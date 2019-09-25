@@ -704,7 +704,7 @@ struct dhcp_lease *lease6_find_by_addr(struct in6_addr *net, int prefix, u64 add
 } 
 
 /* Find largest assigned address in context */
-u64 lease_find_max_addr6(struct dhcp_context *context)
+u64 lease_find_max_addr6(struct DhcpContext *context)
 {
   struct dhcp_lease *lease;
   u64 addr = addr6part(&context->start6);
@@ -728,7 +728,7 @@ u64 lease_find_max_addr6(struct dhcp_context *context)
 #endif
 
 /* Find largest assigned address in context */
-struct in_addr lease_find_max_addr(struct dhcp_context *context)
+struct in_addr lease_find_max_addr(struct DhcpContext *context)
 {
   struct dhcp_lease *lease;
   struct in_addr addr = context->start;

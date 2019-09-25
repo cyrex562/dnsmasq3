@@ -59,17 +59,17 @@
 #define DHCPRELEASE              7
 #define DHCP_SERVER_PORT         67
 
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
 
 struct dhcp_packet {
-  u8 op, htype, hlen, hops;
-  u32 xid;
-  u16 secs, flags;
+  uint8_t op, htype, hlen, hops;
+  uint32_t xid;
+  uint16_t secs, flags;
   struct in_addr ciaddr, yiaddr, siaddr, giaddr;
-  u8 chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
-  u32 cookie;
+  uint8_t chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
+  uint32_t cookie;
   unsigned char options[308];
 };
 

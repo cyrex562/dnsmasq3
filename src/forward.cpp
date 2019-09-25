@@ -1624,7 +1624,7 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
   unsigned char *packet = nullptr;
   unsigned char *payload = nullptr;
   struct dns_header *new_header = nullptr;
-  u16 *length = nullptr;
+  uint16_t *length = nullptr;
  
   while (1)
     {
@@ -1653,10 +1653,10 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
 	 Make query for same, and recurse to validate */
       if (!packet)
 	{
-	  packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(u16));
+	  packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(uint16_t));
 	  payload = &packet[2];
 	  new_header = (struct dns_header *)payload;
-	  length = (u16 *)packet;
+	  length = (uint16_t *)packet;
 	}
       
       if (!packet)
@@ -1724,7 +1724,7 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
 	      server->flags &= ~SERV_GOT_TCP;
 	    }
 	  
-	  if (!read_write(server->tcpfd, packet, m + sizeof(u16), 0) ||
+	  if (!read_write(server->tcpfd, packet, m + sizeof(uint16_t), 0) ||
 	      !read_write(server->tcpfd, &c1, 1, 1) ||
 	      !read_write(server->tcpfd, &c2, 1, 1) ||
 	      !read_write(server->tcpfd, payload, (c1 << 8) | c2, 1))
@@ -1788,11 +1788,11 @@ unsigned char *tcp_request(int confd, time_t now,
   unsigned int gotname;
   unsigned char c1, c2;
   /* Max TCP packet + slop + size */
-  unsigned char *packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(u16));
+  unsigned char *packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(uint16_t));
   unsigned char *payload = &packet[2];
   /* largest field in header is 16-bits, so this is still sufficiently aligned */
   struct dns_header *header = (struct dns_header *)payload;
-  u16 *length = (u16 *)packet;
+  uint16_t *length = (uint16_t *)packet;
   struct server *last_server;
   struct in_addr dst_addr_4;
   union mysockaddr peer_addr;
@@ -2049,7 +2049,7 @@ unsigned char *tcp_request(int confd, time_t now,
 		      if (!(gotname = extract_request(header, (unsigned int)size, daemon->namebuff, &qtype)))
 			strcpy(daemon->namebuff, "query");
 		      
-		      if (!read_write(last_server->tcpfd, packet, size + sizeof(u16), 0) ||
+		      if (!read_write(last_server->tcpfd, packet, size + sizeof(uint16_t), 0) ||
 			  !read_write(last_server->tcpfd, &c1, 1, 1) ||
 			  !read_write(last_server->tcpfd, &c2, 1, 1) ||
 			  !read_write(last_server->tcpfd, payload, (c1 << 8) | c2, 1))
@@ -2159,7 +2159,7 @@ unsigned char *tcp_request(int confd, time_t now,
       
       *length = htons(m);
            
-      if (m == 0 || !read_write(confd, packet, m + sizeof(u16), 0))
+      if (m == 0 || !read_write(confd, packet, m + sizeof(uint16_t), 0))
 	return packet;
     }
 }

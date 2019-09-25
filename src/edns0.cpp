@@ -300,12 +300,12 @@ static size_t add_mac(struct dns_header *header, size_t plen, unsigned char *lim
 }
 
 struct subnet_opt {
-  u16 family;
-  u8 source_netmask, scope_netmask;
+  uint16_t family;
+  uint8_t source_netmask, scope_netmask;
 #ifdef HAVE_IPV6 
-  u8 addr[IN6ADDRSZ];
+  uint8_t addr[IN6ADDRSZ];
 #else
-  u8 addr[INADDRSZ];
+  uint8_t addr[INADDRSZ];
 #endif
 };
 

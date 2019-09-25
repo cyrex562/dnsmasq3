@@ -18,24 +18,24 @@
 
 #ifdef HAVE_DUMPFILE
 
-static u32 packet_count;
+static uint32_t packet_count;
 
 /* https://wiki.wireshark.org/Development/LibpcapFileFormat */
 struct pcap_hdr_s {
-        u32 magic_number;   /* magic number */
-        u16 version_major;  /* major version number */
-        u16 version_minor;  /* minor version number */
-        u32 thiszone;       /* GMT to local correction */
-        u32 sigfigs;        /* accuracy of timestamps */
-        u32 snaplen;        /* max length of captured packets, in octets */
-        u32 network;        /* data link type */
+        uint32_t magic_number;   /* magic number */
+        uint16_t version_major;  /* major version number */
+        uint16_t version_minor;  /* minor version number */
+        uint32_t thiszone;       /* GMT to local correction */
+        uint32_t sigfigs;        /* accuracy of timestamps */
+        uint32_t snaplen;        /* max length of captured packets, in octets */
+        uint32_t network;        /* data link type */
 };
 
 struct pcaprec_hdr_s {
-        u32 ts_sec;         /* timestamp seconds */
-        u32 ts_usec;        /* timestamp microseconds */
-        u32 incl_len;       /* number of octets of packet saved in file */
-        u32 orig_len;       /* actual length of packet */
+        uint32_t ts_sec;         /* timestamp seconds */
+        uint32_t ts_usec;        /* timestamp microseconds */
+        uint32_t incl_len;       /* number of octets of packet saved in file */
+        uint32_t orig_len;       /* actual length of packet */
 };
 
 
@@ -87,14 +87,14 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
   int family;
 #endif
   struct udphdr {
-    u16 uh_sport;               /* source port */
-    u16 uh_dport;               /* destination port */
-    u16 uh_ulen;                /* udp length */
-    u16 uh_sum;                 /* udp checksum */
+    uint16_t uh_sport;               /* source port */
+    uint16_t uh_dport;               /* destination port */
+    uint16_t uh_ulen;                /* udp length */
+    uint16_t uh_sum;                 /* udp checksum */
   } udp;
   struct pcaprec_hdr_s pcap_header;
   struct timeval time;
-  u32 i, sum;
+  uint32_t i, sum;
   void *iphdr;
   size_t ipsz;
   int rc;
@@ -136,7 +136,7 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
             
       /* start UDP checksum */
       for (sum = 0, i = 0; i < IN6ADDRSZ; i++)
-	sum += ((u16 *)&ip6.ip6_src)[i];
+	sum += ((uint16_t *)&ip6.ip6_src)[i];
     }
   else
 #endif
@@ -165,7 +165,7 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
       
       ip.ip_sum = 0;
       for (sum = 0, i = 0; i < sizeof(struct ip) / 2; i++)
-	sum += ((u16 *)&ip)[i];
+	sum += ((uint16_t *)&ip)[i];
       while (sum >> 16)
 	sum = (sum & 0xffff) + (sum >> 16);  
       ip.ip_sum = (sum == 0xffff) ? sum : ~sum;
@@ -185,9 +185,9 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
   sum += htons(IPPROTO_UDP);
   sum += htons(sizeof(struct udphdr) + len);
   for (i = 0; i < sizeof(struct udphdr)/2; i++)
-    sum += ((u16 *)&udp)[i];
+    sum += ((uint16_t *)&udp)[i];
   for (i = 0; i < (len + 1) / 2; i++)
-    sum += ((u16 *)packet)[i];
+    sum += ((uint16_t *)packet)[i];
   while (sum >> 16)
     sum = (sum & 0xffff) + (sum >> 16);
   udp.uh_sum = (sum == 0xffff) ? sum : ~sum;

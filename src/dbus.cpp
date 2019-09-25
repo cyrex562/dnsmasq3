@@ -153,7 +153,7 @@ static void dbus_read_servers(DBusMessage *message)
 
       if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_UINT32)
 	{
-	  u32 a;
+	  uint32_t a;
 	  
 	  dbus_message_iter_get_basic(&iter, &a);
 	  dbus_message_iter_next (&iter);

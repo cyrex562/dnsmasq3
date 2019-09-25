@@ -32,9 +32,9 @@
 
 /* SURF random number generator */
 
-static u32 seed[32];
-static u32 in[12];
-static u32 out[8];
+static uint32_t seed[32];
+static uint32_t in[12];
+static uint32_t out[8];
 static int outleft = 0;
 
 void rand_init()
@@ -54,7 +54,7 @@ void rand_init()
 
 static void surf(void)
 {
-  u32 t[12]; u32 x; u32 sum = 0;
+  uint32_t t[12]; uint32_t x; uint32_t sum = 0;
   int r; int i; int loop;
 
   for (i = 0;i < 12;++i) t[i] = in[i] ^ seed[12 + i];
@@ -83,7 +83,7 @@ unsigned short rand16(void)
   return (unsigned short) out[--outleft];
 }
 
-u32 rand32(void)
+uint32_t rand32(void)
 {
  if (!outleft) 
     {

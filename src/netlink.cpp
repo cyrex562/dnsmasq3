@@ -36,7 +36,7 @@
 
 
 static struct iovec iov;
-static u32 netlink_pid;
+static uint32_t netlink_pid;
 
 static void nl_async(struct nlmsghdr *h);
 
@@ -239,7 +239,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		else if (ifa->ifa_family == AF_INET6)
 		  {
 		    struct in6_addr *addrp = nullptr;
-		    u32 valid = 0, preferred = 0;
+		    uint32_t valid = 0, preferred = 0;
 		    int flags = 0;
 		    
 		    while (RTA_OK(rta, len1))

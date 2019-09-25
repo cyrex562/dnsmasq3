@@ -37,7 +37,7 @@ int main (int argc, char **argv)
   int bind_fallback = 0;
   time_t now;
   struct sigaction sigact;
-  struct iname *if_tmp;
+  struct Iname *if_tmp;
   int piperead, pipefd[2], err_pipe[2];
   struct passwd *ent_pw = nullptr;
 #if defined(HAVE_SCRIPT)
@@ -56,7 +56,7 @@ int main (int argc, char **argv)
   int did_bind = 0;
 #endif 
 #if defined(HAVE_DHCP) || defined(HAVE_DHCP6)
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   struct DhcpRelay *relay;
 #endif
 #ifdef HAVE_TFTP
@@ -1869,7 +1869,7 @@ int icmp_ping(struct in_addr addr)
   packet.icmp.icmp_type = ICMP_ECHO;
   packet.icmp.icmp_id = id;
   for (j = 0, i = 0; i < sizeof(struct icmp) / 2; i++)
-    j += ((u16 *)&packet.icmp)[i];
+    j += ((uint16_t *)&packet.icmp)[i];
   while (j>>16)
     j = (j & 0xffff) + (j >> 16);  
   packet.icmp.icmp_cksum = (j == 0xffff) ? j : ~j;

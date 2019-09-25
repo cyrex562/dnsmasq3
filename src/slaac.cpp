@@ -25,7 +25,7 @@ static int ping_id = 0;
 void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
 {
   struct slaac_address *slaac, *old, **up;
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   int dns_dirty = 0;
   
   if (!(lease->flags & LEASE_HAVE_HWADDR) || 
@@ -118,7 +118,7 @@ void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
 
 time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 {
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   struct dhcp_lease *lease;
   struct slaac_address *slaac;
   time_t next_event = 0;

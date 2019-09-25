@@ -111,7 +111,7 @@ int indextoname(int fd, int index, char *name)
 
 int iface_check(int family, struct all_addr *addr, char *name, int *auth)
 {
-  struct iname *tmp;
+  struct Iname *tmp;
   int ret = 1, match_addr = 0;
 
   /* Note: have to check all and not bail out early, so that we set the
@@ -230,12 +230,12 @@ int label_exception(int index, int family, struct all_addr *addr)
   return 0;
 }
 
-struct iface_param {
+struct IfaceParam {
   struct addrlist *spare;
   int fd;
 };
 
-static int iface_allowed(struct iface_param *param, int if_index, char *label,
+static int iface_allowed(struct IfaceParam *param, int if_index, char *label,
 			 union mysockaddr *addr, struct in_addr netmask, int prefixlen, int iface_flags) 
 {
   struct irec *iface;
@@ -246,7 +246,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
   int auth_dns = 0;
   int is_label = 0;
 #if defined(HAVE_DHCP) || defined(HAVE_TFTP)
-  struct iname *tmp;
+  struct Iname *tmp;
 #endif
 
   (void)prefixlen;
@@ -415,12 +415,12 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
      sure that loopback interfaces are in that set. */
   if (daemon->if_names && loopback)
     {
-      struct iname *lo;
+      struct Iname *lo;
       for (lo = daemon->if_names; lo; lo = lo->next)
 	if (lo->name && strcmp(lo->name, ifr.ifr_name) == 0)
 	  break;
       
-      if (!lo && (lo = whine_malloc(sizeof(struct iname)))) 
+      if (!lo && (lo = whine_malloc(sizeof(struct Iname))))
 	{
 	  if ((lo->name = whine_malloc(strlen(ifr.ifr_name)+1)))
 	    {
@@ -527,7 +527,7 @@ static int iface_allowed_v6(struct in6_addr *local, int prefix,
   else
     addr.in6.sin6_scope_id = 0;
   
-  return iface_allowed((struct iface_param *)vparam, if_index, nullptr, &addr, netmask, prefix, flags);
+  return iface_allowed((struct IfaceParam *)vparam, if_index, nullptr, &addr, netmask, prefix, flags);
 }
 #endif
 
@@ -550,14 +550,14 @@ static int iface_allowed_v4(struct in_addr local, int if_index, char *label,
   /* determine prefix length from netmask */
   for (prefix = 32, bit = 1; (bit & ntohl(netmask.s_addr)) == 0 && prefix != 0; bit = bit << 1, prefix--);
 
-  return iface_allowed((struct iface_param *)vparam, if_index, label, &addr, netmask, prefix, 0);
+  return iface_allowed((struct IfaceParam *)vparam, if_index, label, &addr, netmask, prefix, 0);
 }
    
 int enumerate_interfaces(int reset)
 {
   static struct addrlist *spare = nullptr;
   static int done = 0;
-  struct iface_param param;
+  struct IfaceParam param;
   int errsave, ret = 1;
   struct addrlist *addr, *tmp;
   struct interface_name *intname;
@@ -968,7 +968,7 @@ void create_bound_listeners(int dienow)
 {
   struct listener *new;
   struct irec *iface;
-  struct iname *if_tmp;
+  struct Iname *if_tmp;
 
   for (iface = daemon->interfaces; iface; iface = iface->next)
     if (!iface->done && !iface->dad && iface->found &&

@@ -17,7 +17,7 @@
 #include "dnsmasq.h"
 
 #ifdef HAVE_LOOP
-static ssize_t loop_make_probe(u32 uid);
+static ssize_t loop_make_probe(uint32_t uid);
 
 void loop_send_probes()
 {
@@ -52,7 +52,7 @@ void loop_send_probes()
        }
 }
   
-static ssize_t loop_make_probe(u32 uid)
+static ssize_t loop_make_probe(uint32_t uid)
 {
   struct dns_header *header = (struct dns_header *)daemon->packet;
   unsigned char *p = (unsigned char *)(header+1);
@@ -84,7 +84,7 @@ static ssize_t loop_make_probe(u32 uid)
 int detect_loop(char *query, int type)
 {
   int i;
-  u32 uid;
+  uint32_t uid;
   struct server *serv;
   
   if (!option_bool(OPT_LOOP_DETECT))

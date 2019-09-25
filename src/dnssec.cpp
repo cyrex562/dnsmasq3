@@ -117,7 +117,7 @@ static int count_labels(char *name)
 }
 
 /* Implement RFC1982 wrapped compare for 32-bit numbers */
-static int serial_compare_32(u32 s1, u32 s2)
+static int serial_compare_32(uint32_t s1, uint32_t s2)
 {
   if (s1 == s2)
     return SERIAL_EQ;
@@ -186,7 +186,7 @@ int setup_timestamp(void)
 }
 
 /* Check whether today/now is between date_start and date_end */
-static int check_date_range(u32 date_start, u32 date_end)
+static int check_date_range(uint32_t date_start, uint32_t date_end)
 {
   unsigned long curtime = time(0);
  
@@ -225,12 +225,12 @@ static int check_date_range(u32 date_start, u32 date_end)
 /* Return bytes of canonicalised rdata, when the return value is zero, the remaining 
    data, pointed to by *p, should be used raw. */
 static int get_rdata(struct dns_header *header, size_t plen, unsigned char *end, char *buff, int bufflen,
-		     unsigned char **p, u16 **desc)
+		     unsigned char **p, uint16_t **desc)
 {
   int d = **desc;
   
   /* No more data needs mangling */
-  if (d == (u16)-1)
+  if (d == (uint16_t)-1)
     {
       /* If there's more data than we have space for, just return what fits,
 	 we'll get called again for more chunks */
@@ -279,7 +279,7 @@ static int get_rdata(struct dns_header *header, size_t plen, unsigned char *end,
    leaving the following bytes as deciding the order. Hence the nasty left1 and left2 variables.
 */
 
-static int sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int rrsetidx, 
+static int sort_rrset(struct dns_header *header, size_t plen, uint16_t *rr_desc, int rrsetidx,
 		      unsigned char **rrset, char *buff1, char *buff2)
 {
   int swap, quit, i, j;
@@ -289,7 +289,7 @@ static int sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int 
       for (swap = 0, i = 0; i < rrsetidx-1; i++)
 	{
 	  int rdlen1, rdlen2, left1, left2, len1, len2, len, rc;
-	  u16 *dp1, *dp2;
+	  uint16_t *dp1, *dp2;
 	  unsigned char *end1, *end2;
 	  /* Note that these have been determined to be OK previously,
 	     so we don't need to check for NULL return here. */
@@ -492,7 +492,7 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
   unsigned char *p;
   int rdlen, j, name_labels, algo, labels, orig_ttl, key_tag;
   struct crec *crecp = nullptr;
-  u16 *rr_desc = rrfilter_desc(type);
+  uint16_t *rr_desc = rrfilter_desc(type);
   u32 sig_expiration, sig_inception
 ;
   if (wildcard_out)
@@ -554,7 +554,7 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
 	{
 	  int seg;
 	  unsigned char *end, *cp;
-	  u16 len, *dp;
+	  uint16_t len, *dp;
 	  
 	  p = rrset[i];
 	 	  

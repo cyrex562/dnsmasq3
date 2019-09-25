@@ -393,7 +393,7 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                 log_query(F_RRNAME | F_AUTH, zone->domain, nullptr, "<SOA>");
             }
             else if (qtype==T_AXFR) {
-                struct iname* peers;
+                struct Iname* peers;
 
                 if (peer_addr->sa.sa_family==AF_INET)
                     peer_addr->in.sin_port = 0;

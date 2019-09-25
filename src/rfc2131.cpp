@@ -26,21 +26,21 @@ static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
 #endif
 
 static int sanitise(unsigned char *opt, char *buf);
-static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback);
-static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt);
+static struct in_addr server_id(struct DhcpContext *context, struct in_addr override, struct in_addr fallback);
+static unsigned int calc_time(struct DhcpContext *context, struct dhcp_config *config, unsigned char *opt);
 static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val);
 static void option_put_string(struct dhcp_packet *mess, unsigned char *end, 
 			      int opt, char *string, int null_term);
 static struct in_addr option_addr(unsigned char *opt);
 static unsigned int option_uint(unsigned char *opt, int offset, int size);
 static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
-		       int mac_len, char *interface, char *string, char *err, u32 xid);
+		       int mac_len, char *interface, char *string, char *err, uint32_t xid);
 static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize);
 static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize);
 static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end);
 static void clear_packet(struct dhcp_packet *mess, unsigned char *end);
 static int in_list(unsigned char *list, int opt);
-static void do_options(struct dhcp_context *context,
+static void do_options(struct DhcpContext *context,
 		       struct dhcp_packet *mess,
 		       unsigned char *end,
 		       unsigned char *req_options,
@@ -64,9 +64,9 @@ static int prune_vendor_opts(struct dhcp_netid *netid);
 static struct dhcp_opt *pxe_opts(int pxe_arch, struct dhcp_netid *netid, struct in_addr local, time_t now);
 struct dhcp_boot *find_boot(struct dhcp_netid *netid);
 static int pxe_uefi_workaround(int pxe_arch, struct dhcp_netid *netid, struct dhcp_packet *mess, struct in_addr local, time_t now, int pxe);
-static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid);
+static void apply_delay(uint32_t xid, time_t recvtime, struct dhcp_netid *netid);
 
-size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+size_t dhcp_reply(struct DhcpContext *context, char *iface_name, int int_index,
 		  size_t sz, time_t now, int unicast_dest, int loopback,
 		  int *is_inform, int pxe, struct in_addr fallback, time_t recvtime)
 {
@@ -117,10 +117,10 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
   /* check for DHCP rather than BOOTP */
   if ((opt = option_find(mess, sz, OPTION_MESSAGE_TYPE, 1)))
     {
-      u32 cookie = htonl(DHCP_COOKIE);
+      uint32_t cookie = htonl(DHCP_COOKIE);
       
       /* only insist on a cookie for DHCP. */
-      if (memcmp(mess->options, &cookie, sizeof(u32)) != 0)
+      if (memcmp(mess->options, &cookie, sizeof(uint32_t)) != 0)
 	return 0;
       
       mess_type = option_uint(opt, 0, 1);
@@ -188,7 +188,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	     be enough free space at the end of the packet to copy the option. */
 	  unsigned char *sopt;
 	  unsigned int total = option_len(opt) + 2;
-	  unsigned char *last_opt = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + sz,
+	  unsigned char *last_opt = option_find1(&mess->options[0] + sizeof(uint32_t), ((unsigned char *)mess) + sz,
 						 OPTION_END, 0);
 	  if (last_opt && last_opt < end - total)
 	    {
@@ -273,7 +273,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
      from the physical network, continue using that to allow correct DHCPNAK generation later. */
   if (mess->giaddr.s_addr || subnet_addr.s_addr || mess->ciaddr.s_addr)
     {
-      struct dhcp_context *context_tmp, *context_new = nullptr;
+      struct DhcpContext *context_tmp, *context_new = nullptr;
       struct in_addr addr;
       int force = 0;
       
@@ -352,7 +352,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 
   if (option_bool(OPT_LOG_OPTS))
     {
-      struct dhcp_context *context_tmp;
+      struct DhcpContext *context_tmp;
       for (context_tmp = context; context_tmp; context_tmp = context_tmp->current)
 	{
 	  strcpy(daemon->namebuff, inet_ntoa(context_tmp->start));
@@ -896,7 +896,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	  /* proxy DHCP here. */
 	  if ((mess_type == DHCPDISCOVER || (pxe && mess_type == DHCPREQUEST)))
 	    {
-	      struct dhcp_context *tmp;
+	      struct DhcpContext *tmp;
 	      int workaround = 0;
 	      
 	      for (tmp = context; tmp; tmp = tmp->current)
@@ -1064,7 +1064,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		}
 	      else
 		{
-		  struct dhcp_context *tmp;
+		  struct DhcpContext *tmp;
 		  for (tmp = context; tmp; tmp = tmp->current)
 		    if (context->router.s_addr == config->addr.s_addr)
 		      break;
@@ -1234,7 +1234,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
       if (!message)
 	{
 	  struct dhcp_config *addr_config;
-	  struct dhcp_context *tmp = nullptr;
+	  struct DhcpContext *tmp = nullptr;
 	  
 	  if (have_config(config, CONFIG_ADDR))
 	    for (tmp = context; tmp; tmp = tmp->current)
@@ -1584,7 +1584,7 @@ unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr,
   return hwaddr;
 }
 
-static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt)
+static unsigned int calc_time(struct DhcpContext *context, struct dhcp_config *config, unsigned char *opt)
 {
   unsigned int time = have_config(config, CONFIG_TIME) ? config->lease_time : context->lease_time;
   
@@ -1600,7 +1600,7 @@ static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *
   return time;
 }
 
-static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback)
+static struct in_addr server_id(struct DhcpContext *context, struct in_addr override, struct in_addr fallback)
 {
   if (override.s_addr != 0)
     return override;
@@ -1644,7 +1644,7 @@ static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
 #endif
 
 static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
-		       int mac_len, char *interface, char *string, char *err, u32 xid)
+		       int mac_len, char *interface, char *string, char *err, uint32_t xid)
 {
   struct in_addr a;
  
@@ -1685,7 +1685,7 @@ static void log_packet(char *type, void *addr, unsigned char *ext_mac,
 #endif
 }
 
-static void log_options(unsigned char *start, u32 xid)
+static void log_options(unsigned char *start, uint32_t xid)
 {
   while (*start != OPTION_END)
     {
@@ -1727,11 +1727,11 @@ static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt
   unsigned char *ret, *overload;
   
   /* skip over DHCP cookie; */
-  if ((ret = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + size, opt_type, minsize)))
+  if ((ret = option_find1(&mess->options[0] + sizeof(uint32_t), ((unsigned char *)mess) + size, opt_type, minsize)))
     return ret;
 
   /* look for overload option. */
-  if (!(overload = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + size, OPTION_OVERLOAD, 1)))
+  if (!(overload = option_find1(&mess->options[0] + sizeof(uint32_t), ((unsigned char *)mess) + size, OPTION_OVERLOAD, 1)))
     return NULL;
   
   /* Can we look in filename area ? */
@@ -1781,7 +1781,7 @@ static unsigned char *dhcp_skip_opts(unsigned char *start)
 /* only for use when building packet: doesn't check for bad data. */ 
 static unsigned char *find_overload(struct dhcp_packet *mess)
 {
-  unsigned char *p = &mess->options[0] + sizeof(u32);
+  unsigned char *p = &mess->options[0] + sizeof(uint32_t);
   
   while (*p != 0)
     {
@@ -1794,7 +1794,7 @@ static unsigned char *find_overload(struct dhcp_packet *mess)
 
 static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end)
 {
-  unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
+  unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(uint32_t));
   unsigned char *overload;
   size_t ret;
   
@@ -1838,7 +1838,7 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
       if ((mess->flags & htons(0x8000)) && mess->ciaddr.s_addr == 0)
 	my_syslog(MS_DHCP | LOG_INFO, _("%u broadcast response"), ntohl(mess->xid));
       
-      log_options(&mess->options[0] + sizeof(u32), mess->xid);
+      log_options(&mess->options[0] + sizeof(uint32_t), mess->xid);
     } 
   
   ret = (size_t)(p - (unsigned char *)mess);
@@ -1851,7 +1851,7 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
 
 static unsigned char *free_space(struct dhcp_packet *mess, unsigned char *end, int opt, int len)
 {
-  unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
+  unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(uint32_t));
   
   if (p + len + 3 >= end)
     /* not enough space in options area, try and use overload, if poss */
@@ -1935,7 +1935,7 @@ static void option_put_string(struct dhcp_packet *mess, unsigned char *end, int 
 }
 
 /* return length, note this only does the data part */
-static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *context, int null_term)
+static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct DhcpContext *context, int null_term)
 {
   int len = opt->len;
   
@@ -2261,7 +2261,7 @@ static void clear_packet(struct dhcp_packet *mess, unsigned char *end)
 {
   memset(mess->sname, 0, sizeof(mess->sname));
   memset(mess->file, 0, sizeof(mess->file));
-  memset(&mess->options[0] + sizeof(u32), 0, end - (&mess->options[0] + sizeof(u32)));
+  memset(&mess->options[0] + sizeof(uint32_t), 0, end - (&mess->options[0] + sizeof(uint32_t)));
   mess->siaddr.s_addr = 0;
 }
 
@@ -2282,7 +2282,7 @@ struct dhcp_boot *find_boot(struct dhcp_netid *netid)
   return boot;
 }
 
-static void do_options(struct dhcp_context *context,
+static void do_options(struct DhcpContext *context,
 		       struct dhcp_packet *mess,
 		       unsigned char *end, 
 		       unsigned char *req_options,
@@ -2691,7 +2691,7 @@ static void do_options(struct dhcp_context *context,
     }
 }
 
-static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid)
+static void apply_delay(uint32_t xid, time_t recvtime, struct dhcp_netid *netid)
 {
   struct delay_config *delay_conf;
   

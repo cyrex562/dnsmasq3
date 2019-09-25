@@ -974,7 +974,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
   int addrs, digs, is_addr, is_addr6, is_hex, is_dec, is_string, dots;
   char *comma = nullptr;
   struct dhcp_netid *np = nullptr;
-  u16 opt_len = 0;
+  uint16_t opt_len = 0;
   int is6 = 0;
   int option_ok = 0;
 
@@ -1398,7 +1398,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	      
 	      while (arg && *arg)
 		{
-		  u16 len = strlen(arg);
+		  uint16_t len = strlen(arg);
 		  unhide_metas(arg);
 		  PUTSHORT(len, p);
 		  memcpy(p, arg, len);
@@ -1908,7 +1908,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       
       while ((arg = comma))
 	{
-	  struct iname *new = opt_malloc(sizeof(struct iname));
+	  struct iname *new = opt_malloc(sizeof(struct Iname));
 	  comma = split(arg);
 	  new->name = nullptr;
 	  unhide_metas(arg);
@@ -2045,7 +2045,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       
     case  LOPT_AUTHSOA: /* --auth-soa */
       comma = split(arg);
-      daemon->soa_sn = (u32)atoi(arg);
+      daemon->soa_sn = (uint32_t)atoi(arg);
       if (comma)
 	{
 	  char *cp;
@@ -2060,14 +2060,14 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	    {
 	      arg = comma;
 	      comma = split(arg); 
-	      daemon->soa_refresh = (u32)atoi(arg);
+	      daemon->soa_refresh = (uint32_t)atoi(arg);
 	      if (comma)
 		{
 		  arg = comma;
 		  comma = split(arg); 
-		  daemon->soa_retry = (u32)atoi(arg);
+		  daemon->soa_retry = (uint32_t)atoi(arg);
 		  if (comma)
-		    daemon->soa_expiry = (u32)atoi(comma);
+		    daemon->soa_expiry = (uint32_t)atoi(comma);
 		}
 	    }
 	}
@@ -2287,7 +2287,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       
     case 'i':  /* --interface */
       do {
-	struct iname *new = opt_malloc(sizeof(struct iname));
+	struct iname *new = opt_malloc(sizeof(struct Iname));
 	comma = split(arg);
 	new->next = daemon->if_names;
 	daemon->if_names = new;
@@ -2308,7 +2308,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case 'I':  /* --except-interface */
     case '2':  /* --no-dhcp-interface */
       do {
-	struct iname *new = opt_malloc(sizeof(struct iname));
+	struct iname *new = opt_malloc(sizeof(struct Iname));
 	comma = split(arg);
 	new->name = opt_string_alloc(arg);
 	if (option == 'I')
@@ -2358,7 +2358,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case 'a':  /* --listen-address */
     case LOPT_AUTHPEER: /* --auth-peer */
       do {
-	struct iname *new = opt_malloc(sizeof(struct iname));
+	struct iname *new = opt_malloc(sizeof(struct Iname));
 	comma = split(arg);
 	unhide_metas(arg);
 	if (arg && (inet_pton(AF_INET, arg, &new->addr.in.sin_addr) > 0))
@@ -2793,7 +2793,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       {
 	int k, leasepos = 2;
 	char *cp, *a[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-	struct dhcp_context *new = opt_malloc(sizeof(struct dhcp_context));
+	struct dhcp_context *new = opt_malloc(sizeof(struct DhcpContext));
 	
 	memset (new, 0, sizeof(*new));
 	new->lease_time = DEFLEASE;
@@ -4926,7 +4926,7 @@ void read_opts(int argc, char **argv, char *compile_opts)
 
   if (daemon->if_addrs)
     {  
-      struct iname *tmp;
+      struct Iname *tmp;
       for(tmp = daemon->if_addrs; tmp; tmp = tmp->next)
 	if (tmp->addr.sa.sa_family == AF_INET)
 	  tmp->addr.in.sin_port = htons(daemon->port);

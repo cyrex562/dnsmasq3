@@ -198,7 +198,7 @@ char *strip_hostname(char *hostname)
   return nullptr;
 }
 
-void log_tags(struct dhcp_netid *netid, u32 xid)
+void log_tags(struct dhcp_netid *netid, uint32_t xid)
 {
   if (netid && option_bool(OPT_LOG_OPTS))
     {
@@ -267,7 +267,7 @@ int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, i
   return 0;
 }
 
-static int is_config_in_context(struct dhcp_context *context, struct dhcp_config *config)
+static int is_config_in_context(struct DhcpContext *context, struct dhcp_config *config)
 {
   if (!context) /* called via find_config() from lease_update_from_configs() */
     return 1; 
@@ -296,7 +296,7 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
 }
 
 struct dhcp_config *find_config(struct dhcp_config *configs,
-				struct dhcp_context *context,
+				struct DhcpContext *context,
 				unsigned char *clid, int clid_len,
 				unsigned char *hwaddr, int hw_len, 
 				int hw_type, char *hostname)
@@ -459,7 +459,7 @@ char *whichdevice(void)
 */
   
   struct irec *iface, *found;
-  struct iname *if_tmp;
+  struct Iname *if_tmp;
   
   if (!daemon->if_names)
     return nullptr;
@@ -497,7 +497,7 @@ void  bindtodevice(char *device, int fd)
 
 static const struct opttab_t {
   char *name;
-  u16 val, size;
+  uint16_t val, size;
 } opttab[] = {
   { "netmask", 1, OT_ADDR_LIST },
   { "time-offset", 2, 4 },
@@ -798,7 +798,7 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 
 }
 
-void log_context(int family, struct dhcp_context *context)
+void log_context(int family, struct DhcpContext *context)
 {
   /* Cannot use dhcp_buff* for RA contexts */
 

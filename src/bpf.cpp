@@ -159,7 +159,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	      unsigned char *netmask = (unsigned char *) &((struct sockaddr_in6 *) addrs->ifa_netmask)->sin6_addr;
 	      int scope_id = ((struct sockaddr_in6 *) addrs->ifa_addr)->sin6_scope_id;
 	      int i, j, prefix = 0;
-	      u32 valid = 0xffffffff, preferred = 0xffffffff;
+	      uint32_t valid = 0xffffffff, preferred = 0xffffffff;
 	      int flags = 0;
 #ifdef HAVE_BSD_NETWORK
 	      if (del_family == AF_INET6 && IN6_ARE_ADDR_EQUAL(&del_addr.addr.addr6, addr))
@@ -278,13 +278,13 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   struct ether_header ether; 
   struct ip ip;
   struct udphdr {
-    u16 uh_sport;               /* source port */
-    u16 uh_dport;               /* destination port */
-    u16 uh_ulen;                /* udp length */
-    u16 uh_sum;                 /* udp checksum */
+    uint16_t uh_sport;               /* source port */
+    uint16_t uh_dport;               /* destination port */
+    uint16_t uh_ulen;                /* udp length */
+    uint16_t uh_sum;                 /* udp checksum */
   } udp;
   
-  u32 i, sum;
+  uint32_t i, sum;
   struct iovec iov[4];
 
   /* Only know how to do ethernet on *BSD */
@@ -326,7 +326,7 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   ip.ip_ttl = IPDEFTTL;
   ip.ip_sum = 0;
   for (sum = 0, i = 0; i < sizeof(struct ip) / 2; i++)
-    sum += ((u16 *)&ip)[i];
+    sum += ((uint16_t *)&ip)[i];
   while (sum>>16)
     sum = (sum & 0xffff) + (sum >> 16);  
   ip.ip_sum = (sum == 0xffff) ? sum : ~sum;
@@ -343,9 +343,9 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   sum += ip.ip_dst.s_addr & 0xffff;
   sum += (ip.ip_dst.s_addr >> 16) & 0xffff;
   for (i = 0; i < sizeof(struct udphdr)/2; i++)
-    sum += ((u16 *)&udp)[i];
+    sum += ((uint16_t *)&udp)[i];
   for (i = 0; i < (len + 1) / 2; i++)
-    sum += ((u16 *)mess)[i];
+    sum += ((uint16_t *)mess)[i];
   while (sum>>16)
     sum = (sum & 0xffff) + (sum >> 16);
   udp.uh_sum = (sum == 0xffff) ? sum : ~sum;

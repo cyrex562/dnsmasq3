@@ -136,9 +136,9 @@ static int check_rrs(unsigned char *p, struct dns_header *header, size_t plen, i
 	  
 	  if (_class == C_IN)
 	    {
-	      u16 *d;
+	      uint16_t *d;
  
-	      for (pp = p, d = rrfilter_desc(type); *d != (u16)-1; d++)
+	      for (pp = p, d = rrfilter_desc(type); *d != (uint16_t)-1; d++)
 		{
 		  if (*d != 0)
 		    pp += *d;
@@ -266,7 +266,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
 }
 
 /* This is used in the DNSSEC code too, hence it's exported */
-u16 *rrfilter_desc(int type)
+uint16_t *rrfilter_desc(int type)
 {
   /* List of RRtypes which include domains in the data.
      0 -> domain
@@ -277,7 +277,7 @@ u16 *rrfilter_desc(int type)
      anything which needs no mangling.
   */
   
-  static u16 rr_desc[] = 
+  static uint16_t rr_desc[] =
     { 
       T_NS, 0, -1, 
       T_MD, 0, -1,
@@ -302,10 +302,10 @@ u16 *rrfilter_desc(int type)
       0, -1 /* wildcard/catchall */
     }; 
   
-  u16 *p = rr_desc;
+  uint16_t *p = rr_desc;
   
   while (*p != type && *p != 0)
-    while (*p++ != (u16)-1);
+    while (*p++ != (uint16_t)-1);
 
   return p+1;
 }

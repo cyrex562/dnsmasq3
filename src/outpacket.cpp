@@ -24,7 +24,7 @@ static size_t outpacket_counter;
 void end_opt6(int container)
 {
    void *p = daemon->outpacket.iov_base + container + 2;
-   u16 len = outpacket_counter - container - 4 ;
+   uint16_t len = outpacket_counter - container - 4 ;
    
    PUTSHORT(len, p);
 }

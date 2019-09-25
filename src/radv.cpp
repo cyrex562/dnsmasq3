@@ -33,7 +33,7 @@ struct ra_param {
   struct dhcp_netid *tags;
   struct in6_addr link_local, link_global, ula;
   unsigned int glob_pref_time, link_pref_time, ula_pref_time, adv_interval, prio;
-  struct dhcp_context *found_context;
+  struct DhcpContext *found_context;
 };
 
 struct search_param {
@@ -60,7 +60,7 @@ static int iface_search(struct in6_addr *local,  int prefix,
 			int scope, int if_index, int flags, 
 			int prefered, int valid, void *vparam);
 static int add_lla(int index, unsigned int type, char *mac, size_t maclen, void *parm);
-static void new_timeout(struct dhcp_context *context, char *iface_name, time_t now);
+static void new_timeout(struct DhcpContext *context, char *iface_name, time_t now);
 static unsigned int calc_lifetime(struct ra_interface *ra);
 static unsigned int calc_interval(struct ra_interface *ra);
 static unsigned int calc_prio(struct ra_interface *ra);
@@ -77,7 +77,7 @@ void ra_init(time_t now)
 #endif
   int val = 255; /* radvd uses this value */
   socklen_t len = sizeof(int);
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   
   /* ensure this is around even if we're not doing DHCPv6 */
   expand_buf(&daemon->outpacket, sizeof(struct dhcp_packet));
@@ -115,7 +115,7 @@ void ra_init(time_t now)
      ra_start_unsolicited(now, nullptr);
 }
 
-void ra_start_unsolicited(time_t now, struct dhcp_context *context)
+void ra_start_unsolicited(time_t now, struct DhcpContext *context)
 {   
    /* init timers so that we do ra's for some/all soon. some ra_times will end up zeroed
      if it's not appropriate to advertise those contexts.
@@ -147,7 +147,7 @@ void icmp6_packet(time_t now)
   } control_u;
   struct sockaddr_in6 from;
   unsigned char *packet;
-  struct iname *tmp;
+  struct Iname *tmp;
 
   /* Note: use outpacket for input buffer */
   msg.msg_control = control_u.control6;
@@ -242,7 +242,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   struct ra_packet *ra;
   struct ra_param parm;
   struct sockaddr_in6 addr;
-  struct dhcp_context *context, *tmp,  **up;
+  struct DhcpContext *context, *tmp,  **up;
   struct dhcp_netid iface_id;
   struct dhcp_opt *opt_cfg;
   struct ra_interface *ra_param = find_iface_param(iface_name);
@@ -584,7 +584,7 @@ static int add_prefixes(struct in6_addr *local,  int prefix,
 	  int adv_router = 0;
 	  int off_link = 0;
 	  unsigned int time = 0xffffffff;
-	  struct dhcp_context *context;
+	  struct DhcpContext *context;
 	  
 	  for (context = daemon->dhcp6; context; context = context->next)
 	    if (!(context->flags & (CONTEXT_TEMPLATE | CONTEXT_OLD)) &&
@@ -754,7 +754,7 @@ static int add_lla(int index, unsigned int type, char *mac, size_t maclen, void 
 time_t periodic_ra(time_t now)
 {
   struct search_param param;
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   time_t next_event;
   struct alias_param aparam;
     
@@ -799,7 +799,7 @@ time_t periodic_ra(time_t now)
       if (param.iface != 0 &&
 	  iface_check(AF_LOCAL, nullptr, param.name, nullptr))
 	{
-	  struct iname *tmp;
+	  struct Iname *tmp;
 	  for (tmp = daemon->dhcp_except; tmp; tmp = tmp->next)
 	    if (tmp->name && wildcard_match(tmp->name, param.name))
 	      break;
@@ -887,7 +887,7 @@ static int iface_search(struct in6_addr *local,  int prefix,
 			int preferred, int valid, void *vparam)
 {
   struct search_param *param = vparam;
-  struct dhcp_context *context;
+  struct DhcpContext *context;
 
   (void)scope;
   (void)preferred;
@@ -931,7 +931,7 @@ static int iface_search(struct in6_addr *local,  int prefix,
   return 1; /* keep searching */
 }
  
-static void new_timeout(struct dhcp_context *context, char *iface_name, time_t now)
+static void new_timeout(struct DhcpContext *context, char *iface_name, time_t now)
 {
   if (difftime(now, context->ra_short_period_start) < 60.0)
     /* range 5 - 20 */

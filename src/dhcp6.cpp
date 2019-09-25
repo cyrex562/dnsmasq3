@@ -20,8 +20,8 @@
 
 #include <netinet/icmp6.h>
 
-struct iface_param {
-  struct dhcp_context *current;
+struct IfaceParam {
+  struct DhcpContext *current;
   struct dhcp_relay *relay;
   struct in6_addr fallback, relay_local, ll_addr, ula_addr;
   int ind, addr_match;
@@ -89,9 +89,9 @@ void dhcp6_init(void)
 
 void dhcp6_packet(time_t now)
 {
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   struct dhcp_relay *relay;
-  struct iface_param parm;
+  struct IfaceParam parm;
   struct cmsghdr *cmptr;
   struct msghdr msg;
   int if_index = 0;
@@ -102,7 +102,7 @@ void dhcp6_packet(time_t now)
   struct sockaddr_in6 from;
   ssize_t sz; 
   struct ifreq ifr;
-  struct iname *tmp;
+  struct Iname *tmp;
   unsigned short port;
   struct in6_addr dst_addr;
 
@@ -166,7 +166,7 @@ void dhcp6_packet(time_t now)
 	  for (alias = bridge->alias; alias; alias = alias->next)
 	    if (wildcard_matchn(alias->iface, ifr.ifr_name, IF_NAMESIZE))
 	      {
-		parm.ind = if_nametoindex(bridge->iface);
+		parm.ind = if_nametoindex(bridge->iface.c_str());
 		if (!parm.ind)
 		  {
 		    my_syslog(MS_DHCP | LOG_WARNING,
@@ -298,10 +298,10 @@ static int complete_context6(struct in6_addr *local,  int prefix,
 			     int scope, int if_index, int flags, unsigned int preferred, 
 			     unsigned int valid, void *vparam)
 {
-  struct dhcp_context *context;
-  struct dhcp_relay *relay;
-  struct iface_param *param = vparam;
-  struct iname *tmp;
+  struct DhcpContext *context;
+  struct DhcpRelay*relay;
+  struct IfaceParam *param = vparam;
+  struct Iname *tmp;
  
   (void)scope; /* warning */
   
@@ -342,7 +342,7 @@ static int complete_context6(struct in6_addr *local,  int prefix,
 		  /* link it onto the current chain if we've not seen it before */
 		  if (context->current == context)
 		    {
-		      struct dhcp_context *tmp, **up;
+		      struct DhcpContext *tmp, **up;
 		      
 		      /* use interface values only for constructed contexts */
 		      if (!(context->flags & CONTEXT_CONSTRUCTED))
@@ -397,7 +397,7 @@ struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct 
   return nullptr;
 }
 
-struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned char *clid, int clid_len, int temp_addr,
+struct DhcpContext *address6_allocate(struct DhcpContext *context,  unsigned char *clid, int clid_len, int temp_addr,
 				       int iaid, int serial, struct dhcp_netid *netids, int plain_range, struct in6_addr *ans)   
 {
   /* Find a free address: exclude anything in use and anything allocated to
@@ -409,7 +409,7 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned c
 */
 
   u64 start, addr;
-  struct dhcp_context *c, *d;
+  struct DhcpContext *c, *d;
   int i, pass;
   u64 j; 
 
@@ -475,13 +475,13 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned c
 }
 
 /* can dynamically allocate addr */
-struct dhcp_context *address6_available(struct dhcp_context *context, 
+struct DhcpContext *address6_available(struct DhcpContext *context,
 					struct in6_addr *taddr,
 					struct dhcp_netid *netids,
 					int plain_range)
 {
   u64 start, end, addr = addr6part(taddr);
-  struct dhcp_context *tmp;
+  struct DhcpContext *tmp;
  
   for (tmp = context; tmp; tmp = tmp->current)
     {
@@ -501,12 +501,12 @@ struct dhcp_context *address6_available(struct dhcp_context *context,
 }
 
 /* address OK if configured */
-struct dhcp_context *address6_valid(struct dhcp_context *context, 
+struct DhcpContext *address6_valid(struct DhcpContext *context,
 				    struct in6_addr *taddr,
 				    struct dhcp_netid *netids,
 				    int plain_range)
 {
-  struct dhcp_context *tmp;
+  struct DhcpContext *tmp;
  
   for (tmp = context; tmp; tmp = tmp->current)
     if (is_same_net6(&tmp->start6, taddr, tmp->prefix) &&
@@ -516,7 +516,7 @@ struct dhcp_context *address6_valid(struct dhcp_context *context,
   return nullptr;
 }
 
-int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr)
+int config_valid(struct dhcp_config *config, struct DhcpContext *context, struct in6_addr *addr)
 {
   if (!config || !(config->flags & CONFIG_ADDR6))
     return 0;
@@ -697,7 +697,7 @@ static int construct_worker(struct in6_addr *local, int prefix,
 		}
 	    }
 	
-	if (!context && (context = whine_malloc(sizeof (struct dhcp_context))))
+	if (!context && (context = whine_malloc(sizeof (struct DhcpContext))))
 	  {
 	    *context = *template;
 	    context->start6 = start6;
@@ -729,7 +729,7 @@ static int construct_worker(struct in6_addr *local, int prefix,
 
 void dhcp_construct_contexts(time_t now)
 { 
-  struct dhcp_context *context, *tmp, **up;
+  struct DhcpContext *context, *tmp, **up;
   struct cparam param;
   param.newone = 0;
   param.newname = 0;

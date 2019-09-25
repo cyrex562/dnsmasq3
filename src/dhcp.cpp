@@ -18,8 +18,8 @@
 
 #ifdef HAVE_DHCP
 
-struct iface_param {
-  struct dhcp_context *current;
+struct IfaceParam {
+  struct DhcpContext *current;
   struct DhcpRelay *relay;
   struct in_addr relay_local;
   int ind;
@@ -135,10 +135,10 @@ void dhcp_packet(time_t now, int pxe_fd)
 {
   int fd = pxe_fd ? daemon->pxefd : daemon->dhcpfd;
   struct dhcp_packet *mess;
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   struct DhcpRelay *relay;
   int is_relay_reply = 0;
-  struct iname *tmp;
+  struct Iname *tmp;
   struct ifreq ifr;
   struct msghdr msg;
   struct sockaddr_in dest;
@@ -148,7 +148,7 @@ void dhcp_packet(time_t now, int pxe_fd)
   int iface_index = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
   int rcvd_iface_index;
   struct in_addr iface_addr;
-  struct iface_param parm;
+  struct IfaceParam parm;
   time_t recvtime = now;
 #ifdef HAVE_LINUX_NETWORK
   struct arpreq arp_req;
@@ -476,7 +476,7 @@ static int check_listen_addrs(struct in_addr local, int if_index, char *label,
 			      struct in_addr netmask, struct in_addr broadcast, void *vparam)
 {
   struct match_param *param = vparam;
-  struct iname *tmp;
+  struct Iname *tmp;
 
   (void) label;
 
@@ -510,9 +510,9 @@ static int check_listen_addrs(struct in_addr local, int if_index, char *label,
 static int complete_context(struct in_addr local, int if_index, char *label,
 			    struct in_addr netmask, struct in_addr broadcast, void *vparam)
 {
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   struct DhcpRelay *relay;
-  struct iface_param *param = vparam;
+  struct IfaceParam *param = vparam;
 
   (void)label;
   
@@ -569,7 +569,7 @@ static int complete_context(struct in_addr local, int if_index, char *label,
   return 1;
 }
 	  
-struct dhcp_context *address_available(struct dhcp_context *context, 
+struct DhcpContext *address_available(struct DhcpContext *context,
 				       struct in_addr taddr,
 				       struct dhcp_netid *netids)
 {
@@ -578,7 +578,7 @@ struct dhcp_context *address_available(struct dhcp_context *context,
      by the server itself. */
   
   unsigned int start, end, addr = ntohl(taddr.s_addr);
-  struct dhcp_context *tmp;
+  struct DhcpContext *tmp;
 
   for (tmp = context; tmp; tmp = tmp->current)
     if (taddr.s_addr == context->router.s_addr)
@@ -599,7 +599,7 @@ struct dhcp_context *address_available(struct dhcp_context *context,
   return nullptr;
 }
 
-struct dhcp_context *narrow_context(struct dhcp_context *context, 
+struct DhcpContext *narrow_context(struct DhcpContext *context,
 				    struct in_addr taddr,
 				    struct dhcp_netid *netids)
 {
@@ -611,7 +611,7 @@ struct dhcp_context *narrow_context(struct dhcp_context *context,
      any context on the correct subnet. (If there's more than one, this is a dodgy 
      configuration: maybe there should be a warning.) */
   
-  struct dhcp_context *tmp;
+  struct DhcpContext *tmp;
 
   if (!(tmp = address_available(context, taddr, netids)))
     {
@@ -707,7 +707,7 @@ struct ping_result *do_icmp_ping(time_t now, struct in_addr addr, unsigned int h
     }
 }
 
-int address_allocate(struct dhcp_context *context,
+int address_allocate(struct DhcpContext *context,
 		     struct in_addr *addrp, unsigned char *hwaddr, int hw_len, 
 		     struct dhcp_netid *netids, time_t now, int loopback)   
 {
@@ -716,7 +716,7 @@ int address_allocate(struct dhcp_context *context,
      Try to return from contexts which match netids first. */
 
   struct in_addr start, addr;
-  struct dhcp_context *c, *d;
+  struct DhcpContext *c, *d;
   int i, pass;
   unsigned int j; 
 

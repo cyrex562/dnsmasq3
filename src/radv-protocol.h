@@ -18,31 +18,31 @@
 #define ALL_ROUTERS               "FF02::2"
 
 struct ping_packet {
-  u8 type, code;
-  u16 checksum;
-  u16 identifier;
-  u16 sequence_no;
+  uint8_t type, code;
+  uint16_t checksum;
+  uint16_t identifier;
+  uint16_t sequence_no;
 };
 
 struct ra_packet {
-  u8 type, code;
-  u16 checksum;
-  u8 hop_limit, flags;
-  u16 lifetime;
-  u32 reachable_time;
-  u32 retrans_time;
+  uint8_t type, code;
+  uint16_t checksum;
+  uint8_t hop_limit, flags;
+  uint16_t lifetime;
+  uint32_t reachable_time;
+  uint32_t retrans_time;
 };
 
 struct neigh_packet {
-  u8 type, code;
-  u16 checksum;
-  u16 reserved;
+  uint8_t type, code;
+  uint16_t checksum;
+  uint16_t reserved;
   struct in6_addr target;
 };
 
 struct prefix_opt {
-  u8 type, len, prefix_len, flags;
-  u32 valid_lifetime, preferred_lifetime, reserved;
+  uint8_t type, len, prefix_len, flags;
+  uint32_t valid_lifetime, preferred_lifetime, reserved;
   struct in6_addr prefix;
 };
 

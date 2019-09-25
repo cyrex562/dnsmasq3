@@ -23,7 +23,7 @@ struct state {
   unsigned char *clid;
   int clid_len, iaid, ia_type, interface, hostname_auth, lease_allocate;
   char *client_hostname, *hostname, *domain, *send_domain;
-  struct dhcp_context *context;
+  struct DhcpContext *context;
   struct in6_addr *link_address, *fallback, *ll_addr, *ula_addr;
   unsigned int xid, fqdn_flags;
   char *iface_name;
@@ -45,22 +45,22 @@ static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, c
 static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize);
 static void *opt6_next(void *opts, void *end);
 static unsigned int opt6_uint(unsigned char *opt, int offset, int size);
-static void get_context_tag(struct state *state, struct dhcp_context *context);
+static void get_context_tag(struct state *state, struct DhcpContext *context);
 static int check_ia(struct state *state, void *opt, void **endp, void **ia_option);
 static int build_ia(struct state *state, int *t1cntr);
 static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz);
 #ifdef OPTION6_PREFIX_CLASS
-static struct prefix_class *prefix_class_from_context(struct dhcp_context *context);
+static struct prefix_class *prefix_class_from_context(struct DhcpContext *context);
 #endif
 static void mark_context_used(struct state *state, struct in6_addr *addr);
-static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr);
+static void mark_config_used(struct DhcpContext *context, struct in6_addr *addr);
 static int check_address(struct state *state, struct in6_addr *addr);
-static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
+static void add_address(struct state *state, struct DhcpContext *context, unsigned int lease_time, void *ia_option,
 			unsigned int *min_time, struct in6_addr *addr, time_t now);
-static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now);
-static int add_local_addrs(struct dhcp_context *context);
+static void update_leases(struct state *state, struct DhcpContext *context, struct in6_addr *addr, unsigned int lease_time, time_t now);
+static int add_local_addrs(struct DhcpContext *context);
 static struct dhcp_netid *add_options(struct state *state, int do_refresh);
-static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
+static void calculate_times(struct DhcpContext *context, unsigned int *min_time, unsigned int *valid_timep,
 			    unsigned int *preferred_timep, unsigned int lease_time);
 
 #define opt6_len(opt) ((int)(opt6_uint(opt, -2, 2)))
@@ -72,7 +72,7 @@ static void calculate_times(struct dhcp_context *context, unsigned int *min_time
 #define opt6_user_vendor_next(opt, end) (opt6_next(((void *) opt) - 2, end))
  
 
-unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *iface_name,
+unsigned short dhcp6_reply(struct DhcpContext *context, int interface, char *iface_name,
 			   struct in6_addr *fallback,  struct in6_addr *ll_addr, struct in6_addr *ula_addr,
 			   size_t sz, struct in6_addr *client_addr, time_t now)
 {
@@ -133,7 +133,7 @@ static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz,
 	get_client_mac(client_addr, state->interface, state->mac, &state->mac_len, &state->mac_type, now);
       else
 	{
-	  struct dhcp_context *c;
+	  struct DhcpContext *c;
 	  state->context = nullptr;
 	   
 	  if (!IN6_IS_ADDR_LOOPBACK(state->link_address) &&
@@ -249,7 +249,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
   struct dhcp_netid known_id, iface_id, v6_id;
   unsigned char *outmsgtypep;
   struct dhcp_vendor *vendor;
-  struct dhcp_context *context_tmp;
+  struct DhcpContext *context_tmp;
   struct dhcp_mac *mac_opt;
   unsigned int ignore = 0;
 #ifdef OPTION6_PREFIX_CLASS
@@ -630,7 +630,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
       	int address_assigned = 0;
 	/* tags without all prefix-class tags */
 	struct dhcp_netid *solicit_tags;
-	struct dhcp_context *c;
+	struct DhcpContext *c;
 	
 	*outmsgtypep = DHCP6ADVERTISE;
 	
@@ -666,7 +666,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	    /* set unless we're sending a particular prefix-class, when we
 	       want only dhcp-ranges with the correct tags set and not those without any tags. */
 	    int plain_range = 1;
-	    u32 lease_time;
+	    uint32_t lease_time;
 	    struct dhcp_lease *ltmp;
 	    struct in6_addr req_addr, addr;
 	    
@@ -922,7 +922,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	    for (; ia_option; ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
 	      {
 		struct in6_addr req_addr;
-		struct dhcp_context *dynamic, *c;
+		struct DhcpContext *dynamic, *c;
 		unsigned int lease_time;
 		struct in6_addr addr;
 		int config_ok = 0;
@@ -1032,7 +1032,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		unsigned int preferred_time =  opt6_uint(ia_option, 16, 4);
 		unsigned int valid_time =  opt6_uint(ia_option, 20, 4);
 		char *message = nullptr;
-		struct dhcp_context *this_context;
+		struct DhcpContext *this_context;
 
 		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ); 
 		
@@ -1440,7 +1440,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
 
   if (state->context && !done_refresh)
     {
-      struct dhcp_context *c;
+      struct DhcpContext *c;
       unsigned int lease_time = 0xffffffff;
       
       /* Find the smallest lease tie of all contexts,
@@ -1564,7 +1564,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
   return tagif;
 }
  
-static int add_local_addrs(struct dhcp_context *context)
+static int add_local_addrs(struct DhcpContext *context)
 {
   int done = 0;
   
@@ -1572,7 +1572,7 @@ static int add_local_addrs(struct dhcp_context *context)
     if ((context->flags & CONTEXT_USED) && !IN6_IS_ADDR_UNSPECIFIED(&context->local6))
       {
 	/* squash duplicates */
-	struct dhcp_context *c;
+	struct DhcpContext *c;
 	for (c = context->current; c; c = c->current)
 	  if ((c->flags & CONTEXT_USED) &&
 	      IN6_ARE_ADDR_EQUAL(&context->local6, &c->local6))
@@ -1589,7 +1589,7 @@ static int add_local_addrs(struct dhcp_context *context)
 }
 
 
-static void get_context_tag(struct state *state, struct dhcp_context *context)
+static void get_context_tag(struct state *state, struct DhcpContext *context)
 {
   /* get tags from context if we've not used it before */
   if (context->netid.next == &context->netid && context->netid.net)
@@ -1610,7 +1610,7 @@ static void get_context_tag(struct state *state, struct dhcp_context *context)
 } 
 
 #ifdef OPTION6_PREFIX_CLASS
-static struct prefix_class *prefix_class_from_context(struct dhcp_context *context)
+static struct prefix_class *prefix_class_from_context(struct DhcpContext *context)
 {
   struct prefix_class *p;
   struct dhcp_netid *t;
@@ -1689,7 +1689,7 @@ static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz)
     }	
 }
 
-static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
+static void add_address(struct state *state, struct DhcpContext *context, unsigned int lease_time, void *ia_option,
 			unsigned int *min_time, struct in6_addr *addr, time_t now)
 {
   unsigned int valid_time = 0, preferred_time = 0;
@@ -1750,7 +1750,7 @@ static void add_address(struct state *state, struct dhcp_context *context, unsig
 
 static void mark_context_used(struct state *state, struct in6_addr *addr)
 {
-  struct dhcp_context *context;
+  struct DhcpContext *context;
 
   /* Mark that we have an address for this prefix. */
 #ifdef OPTION6_PREFIX_CLASS
@@ -1765,7 +1765,7 @@ static void mark_context_used(struct state *state, struct in6_addr *addr)
 #endif
 }
 
-static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr)
+static void mark_config_used(struct DhcpContext *context, struct in6_addr *addr)
 {
   for (; context; context = context->current)
     if (is_same_net6(addr, &context->start6, context->prefix))
@@ -1805,7 +1805,7 @@ static int check_address(struct state *state, struct in6_addr *addr)
    *min_time - smallest valid time sent so far, to calculate T1 and T2.
    
    */
-static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
+static void calculate_times(struct DhcpContext *context, unsigned int *min_time, unsigned int *valid_timep,
 			    unsigned int *preferred_timep, unsigned int lease_time)
 {
   unsigned int req_preferred = *preferred_timep, req_valid = *valid_timep;
@@ -1852,7 +1852,7 @@ static void calculate_times(struct dhcp_context *context, unsigned int *min_time
   *preferred_timep = preferred_time;
 }
 
-static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now)
+static void update_leases(struct state *state, struct DhcpContext *context, struct in6_addr *addr, unsigned int lease_time, time_t now)
 {
   struct dhcp_lease *lease = lease6_find_by_addr(addr, 128, 0);
 #ifdef HAVE_SCRIPT
@@ -2061,7 +2061,7 @@ static void log6_packet(struct state *state, char *type, struct in6_addr *addr, 
 
 static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize)
 {
-  u16 opt, opt_len;
+  uint16_t opt, opt_len;
   void *start;
   
   if (!opts)
@@ -2088,7 +2088,7 @@ static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int
 
 static void *opt6_next(void *opts, void *end)
 {
-  u16 opt_len;
+  uint16_t opt_len;
   
   if (end - opts < 4) 
     return nullptr;
@@ -2116,7 +2116,7 @@ static unsigned int opt6_uint(unsigned char *opt, int offset, int size)
 } 
 
 void relay_upstream6(struct dhcp_relay *relay, ssize_t sz, 
-		     struct in6_addr *peer_address, u32 scope_id, time_t now)
+		     struct in6_addr *peer_address, uint32_t scope_id, time_t now)
 {
   /* ->local is same value for all relays on ->current chain */
   
