@@ -337,7 +337,7 @@ struct complete_context6_args {
     int prefix;
     int scope;
     int if_index;
-    
+
 };
 
 static int
