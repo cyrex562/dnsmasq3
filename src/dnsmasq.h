@@ -2084,8 +2084,10 @@ void route_sock(void);
 #endif
 
 /* bpf.c or netlink.c */
+using callback_t = int(*)(struct in_addr*, int, int, int, int, int, int, void*);
+
 int
-iface_enumerate(int family, void* parm, int (callback)());
+iface_enumerate(int family, void* parm, callback_t callback);
 
 /* dbus.c */
 #ifdef HAVE_DBUS
