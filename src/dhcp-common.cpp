@@ -367,7 +367,7 @@ void dhcp_update_configs(struct dhcp_config *configs)
      restore the status-quo ante first. */
   
   struct dhcp_config *config, *conf_tmp;
-  struct crec *crec;
+  struct Crec *crec;
   int prot = AF_INET;
 
   for (config = configs; config; config = config->next)
