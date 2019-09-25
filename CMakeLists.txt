@@ -2,8 +2,13 @@ cmake_minimum_required(VERSION 3.14)
 project(dnsmasq3)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD 11)
 
-include_directories(src)
+add_subdirectory(fmt)
+
+add_subdirectory(spdlog)
+
+include_directories(src spdlog/include fmt/include)
 
 add_executable(dnsmasq3
         src/arp.cpp
@@ -53,3 +58,12 @@ add_executable(dnsmasq3
         src/tftp.cpp
         src/ubus.cpp
         src/util.cpp src/dnsmasq_sys.h)
+
+target_include_directories(dnsmasq3 PUBLIC fmt/include)
+target_include_directories(dnsmasq3 PUBLIC spdlog/include)
+target_link_libraries(dnsmasq3 fmt)
+target_link_libraries(dnsmasq3 spdlog)
+
+#
+# END OF FILE
+#

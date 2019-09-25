@@ -595,7 +595,7 @@ int extract_addresses(struct dns_header* header, size_t qlen, char* name, time_t
 
     for (i = ntohs(header->qdcount); i!=0; i--) {
         int found = 0, cname_count = CNAME_CHAIN;
-        struct crec* cpp = nullptr;
+        struct Crec* cpp = nullptr;
         int flags = RCODE(header)==NXDOMAIN ? F_NXDOMAIN : 0;
 #ifdef HAVE_DNSSEC
         int cname_short = 0;
@@ -692,7 +692,7 @@ int extract_addresses(struct dns_header* header, size_t qlen, char* name, time_t
         }
         else {
             /* everything other than PTR */
-            struct crec* newc;
+            struct Crec* newc;
             int addrlen;
 
             if (qtype==T_A) {
@@ -1179,7 +1179,7 @@ int add_resource_record(struct dns_header* header, char* limit, int* truncp, int
 #undef CHECK_LIMIT
 }
 
-static unsigned long crec_ttl(struct crec* crecp, time_t now)
+static unsigned long crec_ttl(struct Crec* crecp, time_t now)
 {
     /* Return 0 ttl for DHCP entries, which might change
        before the lease expires, unless configured otherwise. */
@@ -1218,7 +1218,7 @@ size_t answer_request(struct dns_header* header, char* limit, size_t qlen,
     uint16_t flag;
     int q, ans, anscount = 0, addncount = 0;
     int dryrun = 0;
-    struct crec* crecp;
+    struct Crec* crecp;
     int nxdomain = 0, auth = 1, trunc = 0, sec_data = 1;
     struct mx_srv_record* rec;
     size_t len;
@@ -1555,7 +1555,7 @@ size_t answer_request(struct dns_header* header, char* limit, size_t qlen,
                     /* See if a putative address is on the network from which we received
                        the query, is so we'll filter other answers. */
                     if (local_addr.s_addr!=0 && option_bool(OPT_LOCALISE) && flag==F_IPV4) {
-                        struct crec* save = crecp;
+                        struct Crec* save = crecp;
                         do {
                             if ((crecp->flags & F_HOSTS) &&
                                     is_same_net(*((struct in_addr*) &crecp->addr), local_addr, local_netmask)) {

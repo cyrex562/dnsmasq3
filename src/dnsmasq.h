@@ -1,15 +1,15 @@
 /* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; version 2 dated June, 1991, or
    (at your option) version 3 dated 29 June, 2007.
- 
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-     
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -36,7 +36,7 @@
 #  ifndef __ANDROID__
 #      define _GNU_SOURCE
 #  endif
-#  include <features.h> 
+#  include <features.h>
 #endif
 
 /* Need these defined early */
@@ -75,7 +75,7 @@
 #endif
 
 /* Also needed before config.h. */
-#include <getopt.h>
+// #include <getopt.h>
 
 #include "config.h"
 #include "ip6addr.h"
@@ -102,7 +102,7 @@
 #  define _(S) (S)
 #else
 #  include <libintl.h>
-#  include <locale.h>   
+#  include <locale.h>
 #  define _(S) gettext(S)
 #endif
 
@@ -121,9 +121,10 @@
 #ifdef __linux__
 #include <sys/poll.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #endif
 
-#include <sys/time.h>
+
 
 #ifdef __linux__
 #include <sys/un.h>
@@ -139,7 +140,10 @@
 #  define ifr_mtu  ifr_ifru.ifru_metric
 #endif
 
+#ifdef __linux__
 #include <unistd.h>
+#endif
+
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -177,9 +181,10 @@
 #include <netinet/ip_icmp.h>
 #include <sys/uio.h>
 #include <syslog.h>
+#include <dirent.h>
 #endif
 
-#include <dirent.h>
+
 
 #ifndef HAVE_LINUX_NETWORK
 #ifdef __linux__
@@ -189,7 +194,7 @@
 
 #if defined(HAVE_LINUX_NETWORK)
 #include <linux/capability.h>
-/* There doesn't seem to be a universally-available 
+/* There doesn't seem to be a universally-available
    userspace header for these. */
 extern int capset(cap_user_header_t header, cap_user_data_t data);
 extern int capget(cap_user_header_t header, cap_user_data_t data);
@@ -318,7 +323,7 @@ struct event_desc {
 #define OPT_UBUS           58
 #define OPT_LAST           59
 
-/* extra flags for my_syslog, we use a couple of facilities since they are known 
+/* extra flags for my_syslog, we use a couple of facilities since they are known
    not to occupy the same bits as priorities, no matter how syslog.h is set up. */
 #define MS_TFTP   LOG_USER
 #define MS_DHCP   LOG_DAEMON
@@ -464,16 +469,16 @@ struct blockdata {
     unsigned char key[KEYBLOCK_LEN];
 };
 
-struct crec {
-    struct crec* hash_next;
-    struct crec* prev;
-    struct crec* next;
+struct Crec {
+    struct Crec* hash_next;
+    struct Crec* prev;
+    struct Crec* next;
     /* union is 16 bytes when doing IPv6, 8 bytes on 32 bit machines without IPv6 */
     union {
         struct all_addr addr;
         struct {
             union {
-                struct crec* cache;
+                struct Crec* cache;
                 struct interface_name* int_name;
             } target;
             uint32_t uid; /* 0 if union is interface-name */
@@ -1056,7 +1061,7 @@ struct DhcpRelay {
 };
 
 extern struct daemon {
-    /* datastuctures representing the command-line and 
+    /* datastuctures representing the command-line and
        config file arguments. All set (including defaults)
        in option.c */
 
@@ -1229,7 +1234,7 @@ extern struct daemon {
 /* cache.c */
 void cache_init(void);
 
-void next_uid(struct crec* crecp);
+void next_uid(struct Crec* crecp);
 
 void log_query(uint32_t flags, char* name, struct all_addr* addr, char* arg);
 
@@ -1239,18 +1244,18 @@ char* querystr(char* desc, uint16_t type);
 
 int cache_find_non_terminal(char* name, time_t now);
 
-struct crec* cache_find_by_addr(struct crec* crecp,
+struct Crec* cache_find_by_addr(struct Crec* crecp,
         struct all_addr* addr, time_t now,
         uint32_t prot);
 
-struct crec* cache_find_by_name(struct crec* crecp,
+struct Crec* cache_find_by_name(struct Crec* crecp,
         char* name, time_t now, uint32_t prot);
 
 void cache_end_insert(void);
 
 void cache_start_insert(void);
 
-struct crec* cache_insert(char* name, struct all_addr* addr,
+struct Crec* cache_insert(char* name, struct all_addr* addr,
         time_t now, unsigned long ttl, uint16_t flags);
 
 void cache_reload(void);
@@ -1269,14 +1274,14 @@ int cache_make_stat(struct txt_record* t);
 
 #endif
 
-char* cache_get_name(struct crec* crecp);
+char* cache_get_name(struct Crec* crecp);
 
-char* cache_get_cname_target(struct crec* crecp);
+char* cache_get_cname_target(struct Crec* crecp);
 
-struct crec* cache_enumerate(int init);
+struct Crec* cache_enumerate(int init);
 
 int read_hostsfile(char* filename, uint32_t index, int cache_size,
-        struct crec** rhash, int hashsz);
+        struct Crec** rhash, int hashsz);
 
 /* blockdata.c */
 #ifdef HAVE_DNSSEC
@@ -1616,7 +1621,7 @@ struct dhcp_lease* lease4_allocate(struct in_addr addr);
 
 #ifdef HAVE_DHCP6
 struct dhcp_lease *lease6_allocate(struct in6_addr *addrp, int lease_type);
-struct dhcp_lease *lease6_find(unsigned char *clid, int clid_len, 
+struct dhcp_lease *lease6_find(unsigned char *clid, int clid_len,
                    int lease_type, int iaid, struct in6_addr *addr);
 void lease6_reset(void);
 struct dhcp_lease *lease6_find_by_client(struct dhcp_lease *first, int lease_type, unsigned char *clid, int clid_len, int iaid);
@@ -1785,19 +1790,19 @@ void dhcp6_packet(time_t now);
 struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned char *clid, int clid_len, int temp_addr,
                        int iaid, int serial, struct dhcp_netid *netids, int plain_range, struct in6_addr *ans);
 int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr);
-struct dhcp_context *address6_available(struct dhcp_context *context, 
+struct dhcp_context *address6_available(struct dhcp_context *context,
                     struct in6_addr *taddr,
                     struct dhcp_netid *netids,
                     int plain_range);
-struct dhcp_context *address6_valid(struct dhcp_context *context, 
+struct dhcp_context *address6_valid(struct dhcp_context *context,
                     struct in6_addr *taddr,
                     struct dhcp_netid *netids,
                     int plain_range);
-struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct in6_addr *net, 
+struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct in6_addr *net,
                         int prefix, uint64_t addr);
 void make_duid(time_t now);
 void dhcp_construct_contexts(time_t now);
-void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, 
+void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac,
             uint32_t *maclenp, uint32_t *mactypep, time_t now);
 #endif
 
@@ -1806,7 +1811,7 @@ void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac,
 uint16_t dhcp6_reply(struct dhcp_context *context, int interface, char *iface_name,
                struct in6_addr *fallback, struct in6_addr *ll_addr, struct in6_addr *ula_addr,
                size_t sz, struct in6_addr *client_addr, time_t now);
-void relay_upstream6(struct dhcp_relay *relay, ssize_t sz, struct in6_addr *peer_address, 
+void relay_upstream6(struct dhcp_relay *relay, ssize_t sz, struct in6_addr *peer_address,
              uint32_t scope_id, time_t now);
 
 uint16_t relay_reply6( struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface);

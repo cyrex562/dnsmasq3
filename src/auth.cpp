@@ -103,7 +103,7 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
     int qtype, qclass, rc;
     int nameoffset, axfroffset = 0;
     int q, anscount = 0, authcount = 0;
-    struct crec* crecp;
+    struct Crec* crecp;
     int auth = !local_query, trunc = 0, nxdomain = 1, soa = 0, ns = 0, axfr = 0;
     struct auth_zone* zone = nullptr;
     struct addrlist* subnet = nullptr;
