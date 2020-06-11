@@ -1,0 +1,32 @@
+[package]
+name = "pt_controller"
+version = "0.1.0"
+authors = ["Josh M. <jm@5thcol.tech>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "pt_controller"
+path = "src/main.rs"
+
+[lib]
+name = "pt_controller"
+path = "src/lib.rs"
+
+[dependencies]
+tonic = "^0.2"
+prost = "^0.6"
+tokio = { version = "^0.2", features = ["full"]}
+futures = { version = "0.3"}
+async-stream = "0.2"
+tower = "0.3"
+pt_grpc = { path = "../pt_grpc"}
+pt_util = { path = "../pt_util"}
+redis = "*"
+fern = {version = "*", features = ["syslog-4"]}
+log = "*"
+chrono = "*"
+syslog = "*"
+function_name = "*"
+dotenv = "*"

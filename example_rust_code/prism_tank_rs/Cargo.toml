@@ -1,0 +1,9 @@
+[workspace]
+
+members = [
+    "pt_grpc",
+    "pt_util",
+    "pt_controller",
+    "pt_host_agent",
+    "pt_tests"
+]

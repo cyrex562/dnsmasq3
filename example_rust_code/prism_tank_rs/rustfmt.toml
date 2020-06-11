@@ -1,0 +1,14 @@
+blank_lines_upper_bound=2
+color = "Always"
+edition = "2018"
+fn_args_layout = "Vertical"
+force_multiline_blocks = true
+format_strings = true
+indent_style = "Visual"
+merge_imports = true
+normalize_comments = true
+normalize_doc_attributes = true
+reorder_impl_items = true
+reorder_imports = true
+reorder_modules = true
+wrap_comments = true

@@ -1,0 +1,20 @@
+{
+    "protoc": {
+        "path": "/home/joshm/.local/bin/protoc",
+        "compile_on_save": false,
+        
+    },
+    "cSpell.words": [
+        "INTVL",
+        "Uuid",
+        "curr",
+        "grpc",
+        "hmset",
+        "hset",
+        "lrem",
+        "res",
+        "syslog",
+        "unreg",
+        "unregister"
+    ]
+}

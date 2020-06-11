@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package prism_tank_grpc;
+
+import "pt_common.proto";
+
+service PtHostAgent {
+    rpc Echo(EchoRequest) returns (EchoReply) {}
+
+    rpc GetHostname(GetHostnameRequest) returns (GetHostnameReply) {}
+}
+
+
+
+message GetHostnameRequest {
+}
+
+message GetHostnameReply {
+    string hostname = 1;
+    ResultCode result = 2;
+}
+

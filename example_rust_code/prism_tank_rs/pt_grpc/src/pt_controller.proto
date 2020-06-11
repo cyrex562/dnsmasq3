@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package prism_tank_grpc;
+
+import "pt_common.proto";
+
+service PtController {
+    rpc Echo(EchoRequest) returns (EchoReply) {}
+
+    rpc Register(RegisterRequest) returns (RegisterReply) {}
+
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
+
+    rpc Unregister(UnregisterRequest) returns (UnregisterReply) {}
+
+}
+
+message RegisterRequest {
+    string host_agent_id = 1;
+    string host_agent_address = 2;
+}
+
+message RegisterReply {
+    ResultCode result = 1;
+}
+
+message HeartbeatRequest {
+    string host_agent_id = 1;
+}
+
+message HeartbeatReply {
+    ResultCode result = 1;
+}
+
+message UnregisterRequest {
+    string host_agent_id = 1;
+}
+
+message UnregisterReply {
+    ResultCode result = 1;
+}
