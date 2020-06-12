@@ -155,7 +155,7 @@ pub struct Cname {
 }
 
 #[derive(Debug, Clone)]
-struct ds_config {
+pub struct DsConfig {
     // char* name, * digest;
     name: String,
     digest: String,
@@ -167,11 +167,181 @@ struct ds_config {
     digest_type: i32
     // struct ds_config* next;
     // TODO: use vec to represent next field
+}
+
+#[derive(Debug, Clone)]
+pub struct AddrList {
+    // struct all_addr addr;
+    addr: AllAddr,
+    // int flags, prefixlen;
+    flags: i32,
+    prefixlen: i32,
+    // struct addrlist* next;
+    // TODO: use vec to represent next field
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthNameList {
+    name: String,
+    flags: i32,
+    // TODO: next field replace with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthZone {
+    // char* domain;
+    domain: String,
+    // struct auth_name_list {
+    //     char* name;
+    //     int flags;
+    //     struct auth_name_list* next;
+    // } * interface_names;
+    interface_names: Vec<AuthNameList>,
+    // struct addrlist* subnet;
+    subnet: Vec<AddrList>,
+    // struct addrlist* exclude;
+    exclude: Vec<AddrList>,
+    // struct auth_zone* next;
+    // TODO: replace next field with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct NameList {
+    // char* name;
+    name: String,
+    // struct name_list* next;
+    // TODO: replace next field with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct HostRecord {
+    // int ttl;
+    ttl: i32,
+    // name_list* names;
+    names: Vec<NameList>,
+    // struct in_addr addr;
+    addr: DmqInAddr,
+    // struct in6_addr addr6;
+    addr6: DmqIn6Addr,
+    // struct host_record* next;
+    // TODO: replace next field with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct InterfaceName {
+    // char* name; /* domain name */
+    name: String,
+    // char* intr; /* interface name */
+    intr: String,
+    // int family; /* AF_INET, AF_INET6 or zero for both */
+    family: i32,
+    // struct addrlist* addr;
+    addr: Vec<AddrList>,
+    // struct interface_name* next;
+    // TODO: replace next field with vec
+}
+
+// #define MAXDNAME	1025
+const MAXDNAME: usize = 1025;
+
+// union bigname {
+//     // char name[MAXDNAME];
+//     name: [u8;MAXDNAME]
+//     union bigname* next; /* freelist */
+// };
+// TODO: create custom impl for Debug and Clone operations
+pub struct Bigname {
+    name: [u8;MAXDNAME],
+    // TODO: replace next field with vec
+}
+
+// #define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
+const KEYBLOCK_LEN: usize = 40;
+
+// TODO: create custom impl for Debug, Copy, and Clone operations
+pub struct Blockdata {
+    // struct blockdata* next;
+    // TODO: replace next field with vec
+    // unsigned char key[KEYBLOCK_LEN];
+    key: [u8;KEYBLOCK_LEN],
+}
+
+#[derive(Debug,Clone,Copy)]
+pub union CrecAddrCnameTarget {
+    // TODO: figure out how to replace crec ptr var cache
+    // struct crec* cache;
+    int_name: InterfaceName,
+}
+
+#[derive(Debug,Clone,Copy)]
+pub struct CrecAddrCname {
+    target: CrecAddrCnameTarget,
+    // uint32_t uid; /* 0 if union is interface-name */
+    uid: u32,
+}
+
+
+#[derive(Debug,Clone,Copy)]
+pub struct CrecAddrKey {
+    // struct blockdata* keydata;
+    keydata: Blockdata,
+    // uint16_t keylen, flags, keytag;
+    keylen: u16,
+    flags: u16,
+    keytag: u16,
+    // unsigned char algo;
+    algo: u8,
+}
+
+#[derive(Debug,Clone,Copy)]
+pub struct {
+    struct blockdata* keydata;
+    uint16_t keylen, keytag;
+    unsigned char algo;
+    unsigned char digest;
+} ds;
+
+#[derive(Debug,Clone,Copy)]
+pub union CrecAddr {
+    // struct all_addr addr;
+    addr: AllAddr,
+    cname: CrecAddrCname,
+    key: CrecAddrKey,
+    ds: 
+} 
+
+pub struct crec {
+    // TODO: replace ptr fields with vec usage
+    // struct crec* hash_next;
+    // struct crec* prev;
+    // struct crec* next;
+    /* union is 16 bytes when doing IPv6, 8 bytes on 32 bit machines without IPv6 */
+    addr: CrecAddr,
+    time_t ttd; /* time to die */
+    /* used as class if DNSKEY/DS, index to source for F_HOSTS */
+    uint32_t uid;
+    uint16_t flags;
+    union {
+        char sname[SMALLDNAME];
+        union bigname* bname;
+        char* namep;
+    } name;
 };
 
+
+
+
+// #define AUTH6     1
+const AUTH6: i32 = 1;
+// #define AUTH4     2
+const AUTH4: i32 = 2;
+
 // #define ADDRLIST_LITERAL 1
+const ADDRLIST_LITERAL: i32 = 1;
 // #define ADDRLIST_IPV6    2
+const ADDRLIST_IPV6: i32 = 2;
 // #define ADDRLIST_REVONLY 4
+const ADDRLIST_REVONLY: i32 = 3;
 
 
 // #define TXT_STAT_CACHESIZE     1
