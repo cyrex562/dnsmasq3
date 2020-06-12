@@ -2,12 +2,12 @@ mod util;
 
 use log::{debug, error, info};
 
-type dmq_pid_t = i32;
-type dmq_in_addr_t = u32;
+type DmqPidT = i32;
+type DmqInAddrT = u32;
 
 #[derive(Debug,Copy,Clone)]
 pub struct DmqInAddr {
-    pub s_addr: dmq_in_addr_t,
+    pub s_addr: DmqInAddrT,
 }
 
 #[derive(Debug,Copy,Clone)]
@@ -16,12 +16,12 @@ pub struct DmqIn6Addr {
 }
 
 #[derive(Debug,Copy,Clone)]
-pub struct dnsmasq_daemon {
+pub struct DnsmasqDaemon {
 
 }
 
 #[derive(Debug,Copy,Clone)]
-pub struct event_desc {
+pub struct EventDesc {
     msg_sz: i32,
     event: i32,
     data: i32,
@@ -67,6 +67,128 @@ impl std::fmt::Debug for AddrUnion {
 pub struct AllAddr {
     addr: AddrUnion,
 }
+
+// struct bogus_addr {
+//     struct in_addr addr;
+//     struct bogus_addr* next;
+// };
+// TODO: replace bogus_addr with vec of InAddr
+pub struct BogusAddr {
+    addr: DmqInAddr,
+    // todo: replace next field with vec
+}
+
+/* dns doctor param */
+pub struct doctor {
+    // struct in_addr in, end, out, mask;
+    in_addr: DmqInAddr,
+    end_addr: DmqInAddr,
+    out_addr: DmqInAddr,
+    mask_addr: DmqInAddr,
+    // struct doctor* next;
+    // TODO: replace next field with vec
+}
+
+pub struct mx_srv_record {
+    // char* name, * target;
+    name: String,
+    target: String,
+    // int issrv, srvport, priority, weight;
+    issrv: i32,
+    srv_port: i32,
+    priority: i32,
+    weight: i32,
+    // uint32_t offset;
+    offset: u32,
+    // struct mx_srv_record* next;
+    // TODO: replace next with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct Naptr {
+    // char* name, * replace, * regexp, * services, * flags;
+    name: String,
+    replace: String, 
+    regexp: String, 
+    services: String,
+    // uint32_t order, pref;
+    order: u32,
+    pref: u32,
+    // struct naptr* next;
+    // TODO: replace next field with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct TxtRecord {
+    //char* name;
+    name: String,
+    // unsigned char* txt;
+    txt: String,
+    // uint16_t _class, len;
+    _class: u16,
+    len: u16,
+    // int stat;
+    stat: u32,
+    // struct txt_record* next;
+    // TODO: replace next field with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct PtrRecord {
+    // char* name, * ptr;
+    name: String,
+    ptr: String,
+    // struct ptr_record* next;
+    // TODO: replace next field with vec
+}
+
+#[derive(Debug, Clone)]
+pub struct Cname {
+    // int ttl, flag;
+    ttl: i32,
+    flag: i32,
+    // char* alias, * target;
+    alias: String,
+    target: String,
+    // struct cname* next, * targetp;
+    // TODO: use vec or something else to represent next and targetp
+}
+
+#[derive(Debug, Clone)]
+struct ds_config {
+    // char* name, * digest;
+    name: String,
+    digest: String,
+    // int digestlen, _class , algo, keytag, digest_type;
+    digest_len: i32,
+    _class: i32,
+    algo: i32,
+    keytag: i32,
+    digest_type: i32
+    // struct ds_config* next;
+    // TODO: use vec to represent next field
+};
+
+// #define ADDRLIST_LITERAL 1
+// #define ADDRLIST_IPV6    2
+// #define ADDRLIST_REVONLY 4
+
+
+// #define TXT_STAT_CACHESIZE     1
+const TXT_STAT_CACHESIZE: i32 = 1;
+// #define TXT_STAT_INSERTS       2
+const TXT_STAT_INSERTS: i32 = 2;
+// #define TXT_STAT_EVICTIONS     3
+const TXT_STAT_EVICTIONS: i32 = 3;
+// #define TXT_STAT_MISSES        4
+const TXT_STAT_MISSES: i32 = 4;
+// #define TXT_STAT_HITS          5
+const TXT_STAT_HITS: i32 = 5;
+// #define TXT_STAT_AUTH          6
+const TXT_STAT_AUTH: i32 = 6;
+// #define TXT_STAT_SERVERS       7
+const TXT_STAT_SERVERS: i32 = 7;
+
 
 const EVENT_RELOAD: i32 = 1;
 const EVENT_DUMP: i32 = 2;
