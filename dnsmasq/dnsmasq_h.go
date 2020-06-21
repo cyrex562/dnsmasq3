@@ -1,23 +1,24 @@
 /* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; version 2 dated June, 1991, or
    (at your option) version 3 dated 29 June, 2007.
- 
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-     
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+package dnsmasq
+
 // #pragma once
 
 // const COPYRIGHT :u32 = ;"Copyright (c) 2000-2018 Simon Kelley"
-
-
 
 /* We do defines that influence behavior of stdio.h, so complain
    if included too early. */
@@ -83,6 +84,9 @@
 // /* Also needed before config.h. */
 // #include <getopt.h>
 
+// #include "config.h"
+// #include "ip6addr.h"
+// #include "metrics.h"
 
 // const countof :u32 = ;(x)      (long)(sizeof(x) / sizeof(x[0]))
 // TODO: define or replace
@@ -90,7 +94,13 @@
 //const MIN :u32 = ;(a, b)        ((a) < (b) ? (a) : (b))
 // TODO: define or replace
 
+// #include "dns-protocol.h"
+// #include "dhcp-protocol.h"
 
+// #ifdef HAVE_DHCP6
+
+// #include "dhcp6-protocol.h"
+// #include "radv-protocol.h"
 
 // #endif
 
@@ -99,7 +109,7 @@
 // #  define _(S) (S)
 // #else
 // #  include <libintl.h>
-// #  include <locale.h>   
+// #  include <locale.h>
 // #  define _(S) gettext(S)
 // #endif
 
@@ -211,16 +221,16 @@
 /* There doesn't seem to be a universally-available
    userspace header for these. */
 // TODO: replace
-   // extern int
+// extern int
 // capset(cap_user_header_t header, cap_user_data_t data);
 
 // TODO: replace
 // extern int
 // capget(cap_user_header_t header, cap_user_data_t data);
 
-const LINUX_CAPABILITY_VERSION_1: u32 = 0x19980330;
-const LINUX_CAPABILITY_VERSION_2: u32 = 0x20071026;
-const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
+const LINUX_CAPABILITY_VERSION_1 = 0x19980330
+const LINUX_CAPABILITY_VERSION_2 = 0x20071026
+const LINUX_CAPABILITY_VERSION_3 = 0x20080522
 
 // #include <sys/prctl.h>
 
@@ -232,342 +242,342 @@ const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
 // #  include <nettle/nettle-meta.h>
 // #endif
 
-
+// #include "dnsmasq_sys.h"
 
 /* daemon is function in the C library.... */
 // const daemon :u32 = ;dnsmasq_daemon
 
 /* Async event queue */
-struct event_desc {
-    msg_sz: i32,
-    event: i32,
-    data: i32,
+type event_desc struct {
+	msg_sz uint32
+	event  uint32
+	data   uint32
 }
 
-const EVENT_RELOAD: u32 =     1;
-const EVENT_DUMP: u32 =      2;
-const EVENT_ALARM: u32 =     3;
-const EVENT_TERM: u32 =       4;
-const EVENT_CHILD: u32 =      5;
-const EVENT_REOPEN: u32 =    6;
-const EVENT_EXITED: u32 =     7;
-const EVENT_KILLED: u32 =    8;
-const EVENT_EXEC_ERR: u32 =   9;
-const EVENT_PIPE_ERR: u32 =   10;
-const EVENT_USER_ERR: u32 =  11;
-const EVENT_CAP_ERR: u32 =   12;
-const EVENT_PIDFILE: u32 =   13;
-const EVENT_HUSER_ERR: u32 = 14;
-const EVENT_GROUP_ERR: u32 = 15;
-const EVENT_DIE: u32 =       16;
-const EVENT_LOG_ERR: u32 =   17;
-const EVENT_FORK_ERR: u32 =  18;
-const EVENT_LUA_ERR: u32 =   19;
-const EVENT_TFTP_ERR: u32 =  20;
-const EVENT_INIT: u32 =      21;
-const EVENT_NEWADDR: u32 =   22;
-const EVENT_NEWROUTE: u32 =  23;
-const EVENT_TIME_ERR: u32 = 24;
-const EVENT_SCRIPT_LOG: u32 = 25;
-const EVENT_TIME: u32 =       26;
+const EVENT_RELOAD = 1
+const EVENT_DUMP = 2
+const EVENT_ALARM = 3
+const EVENT_TERM = 4
+const EVENT_CHILD = 5
+const EVENT_REOPEN = 6
+const EVENT_EXITED = 7
+const EVENT_KILLED = 8
+const EVENT_EXEC_ERR = 9
+const EVENT_PIPE_ERR = 10
+const EVENT_USER_ERR = 11
+const EVENT_CAP_ERR = 12
+const EVENT_PIDFILE = 13
+const EVENT_HUSER_ERR = 14
+const EVENT_GROUP_ERR = 15
+const EVENT_DIE = 16
+const EVENT_LOG_ERR = 17
+const EVENT_FORK_ERR = 18
+const EVENT_LUA_ERR = 19
+const EVENT_TFTP_ERR = 20
+const EVENT_INIT = 21
+const EVENT_NEWADDR = 22
+const EVENT_NEWROUTE = 23
+const EVENT_TIME_ERR = 24
+const EVENT_SCRIPT_LOG = 25
+const EVENT_TIME = 26
 
 /* Exit codes. */
-const EC_GOOD: u32 =        0;
-const EC_BADCONF: u32 =     1;
-const EC_BADNET: u32 =      2;
-const EC_FILE: u32 =        3;
-const EC_NOMEM: u32 =       4;
-const EC_MISC: u32 =        5;
-const EC_INIT_OFFSET: u32 = 10;
+const EC_GOOD = 0
+const EC_BADCONF = 1
+const EC_BADNET = 2
+const EC_FILE = 3
+const EC_NOMEM = 4
+const EC_MISC = 5
+const EC_INIT_OFFSET = 10
 
 /* Trust the compiler dead-code eliminator.... */
 // const option_bool :u32 = ;(x) (((x) < 32) ? daemon->options & (1u << (x)) : daemon->options2 & (1u << ((x) - 32)))
 
-const OPT_BOGUSPRIV: u32    =  0;
-const OPT_FILTER: u32 =         1;
-const OPT_LOG: u32 =            2;
-const OPT_SELFMX: u32 =         3;
-const OPT_NO_HOSTS: u32 =       4;
-const OPT_NO_POLL: u32 =        5;
-const OPT_DEBUG: u32 =          6;
-const OPT_ORDER: u32 =          7;
-const OPT_NO_RESOLV: u32 =      8;
-const OPT_EXPAND: u32 =         9;
-const OPT_LOCALMX: u32 =        10;
-const OPT_NO_NEG: u32 =         11;
-const OPT_NODOTS_LOCAL: u32 =   12;
-const OPT_NOWILD: u32 =         13;
-const OPT_ETHERS: u32 =         14;
-const OPT_RESOLV_DOMAIN: u32 =  15;
-const OPT_NO_FORK: u32 =        16;
-const OPT_AUTHORITATIVE: u32 =  17;
-const OPT_LOCALISE :u32 = 18;
-const OPT_DBUS :u32 = 19;
-const OPT_DHCP_FQDN :u32 = 20;
-const OPT_NO_PING :u32 = 21;
-const OPT_LEASE_RO :u32 = 22;
-const OPT_ALL_SERVERS :u32 = 23;
-const OPT_RELOAD :u32 = 24;
-const OPT_LOCAL_REBIND :u32 = 25;
-const OPT_TFTP_SECURE :u32 = 26;
-const OPT_TFTP_NOBLOCK :u32 = 27;
-const OPT_LOG_OPTS :u32 = 28;
-const OPT_TFTP_APREF_IP :u32 = 29;
-const OPT_NO_OVERRIDE :u32 = 30;
-const OPT_NO_REBIND :u32 = 31;
-const OPT_ADD_MAC :u32 = 32;
-const OPT_DNSSEC_PROXY :u32 = 33;
-const OPT_CONSEC_ADDR :u32 = 34;
-const OPT_CONNTRACK :u32 = 35;
-const OPT_FQDN_UPDATE :u32 = 36;
-const OPT_RA :u32 = 37;
-const OPT_TFTP_LC :u32 = 38;
-const OPT_CLEVERBIND :u32 = 39;
-const OPT_TFTP :u32 = 40;
-const OPT_CLIENT_SUBNET :u32 = 41;
-const OPT_QUIET_DHCP :u32 = 42;
-const OPT_QUIET_DHCP6 :u32 = 43;
-const OPT_QUIET_RA :u32 = 44;
-const OPT_DNSSEC_VALID :u32 = 45;
-const OPT_DNSSEC_TIME :u32 = 46;
-const OPT_DNSSEC_DEBUG :u32 = 47;
-const OPT_DNSSEC_IGN_NS :u32 = 48;
-const OPT_LOCAL_SERVICE :u32 = 49;
-const OPT_LOOP_DETECT :u32 = 50;
-const OPT_EXTRALOG :u32 = 51;
-const OPT_TFTP_NO_FAIL :u32 = 52;
-const OPT_SCRIPT_ARP :u32 = 53;
-const OPT_MAC_B64 :u32 = 54;
-const OPT_MAC_HEX :u32 = 55;
-const OPT_TFTP_APREF_MAC :u32 = 56;
-const OPT_RAPID_COMMIT :u32 = 57;
-const OPT_UBUS :u32 = 58;
-const OPT_LAST :u32 = 59;
+const OPT_BOGUSPRIV = 0
+const OPT_FILTER = 1
+const OPT_LOG = 2
+const OPT_SELFMX = 3
+const OPT_NO_HOSTS = 4
+const OPT_NO_POLL = 5
+const OPT_DEBUG = 6
+const OPT_ORDER = 7
+const OPT_NO_RESOLV = 8
+const OPT_EXPAND = 9
+const OPT_LOCALMX = 10
+const OPT_NO_NEG = 11
+const OPT_NODOTS_LOCAL = 12
+const OPT_NOWILD = 13
+const OPT_ETHERS = 14
+const OPT_RESOLV_DOMAIN = 15
+const OPT_NO_FORK = 16
+const OPT_AUTHORITATIVE = 17
+const OPT_LOCALISE = 18
+const OPT_DBUS = 19
+const OPT_DHCP_FQDN = 20
+const OPT_NO_PING = 21
+const OPT_LEASE_RO = 22
+const OPT_ALL_SERVERS = 23
+const OPT_RELOAD = 24
+const OPT_LOCAL_REBIND = 25
+const OPT_TFTP_SECURE = 26
+const OPT_TFTP_NOBLOCK = 27
+const OPT_LOG_OPTS = 28
+const OPT_TFTP_APREF_IP = 29
+const OPT_NO_OVERRIDE = 30
+const OPT_NO_REBIND = 31
+const OPT_ADD_MAC = 32
+const OPT_DNSSEC_PROXY = 33
+const OPT_CONSEC_ADDR = 34
+const OPT_CONNTRACK = 35
+const OPT_FQDN_UPDATE = 36
+const OPT_RA = 37
+const OPT_TFTP_LC = 38
+const OPT_CLEVERBIND = 39
+const OPT_TFTP = 40
+const OPT_CLIENT_SUBNET = 41
+const OPT_QUIET_DHCP = 42
+const OPT_QUIET_DHCP6 = 43
+const OPT_QUIET_RA = 44
+const OPT_DNSSEC_VALID = 45
+const OPT_DNSSEC_TIME = 46
+const OPT_DNSSEC_DEBUG = 47
+const OPT_DNSSEC_IGN_NS = 48
+const OPT_LOCAL_SERVICE = 49
+const OPT_LOOP_DETECT = 50
+const OPT_EXTRALOG = 51
+const OPT_TFTP_NO_FAIL = 52
+const OPT_SCRIPT_ARP = 53
+const OPT_MAC_B64 = 54
+const OPT_MAC_HEX = 55
+const OPT_TFTP_APREF_MAC = 56
+const OPT_RAPID_COMMIT = 57
+const OPT_UBUS = 58
+const OPT_LAST = 59
 
-/* extra flags for my_syslog, we use a couple of facilities since they are known 
+/* extra flags for my_syslog, we use a couple of facilities since they are known
    not to occupy the same bits as priorities, no matter how syslog.h is set up. */
-const MS_TFTP :u32 = LOG_USER;
-const MS_DHCP :u32 = LOG_DAEMON;
-const MS_SCRIPT :u32 = LOG_MAIL;
+// TODO: define LOG_USER
+// const MS_TFTP = LOG_USER
+// TODO: define LOG_DAEMON
+// const MS_DHCP = LOG_DAEMON
+// TODO: define LOG_MAIL
+// const MS_SCRIPT = LOG_MAIL
 
-struct all_addr_log {
-    keytag: u16,
-    algo: u16,
-    digest: u16,
+type all_addr_log struct {
+	keytag uint16
+	algo   uint16
+	digest uint16
 }
 
-struct all_addr_rcode {
-    rcode: u32,
+type all_addr_rcode struct {
+	rcode uint32
 }
 
-struct all_addr_dnssec {
-    _class: u16,
-    _type: u16,
+type all_addr_dnssec struct {
+	_class uint16
+	_type  uint16
 }
 
-struct all_addr_addr {
-    addr4: in_addr,
-    addr6: in6_addr,
-    log: all_addr_log,
-    rcode: all_addr_rcode,
-    dnssec: all_addr_dnssec,
+type all_addr_addr struct {
+	addr4  in_addr
+	addr6  in6_addr
+	log    all_addr_log
+	rcode  all_addr_rcode
+	dnssec all_addr_dnssec
 }
 
-
-
-struct all_addr {
-    addr: all_addr_addr
+type all_addr struct {
+	addr all_addr_addr
 }
 
-struct bogus_addr {
-    addr: in_addr,
-    // next: &bogus_addr,;
+type bogus_addr struct {
+	addr in_addr
+	// next: &bogus_addr,;
 }
 
 /* dns doctor param */
-struct doctor {
-    _in: in_addr,
-    end: in_addr,
-    out: in_addr,
-    mask: in_addr,
-    // next: doctor*
+type doctor struct {
+	_in  in_addr
+	end  in_addr
+	out  in_addr
+	mask in_addr
+	// next: doctor*
 }
 
-struct mx_srv_record {
-    name: String,
-    target: String,
-    issrv: i32,
-    srvport: i32,
-    priority: i32,
-    weight: i32,
-    offset: u32,
-    // next: mx_srv_record
+type mx_srv_record struct {
+	name     string
+	target   string
+	issrv    int32
+	srvport  int32
+	priority int32
+	weight   int32
+	offset   uint
+	// next: mx_srv_record
 }
 
-struct naptr {
-    name: String,
-    replace: String,
-    regexp: String,
-    services: String,
-    flages: String,
-    pref: String,
-    order: String,
-    // next: naptr*
+type naptr struct {
+	name     string
+	replace  string
+	regexp   string
+	services string
+	flages   string
+	pref     string
+	order    string
+	// next: naptr*
 }
 
-const TXT_STAT_CACHESIZE :u32 = 1;
-const TXT_STAT_INSERTS :u32 = 2;
-const TXT_STAT_EVICTIONS :u32 = 3;
-const TXT_STAT_MISSES :u32 = 4;
-const TXT_STAT_HITS :u32 = 5;
-const TXT_STAT_AUTH :u32 = 6;
-const TXT_STAT_SERVERS :u32 = 7;
+const TXT_STAT_CACHESIZE = 1
+const TXT_STAT_INSERTS = 2
+const TXT_STAT_EVICTIONS = 3
+const TXT_STAT_MISSES = 4
+const TXT_STAT_HITS = 5
+const TXT_STAT_AUTH = 6
+const TXT_STAT_SERVERS = 7
 
-
-struct txt_record {
-    name: String,
-    txt: String,
-    _class: u16,
-    len: u16,
-    stat: i32,
-    // next: txt_record*
+type txt_record struct {
+	name   string
+	txt    string
+	_class uint16
+	len    uint16
+	stat   int32
+	// next: txt_record*
 }
 
-struct ptr_record {
-    name: String,
-    ptr: String,
-    // next: ptr_record*
+type ptr_record struct {
+	name string
+	ptr  string
+	// next: ptr_record*
 }
 
-struct cname {
-    flag: i32,
-    ttl: i32,
-    alias: String,
-    target: String,
-    // next: cname*
-    // targetp: cname*
+type cname struct {
+	flag   int32
+	ttl    int32
+	alias  string
+	target string
+	// next: cname*
+	// targetp: cname*
 }
 
-struct ds_config {
-    name: String,
-    digest: String,
-    digestlen: i32,
-    _class: i32,
-    algo: i32,
-    keytag: i32,
-    digest_type: i32,
-    // next: ds_config*
+type ds_config struct {
+	name        string
+	digest      string
+	digestlen   int32
+	_class      int32
+	algo        int32
+	keytag      int32
+	digest_type int32
+	// next: ds_config*
 }
 
-const ADDRLIST_LITERAL :u32 = 1;
-const ADDRLIST_IPV6 :u32 = 2;
-const ADDRLIST_REVONLY :u32 = 4;
+const ADDRLIST_LITERAL = 1
+const ADDRLIST_IPV6 = 2
+const ADDRLIST_REVONLY = 4
 
-struct addrlist {
-    addr: all_addr,
-    flags: i32,
-    prefixlen: i32,
-    // next: addrlist*
+type addrlist struct {
+	addr      all_addr
+	flags     int32
+	prefixlen int32
+	// next: addrlist*
 }
 
-const AUTH6 :u32 = 1;
-const AUTH4 :u32 = 2;
+const AUTH6 = 1
+const AUTH4 = 2
 
-struct auth_name_list {
-    name: String,
-    flags: i32,
-    // next: auth_name_list*
+type auth_name_list struct {
+	name  string
+	flags int32
+	// next: auth_name_list*
 }
 
-struct auth_zone {
-    domain: String,
-    interface_names: Vec<auth_name_list>,
-    subnet: addrlist,
-    exclude: addrlist,
-    //next: auth_zone*
+type auth_zone struct {
+	domain          string
+	interface_names []auth_name_list
+	subnet          addrlist
+	exclude         addrlist
+	//next: auth_zone*
 }
 
-struct name_list {
-    name: String,
-    // next: name_list*
+type name_list struct {
+	name string
+	// next: name_list*
 }
 
-struct host_record {
-    ttl: i32,
-    names: Vec<name_list>,
-    addr: in_addr,
-    addr6: in6_addr,
-    // next: host_record*
+type host_record struct {
+	ttl   int32
+	names []name_list
+	addr  in_addr
+	addr6 in6_addr
+	// next: host_record*
 }
 
-struct interface_name {
-    name: String,
-    intr: String,
-    family: i32,
-    // TODO: should this be a list of addrlist structs or a pointer to one?
-    addr: Vec<addrlist>,
-    // next: interface_name*
+type interface_name struct {
+	name   string
+	intr   string
+	family int32
+	// TODO: should this be a list of addrlist structs or a pointer to one?
+	addr []addrlist
+	// next: interface_name*
 }
 
-union bigname {
-    name: String,
-    // next: bigname*
+type bigname struct {
+	name string
+	// next: bigname*
 }
 
-struct blockdata {
-    // next blockdata*
-    key: [u8;KEYBLOCK_LEN],
+type blockdata struct {
+	// next blockdata*
+	key [KEYBLOCK_LEN]byte
 }
 
-struct crec_target {
-    // TODO: should cache and int_name be vectors or just pointers?
-    cache: Vec<crec>
-    int_name: Vec<interface_name>,
+type crec_target struct {
+	// TODO: should cache and int_name be vectors or just pointers?
+	cache    []crec
+	int_name []interface_name
 }
 
-struct crec_cname {
-    target: crec_target,
-    uid: u32,
+type crec_cname struct {
+	target crec_target
+	uid    uint32
 }
 
-struct crec_key {
-    keydata: Vec<blockdata>,
-    keylen: u16,
-    flags: u16,
-    keytag: u16,
-    algo: u8,
+type crec_key struct {
+	keydata []blockdata
+	keylen  uint16
+	flags   uint16
+	keytag  uint16
+	algo    uint8
 }
 
-struct crec_ds {
-    keydata: Vec<blockdata>,
-    keylen: u16,
-    keytag: u16,
-    algo:u8,
-    digest: u8,
+type crec_ds struct {
+	keydata []blockdata
+	keylen  uint16
+	keytag  uint16
+	algo    uint8
+	digest  uint8
 }
 
-struct crec_addr {
-    addr: all_addr,
-    cname: crec_cname,
-    key: crec_key,
-    ds: crec_ds,
+type crec_addr struct {
+	addr  all_addr
+	cname crec_cname
+	key   crec_key
+	ds    crec_ds
 }
 
-struct crec_name {
-    sname: String,
-    bname: bigname,
-    namep: String
+type crec_name struct {
+	sname string
+	bname bigname
+	namep String
 }
 
-struct crec {
-    // hash_next: crec*
-    // prev: crec*
-    // next: crec*
-    addr: crec_addr,
-    ttd: time_t,
-    uid: u32,
-    flags: u16,
-    name: crec_name,
+type crec struct {
+	// hash_next: crec*
+	// prev: crec*
+	// next: crec*
+	addr  crec_addr
+	ttd   time_t
+	uid   uint32
+	flags uint16
+	name  crec_name
 }
 
 // TODO: implement
@@ -575,777 +585,778 @@ struct crec {
 // TODO: implement
 // const SIZEOF_POINTER_CREC = (sizeof(struct crec) + sizeof(char *) - SMALLDNAME)
 
-const F_IMMORTAL :u32 = 1;
-const F_NAMEP :u32 = 2;
-const F_REVERSE :u32 = 4;
-const F_FORWARD :u32 = 8;
-const F_DHCP :u32 = 16;
-const F_NEG :u32 = 32;
-const F_HOSTS :u32 = 64;
-const F_IPV4 :u32 = 128;
-const F_IPV6 :u32 = 256;
-const F_BIGNAME :u32 = 512;
-const F_NXDOMAIN :u32 = 1024;
-const F_CNAME :u32 = 2048;
-const F_DNSKEY :u32 = 4096;
-const F_CONFIG :u32 = 8192;
-const F_DS :u32 = 16384;
-const F_DNSSECOK :u32 = 32768;
+const F_IMMORTAL = 1
+const F_NAMEP = 2
+const F_REVERSE = 4
+const F_FORWARD = 8
+const F_DHCP = 16
+const F_NEG = 32
+const F_HOSTS = 64
+const F_IPV4 = 128
+const F_IPV6 = 256
+const F_BIGNAME = 512
+const F_NXDOMAIN = 1024
+const F_CNAME = 2048
+const F_DNSKEY = 4096
+const F_CONFIG = 8192
+const F_DS = 16384
+const F_DNSSECOK = 32768
 
 /* below here are only valid as args to log_query: cache
    entries are limited to 16 bits */
-const F_UPSTREAM :u32 = 65536;
-const F_RRNAME :u32 = 131072;
-const F_SERVER :u32 = 262144;
-const F_QUERY :u32 = 524288;
-const F_NOERR :u32 = 1048576;
-const F_AUTH :u32 = 2097152;
-const F_DNSSEC :u32 = 4194304;
-const F_KEYTAG :u32 = 8388608;
-const F_SECSTAT :u32 = 16777216;
-const F_NO_RR :u32 = 33554432;
-const F_IPSET :u32 = 67108864;
-const F_NOEXTRA :u32 = 134217728;
-const F_SERVFAIL :u32 = 268435456;
-const F_RCODE :u32 = 536870912;
+const F_UPSTREAM = 65536
+const F_RRNAME = 131072
+const F_SERVER = 262144
+const F_QUERY = 524288
+const F_NOERR = 1048576
+const F_AUTH = 2097152
+const F_DNSSEC = 4194304
+const F_KEYTAG = 8388608
+const F_SECSTAT = 16777216
+const F_NO_RR = 33554432
+const F_IPSET = 67108864
+const F_NOEXTRA = 134217728
+const F_SERVFAIL = 268435456
+const F_RCODE = 536870912
 
-const UID_NONE :u32 = 0;
+const UID_NONE = 0
+
 /* Values of uid in crecs with F_CONFIG bit set. */
-/* cname to uid SRC_INTERFACE are to interface names,
+/* cname to uid SRC_INTERFACE are to interface names
    so use UID_NONE for that to eliminate clashes with
    any other uid */
-const SRC_INTERFACE :u32 = UID_NONE;
-const SRC_CONFIG :u32 = 1;
-const SRC_HOSTS :u32 = 2;
-const SRC_AH :u32 = 3;
+const SRC_INTERFACE = UID_NONE
+const SRC_CONFIG = 1
+const SRC_HOSTS = 2
+const SRC_AH = 3
 
-/* struct sockaddr is not large enough to hold any address,
+/* struct sockaddr is not large enough to hold any address
    and specifically not big enough to hold an IPv6 address.
    Blech. Roll our own. */
-struct mysockaddr {
-    sa: sockaddr,
-    in4: sockaddr_in,
-    in6: sockaddr_in6,
-
+type mysockaddr struct {
+	sa  sockaddr
+	in4 sockaddr_in
+	in6 sockaddr_in6
 }
 
 /* bits in flag param to IPv6 callbacks from iface_enumerate() */
-const IFACE_TENTATIVE :u32 = 1;
-const IFACE_DEPRECATED :u32 = 2;
-const IFACE_PERMANENT :u32 = 4;
+const IFACE_TENTATIVE = 1
+const IFACE_DEPRECATED = 2
+const IFACE_PERMANENT = 4
 
-const SERV_FROM_RESOLV :u32 = 1;  /* 1 for servers from resolv, 0 for command line. */
-const SERV_NO_ADDR :u32 = 2;  /* no server, this domain is local only */
-const SERV_LITERAL_ADDRESS :u32 = 4;  /* addr is the answer, not the server */
-const SERV_HAS_DOMAIN :u32 = 8;  /* server for one domain only */
-const SERV_HAS_SOURCE :u32 = 16;  /* source address defined */
-const SERV_FOR_NODOTS :u32 = 32;  /* server for names with no domain part only */
-const SERV_WARNED_RECURSIVE :u32 = 64;  /* avoid warning spam */
-const SERV_FROM_DBUS :u32 = 128;  /* 1 if source is DBus */
-const SERV_MARK :u32 = 256;  /* for mark-and-delete */
-const SERV_TYPE :u32 = (SERV_HAS_DOMAIN | SERV_FOR_NODOTS);
-const SERV_COUNTED :u32 = 512;  /* workspace for log code */
-const SERV_USE_RESOLV :u32 = 1024;  /* forward this domain in the normal way */
-const SERV_NO_REBIND :u32 = 2048;  /* inhibit dns-rebind protection */
-const SERV_FROM_FILE :u32 = 4096;  /* read from --servers-file */
-const SERV_LOOP :u32 = 8192;  /* server causes forwarding loop */
-const SERV_DO_DNSSEC :u32 = 16384;  /* Validate DNSSEC when using this server */
-const SERV_GOT_TCP :u32 = 32768;  /* Got some data from the TCP connection */
+const SERV_FROM_RESOLV = 1       /* 1 for servers from resolv, 0 for command line. */
+const SERV_NO_ADDR = 2           /* no server, this domain is local only */
+const SERV_LITERAL_ADDRESS = 4   /* addr is the answer, not the server */
+const SERV_HAS_DOMAIN = 8        /* server for one domain only */
+const SERV_HAS_SOURCE = 16       /* source address defined */
+const SERV_FOR_NODOTS = 32       /* server for names with no domain part only */
+const SERV_WARNED_RECURSIVE = 64 /* avoid warning spam */
+const SERV_FROM_DBUS = 128       /* 1 if source is DBus */
+const SERV_MARK = 256            /* for mark-and-delete */
+const SERV_TYPE = (SERV_HAS_DOMAIN | SERV_FOR_NODOTS)
+const SERV_COUNTED = 512     /* workspace for log code */
+const SERV_USE_RESOLV = 1024 /* forward this domain in the normal way */
+const SERV_NO_REBIND = 2048  /* inhibit dns-rebind protection */
+const SERV_FROM_FILE = 4096  /* read from --servers-file */
+const SERV_LOOP = 8192       /* server causes forwarding loop */
+const SERV_DO_DNSSEC = 16384 /* Validate DNSSEC when using this server */
+const SERV_GOT_TCP = 32768   /* Got some data from the TCP connection */
 
-struct ServerFd {
-    fd: i32,
-    source_addr: mysockaddr,
-    _interface: String,
-    preallocated: u32,
-    used: u32,
-    ifindex: u32,
-    // next: ServerFd*
+type ServerFd struct {
+	fd           int32
+	source_addr  mysockaddr
+	_interface   string
+	preallocated uint32
+	used         uint32
+	ifindex      uint32
+	// next: ServerFd*
 }
 
-struct randfd {
-    fd: i32,
-    refcount: u16,
-    family: u16,
+type randfd struct {
+	fd       int32
+	refcount uint16
+	family   uint16
 }
 
-struct server {
-    addr: mysockaddr,
-    source_addr: mysockaddr,
-    _interface: String,
-    sfd: ServerFd,
-    domain: String,
-    flags: i32,
-    tcpfd: i32,
-    edns_pktsz: i32,
-    pktsz_reduced: time_t,
-    queries: u32,
-    failed_queries: u32,
-    uid: u32,
-    // next: server*
+type server struct {
+	addr           mysockaddr
+	source_addr    mysockaddr
+	_interface     string
+	sfd            ServerFd
+	domain         string
+	flags          int32
+	tcpfd          int32
+	edns_pktsz     int32
+	pktsz_reduced  time_t
+	queries        uint32
+	failed_queries uint32
+	uid            uint32
+	// next: server*
 }
 
-struct ipsets {
-    sets: Vec<String>,
-    domain: String,
-    // next: ipsets*
+type ipsets struct {
+	sets   []string
+	domain string
+	// next: ipsets*
 }
 
-struct irec {
-    addr: mysockaddr,
-    netmask: in_addr,
-    tftp_ok: i32,
-    dhcp_ok: i32,
-    mtu: i32,
-    done: i32,
-    warned: i32,
-    dad: i32,
-    dns_auth:i32,
-    index: i32,
-    multicast_done: i32,
-    found: i32,
-    label: i32,
-    name: String,
-    // next: irec*
+type irec struct {
+	addr           mysockaddr
+	netmask        in_addr
+	tftp_ok        int32
+	dhcp_ok        int32
+	mtu            int32
+	done           int32
+	warned         int32
+	dad            int32
+	dns_auth       int32
+	index          int32
+	multicast_done int32
+	found          int32
+	label          int32
+	name           string
+	// next: irec*
 }
 
-struct listener {
-    fd: i32,
-    tcpfd: i32,
-    tftpfd: i32,
-    family: i32,
-    iface: irec, // TODO: ptr?
-    // next: listener*
+type listener struct {
+	fd     int32
+	tcpfd  int32
+	tftpfd int32
+	family int32
+	iface  irec // TODO: ptr?
+	// next: listener*
 }
 
 /* interface and address parms from command line. */
-struct Iname {
-    name: String,
-    addr: mysockaddr,
-    used: i32,
-    // next: Iname*
+type Iname struct {
+	name string
+	addr mysockaddr
+	used int32
+	// next: Iname*
 }
 
 /* subnet parameters from command line */
-struct mysubnet {
-    addr: mysockaddr,
-    addr_used: i32,
-    mask: i32,
+type mysubnet struct {
+	addr      mysockaddr
+	addr_used int32
+	mask      int32
 }
 
 /* resolv-file parms from command-line */
-struct resolvc {
-    // next: resolvc*
-    is_default: i32,
-    logged: i32,
-    mtime: time_t,
-    name: String,
-    wd: i32,
-    file: String,
+type resolvc struct {
+	// next: resolvc*
+	is_default int32
+	logged     int32
+	mtime      time_t
+	name       string
+	wd         int32
+	file       string
 }
 
 /* adn-hosts parms from command-line (also dhcp-hostsfile and dhcp-optsfile and dhcp-hostsdir*/
-const AH_DIR :u32 = 1;
-const AH_INACTIVE :u32 = 2;
-const AH_WD_DONE :u32 = 4;
-const AH_HOSTS :u32 = 8;
-const AH_DHCP_HST :u32 = 16;
-const AH_DHCP_OPT :u32 = 32;
+const AH_DIR = 1
+const AH_INACTIVE = 2
+const AH_WD_DONE = 4
+const AH_HOSTS = 8
+const AH_DHCP_HST = 16
+const AH_DHCP_OPT = 32
 
-struct hostsfile {
-    // next: hostsfile*
-    flags: i32,
-    fname: String,
-    wd: i32,
-    index: u32,
+type hostsfile struct {
+	// next: hostsfile*
+	flags int32
+	fname string
+	wd    int32
+	index uint32
 }
 
 /* packet-dump flags */
-const DUMP_QUERY :u32 = 0x0001;
-const DUMP_REPLY :u32 = 0x0002;
-const DUMP_UP_QUERY :u32 = 0x0004;
-const DUMP_UP_REPLY :u32 = 0x0008;
-const DUMP_SEC_QUERY :u32 = 0x0010;
-const DUMP_SEC_REPLY :u32 = 0x0020;
-const DUMP_BOGUS :u32 = 0x0040;
-const DUMP_SEC_BOGUS :u32 = 0x0080;
-
+const DUMP_QUERY = 0x0001
+const DUMP_REPLY = 0x0002
+const DUMP_UP_QUERY = 0x0004
+const DUMP_UP_REPLY = 0x0008
+const DUMP_SEC_QUERY = 0x0010
+const DUMP_SEC_REPLY = 0x0020
+const DUMP_BOGUS = 0x0040
+const DUMP_SEC_BOGUS = 0x0080
 
 /* DNSSEC status values. */
-const STAT_SECURE :u32 = 1;
-const STAT_INSECURE :u32 = 2;
-const STAT_BOGUS :u32 = 3;
-const STAT_NEED_DS :u32 = 4;
-const STAT_NEED_KEY :u32 = 5;
-const STAT_TRUNCATED :u32 = 6;
-const STAT_SECURE_WILDCARD :u32 = 7;
-const STAT_OK :u32 = 8;
-const STAT_ABANDONED :u32 = 9;
+const STAT_SECURE = 1
+const STAT_INSECURE = 2
+const STAT_BOGUS = 3
+const STAT_NEED_DS = 4
+const STAT_NEED_KEY = 5
+const STAT_TRUNCATED = 6
+const STAT_SECURE_WILDCARD = 7
+const STAT_OK = 8
+const STAT_ABANDONED = 9
 
-const FREC_NOREBIND :u32 = 1;
-const FREC_CHECKING_DISABLED :u32 = 2;
-const FREC_HAS_SUBNET :u32 = 4;
-const FREC_DNSKEY_QUERY :u32 = 8;
-const FREC_DS_QUERY :u32 = 16;
-const FREC_AD_QUESTION :u32 = 32;
-const FREC_DO_QUESTION :u32 = 64;
-const FREC_ADDED_PHEADER :u32 = 128;
-const FREC_TEST_PKTSZ :u32 = 256;
-const FREC_HAS_EXTRADATA :u32 = 512;
+const FREC_NOREBIND = 1
+const FREC_CHECKING_DISABLED = 2
+const FREC_HAS_SUBNET = 4
+const FREC_DNSKEY_QUERY = 8
+const FREC_DS_QUERY = 16
+const FREC_AD_QUESTION = 32
+const FREC_DO_QUESTION = 64
+const FREC_ADDED_PHEADER = 128
+const FREC_TEST_PKTSZ = 256
+const FREC_HAS_EXTRADATA = 512
 
+const HASH_SIZE_DNSSEC = 20 /* SHA-1 digest size */
+const HASH_SIZE = 32
 
-const HASH_SIZE_DNSSEC :u32 = 20; /* SHA-1 digest size */
-const HASH_SIZE :u32 = 32;
-
-
-struct frec {
-    source: mysockaddr,
-    dest: all_addr,
-    sentto: Server, // TODO ptr?
-    rfd64: randfd, // TODO: ptr?
-    rfd6: randfd, // TODO: ptr?
-    iface: u32,
-    orig_id: u32,
-    new_id: u32,
-    log_id: i32,
-    fd: i32,
-    forwardall: i32,
-    flags: i32,
-    time: time_t,
-    hash: [u8;HASH_SIZE],
-    _class: i32,
-    work_counter: i32,
-    stash: Vec<blockdata>,
-    stash_len: usize,
-    // dependent: frec, // TODO: ptr?
-    // blocking_query: frec // TODO: ptr?
-    // next: frec*
+type frec struct {
+	source       mysockaddr
+	dest         all_addr
+	sentto       Server // TODO ptr?
+	rfd64        randfd // TODO: ptr?
+	rfd6         randfd // TODO: ptr?
+	iface        uint32
+	orig_id      uint32
+	new_id       uint32
+	log_id       int32
+	fd           int32
+	forwardall   int32
+	flags        int32
+	time         time_t
+	hash         [HASH_SIZE]u8
+	_class       int32
+	work_counter int32
+	stash        []blockdata
+	stash_len    usize
+	// dependent: frec, // TODO: ptr?
+	// blocking_query: frec // TODO: ptr?
+	// next: frec*
 }
 
 /* flags in top of length field for DHCP-option tables */
-const OT_ADDR_LIST :u32 = 0x8000;
-const OT_RFC1035_NAME :u32 = 0x4000;
-const OT_INTERNAL :u32 = 0x2000;
-const OT_NAME :u32 = 0x1000;
-const OT_CSTRING :u32 = 0x0800;
-const OT_DEC :u32 = 0x0400;
-const OT_TIME :u32 = 0x0200;
+const OT_ADDR_LIST = 0x8000
+const OT_RFC1035_NAME = 0x4000
+const OT_INTERNAL = 0x2000
+const OT_NAME = 0x1000
+const OT_CSTRING = 0x0800
+const OT_DEC = 0x0400
+const OT_TIME = 0x0200
 
 /* actions in the daemon->helper RPC */
-const ACTION_DEL :u32 = 1;
-const ACTION_OLD_HOSTNAME :u32 = 2;
-const ACTION_OLD :u32 = 3;
-const ACTION_ADD :u32 = 4;
-const ACTION_TFTP :u32 = 5;
-const ACTION_ARP :u32 = 6;
-const ACTION_ARP_DEL :u32 = 7;
+const ACTION_DEL = 1
+const ACTION_OLD_HOSTNAME = 2
+const ACTION_OLD = 3
+const ACTION_ADD = 4
+const ACTION_TFTP = 5
+const ACTION_ARP = 6
+const ACTION_ARP_DEL = 7
 
-const LEASE_NEW :u32 = 1;  /* newly created */
-const LEASE_CHANGED :u32 = 2;  /* modified */
-const LEASE_AUX_CHANGED :u32 = 4;  /* CLID or expiry changed */
-const LEASE_AUTH_NAME :u32 = 8;  /* hostname came from config, not from client */
-const LEASE_USED :u32 = 16;  /* used this DHCPv6 transaction */
-const LEASE_NA :u32 = 32;  /* IPv6 no-temporary lease */
-const LEASE_TA :u32 = 64;  /* IPv6 temporary lease */
-const LEASE_HAVE_HWADDR :u32 = 128;  /* Have set hwaddress */
+const LEASE_NEW = 1           /* newly created */
+const LEASE_CHANGED = 2       /* modified */
+const LEASE_AUX_CHANGED = 4   /* CLID or expiry changed */
+const LEASE_AUTH_NAME = 8     /* hostname came from config, not from client */
+const LEASE_USED = 16         /* used this DHCPv6 transaction */
+const LEASE_NA = 32           /* IPv6 no-temporary lease */
+const LEASE_TA = 64           /* IPv6 temporary lease */
+const LEASE_HAVE_HWADDR = 128 /* Have set hwaddress */
 
-
-struct slaac_address {
-    addr: in6_addr,
-    ping_time: time_t,
-    backoff: i32,
-    // next: slaac_address*
+type slaac_address struct {
+	addr      in6_addr
+	ping_time time_t
+	backoff   int32
+	// next: slaac_address*
 }
 
-struct dhcp_lease {
-    clid_len: i32,
-    clid: Vec<u8>,
-    hostname: String,
-    fqdn: String,
-    old_hostname: String,
-    flags: i32,
-    expires: time_t,
-    length: u32,
-    hwaddr_len: i32,
-    hwaddr_type: i32,
-    hwaddr: [u8;DHCP_CHADDR_MAX],
-    addr: in_addr,
-    _override: in_addr,
-    giaddr: in_addr,
-    extradata: Vec<u8>,
-    extradata_len: u32,
-    extradata_size: u32,
-    last_interface: i32,
-    new_interface: i32,
-    new_prefixlen: i32,
-    addr6: in6_addr,
-    iaid: i32,
-    slaac_addr: slaac_address,
-    vendorclass_count: i32,
-    // next: dhcp_lease*
+type dhcp_lease struct {
+	clid_len          int32
+	clid              []u8
+	hostname          string
+	fqdn              string
+	old_hostname      string
+	flags             int32
+	expires           time_t
+	length            uint32
+	hwaddr_len        int32
+	hwaddr_type       int32
+	hwaddr            [DHCP_CHADDR_MAX]u8
+	addr              in_addr
+	_override         in_addr
+	giaddr            in_addr
+	extradata         []u8
+	extradata_len     uint32
+	extradata_size    uint32
+	last_interface    int32
+	new_interface     int32
+	new_prefixlen     int32
+	addr6             in6_addr
+	iaid              int32
+	slaac_addr        slaac_address
+	vendorclass_count int32
+	// next: dhcp_lease*
 }
 
-struct dhcp_netid {
-    net: String,
-    // next: dhcp_netid*
+type dhcp_netid struct {
+	net string
+	// next: dhcp_netid*
 }
 
-struct dhcp_netid_list {
-    list: Vec<dhcp_netid>,
-    // next: dhcp_netid_list
+type dhcp_netid_list struct {
+	list []dhcp_netid
+	// next: dhcp_netid_list
 }
 
-struct tag_if {
-    set: dhcp_netid_list,
-    tag: dhcp_netid, // TODO: ptr,
-    // next: tag_if*
+type tag_if struct {
+	set dhcp_netid_list
+	tag dhcp_netid // TODO: ptr,
+	// next: tag_if*
 }
 
-struct delay_config {
-    delay: i32,
-    netid: dhcp_netid // todo: ptr,
-    // next: delay_config*
+type delay_config struct {
+	delay int32
+	netid dhcp_netid // todo ptr
+	// next: delay_config*
 }
 
-struct hwaddr_config {
-    hwaddr_len: i32,
-    hwaddr_type: i32,
-    hwaddr: [u8;DHCP_CHADDR_MAX],
-    wildcard_mask: u32,
-    // next: hwaddr_config*
+type hwaddr_config struct {
+	hwaddr_len    int32
+	hwaddr_type   int32
+	hwaddr        [DHCP_CHADDR_MAX]byte
+	wildcard_mask uint32
+	// next: hwaddr_config*
 }
 
-struct dhcp_config {
-    flags: u32,
-    clid_len: i32,
-    clid: Vec<u8>,
-    hostname: String,
-    domain: String,
-    netid: dhcp_netid_list,
-    addr6: in6_addr,
-    addr: in_addr,
-    decline_time: time_t,
-    lease_time: u32,
-    hwaddr: hwaddr_config,
-    // next: dhcp_config*
+type dhcp_config struct {
+	flags        uint32
+	clid_len     int32
+	clid         []byte
+	hostname     string
+	domain       string
+	netid        dhcp_netid_list
+	addr6        in6_addr
+	addr         in_addr
+	decline_time time_t
+	lease_time   uint32
+	hwaddr       hwaddr_config
+	// next: dhcp_config*
 }
 
 // todo: re-implement
 //const have_config :u32 = ;(config, mask) ((config) && ((config)->flags & (mask)))
 
-const CONFIG_DISABLE :u32 = 1;
-const CONFIG_CLID :u32 = 2;
-const CONFIG_TIME :u32 = 8;
-const CONFIG_NAME :u32 = 16;
-const CONFIG_ADDR :u32 = 32;
-const CONFIG_NOCLID :u32 = 128;
-const CONFIG_FROM_ETHERS :u32 = 256;    /* entry created by /etc/ethers */
-const CONFIG_ADDR_HOSTS :u32 = 512;    /* address added by from /etc/hosts */
-const CONFIG_DECLINED :u32 = 1024;    /* address declined by client */
-const CONFIG_BANK :u32 = 2048;    /* from dhcp hosts file */
-const CONFIG_ADDR6 :u32 = 4096;
-const CONFIG_WILDCARD :u32 = 8192;
+const CONFIG_DISABLE = 1
+const CONFIG_CLID = 2
+const CONFIG_TIME = 8
+const CONFIG_NAME = 16
+const CONFIG_ADDR = 32
+const CONFIG_NOCLID = 128
+const CONFIG_FROM_ETHERS = 256 /* entry created by /etc/ethers */
+const CONFIG_ADDR_HOSTS = 512  /* address added by from /etc/hosts */
+const CONFIG_DECLINED = 1024   /* address declined by client */
+const CONFIG_BANK = 2048       /* from dhcp hosts file */
+const CONFIG_ADDR6 = 4096
+const CONFIG_WILDCARD = 8192
 
-struct dhcp_opt_u {
-    encap: i32,
-    wildcard_mask: u32,
-    vendor_class: Vec<u8>,
+type dhcp_opt_u struct {
+	encap         int32
+	wildcard_mask uint32
+	vendor_class  []byte
 }
 
-struct dhcp_opt {
-    opt: i32,
-    len: i32,
-    flags: i32,
-    u: dhcp_opt_u,
-    val: Vec<u8>,
-    netid: dhcp_netid,
-    // next: dhcp_opt,
+type dhcp_opt struct {
+	opt   int32
+	len   int32
+	flags int32
+	u     dhcp_opt_u
+	val   []byte
+	netid dhcp_netid
+	// next: dhcp_opt,
 }
 
-const DHOPT_ADDR :u32 = 1;
-const DHOPT_STRING :u32 = 2;
-const DHOPT_ENCAPSULATE :u32 = 4;
-const DHOPT_ENCAP_MATCH :u32 = 8;
-const DHOPT_FORCE :u32 = 16;
-const DHOPT_BANK :u32 = 32;
-const DHOPT_ENCAP_DONE :u32 = 64;
-const DHOPT_MATCH :u32 = 128;
-const DHOPT_VENDOR :u32 = 256;
-const DHOPT_HEX :u32 = 512;
-const DHOPT_VENDOR_MATCH :u32 = 1024;
-const DHOPT_RFC3925 :u32 = 2048;
-const DHOPT_TAGOK :u32 = 4096;
-const DHOPT_ADDR6 :u32 = 8192;
+const DHOPT_ADDR = 1
+const DHOPT_STRING = 2
+const DHOPT_ENCAPSULATE = 4
+const DHOPT_ENCAP_MATCH = 8
+const DHOPT_FORCE = 16
+const DHOPT_BANK = 32
+const DHOPT_ENCAP_DONE = 64
+const DHOPT_MATCH = 128
+const DHOPT_VENDOR = 256
+const DHOPT_HEX = 512
+const DHOPT_VENDOR_MATCH = 1024
+const DHOPT_RFC3925 = 2048
+const DHOPT_TAGOK = 4096
+const DHOPT_ADDR6 = 8192
 
-struct dhcp_boot {
-    file: String,
-    sname: String,
-    tftp_sname: String,
-    next_server: in_addr,
-    netid: dhcp_netid,
-    // next: dhcp_boot*
+type dhcp_boot struct {
+	file        string
+	sname       string
+	tftp_sname  string
+	next_server in_addr
+	netid       dhcp_netid
+	// next: dhcp_boot*
 }
 
-struct dhcp_match_name {
-    name: String,
-    wildcard: i32,
-    netid: dhcp_netid,
-    // next: dhcp_match_name*
+type dhcp_match_name struct {
+	name     string
+	wildcard int32
+	netid    dhcp_netid
+	// next: dhcp_match_name*
 }
 
-struct pxe_service {
-    CSA: u16,
-    _type: u16,
-    menu: String,
-    basename: String,
-    sname: String,
-    server: in_addr,
-    netid: dhcp_netid,
-    // next: pxe_service*
+type pxe_service struct {
+	CSA      uint16
+	_type    uint16
+	menu     string
+	basename string
+	sname    string
+	server   in_addr
+	netid    dhcp_netid
+	// next: pxe_service*
 }
 
-const MATCH_VENDOR :u32 = 1;
-const MATCH_USER :u32 = 2;
-const MATCH_CIRCUIT :u32 = 3;
-const MATCH_REMOTE :u32 = 4;
-const MATCH_SUBSCRIBER :u32 = 5;
+const MATCH_VENDOR = 1
+const MATCH_USER = 2
+const MATCH_CIRCUIT = 3
+const MATCH_REMOTE = 4
+const MATCH_SUBSCRIBER = 5
 
 /* vendorclass, userclass, remote-id or circuit-id */
-struct dhcp_vendor {
-    len: i32,
-    match_type: i32,
-    enterprise: u32,
-    data: String,
-    netid: dhcp_netid,
-    // next: dhcp_vendor*
+type dhcp_vendor struct {
+	len        int32
+	match_type int32
+	enterprise uint32
+	data       string
+	netid      dhcp_netid
+	// next: dhcp_vendor*
 }
 
-struct dhcp_mac {
-    mask: u32,
-    hwaddr_len: i32,
-    hwaddr_type: i32,
-    hwaddr: [u8;DHCP_CHADDR_MAX],
-    netid: dhcp_netid,
-    // next: dhcp_mac*
+type dhcp_mac struct {
+	mask        uint32
+	hwaddr_len  int32
+	hwaddr_type int32
+	hwaddr      [DHCP_CHADDR_MAX]byte
+	netid       dhcp_netid
+	// next: dhcp_mac*
 }
 
-struct dhcp_bridge {
-    iface: String,
-    // alias: dhcp_bridge*
-    // next: dhcp_bridge*
+type dhcp_bridge struct {
+	iface string
+	// alias: dhcp_bridge*
+	// next: dhcp_bridge*
 }
 
-struct cond_domain {
-    domain: String,
-    prefix: String,
-    start: in_addr,
-    end: in_addr,
-    start6: in6_addr,
-    end6: in6_addr,
-    is6: i32,
-    indexed: i32,
-    // next: cond_domain*
+type cond_domain struct {
+	domain  string
+	prefix  string
+	start   in_addr
+	end     in_addr
+	start6  in6_addr
+	end6    in6_addr
+	is6     int32
+	indexed int32
+	// next: cond_domain*
 }
 
 // #ifdef OPTION6_PREFIX_CLASS
-struct prefix_class {
-    _class: i32,
-    tag: dhcp_netid,
-    // next: prefix_class*
+type prefix_class struct {
+	_class int32
+	tag    dhcp_netid
+	// next: prefix_class*
 }
+
 // #endif
 
-struct ra_interface {
-    name: String,
-    mtu_name: String,
-    interval: i32,
-    lifetime: i32,
-    prio: i32,
-    mtu: i32,
-    // next: ra_interface*
+type ra_interface struct {
+	name     string
+	mtu_name string
+	interval int32
+	lifetime int32
+	prio     int32
+	mtu      int32
+	// next: ra_interface*
 }
 
-struct DhcpContext {
-    lease_time: u32,
-    addr_epoch: u32,
-    netmask : in_addr,
-    broadcast: in_addr,
-    local: in_addr,
-    router: in_addr,
-    start: in_addr,
-    end: in_addr,
-    start6: in6_addr,
-    end6: in6_addr,
-    local6: in6_addr,
-    prefix: i32,
-    if_index: i32,
-    valid: u32,
-    preferred: u32,
-    saved_valid: u32,
-    ra_time: time_t,
-    ra_short_period_start: time_t,
-    address_list_time: time_t,
-    template_interface: String,
-    flags: i32,
-    netid: dhcp_netid,
-    filter: dhcp_netid,
-    // next: DhcpContext
-    // current: DhcpContext
+type DhcpContext struct {
+	lease_time            uint32
+	addr_epoch            uint32
+	netmask               in_addr
+	broadcast             in_addr
+	local                 in_addr
+	router                in_addr
+	start                 in_addr
+	end                   in_addr
+	start6                in6_addr
+	end6                  in6_addr
+	local6                in6_addr
+	prefix                int32
+	if_index              int32
+	valid                 uint32
+	preferred             uint32
+	saved_valid           uint32
+	ra_time               time_t
+	ra_short_period_start time_t
+	address_list_time     time_t
+	template_interface    string
+	flags                 int32
+	netid                 dhcp_netid
+	filter                dhcp_netid
+	// next: DhcpContext
+	// current: DhcpContext
 }
 
-const CONTEXT_STATIC :u32 = 1;
-const CONTEXT_NETMASK :u32 = 2;
-const CONTEXT_BRDCAST :u32 = 4;
-const CONTEXT_PROXY :u32 = 8;
-const CONTEXT_RA_ROUTER :u32 = 16;
-const CONTEXT_RA_DONE :u32 = 32;
-const CONTEXT_RA_NAME :u32 = 64;
-const CONTEXT_RA_STATELESS :u32 = 128;
-const CONTEXT_DHCP :u32 = 256;
-const CONTEXT_DEPRECATE :u32 = 512;
-const CONTEXT_TEMPLATE :u32 = 1024;    /* create contexts using addresses */
-const CONTEXT_CONSTRUCTED :u32 = 2048;
-const CONTEXT_GC :u32 = 4096;
-const CONTEXT_RA :u32 = 8192;
-const CONTEXT_CONF_USED :u32 = 16384;
-const CONTEXT_USED :u32 = 32768;
-const CONTEXT_OLD :u32 = 65536;
-const CONTEXT_V6 :u32 = 131072;
-const CONTEXT_RA_OFF_LINK :u32 = 262144;
+const CONTEXT_STATIC = 1
+const CONTEXT_NETMASK = 2
+const CONTEXT_BRDCAST = 4
+const CONTEXT_PROXY = 8
+const CONTEXT_RA_ROUTER = 16
+const CONTEXT_RA_DONE = 32
+const CONTEXT_RA_NAME = 64
+const CONTEXT_RA_STATELESS = 128
+const CONTEXT_DHCP = 256
+const CONTEXT_DEPRECATE = 512
+const CONTEXT_TEMPLATE = 1024 /* create contexts using addresses */
+const CONTEXT_CONSTRUCTED = 2048
+const CONTEXT_GC = 4096
+const CONTEXT_RA = 8192
+const CONTEXT_CONF_USED = 16384
+const CONTEXT_USED = 32768
+const CONTEXT_OLD = 65536
+const CONTEXT_V6 = 131072
+const CONTEXT_RA_OFF_LINK = 262144
 
-struct ping_result {
-    addr: in_addr,
-    time: time_t,
-    hash: u32,
-    // next: ping_result*
+type ping_result struct {
+	addr in_addr
+	time time_t
+	hash uint32
+	// next: ping_result*
 }
 
-struct tftp_file {
-    refcount: i32,
-    fd: i32,
-    size: off_t,
-    dev: dev_t,
-    inode: ino_t,
-    filename: String,
+type tftp_file struct {
+	refcount int32
+	fd       int32
+	size     off_t
+	dev      dev_t
+	inode    ino_t
+	filename string
 }
 
-struct tftp_transfer {
-    sockfd: i32,
-    timeout: time_t,
-    backoff: i32,
-    expansion: u32,
-    blocksize: u32,
-    block: u32,
-    peer: mysockaddr,
-    carrylf: u8,
-    netascii: u8,
-    opt_transize: u8,
-    opt_blocksize: u8,
-    file: tftp_file,
-    // enxt: tftp_transfer
+type tftp_transfer struct {
+	sockfd        int32
+	timeout       time_t
+	backoff       int32
+	expansion     uint32
+	blocksize     uint32
+	block         uint32
+	peer          mysockaddr
+	carrylf       uint8
+	netascii      uint8
+	opt_transize  uint8
+	opt_blocksize uint8
+	file          tftp_file
+	// enxt: tftp_transfer
 }
 
-struct AddrList {
-    addr: in_addr,
-    // next: AddrList*
+type AddrList struct {
+	addr in_addr
+	// next: AddrList*
 }
 
-struct TftpPrefix {
-    _interface: String,
-    prefix: String,
-    missing: i32,
-    // next: TftpPrefix*
+type TftpPrefix struct {
+	_interface string
+	prefix     string
+	missing    int32
+	// next: TftpPrefix*
 }
 
-struct DhcpRelay {
-    server: all_addr,
-    local: all_addr,
-    _interface: String,
-    iface_index: i32,
-    // next: DhcpRelay*
-    // current: DhcpRelay*
+type DhcpRelay struct {
+	server      all_addr
+	local       all_addr
+	_interface  string
+	iface_index int32
+	// next: DhcpRelay*
+	// current: DhcpRelay*
 }
 
-struct daemon {
-    /* datastuctures representing the command-line and 
-       config file arguments. All set (including defaults)
-       in option.c */
-    options2: u32,
-    /* datastuctures representing the command-line and
-           config file arguments. All set (including defaults)
-           in option.c */
-    options: u32,
-    resolv_files: resolvc, // todo: ptr?
-    default_resolv: resolvc, // todo: ptr?
-    last_resolv: time_t,
-    server_file: String,
-    mxnames: Vec<mx_srv_record>,
-    naptr: naptr,
-    rr: txt_record,
-    txt: txt_record,
-    ptr: ptr_record,
-    host_records_tail: Vec<host_record>,
-    host_records: Vec<host_record>,
-    cnames: Vec<cname>,
-    auth_zones: Vec<auth_zone>,
-    int_names: Vec<interface_name>,
-    mxtarget: String,
-    add_subnet4: mysubnet,
-    add_subnet6: mysubnet,
-    lease_file: String,
-    scriptuser: String,
-    groupname: String,
-    username: String,
-    luascript: String,
-    hostmaster: String,
-    authserver: String,
-    authinterface: String,
-    scondary_foward_server: Vec<name_list>,
-    osport: i32,
-    group_set: i32,
-    domain_suffix: String,
-    synth_domains: Vec<cond_domain>,
-    cond_domains: Vec<cond_domain>,
-    runfile: String,
-    lease_change_command: String,
-    if_names: Vec<Iname>,
-    if_addrs: Vec<Iname>,
-    if_except: Vec<Iname>,
-    dhcp_except: Vec<Iname>,
-    auth_peers: Vec<Iname>,
-    tftp_interfaces: Vec<Iname>,
-    bogus_addr: Vec<bogus_addr>,
-    ignore_addr: Vec<ignore_addr>,
-    servers: Vec<server>,
-    ipsets: Vec<ipsets>,
-    log_fac: i32,
-    log_file: String,
-    max_logs: i32,
-    cachesize: i32,
-    ftabsize: i32,
-    port: i32,
-    query_port: i32,
-    min_port: i32,
-    max_port: i32,
-    local_ttl: u32,
-    neg_ttl: u32,
-    max_ttl: u32,
-    min_cache_ttl: u32,
-    max_cache_ttl: u32,
-    auth_ttl: u32,
-    dhcp_ttl: u32,
-    use_dhcp_ttl: u32,
-    dns_client_id: String,
-    addn_hosts: Vec<hostsfile>,
-    dhcp: Vec<DhcpContext>,
-    dhcp6: Vec<DhcpContext>,
-    ra_interfaces: Vec<ra_interface>,
-    dhcp_conf: dhcp_config,
-    dhcp_opts: Vec<dhcp_opt>,
-    dhcp_match: Vec<dhcp_opt>,
-    dhcp_opts6: Vec<dhcp_opt>,
-    dhcp_match6: Vec<dhcp_opt>,
-    dhcp_name_match: Vec<dhcp_match_name>,
-    dhcp_vendors: Vec<dhcp_vendor>,
-    dhcp_macs: Vec<dhcp_mac>,
-    boot_config: dhcp_boot,
-    pxe_services: Vec<pxe_service>,
-    tag_if: Vec<tag_if>,
-    override_relays: Vec<AddrList>,
-    relay4: DhcpRelay,
-    relay6: DhcpRelay,
-    delay_conf: delay_config,
-    override: i32,
-    enable_pxe: i32,
-    doing_ra: i32,
-    doing_dhcp6: i32,
-    dhcp_ignore: Vec<dhcp_netid_list>,
-    dhcp_ignore_names: Vec<dhcp_netid_list>,
-    dhcp_gen_names: Vec<dhcp_netid_list>,
-    force_broadcast: Vec<dhcp_netid_list>,
-    bootp_dynamic: Vec<dhcp_netid_list>,
-    dhcp_hosts_file: hostsfile,
-    dhcp_opts_file: hostsfile,
-    dynamic_dirs: Vec<hostsfile>,
-    dhcp_max: i32,
-    tftp_max: i32, 
-    tftp_mtu: i32,
-    dhcp_server_port: i32,
-    dhcp_client_port: i32,
-    start_tftp_port: i32,
-    end_tftp_port: i32,
-    min_leasetime: u32,
-    doctors: Vec<doctor>,
-    edns_pktsz: u16,
-    tftp_prefix: String,
-    if_prefix: Vec<TftpPrefix>,
-    duid_enterprise: u32,
-    duid_config_len: u32,
-    duid_config: Vec<u8>,
-    dbus_name: String,
-    dump_file: String,
-    dump_mask: i32,
-    soa_sn: u32,
-    soa_refresh: u32,
-    soa_retry: u32,
-    soa_expiry: u32,
-    metrics: Vec<u32>,
-    prefix_classes: Vec<prefix_class>,
-    ds: Vec<ds_config>,
-    timestamp_file: String,
-    packet: Vec<u8>,
-    packet_buff_sz: i32,
-    namebuff: String,
-    keyname: String,
-    workspacename: String,
-    rr_status: String,
-    rr_status_sz: i32,
-    dnssec_no_time_check: i32,
-    back_to_the_future: i32,
-    frec_list: Vec<frec>,
-    sfds: Vec<ServerFd>,
-    interfaces: Vec<irec>,
-    listeners: Vec<listener>,
-    last_server: Vec<server>,
-    forwardtime: time_t,
-    forwardcount: i32,
-    srv_save: Vec<server>,
-    packet_len: usize,
-    rfd_save: Vec<randfd>,
-    tcp_pids: Vec<pid_t>,
-    randomsocks: Vec<randfd>,
-    v6pktinfo: i32,
-    interface_addrs: Vec<addrlist>,
-    lot_id: i32,
-    log_display_id: i32,
-    log_source_addr: mysockaddr,
-    pxefd: i32,
-    helperfd: i32,
-    dhcpfd: i32,
-    inotifyfd: i32,
-    netlinkfd: i32,
-    dhcp_raw_fd: i32,
-    dhcp_icmp_fd: i32,
-    routefd: i32,
-    dhcp_packet: iovec,
-    dhcp_buff: Vec<u8>,
-    dhcp_buff2: Vec<u8>,
-    dhcp_buff3: Vec<u8>,
-    ping_results: Vec<ping_result>,
-    lease_stream: file,
-    bridges: Vec<dhcp_bridge>,
-    duid_len: i32,
-    dui: Vec<u8>,
-    outpacket: iovec,
-    dhcp6fd: i32,
-    icmp6fd: i32,
-    dbus: voidptr,
-    watches: Vec<watch>,
-    tftp_trans: Vec<tftp_transfer>,
-    tftp_done_trans: Vec<tftp_transfer>,
-    addrbuff: Vec<u8>,
-    addrbuff2: Vec<u8>,
-    dumpfd: i32,
-    
+type daemon struct {
+	/* datastuctures representing the command-line and
+	   config file arguments. All set (including defaults)
+	   in option.c */
+	options2 uint32
+	/* datastuctures representing the command-line and
+	   config file arguments. All set (including defaults)
+	   in option.c */
+	options        uint32
+	resolv_files   resolvc // todo: ptr?
+	default_resolv resolvc // todo: ptr?
+
+	//struct resolvc* resolv_files;
+	resolv_files []resolvc
+	//struct resolvc default_resolv;
+	default_resolv           []resolvc
+	last_resolv              time_t
+	servers_file             string
+	mxnames                  []mx_srv_record
+	naptr                    []naptr
+	rr                       []txt_record
+	txt                      []txt_record
+	ptr                      []ptr_record
+	host_records_tail        []host_record
+	host_records             []host_record
+	cnames                   []string
+	auth_zones               []auth_zones
+	int_names                []interface_names
+	mxtarget                 string
+	add_subnet4              []mysubnet
+	add_subnet6              []mysubnet
+	lease_file               string
+	scriptuser               string
+	groupname                string
+	username                 string
+	luascript                string
+	hostmaster               string
+	authserver               string
+	authinterface            []Iname
+	secondary_forward_server []name_list
+	group_set                int32
+	osport                   int32
+	domain_suffix            string
+	synth_domains            []cond_domain
+	cond_domain              []cond_domain
+	runfile                  string
+	lease_change_command     string
+	if_names                 []Iname
+	if_addrs                 []Iname
+	if_except                []Iname
+	dhcp_except              []Iname
+	auth_peers               []Iname
+	tftp_interfaces          []Iname
+	bogus_addr               []bogus_addr
+	ignore_addr              []bogus_addr
+	servers                  []server
+	ipsets                   []ipsets
+	log_fac                  int32
+	log_file                 string
+	max_logs                 int32
+	cachesize                int32
+	ftabsize                 int32
+	port                     int32
+	query_port               int32
+	min_port                 int32
+	max_port                 int32
+	local_ttl                uint32
+	neg_ttl                  uint32
+	max_ttl                  uint32
+	min_cache_ttl            uint32
+	max_cache_ttl            uint32
+	auth_ttl                 uint32
+	dhcp_ttl                 uint32
+	use_dhcp_ttl             uint32
+	dns_client_id            string
+	addn_hosts               []hostsfile
+	dhcp                     []DhcpContext
+	dhcp6                    []DhcpContext
+	ra_interfaces            []ra_interface
+	dhcp_conf                []dhcp_config
+	dhcp_opts                []dhcp_opt
+	dhcp_match               []dhcp_opt
+	dhcp_opts6               []dhcp_opt
+	dhcp_match6              []dhcp_opt
+	dhcp_name_match          []dhcp_match_name
+	dhcp_vendors             []dhcp_vendor
+	dhcp_macs                []dhcp_mac
+	boot_config              []dhcp_boot
+	pxe_services             []pxe_service
+	tag_if                   []tag_if
+	override_relays          []AddrList
+	relay4                   DhcpRelay
+	realy6                   Dhcp6Relay
+	delay_conf               delay_config
+	override                 int32
+	enable_pxe               int32
+	doing_ra                 int32
+	doing_dhcp6              int32
+	dhcp_ignore              []dhcp_netid_list
+	dhcp_ignore_names        []dhcp_netid_list
+	dhcp_gen_names           []dhcp_netid_list
+	force_broadcast          []dhcp_netid_list
+	bootp_dynamic            []dhcp_netid_list
+	dhcp_hosts_file          []hostsfile
+	dhcp_opts_file           []hostsfile
+	dynamic_dirs             []hostsfile
+	dhcp_max                 int32
+	tftp_max                 int32
+	tftp_mtu                 int32
+	dhcp_server_port         int32
+	dhcp_client_port         int32
+	start_tftp_port          int32
+	end_tftp_port            int32
+	min_leasetime            int32
+	doctors                  []doctor
+	edns_pktsz               uint16
+	tftp_prefix              string
+	if_prefix                TftPrefix
+	duid_enterprise          uint32
+	duid_config_len          uint32
+	duid_config              []byte
+	dbus_name                string
+	dump_file                string
+	dump_mask                int32
+	soa_sn                   uint32
+	soa_refresh              uint32
+	soa_retry                uint32
+	soa_expiry               uint32
+	metrics                  []uint32
+	prefix_classes           []prefix_class
+	ds                       ds_config
+	timestamp_file           string
+	packet                   String
+	packet_buff_sz           int32
+	namebuff                 string
+	keyname                  string
+	workspacename            string
+	rr_status                string
+	rr_status_sz             int32
+	dnsssec_no_time_check    int32
+	back_to_the_future       int32
+	frec_list                []frec
+	sfds                     []ServerFd
+	interfaces               []irec
+	listeners                []listener
+	last_server              []server
+	forwardtime              time_t
+	forwardcount             int32
+	srv_save                 server
+	packet_len               uint32
+	rfd_save                 randfd
+	tcp_pids                 []pid_t
+	randomsocks              []randfd
+	v6pktinfo                int32
+	interface_addrs          []addrlist
+	log_id                   int32
+	log_display_id           int32
+	log_soruce_addr          mysockaddr
+	pxefd                    int32
+	helperfd                 int32
+	dhcpfd                   int32
+	inotifyfd                int32
+	netlinkfd                int32
+	dhcp_raw_fd              int32
+	dhcp_icmp_fd             int32
+	routefd                  int32
+	dhcp_packet              iovec
+	dchp_buff                string
+	dhcp_buff2               string
+	dhcp_buff3               string
+	ping_results             []pint_result
+	lease_stream             file
+	bridges                  []dhcp_bridge
+	duid_len                 int32
+	duid                     []byte
+	outpacket                iovec
+	dhcp6fd                  int32
+	icmp6fd                  int32
+	dbus                     void_ptr
+	watches                  []watch
+	tftp_trans               []tftp_transfer
+	tftp_done_trans          []tftp_transfer
+	addrbuff                 string
+	addrbuff2                string
+	dumpfd                   int32
 }
 
 /* cache.c */
@@ -1934,7 +1945,6 @@ struct daemon {
 // newaddress(time_t now);
 
 // #endif
-
 
 // /* dhcp.c */
 // #ifdef HAVE_DHCP
