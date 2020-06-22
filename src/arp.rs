@@ -14,25 +14,21 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
-#include <cstdint>
-#include <array>
-
 /* Time between forced re-loads from kernel. */
-constexpr auto INTERVAL = 90;
-
-constexpr auto ARP_MARK =  0;
-constexpr auto ARP_FOUND = 1;  /* Confirmed */
-constexpr auto ARP_NEW  = 2;  /* Newly created */
-constexpr auto ARP_EMPTY = 3;  /* No MAC addr */
+pub const INTERVAL: u32 = 90;
+pub const ARP_MARK: u32 =  0;
+pub const ARP_FOUND: u32 = 1;  /* Confirmed */
+pub const ARP_NEW:u32  = 2;  /* Newly created */
+pub const ARP_EMPTY: u32 = 3;  /* No MAC addr */
 
 struct arp_record {
-    uint16_t hwlen, status;
-    int family;
-    uint8_t hwaddr[DHCP_CHADDR_MAX];
-    struct all_addr addr;
-    struct arp_record* next;
-};
+    hwlen: u16,
+    status: u16,
+    family: i32,
+    hwaddr: [u8;DHCP_CHADDR_MAX],
+    addr: all_addr,
+    // arp_record* next
+}
 
 static struct arp_record* arps = nullptr, * old = nullptr, * freelist = nullptr;
 static time_t last = 0;
