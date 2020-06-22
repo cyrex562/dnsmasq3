@@ -1,3 +1,5 @@
+use libc::in_addr;
+
 /* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -13,90 +15,98 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define DHCP_SERVER_PORT 67
-#define DHCP_CLIENT_PORT 68
-#define DHCP_SERVER_ALTPORT 1067
-#define DHCP_CLIENT_ALTPORT 1068
-#define PXE_PORT 4011
+pub const DHCP_SERVER_PORT: u32= 67;
+pub const DHCP_CLIENT_PORT: u32= 68;
+pub const DHCP_SERVER_ALTPORT: u32= 1067;
+pub const DHCP_CLIENT_ALTPORT: u32= 1068;
+pub const PXE_PORT: u32= 4011;
 
 /* These each hold a DHCP option max size 255
    and get a terminating zero added */
-#define DHCP_BUFF_SZ 256
+pub const DHCP_BUFF_SZ: u32= 256;
 
-#define BOOTREQUEST              1
-#define BOOTREPLY                2
-#define DHCP_COOKIE              0x63825363
+pub const BOOTREQUEST  :u32 =            1;
+pub const BOOTREPLY: u32= 2;
+pub const DHCP_COOKIE: u32= 0x63825363;
 
 /* The Linux in-kernel DHCP client silently ignores any packet 
    smaller than this. Sigh...........   */
-#define MIN_PACKETSZ             300
+pub const MIN_PACKETSZ: u32= 300;
 
-#define OPTION_PAD               0
-#define OPTION_NETMASK           1
-#define OPTION_ROUTER            3
-#define OPTION_DNSSERVER         6
-#define OPTION_HOSTNAME          12
-#define OPTION_DOMAINNAME        15
-#define OPTION_BROADCAST         28
-#define OPTION_VENDOR_CLASS_OPT  43
-#define OPTION_REQUESTED_IP      50 
-#define OPTION_LEASE_TIME        51
-#define OPTION_OVERLOAD          52
-#define OPTION_MESSAGE_TYPE      53
-#define OPTION_SERVER_IDENTIFIER 54
-#define OPTION_REQUESTED_OPTIONS 55
-#define OPTION_MESSAGE           56
-#define OPTION_MAXMESSAGE        57
-#define OPTION_T1                58
-#define OPTION_T2                59
-#define OPTION_VENDOR_ID         60
-#define OPTION_CLIENT_ID         61
-#define OPTION_SNAME             66
-#define OPTION_FILENAME          67
-#define OPTION_USER_CLASS        77
-#define OPTION_RAPID_COMMIT      80
-#define OPTION_CLIENT_FQDN       81
-#define OPTION_AGENT_ID          82
-#define OPTION_ARCH              93
-#define OPTION_PXE_UUID          97
-#define OPTION_SUBNET_SELECT     118
-#define OPTION_DOMAIN_SEARCH     119
-#define OPTION_SIP_SERVER        120
-#define OPTION_VENDOR_IDENT      124
-#define OPTION_VENDOR_IDENT_OPT  125
-#define OPTION_END               255
+pub const OPTION_PAD: u32= 0;
+pub const OPTION_NETMASK: u32= 1;
+pub const OPTION_ROUTER: u32= 3;
+pub const OPTION_DNSSERVER: u32= 6;
+pub const OPTION_HOSTNAME: u32= 12;
+pub const OPTION_DOMAINNAME: u32= 15;
+pub const OPTION_BROADCAST: u32= 28;
+pub const OPTION_VENDOR_CLASS_OPT: u32= 43;
+pub const OPTION_REQUESTED_IP: u32= 50; 
+pub const OPTION_LEASE_TIME: u32= 51;
+pub const OPTION_OVERLOAD: u32= 52;
+pub const OPTION_MESSAGE_TYPE: u32= 53;
+pub const OPTION_SERVER_IDENTIFIER: u32= 54;
+pub const OPTION_REQUESTED_OPTIONS: u32= 55;
+pub const OPTION_MESSAGE: u32= 56;
+pub const OPTION_MAXMESSAGE: u32= 57;
+pub const OPTION_T1: u32= 58;
+pub const OPTION_T2: u32= 59;
+pub const OPTION_VENDOR_ID: u32= 60;
+pub const OPTION_CLIENT_ID: u32= 61;
+pub const OPTION_SNAME: u32= 66;
+pub const OPTION_FILENAME: u32= 67;
+pub const OPTION_USER_CLASS: u32= 77;
+pub const OPTION_RAPID_COMMIT: u32= 80;
+pub const OPTION_CLIENT_FQDN: u32= 81;
+pub const OPTION_AGENT_ID: u32= 82;
+pub const OPTION_ARCH: u32= 93;
+pub const OPTION_PXE_UUID: u32= 97;
+pub const OPTION_SUBNET_SELECT: u32= 118;
+pub const OPTION_DOMAIN_SEARCH: u32= 119;
+pub const OPTION_SIP_SERVER: u32= 120;
+pub const OPTION_VENDOR_IDENT: u32= 124;
+pub const OPTION_VENDOR_IDENT_OPT: u32= 125;
+pub const OPTION_END: u32= 255;
 
-#define SUBOPT_CIRCUIT_ID        1
-#define SUBOPT_REMOTE_ID         2
-#define SUBOPT_SUBNET_SELECT     5     /* RFC 3527 */
-#define SUBOPT_SUBSCR_ID         6     /* RFC 3393 */
-#define SUBOPT_SERVER_OR         11    /* RFC 5107 */
+pub const SUBOPT_CIRCUIT_ID: u32= 1;
+pub const SUBOPT_REMOTE_ID: u32= 2;
+pub const SUBOPT_SUBNET_SELECT: u32= 5;     /* RFC 3527 */
+pub const SUBOPT_SUBSCR_ID: u32= 6;     /* RFC 3393 */
+pub const SUBOPT_SERVER_OR: u32= 11;    /* RFC 5107 */
 
-#define SUBOPT_PXE_BOOT_ITEM     71    /* PXE standard */
-#define SUBOPT_PXE_DISCOVERY     6
-#define SUBOPT_PXE_SERVERS       8
-#define SUBOPT_PXE_MENU          9
-#define SUBOPT_PXE_MENU_PROMPT   10
+pub const SUBOPT_PXE_BOOT_ITEM: u32= 71;    /* PXE standard */
+pub const SUBOPT_PXE_DISCOVERY: u32= 6;
+pub const SUBOPT_PXE_SERVERS: u32= 8;
+pub const SUBOPT_PXE_MENU: u32= 9;
+pub const SUBOPT_PXE_MENU_PROMPT: u32= 10;
 
-#define DHCPDISCOVER             1
-#define DHCPOFFER                2
-#define DHCPREQUEST              3
-#define DHCPDECLINE              4
-#define DHCPACK                  5
-#define DHCPNAK                  6
-#define DHCPRELEASE              7
-#define DHCPINFORM               8
+pub const DHCPDISCOVER: u32= 1;
+pub const DHCPOFFER: u32= 2;
+pub const DHCPREQUEST: u32= 3;
+pub const DHCPDECLINE: u32= 4;
+pub const DHCPACK: u32= 5;
+pub const DHCPNAK: u32= 6;
+pub const DHCPRELEASE: u32= 7;
+pub const DHCPINFORM: u32= 8;
 
-#define BRDBAND_FORUM_IANA       3561 /* Broadband forum IANA enterprise */
+pub const BRDBAND_FORUM_IANA: u32= 3561; /* Broadband forum IANA enterprise */
 
-#define DHCP_CHADDR_MAX 16
+pub const DHCP_CHADDR_MAX: usize = 16;
 
-struct dhcp_packet {
-    uint8_t op, htype, hlen, hops;
-    uint32_t xid;
-    uint16_t flags;
-    uint16_t secs;
-    struct in_addr ciaddr, yiaddr, siaddr, giaddr;
-    uint8_t chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
-    uint8_t options[312];
-};
+pub struct dhcp_packet {
+   op: u8,
+   htype: u8,
+   hlen: u8,
+   hops: u8,
+   xid: u32,
+   flags: u16,
+   secs: u16,
+   ciaddr: in_addr,
+   yiaddr: in_addr,
+   siaddr: in_addr,
+   giaddr: in_addr,
+   chaddr: [u8;DHCP_CHADDR_MAX],
+   sname: [u8;64],
+   file: [u8;128],
+   options: [u8;312],
+}

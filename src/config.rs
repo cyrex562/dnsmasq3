@@ -14,49 +14,49 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define FTABSIZ 150 /* max number of outstanding requests (default) */
-#define MAX_PROCS 20 /* max no children for TCP requests */
-#define CHILD_LIFETIME 150 /* secs 'till terminated (RFC1035 suggests > 120s) */
-#define TCP_MAX_QUERIES 100 /* Maximum number of queries per incoming TCP connection */
-#define TCP_BACKLOG 32  /* kernel backlog limit for TCP connections */
-#define EDNS_PKTSZ 4096 /* default max EDNS.0 UDP packet from RFC5625 */
-#define SAFE_PKTSZ 1280 /* "go anywhere" UDP packet size */
-#define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
-#define DNSSEC_WORK 50 /* Max number of queries to validate one question */
-#define TIMEOUT 10 /* drop UDP queries after TIMEOUT seconds */
-#define FORWARD_TEST 50 /* try all servers every 50 queries */
-#define FORWARD_TIME 20 /* or 20 seconds */
-#define UDP_TEST_TIME 60 /* How often to reset our idea of max packet size. */
-#define SERVERS_LOGGED 30 /* Only log this many servers when logging state */
-#define LOCALS_LOGGED 8 /* Only log this many local addresses when logging state */
-#define RANDOM_SOCKS 64 /* max simultaneous random ports */
-#define LEASE_RETRY 60 /* on error, retry writing leasefile after LEASE_RETRY seconds */
-#define CACHESIZ 150 /* default cache size */
-#define TTL_FLOOR_LIMIT 3600 /* don't allow --min-cache-ttl to raise TTL above this under any circumstances */
-#define MAXLEASES 1000 /* maximum number of DHCP leases */
-#define PING_WAIT 3 /* wait for ping address-in-use test */
-#define PING_CACHE_TIME 30 /* Ping test assumed to be valid this long. */
-#define DECLINE_BACKOFF 600 /* disable DECLINEd static addresses for this long */
-#define DHCP_PACKET_MAX 16384 /* hard limit on DHCP packet size */
+pub const FTABSIZ: u32 = 150; /* max number of outstanding requests (default) */
+pub const MAX_PROCS: u32 = 20; /* max no children for TCP requests */
+pub const CHILD_LIFETIME: u32 = 150; /* secs 'till terminated (RFC1035 suggests > 120s) */
+pub const TCP_MAX_QUERIES: u32 = 100; /* Maximum number of queries per incoming TCP connection */
+pub const TCP_BACKLOG: u32 = 32;  /* kernel backlog limit for TCP connections */
+pub const EDNS_PKTSZ: u32 = 4096; /* default max EDNS.0 UDP packet from RFC5625 */
+pub const SAFE_PKTSZ: u32 = 1280; /* "go anywhere" UDP packet size */
+pub const KEYBLOCK_LEN: usize = 40; /* choose to minimise fragmentation when storing DNSSEC keys */
+pub const DNSSEC_WORK: u32 = 50; /* Max number of queries to validate one question */
+pub const TIMEOUT: u32 = 10; /* drop UDP queries after TIMEOUT seconds */
+pub const FORWARD_TEST: u32 = 50; /* try all servers every 50 queries */
+pub const FORWARD_TIME: u32 = 20; /* or 20 seconds */
+pub const UDP_TEST_TIME: u32 = 60; /* How often to reset our idea of max packet size. */
+pub const SERVERS_LOGGED: u32 = 30; /* Only log this many servers when logging state */
+pub const LOCALS_LOGGED: u32 = 8; /* Only log this many local addresses when logging state */
+pub const RANDOM_SOCKS: u32 = 64; /* max simultaneous random ports */
+pub const LEASE_RETRY: u32 = 60; /* on error, retry writing leasefile after LEASE_RETRY seconds */
+pub const CACHESIZ: u32 = 150; /* default cache size */
+pub const TTL_FLOOR_LIMIT: u32 = 3600; /* don't allow --min-cache-ttl to raise TTL above this under any circumstances */
+pub const MAXLEASES: u32 = 1000; /* maximum number of DHCP leases */
+pub const PING_WAIT: u32 = 3; /* wait for ping address-in-use test */
+pub const PING_CACHE_TIME: u32 = 30; /* Ping test assumed to be valid this long. */
+pub const DECLINE_BACKOFF: u32 = 600; /* disable DECLINEd static addresses for this long */
+pub const DHCP_PACKET_MAX: u32 = 16384; /* hard limit on DHCP packet size */
 
-#define CNAME_CHAIN 10 /* chains longer than this atr dropped for loop protection */
-#define HOSTSFILE "/etc/hosts"
-#define ETHERSFILE "/etc/ethers"
-#define DEFLEASE 3600 /* default lease time, 1 hour */
-#define CHUSER "nobody"
-#define CHGRP "dip"
-#define TFTP_MAX_CONNECTIONS 50 /* max simultaneous connections */
-#define LOG_MAX 5 /* log-queue length */
-#define RANDFILE "/dev/urandom"
-#define DNSMASQ_SERVICE "uk.org.thekelleys.dnsmasq" /* Default - may be overridden by config */
-#define DNSMASQ_PATH "/uk/org/thekelleys/dnsmasq"
-#define AUTH_TTL 600 /* default TTL for auth DNS */
-#define SOA_REFRESH 1200 /* SOA refresh default */
-#define SOA_RETRY 180 /* SOA retry default */
-#define SOA_EXPIRY 1209600 /* SOA expiry default */
-#define LOOP_TEST_DOMAIN "test" /* domain for loop testing, "test" is reserved by RFC 2606 and won't therefore clash */
-#define LOOP_TEST_TYPE T_TXT
-constexpr size_t IF_NAMESIZE = 16;
+pub const CNAME_CHAIN: u32 = 10; /* chains longer than this atr dropped for loop protection */
+pub const HOSTSFILE: &str= "/etc/hosts";
+pub const ETHERSFILE: &str= "/etc/ethers";
+pub const DEFLEASE: u32 = 3600; /* default lease time, 1 hour */
+pub const CHUSER: &str= "nobody";
+pub const CHGRP: &str= "dip";
+pub const TFTP_MAX_CONNECTIONS: u32 = 50; /* max simultaneous connections */
+pub const LOG_MAX: u32 = 5; /* log-queue length */
+pub const RANDFILE: &str= "/dev/urandom";
+pub const DNSMASQ_SERVICE: &str= "uk.org.thekelleys.dnsmasq"; /* Default - may be overridden by config */
+pub const DNSMASQ_PATH: &str= "/uk/org/thekelleys/dnsmasq";
+pub const AUTH_TTL: u32 = 600; /* default TTL for auth DNS */
+pub const SOA_REFRESH: u32 = 1200; /* SOA refresh default */
+pub const SOA_RETRY: u32 = 180; /* SOA retry default */
+pub const SOA_EXPIRY: u32 = 1209600; /* SOA expiry default */
+pub const LOOP_TEST_DOMAIN: &str= "test"; /* domain for loop testing, "test" is reserved by RFC 2606 and won't therefore clash */
+// const LOOP_TEST_TYPE: &str= T_TXT;
+pub const IF_NAMESIZE: usize = 16;
 
 /* compile-time options: uncomment below to enable or do eg.
    make COPTS=-DHAVE_BROKEN_RTC
@@ -165,14 +165,14 @@ RESOLVFILE
 /* The default set of options to build. Built with these options, dnsmasq
    has no library dependencies other than libc */
 
-#define HAVE_DHCP
-#define HAVE_DHCP6
-#define HAVE_TFTP
-#define HAVE_SCRIPT
-#define HAVE_AUTH
-#define HAVE_IPSET
-#define HAVE_LOOP
-#define HAVE_DUMPFILE
+// #define HAVE_DHCP
+// #define HAVE_DHCP6
+// #define HAVE_TFTP
+// #define HAVE_SCRIPT
+// #define HAVE_AUTH
+// #define HAVE_IPSET
+// #define HAVE_LOOP
+// #define HAVE_DUMPFILE
 
 /* Build options which require external libraries.
 
@@ -189,288 +189,288 @@ RESOLVFILE
 /* #define HAVE_DNSSEC */
 
 
-/* Default locations for important system files. */
+// /* Default locations for important system files. */
 
-#ifndef LEASEFILE
-#   if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
-#      define LEASEFILE "/var/db/dnsmasq.leases"
-#   elif defined(__sun__) || defined (__sun)
-#      define LEASEFILE "/var/cache/dnsmasq.leases"
-#   elif defined(__ANDROID__)
-#      define LEASEFILE "/data/misc/dhcp/dnsmasq.leases"
-#   else
-#      define LEASEFILE "/var/lib/misc/dnsmasq.leases"
-#   endif
-#endif
+// #ifndef LEASEFILE
+// #   if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
+// #      define LEASEFILE "/var/db/dnsmasq.leases"
+// #   elif defined(__sun__) || defined (__sun)
+// #      define LEASEFILE "/var/cache/dnsmasq.leases"
+// #   elif defined(__ANDROID__)
+// #      define LEASEFILE "/data/misc/dhcp/dnsmasq.leases"
+// #   else
+// #      define LEASEFILE "/var/lib/misc/dnsmasq.leases"
+// #   endif
+// #endif
 
-#ifndef CONFFILE
-#   if defined(__FreeBSD__)
-#      define CONFFILE "/usr/local/etc/dnsmasq.conf"
-#   else
-#      define CONFFILE "/etc/dnsmasq.conf"
-#   endif
-#endif
+// #ifndef CONFFILE
+// #   if defined(__FreeBSD__)
+// #      define CONFFILE "/usr/local/etc/dnsmasq.conf"
+// #   else
+// #      define CONFFILE "/etc/dnsmasq.conf"
+// #   endif
+// #endif
 
-#ifndef RESOLVFILE
-#   if defined(__uClinux__)
-#      define RESOLVFILE "/etc/config/resolv.conf"
-#   else
-#      define RESOLVFILE "/etc/resolv.conf"
-#   endif
-#endif
+// #ifndef RESOLVFILE
+// #   if defined(__uClinux__)
+// #      define RESOLVFILE "/etc/config/resolv.conf"
+// #   else
+// #      define RESOLVFILE "/etc/resolv.conf"
+// #   endif
+// #endif
 
-#ifndef RUNFILE
-#   if defined(__ANDROID__)
-#      define RUNFILE "/data/dnsmasq.pid"
-#    else
-#      define RUNFILE "/var/run/dnsmasq.pid"
-#    endif
-#endif
+// #ifndef RUNFILE
+// #   if defined(__ANDROID__)
+// #      define RUNFILE "/data/dnsmasq.pid"
+// #    else
+// #      define RUNFILE "/var/run/dnsmasq.pid"
+// #    endif
+// #endif
 
-/* platform dependent options: these are determined automatically below
+// /* platform dependent options: these are determined automatically below
 
-HAVE_LINUX_NETWORK
-HAVE_BSD_NETWORK
-HAVE_SOLARIS_NETWORK
-   define exactly one of these to alter interaction with kernel networking.
+// HAVE_LINUX_NETWORK
+// HAVE_BSD_NETWORK
+// HAVE_SOLARIS_NETWORK
+//    define exactly one of these to alter interaction with kernel networking.
 
-HAVE_GETOPT_LONG
-   defined when GNU-style getopt_long available.
+// HAVE_GETOPT_LONG
+//    defined when GNU-style getopt_long available.
 
-HAVE_SOCKADDR_SA_LEN
-   defined if struct sockaddr has sa_len field (*BSD)
-*/
+// HAVE_SOCKADDR_SA_LEN
+//    defined if struct sockaddr has sa_len field (*BSD)
+// */
 
-/* Must precede __linux__ since uClinux defines __linux__ too. */
-#if defined(__uClinux__)
-#define HAVE_LINUX_NETWORK
-#define HAVE_GETOPT_LONG
-#undef HAVE_SOCKADDR_SA_LEN
-/* Never use fork() on uClinux. Note that this is subtly different from the
-   --keep-in-foreground option, since it also  suppresses forking new
-   processes for TCP connections and disables the call-a-script on leasechange
-   system. It's intended for use on MMU-less kernels. */
-#define NO_FORK
+// /* Must precede __linux__ since uClinux defines __linux__ too. */
+// #if defined(__uClinux__)
+// #define HAVE_LINUX_NETWORK
+// #define HAVE_GETOPT_LONG
+// #undef HAVE_SOCKADDR_SA_LEN
+// /* Never use fork() on uClinux. Note that this is subtly different from the
+//    --keep-in-foreground option, since it also  suppresses forking new
+//    processes for TCP connections and disables the call-a-script on leasechange
+//    system. It's intended for use on MMU-less kernels. */
+// #define NO_FORK
 
-#elif defined(__UCLIBC__)
-#define HAVE_LINUX_NETWORK
-#if defined(__UCLIBC_HAS_GNU_GETOPT__) || \
-   ((__UCLIBC_MAJOR__==0) && (__UCLIBC_MINOR__==9) && (__UCLIBC_SUBLEVEL__<21))
-#    define HAVE_GETOPT_LONG
-#endif
-#undef HAVE_SOCKADDR_SA_LEN
-#if !defined(__ARCH_HAS_MMU__) && !defined(__UCLIBC_HAS_MMU__)
-#  define NO_FORK
-#endif
-#if defined(__UCLIBC_HAS_IPV6__)
-#  ifndef IPV6_V6ONLY
-#    define IPV6_V6ONLY 26
-#  endif
-#endif
+// #elif defined(__UCLIBC__)
+// #define HAVE_LINUX_NETWORK
+// #if defined(__UCLIBC_HAS_GNU_GETOPT__) || \
+//    ((__UCLIBC_MAJOR__==0) && (__UCLIBC_MINOR__==9) && (__UCLIBC_SUBLEVEL__<21))
+// #    define HAVE_GETOPT_LONG
+// #endif
+// #undef HAVE_SOCKADDR_SA_LEN
+// #if !defined(__ARCH_HAS_MMU__) && !defined(__UCLIBC_HAS_MMU__)
+// #  define NO_FORK
+// #endif
+// #if defined(__UCLIBC_HAS_IPV6__)
+// #  ifndef IPV6_V6ONLY
+// #    define IPV6_V6ONLY 26
+// #  endif
+// #endif
 
-/* This is for glibc 2.x */
-#elif defined(__linux__)
-#define HAVE_LINUX_NETWORK
-#define HAVE_GETOPT_LONG
-#undef HAVE_SOCKADDR_SA_LEN
+// /* This is for glibc 2.x */
+// #elif defined(__linux__)
+// #define HAVE_LINUX_NETWORK
+// #define HAVE_GETOPT_LONG
+// #undef HAVE_SOCKADDR_SA_LEN
 
-#elif defined(__FreeBSD__) || \
-      defined(__OpenBSD__) || \
-      defined(__DragonFly__) || \
-      defined(__FreeBSD_kernel__)
-#define HAVE_BSD_NETWORK
-/* Later versions of FreeBSD have getopt_long() */
-#if defined(optional_argument) && defined(required_argument)
-#   define HAVE_GETOPT_LONG
-#endif
-#define HAVE_SOCKADDR_SA_LEN
+// #elif defined(__FreeBSD__) || \
+//       defined(__OpenBSD__) || \
+//       defined(__DragonFly__) || \
+//       defined(__FreeBSD_kernel__)
+// #define HAVE_BSD_NETWORK
+// /* Later versions of FreeBSD have getopt_long() */
+// #if defined(optional_argument) && defined(required_argument)
+// #   define HAVE_GETOPT_LONG
+// #endif
+// #define HAVE_SOCKADDR_SA_LEN
 
-#elif defined(__APPLE__)
-#define HAVE_BSD_NETWORK
-#define HAVE_GETOPT_LONG
-#define HAVE_SOCKADDR_SA_LEN
-/* Define before sys/socket.h is included so we get socklen_t */
-#define _BSD_SOCKLEN_T_
-/* Select the RFC_3542 version of the IPv6 socket API.
-   Define before netinet6/in6.h is included. */
-#define __APPLE_USE_RFC_3542
-#define NO_IPSET
+// #elif defined(__APPLE__)
+// #define HAVE_BSD_NETWORK
+// #define HAVE_GETOPT_LONG
+// #define HAVE_SOCKADDR_SA_LEN
+// /* Define before sys/socket.h is included so we get socklen_t */
+// #define _BSD_SOCKLEN_T_
+// /* Select the RFC_3542 version of the IPv6 socket API.
+//    Define before netinet6/in6.h is included. */
+// #define __APPLE_USE_RFC_3542
+// #define NO_IPSET
 
-#elif defined(__NetBSD__)
-#define HAVE_BSD_NETWORK
-#define HAVE_GETOPT_LONG
-#define HAVE_SOCKADDR_SA_LEN
+// #elif defined(__NetBSD__)
+// #define HAVE_BSD_NETWORK
+// #define HAVE_GETOPT_LONG
+// #define HAVE_SOCKADDR_SA_LEN
 
-#elif defined(__sun) || defined(__sun__)
-#define HAVE_SOLARIS_NETWORK
-#define HAVE_GETOPT_LONG
-#undef HAVE_SOCKADDR_SA_LEN
-#define ETHER_ADDR_LEN 6
+// #elif defined(__sun) || defined(__sun__)
+// #define HAVE_SOLARIS_NETWORK
+// #define HAVE_GETOPT_LONG
+// #undef HAVE_SOCKADDR_SA_LEN
+// const ETHER_ADDR_LEN: u32 = 6;
 
-#endif
+// #endif
 
-/* Decide if we're going to support IPv6 */
-/* We assume that systems which don't have IPv6
-   headers don't have ntop and pton either */
+// /* Decide if we're going to support IPv6 */
+// /* We assume that systems which don't have IPv6
+//    headers don't have ntop and pton either */
 
-#if defined(INET6_ADDRSTRLEN) && defined(IPV6_V6ONLY)
-#  define HAVE_IPV6
-#  define ADDRSTRLEN INET6_ADDRSTRLEN
-#else
-#  if !defined(INET_ADDRSTRLEN)
-#      define INET_ADDRSTRLEN 16 /* 4*3 + 3 dots + NULL */
-#  endif
-#  undef HAVE_IPV6
-#  define ADDRSTRLEN INET_ADDRSTRLEN
-#endif
+// #if defined(INET6_ADDRSTRLEN) && defined(IPV6_V6ONLY)
+// #  define HAVE_IPV6
+// #  define ADDRSTRLEN INET6_ADDRSTRLEN
+// #else
+// #  if !defined(INET_ADDRSTRLEN)
+// #      define INET_ADDRSTRLEN 16 /* 4*3 + 3 dots + NULL */
+// #  endif
+// #  undef HAVE_IPV6
+// #  define ADDRSTRLEN INET_ADDRSTRLEN
+// #endif
 
 
-/* rules to implement compile-time option dependencies and
-   the NO_XXX flags */
+// /* rules to implement compile-time option dependencies and
+//    the NO_XXX flags */
 
-#ifdef NO_IPV6
-#undef HAVE_IPV6
-#endif
+// #ifdef NO_IPV6
+// #undef HAVE_IPV6
+// #endif
 
-#ifdef NO_TFTP
-#undef HAVE_TFTP
-#endif
+// #ifdef NO_TFTP
+// #undef HAVE_TFTP
+// #endif
 
-#ifdef NO_DHCP
-#undef HAVE_DHCP
-#undef HAVE_DHCP6
-#endif
+// #ifdef NO_DHCP
+// #undef HAVE_DHCP
+// #undef HAVE_DHCP6
+// #endif
 
-#if defined(NO_DHCP6) || !defined(HAVE_IPV6)
-#undef HAVE_DHCP6
-#endif
+// #if defined(NO_DHCP6) || !defined(HAVE_IPV6)
+// #undef HAVE_DHCP6
+// #endif
 
-/* DHCP6 needs DHCP too */
-#ifdef HAVE_DHCP6
-#define HAVE_DHCP
-#endif
+// /* DHCP6 needs DHCP too */
+// #ifdef HAVE_DHCP6
+// #define HAVE_DHCP
+// #endif
 
-#if defined(NO_SCRIPT) || defined(NO_FORK)
-#undef HAVE_SCRIPT
-#undef HAVE_LUASCRIPT
-#endif
+// #if defined(NO_SCRIPT) || defined(NO_FORK)
+// #undef HAVE_SCRIPT
+// #undef HAVE_LUASCRIPT
+// #endif
 
-/* Must HAVE_SCRIPT to HAVE_LUASCRIPT */
-#ifdef HAVE_LUASCRIPT
-#define HAVE_SCRIPT
-#endif
+// /* Must HAVE_SCRIPT to HAVE_LUASCRIPT */
+// #ifdef HAVE_LUASCRIPT
+// #define HAVE_SCRIPT
+// #endif
 
-#ifdef NO_AUTH
-#undef HAVE_AUTH
-#endif
+// #ifdef NO_AUTH
+// #undef HAVE_AUTH
+// #endif
 
-#if defined(NO_IPSET)
-#undef HAVE_IPSET
-#endif
+// #if defined(NO_IPSET)
+// #undef HAVE_IPSET
+// #endif
 
-#ifdef NO_LOOP
-#undef HAVE_LOOP
-#endif
+// #ifdef NO_LOOP
+// #undef HAVE_LOOP
+// #endif
 
-#ifdef NO_DUMPFILE
-#undef HAVE_DUMPFILE
-#endif
+// #ifdef NO_DUMPFILE
+// #undef HAVE_DUMPFILE
+// #endif
 
-#if defined (HAVE_LINUX_NETWORK) && !defined(NO_INOTIFY)
-#define HAVE_INOTIFY
-#endif
+// #if defined (HAVE_LINUX_NETWORK) && !defined(NO_INOTIFY)
+// #define HAVE_INOTIFY
+// #endif
 
-/* Define a string indicating which options are in use.
-   DNSMASQ_COMPILE_OPTS is only defined in dnsmasq.c */
+// /* Define a string indicating which options are in use.
+//    DNSMASQ_COMPILE_OPTS is only defined in dnsmasq.c */
 
-#ifdef DNSMASQ_COMPILE_OPTS
+// #ifdef DNSMASQ_COMPILE_OPTS
 
-static char *compile_opts =
-#ifndef HAVE_IPV6
-"no-"
-#endif
-"IPv6 "
-#ifndef HAVE_GETOPT_LONG
-"no-"
-#endif
-"GNU-getopt "
-#ifdef HAVE_BROKEN_RTC
-"no-RTC "
-#endif
-#ifdef NO_FORK
-"no-MMU "
-#endif
-#ifndef HAVE_DBUS
-"no-"
-#endif
-"DBus "
-#ifndef LOCALEDIR
-"no-"
-#endif
-"i18n "
-#if defined(HAVE_LIBIDN2)
-"IDN2 "
-#else
- #if !defined(HAVE_IDN)
-"no-"
- #endif
-"IDN "
-#endif
-#ifndef HAVE_DHCP
-"no-"
-#endif
-"DHCP "
-#if defined(HAVE_DHCP)
-#  if !defined (HAVE_DHCP6)
-     "no-"
-#  endif
-     "DHCPv6 "
-#endif
-#if !defined(HAVE_SCRIPT)
-     "no-scripts "
-#else
-#  if !defined(HAVE_LUASCRIPT)
-     "no-"
-#  endif
-     "Lua "
-#endif
-#ifndef HAVE_TFTP
-"no-"
-#endif
-"TFTP "
-#ifndef HAVE_CONNTRACK
-"no-"
-#endif
-"conntrack "
-#ifndef HAVE_IPSET
-"no-"
-#endif
-"ipset "
-#ifndef HAVE_AUTH
-"no-"
-#endif
-"auth "
-#ifndef HAVE_DNSSEC
-"no-"
-#endif
-"DNSSEC "
-#ifdef NO_ID
-"no-ID "
-#endif
-#ifndef HAVE_LOOP
-"no-"
-#endif
-"loop-detect "
-#ifndef HAVE_INOTIFY
-"no-"
-#endif
-"inotify "
-#ifndef HAVE_DUMPFILE
-"no-"
-#endif
-"dumpfile";
+// static char *compile_opts =
+// #ifndef HAVE_IPV6
+// "no-"
+// #endif
+// "IPv6 "
+// #ifndef HAVE_GETOPT_LONG
+// "no-"
+// #endif
+// "GNU-getopt "
+// #ifdef HAVE_BROKEN_RTC
+// "no-RTC "
+// #endif
+// #ifdef NO_FORK
+// "no-MMU "
+// #endif
+// #ifndef HAVE_DBUS
+// "no-"
+// #endif
+// "DBus "
+// #ifndef LOCALEDIR
+// "no-"
+// #endif
+// "i18n "
+// #if defined(HAVE_LIBIDN2)
+// "IDN2 "
+// #else
+//  #if !defined(HAVE_IDN)
+// "no-"
+//  #endif
+// "IDN "
+// #endif
+// #ifndef HAVE_DHCP
+// "no-"
+// #endif
+// "DHCP "
+// #if defined(HAVE_DHCP)
+// #  if !defined (HAVE_DHCP6)
+//      "no-"
+// #  endif
+//      "DHCPv6 "
+// #endif
+// #if !defined(HAVE_SCRIPT)
+//      "no-scripts "
+// #else
+// #  if !defined(HAVE_LUASCRIPT)
+//      "no-"
+// #  endif
+//      "Lua "
+// #endif
+// #ifndef HAVE_TFTP
+// "no-"
+// #endif
+// "TFTP "
+// #ifndef HAVE_CONNTRACK
+// "no-"
+// #endif
+// "conntrack "
+// #ifndef HAVE_IPSET
+// "no-"
+// #endif
+// "ipset "
+// #ifndef HAVE_AUTH
+// "no-"
+// #endif
+// "auth "
+// #ifndef HAVE_DNSSEC
+// "no-"
+// #endif
+// "DNSSEC "
+// #ifdef NO_ID
+// "no-ID "
+// #endif
+// #ifndef HAVE_LOOP
+// "no-"
+// #endif
+// "loop-detect "
+// #ifndef HAVE_INOTIFY
+// "no-"
+// #endif
+// "inotify "
+// #ifndef HAVE_DUMPFILE
+// "no-"
+// #endif
+// "dumpfile";
 
-#endif
+// #endif
 
 
 

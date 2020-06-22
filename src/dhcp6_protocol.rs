@@ -14,62 +14,63 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define DHCPV6_SERVER_PORT 547
-#define DHCPV6_CLIENT_PORT 546
+const DHCPV6_SERVER_PORT: u32= 547;
+const DHCPV6_CLIENT_PORT: u32= 546;
 
-#define ALL_SERVERS                  "FF05::1:3"
-#define ALL_RELAY_AGENTS_AND_SERVERS "FF02::1:2"
+const ALL_SERVERS   : &str =               "FF05::1:3";
 
-#define DHCP6SOLICIT      1
-#define DHCP6ADVERTISE    2
-#define DHCP6REQUEST      3
-#define DHCP6CONFIRM      4
-#define DHCP6RENEW        5
-#define DHCP6REBIND       6
-#define DHCP6REPLY        7
-#define DHCP6RELEASE      8
-#define DHCP6DECLINE      9
-#define DHCP6RECONFIGURE  10
-#define DHCP6IREQ         11
-#define DHCP6RELAYFORW    12
-#define DHCP6RELAYREPL    13
+const ALL_RELAY_AGENTS_AND_SERVERS: &str = "FF02::1:2";
 
-#define OPTION6_CLIENT_ID       1
-#define OPTION6_SERVER_ID       2
-#define OPTION6_IA_NA           3
-#define OPTION6_IA_TA           4
-#define OPTION6_IAADDR          5
-#define OPTION6_ORO             6
-#define OPTION6_PREFERENCE      7
-#define OPTION6_ELAPSED_TIME    8
-#define OPTION6_RELAY_MSG       9
-#define OPTION6_AUTH            11
-#define OPTION6_UNICAST         12
-#define OPTION6_STATUS_CODE     13
-#define OPTION6_RAPID_COMMIT    14
-#define OPTION6_USER_CLASS      15
-#define OPTION6_VENDOR_CLASS    16
-#define OPTION6_VENDOR_OPTS     17
-#define OPTION6_INTERFACE_ID    18
-#define OPTION6_RECONFIGURE_MSG 19
-#define OPTION6_RECONF_ACCEPT   20
-#define OPTION6_DNS_SERVER      23
-#define OPTION6_DOMAIN_SEARCH   24
-#define OPTION6_REFRESH_TIME    32
-#define OPTION6_REMOTE_ID       37
-#define OPTION6_SUBSCRIBER_ID   38
-#define OPTION6_FQDN            39
-#define OPTION6_CLIENT_MAC      79
+const DHCP6SOLICIT: u32= 1;
+const DHCP6ADVERTISE: u32= 2;
+const DHCP6REQUEST: u32= 3;
+const DHCP6CONFIRM: u32= 4;
+const DHCP6RENEW: u32= 5;
+const DHCP6REBIND: u32= 6;
+const DHCP6REPLY: u32= 7;
+const DHCP6RELEASE: u32= 8;
+const DHCP6DECLINE: u32= 9;
+const DHCP6RECONFIGURE: u32= 10;
+const DHCP6IREQ: u32= 11;
+const DHCP6RELAYFORW: u32= 12;
+const DHCP6RELAYREPL: u32= 13;
+
+const OPTION6_CLIENT_ID: u32= 1;
+const OPTION6_SERVER_ID: u32= 2;
+const OPTION6_IA_NA: u32= 3;
+const OPTION6_IA_TA: u32= 4;
+const OPTION6_IAADDR: u32= 5;
+const OPTION6_ORO: u32= 6;
+const OPTION6_PREFERENCE: u32= 7;
+const OPTION6_ELAPSED_TIME: u32= 8;
+const OPTION6_RELAY_MSG: u32= 9;
+const OPTION6_AUTH: u32= 11;
+const OPTION6_UNICAST: u32= 12;
+const OPTION6_STATUS_CODE: u32= 13;
+const OPTION6_RAPID_COMMIT: u32= 14;
+const OPTION6_USER_CLASS: u32= 15;
+const OPTION6_VENDOR_CLASS: u32= 16;
+const OPTION6_VENDOR_OPTS: u32= 17;
+const OPTION6_INTERFACE_ID: u32= 18;
+const OPTION6_RECONFIGURE_MSG: u32= 19;
+const OPTION6_RECONF_ACCEPT: u32= 20;
+const OPTION6_DNS_SERVER: u32= 23;
+const OPTION6_DOMAIN_SEARCH: u32= 24;
+const OPTION6_REFRESH_TIME: u32= 32;
+const OPTION6_REMOTE_ID: u32= 37;
+const OPTION6_SUBSCRIBER_ID: u32= 38;
+const OPTION6_FQDN: u32= 39;
+const OPTION6_CLIENT_MAC: u32= 79;
 
 /* replace this with the real number when allocated.
    defining this also enables the relevant code. */ 
 /* #define OPTION6_PREFIX_CLASS    99 */
 
 
-#define DHCP6SUCCESS     0
-#define DHCP6UNSPEC      1
-#define DHCP6NOADDRS     2
-#define DHCP6NOBINDING   3
-#define DHCP6NOTONLINK   4
-#define DHCP6USEMULTI    5
+const DHCP6SUCCESS: u32= 0;
+const DHCP6UNSPEC: u32= 1;
+const DHCP6NOADDRS: u32= 2;
+const DHCP6NOBINDING: u32= 3;
+const DHCP6NOTONLINK: u32= 4;
+const DHCP6USEMULTI: u32= 5;
 
