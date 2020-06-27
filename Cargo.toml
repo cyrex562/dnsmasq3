@@ -8,7 +8,8 @@ edition = "2018"
 
 [dependencies]
 libc = "0.2"
-log = "*"
-fern = "*"
-chrono = "*"
+log = "0.4.8"
+fern = "0.6.0"
+chrono = "0.4.11"
 byteorder = "1.3.4"
+socket = "0.0.7"

@@ -1,4 +1,4 @@
-enum AddrType {
+pub enum AddrType {
     Ipv4Addr,
     MacAddr,
     Ipv6Addr,

@@ -14,9 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
-
-const char * metric_names[] = {
+const metric_names: &[&str] = &[
     "dns_cache_inserted",
     "dns_cache_live_freed",
     "dns_queries_forwarded",
@@ -37,8 +35,12 @@ const char * metric_names[] = {
     "leases_pruned_4",
     "leases_allocated_6",
     "leases_pruned_6",
-};
+];
 
-const char* get_metric_name(int i) {
-    return metric_names[i];
+
+// const char* get_metric_name(int i) {
+//     return metric_names[i];
+// }
+fn get_metric_name(i: usize) -> String {
+    metric_names[i].to_string()
 }

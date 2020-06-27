@@ -14,8 +14,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// #include <cstdint>
-
 pub const NAMESERVER_PORT: u32 = 53;
 pub const TFTP_PORT: u32 =       69;
 pub const MIN_PORT: u32 =       1024;           /* first non-reserved port */

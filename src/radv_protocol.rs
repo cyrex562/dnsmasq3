@@ -14,45 +14,58 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define ALL_NODES                 "FF02::1"
-#define ALL_ROUTERS               "FF02::2"
+use crate::dnsmasq_sys::in6_addr;
 
-struct ping_packet {
-  uint8_t type, code;
-  uint16_t checksum;
-  uint16_t identifier;
-  uint16_t sequence_no;
-};
+const ALL_NODES: &str = "FF02::1";
+const ALL_ROUTERS: &str = "FF02::2";
+
+const ICMP6_OPT_SOURCE_MAC: u8 =  1;
+const ICMP6_OPT_PREFIX: u8 =      3;
+const ICMP6_OPT_MTU: u8 =         5;
+const ICMP6_OPT_ADV_INTERVAL: u8 = 7;
+const ICMP6_OPT_RT_INFO: u8 =     24;
+const ICMP6_OPT_RDNSS: u8 =      25;
+const ICMP6_OPT_DNSSL: u8 =      31;
+
+pub struct ping_packet {
+  pkt_type: u8,
+  code: u8,
+  checksum: u16,
+  identifier: u16,
+  sequence_no: u16,
+}
 
 struct ra_packet {
-  uint8_t type, code;
-  uint16_t checksum;
-  uint8_t hop_limit, flags;
-  uint16_t lifetime;
-  uint32_t reachable_time;
-  uint32_t retrans_time;
-};
+  pkt_type: u8,
+  code: u8,
+  checksum: u16,
+  hop_limit: u8,
+  flags: u8,
+  lifetime: u16,
+  reachable_time: u32,
+  retrans_time: u32,
+}
 
 struct neigh_packet {
-  uint8_t type, code;
-  uint16_t checksum;
-  uint16_t reserved;
-  struct in6_addr target;
-};
+  pkt_type: u8,
+  code: u8,
+  checksum: u16,
+  reserved: u16,
+  target: in6_addr,
+}
 
 struct prefix_opt {
-  uint8_t type, len, prefix_len, flags;
-  uint32_t valid_lifetime, preferred_lifetime, reserved;
-  struct in6_addr prefix;
-};
+  opt_type: u8,
+  len: u8,
+  prefix_len: u8,
+  flags: u8,
+  valid_lifetime: u32,
+  preferred_lifetime: u32,
+  reserved: u32,
+  prefix: in6_addr
+}
 
-#define ICMP6_OPT_SOURCE_MAC   1
-#define ICMP6_OPT_PREFIX       3
-#define ICMP6_OPT_MTU          5
-#define ICMP6_OPT_ADV_INTERVAL 7
-#define ICMP6_OPT_RT_INFO     24
-#define ICMP6_OPT_RDNSS       25
-#define ICMP6_OPT_DNSSL       31
+
 
 
 

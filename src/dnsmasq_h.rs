@@ -13,75 +13,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-// #pragma once
-
 // const COPYRIGHT :u32 = ;"Copyright (c) 2000-2018 Simon Kelley"
-
-
-
-/* We do defines that influence behavior of stdio.h, so complain
-   if included too early. */
-// #ifdef _STDIO_H
-// #  error "Header file stdio.h included too early!"
-// #endif
-
-// #ifndef NO_LARGEFILE
-// /* Ensure we can use files >2GB (log files may grow this big) */
-// #  define _LARGEFILE_SOURCE 1
-// #  define _FILE_OFFSET_BITS 64
-// #endif
-
-/* Get linux C library versions and define _GNU_SOURCE for kFreeBSD. */
-// #if defined(__linux__) || defined(__GLIBC__)
-// #  ifndef __ANDROID__
-// //#      define _GNU_SOURCE
-// #  endif
-
-// #  include <features.h>
-
-// #endif
-
-/* Need these defined early */
-// #if defined(__sun) || defined(__sun__)
-// #  define _XPG4_2
-// #  define __EXTENSIONS__
-// #endif
-
-// #if (defined(__GNUC__) && __GNUC__>=3) || defined(__clang__)
-// const ATTRIBUTE_NORETURN :u32 = ;__attribute__ ((noreturn))
-// #else
-// const ATTRIBUTE_NORETURN :u32 = ;
-// #endif
-
-// /* get these before config.h  for IPv6 stuff... */
-// #include <sys/types.h>
-
-// #include <cstdint>
-
-// #ifdef __linux__
-
-// #include <sys/socket.h>
-
-// #endif
-
-// #ifdef _WIN32
-
-// #include <winsock2.h>
-
-// #endif
-
-// #ifdef __APPLE__
-// /* Define before netinet/in.h to select API. OSX Lion onwards. */
-// #  define __APPLE_USE_RFC_3542
-// #endif
-// #ifdef __linux__
-
-// #include <netinet/in.h>
-
-// #endif
-
-// /* Also needed before config.h. */
-// #include <getopt.h>
 
 
 // const countof :u32 = ;(x)      (long)(sizeof(x) / sizeof(x[0]))
@@ -90,123 +22,6 @@
 //const MIN :u32 = ;(a, b)        ((a) < (b) ? (a) : (b))
 // TODO: define or replace
 
-
-
-// #endif
-
-// const gettext_noop :u32 = ;(S) (S)
-// #ifndef LOCALEDIR
-// #  define _(S) (S)
-// #else
-// #  include <libintl.h>
-// #  include <locale.h>   
-// #  define _(S) gettext(S)
-// #endif
-
-// #ifdef __linux__
-
-// #include <arpa/inet.h>
-
-// #endif
-
-// #include <sys/stat.h>
-
-// #ifdef __linux__
-
-// #include <sys/ioctl.h>
-
-// #endif
-// #if defined(HAVE_SOLARIS_NETWORK)
-// #  include <sys/sockio.h>
-// #endif
-// #ifdef __linux__
-
-// #include <sys/poll.h>
-// #include <sys/wait.h>
-
-// #endif
-
-// #include <ctime>
-
-// #ifdef __linux__
-
-// #include <sys/un.h>
-
-// #endif
-
-// #include <climits>
-
-// #ifdef __linux__
-
-// #include <net/if.h>
-
-// #endif
-// #if defined(HAVE_SOLARIS_NETWORK) && !defined(ifr_mtu)
-// /* Some solaris net/if./h omit this. */
-// #  define ifr_mtu  ifr_ifru.ifru_metric
-// #endif
-
-// #include <unistd.h>
-// #include <cstdio>
-// #include <cstring>
-// #include <cstdlib>
-// #include <fcntl.h>
-// #include <cctype>
-// #include <csignal>
-// #include <cstddef>
-// #include <ctime>
-// #include <cerrno>
-// #include <string>
-
-// #ifdef __linux__
-
-// #include <pwd.h>
-// #include <grp.h>
-
-// #endif
-
-// #include <cstdarg>
-
-// #if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__sun__) || defined (__sun) || defined (__ANDROID__)
-// #include <netinet/if_ether.h>
-// #else
-// #ifdef __linux__
-
-// #include <net/ethernet.h>
-
-// #endif
-// #endif
-// #ifdef __linux__
-
-// #include <net/if_arp.h>
-// #include <netinet/in_systm.h>
-// #include <netinet/ip.h>
-
-// #endif
-// #ifdef HAVE_IPV6
-
-// #include <netinet/ip6.h>
-
-// #endif
-// #ifdef __linux__
-
-// #include <netinet/ip_icmp.h>
-// #include <sys/uio.h>
-// #include <syslog.h>
-
-// #endif
-
-// #include <dirent.h>
-
-// #ifndef HAVE_LINUX_NETWORK
-// #ifdef __linux__
-// #  include <net/if_dl.h>
-// #endif
-// #endif
-
-// #if defined(HAVE_LINUX_NETWORK)
-
-// #include <linux/capability.h>
 
 /* There doesn't seem to be a universally-available
    userspace header for these. */
@@ -218,11 +33,17 @@
 // extern int
 // capget(cap_user_header_t header, cap_user_data_t data);
 
-use libc::{LOG_DAEMON, LOG_USER, LOG_MAIL, in_addr, in6_addr, sockaddr, sockaddr_in, sockaddr_in6, time_t, off_t, dev_t, ino_t, pid_t, iovec, FILE, c_void};
-use crate::dbus::{watch};
+#[cfg(not(target_os="windows"))]
+use libc::{LOG_DAEMON, LOG_USER, LOG_MAIL, sockaddr, sockaddr_in, sockaddr_in6, time_t, off_t, dev_t, ino_t, pid_t, iovec};
+use libc::FILE;
+#[cfg(target_os="windows")]
+use crate::dnsmasq_sys::*;
+
+use std::ffi::{c_void};
 
 use crate::config;
 use crate::dhcp_protocol;
+
 
 
 pub const LINUX_CAPABILITY_VERSION_1: u32 = 0x19980330;
@@ -1346,7 +1167,6 @@ pub struct daemon {
     dhcp6fd: i32,
     icmp6fd: i32,
     dbus: c_void,
-    watches: Vec<watch>,
     tftp_trans: Vec<tftp_transfer>,
     tftp_done_trans: Vec<tftp_transfer>,
     addrbuff: Vec<u8>,

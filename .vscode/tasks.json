@@ -10,15 +10,6 @@
 			],
 			"group": {
 				"kind": "build",
-				"isDefault": false
-			},
-		},
-		{
-			"label": "build go",
-			"type": "shell",
-			"command": "go build",
-			"group": {
-				"kind": "build",
 				"isDefault": true
 			}
 		}
