@@ -14,107 +14,88 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
-#include <cstdint>
-#include <array>
+// #include "dnsmasq.h"
+// #include <cstdint>
+// #include <array>
 
 /* Time between forced re-loads from kernel. */
-constexpr auto INTERVAL = 90;
+const INTERVAL: u32 = 90;
 
-constexpr auto ARP_MARK =  0;
-constexpr auto ARP_FOUND = 1;  /* Confirmed */
-constexpr auto ARP_NEW  = 2;  /* Newly created */
-constexpr auto ARP_EMPTY = 3;  /* No MAC addr */
+const ARP_MARK: u32 =  0;
+const ARP_FOUND: u32 = 1;  /* Confirmed */
+const ARP_NEW: u32  = 2;  /* Newly created */
+const ARP_EMPTY: u32 = 3;  /* No MAC addr */
 
-struct arp_record {
-    uint16_t hwlen, status;
-    int family;
-    uint8_t hwaddr[DHCP_CHADDR_MAX];
-    struct all_addr addr;
-    struct arp_record* next;
-};
+pub struct arp_record {
+    hwlen: u16,
+    status: u16,
+    family: i32,
+    hwaddr: [u8;DHCP_CHADDR_MAX],
+    addr: all_addr,
+    // next: arp_record*
+}
 
-static struct arp_record* arps = nullptr, * old = nullptr, * freelist = nullptr;
-static time_t last = 0;
+static arps: Vec<arp_record>;
+static old: Vec<arp_record>;
+static freelist: Vec<arp_record>;
+static last: time_t = 0;
 
-static int filter_mac(int family, char* addrp, char* mac, size_t maclen, void* parmv)
+pub fn filter_mac(family: i32, addrp: String, mac: String, maclen: usize, parmv: *c_void) -> i32
 {
-    struct arp_record* arp;
-
-    (void) parmv;
-
-    if (maclen>DHCP_CHADDR_MAX)
+    let matching_arp: *mut arp_record = None;
+    
+    if maclen>DHCP_CHADDR_MAX {
         return 1;
+    }
 
-#ifndef HAVE_IPV6
-    if (family!=AF_INET)
+    if family != AF_INET {
         return 1;
-#endif
+    }
 
-    /* Look for existing entry */
-    for (arp = arps; arp; arp = arp->next) {
-        if (family!=arp->family || arp->status==ARP_NEW)
+    for arp in arps {
+        if family != arp.family || arp.status == ARP_NEW {
             continue;
-
-        if (family==AF_INET) {
-            if (arp->addr.addr.addr4.s_addr!=((struct in_addr*) addrp)->s_addr)
+        }
+        if family == AF_INET {
+            if arp.addr.addr.addr4.s_addr != addrp.s_addr {
                 continue;
+            }
+        } else {
+            // if addresses are not equal
+            if arp.addr.addr.addr6 != addrp {
+                continue;
+            }
         }
-#ifdef HAVE_IPV6
-        else
-      {
-        if (!IN6_ARE_ADDR_EQUAL(&arp->addr.addr.addr6, (struct in6_addr *)addrp))
-          continue;
-      }
-#endif
 
-        if (arp->status==ARP_EMPTY) {
-            /* existing address, was negative. */
-            arp->status = ARP_NEW;
-            arp->hwlen = maclen;
-            memcpy(arp->hwaddr, mac, maclen);
-        }
-        else if (arp->hwlen==maclen && memcmp(arp->hwaddr, mac, maclen)==0)
-            /* Existing entry matches - confirm. */
-            arp->status = ARP_FOUND;
-        else
+        if arp.status == ARP_EMPTY {
+            arp.status = ARP_NEW;
+            arp.hwlen = maclen;
+            arp.hwaddr = mac.clone();
+
+        } else if arp.hwlen == maclen && arp.hwaddr == mac {
+            arp.status == ARP_FOUND;
+        } else {
             continue;
-
+        }
+        matching_arp = arp;
         break;
     }
 
-    if (!arp) {
-        /* New entry */
-        if (freelist) {
-            arp = freelist;
-            freelist = freelist->next;
-        }
-        else if (!(arp = (arp_record*)whine_malloc(sizeof(struct arp_record))))
-            return 1;
-
-        arp->next = arps;
-        arps = arp;
-        arp->status = ARP_NEW;
-        arp->hwlen = maclen;
-        arp->family = family;
-        memcpy(arp->hwaddr, mac, maclen);
-        if (family==AF_INET)
-            arp->addr.addr.addr4.s_addr = ((struct in_addr*) addrp)->s_addr;
-#ifdef HAVE_IPV6
-        else
-      memcpy(&arp->addr.addr.addr6, addrp, IN6ADDRSZ);
-#endif
+    if matching_arp == None {
+        matching_arp = arp_record { status: ARP_NEW, hwlen: maclen, family: family, hwaddr: mac.clone(), addr: addrp}
     }
 
     return 1;
 }
 
 /* If in lazy mode, we cache absence of ARP entries. */
-int find_mac(union mysockaddr* addr, uint8_t* mac, int lazy, time_t now)
+pub fn find_mac(addr: *mysockaddr, mac: [u8;6], lazy: i32, now: time_t) -> i32
 {
-    struct arp_record* arp, * tmp, ** up;
-    int updated = 0;
-
+    let arp: *arp_record = None;
+    let tmp: *arp_record = None;
+    let up: **arp_record = None;
+    let updated: i32 = 0;
+    
     again:
 
     /* If the database is less then INTERVAL old, look in there */

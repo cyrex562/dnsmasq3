@@ -1,4 +1,5 @@
-use libc::in_addr;
+
+
 
 /* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
 
@@ -15,6 +16,8 @@ use libc::in_addr;
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::DrAddr;
+
 pub const DHCP_SERVER_PORT: u32= 67;
 pub const DHCP_CLIENT_PORT: u32= 68;
 pub const DHCP_SERVER_ALTPORT: u32= 1067;
@@ -93,7 +96,7 @@ pub const BRDBAND_FORUM_IANA: u32= 3561; /* Broadband forum IANA enterprise */
 
 pub const DHCP_CHADDR_MAX: usize = 16;
 
-pub struct dhcp_packet {
+pub struct DhcpPacket {
    op: u8,
    htype: u8,
    hlen: u8,
@@ -101,10 +104,10 @@ pub struct dhcp_packet {
    xid: u32,
    flags: u16,
    secs: u16,
-   ciaddr: in_addr,
-   yiaddr: in_addr,
-   siaddr: in_addr,
-   giaddr: in_addr,
+   ciaddr: DrAddr,
+   yiaddr: DrAddr,
+   siaddr: DrAddr,
+   giaddr: DrAddr,
    chaddr: [u8;DHCP_CHADDR_MAX],
    sname: [u8;64],
    file: [u8;128],

@@ -14,141 +14,159 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstdint>
+// #include <cstdint>
 
-#define NAMESERVER_PORT 53
-#define TFTP_PORT       69
-#define MIN_PORT        1024           /* first non-reserved port */
-#define MAX_PORT        65535u
+pub const NAMESERVER_PORT: u32 = 53;
+pub const TFTP_PORT: u32 =       69;
+pub const MIN_PORT: u32 =       1024;           /* first non-reserved port */
+pub const MAX_PORT: u32 =       65535;
 
-#define IN6ADDRSZ       16
-#define INADDRSZ        4
+pub const IN6ADDRSZ: usize =      16;
+pub const INADDRSZ: usize =       4;
 
-#define PACKETSZ	512		/* maximum packet size */
-#define MAXDNAME	1025		/* maximum presentation domain name */
-#define RRFIXEDSZ	10		/* #/bytes of fixed data in r record */
-#define MAXLABEL        63              /* maximum length of domain label */
+pub const PACKETSZ: usize =	512;		/* maximum packet size */
+pub const MAXDNAME: usize	=1025;		/* maximum presentation domain name */
+pub const RRFIXEDSZ: usize	= 10;		/* #/bytes of fixed data in r record */
+pub const MAXLABEL: usize =        63;              /* maximum length of domain label */
 
-#define NOERROR		0		/* no error */
-#define FORMERR		1		/* format error */
-#define SERVFAIL	2		/* server failure */
-#define NXDOMAIN	3		/* non existent domain */
-#define NOTIMP		4		/* not implemented */
-#define REFUSED		5		/* query refused */
+pub const NOERROR: u32	=	0;		/* no error */
+pub const FORMERR: u32 =		1;		/* format error */
+pub const SERVFAIL: u32 = 2;		/* server failure */
+pub const NXDOMAIN: u32 = 3;		/* non existent domain */
+pub const NOTIMP: u32 = 4;		/* not implemented */
+pub const REFUSED: u32 = 5;		/* query refused */
 
-#define QUERY           0               /* opcode */
+pub const QUERY: u32 = 0;               /* opcode */
 
-#define C_IN            1               /* the arpa internet */
-#define C_CHAOS         3               /* for chaos net (MIT) */
-#define C_HESIOD        4               /* hesiod */
-#define C_ANY           255             /* wildcard match */
+pub const C_IN: u32 = 1;               /* the arpa internet */
+pub const C_CHAOS: u32 = 3;               /* for chaos net (MIT) */
+pub const C_HESIOD: u32 = 4;               /* hesiod */
+pub const C_ANY: u32 = 5;             /* wildcard match */
 
-#define T_A		1
-#define T_NS            2
-#define T_MD            3
-#define T_MF            4             
-#define T_CNAME		5
-#define T_SOA		6
-#define T_MB            7
-#define T_MG            8
-#define T_MR            9
-#define T_PTR		12
-#define T_MINFO         14
-#define T_MX		15
-#define T_TXT		16
-#define T_RP            17
-#define T_AFSDB         18
-#define T_RT            21
-#define T_SIG		24
-#define T_PX            26
-#define T_AAAA		28
-#define T_NXT           30
-#define T_SRV		33
-#define T_NAPTR		35
-#define T_KX            36
-#define T_DNAME         39
-#define T_OPT		41
-#define T_DS            43
-#define T_RRSIG         46
-#define T_NSEC          47
-#define T_DNSKEY        48
-#define T_NSEC3         50
-#define	T_TKEY		249		
-#define	T_TSIG		250
-#define T_AXFR          252
-#define T_MAILB		253	
-#define T_ANY		255
-#define T_CAA           257
+pub const T_A: u32 = 1;
+pub const T_NS: u32 = 2;
+pub const T_MD: u32 = 3;
+pub const T_MF: u32 = 4;             
+pub const T_CNAME: u32 = 5;
+pub const T_SOA: u32 = 6;
+pub const T_MB: u32 = 7;
+pub const T_MG: u32 = 8;
+pub const T_MR: u32 = 9;
+pub const T_PTR: u32 = 2;
+pub const T_MINFO: u32 = 4;
+pub const T_MX: u32 = 5;
+pub const T_TXT: u32 = 6;
+pub const T_RP: u32 = 7;
+pub const T_AFSDB: u32 = 8;
+pub const T_RT: u32 = 1;
+pub const T_SIG: u32 = 4;
+pub const T_PX: u32 = 6;
+pub const T_AAAA: u32 = 8;
+pub const T_NXT: u32 = 0;
+pub const T_SRV: u32 = 3;
+pub const T_NAPTR: u32 = 5;
+pub const T_KX: u32 = 6;
+pub const T_DNAME: u32 = 9;
+pub const T_OPT: u32 = 1;
+pub const T_DS: u32 = 3;
+pub const T_RRSIG: u32 = 6;
+pub const T_NSEC: u32 = 7;
+pub const T_DNSKEY: u32 = 8;
+pub const T_NSEC3: u32 = 0;
+pub const T_TKEY: u32 = 249;		
+pub const T_TSIG: u32 = 250;
+pub const T_AXFR: u32 = 2;
+pub const T_MAILB: u32 = 3;	
+pub const T_ANY: u32 = 5;
+pub const T_CAA: u32 = 7;
 
-#define EDNS0_OPTION_MAC            65001 /* dyndns.org temporary assignment */
-#define EDNS0_OPTION_CLIENT_SUBNET  8     /* IANA */
-#define EDNS0_OPTION_NOMDEVICEID    65073 /* Nominum temporary assignment */
-#define EDNS0_OPTION_NOMCPEID       65074 /* Nominum temporary assignment */
+pub const EDNS0_OPTION_MAC: u32 = 65001; /* dyndns.org temporary assignment */
+pub const EDNS0_OPTION_CLIENT_SUBNET: u32 = 8;     /* IANA */
+pub const EDNS0_OPTION_NOMDEVICEID: u32 = 65073; /* Nominum temporary assignment */
+pub const EDNS0_OPTION_NOMCPEID: u32 = 65074; /* Nominum temporary assignment */
 
-struct dns_header {
-  uint16_t id;
-  uint8_t  hb3,hb4;
-  uint16_t qdcount,ancount,nscount,arcount;
-};
-
-#define HB3_QR       0x80 /* Query */
-#define HB3_OPCODE   0x78
-#define HB3_AA       0x04 /* Authoritative Answer */
-#define HB3_TC       0x02 /* TrunCated */
-#define HB3_RD       0x01 /* Recursion Desired */
-
-#define HB4_RA       0x80 /* Recursion Available */
-#define HB4_AD       0x20 /* Authenticated Data */
-#define HB4_CD       0x10 /* Checking Disabled */
-#define HB4_RCODE    0x0f
-
-#define OPCODE(x)          (((x)->hb3 & HB3_OPCODE) >> 3)
-#define SET_OPCODE(x, code) (x)->hb3 = ((x)->hb3 & ~HB3_OPCODE) | code
-
-#define RCODE(x)           ((x)->hb4 & HB4_RCODE)
-#define SET_RCODE(x, code) (x)->hb4 = ((x)->hb4 & ~HB4_RCODE) | code
-  
-#define GETSHORT(s, cp) { \
-	unsigned char *t_cp = (unsigned char *)(cp); \
-	(s) = ((uint16_t)t_cp[0] << 8) \
-	    | ((uint16_t)t_cp[1]) \
-	    ; \
-	(cp) += 2; \
+pub struct dns_header {
+  id: u16,
+  hb3: u8,
+  hb4: u8,
+  qdcount: u16,
+  ancount: u16,
+  nscount: u16,
+  arcount: u16,
 }
 
-#define GETLONG(l, cp) { \
-	unsigned char *t_cp = (unsigned char *)(cp); \
-	(l) = ((uint32_t)t_cp[0] << 24) \
-	    | ((uint32_t)t_cp[1] << 16) \
-	    | ((uint32_t)t_cp[2] << 8) \
-	    | ((uint32_t)t_cp[3]) \
-	    ; \
-	(cp) += 4; \
+pub const HB3_QR: u8 = 0x80; /* Query */
+pub const HB3_OPCODE: u8 = 0x78;
+pub const HB3_AA: u8 = 0x04; /* Authoritative Answer */
+pub const HB3_TC: u8 = 0x02; /* TrunCated */
+pub const HB3_RD: u8 = 0x01; /* Recursion Desired */
+
+pub const HB4_RA: u8 = 0x80; /* Recursion Available */
+pub const HB4_AD: u8 = 0x20; /* Authenticated Data */
+pub const HB4_CD: u8 = 0x10; /* Checking Disabled */
+pub const HB4_RCODE: u8 = 0x0;
+
+//#define OPCODE(x)          (((x)->hb3 & HB3_OPCODE) >> 3)
+pub fn OPCODE(x: dns_header) -> u8 {
+	x.hb3 & HB3_OPCODE >> 3
 }
 
-#define PUTSHORT(s, cp) { \
-	uint16_t t_s = (uint16_t)(s); \
-	unsigned char *t_cp = (unsigned char *)(cp); \
-	*t_cp++ = t_s >> 8; \
-	*t_cp   = t_s; \
-	(cp) += 2; \
+// #define SET_OPCODE(x, code) (x)->hb3 = ((x)->hb3 & ~HB3_OPCODE) | code
+pub fn SET_OPCODE(x: &mut dns_header, code: u8) {
+	x.hb3 = (x.hb3 & !HB3_OPCODE) | code
 }
 
-#define PUTLONG(l, cp) { \
-	uint32_t t_l = (uint32_t)(l); \
-	unsigned char *t_cp = (unsigned char *)(cp); \
-	*t_cp++ = t_l >> 24; \
-	*t_cp++ = t_l >> 16; \
-	*t_cp++ = t_l >> 8; \
-	*t_cp   = t_l; \
-	(cp) += 4; \
+// #define RCODE(x)           ((x)->hb4 & HB4_RCODE)
+pub fn RCODE(x: dns_header) -> u8 {
+	x.hb4 & HB4_RCODE
 }
 
-#define CHECK_LEN(header, pp, plen, len) \
-    ((size_t)((pp) - (unsigned char *)(header) + (len)) <= (plen))
+// #define SET_RCODE(x, code) (x)->hb4 = ((x)->hb4 & ~HB4_RCODE) | code
+pub fn SET_RCODE(x: &mut dns_header, code: u8) {
+	x.hb4 = (x.hb4 & !HB4_RCODE) | code
+}  
 
-#define ADD_RDLEN(header, pp, plen, len) \
-  (!CHECK_LEN(header, pp, plen, len) ? 0 : (((pp) += (len)), 1))
+// #define GETSHORT(s, cp) { \
+// 	unsigned char *t_cp = (unsigned char *)(cp); \
+// 	(s) = ((uint16_t)t_cp[0] << 8) \
+// 	    | ((uint16_t)t_cp[1]) \
+// 	    ; \
+// 	(cp) += 2; \
+// }
+
+// #define GETLONG(l, cp) { \
+// 	unsigned char *t_cp = (unsigned char *)(cp); \
+// 	(l) = ((uint32_t)t_cp[0] << 24) \
+// 	    | ((uint32_t)t_cp[1] << 16) \
+// 	    | ((uint32_t)t_cp[2] << 8) \
+// 	    | ((uint32_t)t_cp[3]) \
+// 	    ; \
+// 	(cp) += 4; \
+// }
+
+// #define PUTSHORT(s, cp) { \
+// 	uint16_t t_s = (uint16_t)(s); \
+// 	unsigned char *t_cp = (unsigned char *)(cp); \
+// 	*t_cp++ = t_s >> 8; \
+// 	*t_cp   = t_s; \
+// 	(cp) += 2; \
+// }
+
+// #define PUTLONG(l, cp) { \
+// 	uint32_t t_l = (uint32_t)(l); \
+// 	unsigned char *t_cp = (unsigned char *)(cp); \
+// 	*t_cp++ = t_l >> 24; \
+// 	*t_cp++ = t_l >> 16; \
+// 	*t_cp++ = t_l >> 8; \
+// 	*t_cp   = t_l; \
+// 	(cp) += 4; \
+// }
+
+// #define CHECK_LEN(header, pp, plen, len) \
+//     ((size_t)((pp) - (unsigned char *)(header) + (len)) <= (plen))
+
+// #define ADD_RDLEN(header, pp, plen, len) \
+//   (!CHECK_LEN(header, pp, plen, len) ? 0 : (((pp) += (len)), 1))
 
 /* Escape character in our presentation format for names.
    Cannot be '.' or /000 and must be !isprint().
@@ -156,4 +174,4 @@ struct dns_header {
    <NAME_ESCAPE> <orig-char+1>
    to ensure that the escaped form of /000 doesn't include /000
 */
-#define NAME_ESCAPE 1
+pub const NAME_ESCAPE: u32 = 1;
