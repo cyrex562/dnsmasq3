@@ -14,82 +14,99 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
-
-#ifdef HAVE_AUTH
-
-static struct addrlist* find_addrlist(struct addrlist* list, int flag, struct all_addr* addr_u)
+//static struct addrlist* find_addrlist(struct addrlist* list, int flag, struct all_addr* addr_u)
+fn find_addrlist(list: Vec<addrlist>, flag: i32, addr_u: Vec<all_addr>) -> Option<addrlist>
 {
-    do {
-        if (!(list->flags & ADDRLIST_IPV6)) {
-            struct in_addr netmask, addr = addr_u->addr.addr4;
+    for l in list {
+        if !l.flags & ADDRLIST_IPV6 {
+            let in_addr = addr_u.addr.addr4;
+            let netmask = addr_u.addr.addr4;
+            let addr = addr_u.addr.addr4;
 
-            if (!(flag & F_IPV4))
+            if !(flag & F_IPV4) {
                 continue;
+            }
+            let x = 0u32 << (!(32u32 - l.prefixlen)).swap_bytes();
+            netmask.s_addr = htonl
 
-            netmask.s_addr = htonl(~(in_addr_t) 0 << (32-list->prefixlen));
-
-            if (is_same_net(addr, list->addr.addr.addr4, netmask))
-                return list;
+            if is_same_net(addr, l.addr.addr.addr4, netmask) {
+                return l;
+            }
+        } else if is_same_net6(addr_u.addr.addrt, l.addr.addr.addr6, l.prefixlen) {
+            return l;
         }
-#ifdef HAVE_IPV6
-        else if (is_same_net6(&(addr_u->addr.addr6), &list->addr.addr.addr6, list->prefixlen))
-          return list;
-#endif
-
     }
-    while ((list = list->next));
 
-    return nullptr;
+    None
 }
 
-static struct addrlist* find_subnet(struct auth_zone* zone, int flag, struct all_addr* addr_u)
+fn find_subnet(zone: auth_zone, flag: i32, addr_u: all_addr) -> Option<addrlist>
 {
-    if (!zone->subnet)
-        return nullptr;
-
-    return find_addrlist(zone->subnet, flag, addr_u);
+    if !zone.subnet {
+        None
+    } else {
+        find_addrlist(zone.subnet, flag, addr_u)
+    }    
 }
 
-static struct addrlist* find_exclude(struct auth_zone* zone, int flag, struct all_addr* addr_u)
+fn find_exclude(zone: auth_zone, flag: i32, addr_u: all_addr)
 {
-    if (!zone->exclude)
-        return nullptr;
-
-    return find_addrlist(zone->exclude, flag, addr_u);
+    if !zone.exclue {
+        None
+    } else {
+        find_addrlist(zone.exclude, flag, addr_u)
+    }
 }
 
-static int filter_zone(struct auth_zone* zone, int flag, struct all_addr* addr_u)
+// static int filter_zone(struct auth_zone* zone, int flag, struct all_addr* addr_u)
+fn filter_zone(zone: auth_zone, flag: i32, addr_u: all_addr) -> i32
 {
-    if (find_exclude(zone, flag, addr_u))
+    // if (find_exclude(zone, flag, addr_u))
+    //     return 0;
+    if find_exclude(zone, flag, addr_u) {
         return 0;
+    }
 
     /* No subnets specified, no filter */
-    if (!zone->subnet)
+    // if (!zone->subnet)
+    //     return 1;
+    if !zone.subnet {
         return 1;
+    }
 
-    return find_subnet(zone, flag, addr_u)!=nullptr;
+    // return find_subnet(zone, flag, addr_u)!=nullptr;
+    find_subnet(zone, flag, addr_u).is_some()
 }
 
-int in_zone(struct auth_zone* zone, char* name, char** cut)
+// int in_zone(struct auth_zone* zone, char* name, char** cut)
+fn in_zone(zone: auth_zone, name: &str, cut: &mut String) -> i32
 {
-    size_t namelen = strlen(name);
-    size_t domainlen = strlen(zone->domain);
+    // size_t namelen = strlen(name);
+    let namelen = name.len();
+    // size_t domainlen = strlen(zone->domain);
+    let domainlen = zone.domain.len();
 
-    if (cut)
-        *cut = nullptr;
+    // if (cut)
+    //     *cut = nullptr;
 
-    if (namelen>=domainlen &&
-            hostname_isequal(zone->domain, &name[namelen-domainlen])) {
-
-        if (namelen==domainlen)
-            return 1;
-
-        if (name[namelen-domainlen-1]=='.') {
-            if (cut)
-                *cut = &name[namelen-domainlen-1];
+    // if (namelen>=domainlen &&
+    //         hostname_isequal(zone->domain, &name[namelen-domainlen])) {
+    if namelen >= domainlen && hostname_isequal(zone.domain, &name[namelen-domainlen]) {
+        // if (namelen==domainlen)
+        //     return 1;
+        if namelen == domainlen {
             return 1;
         }
+
+        // if (name[namelen-domainlen-1]=='.') {
+        //     if (cut)
+        //         *cut = &name[namelen-domainlen-1];
+        //     return 1;
+        // }
+        if name[namelen-domainlen-1]=='.' {
+            cut[0] = name[namelen-domainlen-1];
+        }
+        return 1;
     }
 
     return 0;
@@ -181,7 +198,6 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                         while (intr->next && strcmp(intr->intr, intr->next->intr)==0)
                             intr = intr->next;
                 }
-#ifdef HAVE_IPV6
             else if (flag == F_IPV6)
               for (intr = daemon->int_names; intr; intr = intr->next)
                 {
@@ -197,8 +213,6 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                 while (intr->next && strcmp(intr->intr, intr->next->intr) == 0)
                   intr = intr->next;
                 }
-#endif
-
             if (intr) {
                 if (local_query || in_zone(zone, intr->name, nullptr)) {
                     found = 1;
@@ -356,10 +370,8 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
         if (qtype==T_A)
             flag = F_IPV4;
 
-#ifdef HAVE_IPV6
         if (qtype == T_AAAA)
       flag = F_IPV6;
-#endif
 
         for (intr = daemon->int_names; intr; intr = intr->next)
             if ((rc = hostname_issubdomain(name, intr->name))) {
@@ -371,10 +383,8 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                     for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
                         if (((addrlist->flags & ADDRLIST_IPV6) ? T_AAAA : T_A)==qtype &&
                                 (local_query || filter_zone(zone, flag, &addrlist->addr))) {
-#ifdef HAVE_IPV6
                             if (addrlist->flags & ADDRLIST_REVONLY)
                               continue;
-#endif
                             found = 1;
                             log_query(F_FORWARD | F_CONFIG | flag, name, &addrlist->addr, nullptr);
                             if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
@@ -397,13 +407,11 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
 
                 if (peer_addr->sa.sa_family==AF_INET)
                     peer_addr->in.sin_port = 0;
-#ifdef HAVE_IPV6
                 else
               {
                 peer_addr->in6.sin6_port = 0;
                 peer_addr->in6.sin6_scope_id = 0;
               }
-#endif
 
                 for (peers = daemon->auth_peers; peers; peers = peers->next)
                     if (sockaddr_isequal(peer_addr, &peers->addr))
@@ -414,10 +422,8 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                         (daemon->auth_peers && !peers)) {
                     if (peer_addr->sa.sa_family==AF_INET)
                         inet_ntop(AF_INET, &peer_addr->in.sin_addr, daemon->addrbuff, ADDRSTRLEN);
-#ifdef HAVE_IPV6
                     else
                       inet_ntop(AF_INET6, &peer_addr->in6.sin6_addr, daemon->addrbuff, ADDRSTRLEN);
-#endif
 
                     my_syslog(LOG_WARNING, _("ignoring zone transfer request from %s"), daemon->addrbuff);
                     return 0;
@@ -558,7 +564,6 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                 p += sprintf(p, "%u.in-addr.arpa", a & 0xff);
 
             }
-#ifdef HAVE_IPV6
             else
               {
                 char *p = name;
@@ -572,7 +577,6 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                 p += sprintf(p, "ip6.arpa");
 
               }
-#endif
         }
 
         /* handle NS and SOA in auth section or for explicit queries */
@@ -700,14 +704,12 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                                         &addrlist->addr))
                             anscount++;
 
-#ifdef HAVE_IPV6
                     for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
                       if ((addrlist->flags & ADDRLIST_IPV6) &&
                           (local_query || filter_zone(zone, F_IPV6, &addrlist->addr)) &&
                           add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
                                   daemon->auth_ttl, nullptr, T_AAAA, C_IN, "6", cut ? intr->name : nullptr, &addrlist->addr))
                         anscount++;
-#endif
 
                     /* restore config data */
                     if (cut)
@@ -742,10 +744,8 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                                 (local_query || filter_zone(zone, (crecp->flags & (F_IPV6 | F_IPV4)),
                                         &(crecp->addr.addr)))) {
                             qtype = T_A;
-#ifdef HAVE_IPV6
                             if (crecp->flags & F_IPV6)
                               qtype = T_AAAA;
-#endif
                             if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
                                     daemon->auth_ttl, nullptr, qtype, C_IN,
                                     (crecp->flags & F_IPV4) ? "4" : "6", cache_name, &crecp->addr))
@@ -759,10 +759,8 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
                                 (local_query || filter_zone(zone, (crecp->flags & (F_IPV6 | F_IPV4)),
                                         &(crecp->addr.addr)))) {
                             qtype = T_A;
-#ifdef HAVE_IPV6
                             if (crecp->flags & F_IPV6)
                               qtype = T_AAAA;
-#endif
                             if (cut)
                                 *cut = 0;
 
@@ -825,7 +823,6 @@ size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t n
     return ansp-(unsigned char*) header;
 }
 
-#endif  
   
 
 

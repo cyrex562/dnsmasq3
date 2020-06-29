@@ -1,6 +1,7 @@
 mod util;
 mod defines;
 mod dnsmasq_h;
+mod arp;
 mod config;
 mod ip6addr;
 mod metrics;
