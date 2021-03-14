@@ -32,81 +32,126 @@
    Used for the EdDSA sigs, which operate on the whole message, rather 
    than a digest. */
 
-struct null_hash_digest
-{
-  uint8_t *buff;
-  size_t len;
-};
-
-struct null_hash_ctx
-{
-  size_t len;
-};
-
-static size_t null_hash_buff_sz = 0;
-static uint8_t *null_hash_buff = nullptr;
-#define BUFF_INCR 128
-
-static void null_hash_init(void *ctx)
-{
-  ((struct null_hash_ctx *)ctx)->len = 0;
+// struct null_hash_digest
+// {
+//   uint8_t *buff;
+//   size_t len;
+// };
+pub struct null_hash_digest {
+  buff: Vec<u8>,
+  len: usize,
 }
 
-static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
+
+// struct null_hash_ctx
+// {
+//   size_t len;
+// };
+pub struct null_hash_ctx {
+  len: usize,
+}
+
+// static size_t null_hash_buff_sz = 0;
+// static uint8_t *null_hash_buff = nullptr;
+// #define BUFF_INCR 128
+pub const BUFF_INCR: u32 = 128;
+
+pub fn null_hash_init(ctx: &mut null_hash_ctx)
 {
-  struct null_hash_ctx *ctx = ctxv;
-  size_t new_len = ctx->len + length;
+  ctx.len = 0;
+}
+
+// static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
+pub fn null_hash_update(
+    ctxv: &mut null_hash_ctx,
+    length: &mut usize,
+    src: &mut Vec<u8>,
+    null_hash_buff_sz: &mut usize,
+    null_hash_buff: &mut Vec<u8>,
+)
+{
+    // TODO: modify length
+//   struct null_hash_ctx *ctx = ctxv;
+    let new_len: usize = ctxv.len;
+//   size_t new_len = ctx->len + length;
   
-  if (new_len > null_hash_buff_sz)
-    {
-      uint8_t *new;
+//   if (new_len > null_hash_buff_sz)
+//     {
+//       uint8_t *new;
       
-      if (!(new = whine_malloc(new_len + BUFF_INCR)))
-	return;
+//     //   if (!(new = whine_malloc(new_len + BUFF_INCR)))
+// 	// return;
 
-      if (null_hash_buff)
-	{
-	  if (ctx->len != 0)
-	    memcpy(new, null_hash_buff, ctx->len);
-	  free(null_hash_buff);
-	}
+//       if (null_hash_buff)
+// 	{
+// 	  if (ctx.len != 0) {
+//         // memcpy(new, null_hash_buff, ctx->len);
+
+//       }
+	    
+// 	  free(null_hash_buff);
+// 	}
       
-      null_hash_buff_sz = new_len + BUFF_INCR;
-      null_hash_buff = new;
-    }
+//       null_hash_buff_sz = new_len + BUFF_INCR;
+//       null_hash_buff = new;
+//     }
 
-  memcpy(null_hash_buff + ctx->len, src, length);
-  ctx->len += length;
+//   memcpy(null_hash_buff + ctx->len, src, length);
+//   ctx->len += length;
 }
  
 
-static void null_hash_digest(void *ctx, size_t length, uint8_t *dst)
+pub fn null_hash_digest(
+    ctx: &mut null_hash_ctx,
+    length: &mut usize,
+    dst: &mut null_hash_digest)
 {
-  (void)length;
-  
-  ((struct null_hash_digest *)dst)->buff = null_hash_buff;
-  ((struct null_hash_digest *)dst)->len = ((struct null_hash_ctx *)ctx)->len;
+  dst.buff = null_hash_buf.clone();
+  dst.len = ctx.len;
 }
 
-static struct nettle_hash null_hash = {
-  "null_hash",
-  sizeof(struct null_hash_ctx),
-  sizeof(struct null_hash_digest),
-  0,
-  (nettle_hash_init_func *) null_hash_init,
-  (nettle_hash_update_func *) null_hash_update,
-  (nettle_hash_digest_func *) null_hash_digest
+pub struct NettleHash {
+    pub name: &str,
+    pub ctx_size: usize,
+    pub digest_size: usize,
+    pub reserved: u32,
+    pub init: fn(),
+    pub null_hash_update_func: fn(),
+    pub null_hash_digest_func: fn(),
+}
+
+// static struct nettle_hash null_hash = {
+//   "null_hash",
+//   sizeof(struct null_hash_ctx),
+//   sizeof(struct null_hash_digest),
+//   0,
+//   (nettle_hash_init_func *) null_hash_init,
+//   (nettle_hash_update_func *) null_hash_update,
+//   (nettle_hash_digest_func *) null_hash_digest
+// };
+pub const null_hash: NettleHash = NettleHash{
+    name: "null_hash",
+    ctx_size: 0,
+    digest_size: 0,
+    reserved: 0,
+    init: null_hash_init,
+    null_hash_update_func: null_hash_update,
+    null_hash_digest_func: null_hash_digest,
 };
 
 /* Find pointer to correct hash function in nettle library */
-const struct nettle_hash *hash_find(char *name)
+pub fn hash_find(name: String) -> Optiona<NettleHash>
 {
-  if (!name)
-    return nullptr;
+  if (!name) {
+    return None;
+  }
+    
   
   /* We provide a "null" hash which returns the input data as digest. */
-  if (strcmp(null_hash.name, name) == 0)
+  if (strcmp(null_hash.name, name) == 0) {
     return &null_hash;
+  }
+    
 
   /* libnettle >= 3.4 provides nettle_lookup_hash() which avoids nasty ABI
      incompatibilities if sizeof(nettle_hashes) changes between library
@@ -116,144 +161,162 @@ const struct nettle_hash *hash_find(char *name)
 //#ifdef nettle_hashes
   return nettle_lookup_hash(name);
 //#else
-  {
-    int i;
 
-    for (i = 0; nettle_hashes[i]; i++)
-      if (strcmp(nettle_hashes[i]->name, name) == 0)
-	return nettle_hashes[i];
-  }
+    // int i;
+
+    // for (i = 0; nettle_hashes[i]; i++)
+    //   if (strcmp(nettle_hashes[i]->name, name) == 0)
+	// return nettle_hashes[i];
+    // TODO
+
   
-  return nullptr;
+  return None;
 //#endif
 }
 
 /* expand ctx and digest memory allocations if necessary and init hash function */
-int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp)
+pub fn hash_init(
+    hash: NettleHash,
+    ctxp: *mut c_void,
+    digestp: &mut Vec<u8>,) -> i32
 {
-  static void *ctx = nullptr;
-  static unsigned char *digest = nullptr;
-  static unsigned int ctx_sz = 0;
-  static unsigned int digest_sz = 0;
+    let mut ctx: *mut c_void;
+    let mut digest: Vec<u8>;
+    let mut ctx_sz: i32 = 0;
+    let mut digest_sz: i32 = 0;
+    let mut new: *mut c_void;
 
-  void *new;
-
-  if (ctx_sz < hash->context_size)
+  if (ctx_sz < hash.context_size)
     {
-      if (!(new = whine_malloc(hash->context_size)))
-	return 0;
-      if (ctx)
-	free(ctx);
+      if (!(new = whine_malloc(hash.context_size))) {
+        return 0;
+      }
+	
+      if (ctx) {
+        // free(ctx);
+      }
+	
       ctx = new;
-      ctx_sz = hash->context_size;
+      ctx_sz = hash.context_size;
     }
   
-  if (digest_sz < hash->digest_size)
+  if (digest_sz < hash.digest_size)
     {
-      if (!(new = whine_malloc(hash->digest_size)))
-	return 0;
-      if (digest)
-	free(digest);
+      if (!(new = whine_malloc(hash.digest_size))) {
+        return 0;
+      }
+	
+      if (digest) {
+        // free(digest);
+      }
+	
       digest = new;
-      digest_sz = hash->digest_size;
+      digest_sz = hash.digest_size;
     }
 
-  *ctxp = ctx;
-  *digestp = digest;
+  ctxp = ctx;
+  digestp = digest;
 
-  hash->init(ctx);
+  hash.init(ctx);
 
   return 1;
 }
   
-static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-			      unsigned char *digest, size_t digest_len, int algo)
+// static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
+// 			      unsigned char *digest, size_t digest_len, int algo)
+pub fn dnsmasq_rsa_verify(key_data: &mut blockdata, key_len: i32, sig: &mut Vec<u8>, sig_len: usize, digest: &mut Vec<u8>, digest_len: usize, algo: i32) -> i32
 {
-  unsigned char *p;
-  size_t exp_len;
-  
-  static struct rsa_public_key *key = nullptr;
-  static mpz_t sig_mpz;
+    let mut p: Vec<u8>;
+    let mut exp_len: usize = 0;
+    let mut key: rsa_public_key;
+    let mut sig_mpz: mpz_t;
 
-  (void)digest_len;
+    nettle_rsa_public_key_init(key);
+    mpz_init(sig_mpz);
   
-  if (key == nullptr)
-    {
-      if (!(key = whine_malloc(sizeof(struct rsa_public_key))))
-	return 0;
-      
-      nettle_rsa_public_key_init(key);
-      mpz_init(sig_mpz);
-    }
-  
-  if ((key_len < 3) || !(p = blockdata_retrieve(key_data, key_len, nullptr)))
+  if ((key_len < 3) || !(p = blockdata_retrieve(key_data, key_len, None))) {
     return 0;
+  }
+
+  key_len -= 1;
+  // TODO:
+//   if ((exp_len = *p++) == 0)
+//     {
+//       GETSHORT(exp_len, p);
+//       key_len -= 2;
+//     }
   
-  key_len--;
-  if ((exp_len = *p++) == 0)
-    {
-      GETSHORT(exp_len, p);
-      key_len -= 2;
-    }
-  
-  if (exp_len >= key_len)
+  if (exp_len >= key_len) {
     return 0;
-  
-  key->size =  key_len - exp_len;
-  mpz_import(key->e, exp_len, 1, 1, 0, 0, p);
-  mpz_import(key->n, key->size, 1, 1, 0, 0, p + exp_len);
+  }
+
+  key.size =  key_len - exp_len;
+  mpz_import(key.e, exp_len, 1, 1, 0, 0, p);
+  mpz_import(key.n, key.size, 1, 1, 0, 0, p + exp_len);
 
   mpz_import(sig_mpz, sig_len, 1, 1, 0, 0, sig);
   
-  switch (algo)
-    {
-    case 1:
-      return nettle_rsa_md5_verify_digest(key, digest, sig_mpz);
-    case 5: case 7:
-      return nettle_rsa_sha1_verify_digest(key, digest, sig_mpz);
-    case 8:
-      return nettle_rsa_sha256_verify_digest(key, digest, sig_mpz);
-    case 10:
-      return nettle_rsa_sha512_verify_digest(key, digest, sig_mpz);
-    }
-
-  return 0;
+  match algo {
+      1 => {return nettle_rsa_md5_verify_digest(key, digest, sig_mpz)},
+      5 => {return nettle_rsa_sha1_verify_digest(key, digest, sig_mpz)},
+      8 => {return nettle_rsa_sha256_verify_digest(key, digest, sig_mpz)},
+      10 => {return nettle_rsa_sha512_verify_digest(key, digest, sig_mpz)},
+      _ => {return 0}
+  };
 }  
 
-static int dnsmasq_dsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-			      unsigned char *digest, size_t digest_len, int algo)
+// static int dnsmasq_dsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
+// 			      unsigned char *digest, size_t digest_len, int algo)
+pub fn dnsmasq_dsa_verify(
+    key_data: &mut blockdata,
+    key_len: i32,
+    sig: &mut Vec<u8>,
+    sig_len: usize,
+    digest: &mut Vec<u8>,
+    digest_len: usize,
+    algo: i32
+) -> i32
 {
-  unsigned char *p;
-  unsigned int t;
+    let mut p: Vec<u8>;
+    let mut t: u32;
+    let mut y: mpz_t;
+    let mut params: dsa_params;
+    let mut sig_struct: dsa_signature;
 
-  static mpz_t y;
-  static struct dsa_params *params = nullptr;
-  static struct dsa_signature *sig_struct;
-  
-  (void)digest_len;
+    dsa_signature = dsa_signature::default();
+    params = dsa_params::default();
+    mpz_init(y);
+    nettle_dsa_params_init(params);
+    nettle_dsa_signature_init(sig_struct);
 
-  if (params == nullptr)
-    {
-      if (!(sig_struct = whine_malloc(sizeof(struct dsa_signature))) || 
-	  !(params = whine_malloc(sizeof(struct dsa_params)))) 
-	return 0;
+//   if (params == nullptr)
+//     {
+//       if (!(sig_struct = whine_malloc(sizeof(struct dsa_signature))) || 
+// 	  !(params = whine_malloc(sizeof(struct dsa_params)))) 
+// 	return 0;
       
-      mpz_init(y);
-      nettle_dsa_params_init(params);
-      nettle_dsa_signature_init(sig_struct);
+//       mpz_init(y);
+//       nettle_dsa_params_init(params);
+//       nettle_dsa_signature_init(sig_struct);
+//     }
+    // TODO: pass in sig_struct, params, and y
+  
+    if (sig_len < 41) || !(p = blockdata_retrieve(key_data, key_len, None)) {
+        return 0;
     }
+
   
-  if ((sig_len < 41) || !(p = blockdata_retrieve(key_data, key_len, nullptr)))
+    // t = *p++;
+    // TODO: read
+  
+  if (key_len < (213 + (t * 24))) {
     return 0;
+  }
+   
   
-  t = *p++;
-  
-  if (key_len < (213 + (t * 24)))
-    return 0;
-  
-  mpz_import(params->q, 20, 1, 1, 0, 0, p); p += 20;
-  mpz_import(params->p, 64 + (t*8), 1, 1, 0, 0, p); p += 64 + (t*8);
-  mpz_import(params->g, 64 + (t*8), 1, 1, 0, 0, p); p += 64 + (t*8);
+  mpz_import(params.q, 20, 1, 1, 0, 0, p); p += 20;
+  mpz_import(params.p, 64 + (t*8), 1, 1, 0, 0, p); p += 64 + (t*8);
+  mpz_import(params.g, 64 + (t*8), 1, 1, 0, 0, p); p += 64 + (t*8);
   mpz_import(y, 64 + (t*8), 1, 1, 0, 0, p); p += 64 + (t*8);
   
   mpz_import(sig_struct->r, 20, 1, 1, 0, 0, sig+1);
