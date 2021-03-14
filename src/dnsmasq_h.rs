@@ -1,20 +1,19 @@
 /* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; version 2 dated June, 1991, or
    (at your option) version 3 dated 29 June, 2007.
- 
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-     
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 // const COPYRIGHT :u32 = ;"Copyright (c) 2000-2018 Simon Kelley"
-
 
 // const countof :u32 = ;(x)      (long)(sizeof(x) / sizeof(x[0]))
 // TODO: define or replace
@@ -22,161 +21,169 @@
 //const MIN :u32 = ;(a, b)        ((a) < (b) ? (a) : (b))
 // TODO: define or replace
 
-
 /* There doesn't seem to be a universally-available
-   userspace header for these. */
+userspace header for these. */
 // TODO: replace
-   // extern int
+// extern int
 // capset(cap_user_header_t header, cap_user_data_t data);
 
 // TODO: replace
 // extern int
 // capget(cap_user_header_t header, cap_user_data_t data);
 
-#[cfg(not(target_os="windows"))]
-use libc::{LOG_DAEMON, LOG_USER, LOG_MAIL, sockaddr, sockaddr_in, sockaddr_in6, time_t, off_t, dev_t, ino_t, pid_t, iovec};
-use libc::FILE;
-#[cfg(target_os="windows")]
+#[cfg(target_os = "windows")]
 use crate::dnsmasq_sys::*;
+use libc::{c_int, FILE};
+#[cfg(not(target_os = "windows"))]
+use libc::{
+    dev_t, ino_t, iovec, off_t, pid_t, sockaddr, sockaddr_in, sockaddr_in6, time_t, LOG_DAEMON,
+    LOG_MAIL, LOG_USER,
+};
 
-use std::ffi::{c_void};
+use std::ffi::c_void;
 
-use crate::config;
+use crate::{arp::AddressPointer, config};
 use crate::dhcp_protocol;
 
-
+pub const AF_INET6: c_int = 10;
+pub const AF_UNSPEC: c_int = 0;
 
 pub const LINUX_CAPABILITY_VERSION_1: u32 = 0x19980330;
 pub const LINUX_CAPABILITY_VERSION_2: u32 = 0x20071026;
 pub const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
 
-// #include <sys/prctl.h>
+// //#include <sys/prctl.h>
 
 // #elif defined(HAVE_SOLARIS_NETWORK)
-// #include <priv.h>
-// #endif
+// //#include <priv.h>
+// //#endif
 
-// #ifdef HAVE_DNSSEC
+// //#ifdef HAVE_DNSSEC
 // #  include <nettle/nettle-meta.h>
-// #endif
-
-
+// //#endif
 
 /* daemon is function in the C library.... */
 // const daemon :u32 = ;dnsmasq_daemon
 
 /* Async event queue */
-pub struct event_desc {
-    msg_sz: i32,
-    event: i32,
-    data: i32,
+pub struct EventDesc {
+    pub msg_sz: i32,
+    pub event: i32,
+    pub data: i32,
 }
 
-pub const EVENT_RELOAD: u32 =     1;
-pub const EVENT_DUMP: u32 =      2;
-pub const EVENT_ALARM: u32 =     3;
-pub const EVENT_TERM: u32 =       4;
-pub const EVENT_CHILD: u32 =      5;
-pub const EVENT_REOPEN: u32 =    6;
-pub const EVENT_EXITED: u32 =     7;
-pub const EVENT_KILLED: u32 =    8;
-pub const EVENT_EXEC_ERR: u32 =   9;
-pub const EVENT_PIPE_ERR: u32 =   10;
-pub const EVENT_USER_ERR: u32 =  11;
-pub const EVENT_CAP_ERR: u32 =   12;
-pub const EVENT_PIDFILE: u32 =   13;
+pub const EVENT_RELOAD: u32 = 1;
+pub const EVENT_DUMP: u32 = 2;
+pub const EVENT_ALARM: u32 = 3;
+pub const EVENT_TERM: u32 = 4;
+pub const EVENT_CHILD: u32 = 5;
+pub const EVENT_REOPEN: u32 = 6;
+pub const EVENT_EXITED: u32 = 7;
+pub const EVENT_KILLED: u32 = 8;
+pub const EVENT_EXEC_ERR: u32 = 9;
+pub const EVENT_PIPE_ERR: u32 = 10;
+pub const EVENT_USER_ERR: u32 = 11;
+pub const EVENT_CAP_ERR: u32 = 12;
+pub const EVENT_PIDFILE: u32 = 13;
 pub const EVENT_HUSER_ERR: u32 = 14;
 pub const EVENT_GROUP_ERR: u32 = 15;
-pub const EVENT_DIE: u32 =       16;
-pub const EVENT_LOG_ERR: u32 =   17;
-pub const EVENT_FORK_ERR: u32 =  18;
-pub const EVENT_LUA_ERR: u32 =   19;
-pub const EVENT_TFTP_ERR: u32 =  20;
-pub const EVENT_INIT: u32 =      21;
-pub const EVENT_NEWADDR: u32 =   22;
-pub const EVENT_NEWROUTE: u32 =  23;
+pub const EVENT_DIE: u32 = 16;
+pub const EVENT_LOG_ERR: u32 = 17;
+pub const EVENT_FORK_ERR: u32 = 18;
+pub const EVENT_LUA_ERR: u32 = 19;
+pub const EVENT_TFTP_ERR: u32 = 20;
+pub const EVENT_INIT: u32 = 21;
+pub const EVENT_NEWADDR: u32 = 22;
+pub const EVENT_NEWROUTE: u32 = 23;
 pub const EVENT_TIME_ERR: u32 = 24;
 pub const EVENT_SCRIPT_LOG: u32 = 25;
-pub const EVENT_TIME: u32 =       26;
+pub const EVENT_TIME: u32 = 26;
 
 /* Exit codes. */
-pub const EC_GOOD: u32 =        0;
-pub const EC_BADCONF: u32 =     1;
-pub const EC_BADNET: u32 =      2;
-pub const EC_FILE: u32 =        3;
-pub const EC_NOMEM: u32 =       4;
-pub const EC_MISC: u32 =        5;
+pub const EC_GOOD: u32 = 0;
+pub const EC_BADCONF: u32 = 1;
+pub const EC_BADNET: u32 = 2;
+pub const EC_FILE: u32 = 3;
+pub const EC_NOMEM: u32 = 4;
+pub const EC_MISC: u32 = 5;
 pub const EC_INIT_OFFSET: u32 = 10;
 
 /* Trust the compiler dead-code eliminator.... */
 // const option_bool :u32 = ;(x) (((x) < 32) ? daemon->options & (1u << (x)) : daemon->options2 & (1u << ((x) - 32)))
+pub fn option_bool(opt: u32, daemon: &Daemon) -> u32 {
+    if opt < 32 {
+        return daemon.options & 1 << opt;
+    } else {
+        return daemon.options2 & 1 << (opt - 32);
+    }
+}
 
-pub const OPT_BOGUSPRIV: u32    =  0;
-pub const OPT_FILTER: u32 =         1;
-pub const OPT_LOG: u32 =            2;
-pub const OPT_SELFMX: u32 =         3;
-pub const OPT_NO_HOSTS: u32 =       4;
-pub const OPT_NO_POLL: u32 =        5;
-pub const OPT_DEBUG: u32 =          6;
-pub const OPT_ORDER: u32 =          7;
-pub const OPT_NO_RESOLV: u32 =      8;
-pub const OPT_EXPAND: u32 =         9;
-pub const OPT_LOCALMX: u32 =        10;
-pub const OPT_NO_NEG: u32 =         11;
-pub const OPT_NODOTS_LOCAL: u32 =   12;
-pub const OPT_NOWILD: u32 =         13;
-pub const OPT_ETHERS: u32 =         14;
-pub const OPT_RESOLV_DOMAIN: u32 =  15;
-pub const OPT_NO_FORK: u32 =        16;
-pub const OPT_AUTHORITATIVE: u32 =  17;
-pub const OPT_LOCALISE :u32 = 18;
-pub const OPT_DBUS :u32 = 19;
-pub const OPT_DHCP_FQDN :u32 = 20;
-pub const OPT_NO_PING :u32 = 21;
-pub const OPT_LEASE_RO :u32 = 22;
-pub const OPT_ALL_SERVERS :u32 = 23;
-pub const OPT_RELOAD :u32 = 24;
-pub const OPT_LOCAL_REBIND :u32 = 25;
-pub const OPT_TFTP_SECURE :u32 = 26;
-pub const OPT_TFTP_NOBLOCK :u32 = 27;
-pub const OPT_LOG_OPTS :u32 = 28;
-pub const OPT_TFTP_APREF_IP :u32 = 29;
-pub const OPT_NO_OVERRIDE :u32 = 30;
-pub const OPT_NO_REBIND :u32 = 31;
-pub const OPT_ADD_MAC :u32 = 32;
-pub const OPT_DNSSEC_PROXY :u32 = 33;
-pub const OPT_CONSEC_ADDR :u32 = 34;
-pub const OPT_CONNTRACK :u32 = 35;
-pub const OPT_FQDN_UPDATE :u32 = 36;
-pub const OPT_RA :u32 = 37;
-pub const OPT_TFTP_LC :u32 = 38;
-pub const OPT_CLEVERBIND :u32 = 39;
-pub const OPT_TFTP :u32 = 40;
-pub const OPT_CLIENT_SUBNET :u32 = 41;
-pub const OPT_QUIET_DHCP :u32 = 42;
-pub const OPT_QUIET_DHCP6 :u32 = 43;
-pub const OPT_QUIET_RA :u32 = 44;
-pub const OPT_DNSSEC_VALID :u32 = 45;
-pub const OPT_DNSSEC_TIME :u32 = 46;
-pub const OPT_DNSSEC_DEBUG :u32 = 47;
-pub const OPT_DNSSEC_IGN_NS :u32 = 48;
-pub const OPT_LOCAL_SERVICE :u32 = 49;
-pub const OPT_LOOP_DETECT :u32 = 50;
-pub const OPT_EXTRALOG :u32 = 51;
-pub const OPT_TFTP_NO_FAIL :u32 = 52;
-pub const OPT_SCRIPT_ARP :u32 = 53;
-pub const OPT_MAC_B64 :u32 = 54;
-pub const OPT_MAC_HEX :u32 = 55;
-pub const OPT_TFTP_APREF_MAC :u32 = 56;
-pub const OPT_RAPID_COMMIT :u32 = 57;
-pub const OPT_UBUS :u32 = 58;
-pub const OPT_LAST :u32 = 59;
+pub const OPT_BOGUSPRIV: u32 = 0;
+pub const OPT_FILTER: u32 = 1;
+pub const OPT_LOG: u32 = 2;
+pub const OPT_SELFMX: u32 = 3;
+pub const OPT_NO_HOSTS: u32 = 4;
+pub const OPT_NO_POLL: u32 = 5;
+pub const OPT_DEBUG: u32 = 6;
+pub const OPT_ORDER: u32 = 7;
+pub const OPT_NO_RESOLV: u32 = 8;
+pub const OPT_EXPAND: u32 = 9;
+pub const OPT_LOCALMX: u32 = 10;
+pub const OPT_NO_NEG: u32 = 11;
+pub const OPT_NODOTS_LOCAL: u32 = 12;
+pub const OPT_NOWILD: u32 = 13;
+pub const OPT_ETHERS: u32 = 14;
+pub const OPT_RESOLV_DOMAIN: u32 = 15;
+pub const OPT_NO_FORK: u32 = 16;
+pub const OPT_AUTHORITATIVE: u32 = 17;
+pub const OPT_LOCALISE: u32 = 18;
+pub const OPT_DBUS: u32 = 19;
+pub const OPT_DHCP_FQDN: u32 = 20;
+pub const OPT_NO_PING: u32 = 21;
+pub const OPT_LEASE_RO: u32 = 22;
+pub const OPT_ALL_SERVERS: u32 = 23;
+pub const OPT_RELOAD: u32 = 24;
+pub const OPT_LOCAL_REBIND: u32 = 25;
+pub const OPT_TFTP_SECURE: u32 = 26;
+pub const OPT_TFTP_NOBLOCK: u32 = 27;
+pub const OPT_LOG_OPTS: u32 = 28;
+pub const OPT_TFTP_APREF_IP: u32 = 29;
+pub const OPT_NO_OVERRIDE: u32 = 30;
+pub const OPT_NO_REBIND: u32 = 31;
+pub const OPT_ADD_MAC: u32 = 32;
+pub const OPT_DNSSEC_PROXY: u32 = 33;
+pub const OPT_CONSEC_ADDR: u32 = 34;
+pub const OPT_CONNTRACK: u32 = 35;
+pub const OPT_FQDN_UPDATE: u32 = 36;
+pub const OPT_RA: u32 = 37;
+pub const OPT_TFTP_LC: u32 = 38;
+pub const OPT_CLEVERBIND: u32 = 39;
+pub const OPT_TFTP: u32 = 40;
+pub const OPT_CLIENT_SUBNET: u32 = 41;
+pub const OPT_QUIET_DHCP: u32 = 42;
+pub const OPT_QUIET_DHCP6: u32 = 43;
+pub const OPT_QUIET_RA: u32 = 44;
+pub const OPT_DNSSEC_VALID: u32 = 45;
+pub const OPT_DNSSEC_TIME: u32 = 46;
+pub const OPT_DNSSEC_DEBUG: u32 = 47;
+pub const OPT_DNSSEC_IGN_NS: u32 = 48;
+pub const OPT_LOCAL_SERVICE: u32 = 49;
+pub const OPT_LOOP_DETECT: u32 = 50;
+pub const OPT_EXTRALOG: u32 = 51;
+pub const OPT_TFTP_NO_FAIL: u32 = 52;
+pub const OPT_SCRIPT_ARP: u32 = 53;
+pub const OPT_MAC_B64: u32 = 54;
+pub const OPT_MAC_HEX: u32 = 55;
+pub const OPT_TFTP_APREF_MAC: u32 = 56;
+pub const OPT_RAPID_COMMIT: u32 = 57;
+pub const OPT_UBUS: u32 = 58;
+pub const OPT_LAST: u32 = 59;
 
-/* extra flags for my_syslog, we use a couple of facilities since they are known 
-   not to occupy the same bits as priorities, no matter how syslog.h is set up. */
-pub const MS_TFTP :i32 = LOG_USER;
-pub const MS_DHCP :i32 = LOG_DAEMON;
-pub const MS_SCRIPT :i32 = LOG_MAIL;
+/* extra flags for my_syslog, we use a couple of facilities since they are known
+not to occupy the same bits as priorities, no matter how syslog.h is set up. */
+pub const MS_TFTP: i32 = LOG_USER;
+pub const MS_DHCP: i32 = LOG_DAEMON;
+pub const MS_SCRIPT: i32 = LOG_MAIL;
 
 pub struct all_addr_log {
     keytag: u16,
@@ -188,36 +195,34 @@ pub struct all_addr_rcode {
     rcode: u32,
 }
 
-pub struct all_addr_dnssec {
-    _class: u16,
-    _type: u16,
+pub struct AllAddrDnssec {
+    pub _class: u16,
+    pub _type: u16,
 }
 
-pub struct all_addr_addr {
-    addr4: in_addr,
-    addr6: in6_addr,
-    log: all_addr_log,
-    rcode: all_addr_rcode,
-    dnssec: all_addr_dnssec,
+pub struct AllAddrAddr {
+    pub addr4: InAddr,
+    pub addr6: In6Addr,
+    pub log: all_addr_log,
+    pub rcode: all_addr_rcode,
+    pub dnssec: AllAddrDnssec,
 }
 
+// pub struct AllAddr {
+//     pub addr: AllAddrAddr
+// }
 
-
-pub struct all_addr {
-    addr: all_addr_addr
-}
-
-pub struct bogus_addr {
-    addr: in_addr,
+pub struct BogusAddr {
+    pub addr: InAddr,
     // next: &bogus_addr,;
 }
 
 /* dns doctor param */
 pub struct doctor {
-    _in: in_addr,
-    end: in_addr,
-    out: in_addr,
-    mask: in_addr,
+    _in: InAddr,
+    end: InAddr,
+    out: InAddr,
+    mask: InAddr,
     // next: doctor*
 }
 
@@ -243,14 +248,13 @@ pub struct naptr {
     // next: naptr*
 }
 
-pub const TXT_STAT_CACHESIZE :u32 = 1;
-pub const TXT_STAT_INSERTS :u32 = 2;
-pub const TXT_STAT_EVICTIONS :u32 = 3;
-pub const TXT_STAT_MISSES :u32 = 4;
-pub const TXT_STAT_HITS :u32 = 5;
-pub const TXT_STAT_AUTH :u32 = 6;
-pub const TXT_STAT_SERVERS :u32 = 7;
-
+pub const TXT_STAT_CACHESIZE: u32 = 1;
+pub const TXT_STAT_INSERTS: u32 = 2;
+pub const TXT_STAT_EVICTIONS: u32 = 3;
+pub const TXT_STAT_MISSES: u32 = 4;
+pub const TXT_STAT_HITS: u32 = 5;
+pub const TXT_STAT_AUTH: u32 = 6;
+pub const TXT_STAT_SERVERS: u32 = 7;
 
 pub struct txt_record {
     name: String,
@@ -287,19 +291,19 @@ pub struct ds_config {
     // next: ds_config*
 }
 
-pub const ADDRLIST_LITERAL :u32 = 1;
-pub const ADDRLIST_IPV6 :u32 = 2;
-pub const ADDRLIST_REVONLY :u32 = 4;
+pub const ADDRLIST_LITERAL: u32 = 1;
+pub const ADDRLIST_IPV6: u32 = 2;
+pub const ADDRLIST_REVONLY: u32 = 4;
 
 pub struct addrlist {
-    addr: all_addr,
+    addr: AllAddr,
     flags: i32,
     prefixlen: i32,
     // next: addrlist*
 }
 
-pub const AUTH6 :u32 = 1;
-pub const AUTH4 :u32 = 2;
+pub const AUTH6: u32 = 1;
+pub const AUTH4: u32 = 2;
 
 pub struct auth_name_list {
     name: String,
@@ -323,8 +327,8 @@ pub struct name_list {
 pub struct host_record {
     ttl: i32,
     names: Vec<name_list>,
-    addr: in_addr,
-    addr6: in6_addr,
+    addr: InAddr,
+    addr6: In6Addr,
     // next: host_record*
 }
 
@@ -344,7 +348,7 @@ pub struct bigname {
 
 pub struct blockdata {
     // next blockdata*
-    key: [u8;config::KEYBLOCK_LEN],
+    key: [u8; config::KEYBLOCK_LEN],
 }
 
 pub struct crec_target {
@@ -370,12 +374,12 @@ pub struct crec_ds {
     keydata: Vec<blockdata>,
     keylen: u16,
     keytag: u16,
-    algo:u8,
+    algo: u8,
     digest: u8,
 }
 
-pub struct crec_addr {
-    addr: all_addr,
+pub struct CrecAddr {
+    addr: Vec<AddressPointer>,
     cname: crec_cname,
     key: crec_key,
     ds: crec_ds,
@@ -384,14 +388,14 @@ pub struct crec_addr {
 pub struct crec_name {
     sname: String,
     bname: bigname,
-    namep: String
+    namep: String,
 }
 
 pub struct crec {
     // hash_next: crec*
     // prev: crec*
     // next: crec*
-    addr: crec_addr,
+    addr: CrecAddr,
     ttd: time_t,
     uid: u32,
     flags: u16,
@@ -403,86 +407,85 @@ pub struct crec {
 // TODO: implement
 // const SIZEOF_POINTER_CREC = (sizeof(struct crec) + sizeof(char *) - SMALLDNAME)
 
-pub const F_IMMORTAL :u32 = 1;
-pub const F_NAMEP :u32 = 2;
-pub const F_REVERSE :u32 = 4;
-pub const F_FORWARD :u32 = 8;
-pub const F_DHCP :u32 = 16;
-pub const F_NEG :u32 = 32;
-pub const F_HOSTS :u32 = 64;
-pub const F_IPV4 :u32 = 128;
-pub const F_IPV6 :u32 = 256;
-pub const F_BIGNAME :u32 = 512;
-pub const F_NXDOMAIN :u32 = 1024;
-pub const F_CNAME :u32 = 2048;
-pub const F_DNSKEY :u32 = 4096;
-pub const F_CONFIG :u32 = 8192;
-pub const F_DS :u32 = 16384;
-pub const F_DNSSECOK :u32 = 32768;
+pub const F_IMMORTAL: u32 = 1;
+pub const F_NAMEP: u32 = 2;
+pub const F_REVERSE: u32 = 4;
+pub const F_FORWARD: u32 = 8;
+pub const F_DHCP: u32 = 16;
+pub const F_NEG: u32 = 32;
+pub const F_HOSTS: u32 = 64;
+pub const F_IPV4: u32 = 128;
+pub const F_IPV6: u32 = 256;
+pub const F_BIGNAME: u32 = 512;
+pub const F_NXDOMAIN: u32 = 1024;
+pub const F_CNAME: u32 = 2048;
+pub const F_DNSKEY: u32 = 4096;
+pub const F_CONFIG: u32 = 8192;
+pub const F_DS: u32 = 16384;
+pub const F_DNSSECOK: u32 = 32768;
 
 /* below here are only valid as args to log_query: cache
-   entries are limited to 16 bits */
-pub const F_UPSTREAM :u32 = 65536;
-pub const F_RRNAME :u32 = 131072;
-pub const F_SERVER :u32 = 262144;
-pub const F_QUERY :u32 = 524288;
-pub const F_NOERR :u32 = 1048576;
-pub const F_AUTH :u32 = 2097152;
-pub const F_DNSSEC :u32 = 4194304;
-pub const F_KEYTAG :u32 = 8388608;
-pub const F_SECSTAT :u32 = 16777216;
-pub const F_NO_RR :u32 = 33554432;
-pub const F_IPSET :u32 = 67108864;
-pub const F_NOEXTRA :u32 = 134217728;
-pub const F_SERVFAIL :u32 = 268435456;
-pub const F_RCODE :u32 = 536870912;
+entries are limited to 16 bits */
+pub const F_UPSTREAM: u32 = 65536;
+pub const F_RRNAME: u32 = 131072;
+pub const F_SERVER: u32 = 262144;
+pub const F_QUERY: u32 = 524288;
+pub const F_NOERR: u32 = 1048576;
+pub const F_AUTH: u32 = 2097152;
+pub const F_DNSSEC: u32 = 4194304;
+pub const F_KEYTAG: u32 = 8388608;
+pub const F_SECSTAT: u32 = 16777216;
+pub const F_NO_RR: u32 = 33554432;
+pub const F_IPSET: u32 = 67108864;
+pub const F_NOEXTRA: u32 = 134217728;
+pub const F_SERVFAIL: u32 = 268435456;
+pub const F_RCODE: u32 = 536870912;
 
-pub const UID_NONE :u32 = 0;
+pub const UID_NONE: u32 = 0;
 /* Values of uid in crecs with F_CONFIG bit set. */
 /* cname to uid SRC_INTERFACE are to interface names,
-   so use UID_NONE for that to eliminate clashes with
-   any other uid */
-pub const SRC_INTERFACE :u32 = UID_NONE;
-pub const SRC_CONFIG :u32 = 1;
-pub const SRC_HOSTS :u32 = 2;
-pub const SRC_AH :u32 = 3;
+so use UID_NONE for that to eliminate clashes with
+any other uid */
+pub const SRC_INTERFACE: u32 = UID_NONE;
+pub const SRC_CONFIG: u32 = 1;
+pub const SRC_HOSTS: u32 = 2;
+pub const SRC_AH: u32 = 3;
 
 /* struct sockaddr is not large enough to hold any address,
-   and specifically not big enough to hold an IPv6 address.
-   Blech. Roll our own. */
-pub struct mysockaddr {
-    sa: sockaddr,
-    in4: sockaddr_in,
-    in6: sockaddr_in6,
-
+and specifically not big enough to hold an IPv6 address.
+Blech. Roll our own. */
+pub struct Mysockaddr {
+    pub sa: Sockaddr,
+    pub in4: sockaddr_in,
+    pub in6: sockaddr_in6,
 }
 
 /* bits in flag param to IPv6 callbacks from iface_enumerate() */
-pub const IFACE_TENTATIVE :u32 = 1;
-pub const IFACE_DEPRECATED :u32 = 2;
-pub const IFACE_PERMANENT :u32 = 4;
+pub const IFACE_TENTATIVE: u32 = 1;
+pub const IFACE_DEPRECATED: u32 = 2;
+pub const IFACE_PERMANENT: u32 = 4;
 
-pub const SERV_FROM_RESOLV :u32 = 1;  /* 1 for servers from resolv, 0 for command line. */
-pub const SERV_NO_ADDR :u32 = 2;  /* no server, this domain is local only */
-pub const SERV_LITERAL_ADDRESS :u32 = 4;  /* addr is the answer, not the server */
-pub const SERV_HAS_DOMAIN :u32 = 8;  /* server for one domain only */
-pub const SERV_HAS_SOURCE :u32 = 16;  /* source address defined */
-pub const SERV_FOR_NODOTS :u32 = 32;  /* server for names with no domain part only */
-pub const SERV_WARNED_RECURSIVE :u32 = 64;  /* avoid warning spam */
-pub const SERV_FROM_DBUS :u32 = 128;  /* 1 if source is DBus */
-pub const SERV_MARK :u32 = 256;  /* for mark-and-delete */
-pub const SERV_TYPE :u32 = (SERV_HAS_DOMAIN | SERV_FOR_NODOTS);
-pub const SERV_COUNTED :u32 = 512;  /* workspace for log code */
-pub const SERV_USE_RESOLV :u32 = 1024;  /* forward this domain in the normal way */
-pub const SERV_NO_REBIND :u32 = 2048;  /* inhibit dns-rebind protection */
-pub const SERV_FROM_FILE :u32 = 4096;  /* read from --servers-file */
-pub const SERV_LOOP :u32 = 8192;  /* server causes forwarding loop */
-pub const SERV_DO_DNSSEC :u32 = 16384;  /* Validate DNSSEC when using this server */
-pub const SERV_GOT_TCP :u32 = 32768;  /* Got some data from the TCP connection */
+pub const SERV_FROM_RESOLV: u32 = 1; /* 1 for servers from resolv, 0 for command line. */
+pub const SERV_NO_ADDR: u32 = 2; /* no server, this domain is local only */
+pub const SERV_LITERAL_ADDRESS: u32 = 4; /* addr is the answer, not the server */
+pub const SERV_HAS_DOMAIN: u32 = 8; /* server for one domain only */
+pub const SERV_HAS_SOURCE: u32 = 16; /* source address defined */
+pub const SERV_FOR_NODOTS: u32 = 32; /* server for names with no domain part only */
+pub const SERV_WARNED_RECURSIVE: u32 = 64; /* avoid warning spam */
+pub const SERV_FROM_DBUS: u32 = 128; /* 1 if source is DBus */
+pub const SERV_MARK: u32 = 256; /* for mark-and-delete */
+pub const SERV_TYPE: u32 = (SERV_HAS_DOMAIN | SERV_FOR_NODOTS);
+pub const SERV_COUNTED: u32 = 512; /* workspace for log code */
+pub const SERV_USE_RESOLV: u32 = 1024; /* forward this domain in the normal way */
+pub const SERV_NO_REBIND: u32 = 2048; /* inhibit dns-rebind protection */
+pub const SERV_FROM_FILE: u32 = 4096; /* read from --servers-file */
+pub const SERV_LOOP: u32 = 8192; /* server causes forwarding loop */
+pub const SERV_DO_DNSSEC: u32 = 16384; /* Validate DNSSEC when using this server */
+pub const SERV_GOT_TCP: u32 = 32768; /* Got some data from the TCP connection */
 
 pub struct ServerFd {
     fd: i32,
-    source_addr: mysockaddr,
+    source_addr: Mysockaddr,
     _interface: String,
     preallocated: u32,
     used: u32,
@@ -497,8 +500,8 @@ pub struct randfd {
 }
 
 pub struct server {
-    addr: mysockaddr,
-    source_addr: mysockaddr,
+    addr: Mysockaddr,
+    source_addr: Mysockaddr,
     _interface: String,
     sfd: ServerFd,
     domain: String,
@@ -519,15 +522,15 @@ pub struct ipsets {
 }
 
 pub struct irec {
-    addr: mysockaddr,
-    netmask: in_addr,
+    addr: Mysockaddr,
+    netmask: InAddr,
     tftp_ok: i32,
     dhcp_ok: i32,
     mtu: i32,
     done: i32,
     warned: i32,
     dad: i32,
-    dns_auth:i32,
+    dns_auth: i32,
     index: i32,
     multicast_done: i32,
     found: i32,
@@ -542,20 +545,20 @@ pub struct listener {
     tftpfd: i32,
     family: i32,
     iface: irec, // TODO: ptr?
-    // next: listener*
+                 // next: listener*
 }
 
 /* interface and address parms from command line. */
 pub struct Iname {
     name: String,
-    addr: mysockaddr,
+    addr: Mysockaddr,
     used: i32,
     // next: Iname*
 }
 
 /* subnet parameters from command line */
 pub struct mysubnet {
-    addr: mysockaddr,
+    addr: Mysockaddr,
     addr_used: i32,
     mask: i32,
 }
@@ -572,12 +575,12 @@ pub struct resolvc {
 }
 
 /* adn-hosts parms from command-line (also dhcp-hostsfile and dhcp-optsfile and dhcp-hostsdir*/
-pub const AH_DIR :u32 = 1;
-pub const AH_INACTIVE :u32 = 2;
-pub const AH_WD_DONE :u32 = 4;
-pub const AH_HOSTS :u32 = 8;
-pub const AH_DHCP_HST :u32 = 16;
-pub const AH_DHCP_OPT :u32 = 32;
+pub const AH_DIR: u32 = 1;
+pub const AH_INACTIVE: u32 = 2;
+pub const AH_WD_DONE: u32 = 4;
+pub const AH_HOSTS: u32 = 8;
+pub const AH_DHCP_HST: u32 = 16;
+pub const AH_DHCP_OPT: u32 = 32;
 
 pub struct hostsfile {
     // next: hostsfile*
@@ -588,49 +591,46 @@ pub struct hostsfile {
 }
 
 /* packet-dump flags */
-pub const DUMP_QUERY :u32 = 0x0001;
-pub const DUMP_REPLY :u32 = 0x0002;
-pub const DUMP_UP_QUERY :u32 = 0x0004;
-pub const DUMP_UP_REPLY :u32 = 0x0008;
-pub const DUMP_SEC_QUERY :u32 = 0x0010;
-pub const DUMP_SEC_REPLY :u32 = 0x0020;
-pub const DUMP_BOGUS :u32 = 0x0040;
-pub const DUMP_SEC_BOGUS :u32 = 0x0080;
-
+pub const DUMP_QUERY: u32 = 0x0001;
+pub const DUMP_REPLY: u32 = 0x0002;
+pub const DUMP_UP_QUERY: u32 = 0x0004;
+pub const DUMP_UP_REPLY: u32 = 0x0008;
+pub const DUMP_SEC_QUERY: u32 = 0x0010;
+pub const DUMP_SEC_REPLY: u32 = 0x0020;
+pub const DUMP_BOGUS: u32 = 0x0040;
+pub const DUMP_SEC_BOGUS: u32 = 0x0080;
 
 /* DNSSEC status values. */
-pub const STAT_SECURE :u32 = 1;
-pub const STAT_INSECURE :u32 = 2;
-pub const STAT_BOGUS :u32 = 3;
-pub const STAT_NEED_DS :u32 = 4;
-pub const STAT_NEED_KEY :u32 = 5;
-pub const STAT_TRUNCATED :u32 = 6;
-pub const STAT_SECURE_WILDCARD :u32 = 7;
-pub const STAT_OK :u32 = 8;
-pub const STAT_ABANDONED :u32 = 9;
+pub const STAT_SECURE: u32 = 1;
+pub const STAT_INSECURE: u32 = 2;
+pub const STAT_BOGUS: u32 = 3;
+pub const STAT_NEED_DS: u32 = 4;
+pub const STAT_NEED_KEY: u32 = 5;
+pub const STAT_TRUNCATED: u32 = 6;
+pub const STAT_SECURE_WILDCARD: u32 = 7;
+pub const STAT_OK: u32 = 8;
+pub const STAT_ABANDONED: u32 = 9;
 
-pub const FREC_NOREBIND :u32 = 1;
-pub const FREC_CHECKING_DISABLED :u32 = 2;
-pub const FREC_HAS_SUBNET :u32 = 4;
-pub const FREC_DNSKEY_QUERY :u32 = 8;
-pub const FREC_DS_QUERY :u32 = 16;
-pub const FREC_AD_QUESTION :u32 = 32;
-pub const FREC_DO_QUESTION :u32 = 64;
-pub const FREC_ADDED_PHEADER :u32 = 128;
-pub const FREC_TEST_PKTSZ :u32 = 256;
-pub const FREC_HAS_EXTRADATA :u32 = 512;
+pub const FREC_NOREBIND: u32 = 1;
+pub const FREC_CHECKING_DISABLED: u32 = 2;
+pub const FREC_HAS_SUBNET: u32 = 4;
+pub const FREC_DNSKEY_QUERY: u32 = 8;
+pub const FREC_DS_QUERY: u32 = 16;
+pub const FREC_AD_QUESTION: u32 = 32;
+pub const FREC_DO_QUESTION: u32 = 64;
+pub const FREC_ADDED_PHEADER: u32 = 128;
+pub const FREC_TEST_PKTSZ: u32 = 256;
+pub const FREC_HAS_EXTRADATA: u32 = 512;
 
+pub const HASH_SIZE_DNSSEC: u32 = 20; /* SHA-1 digest size */
+pub const HASH_SIZE: usize = 32;
 
-pub const HASH_SIZE_DNSSEC :u32 = 20; /* SHA-1 digest size */
-pub const HASH_SIZE :usize = 32;
-
-
-pub struct frec {
-    source: mysockaddr,
-    dest: all_addr,
+pub struct Frec {
+    source: Mysockaddr,
+    dest: Vec<AddressPointer>,
     sentto: server, // TODO ptr?
-    rfd64: randfd, // TODO: ptr?
-    rfd6: randfd, // TODO: ptr?
+    rfd64: randfd,  // TODO: ptr?
+    rfd6: randfd,   // TODO: ptr?
     iface: u32,
     orig_id: u32,
     new_id: u32,
@@ -639,7 +639,7 @@ pub struct frec {
     forwardall: i32,
     flags: i32,
     time: time_t,
-    hash: [u8;HASH_SIZE],
+    hash: [u8; HASH_SIZE],
     _class: i32,
     work_counter: i32,
     stash: Vec<blockdata>,
@@ -650,35 +650,44 @@ pub struct frec {
 }
 
 /* flags in top of length field for DHCP-option tables */
-pub const OT_ADDR_LIST :u32 = 0x8000;
-pub const OT_RFC1035_NAME :u32 = 0x4000;
-pub const OT_INTERNAL :u32 = 0x2000;
-pub const OT_NAME :u32 = 0x1000;
-pub const OT_CSTRING :u32 = 0x0800;
-pub const OT_DEC :u32 = 0x0400;
-pub const OT_TIME :u32 = 0x0200;
+pub const OT_ADDR_LIST: u32 = 0x8000;
+pub const OT_RFC1035_NAME: u32 = 0x4000;
+pub const OT_INTERNAL: u32 = 0x2000;
+pub const OT_NAME: u32 = 0x1000;
+pub const OT_CSTRING: u32 = 0x0800;
+pub const OT_DEC: u32 = 0x0400;
+pub const OT_TIME: u32 = 0x0200;
 
 /* actions in the daemon->helper RPC */
-pub const ACTION_DEL :u32 = 1;
-pub const ACTION_OLD_HOSTNAME :u32 = 2;
-pub const ACTION_OLD :u32 = 3;
-pub const ACTION_ADD :u32 = 4;
-pub const ACTION_TFTP :u32 = 5;
-pub const ACTION_ARP :u32 = 6;
-pub const ACTION_ARP_DEL :u32 = 7;
+// pub const ACTION_DEL :u32 = 1;
+// pub const ACTION_OLD_HOSTNAME :u32 = 2;
+// pub const ACTION_OLD :u32 = 3;
+// pub const ACTION_ADD :u32 = 4;
+// pub const ACTION_TFTP :u32 = 5;
+// pub const ACTION_ARP :u32 = 6;
+// pub const ACTION_ARP_DEL :u32 = 7;
 
-pub const LEASE_NEW :u32 = 1;  /* newly created */
-pub const LEASE_CHANGED :u32 = 2;  /* modified */
-pub const LEASE_AUX_CHANGED :u32 = 4;  /* CLID or expiry changed */
-pub const LEASE_AUTH_NAME :u32 = 8;  /* hostname came from config, not from client */
-pub const LEASE_USED :u32 = 16;  /* used this DHCPv6 transaction */
-pub const LEASE_NA :u32 = 32;  /* IPv6 no-temporary lease */
-pub const LEASE_TA :u32 = 64;  /* IPv6 temporary lease */
-pub const LEASE_HAVE_HWADDR :u32 = 128;  /* Have set hwaddress */
+pub enum Action {
+    ACTION_DEL,
+    ACTION_OLD_HOSTNAME,
+    ACTION_OLD,
+    ACTION_ADD,
+    ACTION_TFTP,
+    ACTION_ARP,
+    ACTION_ARP_DEL,
+}
 
+pub const LEASE_NEW: u32 = 1; /* newly created */
+pub const LEASE_CHANGED: u32 = 2; /* modified */
+pub const LEASE_AUX_CHANGED: u32 = 4; /* CLID or expiry changed */
+pub const LEASE_AUTH_NAME: u32 = 8; /* hostname came from config, not from client */
+pub const LEASE_USED: u32 = 16; /* used this DHCPv6 transaction */
+pub const LEASE_NA: u32 = 32; /* IPv6 no-temporary lease */
+pub const LEASE_TA: u32 = 64; /* IPv6 temporary lease */
+pub const LEASE_HAVE_HWADDR: u32 = 128; /* Have set hwaddress */
 
 pub struct slaac_address {
-    addr: in6_addr,
+    addr: In6Addr,
     ping_time: time_t,
     backoff: i32,
     // next: slaac_address*
@@ -695,17 +704,17 @@ pub struct dhcp_lease {
     length: u32,
     hwaddr_len: i32,
     hwaddr_type: i32,
-    hwaddr: [u8;dhcp_protocol::DHCP_CHADDR_MAX],
-    addr: in_addr,
-    _override: in_addr,
-    giaddr: in_addr,
+    hwaddr: [u8; dhcp_protocol::DHCP_CHADDR_MAX],
+    addr: InAddr,
+    _override: InAddr,
+    giaddr: InAddr,
     extradata: Vec<u8>,
     extradata_len: u32,
     extradata_size: u32,
     last_interface: i32,
     new_interface: i32,
     new_prefixlen: i32,
-    addr6: in6_addr,
+    addr6: In6Addr,
     iaid: i32,
     slaac_addr: slaac_address,
     vendorclass_count: i32,
@@ -725,19 +734,19 @@ pub struct dhcp_netid_list {
 pub struct tag_if {
     set: dhcp_netid_list,
     tag: dhcp_netid, // TODO: ptr,
-    // next: tag_if*
+                     // next: tag_if*
 }
 
 pub struct delay_config {
     delay: i32,
-    netid: dhcp_netid // todo: ptr,
-    // next: delay_config*
+    netid: dhcp_netid, // todo: ptr,
+                       // next: delay_config*
 }
 
 pub struct hwaddr_config {
     hwaddr_len: i32,
     hwaddr_type: i32,
-    hwaddr: [u8;dhcp_protocol::DHCP_CHADDR_MAX],
+    hwaddr: [u8; dhcp_protocol::DHCP_CHADDR_MAX],
     wildcard_mask: u32,
     // next: hwaddr_config*
 }
@@ -749,8 +758,8 @@ pub struct dhcp_config {
     hostname: String,
     domain: String,
     netid: dhcp_netid_list,
-    addr6: in6_addr,
-    addr: in_addr,
+    addr6: In6Addr,
+    addr: InAddr,
     decline_time: time_t,
     lease_time: u32,
     hwaddr: hwaddr_config,
@@ -760,18 +769,18 @@ pub struct dhcp_config {
 // todo: re-implement
 //const have_config :u32 = ;(config, mask) ((config) && ((config)->flags & (mask)))
 
-pub const CONFIG_DISABLE :u32 = 1;
-pub const CONFIG_CLID :u32 = 2;
-pub const CONFIG_TIME :u32 = 8;
-pub const CONFIG_NAME :u32 = 16;
-pub const CONFIG_ADDR :u32 = 32;
-pub const CONFIG_NOCLID :u32 = 128;
-pub const CONFIG_FROM_ETHERS :u32 = 256;    /* entry created by /etc/ethers */
-pub const CONFIG_ADDR_HOSTS :u32 = 512;    /* address added by from /etc/hosts */
-pub const CONFIG_DECLINED :u32 = 1024;    /* address declined by client */
-pub const CONFIG_BANK :u32 = 2048;    /* from dhcp hosts file */
-pub const CONFIG_ADDR6 :u32 = 4096;
-pub const CONFIG_WILDCARD :u32 = 8192;
+pub const CONFIG_DISABLE: u32 = 1;
+pub const CONFIG_CLID: u32 = 2;
+pub const CONFIG_TIME: u32 = 8;
+pub const CONFIG_NAME: u32 = 16;
+pub const CONFIG_ADDR: u32 = 32;
+pub const CONFIG_NOCLID: u32 = 128;
+pub const CONFIG_FROM_ETHERS: u32 = 256; /* entry created by /etc/ethers */
+pub const CONFIG_ADDR_HOSTS: u32 = 512; /* address added by from /etc/hosts */
+pub const CONFIG_DECLINED: u32 = 1024; /* address declined by client */
+pub const CONFIG_BANK: u32 = 2048; /* from dhcp hosts file */
+pub const CONFIG_ADDR6: u32 = 4096;
+pub const CONFIG_WILDCARD: u32 = 8192;
 
 pub struct dhcp_opt_u {
     encap: i32,
@@ -789,26 +798,26 @@ pub struct dhcp_opt {
     // next: dhcp_opt,
 }
 
-pub const DHOPT_ADDR :u32 = 1;
-pub const DHOPT_STRING :u32 = 2;
-pub const DHOPT_ENCAPSULATE :u32 = 4;
-pub const DHOPT_ENCAP_MATCH :u32 = 8;
-pub const DHOPT_FORCE :u32 = 16;
-pub const DHOPT_BANK :u32 = 32;
-pub const DHOPT_ENCAP_DONE :u32 = 64;
-pub const DHOPT_MATCH :u32 = 128;
-pub const DHOPT_VENDOR :u32 = 256;
-pub const DHOPT_HEX :u32 = 512;
-pub const DHOPT_VENDOR_MATCH :u32 = 1024;
-pub const DHOPT_RFC3925 :u32 = 2048;
-pub const DHOPT_TAGOK :u32 = 4096;
-pub const DHOPT_ADDR6 :u32 = 8192;
+pub const DHOPT_ADDR: u32 = 1;
+pub const DHOPT_STRING: u32 = 2;
+pub const DHOPT_ENCAPSULATE: u32 = 4;
+pub const DHOPT_ENCAP_MATCH: u32 = 8;
+pub const DHOPT_FORCE: u32 = 16;
+pub const DHOPT_BANK: u32 = 32;
+pub const DHOPT_ENCAP_DONE: u32 = 64;
+pub const DHOPT_MATCH: u32 = 128;
+pub const DHOPT_VENDOR: u32 = 256;
+pub const DHOPT_HEX: u32 = 512;
+pub const DHOPT_VENDOR_MATCH: u32 = 1024;
+pub const DHOPT_RFC3925: u32 = 2048;
+pub const DHOPT_TAGOK: u32 = 4096;
+pub const DHOPT_ADDR6: u32 = 8192;
 
 pub struct dhcp_boot {
     file: String,
     sname: String,
     tftp_sname: String,
-    next_server: in_addr,
+    next_server: InAddr,
     netid: dhcp_netid,
     // next: dhcp_boot*
 }
@@ -826,16 +835,16 @@ pub struct pxe_service {
     menu: String,
     basename: String,
     sname: String,
-    server: in_addr,
+    server: InAddr,
     netid: dhcp_netid,
     // next: pxe_service*
 }
 
-pub const MATCH_VENDOR :u32 = 1;
-pub const MATCH_USER :u32 = 2;
-pub const MATCH_CIRCUIT :u32 = 3;
-pub const MATCH_REMOTE :u32 = 4;
-pub const MATCH_SUBSCRIBER :u32 = 5;
+pub const MATCH_VENDOR: u32 = 1;
+pub const MATCH_USER: u32 = 2;
+pub const MATCH_CIRCUIT: u32 = 3;
+pub const MATCH_REMOTE: u32 = 4;
+pub const MATCH_SUBSCRIBER: u32 = 5;
 
 /* vendorclass, userclass, remote-id or circuit-id */
 pub struct dhcp_vendor {
@@ -851,7 +860,7 @@ pub struct dhcp_mac {
     mask: u32,
     hwaddr_len: i32,
     hwaddr_type: i32,
-    hwaddr: [u8;dhcp_protocol::DHCP_CHADDR_MAX],
+    hwaddr: [u8; dhcp_protocol::DHCP_CHADDR_MAX],
     netid: dhcp_netid,
     // next: dhcp_mac*
 }
@@ -865,22 +874,22 @@ pub struct dhcp_bridge {
 pub struct cond_domain {
     domain: String,
     prefix: String,
-    start: in_addr,
-    end: in_addr,
-    start6: in6_addr,
-    end6: in6_addr,
+    start: InAddr,
+    end: InAddr,
+    start6: In6Addr,
+    end6: In6Addr,
     is6: i32,
     indexed: i32,
     // next: cond_domain*
 }
 
-// #ifdef OPTION6_PREFIX_CLASS
+// //#ifdef OPTION6_PREFIX_CLASS
 pub struct prefix_class {
     _class: i32,
     tag: dhcp_netid,
     // next: prefix_class*
 }
-// #endif
+// //#endif
 
 pub struct ra_interface {
     name: String,
@@ -895,15 +904,15 @@ pub struct ra_interface {
 pub struct DhcpContext {
     lease_time: u32,
     addr_epoch: u32,
-    netmask : in_addr,
-    broadcast: in_addr,
-    local: in_addr,
-    router: in_addr,
-    start: in_addr,
-    end: in_addr,
-    start6: in6_addr,
-    end6: in6_addr,
-    local6: in6_addr,
+    netmask: InAddr,
+    broadcast: InAddr,
+    local: InAddr,
+    router: InAddr,
+    start: InAddr,
+    end: InAddr,
+    start6: In6Addr,
+    end6: In6Addr,
+    local6: In6Addr,
     prefix: i32,
     if_index: i32,
     valid: u32,
@@ -920,28 +929,28 @@ pub struct DhcpContext {
     // current: DhcpContext
 }
 
-pub const CONTEXT_STATIC :u32 = 1;
-pub const CONTEXT_NETMASK :u32 = 2;
-pub const CONTEXT_BRDCAST :u32 = 4;
-pub const CONTEXT_PROXY :u32 = 8;
-pub const CONTEXT_RA_ROUTER :u32 = 16;
-pub const CONTEXT_RA_DONE :u32 = 32;
-pub const CONTEXT_RA_NAME :u32 = 64;
-pub const CONTEXT_RA_STATELESS :u32 = 128;
-pub const CONTEXT_DHCP :u32 = 256;
-pub const CONTEXT_DEPRECATE :u32 = 512;
-pub const CONTEXT_TEMPLATE :u32 = 1024;    /* create contexts using addresses */
-pub const CONTEXT_CONSTRUCTED :u32 = 2048;
-pub const CONTEXT_GC :u32 = 4096;
-pub const CONTEXT_RA :u32 = 8192;
-pub const CONTEXT_CONF_USED :u32 = 16384;
-pub const CONTEXT_USED :u32 = 32768;
-pub const CONTEXT_OLD :u32 = 65536;
-pub const CONTEXT_V6 :u32 = 131072;
-pub const CONTEXT_RA_OFF_LINK :u32 = 262144;
+pub const CONTEXT_STATIC: u32 = 1;
+pub const CONTEXT_NETMASK: u32 = 2;
+pub const CONTEXT_BRDCAST: u32 = 4;
+pub const CONTEXT_PROXY: u32 = 8;
+pub const CONTEXT_RA_ROUTER: u32 = 16;
+pub const CONTEXT_RA_DONE: u32 = 32;
+pub const CONTEXT_RA_NAME: u32 = 64;
+pub const CONTEXT_RA_STATELESS: u32 = 128;
+pub const CONTEXT_DHCP: u32 = 256;
+pub const CONTEXT_DEPRECATE: u32 = 512;
+pub const CONTEXT_TEMPLATE: u32 = 1024; /* create contexts using addresses */
+pub const CONTEXT_CONSTRUCTED: u32 = 2048;
+pub const CONTEXT_GC: u32 = 4096;
+pub const CONTEXT_RA: u32 = 8192;
+pub const CONTEXT_CONF_USED: u32 = 16384;
+pub const CONTEXT_USED: u32 = 32768;
+pub const CONTEXT_OLD: u32 = 65536;
+pub const CONTEXT_V6: u32 = 131072;
+pub const CONTEXT_RA_OFF_LINK: u32 = 262144;
 
 pub struct ping_result {
-    addr: in_addr,
+    addr: InAddr,
     time: time_t,
     hash: u32,
     // next: ping_result*
@@ -963,7 +972,7 @@ pub struct tftp_transfer {
     expansion: u32,
     blocksize: u32,
     block: u32,
-    peer: mysockaddr,
+    peer: Mysockaddr,
     carrylf: u8,
     netascii: u8,
     opt_transize: u8,
@@ -973,7 +982,7 @@ pub struct tftp_transfer {
 }
 
 pub struct AddrList {
-    addr: in_addr,
+    addr: InAddr,
     // next: AddrList*
 }
 
@@ -985,194 +994,193 @@ pub struct TftpPrefix {
 }
 
 pub struct DhcpRelay {
-    server: all_addr,
-    local: all_addr,
+    server: Vec<AddressPointer>,
+    local: Vec<AddressPointer>,
     _interface: String,
     iface_index: i32,
     // next: DhcpRelay*
     // current: DhcpRelay*
 }
 
-pub struct daemon {
-    /* datastuctures representing the command-line and 
-       config file arguments. All set (including defaults)
-       in option.c */
-    options2: u32,
+pub struct Daemon {
     /* datastuctures representing the command-line and
-           config file arguments. All set (including defaults)
-           in option.c */
-    options: u32,
-    resolv_files: resolvc, // todo: ptr?
-    default_resolv: resolvc, // todo: ptr?
-    last_resolv: time_t,
-    server_file: String,
-    mxnames: Vec<mx_srv_record>,
-    naptr: naptr,
-    rr: txt_record,
-    txt: txt_record,
-    ptr: ptr_record,
-    host_records_tail: Vec<host_record>,
-    host_records: Vec<host_record>,
-    cnames: Vec<cname>,
-    auth_zones: Vec<auth_zone>,
-    int_names: Vec<interface_name>,
-    mxtarget: String,
-    add_subnet4: mysubnet,
-    add_subnet6: mysubnet,
-    lease_file: String,
-    scriptuser: String,
-    groupname: String,
-    username: String,
-    luascript: String,
-    hostmaster: String,
-    authserver: String,
-    authinterface: String,
-    scondary_foward_server: Vec<name_list>,
-    osport: i32,
-    group_set: i32,
-    domain_suffix: String,
-    synth_domains: Vec<cond_domain>,
-    cond_domains: Vec<cond_domain>,
-    runfile: String,
-    lease_change_command: String,
-    if_names: Vec<Iname>,
-    if_addrs: Vec<Iname>,
-    if_except: Vec<Iname>,
-    dhcp_except: Vec<Iname>,
-    auth_peers: Vec<Iname>,
-    tftp_interfaces: Vec<Iname>,
-    bogus_addr: Vec<bogus_addr>,
-    ignore_addr: Vec<bogus_addr>,
-    servers: Vec<server>,
-    ipsets: Vec<ipsets>,
-    log_fac: i32,
-    log_file: String,
-    max_logs: i32,
-    cachesize: i32,
-    ftabsize: i32,
-    port: i32,
-    query_port: i32,
-    min_port: i32,
-    max_port: i32,
-    local_ttl: u32,
-    neg_ttl: u32,
-    max_ttl: u32,
-    min_cache_ttl: u32,
-    max_cache_ttl: u32,
-    auth_ttl: u32,
-    dhcp_ttl: u32,
-    use_dhcp_ttl: u32,
-    dns_client_id: String,
-    addn_hosts: Vec<hostsfile>,
-    dhcp: Vec<DhcpContext>,
-    dhcp6: Vec<DhcpContext>,
-    ra_interfaces: Vec<ra_interface>,
-    dhcp_conf: dhcp_config,
-    dhcp_opts: Vec<dhcp_opt>,
-    dhcp_match: Vec<dhcp_opt>,
-    dhcp_opts6: Vec<dhcp_opt>,
-    dhcp_match6: Vec<dhcp_opt>,
-    dhcp_name_match: Vec<dhcp_match_name>,
-    dhcp_vendors: Vec<dhcp_vendor>,
-    dhcp_macs: Vec<dhcp_mac>,
-    boot_config: dhcp_boot,
-    pxe_services: Vec<pxe_service>,
-    tag_if: Vec<tag_if>,
-    override_relays: Vec<AddrList>,
-    relay4: DhcpRelay,
-    relay6: DhcpRelay,
-    delay_conf: delay_config,
-    _override: i32,
-    enable_pxe: i32,
-    doing_ra: i32,
-    doing_dhcp6: i32,
-    dhcp_ignore: Vec<dhcp_netid_list>,
-    dhcp_ignore_names: Vec<dhcp_netid_list>,
-    dhcp_gen_names: Vec<dhcp_netid_list>,
-    force_broadcast: Vec<dhcp_netid_list>,
-    bootp_dynamic: Vec<dhcp_netid_list>,
-    dhcp_hosts_file: hostsfile,
-    dhcp_opts_file: hostsfile,
-    dynamic_dirs: Vec<hostsfile>,
-    dhcp_max: i32,
-    tftp_max: i32, 
-    tftp_mtu: i32,
-    dhcp_server_port: i32,
-    dhcp_client_port: i32,
-    start_tftp_port: i32,
-    end_tftp_port: i32,
-    min_leasetime: u32,
-    doctors: Vec<doctor>,
-    edns_pktsz: u16,
-    tftp_prefix: String,
-    if_prefix: Vec<TftpPrefix>,
-    duid_enterprise: u32,
-    duid_config_len: u32,
-    duid_config: Vec<u8>,
-    dbus_name: String,
-    dump_file: String,
-    dump_mask: i32,
-    soa_sn: u32,
-    soa_refresh: u32,
-    soa_retry: u32,
-    soa_expiry: u32,
-    metrics: Vec<u32>,
-    prefix_classes: Vec<prefix_class>,
-    ds: Vec<ds_config>,
-    timestamp_file: String,
-    packet: Vec<u8>,
-    packet_buff_sz: i32,
-    namebuff: String,
-    keyname: String,
-    workspacename: String,
-    rr_status: String,
-    rr_status_sz: i32,
-    dnssec_no_time_check: i32,
-    back_to_the_future: i32,
-    frec_list: Vec<frec>,
-    sfds: Vec<ServerFd>,
-    interfaces: Vec<irec>,
-    listeners: Vec<listener>,
-    last_server: Vec<server>,
-    forwardtime: time_t,
-    forwardcount: i32,
-    srv_save: Vec<server>,
-    packet_len: usize,
-    rfd_save: Vec<randfd>,
-    tcp_pids: Vec<pid_t>,
-    randomsocks: Vec<randfd>,
-    v6pktinfo: i32,
-    interface_addrs: Vec<addrlist>,
-    lot_id: i32,
-    log_display_id: i32,
-    log_source_addr: mysockaddr,
-    pxefd: i32,
-    helperfd: i32,
-    dhcpfd: i32,
-    inotifyfd: i32,
-    netlinkfd: i32,
-    dhcp_raw_fd: i32,
-    dhcp_icmp_fd: i32,
-    routefd: i32,
-    dhcp_packet: iovec,
-    dhcp_buff: Vec<u8>,
-    dhcp_buff2: Vec<u8>,
-    dhcp_buff3: Vec<u8>,
-    ping_results: Vec<ping_result>,
-    lease_stream: FILE,
-    bridges: Vec<dhcp_bridge>,
-    duid_len: i32,
-    dui: Vec<u8>,
-    outpacket: iovec,
-    dhcp6fd: i32,
-    icmp6fd: i32,
-    dbus: c_void,
-    tftp_trans: Vec<tftp_transfer>,
-    tftp_done_trans: Vec<tftp_transfer>,
-    addrbuff: Vec<u8>,
-    addrbuff2: Vec<u8>,
-    dumpfd: i32,
-    
+    config file arguments. All set (including defaults)
+    in option.c */
+    pub options2: u32,
+    /* datastuctures representing the command-line and
+    config file arguments. All set (including defaults)
+    in option.c */
+    pub options: u32,
+    pub resolv_files: resolvc,   // todo: ptr?
+    pub default_resolv: resolvc, // todo: ptr?
+    pub last_resolv: time_t,
+    pub server_file: String,
+    pub mxnames: Vec<mx_srv_record>,
+    pub naptr: naptr,
+    pub rr: txt_record,
+    pub txt: txt_record,
+    pub ptr: ptr_record,
+    pub host_records_tail: Vec<host_record>,
+    pub host_records: Vec<host_record>,
+    pub cnames: Vec<cname>,
+    pub auth_zones: Vec<auth_zone>,
+    pub int_names: Vec<interface_name>,
+    pub mxtarget: String,
+    pub add_subnet4: mysubnet,
+    pub add_subnet6: mysubnet,
+    pub lease_file: String,
+    pub scriptuser: String,
+    pub groupname: String,
+    pub username: String,
+    pub luascript: String,
+    pub hostmaster: String,
+    pub authserver: String,
+    pub authinterface: String,
+    pub scondary_foward_server: Vec<name_list>,
+    pub osport: i32,
+    pub group_set: i32,
+    pub domain_suffix: String,
+    pub synth_domains: Vec<cond_domain>,
+    pub cond_domains: Vec<cond_domain>,
+    pub runfile: String,
+    pub lease_change_command: String,
+    pub if_names: Vec<Iname>,
+    pub if_addrs: Vec<Iname>,
+    pub if_except: Vec<Iname>,
+    pub dhcp_except: Vec<Iname>,
+    pub auth_peers: Vec<Iname>,
+    pub tftp_interfaces: Vec<Iname>,
+    pub bogus_addr: Vec<BogusAddr>,
+    pub ignore_addr: Vec<BogusAddr>,
+    pub servers: Vec<server>,
+    pub ipsets: Vec<ipsets>,
+    pub log_fac: i32,
+    pub log_file: String,
+    pub max_logs: i32,
+    pub cachesize: u32,
+    pub ftabsize: i32,
+    pub port: i32,
+    pub query_port: i32,
+    pub min_port: i32,
+    pub max_port: i32,
+    pub local_ttl: u32,
+    pub neg_ttl: u32,
+    pub max_ttl: u32,
+    pub min_cache_ttl: u32,
+    pub max_cache_ttl: u32,
+    pub auth_ttl: u32,
+    pub dhcp_ttl: u32,
+    pub use_dhcp_ttl: u32,
+    pub dns_client_id: String,
+    pub addn_hosts: Vec<hostsfile>,
+    pub dhcp: Vec<DhcpContext>,
+    pub dhcp6: Vec<DhcpContext>,
+    pub ra_interfaces: Vec<ra_interface>,
+    pub dhcp_conf: dhcp_config,
+    pub dhcp_opts: Vec<dhcp_opt>,
+    pub dhcp_match: Vec<dhcp_opt>,
+    pub dhcp_opts6: Vec<dhcp_opt>,
+    pub dhcp_match6: Vec<dhcp_opt>,
+    pub dhcp_name_match: Vec<dhcp_match_name>,
+    pub dhcp_vendors: Vec<dhcp_vendor>,
+    pub dhcp_macs: Vec<dhcp_mac>,
+    pub boot_config: dhcp_boot,
+    pub pxe_services: Vec<pxe_service>,
+    pub tag_if: Vec<tag_if>,
+    pub override_relays: Vec<AddrList>,
+    pub relay4: DhcpRelay,
+    pub relay6: DhcpRelay,
+    pub delay_conf: delay_config,
+    pub _override: i32,
+    pub enable_pxe: i32,
+    pub doing_ra: i32,
+    pub doing_dhcp6: i32,
+    pub dhcp_ignore: Vec<dhcp_netid_list>,
+    pub dhcp_ignore_names: Vec<dhcp_netid_list>,
+    pub dhcp_gen_names: Vec<dhcp_netid_list>,
+    pub force_broadcast: Vec<dhcp_netid_list>,
+    pub bootp_dynamic: Vec<dhcp_netid_list>,
+    pub dhcp_hosts_file: hostsfile,
+    pub dhcp_opts_file: hostsfile,
+    pub dynamic_dirs: Vec<hostsfile>,
+    pub dhcp_max: i32,
+    pub tftp_max: i32,
+    pub tftp_mtu: i32,
+    pub dhcp_server_port: i32,
+    pub dhcp_client_port: i32,
+    pub start_tftp_port: i32,
+    pub end_tftp_port: i32,
+    pub min_leasetime: u32,
+    pub doctors: Vec<doctor>,
+    pub edns_pktsz: u16,
+    pub tftp_prefix: String,
+    pub if_prefix: Vec<TftpPrefix>,
+    pub duid_enterprise: u32,
+    pub duid_config_len: u32,
+    pub duid_config: Vec<u8>,
+    pub dbus_name: String,
+    pub dump_file: String,
+    pub dump_mask: i32,
+    pub soa_sn: u32,
+    pub soa_refresh: u32,
+    pub soa_retry: u32,
+    pub soa_expiry: u32,
+    pub metrics: Vec<u32>,
+    pub prefix_classes: Vec<prefix_class>,
+    pub ds: Vec<ds_config>,
+    pub timestamp_file: String,
+    pub packet: Vec<u8>,
+    pub packet_buff_sz: i32,
+    pub namebuff: String,
+    pub keyname: String,
+    pub workspacename: String,
+    pub rr_status: String,
+    pub rr_status_sz: i32,
+    pub dnssec_no_time_check: i32,
+    pub back_to_the_future: i32,
+    pub frec_list: Vec<Frec>,
+    pub sfds: Vec<ServerFd>,
+    pub interfaces: Vec<irec>,
+    pub listeners: Vec<listener>,
+    pub last_server: Vec<server>,
+    pub forwardtime: time_t,
+    pub forwardcount: i32,
+    pub srv_save: Vec<server>,
+    pub packet_len: usize,
+    pub rfd_save: Vec<randfd>,
+    pub tcp_pids: Vec<pid_t>,
+    pub randomsocks: Vec<randfd>,
+    pub v6pktinfo: i32,
+    pub interface_addrs: Vec<addrlist>,
+    pub lot_id: i32,
+    pub log_display_id: i32,
+    pub log_source_addr: Mysockaddr,
+    pub pxefd: i32,
+    pub helperfd: i32,
+    pub dhcpfd: i32,
+    pub inotifyfd: i32,
+    pub netlinkfd: i32,
+    pub dhcp_raw_fd: i32,
+    pub dhcp_icmp_fd: i32,
+    pub routefd: i32,
+    pub dhcp_packet: iovec,
+    pub dhcp_buff: Vec<u8>,
+    pub dhcp_buff2: Vec<u8>,
+    pub dhcp_buff3: Vec<u8>,
+    pub ping_results: Vec<ping_result>,
+    pub lease_stream: FILE,
+    pub bridges: Vec<dhcp_bridge>,
+    pub duid_len: i32,
+    pub dui: Vec<u8>,
+    pub outpacket: iovec,
+    pub dhcp6fd: i32,
+    pub icmp6fd: i32,
+    pub dbus: c_void,
+    pub tftp_trans: Vec<tftp_transfer>,
+    pub tftp_done_trans: Vec<tftp_transfer>,
+    pub addrbuff: Vec<u8>,
+    pub addrbuff2: Vec<u8>,
+    pub dumpfd: i32,
 }
 
 /* cache.c */
@@ -1236,7 +1244,7 @@ pub struct daemon {
 // int
 // cache_make_stat(struct txt_record* t);
 
-// #endif
+// //#endif
 
 // char*
 // cache_get_name(struct crec* crecp);
@@ -1255,24 +1263,24 @@ pub struct daemon {
 //         int hashsz);
 
 // /* blockdata.c */
-// #ifdef HAVE_DNSSEC
+// //#ifdef HAVE_DNSSEC
 // void blockdata_init(void);
 // void blockdata_report(void);
 // struct blockdata *blockdata_alloc(char *data, size_t len);
 // void *blockdata_retrieve(struct blockdata *block, size_t len, void *data);
 // void blockdata_free(struct blockdata *blocks);
-// #endif
+// //#endif
 
 // /* domain.c */
 // char*
 // get_domain(struct in_addr addr);
 
-// #ifdef HAVE_IPV6
+// //#ifdef HAVE_IPV6
 
 // char*
 // get_domain6(struct in6_addr* addr);
 
-// #endif
+// //#endif
 
 // int
 // is_name_synthetic(int flags, char* name, struct all_addr* addr);
@@ -1386,7 +1394,7 @@ pub struct daemon {
 // private_net(struct in_addr addr, int ban_localhost);
 
 // /* auth.c */
-// #ifdef HAVE_AUTH
+// //#ifdef HAVE_AUTH
 
 // size_t
 // answer_auth(struct dns_header* header,
@@ -1401,7 +1409,7 @@ pub struct daemon {
 // int
 // in_zone(struct auth_zone* zone, char* name, char** cut);
 
-// #endif
+// //#endif
 
 // /* dnssec.c */
 // size_t
@@ -1531,7 +1539,7 @@ pub struct daemon {
 // int
 // is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask);
 
-// #ifdef HAVE_IPV6
+// //#ifdef HAVE_IPV6
 
 // int
 // is_same_net6(struct in6_addr* a, struct in6_addr* b, int prefixlen);
@@ -1542,7 +1550,7 @@ pub struct daemon {
 // void
 // setaddr6part(struct in6_addr* addr, uint64_t host);
 
-// #endif
+// //#endif
 
 // int
 // retry_send(ssize_t rc);
@@ -1743,28 +1751,27 @@ pub struct daemon {
 // int
 // tcp_interface(int fd, int af);
 
-// #ifdef HAVE_IPV6
+// //#ifdef HAVE_IPV6
 
 // int
 // set_ipv6pktinfo(int fd);
 
-// #endif
-// #ifdef HAVE_DHCP6
+// //#endif
+// //#ifdef HAVE_DHCP6
 
 // void
 // join_multicast(int dienow);
 
-// #endif
+// //#endif
 // #if defined(HAVE_LINUX_NETWORK) || defined(HAVE_BSD_NETWORK)
 
 // void
 // newaddress(time_t now);
 
-// #endif
-
+// //#endif
 
 // /* dhcp.c */
-// #ifdef HAVE_DHCP
+// //#ifdef HAVE_DHCP
 
 // void
 // dhcp_init();
@@ -1803,10 +1810,10 @@ pub struct daemon {
 // char*
 // host_from_dns(struct in_addr addr);
 
-// #endif
+// //#endif
 
 // /* lease.c */
-// #ifdef HAVE_DHCP
+// //#ifdef HAVE_DHCP
 
 // void
 // lease_update_file(time_t now);
@@ -1820,7 +1827,7 @@ pub struct daemon {
 // struct dhcp_lease*
 // lease4_allocate(struct in_addr addr);
 
-// #ifdef HAVE_DHCP6
+// //#ifdef HAVE_DHCP6
 
 // struct dhcp_lease*
 // lease6_allocate(struct in6_addr* addrp, int lease_type);
@@ -1860,7 +1867,7 @@ pub struct daemon {
 // void
 // lease_make_duid(time_t now);
 
-// #endif
+// //#endif
 
 // void
 // lease_set_hwaddr(struct dhcp_lease* lease,
@@ -1913,7 +1920,7 @@ pub struct daemon {
 // void
 // lease_find_interfaces(time_t now);
 
-// #ifdef HAVE_SCRIPT
+// //#ifdef HAVE_SCRIPT
 
 // void
 // lease_add_extradata(struct dhcp_lease* lease,
@@ -1921,11 +1928,11 @@ pub struct daemon {
 //         uint32_t len,
 //         int delim);
 
-// #endif
-// #endif
+// //#endif
+// //#endif
 
 // /* rfc2131.c */
-// #ifdef HAVE_DHCP
+// //#ifdef HAVE_DHCP
 
 // size_t
 // dhcp_reply(struct DhcpContext* context,
@@ -1948,10 +1955,10 @@ pub struct daemon {
 //         unsigned char* clid,
 //         int* len_out);
 
-// #endif
+// //#endif
 
 // /* dnsmasq.c */
-// #ifdef HAVE_DHCP
+// //#ifdef HAVE_DHCP
 
 // int
 // make_icmp_sock();
@@ -1962,7 +1969,7 @@ pub struct daemon {
 // int
 // delay_dhcp(time_t start, int sec, int fd, uint32_t addr, uint16_t id);
 
-// #endif
+// //#endif
 
 // void
 // queue_event(int event);
@@ -1977,7 +1984,7 @@ pub struct daemon {
 // clear_cache_and_reload(time_t now);
 
 // /* netlink.c */
-// #ifdef HAVE_LINUX_NETWORK
+// //#ifdef HAVE_LINUX_NETWORK
 
 // void
 // netlink_init();
@@ -1985,16 +1992,16 @@ pub struct daemon {
 // void
 // netlink_multicast();
 
-// #endif
+// //#endif
 
 // /* bpf.c */
-// #ifdef HAVE_BSD_NETWORK
+// //#ifdef HAVE_BSD_NETWORK
 // void init_bpf(void);
 // void send_via_bpf(struct dhcp_packet *mess, size_t len,
 //           struct in_addr iface_addr, struct ifreq *ifr);
 // void route_init(void);
 // void route_sock(void);
-// #endif
+// //#endif
 
 // /* bpf.c or netlink.c */
 // using callback_t = int(*)(struct in_addr*, int, int, int, int, int, int, void*);
@@ -2003,24 +2010,24 @@ pub struct daemon {
 // iface_enumerate(int family, void* parm, callback_t callback);
 
 // /* dbus.c */
-// #ifdef HAVE_DBUS
+// //#ifdef HAVE_DBUS
 // char *dbus_init(void);
 // void check_dbus_listeners(void);
 // void set_dbus_listeners(void);
 // #  ifdef HAVE_DHCP
 // void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname);
 // #  endif
-// #endif
+// //#endif
 
 // /* ubus.c */
-// #ifdef HAVE_UBUS
+// //#ifdef HAVE_UBUS
 // void set_ubus_listeners(void);
 // void check_ubus_listeners(void);
 // void ubus_event_bcast(const char *type, const char *mac, const char *ip, const char *name, const char *interface);
-// #endif
+// //#endif
 
 // /* ipset.c */
-// #ifdef HAVE_IPSET
+// //#ifdef HAVE_IPSET
 
 // void
 // ipset_init();
@@ -2028,7 +2035,7 @@ pub struct daemon {
 // int
 // add_to_ipset(const char* setname, const struct all_addr* ipaddr, int flags, int remove);
 
-// #endif
+// //#endif
 
 // /* helper.c */
 // #if defined(HAVE_SCRIPT)
@@ -2042,12 +2049,12 @@ pub struct daemon {
 // void
 // queue_script(int action, struct dhcp_lease* lease, char* hostname, time_t now);
 
-// #ifdef HAVE_TFTP
+// //#ifdef HAVE_TFTP
 
 // void
 // queue_tftp(off_t file_len, char* filename, union mysockaddr* peer);
 
-// #endif
+// //#endif
 
 // void
 // queue_arp(int action, unsigned char* mac, int maclen, int family, struct all_addr* addr);
@@ -2055,10 +2062,10 @@ pub struct daemon {
 // int
 // helper_buf_empty();
 
-// #endif
+// //#endif
 
 // /* tftp.c */
-// #ifdef HAVE_TFTP
+// //#ifdef HAVE_TFTP
 
 // void
 // tftp_request(struct listener* listen, time_t now);
@@ -2069,16 +2076,16 @@ pub struct daemon {
 // int
 // do_tftp_script_run();
 
-// #endif
+// //#endif
 
 // /* conntrack.c */
-// #ifdef HAVE_CONNTRACK
+// //#ifdef HAVE_CONNTRACK
 // int get_incoming_mark(union mysockaddr *peer_addr, struct all_addr *local_addr,
 //               int istcp, uint32_t *markp);
-// #endif
+// //#endif
 
 // /* dhcp6.c */
-// #ifdef HAVE_DHCP6
+// //#ifdef HAVE_DHCP6
 
 // void
 // dhcp6_init();
@@ -2134,10 +2141,10 @@ pub struct daemon {
 //         uint32_t* mactypep,
 //         time_t now);
 
-// #endif
+// //#endif
 
 // /* rfc3315.c */
-// #ifdef HAVE_DHCP6
+// //#ifdef HAVE_DHCP6
 
 // uint16_t
 // dhcp6_reply(struct DhcpContext* context,
@@ -2160,10 +2167,10 @@ pub struct daemon {
 // uint16_t
 // relay_reply6(struct sockaddr_in6* peer, ssize_t sz, char* arrival_interface);
 
-// #endif
+// //#endif
 
 // /* dhcp-common.c */
-// #ifdef HAVE_DHCP
+// //#ifdef HAVE_DHCP
 
 // void
 // dhcp_common_init();
@@ -2224,7 +2231,7 @@ pub struct daemon {
 // int
 // config_has_mac(struct dhcp_config* config, unsigned char* hwaddr, int len, int type);
 
-// #ifdef HAVE_LINUX_NETWORK
+// //#ifdef HAVE_LINUX_NETWORK
 
 // char*
 // whichdevice();
@@ -2232,7 +2239,7 @@ pub struct daemon {
 // void
 // bindtodevice(char* device, int fd);
 
-// #endif
+// //#endif
 // #  ifdef HAVE_DHCP6
 
 // void
@@ -2246,10 +2253,10 @@ pub struct daemon {
 // void
 // log_relay(int family, struct DhcpRelay* relay);
 
-// #endif
+// //#endif
 
 // /* outpacket.c */
-// #ifdef HAVE_DHCP6
+// //#ifdef HAVE_DHCP6
 
 // void
 // end_opt6(int container);
@@ -2281,10 +2288,10 @@ pub struct daemon {
 // void
 // put_opt6_string(char* s);
 
-// #endif
+// //#endif
 
 // /* radv.c */
-// #ifdef HAVE_DHCP6
+// //#ifdef HAVE_DHCP6
 
 // void
 // ra_init(time_t now);
@@ -2298,10 +2305,10 @@ pub struct daemon {
 // void
 // ra_start_unsolicited(time_t now, struct DhcpContext* context);
 
-// #endif
+// //#endif
 
 // /* slaac.c */
-// #ifdef HAVE_DHCP6
+// //#ifdef HAVE_DHCP6
 
 // void
 // slaac_add_addrs(struct dhcp_lease* lease, time_t now, int force);
@@ -2315,10 +2322,10 @@ pub struct daemon {
 //         char* interface,
 //         struct dhcp_lease* leases);
 
-// #endif
+// //#endif
 
 // /* loop.c */
-// #ifdef HAVE_LOOP
+// //#ifdef HAVE_LOOP
 
 // void
 // loop_send_probes();
@@ -2326,10 +2333,10 @@ pub struct daemon {
 // int
 // detect_loop(char* query, int type);
 
-// #endif
+// //#endif
 
 // /* inotify.c */
-// #ifdef HAVE_INOTIFY
+// //#ifdef HAVE_INOTIFY
 
 // void
 // inotify_dnsmasq_init();
@@ -2340,7 +2347,7 @@ pub struct daemon {
 // void
 // set_dynamic_inotify(int flag, int total_size, struct crec** rhash, int revhashsz);
 
-// #endif
+// //#endif
 
 // /* poll.c */
 // void
@@ -2410,7 +2417,7 @@ pub struct daemon {
 // do_arp_script_run();
 
 // /* dump.c */
-// #ifdef HAVE_DUMPFILE
+// //#ifdef HAVE_DUMPFILE
 
 // void
 // dump_init();
@@ -2422,7 +2429,7 @@ pub struct daemon {
 //         union mysockaddr* src,
 //         union mysockaddr* dst);
 
-// #endif
+// //#endif
 
 //
 // END OF FILE

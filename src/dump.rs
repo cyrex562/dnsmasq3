@@ -14,9 +14,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_DUMPFILE
+//#ifdef HAVE_DUMPFILE
 
 static uint32_t packet_count;
 
@@ -82,10 +82,10 @@ void dump_init(void)
 void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, union mysockaddr *dst)
 {
   struct ip ip;
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   struct ip6_hdr ip6;
   int family;
-#endif
+//#endif
   struct udphdr {
     uint16_t uh_sport;               /* source port */
     uint16_t uh_dport;               /* destination port */
@@ -105,7 +105,7 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
   /* So wireshark can Id the packet. */
   udp.uh_sport = udp.uh_dport = htons(NAMESERVER_PORT);
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   if (src)
     family = src->sa.sa_family;
   else
@@ -139,7 +139,7 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
 	sum += ((uint16_t *)&ip6.ip6_src)[i];
     }
   else
-#endif
+//#endif
     {
       iphdr = &ip;
       ipsz = sizeof(ip);
@@ -208,4 +208,4 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
 
 }
 
-#endif
+//#endif

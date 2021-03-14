@@ -54,26 +54,29 @@ pub type sa_family_t = u16;
 pub type in_port_t = u16;
 
 #[cfg(target_os="windows")]
-pub struct in_addr {
+#[derive(Debug,Clone, Copy, Default)]
+pub struct InAddr {
     pub s_addr: in_addr_t
 }
 
 #[cfg(target_os="windows")]
-pub struct in6_addr {
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct In6Addr {
     pub s6_addr: [u8;16]
 }
 
 #[cfg(target_os="windows")]
-pub struct sockaddr {
+pub struct Sockaddr {
     pub sa_family: sa_family_t,
-    pub sa_data: [c_char;14]
+    pub sa_data: [c_char;14],
+    pub sa_len: usize,
 }
 
 #[cfg(target_os="windows")]
 pub struct sockaddr_in {
     pub sin_family: sa_family_t,
     pub sin_port: in_port_t,
-    pub sin_addr: in_addr,
+    pub sin_addr: InAddr,
     pub sin_zero: [u8;8]
 }
 
@@ -82,7 +85,7 @@ pub struct sockaddr_in6 {
     pub sin6_family: sa_family_t,
     pub sin6_port: in_port_t,
     pub sin6_flowinfo: u32,
-    pub sin6_addr: in6_addr,
+    pub sin6_addr: In6Addr,
     pub sin6_scope_id: u32,
 }
 

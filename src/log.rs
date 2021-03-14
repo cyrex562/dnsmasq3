@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef __ANDROID__
+//#ifdef __ANDROID__
 #  include <android/log.h>
-#endif
+//#endif
 
 /* Implement logging to /dev/log asynchronously. If syslogd is 
    making DNS lookups through dnsmasq, and dnsmasq blocks awaiting
@@ -63,10 +63,10 @@ int log_start(struct passwd *ent_pw, int errfd)
 
   if (daemon->log_fac != -1)
     log_fac = daemon->log_fac;
-#ifdef LOG_LOCAL0
+//#ifdef LOG_LOCAL0
   else if (option_bool(OPT_DEBUG))
     log_fac = LOG_LOCAL0;
-#endif
+//#endif
 
   if (daemon->log_file)
     { 
@@ -121,19 +121,19 @@ int log_reopen(char *log_file)
 	log_fd = open(log_file, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP);      
       else
 	{
-#if defined(HAVE_SOLARIS_NETWORK) || defined(__ANDROID__)
+//#if defined(HAVE_SOLARIS_NETWORK) || defined(__ANDROID__)
 	  /* Solaris logging is "different", /dev/log is not unix-domain socket.
 	     Just leave log_fd == -1 and use the vsyslog call for everything.... */
 #   define _PATH_LOG ""  /* dummy */
 	  return 1;
-#else
+//#else
 	  int flags;
 	  log_fd = socket(AF_UNIX, connection_type, 0);
 	  
 	  /* if max_logs is zero, leave the socket blocking */
 	  if (log_fd != -1 && max_logs != 0 && (flags = fcntl(log_fd, F_GETFL)) != -1)
 	    fcntl(log_fd, F_SETFL, flags | O_NONBLOCK);
-#endif
+//#endif
 	}
     }
   
@@ -228,9 +228,9 @@ static void log_write(void)
 	      
 	      struct sockaddr_un logaddr;
 	      
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
 	      logaddr.sun_len = sizeof(logaddr) - sizeof(logaddr.sun_path) + strlen(_PATH_LOG) + 1; 
-#endif
+//#endif
 	      logaddr.sun_family = AF_UNIX;
 	      safe_strncpy(logaddr.sun_path, _PATH_LOG, sizeof(logaddr.sun_path));
 	      
@@ -291,12 +291,12 @@ void my_syslog(int priority, const char *format, ...)
   else if ((LOG_FACMASK & priority) == MS_SCRIPT)
     func = "-script";
 	    
-#ifdef LOG_PRI
+//#ifdef LOG_PRI
   priority = LOG_PRI(priority);
-#else
+//#else
   /* Solaris doesn't have LOG_PRI */
   priority &= LOG_PRIMASK;
-#endif
+//#endif
 
   if (echo_stderr) 
     {
@@ -309,7 +309,7 @@ void my_syslog(int priority, const char *format, ...)
 
   if (log_fd == -1)
     {
-#ifdef __ANDROID__
+//#ifdef __ANDROID__
       /* do android-specific logging. 
 	 log_fd is always -1 on Android except when logging to a file. */
       int alog_lvl;
@@ -326,7 +326,7 @@ void my_syslog(int priority, const char *format, ...)
       va_start(ap, format);
       __android_log_vprint(alog_lvl, "dnsmasq", format, ap);
       va_end(ap);
-#else
+//#else
       /* fall-back to syslog if we die during startup or 
 	 fail during running (always on Solaris). */
       static int isopen = 0;
@@ -339,7 +339,7 @@ void my_syslog(int priority, const char *format, ...)
       va_start(ap, format);  
       vsyslog(priority, format, ap);
       va_end(ap);
-#endif
+//#endif
 
       return;
     }

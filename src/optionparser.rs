@@ -41,7 +41,7 @@
  * @file
  *
  * @brief This is the only file required to use The Lean Mean C++ Option Parser.
- *        Just \#include it and you're set.
+ *        Just \//#include it and you're set.
  *
  * The Lean Mean C++ Option Parser handles the program's command line arguments
  * (argc, argv).
@@ -53,7 +53,7 @@
  *
  * @par Highlights:
  * <ul style="padding-left:1em;margin-left:0">
- * <li> It is a header-only library. Just <code>\#include "optionparser.h"</code> and you're set.
+ * <li> It is a header-only library. Just <code>\//#include "optionparser.h"</code> and you're set.
  * <li> It is freestanding. There are no dependencies whatsoever, not even the
  *      C or C++ standard library.
  * <li> It has a usage message formatter that supports column alignment and
@@ -116,8 +116,8 @@
  * (Note: @c option::* identifiers are links that take you to their documentation.)
  * @code
  * #error EXAMPLE SHORTENED FOR READABILITY. BETTER EXAMPLES ARE IN THE .TAR.GZ!
- * #include <iostream>
- * #include "optionparser.h"
+ * //#include <iostream>
+ * //#include "optionparser.h"
  *
  * enum  optionIndex { UNKNOWN, HELP, PLUS };
  * const option::Descriptor usage[] =
@@ -215,19 +215,19 @@
  *
  */
 
-#ifndef OPTIONPARSER_H_
+//#ifndef OPTIONPARSER_H_
 #define OPTIONPARSER_H_
 
-#ifdef _MSC_VER
-#include <intrin.h>
+//#ifdef _MSC_VER
+//#include <intrin.h>
 #pragma intrinsic(_BitScanReverse)
-#endif
+//#endif
 
 /** @brief The namespace of The Lean Mean C++ Option Parser. */
 namespace option
 {
 
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
 struct MSC_Builtin_CLZ
 {
   static int builtin_clz(unsigned x)
@@ -238,7 +238,7 @@ struct MSC_Builtin_CLZ
   }
 };
 #define __builtin_clz(x) MSC_Builtin_CLZ::builtin_clz(x)
-#endif
+//#endif
 
 class Option;
 
@@ -2722,10 +2722,10 @@ struct PrintUsageImplementation
  * will work.
  *
  * @code
- * #include <unistd.h>  // write()
- * #include <iostream>  // cout
- * #include <sstream>   // ostringstream
- * #include <cstdio>    // fwrite()
+ * //#include <unistd.h>  // write()
+ * //#include <iostream>  // cout
+ * //#include <sstream>   // ostringstream
+ * //#include <cstdio>    // fwrite()
  * using namespace std;
  *
  * void my_write(const char* str, int size) {
@@ -2855,4 +2855,4 @@ void printUsage(Function* prn, Stream* stream, const Descriptor usage[], int wid
 }
 // namespace option
 
-#endif /* OPTIONPARSER_H_ */
+//#endif /* OPTIONPARSER_H_ */

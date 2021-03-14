@@ -14,18 +14,18 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#if defined(HAVE_IPSET) && defined(HAVE_LINUX_NETWORK)
+//#if defined(HAVE_IPSET) && defined(HAVE_LINUX_NETWORK)
 
-#include <string.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/utsname.h>
-#include <arpa/inet.h>
-#include <linux/version.h>
-#include <linux/netlink.h>
+//#include <string.h>
+//#include <errno.h>
+//#include <sys/types.h>
+//#include <sys/socket.h>
+//#include <sys/utsname.h>
+//#include <arpa/inet.h>
+//#include <linux/version.h>
+//#include <linux/netlink.h>
 
 /* We want to be able to compile against old header files
    Kernel version is handled at run-time. */
@@ -43,17 +43,17 @@
 #define IPSET_MAXNAMELEN 32
 #define IPSET_PROTOCOL 6
 
-#ifndef NFNETLINK_V0
+//#ifndef NFNETLINK_V0
 #define NFNETLINK_V0    0
-#endif
+//#endif
 
-#ifndef NLA_F_NESTED
+//#ifndef NLA_F_NESTED
 #define NLA_F_NESTED		(1 << 15)
-#endif
+//#endif
 
-#ifndef NLA_F_NET_BYTEORDER
+//#ifndef NLA_F_NET_BYTEORDER
 #define NLA_F_NET_BYTEORDER	(1 << 14)
-#endif
+//#endif
 
 struct my_nlattr {
         __u16           nla_len;
@@ -122,10 +122,10 @@ static int new_add_to_ipset(const char *setname, const struct all_addr *ipaddr, 
   uint8_t proto;
   int addrsz = INADDRSZ;
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   if (af == AF_INET6)
     addrsz = IN6ADDRSZ;
-#endif
+//#endif
     
   if (strlen(setname) >= IPSET_MAXNAMELEN) 
     {
@@ -213,7 +213,7 @@ int add_to_ipset(const char *setname, const struct all_addr *ipaddr, int flags, 
 {
   int ret = 0, af = AF_INET;
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   if (flags & F_IPV6)
     {
       af = AF_INET6;
@@ -224,7 +224,7 @@ int add_to_ipset(const char *setname, const struct all_addr *ipaddr, int flags, 
 	  ret = -1;
 	}
     }
-#endif
+//#endif
   
   if (ret != -1) 
     ret = old_kernel ? old_add_to_ipset(setname, ipaddr, remove) : new_add_to_ipset(setname, ipaddr, af, remove);
@@ -235,4 +235,4 @@ int add_to_ipset(const char *setname, const struct all_addr *ipaddr, int flags, 
   return ret;
 }
 
-#endif
+//#endif

@@ -14,9 +14,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_LOOP
+//#ifdef HAVE_LOOP
 static ssize_t loop_make_probe(uint32_t uid);
 
 void loop_send_probes()
@@ -114,4 +114,4 @@ int detect_loop(char *query, int type)
   return 0;
 }
 
-#endif
+//#endif

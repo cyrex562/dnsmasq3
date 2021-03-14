@@ -15,9 +15,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
 
 #define SERIAL_UNDEF  -100
 #define SERIAL_EQ        0
@@ -2090,4 +2090,4 @@ unsigned char* hash_questions(struct dns_header *header, size_t plen, char *name
   return digest;
 }
 
-#endif /* HAVE_DNSSEC */
+//#endif /* HAVE_DNSSEC */

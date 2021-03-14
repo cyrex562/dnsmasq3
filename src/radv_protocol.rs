@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::dnsmasq_sys::in6_addr;
+use crate::dnsmasq_sys::In6Addr;
 
 const ALL_NODES: &str = "FF02::1";
 const ALL_ROUTERS: &str = "FF02::2";
@@ -51,7 +51,7 @@ struct neigh_packet {
   code: u8,
   checksum: u16,
   reserved: u16,
-  target: in6_addr,
+  target: In6Addr,
 }
 
 struct prefix_opt {
@@ -62,7 +62,7 @@ struct prefix_opt {
   valid_lifetime: u32,
   preferred_lifetime: u32,
   reserved: u32,
-  prefix: in6_addr
+  prefix: In6Addr
 }
 
 

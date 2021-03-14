@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_UBUS
+//#ifdef HAVE_UBUS
 
-#include <libubus.h>
+//#include <libubus.h>
 
 static struct ubus_context *ubus = nullptr;
 static struct blob_buf b;
@@ -104,4 +104,4 @@ void ubus_event_bcast(const char *type, const char *mac, const char *ip, const c
 }
 
 
-#endif /* HAVE_UBUS */
+//#endif /* HAVE_UBUS */

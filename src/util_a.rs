@@ -18,17 +18,17 @@
    Daniel J Bernstein, which is public domain. */
 
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_BROKEN_RTC
-#include <sys/times.h>
-#endif
+//#ifdef HAVE_BROKEN_RTC
+//#include <sys/times.h>
+//#endif
 
-#if defined(HAVE_LIBIDN2)
-#include <idn2.h>
+//#if defined(HAVE_LIBIDN2)
+//#include <idn2.h>
 #elif defined(HAVE_IDN)
-#include <idna.h>
-#endif
+//#include <idna.h>
+//#endif
 
 /* SURF random number generator */
 
@@ -138,10 +138,10 @@ static int check_name(char *in)
       else if (isascii((unsigned char)c) && iscntrl((unsigned char)c)) 
 	/* iscntrl only gives expected results for ascii */
 	return 0;
-#if !defined(HAVE_IDN) && !defined(HAVE_LIBIDN2)
+//#if !defined(HAVE_IDN) && !defined(HAVE_LIBIDN2)
       else if (!isascii((unsigned char)c))
 	return 0;
-#endif
+//#endif
       else if (c != ' ')
 	{
 	  nowhite = 1;
@@ -200,12 +200,12 @@ char *canonicalise(char *in, int *nomem)
   if (!(rc = check_name(in)))
     return nullptr;
   
-#if defined(HAVE_LIBIDN2) && (!defined(IDN2_VERSION_NUMBER) || IDN2_VERSION_NUMBER < 0x02000003)
+//#if defined(HAVE_LIBIDN2) && (!defined(IDN2_VERSION_NUMBER) || IDN2_VERSION_NUMBER < 0x02000003)
   /* older libidn2 strips underscores, so don't do IDN processing
      if the name has an underscore (check_name() returned 2) */
   if (rc != 2)
-#endif
-#if defined(HAVE_IDN) || defined(HAVE_LIBIDN2)
+//#endif
+//#if defined(HAVE_IDN) || defined(HAVE_LIBIDN2)
     {
 #  ifdef HAVE_LIBIDN2
       rc = idn2_to_ascii_lz(in, &ret, IDN2_NONTRANSITIONAL);
@@ -230,7 +230,7 @@ char *canonicalise(char *in, int *nomem)
       
       return ret;
     }
-#endif
+//#endif
   
   if ((ret = whine_malloc(strlen(in)+1)))
     strcpy(ret, in);
@@ -256,11 +256,11 @@ unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
           if (limit && p + 1 > (unsigned char*)limit)
             return nullptr;
 
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
 	  if (option_bool(OPT_DNSSEC_VALID) && *sval == NAME_ESCAPE)
 	    *p++ = (*(++sval))-1;
 	  else
-#endif		
+//#endif		
 	    *p++ = *sval;
 	}
       
@@ -320,29 +320,29 @@ int sockaddr_isequal(union mysockaddr *s1, union mysockaddr *s2)
 	  s1->in.sin_port == s2->in.sin_port &&
 	  s1->in.sin_addr.s_addr == s2->in.sin_addr.s_addr)
 	return 1;
-#ifdef HAVE_IPV6      
+//#ifdef HAVE_IPV6      
       if (s1->sa.sa_family == AF_INET6 &&
 	  s1->in6.sin6_port == s2->in6.sin6_port &&
 	  s1->in6.sin6_scope_id == s2->in6.sin6_scope_id &&
 	  IN6_ARE_ADDR_EQUAL(&s1->in6.sin6_addr, &s2->in6.sin6_addr))
 	return 1;
-#endif
+//#endif
     }
   return 0;
 }
 
 int sa_len(union mysockaddr *addr)
 {
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
   return addr->sa.sa_len;
-#else
-#ifdef HAVE_IPV6
+//#else
+//#ifdef HAVE_IPV6
   if (addr->sa.sa_family == AF_INET6)
     return sizeof(addr->in6);
   else
-#endif
+//#endif
     return sizeof(addr->in); 
-#endif
+//#endif
 }
 
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
@@ -406,7 +406,7 @@ int hostname_issubdomain(char *a, char *b)
   
 time_t dnsmasq_time(void)
 {
-#ifdef HAVE_BROKEN_RTC
+//#ifdef HAVE_BROKEN_RTC
   struct tms dummy;
   static long tps = 0;
 
@@ -414,9 +414,9 @@ time_t dnsmasq_time(void)
     tps = sysconf(_SC_CLK_TCK);
 
   return (time_t)(times(&dummy)/tps);
-#else
+//#else
   return time(nullptr);
-#endif
+//#endif
 }
 
 int netmask_length(struct in_addr mask)
@@ -437,7 +437,7 @@ int is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask)
   return (a.s_addr & mask.s_addr) == (b.s_addr & mask.s_addr);
 } 
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
 int is_same_net6(struct in6_addr *a, struct in6_addr *b, int prefixlen)
 {
   int pfbytes = prefixlen >> 3;
@@ -476,7 +476,7 @@ void setaddr6part(struct in6_addr *addr, u64 host)
     }
 }
 
-#endif
+//#endif
  
 
 /* returns port number from address */
@@ -484,7 +484,7 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
 {
   int port = 0;
   
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   if (addr->sa.sa_family == AF_INET)
     {
       inet_ntop(AF_INET, &addr->in.sin_addr, buf, ADDRSTRLEN);
@@ -503,10 +503,10 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
 	}
       port = ntohs(addr->in6.sin6_port);
     }
-#else
+//#else
   strcpy(buf, inet_ntoa(addr->in.sin_addr));
   port = ntohs(addr->in.sin_port); 
-#endif
+//#endif
   
   return port;
 }

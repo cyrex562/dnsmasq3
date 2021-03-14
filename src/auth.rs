@@ -15,7 +15,7 @@
 */
 
 //static struct addrlist* find_addrlist(struct addrlist* list, int flag, struct all_addr* addr_u)
-fn find_addrlist(list: Vec<addrlist>, flag: i32, addr_u: Vec<all_addr>) -> Option<addrlist>
+pub fn find_addrlist(list: Vec<addrlist>, flag: i32, addr_u: Vec<all_addr>) -> Option<addrlist>
 {
     for l in list {
         if !l.flags & ADDRLIST_IPV6 {
@@ -40,7 +40,7 @@ fn find_addrlist(list: Vec<addrlist>, flag: i32, addr_u: Vec<all_addr>) -> Optio
     None
 }
 
-fn find_subnet(zone: auth_zone, flag: i32, addr_u: all_addr) -> Option<addrlist>
+pub fn find_subnet(zone: auth_zone, flag: i32, addr_u: all_addr) -> Option<addrlist>
 {
     if !zone.subnet {
         None
@@ -49,7 +49,7 @@ fn find_subnet(zone: auth_zone, flag: i32, addr_u: all_addr) -> Option<addrlist>
     }    
 }
 
-fn find_exclude(zone: auth_zone, flag: i32, addr_u: all_addr)
+pub fn find_exclude(zone: auth_zone, flag: i32, addr_u: all_addr)
 {
     if !zone.exclue {
         None
@@ -59,7 +59,7 @@ fn find_exclude(zone: auth_zone, flag: i32, addr_u: all_addr)
 }
 
 // static int filter_zone(struct auth_zone* zone, int flag, struct all_addr* addr_u)
-fn filter_zone(zone: auth_zone, flag: i32, addr_u: all_addr) -> i32
+pub fn filter_zone(zone: auth_zone, flag: i32, addr_u: all_addr) -> i32
 {
     // if (find_exclude(zone, flag, addr_u))
     //     return 0;
@@ -79,7 +79,7 @@ fn filter_zone(zone: auth_zone, flag: i32, addr_u: all_addr) -> i32
 }
 
 // int in_zone(struct auth_zone* zone, char* name, char** cut)
-fn in_zone(zone: auth_zone, name: &str, cut: &mut String) -> i32
+pub fn in_zone(zone: auth_zone, name: &str, cut: &mut String) -> i32
 {
     // size_t namelen = strlen(name);
     let namelen = name.len();
@@ -112,8 +112,9 @@ fn in_zone(zone: auth_zone, name: &str, cut: &mut String) -> i32
     return 0;
 }
 
-size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t now, union mysockaddr* peer_addr,
-        int local_query, int do_bit, int have_pseudoheader)
+// size_t answer_auth(struct dns_header* header, char* limit, size_t qlen, time_t now, union mysockaddr* peer_addr,
+//         int local_query, int do_bit, int have_pseudoheader)
+fn answer_auth(header: &mut dns_header, limit: &mut String, qlen: usize, now: DateTime, peer_addr: )
 {
     char* name = daemon->namebuff;
     unsigned char* p, * ansp;

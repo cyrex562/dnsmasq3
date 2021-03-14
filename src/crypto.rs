@@ -14,17 +14,17 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
 
-#include <nettle/rsa.h>
-#include <nettle/dsa.h>
-#include <nettle/ecdsa.h>
-#include <nettle/ecc-curve.h>
-#include <nettle/eddsa.h>
-#include <nettle/nettle-meta.h>
-#include <nettle/bignum.h>
+//#include <nettle/rsa.h>
+//#include <nettle/dsa.h>
+//#include <nettle/ecdsa.h>
+//#include <nettle/ecc-curve.h>
+//#include <nettle/eddsa.h>
+//#include <nettle/nettle-meta.h>
+//#include <nettle/bignum.h>
 
 /* Implement a "hash-function" to the nettle API, which simply returns
    the input data, concatenated into a single, statically maintained, buffer.
@@ -113,9 +113,9 @@ const struct nettle_hash *hash_find(char *name)
      versions. It also #defines nettle_hashes, so use that to tell
      if we have the new facilities. */
   
-#ifdef nettle_hashes
+//#ifdef nettle_hashes
   return nettle_lookup_hash(name);
-#else
+//#else
   {
     int i;
 
@@ -125,7 +125,7 @@ const struct nettle_hash *hash_find(char *name)
   }
   
   return nullptr;
-#endif
+//#endif
 }
 
 /* expand ctx and digest memory allocations if necessary and init hash function */
@@ -457,4 +457,4 @@ char *nsec3_digest_name(int digest)
     }
 }
 
-#endif
+//#endif

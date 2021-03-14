@@ -14,9 +14,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_TFTP
+//#ifdef HAVE_TFTP
 
 static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix);
 static void free_transfer(struct tftp_transfer *transfer);
@@ -52,32 +52,32 @@ void tftp_request(struct listener *listen, time_t now)
   struct Iname *tmp;
   struct tftp_transfer *transfer;
   int port = daemon->start_tftp_port; /* may be zero to use ephemeral port */
-#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+//#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
   int mtuflag = IP_PMTUDISC_DONT;
-#endif
+//#endif
   char namebuff[IF_NAMESIZE];
   char *name = nullptr;
   char *prefix = daemon->tftp_prefix;
   struct TftpPrefix *pref;
   struct all_addr addra;
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   /* Can always get recvd interface for IPv6 */
   int check_dest = !option_bool(OPT_NOWILD) || listen->family == AF_INET6;
-#else
+//#else
   int check_dest = !option_bool(OPT_NOWILD);
-#endif
+//#endif
   union {
     struct cmsghdr align; /* this ensures alignment */
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-#endif
-#if defined(HAVE_LINUX_NETWORK)
+//#endif
+//#if defined(HAVE_LINUX_NETWORK)
     char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
 #elif defined(HAVE_SOLARIS_NETWORK)
     char control[CMSG_SPACE(sizeof(unsigned int))];
 #elif defined(IP_RECVDSTADDR) && defined(IP_RECVIF)
     char control[CMSG_SPACE(sizeof(struct sockaddr_dl))];
-#endif
+//#endif
   } control_u; 
 
   msg.msg_controllen = sizeof(control_u);
@@ -126,7 +126,7 @@ void tftp_request(struct listener *listen, time_t now)
       
       addr.sa.sa_family = listen->family;
       
-#if defined(HAVE_LINUX_NETWORK)
+//#if defined(HAVE_LINUX_NETWORK)
       if (listen->family == AF_INET)
 	for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
 	  if (cmptr->cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_PKTINFO)
@@ -172,9 +172,9 @@ void tftp_request(struct listener *listen, time_t now)
 	      if_index = p.s->sdl_index;
 	  }
 	  
-#endif
+//#endif
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
       if (listen->family == AF_INET6)
         {
           for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
@@ -190,7 +190,7 @@ void tftp_request(struct listener *listen, time_t now)
                 if_index = p.p->ipi6_ifindex;
               }
         }
-#endif
+//#endif
       
       if (!indextoname(listen->tftpfd, if_index, namebuff))
 	return;
@@ -199,10 +199,10 @@ void tftp_request(struct listener *listen, time_t now)
       
       addra.addr.addr4 = addr.in.sin_addr;
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
       if (listen->family == AF_INET6)
 	addra.addr.addr6 = addr.in6.sin6_addr;
-#endif
+//#endif
 
       if (daemon->tftp_interfaces)
 	{
@@ -226,12 +226,12 @@ void tftp_request(struct listener *listen, time_t now)
 		return;
 	    }
 	  
-#ifdef HAVE_DHCP      
+//#ifdef HAVE_DHCP      
 	  /* allowed interfaces are the same as for DHCP */
 	  for (tmp = daemon->dhcp_except; tmp; tmp = tmp->next)
 	    if (tmp->name && wildcard_match(tmp->name, name))
 	      return;
-#endif
+//#endif
 	}
 
       safe_strncpy(ifr.ifr_name, name, IF_NAMESIZE);
@@ -258,21 +258,21 @@ void tftp_request(struct listener *listen, time_t now)
   if (listen->family == AF_INET)
     {
       addr.in.sin_port = htons(port);
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
       addr.in.sin_len = sizeof(addr.in);
-#endif
+//#endif
     }
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   else
     {
       addr.in6.sin6_port = htons(port);
       addr.in6.sin6_flowinfo = 0;
       addr.in6.sin6_scope_id = 0;
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
       addr.in6.sin6_len = sizeof(addr.in6);
-#endif
+//#endif
     }
-#endif
+//#endif
 
   if (!(transfer = whine_malloc(sizeof(struct tftp_transfer))))
     return;
@@ -299,9 +299,9 @@ void tftp_request(struct listener *listen, time_t now)
   while (1)
     {
       if (bind(transfer->sockfd, &addr.sa, sa_len(&addr)) == -1 ||
-#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+//#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
 	  setsockopt(transfer->sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &mtuflag, sizeof(mtuflag)) == -1 ||
-#endif
+//#endif
 	  !fix_fd(transfer->sockfd))
 	{
 	  if (errno == EADDRINUSE && daemon->start_tftp_port != 0)
@@ -310,10 +310,10 @@ void tftp_request(struct listener *listen, time_t now)
 		{ 
 		  if (listen->family == AF_INET)
 		    addr.in.sin_port = htons(port);
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
 		  else
 		     addr.in6.sin6_port = htons(port);
-#endif
+//#endif
 		  continue;
 		}
 	      my_syslog(MS_TFTP | LOG_ERR, _("unable to get free port for TFTP"));
@@ -400,7 +400,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      unsigned char *macaddr = nullptr;
 	      unsigned char macbuf[DHCP_CHADDR_MAX];
 	      
-#ifdef HAVE_DHCP
+//#ifdef HAVE_DHCP
 	      if (daemon->dhcp && peer.sa.sa_family == AF_INET)
 	        {
 		  /* Check if the client IP is in our lease database */
@@ -408,7 +408,7 @@ void tftp_request(struct listener *listen, time_t now)
 		  if (lease && lease->hwaddr_type == ARPHRD_ETHER && lease->hwaddr_len == ETHER_ADDR_LEN)
 		    macaddr = lease->hwaddr;
 		}
-#endif
+//#endif
 	      
 	      /* If no luck, try to find in ARP table. This only works if client is in same (V)LAN */
 	      if (!macaddr && find_mac(&peer, macbuf, 1, now) > 0)
@@ -807,13 +807,13 @@ int do_tftp_script_run(void)
   if ((transfer = daemon->tftp_done_trans))
     {
       daemon->tftp_done_trans = transfer->next;
-#ifdef HAVE_SCRIPT
+//#ifdef HAVE_SCRIPT
       queue_tftp(transfer->file->size, transfer->file->filename, &transfer->peer);
-#endif
+//#endif
       free_transfer(transfer);
       return 1;
     }
 
   return 0;
 }
-#endif
+//#endif

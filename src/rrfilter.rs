@@ -16,7 +16,7 @@
 
 /* Code to safely remove RRs from a DNS answer */ 
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
    we've chopped out of the packet, or check they don't point into an elided part.  */

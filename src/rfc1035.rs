@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
 int
 extract_name(struct dns_header* header,
@@ -102,7 +102,7 @@ extract_name(struct dns_header* header,
             for (j = 0; j<l; j++, p++) {
                 if (isExtract) {
                     unsigned char c = *p;
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
                     if (option_bool(OPT_DNSSEC_VALID))
                       {
                         if (c == 0 || c == '.' || c == NAME_ESCAPE)
@@ -114,7 +114,7 @@ extract_name(struct dns_header* header,
                           *cp++ = c;
                       }
                     else
-#endif
+//#endif
                     if (c!=0 && c!='.') {
                         *cp++ = c;
                     }
@@ -133,10 +133,10 @@ extract_name(struct dns_header* header,
                         if (c1>='A' && c1<='Z') {
                             c1 += 'a'-'A';
                         }
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
                         if (option_bool(OPT_DNSSEC_VALID) && c1 == NAME_ESCAPE)
                           c1 = (*cp++)-1;
-#endif
+//#endif
 
                         if (c2>='A' && c2<='Z') {
                             c2 += 'a'-'A';
@@ -224,7 +224,7 @@ in_arpa_name_2_addr(char* namein, struct all_addr* addrp)
 
         return F_IPV4;
     }
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
     else if (hostname_isequal(penchunk, "ip6") && (hostname_isequal(lastchunk, "int")
             || hostname_isequal(lastchunk, "arpa"))) {
         /* IP v6:
@@ -270,7 +270,7 @@ in_arpa_name_2_addr(char* namein, struct all_addr* addrp)
             return F_IPV6;
         }
     }
-#endif
+//#endif
 
     return 0;
 }
@@ -375,7 +375,7 @@ skip_section(unsigned char* ansp, int count, struct dns_header* header, size_t p
    than CRC the raw bytes, since replies might be compressed differently. 
    We ignore case in the names for the same reason. Return all-ones
    if there is not question section. */
-#ifndef HAVE_DNSSEC
+//#ifndef HAVE_DNSSEC
 
 unsigned int
 questions_crc(struct dns_header* header, size_t plen, char* name)
@@ -417,7 +417,7 @@ questions_crc(struct dns_header* header, size_t plen, char* name)
     return crc;
 }
 
-#endif
+//#endif
 
 size_t
 resize_packet(struct dns_header* header, size_t plen, unsigned char* pheader, size_t hlen)
@@ -466,7 +466,7 @@ private_net(struct in_addr addr, int ban_localhost)
             || ((ip_addr & 0xFFFFFFFF)==0xFFFFFFFF)  /* 255.255.255.255/32 (broadcast)*/ ;
 }
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
 
 static int
 private_net6(struct in6_addr* a)
@@ -478,7 +478,7 @@ private_net6(struct in6_addr* a)
             ((uint32_t*) a)[0]==htonl(0x20010db8); /* RFC 6303 4.6 */
 }
 
-#endif
+//#endif
 
 static unsigned char*
 do_doctor(unsigned char* p,
@@ -644,11 +644,11 @@ extract_addresses(struct dns_header* header,
     int i, j, qtype, qclass, aqtype, aqclass, ardlen, res, searched_soa = 0;
     unsigned long ttl = 0;
     struct all_addr addr;
-#ifdef HAVE_IPSET
+//#ifdef HAVE_IPSET
     char** ipsets_cur;
-#else
+//#else
     (void)ipsets; /* unused */
-#endif
+//#endif
 
     cache_start_insert();
 
@@ -661,12 +661,12 @@ extract_addresses(struct dns_header* header,
             if (secure) {
                 return 0;
             }
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
             if (option_bool(OPT_DNSSEC_VALID))
               for (i = 0; i < ntohs(header->ancount); i++)
                 if (daemon->rr_status[i])
               return 0;
-#endif
+//#endif
         }
     }
 
@@ -677,9 +677,9 @@ extract_addresses(struct dns_header* header,
         int found = 0, cname_count = CNAME_CHAIN;
         struct crec* cpp = nullptr;
         int flags = RCODE(header)==NXDOMAIN ? F_NXDOMAIN : 0;
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
         int cname_short = 0;
-#endif
+//#endif
         unsigned long cttl = ULONG_MAX, attl;
 
         namep = p;
@@ -731,7 +731,7 @@ extract_addresses(struct dns_header* header,
                     if (aqclass==C_IN && res!=2 && (aqtype==T_CNAME || aqtype==T_PTR)) {
                         if (!extract_name(header, qlen, &p1, name, 1, 0))
                             return 0;
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
                         if (option_bool(OPT_DNSSEC_VALID) && daemon->rr_status[j])
                       {
                         /* validated RR anywhere in CNAME chain, don't cache. */
@@ -740,14 +740,14 @@ extract_addresses(struct dns_header* header,
           
                         secflag = F_DNSSECOK;
                       }
-#endif
+//#endif
 
                         if (aqtype==T_CNAME) {
                             if (!cname_count--)
                                 return 0; /* looped CNAMES, we can't cache. */
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
                             cname_short = 1;
-#endif
+//#endif
                             goto cname_loop;
                         }
 
@@ -788,12 +788,12 @@ extract_addresses(struct dns_header* header,
                 addrlen = INADDRSZ;
                 flags |= F_IPV4;
             }
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
             else if (qtype==T_AAAA) {
                 addrlen = IN6ADDRSZ;
                 flags |= F_IPV6;
             }
-#endif
+//#endif
             else
                 continue;
 
@@ -818,10 +818,10 @@ extract_addresses(struct dns_header* header,
                 endrr = p1+ardlen;
 
                 if (aqclass==C_IN && res!=2 && (aqtype==T_CNAME || aqtype==qtype)) {
-#ifdef HAVE_DNSSEC
+//#ifdef HAVE_DNSSEC
                     if (option_bool(OPT_DNSSEC_VALID) && daemon->rr_status[j])
                         secflag = F_DNSSECOK;
-#endif
+//#endif
                     if (aqtype==T_CNAME) {
                         if (!cname_count--)
                             return 0; /* looped CNAMES */
@@ -863,7 +863,7 @@ extract_addresses(struct dns_header* header,
                                     !option_bool(OPT_LOCAL_REBIND)))
                                 return 1;
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                             if ((flags & F_IPV6)
                                     && IN6_IS_ADDR_V4MAPPED(&addr.addr.addr6)) {
                                 struct in_addr v4;
@@ -871,10 +871,10 @@ extract_addresses(struct dns_header* header,
                                 if (private_net(v4, !option_bool(OPT_LOCAL_REBIND)))
                                     return 1;
                             }
-#endif
+//#endif
                         }
 
-#ifdef HAVE_IPSET
+//#ifdef HAVE_IPSET
                         if (ipsets && (flags & (F_IPV4 | F_IPV6))) {
                             ipsets_cur = ipsets;
                             while (*ipsets_cur) {
@@ -885,7 +885,7 @@ extract_addresses(struct dns_header* header,
                                 add_to_ipset(*ipsets_cur++, &addr, flags, 0);
                             }
                         }
-#endif
+//#endif
 
                         newc = cache_insert(name,
                                 &addr,
@@ -1027,7 +1027,7 @@ setup_reply(struct dns_header* header,
                     addrp);
         }
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
         if (flags & F_IPV6) {
             SET_RCODE(header, NOERROR);
             header->ancount = htons(ntohs(header->ancount)+1);
@@ -1044,7 +1044,7 @@ setup_reply(struct dns_header* header,
                     "6",
                     addrp);
         }
-#endif
+//#endif
     }
     else /* nowhere to forward to */
     {
@@ -1260,14 +1260,14 @@ add_resource_record(struct dns_header* header,
 
     for (; *format; format++) {
         switch (*format) {
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
         case '6':
             CHECK_LIMIT(IN6ADDRSZ);
             sval = va_arg(ap, char *);
             memcpy(p, sval, IN6ADDRSZ);
             p += IN6ADDRSZ;
             break;
-#endif
+//#endif
 
         case '4':
             CHECK_LIMIT(INADDRSZ);
@@ -1458,14 +1458,14 @@ answer_request(struct dns_header* header,
                         unsigned long ttl = daemon->local_ttl;
                         int ok = 1;
                         log_query(F_CONFIG | F_RRNAME, name, nullptr, "<TXT>");
-#ifndef NO_ID
+//#ifndef NO_ID
                         /* Dynamically generate stat record */
                         if (t->stat!=0) {
                             ttl = 0;
                             if (!cache_make_stat(t))
                                 ok = 0;
                         }
-#endif
+//#endif
                         if (ok && add_resource_record(header,
                                 limit,
                                 &trunc,
@@ -1540,7 +1540,7 @@ answer_request(struct dns_header* header,
                             while (intr->next && strcmp(intr->intr, intr->next->intr)==0)
                                 intr = intr->next;
                     }
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                 else if (is_arpa==F_IPV6)
                     for (intr = daemon->int_names; intr; intr = intr->next) {
                         struct addrlist* addrlist;
@@ -1557,7 +1557,7 @@ answer_request(struct dns_header* header,
                             while (intr->next && strcmp(intr->intr, intr->next->intr)==0)
                                 intr = intr->next;
                     }
-#endif
+//#endif
 
                 if (intr) {
                     sec_data = 0;
@@ -1678,9 +1678,9 @@ answer_request(struct dns_header* header,
                     }
                 }
                 else if (option_bool(OPT_BOGUSPRIV) && (
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                         (is_arpa==F_IPV6 && private_net6(&addr.addr.addr6)) ||
-#endif
+//#endif
                                 (is_arpa==F_IPV4 && private_net(addr.addr.addr4, 1)))) {
                     struct server* serv;
                     unsigned int namelen = strlen(name);
@@ -1724,11 +1724,11 @@ answer_request(struct dns_header* header,
                 struct interface_name* intr;
 
                 if (flag==F_IPV6)
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                     type = T_AAAA;
-#else
+//#else
                 break;
-#endif
+//#endif
 
                 if (qtype!=type && qtype!=T_ANY)
                     continue;
@@ -1753,9 +1753,9 @@ answer_request(struct dns_header* header,
                                 for (addrlist = intr->addr;
                                      addrlist;
                                      addrlist = addrlist->next)
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                                         if (!(addrlist->flags & ADDRLIST_IPV6))
-#endif
+//#endif
                                             if (is_same_net(*((struct in_addr*) &addrlist
                                                     ->addr), local_addr, local_netmask)) {
                                                 localise = 1;
@@ -1767,10 +1767,10 @@ answer_request(struct dns_header* header,
                             for (addrlist = intr->addr;
                                  addrlist;
                                  addrlist = addrlist->next)
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                                     if (((addrlist->flags & ADDRLIST_IPV6) ? T_AAAA : T_A)
                                             ==type)
-#endif
+//#endif
                                     {
                                         if (localise
                                                 && !is_same_net(*((struct in_addr*) &addrlist
@@ -1779,10 +1779,10 @@ answer_request(struct dns_header* header,
                                                         local_netmask))
                                             continue;
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                                         if (addrlist->flags & ADDRLIST_REVONLY)
                                             continue;
-#endif
+//#endif
                                         ans = 1;
                                         sec_data = 0;
                                         if (!dryrun) {
@@ -2154,11 +2154,11 @@ answer_request(struct dns_header* header,
                     rec->target,
                     now,
                     F_IPV4 | F_IPV6))) {
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                 int type = crecp->flags & F_IPV4 ? T_A : T_AAAA;
-#else
+//#else
                 int type = T_A;
-#endif
+//#endif
                 if (crecp->flags & F_NEG)
                     continue;
 

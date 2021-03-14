@@ -14,16 +14,16 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_DHCP
+//#ifdef HAVE_DHCP
 
 #define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
 #define option_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2u+(unsigned int)(i)]))
 
-#ifdef HAVE_SCRIPT
+//#ifdef HAVE_SCRIPT
 static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
-#endif
+//#endif
 
 static int sanitise(unsigned char *opt, char *buf);
 static struct in_addr server_id(struct DhcpContext *context, struct in_addr override, struct in_addr fallback);
@@ -97,9 +97,9 @@ size_t dhcp_reply(struct DhcpContext *context, char *iface_name, int int_index,
   struct dhcp_opt *o;
   unsigned char pxe_uuid[17];
   unsigned char *oui = nullptr, *serial = nullptr;
-#ifdef HAVE_SCRIPT
+//#ifdef HAVE_SCRIPT
   unsigned char *_class = nullptr;
-#endif
+//#endif
 
   subnet_addr.s_addr = override.s_addr = 0;
 
@@ -163,9 +163,9 @@ size_t dhcp_reply(struct DhcpContext *context, char *iface_name, int int_index,
 		  unsigned char *y = option_ptr(opt, offset + elen + 5);
 		  oui = option_find1(x, y, 1, 1);
 		  serial = option_find1(x, y, 2, 1);
-#ifdef HAVE_SCRIPT
+//#ifdef HAVE_SCRIPT
 		  _class = option_find1(x, y, 3, 1);
-#endif
+//#endif
 		  /* If TR069-id is present set the tag "cpewan-id" to facilitate echoing 
 		     the gateway id back. Note that the device class is optional */
 		  if (oui && serial)
@@ -1337,7 +1337,7 @@ size_t dhcp_reply(struct DhcpContext *context, char *iface_name, int int_index,
 	      /* pick up INIT-REBOOT events. */
 	      lease->flags |= LEASE_CHANGED;
 
-#ifdef HAVE_SCRIPT
+//#ifdef HAVE_SCRIPT
 	      if (daemon->lease_change_command)
 		{
 		  struct dhcp_netid *n;
@@ -1411,7 +1411,7 @@ size_t dhcp_reply(struct DhcpContext *context, char *iface_name, int int_index,
 		      lease_add_extradata(lease, ucp, len, -1);
 		    }
 		}
-#endif
+//#endif
 	    }
 	  
 	  if (!hostname_auth && (client_hostname = host_from_dns(mess->yiaddr)))
@@ -1568,13 +1568,13 @@ unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr,
 	  return clid + 1;
 	}
 
-#if defined(ARPHRD_EUI64) && defined(ARPHRD_IEEE1394)
+//#if defined(ARPHRD_EUI64) && defined(ARPHRD_IEEE1394)
       if (clid[0] ==  ARPHRD_EUI64 && hwtype == ARPHRD_IEEE1394)
 	{
 	  *len_out = clid_len - 1 ;
 	  return clid + 1;
 	}
-#endif
+//#endif
       
       *len_out = clid_len;
       return clid;
@@ -1633,7 +1633,7 @@ static int sanitise(unsigned char *opt, char *buf)
   return 1;
 }
 
-#ifdef HAVE_SCRIPT
+//#ifdef HAVE_SCRIPT
 static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
 {
   if (!opt)
@@ -1641,7 +1641,7 @@ static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
   else
     lease_add_extradata(lease, option_ptr(opt, 0), option_len(opt), 0); 
 }
-#endif
+//#endif
 
 static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
 		       int mac_len, char *interface, char *string, char *err, uint32_t xid)
@@ -1677,12 +1677,12 @@ static void log_packet(char *type, void *addr, unsigned char *ext_mac,
 	      string ? string : "",
 	      err ? err : "");
 
-#ifdef HAVE_UBUS
+//#ifdef HAVE_UBUS
 	if (!strcmp(type, "DHCPACK"))
 		ubus_event_bcast("dhcp.ack", daemon->namebuff, addr ? inet_ntoa(a) : nullptr, string ? string : NULL, interface);
 	else if (!strcmp(type, "DHCPRELEASE"))
 		ubus_event_bcast("dhcp.release", daemon->namebuff, addr ? inet_ntoa(a) : NULL, string ? string : NULL, interface);
-#endif
+//#endif
 }
 
 static void log_options(unsigned char *start, uint32_t xid)
@@ -2714,7 +2714,7 @@ static void apply_delay(uint32_t xid, time_t recvtime, struct dhcp_netid *netid)
     }
 }
 
-#endif
+//#endif
   
 
   

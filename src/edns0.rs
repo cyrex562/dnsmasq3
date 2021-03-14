@@ -14,65 +14,73 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// //#include "dnsmasq.h"
 
-unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t  *len, unsigned char **p, int *is_sign, int *is_last)
+// unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t  *len, unsigned char **p, int *is_sign, int *is_last)
+pub fn find_pseudoheader(header: &mut dns_header, plen: usize, len: &mut usize, p: &mut Vec<u8>, is_sign: &mut bool, is_last: &mut bool)
 {
   /* See if packet has an RFC2671 pseudoheader, and if so return a pointer to it. 
      also return length of pseudoheader in *len and pointer to the UDP size in *p
      Finally, check to see if a packet is signed. If it is we cannot change a single bit before
      forwarding. We look for TSIG in the addition section, and TKEY queries (for GSS-TSIG) */
-  
-  int i, arcount = ntohs(header->arcount);
-  unsigned char *ansp = (unsigned char *)(header+1);
-  unsigned short rdlen, type, _class;
-  unsigned char *ret = nullptr;
-
-  if (is_sign)
-    {
+  let mut i = ntohs(header.arcount);
+  let arcount = ntohs(header.arcount);
+  // unsigned char *ansp = (unsigned char *)(header+1);
+  let ansp: Vec<u8>;
+  let rdlen: u16;
+  let _type: u16;
+  let _class: u16;
+  let ret: Vec<u8>;
+  if (is_sign) {
       *is_sign = 0;
+      if (OPCODE(header) == QUERY) {
+    for i in ntohs(header.qdcount)..0 {
+      if (!(ansp = skip_name(ansp, header, plen, 4))) {
+        return None;   
+      }
 
-      if (OPCODE(header) == QUERY)
-	{
-	  for (i = ntohs(header->qdcount); i != 0; i--)
-	    {
-	      if (!(ansp = skip_name(ansp, header, plen, 4)))
-		return nullptr;
+    }
 	      
-	      GETSHORT(type, ansp); 
+	      GETSHORT(_type, ansp); 
 	      GETSHORT(_class, ansp);
 	      
-	      if (_class == C_IN && type == T_TKEY)
-		*is_sign = 1;
-	    }
+	      if (_class == C_IN && _type == T_TKEY) {
+          *is_sign = 1;
+        }
+		
 	}
     }
-  else
-    {
+  else {
       if (!(ansp = skip_questions(header, plen)))
-	return nullptr;
-    }
+	      return None;
+  }
     
-  if (arcount == 0)
-    return nullptr;
-  
-  if (!(ansp = skip_section(ansp, ntohs(header->ancount) + ntohs(header->nscount), header, plen)))
-    return nullptr;
-  
-  for (i = 0; i < arcount; i++)
-    {
-      unsigned char *save, *start = ansp;
-      if (!(ansp = skip_name(ansp, header, plen, 10)))
-	return nullptr;
+  if arcount == 0 {
+    return None;
+  }
+    
+  if (!(ansp = skip_section(ansp, ntohs(header.ancount) + ntohs(header.nscount), header, plen))) {
+    return None;
+  }
+    
+  // for (i = 0; i < arcount; i++)
+  for i in 0..arcount {
+    let save: Vec<u8> = ansp;
+    let start: Vec<u8> = ansp;
+      if (!(ansp = skip_name(ansp, header, plen, 10))) {
+        return None; 
+      }
+	
 
-      GETSHORT(type, ansp);
+      GETSHORT(_type, ansp);
       save = ansp;
       GETSHORT(_class, ansp);
       ansp += 4; /* TTL */
       GETSHORT(rdlen, ansp);
-      if (!ADD_RDLEN(header, ansp, plen, rdlen))
-	return nullptr;
-      if (type == T_OPT)
+      if (!ADD_RDLEN(header, ansp, plen, rdlen)) {
+	return None;
+    }
+      if (_type == T_OPT)
 	{
 	  if (len)
 	    *len = ansp - start;
@@ -302,19 +310,19 @@ static size_t add_mac(struct dns_header *header, size_t plen, unsigned char *lim
 struct subnet_opt {
   uint16_t family;
   uint8_t source_netmask, scope_netmask;
-#ifdef HAVE_IPV6 
+//#ifdef HAVE_IPV6 
   uint8_t addr[IN6ADDRSZ];
-#else
+//#else
   uint8_t addr[INADDRSZ];
-#endif
+//#endif
 };
 
 static void *get_addrp(union mysockaddr *addr, const short family) 
 {
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   if (family == AF_INET6)
     return &addr->in6.sin6_addr;
-#endif
+//#endif
 
   return &addr->in.sin_addr;
 }
@@ -330,7 +338,7 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source)
   opt->source_netmask = 0;
   opt->scope_netmask = 0;
 
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   if (source->sa.sa_family == AF_INET6 && daemon->add_subnet6)
     {
       opt->source_netmask = daemon->add_subnet6->mask;
@@ -342,7 +350,7 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source)
       else 
 	addrp = &source->in6.sin6_addr;
     }
-#endif
+//#endif
 
   if (source->sa.sa_family == AF_INET && daemon->add_subnet4)
     {
@@ -356,11 +364,11 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source)
 	  addrp = &source->in.sin_addr;
     }
   
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
   opt->family = htons(sa_family == AF_INET6 ? 2 : 1);
-#else
+//#else
   opt->family = htons(1);
-#endif
+//#endif
   
   len = 0;
   

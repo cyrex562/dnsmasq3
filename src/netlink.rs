@@ -14,25 +14,25 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_LINUX_NETWORK
+//#ifdef HAVE_LINUX_NETWORK
 
-#include <linux/types.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
+//#include <linux/types.h>
+//#include <linux/netlink.h>
+//#include <linux/rtnetlink.h>
 
 /* linux 2.6.19 buggers up the headers, patch it up here. */
-#ifndef IFA_RTA
+//#ifndef IFA_RTA
 #  define IFA_RTA(r)  \
        ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
 
 #  include <linux/if_addr.h>
-#endif
+//#endif
 
-#ifndef NDA_RTA
+//#ifndef NDA_RTA
 #  define NDA_RTA(r) ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ndmsg))))
-#endif
+//#endif
 
 static struct iovec iov;
 static uint32_t netlink_pid;
@@ -53,17 +53,17 @@ netlink_init()
     if (option_bool(OPT_CLEVERBIND)) {
         addr.nl_groups |= RTMGRP_IPV4_IFADDR;
     }
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
     addr.nl_groups |= RTMGRP_IPV6_ROUTE;
     if (option_bool(OPT_CLEVERBIND)) {
         addr.nl_groups |= RTMGRP_IPV6_IFADDR;
     }
-#endif
-#ifdef HAVE_DHCP6
+//#endif
+//#ifdef HAVE_DHCP6
     if (daemon->doing_ra || daemon->doing_dhcp6) {
         addr.nl_groups |= RTMGRP_IPV6_IFADDR;
     }
-#endif
+//#endif
 
     /* May not be able to have permission to set multicast groups don't die in that case */
     if ((daemon->netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE))!=-1) {
@@ -257,7 +257,7 @@ iface_enumerate(int family, void* parm, callback_t callback)
                             }
                         }
                     }
-#ifdef HAVE_IPV6
+//#ifdef HAVE_IPV6
                     else if (ifa->ifa_family==AF_INET6) {
                         struct in6_addr* addrp = nullptr;
                         uint32_t valid = 0, preferred = 0;
@@ -301,7 +301,7 @@ iface_enumerate(int family, void* parm, callback_t callback)
                             }
                         }
                     }
-#endif
+//#endif
                 }
             }
             else if (h->nlmsg_type==RTM_NEWNEIGH && family==AF_UNSPEC) {
@@ -330,7 +330,7 @@ iface_enumerate(int family, void* parm, callback_t callback)
                     }
                 }
             }
-#ifdef HAVE_DHCP6
+//#ifdef HAVE_DHCP6
             else if (h->nlmsg_type==RTM_NEWLINK && family==AF_LOCAL) {
                 struct ifinfomsg* link = NLMSG_DATA(h);
                 struct rtattr* rta = IFLA_RTA(link);
@@ -358,7 +358,7 @@ iface_enumerate(int family, void* parm, callback_t callback)
                 }
             }
         }
-#endif
+//#endif
     }
 }
 
@@ -413,6 +413,6 @@ nl_async(struct nlmsghdr* h)
     }
 }
 
-#endif
+//#endif
 
       

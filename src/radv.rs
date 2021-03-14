@@ -20,11 +20,11 @@
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+//#ifdef HAVE_DHCP6
 
-#include <netinet/icmp6.h>
+//#include <netinet/icmp6.h>
 
 struct ra_param {
   time_t now;
@@ -72,9 +72,9 @@ void ra_init(time_t now)
 {
   struct icmp6_filter filter;
   int fd;
-#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
+//#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
   int _class = IPTOS_CLASS_CS6;
-#endif
+//#endif
   int val = 255; /* radvd uses this value */
   socklen_t len = sizeof(int);
   struct DhcpContext *context;
@@ -99,9 +99,9 @@ void ra_init(time_t now)
   
   if ((fd = socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6)) == -1 ||
       getsockopt(fd, IPPROTO_IPV6, IPV6_UNICAST_HOPS, &hop_limit, &len) ||
-#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
+//#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
       setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &_class, sizeof(_class)) == -1 ||
-#endif
+//#endif
       !fix_fd(fd) ||
       !set_ipv6pktinfo(fd) ||
       setsockopt(fd, IPPROTO_IPV6, IPV6_UNICAST_HOPS, &val, sizeof(val)) ||
@@ -248,9 +248,9 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   struct ra_interface *ra_param = find_iface_param(iface_name);
   int done_dns = 0, old_prefix = 0, mtu = 0;
   unsigned int min_pref_time;
-#ifdef HAVE_LINUX_NETWORK
+//#ifdef HAVE_LINUX_NETWORK
   FILE *f;
-#endif
+//#endif
   
   parm.ind = iface;
   parm.managed = 0;
@@ -406,7 +406,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   /* an MTU of -1 prevents the option from being sent. */
   if (ra_param)
     mtu = ra_param->mtu;
-#ifdef HAVE_LINUX_NETWORK
+//#ifdef HAVE_LINUX_NETWORK
   /* Note that IPv6 MTU is not necessarily the same as the IPv4 MTU
      available from SIOCGIFMTU */
   if (mtu == 0)
@@ -420,7 +420,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
           fclose(f);
         }
     }
-#endif
+//#endif
   if (mtu > 0)
     {
       put_opt6_char(ICMP6_OPT_MTU);
@@ -522,9 +522,9 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
 			
   /* decide where we're sending */
   memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
   addr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+//#endif
   addr.sin6_family = AF_INET6;
   addr.sin6_port = htons(IPPROTO_ICMPV6);
   if (dest)
@@ -997,4 +997,4 @@ static unsigned int calc_prio(struct ra_interface *ra)
   return 0;
 }
 
-#endif
+//#endif

@@ -14,13 +14,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+//#include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+//#ifdef HAVE_DHCP6
 
-#include <netinet/icmp6.h>
+//#include <netinet/icmp6.h>
 
-#include "spdlog/spdlog.h"
+//#include "spdlog/spdlog.h"
 
 struct IfaceParam {
     struct DhcpContext* current;
@@ -47,15 +47,15 @@ dhcp6_init(void)
 {
     int fd;
     struct sockaddr_in6 saddr;
-#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
+//#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
     int _class = IPTOS_CLASS_CS6;
-#endif
+//#endif
     int oneopt = 1;
 
     if ((fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP))==-1 ||
-#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
+//#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
             setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &_class, sizeof(_class))==-1 ||
-#endif
+//#endif
             setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &oneopt, sizeof(oneopt))==-1
             || !fix_fd(fd) || !set_ipv6pktinfo(fd)) {
         die(_("cannot create DHCPv6 socket: %s"), nullptr, EC_BADNET);
@@ -69,12 +69,12 @@ dhcp6_init(void)
     if (option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND)) {
         int rc = 0;
 
-#ifdef SO_REUSEPORT
+//#ifdef SO_REUSEPORT
         if ((rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt)))==-1
                 && errno==ENOPROTOOPT) {
             rc = 0;
         }
-#endif
+//#endif
 
         if (rc!=-1) {
             rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt));
@@ -88,9 +88,9 @@ dhcp6_init(void)
     }
 
     memset(&saddr, 0, sizeof(saddr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
     saddr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+//#endif
     saddr.sin6_family = AF_INET6;
     saddr.sin6_addr = in6addr_any;
     saddr.sin6_port = htons(DHCPV6_SERVER_PORT);
@@ -306,9 +306,9 @@ get_client_mac(struct in6_addr* client,
     neigh.checksum = 0;
 
     memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+//#ifdef HAVE_SOCKADDR_SA_LEN
     addr.in6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+//#endif
     addr.in6.sin6_family = AF_INET6;
     addr.in6.sin6_port = htons(IPPROTO_ICMPV6);
     addr.in6.sin6_addr = *client;
@@ -645,12 +645,12 @@ make_duid(time_t now)
         time_t newnow = 0;
 
         /* If we have no persistent lease database, or a non-stable RTC, use DUID_LL (newnow == 0) */
-#ifndef HAVE_BROKEN_RTC
+//#ifndef HAVE_BROKEN_RTC
         /* rebase epoch to 1/1/2000 */
         if (!option_bool(OPT_LEASE_RO) || daemon->lease_change_command) {
             newnow = now-946684800;
         }
-#endif
+//#endif
 
         iface_enumerate(AF_LOCAL, &newnow, make_duid1);
 
@@ -908,6 +908,6 @@ dhcp_construct_contexts(time_t now)
     }
 }
 
-#endif
+//#endif
 
 
