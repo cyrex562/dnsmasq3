@@ -1,4 +1,5505 @@
-/* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
+         non_upper_case_globals, unused_assignments, unused_mut)]
+#![register_tool(c2rust)]
+#![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
+#[c2rust::header_src = "internal:0"]
+pub mod internal {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "0:0"]
+    pub struct __va_list_tag {
+        pub gp_offset: libc::c_uint,
+        pub fp_offset: libc::c_uint,
+        pub overflow_arg_area: *mut libc::c_void,
+        pub reg_save_area: *mut libc::c_void,
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types.h:17"]
+pub mod types_h {
+    #[c2rust::src_loc = "38:1"]
+    pub type __uint8_t = libc::c_uchar;
+    #[c2rust::src_loc = "40:1"]
+    pub type __uint16_t = libc::c_ushort;
+    #[c2rust::src_loc = "41:1"]
+    pub type __int32_t = libc::c_int;
+    #[c2rust::src_loc = "42:1"]
+    pub type __uint32_t = libc::c_uint;
+    #[c2rust::src_loc = "45:1"]
+    pub type __uint64_t = libc::c_ulong;
+    #[c2rust::src_loc = "72:1"]
+    pub type __intmax_t = libc::c_long;
+    #[c2rust::src_loc = "73:1"]
+    pub type __uintmax_t = libc::c_ulong;
+    #[c2rust::src_loc = "145:1"]
+    pub type __dev_t = libc::c_ulong;
+    #[c2rust::src_loc = "146:1"]
+    pub type __uid_t = libc::c_uint;
+    #[c2rust::src_loc = "147:1"]
+    pub type __gid_t = libc::c_uint;
+    #[c2rust::src_loc = "148:1"]
+    pub type __ino_t = libc::c_ulong;
+    #[c2rust::src_loc = "149:1"]
+    pub type __ino64_t = libc::c_ulong;
+    #[c2rust::src_loc = "150:1"]
+    pub type __mode_t = libc::c_uint;
+    #[c2rust::src_loc = "151:1"]
+    pub type __nlink_t = libc::c_ulong;
+    #[c2rust::src_loc = "152:1"]
+    pub type __off_t = libc::c_long;
+    #[c2rust::src_loc = "153:1"]
+    pub type __off64_t = libc::c_long;
+    #[c2rust::src_loc = "154:1"]
+    pub type __pid_t = libc::c_int;
+    #[c2rust::src_loc = "160:1"]
+    pub type __time_t = libc::c_long;
+    #[c2rust::src_loc = "174:1"]
+    pub type __blksize_t = libc::c_long;
+    #[c2rust::src_loc = "179:1"]
+    pub type __blkcnt_t = libc::c_long;
+    #[c2rust::src_loc = "180:1"]
+    pub type __blkcnt64_t = libc::c_long;
+    #[c2rust::src_loc = "193:1"]
+    pub type __ssize_t = libc::c_long;
+    #[c2rust::src_loc = "196:1"]
+    pub type __syscall_slong_t = libc::c_long;
+    #[c2rust::src_loc = "203:1"]
+    pub type __caddr_t = *mut libc::c_char;
+    #[c2rust::src_loc = "209:1"]
+    pub type __socklen_t = libc::c_uint;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/types.h:17"]
+pub mod sys_types_h {
+    #[c2rust::src_loc = "49:1"]
+    pub type ino_t = __ino64_t;
+    #[c2rust::src_loc = "59:1"]
+    pub type dev_t = __dev_t;
+    #[c2rust::src_loc = "87:1"]
+    pub type off_t = __off64_t;
+    #[c2rust::src_loc = "97:1"]
+    pub type pid_t = __pid_t;
+    #[c2rust::src_loc = "108:1"]
+    pub type ssize_t = __ssize_t;
+    use super::types_h::{__ino64_t, __dev_t, __off64_t, __pid_t, __ssize_t};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types/time_t.h:17"]
+pub mod time_t_h {
+    #[c2rust::src_loc = "7:1"]
+    pub type time_t = __time_t;
+    use super::types_h::__time_t;
+}
+#[c2rust::header_src =
+  "/usr/lib/llvm-10/lib/clang/10.0.0/include/stddef.h:17"]
+pub mod stddef_h {
+    #[c2rust::src_loc = "46:1"]
+    pub type size_t = libc::c_ulong;
+    #[c2rust::src_loc = "89:11"]
+    pub const NULL: libc::c_int = 0 as libc::c_int;
+    #[c2rust::src_loc = "89:11"]
+    pub const NULL_0: libc::c_int = 0 as libc::c_int;
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:17"]
+pub mod struct_timespec_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "10:8"]
+    pub struct timespec {
+        pub tv_sec: __time_t,
+        pub tv_nsec: __syscall_slong_t,
+    }
+    use super::types_h::{__time_t, __syscall_slong_t};
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:17"]
+pub mod struct_iovec_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "26:8"]
+    pub struct iovec {
+        pub iov_base: *mut libc::c_void,
+        pub iov_len: size_t,
+    }
+    use super::stddef_h::size_t;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/socket.h:17"]
+pub mod socket_h {
+    #[c2rust::src_loc = "33:1"]
+    pub type socklen_t = __socklen_t;
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "178:8"]
+    pub struct sockaddr {
+        pub sa_family: sa_family_t,
+        pub sa_data: [libc::c_char; 14],
+    }
+    #[c2rust::src_loc = "200:1"]
+    pub type C2RustUnnamed = libc::c_uint;
+    #[c2rust::src_loc = "248:5"]
+    pub const MSG_CMSG_CLOEXEC: C2RustUnnamed = 1073741824;
+    #[c2rust::src_loc = "245:5"]
+    pub const MSG_FASTOPEN: C2RustUnnamed = 536870912;
+    #[c2rust::src_loc = "243:5"]
+    pub const MSG_ZEROCOPY: C2RustUnnamed = 67108864;
+    #[c2rust::src_loc = "241:5"]
+    pub const MSG_BATCH: C2RustUnnamed = 262144;
+    #[c2rust::src_loc = "239:5"]
+    pub const MSG_WAITFORONE: C2RustUnnamed = 65536;
+    #[c2rust::src_loc = "237:5"]
+    pub const MSG_MORE: C2RustUnnamed = 32768;
+    #[c2rust::src_loc = "235:5"]
+    pub const MSG_NOSIGNAL: C2RustUnnamed = 16384;
+    #[c2rust::src_loc = "233:5"]
+    pub const MSG_ERRQUEUE: C2RustUnnamed = 8192;
+    #[c2rust::src_loc = "231:5"]
+    pub const MSG_RST: C2RustUnnamed = 4096;
+    #[c2rust::src_loc = "229:5"]
+    pub const MSG_CONFIRM: C2RustUnnamed = 2048;
+    #[c2rust::src_loc = "227:5"]
+    pub const MSG_SYN: C2RustUnnamed = 1024;
+    #[c2rust::src_loc = "225:5"]
+    pub const MSG_FIN: C2RustUnnamed = 512;
+    #[c2rust::src_loc = "223:5"]
+    pub const MSG_WAITALL: C2RustUnnamed = 256;
+    #[c2rust::src_loc = "221:5"]
+    pub const MSG_EOR: C2RustUnnamed = 128;
+    #[c2rust::src_loc = "219:5"]
+    pub const MSG_DONTWAIT: C2RustUnnamed = 64;
+    #[c2rust::src_loc = "217:5"]
+    pub const MSG_TRUNC: C2RustUnnamed = 32;
+    #[c2rust::src_loc = "215:5"]
+    pub const MSG_PROXY: C2RustUnnamed = 16;
+    #[c2rust::src_loc = "213:5"]
+    pub const MSG_CTRUNC: C2RustUnnamed = 8;
+    #[c2rust::src_loc = "210:5"]
+    pub const MSG_TRYHARD: C2RustUnnamed = 4;
+    #[c2rust::src_loc = "206:5"]
+    pub const MSG_DONTROUTE: C2RustUnnamed = 4;
+    #[c2rust::src_loc = "204:5"]
+    pub const MSG_PEEK: C2RustUnnamed = 2;
+    #[c2rust::src_loc = "202:5"]
+    pub const MSG_OOB: C2RustUnnamed = 1;
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "257:8"]
+    pub struct msghdr {
+        pub msg_name: *mut libc::c_void,
+        pub msg_namelen: socklen_t,
+        pub msg_iov: *mut iovec,
+        pub msg_iovlen: size_t,
+        pub msg_control: *mut libc::c_void,
+        pub msg_controllen: size_t,
+        pub msg_flags: libc::c_int,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "275:8"]
+    pub struct cmsghdr {
+        pub cmsg_len: size_t,
+        pub cmsg_level: libc::c_int,
+        pub cmsg_type: libc::c_int,
+        pub __cmsg_data: [libc::c_uchar; 0],
+    }
+    #[inline]
+    #[c2rust::src_loc = "311:1"]
+    pub unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
+                                           mut __cmsg: *mut cmsghdr)
+     -> *mut cmsghdr {
+        if (*__cmsg).cmsg_len <
+               ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+            return 0 as *mut cmsghdr
+        }
+        __cmsg =
+            (__cmsg as
+                 *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                 as
+                                                                                 libc::c_ulong).wrapping_sub(1
+                                                                                                                 as
+                                                                                                                 libc::c_int
+                                                                                                                 as
+                                                                                                                 libc::c_ulong)
+                                                 &
+                                                 !(::std::mem::size_of::<size_t>()
+                                                       as
+                                                       libc::c_ulong).wrapping_sub(1
+                                                                                       as
+                                                                                       libc::c_int
+                                                                                       as
+                                                                                       libc::c_ulong))
+                                                as isize) as *mut cmsghdr;
+        if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
+               ((*__mhdr).msg_control as
+                    *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+                                                   isize) ||
+               (__cmsg as
+                    *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                    as
+                                                                                    libc::c_ulong).wrapping_sub(1
+                                                                                                                    as
+                                                                                                                    libc::c_int
+                                                                                                                    as
+                                                                                                                    libc::c_ulong)
+                                                    &
+                                                    !(::std::mem::size_of::<size_t>()
+                                                          as
+                                                          libc::c_ulong).wrapping_sub(1
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                                                   as isize) >
+                   ((*__mhdr).msg_control as
+                        *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+                                                       isize) {
+            return 0 as *mut cmsghdr
+        }
+        return __cmsg;
+    }
+    #[c2rust::src_loc = "246:9"]
+    pub const MSG_FASTOPEN_0: libc::c_int = MSG_FASTOPEN as libc::c_int;
+    #[c2rust::src_loc = "218:9"]
+    pub const MSG_TRUNC_0: libc::c_int = MSG_TRUNC as libc::c_int;
+    #[c2rust::src_loc = "104:9"]
+    pub const AF_INET6: libc::c_int = PF_INET6;
+    #[c2rust::src_loc = "53:9"]
+    pub const PF_INET6: libc::c_int = 10 as libc::c_int;
+    #[c2rust::src_loc = "96:9"]
+    pub const AF_INET: libc::c_int = PF_INET;
+    #[c2rust::src_loc = "45:9"]
+    pub const PF_INET: libc::c_int = 2 as libc::c_int;
+    use super::types_h::__socklen_t;
+    use super::sockaddr_h::sa_family_t;
+    use super::struct_iovec_h::iovec;
+    use super::stddef_h::size_t;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/socket_type.h:17"]
+pub mod socket_type_h {
+    #[c2rust::src_loc = "24:1"]
+    pub type __socket_type = libc::c_uint;
+    #[c2rust::src_loc = "52:3"]
+    pub const SOCK_NONBLOCK: __socket_type = 2048;
+    #[c2rust::src_loc = "49:3"]
+    pub const SOCK_CLOEXEC: __socket_type = 524288;
+    #[c2rust::src_loc = "41:3"]
+    pub const SOCK_PACKET: __socket_type = 10;
+    #[c2rust::src_loc = "39:3"]
+    pub const SOCK_DCCP: __socket_type = 6;
+    #[c2rust::src_loc = "36:3"]
+    pub const SOCK_SEQPACKET: __socket_type = 5;
+    #[c2rust::src_loc = "34:3"]
+    pub const SOCK_RDM: __socket_type = 4;
+    #[c2rust::src_loc = "32:3"]
+    pub const SOCK_RAW: __socket_type = 3;
+    #[c2rust::src_loc = "29:3"]
+    pub const SOCK_DGRAM: __socket_type = 2;
+    #[c2rust::src_loc = "26:3"]
+    pub const SOCK_STREAM: __socket_type = 1;
+    #[c2rust::src_loc = "28:9"]
+    pub const SOCK_STREAM_0: libc::c_int = SOCK_STREAM as libc::c_int;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/sockaddr.h:17"]
+pub mod sockaddr_h {
+    #[c2rust::src_loc = "28:1"]
+    pub type sa_family_t = libc::c_ushort;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/socket.h:17"]
+pub mod sys_socket_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "79:9"]
+    pub union __SOCKADDR_ARG {
+        pub __sockaddr__: *mut sockaddr,
+        pub __sockaddr_at__: *mut sockaddr_at,
+        pub __sockaddr_ax25__: *mut sockaddr_ax25,
+        pub __sockaddr_dl__: *mut sockaddr_dl,
+        pub __sockaddr_eon__: *mut sockaddr_eon,
+        pub __sockaddr_in__: *mut sockaddr_in,
+        pub __sockaddr_in6__: *mut sockaddr_in6,
+        pub __sockaddr_inarp__: *mut sockaddr_inarp,
+        pub __sockaddr_ipx__: *mut sockaddr_ipx,
+        pub __sockaddr_iso__: *mut sockaddr_iso,
+        pub __sockaddr_ns__: *mut sockaddr_ns,
+        pub __sockaddr_un__: *mut sockaddr_un,
+        pub __sockaddr_x25__: *mut sockaddr_x25,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "83:9"]
+    pub union __CONST_SOCKADDR_ARG {
+        pub __sockaddr__: *const sockaddr,
+        pub __sockaddr_at__: *const sockaddr_at,
+        pub __sockaddr_ax25__: *const sockaddr_ax25,
+        pub __sockaddr_dl__: *const sockaddr_dl,
+        pub __sockaddr_eon__: *const sockaddr_eon,
+        pub __sockaddr_in__: *const sockaddr_in,
+        pub __sockaddr_in6__: *const sockaddr_in6,
+        pub __sockaddr_inarp__: *const sockaddr_inarp,
+        pub __sockaddr_ipx__: *const sockaddr_ipx,
+        pub __sockaddr_iso__: *const sockaddr_iso,
+        pub __sockaddr_ns__: *const sockaddr_ns,
+        pub __sockaddr_un__: *const sockaddr_un,
+        pub __sockaddr_x25__: *const sockaddr_x25,
+    }
+    use super::socket_h::{sockaddr, socklen_t, msghdr};
+    use super::in_h::{sockaddr_in, sockaddr_in6};
+    use super::un_h::sockaddr_un;
+    use super::stddef_h::size_t;
+    use super::sys_types_h::ssize_t;
+    extern "C" {
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_x25;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_ns;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_iso;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_ipx;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_inarp;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_eon;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_dl;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_ax25;
+        #[c2rust::src_loc = "79:17"]
+        pub type sockaddr_at;
+        #[no_mangle]
+        #[c2rust::src_loc = "102:1"]
+        pub fn socket(__domain: libc::c_int, __type: libc::c_int,
+                      __protocol: libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "126:1"]
+        pub fn connect(__fd: libc::c_int, __addr: __CONST_SOCKADDR_ARG,
+                       __len: socklen_t) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "130:1"]
+        pub fn getpeername(__fd: libc::c_int, __addr: __SOCKADDR_ARG,
+                           __len: *mut socklen_t) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "152:1"]
+        pub fn sendto(__fd: libc::c_int, __buf: *const libc::c_void,
+                      __n: size_t, __flags: libc::c_int,
+                      __addr: __CONST_SOCKADDR_ARG, __addr_len: socklen_t)
+         -> ssize_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "163:1"]
+        pub fn recvfrom(__fd: libc::c_int, __buf: *mut libc::c_void,
+                        __n: size_t, __flags: libc::c_int,
+                        __addr: __SOCKADDR_ARG, __addr_len: *mut socklen_t)
+         -> ssize_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "173:1"]
+        pub fn sendmsg(__fd: libc::c_int, __message: *const msghdr,
+                       __flags: libc::c_int) -> ssize_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "191:1"]
+        pub fn recvmsg(__fd: libc::c_int, __message: *mut msghdr,
+                       __flags: libc::c_int) -> ssize_t;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/un.h:17"]
+pub mod un_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "29:8"]
+    pub struct sockaddr_un {
+        pub sun_family: sa_family_t,
+        pub sun_path: [libc::c_char; 108],
+    }
+    use super::sockaddr_h::sa_family_t;
+}
+#[c2rust::header_src = "/usr/include/netinet/in.h:17"]
+pub mod in_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "253:8"]
+    pub struct sockaddr_in6 {
+        pub sin6_family: sa_family_t,
+        pub sin6_port: in_port_t,
+        pub sin6_flowinfo: uint32_t,
+        pub sin6_addr: in6_addr,
+        pub sin6_scope_id: uint32_t,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "212:8"]
+    pub struct in6_addr {
+        pub __in6_u: C2RustUnnamed_0,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "214:5"]
+    pub union C2RustUnnamed_0 {
+        pub __u6_addr8: [uint8_t; 16],
+        pub __u6_addr16: [uint16_t; 8],
+        pub __u6_addr32: [uint32_t; 4],
+    }
+    #[c2rust::src_loc = "119:1"]
+    pub type in_port_t = uint16_t;
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "238:8"]
+    pub struct sockaddr_in {
+        pub sin_family: sa_family_t,
+        pub sin_port: in_port_t,
+        pub sin_addr: in_addr,
+        pub sin_zero: [libc::c_uchar; 8],
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "31:8"]
+    pub struct in_addr {
+        pub s_addr: in_addr_t,
+    }
+    #[c2rust::src_loc = "30:1"]
+    pub type in_addr_t = uint32_t;
+    #[c2rust::src_loc = "40:1"]
+    pub type C2RustUnnamed_1 = libc::c_uint;
+    #[c2rust::src_loc = "92:5"]
+    pub const IPPROTO_MAX: C2RustUnnamed_1 = 256;
+    #[c2rust::src_loc = "90:5"]
+    pub const IPPROTO_RAW: C2RustUnnamed_1 = 255;
+    #[c2rust::src_loc = "88:5"]
+    pub const IPPROTO_MPLS: C2RustUnnamed_1 = 137;
+    #[c2rust::src_loc = "86:5"]
+    pub const IPPROTO_UDPLITE: C2RustUnnamed_1 = 136;
+    #[c2rust::src_loc = "84:5"]
+    pub const IPPROTO_SCTP: C2RustUnnamed_1 = 132;
+    #[c2rust::src_loc = "82:5"]
+    pub const IPPROTO_COMP: C2RustUnnamed_1 = 108;
+    #[c2rust::src_loc = "80:5"]
+    pub const IPPROTO_PIM: C2RustUnnamed_1 = 103;
+    #[c2rust::src_loc = "78:5"]
+    pub const IPPROTO_ENCAP: C2RustUnnamed_1 = 98;
+    #[c2rust::src_loc = "76:5"]
+    pub const IPPROTO_BEETPH: C2RustUnnamed_1 = 94;
+    #[c2rust::src_loc = "74:5"]
+    pub const IPPROTO_MTP: C2RustUnnamed_1 = 92;
+    #[c2rust::src_loc = "72:5"]
+    pub const IPPROTO_AH: C2RustUnnamed_1 = 51;
+    #[c2rust::src_loc = "70:5"]
+    pub const IPPROTO_ESP: C2RustUnnamed_1 = 50;
+    #[c2rust::src_loc = "68:5"]
+    pub const IPPROTO_GRE: C2RustUnnamed_1 = 47;
+    #[c2rust::src_loc = "66:5"]
+    pub const IPPROTO_RSVP: C2RustUnnamed_1 = 46;
+    #[c2rust::src_loc = "64:5"]
+    pub const IPPROTO_IPV6: C2RustUnnamed_1 = 41;
+    #[c2rust::src_loc = "62:5"]
+    pub const IPPROTO_DCCP: C2RustUnnamed_1 = 33;
+    #[c2rust::src_loc = "60:5"]
+    pub const IPPROTO_TP: C2RustUnnamed_1 = 29;
+    #[c2rust::src_loc = "58:5"]
+    pub const IPPROTO_IDP: C2RustUnnamed_1 = 22;
+    #[c2rust::src_loc = "56:5"]
+    pub const IPPROTO_UDP: C2RustUnnamed_1 = 17;
+    #[c2rust::src_loc = "54:5"]
+    pub const IPPROTO_PUP: C2RustUnnamed_1 = 12;
+    #[c2rust::src_loc = "52:5"]
+    pub const IPPROTO_EGP: C2RustUnnamed_1 = 8;
+    #[c2rust::src_loc = "50:5"]
+    pub const IPPROTO_TCP: C2RustUnnamed_1 = 6;
+    #[c2rust::src_loc = "48:5"]
+    pub const IPPROTO_IPIP: C2RustUnnamed_1 = 4;
+    #[c2rust::src_loc = "46:5"]
+    pub const IPPROTO_IGMP: C2RustUnnamed_1 = 2;
+    #[c2rust::src_loc = "44:5"]
+    pub const IPPROTO_ICMP: C2RustUnnamed_1 = 1;
+    #[c2rust::src_loc = "42:5"]
+    pub const IPPROTO_IP: C2RustUnnamed_1 = 0;
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "537:8"]
+    pub struct in6_pktinfo {
+        pub ipi6_addr: in6_addr,
+        pub ipi6_ifindex: libc::c_uint,
+    }
+    #[c2rust::src_loc = "43:9"]
+    pub const IPPROTO_IP_0: libc::c_int = IPPROTO_IP as libc::c_int;
+    #[c2rust::src_loc = "65:9"]
+    pub const IPPROTO_IPV6_0: libc::c_int = IPPROTO_IPV6 as libc::c_int;
+    use super::sockaddr_h::sa_family_t;
+    use super::stdint_uintn_h::{uint32_t, uint8_t, uint16_t};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:17"]
+pub mod stdint_uintn_h {
+    #[c2rust::src_loc = "26:1"]
+    pub type uint32_t = __uint32_t;
+    #[c2rust::src_loc = "25:1"]
+    pub type uint16_t = __uint16_t;
+    #[c2rust::src_loc = "24:1"]
+    pub type uint8_t = __uint8_t;
+    use super::types_h::{__uint32_t, __uint16_t, __uint8_t};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/in.h:17"]
+pub mod bits_in_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "157:8"]
+    pub struct in_pktinfo {
+        pub ipi_ifindex: libc::c_int,
+        pub ipi_spec_dst: in_addr,
+        pub ipi_addr: in_addr,
+    }
+    #[c2rust::src_loc = "81:9"]
+    pub const IP_PKTINFO: libc::c_int = 8 as libc::c_int;
+    use super::in_h::in_addr;
+}
+#[c2rust::header_src = "/mnt/d/projects/dnsmasq-2.84/src/metrics.h:17"]
+pub mod metrics_h {
+    #[c2rust::src_loc = "18:1"]
+    pub type C2RustUnnamed_2 = libc::c_uint;
+    #[c2rust::src_loc = "40:3"]
+    pub const __METRIC_MAX: C2RustUnnamed_2 = 20;
+    #[c2rust::src_loc = "38:3"]
+    pub const METRIC_LEASES_PRUNED_6: C2RustUnnamed_2 = 19;
+    #[c2rust::src_loc = "37:3"]
+    pub const METRIC_LEASES_ALLOCATED_6: C2RustUnnamed_2 = 18;
+    #[c2rust::src_loc = "36:3"]
+    pub const METRIC_LEASES_PRUNED_4: C2RustUnnamed_2 = 17;
+    #[c2rust::src_loc = "35:3"]
+    pub const METRIC_LEASES_ALLOCATED_4: C2RustUnnamed_2 = 16;
+    #[c2rust::src_loc = "34:3"]
+    pub const METRIC_NOANSWER: C2RustUnnamed_2 = 15;
+    #[c2rust::src_loc = "33:3"]
+    pub const METRIC_DHCPREQUEST: C2RustUnnamed_2 = 14;
+    #[c2rust::src_loc = "32:3"]
+    pub const METRIC_DHCPRELEASE: C2RustUnnamed_2 = 13;
+    #[c2rust::src_loc = "31:3"]
+    pub const METRIC_DHCPOFFER: C2RustUnnamed_2 = 12;
+    #[c2rust::src_loc = "30:3"]
+    pub const METRIC_DHCPNAK: C2RustUnnamed_2 = 11;
+    #[c2rust::src_loc = "29:3"]
+    pub const METRIC_DHCPINFORM: C2RustUnnamed_2 = 10;
+    #[c2rust::src_loc = "28:3"]
+    pub const METRIC_DHCPDISCOVER: C2RustUnnamed_2 = 9;
+    #[c2rust::src_loc = "27:3"]
+    pub const METRIC_DHCPDECLINE: C2RustUnnamed_2 = 8;
+    #[c2rust::src_loc = "26:3"]
+    pub const METRIC_DHCPACK: C2RustUnnamed_2 = 7;
+    #[c2rust::src_loc = "25:3"]
+    pub const METRIC_PXE: C2RustUnnamed_2 = 6;
+    #[c2rust::src_loc = "24:3"]
+    pub const METRIC_BOOTP: C2RustUnnamed_2 = 5;
+    #[c2rust::src_loc = "23:3"]
+    pub const METRIC_DNS_LOCAL_ANSWERED: C2RustUnnamed_2 = 4;
+    #[c2rust::src_loc = "22:3"]
+    pub const METRIC_DNS_AUTH_ANSWERED: C2RustUnnamed_2 = 3;
+    #[c2rust::src_loc = "21:3"]
+    pub const METRIC_DNS_QUERIES_FORWARDED: C2RustUnnamed_2 = 2;
+    #[c2rust::src_loc = "20:3"]
+    pub const METRIC_DNS_CACHE_LIVE_FREED: C2RustUnnamed_2 = 1;
+    #[c2rust::src_loc = "19:3"]
+    pub const METRIC_DNS_CACHE_INSERTED: C2RustUnnamed_2 = 0;
+}
+#[c2rust::header_src = "/mnt/d/projects/dnsmasq-2.84/src/dnsmasq.h:17"]
+pub mod dnsmasq_h {
+    #[c2rust::src_loc = "68:1"]
+    pub type u8_0 = libc::c_uchar;
+    #[c2rust::src_loc = "69:1"]
+    pub type u16_0 = libc::c_ushort;
+    #[c2rust::src_loc = "70:1"]
+    pub type u32_0 = libc::c_uint;
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "295:7"]
+    pub union all_addr {
+        pub addr4: in_addr,
+        pub addr6: in6_addr,
+        pub cname: C2RustUnnamed_9,
+        pub key: C2RustUnnamed_8,
+        pub ds: C2RustUnnamed_7,
+        pub srv: C2RustUnnamed_6,
+        pub log: C2RustUnnamed_5,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "322:3"]
+    pub struct C2RustUnnamed_5 {
+        pub keytag: libc::c_ushort,
+        pub algo: libc::c_ushort,
+        pub digest: libc::c_ushort,
+        pub rcode: libc::c_ushort,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "317:3"]
+    pub struct C2RustUnnamed_6 {
+        pub target: *mut blockdata,
+        pub targetlen: libc::c_ushort,
+        pub srvport: libc::c_ushort,
+        pub priority: libc::c_ushort,
+        pub weight: libc::c_ushort,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "443:8"]
+    pub struct blockdata {
+        pub next: *mut blockdata,
+        pub key: [libc::c_uchar; 40],
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "311:3"]
+    pub struct C2RustUnnamed_7 {
+        pub keydata: *mut blockdata,
+        pub keylen: libc::c_ushort,
+        pub keytag: libc::c_ushort,
+        pub algo: libc::c_uchar,
+        pub digest: libc::c_uchar,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "306:3"]
+    pub struct C2RustUnnamed_8 {
+        pub keydata: *mut blockdata,
+        pub keylen: libc::c_ushort,
+        pub flags: libc::c_ushort,
+        pub keytag: libc::c_ushort,
+        pub algo: libc::c_uchar,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "298:3"]
+    pub struct C2RustUnnamed_9 {
+        pub target: C2RustUnnamed_10,
+        pub uid: libc::c_uint,
+        pub is_name_ptr: libc::c_int,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "299:5"]
+    pub union C2RustUnnamed_10 {
+        pub cache: *mut crec,
+        pub name: *mut libc::c_char,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "448:8"]
+    pub struct crec {
+        pub next: *mut crec,
+        pub prev: *mut crec,
+        pub hash_next: *mut crec,
+        pub addr: all_addr,
+        pub ttd: time_t,
+        pub uid: libc::c_uint,
+        pub flags: libc::c_uint,
+        pub name: C2RustUnnamed_11,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "455:3"]
+    pub union C2RustUnnamed_11 {
+        pub sname: [libc::c_char; 50],
+        pub bname: *mut bigname,
+        pub namep: *mut libc::c_char,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "438:7"]
+    pub union bigname {
+        pub name: [libc::c_char; 1025],
+        pub next: *mut bigname,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "328:8"]
+    pub struct bogus_addr {
+        pub addr: in_addr,
+        pub next: *mut bogus_addr,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "334:8"]
+    pub struct doctor {
+        pub in_0: in_addr,
+        pub end: in_addr,
+        pub out: in_addr,
+        pub mask: in_addr,
+        pub next: *mut doctor,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "339:8"]
+    pub struct mx_srv_record {
+        pub name: *mut libc::c_char,
+        pub target: *mut libc::c_char,
+        pub issrv: libc::c_int,
+        pub srvport: libc::c_int,
+        pub priority: libc::c_int,
+        pub weight: libc::c_int,
+        pub offset: libc::c_uint,
+        pub next: *mut mx_srv_record,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "346:8"]
+    pub struct naptr {
+        pub name: *mut libc::c_char,
+        pub replace: *mut libc::c_char,
+        pub regexp: *mut libc::c_char,
+        pub services: *mut libc::c_char,
+        pub flags: *mut libc::c_char,
+        pub order: libc::c_uint,
+        pub pref: libc::c_uint,
+        pub next: *mut naptr,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "362:8"]
+    pub struct txt_record {
+        pub name: *mut libc::c_char,
+        pub txt: *mut libc::c_uchar,
+        pub class: libc::c_ushort,
+        pub len: libc::c_ushort,
+        pub stat: libc::c_int,
+        pub next: *mut txt_record,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "370:8"]
+    pub struct ptr_record {
+        pub name: *mut libc::c_char,
+        pub ptr: *mut libc::c_char,
+        pub next: *mut ptr_record,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "375:8"]
+    pub struct cname {
+        pub ttl: libc::c_int,
+        pub flag: libc::c_int,
+        pub alias: *mut libc::c_char,
+        pub target: *mut libc::c_char,
+        pub next: *mut cname,
+        pub targetp: *mut cname,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "394:8"]
+    pub struct addrlist {
+        pub addr: all_addr,
+        pub flags: libc::c_int,
+        pub prefixlen: libc::c_int,
+        pub decline_time: time_t,
+        pub next: *mut addrlist,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "404:8"]
+    pub struct auth_zone {
+        pub domain: *mut libc::c_char,
+        pub interface_names: *mut auth_name_list,
+        pub subnet: *mut addrlist,
+        pub exclude: *mut addrlist,
+        pub next: *mut auth_zone,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "406:10"]
+    pub struct auth_name_list {
+        pub name: *mut libc::c_char,
+        pub flags: libc::c_int,
+        pub next: *mut auth_name_list,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "419:8"]
+    pub struct host_record {
+        pub ttl: libc::c_int,
+        pub flags: libc::c_int,
+        pub names: *mut name_list,
+        pub addr: in_addr,
+        pub addr6: in6_addr,
+        pub next: *mut host_record,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "421:10"]
+    pub struct name_list {
+        pub name: *mut libc::c_char,
+        pub next: *mut name_list,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "430:8"]
+    pub struct interface_name {
+        pub name: *mut libc::c_char,
+        pub intr: *mut libc::c_char,
+        pub family: libc::c_int,
+        pub addr: *mut addrlist,
+        pub next: *mut interface_name,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "507:7"]
+    pub union mysockaddr {
+        pub sa: sockaddr,
+        pub in_0: sockaddr_in,
+        pub in6: sockaddr_in6,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "537:8"]
+    pub struct serverfd {
+        pub fd: libc::c_int,
+        pub source_addr: mysockaddr,
+        pub interface: [libc::c_char; 17],
+        pub ifindex: libc::c_uint,
+        pub used: libc::c_uint,
+        pub preallocated: libc::c_uint,
+        pub next: *mut serverfd,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "545:8"]
+    pub struct randfd {
+        pub fd: libc::c_int,
+        pub refcount: libc::c_ushort,
+        pub family: libc::c_ushort,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "550:8"]
+    pub struct server {
+        pub addr: mysockaddr,
+        pub source_addr: mysockaddr,
+        pub interface: [libc::c_char; 17],
+        pub sfd: *mut serverfd,
+        pub domain: *mut libc::c_char,
+        pub flags: libc::c_int,
+        pub tcpfd: libc::c_int,
+        pub edns_pktsz: libc::c_int,
+        pub pktsz_reduced: time_t,
+        pub queries: libc::c_uint,
+        pub failed_queries: libc::c_uint,
+        pub uid: u32_0,
+        pub next: *mut server,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "564:8"]
+    pub struct ipsets {
+        pub sets: *mut *mut libc::c_char,
+        pub domain: *mut libc::c_char,
+        pub next: *mut ipsets,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "570:8"]
+    pub struct irec {
+        pub addr: mysockaddr,
+        pub netmask: in_addr,
+        pub tftp_ok: libc::c_int,
+        pub dhcp_ok: libc::c_int,
+        pub mtu: libc::c_int,
+        pub done: libc::c_int,
+        pub warned: libc::c_int,
+        pub dad: libc::c_int,
+        pub dns_auth: libc::c_int,
+        pub index: libc::c_int,
+        pub multicast_done: libc::c_int,
+        pub found: libc::c_int,
+        pub label: libc::c_int,
+        pub name: *mut libc::c_char,
+        pub next: *mut irec,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "578:8"]
+    pub struct listener {
+        pub fd: libc::c_int,
+        pub tcpfd: libc::c_int,
+        pub tftpfd: libc::c_int,
+        pub used: libc::c_int,
+        pub addr: mysockaddr,
+        pub iface: *mut irec,
+        pub next: *mut listener,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "586:8"]
+    pub struct iname {
+        pub name: *mut libc::c_char,
+        pub addr: mysockaddr,
+        pub used: libc::c_int,
+        pub next: *mut iname,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "594:8"]
+    pub struct mysubnet {
+        pub addr: mysockaddr,
+        pub addr_used: libc::c_int,
+        pub mask: libc::c_int,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "601:8"]
+    pub struct resolvc {
+        pub next: *mut resolvc,
+        pub is_default: libc::c_int,
+        pub logged: libc::c_int,
+        pub mtime: time_t,
+        pub name: *mut libc::c_char,
+        pub wd: libc::c_int,
+        pub file: *mut libc::c_char,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "619:8"]
+    pub struct hostsfile {
+        pub next: *mut hostsfile,
+        pub flags: libc::c_int,
+        pub fname: *mut libc::c_char,
+        pub wd: libc::c_int,
+        pub index: libc::c_uint,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "666:8"]
+    pub struct frec {
+        pub frec_src: frec_src,
+        pub sentto: *mut server,
+        pub rfd4: *mut randfd,
+        pub rfd6: *mut randfd,
+        pub new_id: libc::c_ushort,
+        pub forwardall: libc::c_int,
+        pub flags: libc::c_int,
+        pub time: time_t,
+        pub hash: [*mut libc::c_uchar; 32],
+        pub next: *mut frec,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "667:10"]
+    pub struct frec_src {
+        pub source: mysockaddr,
+        pub dest: all_addr,
+        pub iface: libc::c_uint,
+        pub log_id: libc::c_uint,
+        pub fd: libc::c_int,
+        pub orig_id: libc::c_ushort,
+        pub next: *mut frec_src,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "752:8"]
+    pub struct dhcp_netid {
+        pub net: *mut libc::c_char,
+        pub next: *mut dhcp_netid,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "757:8"]
+    pub struct dhcp_netid_list {
+        pub list: *mut dhcp_netid,
+        pub next: *mut dhcp_netid_list,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "762:8"]
+    pub struct tag_if {
+        pub set: *mut dhcp_netid_list,
+        pub tag: *mut dhcp_netid,
+        pub next: *mut tag_if,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "768:8"]
+    pub struct delay_config {
+        pub delay: libc::c_int,
+        pub netid: *mut dhcp_netid,
+        pub next: *mut delay_config,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "774:8"]
+    pub struct hwaddr_config {
+        pub hwaddr_len: libc::c_int,
+        pub hwaddr_type: libc::c_int,
+        pub hwaddr: [libc::c_uchar; 16],
+        pub wildcard_mask: libc::c_uint,
+        pub next: *mut hwaddr_config,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "781:8"]
+    pub struct dhcp_config {
+        pub flags: libc::c_uint,
+        pub clid_len: libc::c_int,
+        pub clid: *mut libc::c_uchar,
+        pub hostname: *mut libc::c_char,
+        pub domain: *mut libc::c_char,
+        pub netid: *mut dhcp_netid_list,
+        pub filter: *mut dhcp_netid,
+        pub addr6: *mut addrlist,
+        pub addr: in_addr,
+        pub decline_time: time_t,
+        pub lease_time: libc::c_uint,
+        pub hwaddr: *mut hwaddr_config,
+        pub next: *mut dhcp_config,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "813:8"]
+    pub struct dhcp_opt {
+        pub opt: libc::c_int,
+        pub len: libc::c_int,
+        pub flags: libc::c_int,
+        pub u: C2RustUnnamed_12,
+        pub val: *mut libc::c_uchar,
+        pub netid: *mut dhcp_netid,
+        pub next: *mut dhcp_opt,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "815:3"]
+    pub union C2RustUnnamed_12 {
+        pub encap: libc::c_int,
+        pub wildcard_mask: libc::c_uint,
+        pub vendor_class: *mut libc::c_uchar,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "841:8"]
+    pub struct dhcp_boot {
+        pub file: *mut libc::c_char,
+        pub sname: *mut libc::c_char,
+        pub tftp_sname: *mut libc::c_char,
+        pub next_server: in_addr,
+        pub netid: *mut dhcp_netid,
+        pub next: *mut dhcp_boot,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "848:8"]
+    pub struct dhcp_match_name {
+        pub name: *mut libc::c_char,
+        pub wildcard: libc::c_int,
+        pub netid: *mut dhcp_netid,
+        pub next: *mut dhcp_match_name,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "855:8"]
+    pub struct pxe_service {
+        pub CSA: libc::c_ushort,
+        pub type_0: libc::c_ushort,
+        pub menu: *mut libc::c_char,
+        pub basename: *mut libc::c_char,
+        pub sname: *mut libc::c_char,
+        pub server: in_addr,
+        pub netid: *mut dhcp_netid,
+        pub next: *mut pxe_service,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "872:8"]
+    pub struct dhcp_vendor {
+        pub len: libc::c_int,
+        pub match_type: libc::c_int,
+        pub enterprise: libc::c_uint,
+        pub data: *mut libc::c_char,
+        pub netid: dhcp_netid,
+        pub next: *mut dhcp_vendor,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "880:8"]
+    pub struct dhcp_pxe_vendor {
+        pub data: *mut libc::c_char,
+        pub next: *mut dhcp_pxe_vendor,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "885:8"]
+    pub struct dhcp_mac {
+        pub mask: libc::c_uint,
+        pub hwaddr_len: libc::c_int,
+        pub hwaddr_type: libc::c_int,
+        pub hwaddr: [libc::c_uchar; 16],
+        pub netid: dhcp_netid,
+        pub next: *mut dhcp_mac,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "893:8"]
+    pub struct dhcp_bridge {
+        pub iface: [libc::c_char; 16],
+        pub alias: *mut dhcp_bridge,
+        pub next: *mut dhcp_bridge,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "898:8"]
+    pub struct cond_domain {
+        pub domain: *mut libc::c_char,
+        pub prefix: *mut libc::c_char,
+        pub start: in_addr,
+        pub end: in_addr,
+        pub start6: in6_addr,
+        pub end6: in6_addr,
+        pub is6: libc::c_int,
+        pub indexed: libc::c_int,
+        pub next: *mut cond_domain,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "906:8"]
+    pub struct ra_interface {
+        pub name: *mut libc::c_char,
+        pub mtu_name: *mut libc::c_char,
+        pub interval: libc::c_int,
+        pub lifetime: libc::c_int,
+        pub prio: libc::c_int,
+        pub mtu: libc::c_int,
+        pub next: *mut ra_interface,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "913:8"]
+    pub struct dhcp_context {
+        pub lease_time: libc::c_uint,
+        pub addr_epoch: libc::c_uint,
+        pub netmask: in_addr,
+        pub broadcast: in_addr,
+        pub local: in_addr,
+        pub router: in_addr,
+        pub start: in_addr,
+        pub end: in_addr,
+        pub start6: in6_addr,
+        pub end6: in6_addr,
+        pub local6: in6_addr,
+        pub prefix: libc::c_int,
+        pub if_index: libc::c_int,
+        pub valid: libc::c_uint,
+        pub preferred: libc::c_uint,
+        pub saved_valid: libc::c_uint,
+        pub ra_time: time_t,
+        pub ra_short_period_start: time_t,
+        pub address_lost_time: time_t,
+        pub template_interface: *mut libc::c_char,
+        pub flags: libc::c_int,
+        pub netid: dhcp_netid,
+        pub filter: *mut dhcp_netid,
+        pub next: *mut dhcp_context,
+        pub current: *mut dhcp_context,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "931:8"]
+    pub struct shared_network {
+        pub if_index: libc::c_int,
+        pub match_addr: in_addr,
+        pub shared_addr: in_addr,
+        pub match_addr6: in6_addr,
+        pub shared_addr6: in6_addr,
+        pub next: *mut shared_network,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "962:8"]
+    pub struct ping_result {
+        pub addr: in_addr,
+        pub time: time_t,
+        pub hash: libc::c_uint,
+        pub next: *mut ping_result,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "969:8"]
+    pub struct tftp_file {
+        pub refcount: libc::c_int,
+        pub fd: libc::c_int,
+        pub size: off_t,
+        pub dev: dev_t,
+        pub inode: ino_t,
+        pub filename: [libc::c_char; 0],
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "977:8"]
+    pub struct tftp_transfer {
+        pub sockfd: libc::c_int,
+        pub timeout: time_t,
+        pub backoff: libc::c_int,
+        pub block: libc::c_uint,
+        pub blocksize: libc::c_uint,
+        pub expansion: libc::c_uint,
+        pub offset: off_t,
+        pub peer: mysockaddr,
+        pub source: all_addr,
+        pub if_index: libc::c_int,
+        pub opt_blocksize: libc::c_char,
+        pub opt_transize: libc::c_char,
+        pub netascii: libc::c_char,
+        pub carrylf: libc::c_char,
+        pub file: *mut tftp_file,
+        pub next: *mut tftp_transfer,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "991:8"]
+    pub struct addr_list {
+        pub addr: in_addr,
+        pub next: *mut addr_list,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "996:8"]
+    pub struct tftp_prefix {
+        pub interface: *mut libc::c_char,
+        pub prefix: *mut libc::c_char,
+        pub missing: libc::c_int,
+        pub next: *mut tftp_prefix,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "1003:8"]
+    pub struct dhcp_relay {
+        pub local: all_addr,
+        pub server: all_addr,
+        pub interface: *mut libc::c_char,
+        pub iface_index: libc::c_int,
+        pub current: *mut dhcp_relay,
+        pub next: *mut dhcp_relay,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "1010:15"]
+    pub struct dnsmasq_daemon {
+        pub options: [libc::c_uint; 2],
+        pub default_resolv: resolvc,
+        pub resolv_files: *mut resolvc,
+        pub last_resolv: time_t,
+        pub servers_file: *mut libc::c_char,
+        pub mxnames: *mut mx_srv_record,
+        pub naptr: *mut naptr,
+        pub txt: *mut txt_record,
+        pub rr: *mut txt_record,
+        pub ptr: *mut ptr_record,
+        pub host_records: *mut host_record,
+        pub host_records_tail: *mut host_record,
+        pub cnames: *mut cname,
+        pub auth_zones: *mut auth_zone,
+        pub int_names: *mut interface_name,
+        pub mxtarget: *mut libc::c_char,
+        pub add_subnet4: *mut mysubnet,
+        pub add_subnet6: *mut mysubnet,
+        pub lease_file: *mut libc::c_char,
+        pub username: *mut libc::c_char,
+        pub groupname: *mut libc::c_char,
+        pub scriptuser: *mut libc::c_char,
+        pub luascript: *mut libc::c_char,
+        pub authserver: *mut libc::c_char,
+        pub hostmaster: *mut libc::c_char,
+        pub authinterface: *mut iname,
+        pub secondary_forward_server: *mut name_list,
+        pub group_set: libc::c_int,
+        pub osport: libc::c_int,
+        pub domain_suffix: *mut libc::c_char,
+        pub cond_domain: *mut cond_domain,
+        pub synth_domains: *mut cond_domain,
+        pub runfile: *mut libc::c_char,
+        pub lease_change_command: *mut libc::c_char,
+        pub if_names: *mut iname,
+        pub if_addrs: *mut iname,
+        pub if_except: *mut iname,
+        pub dhcp_except: *mut iname,
+        pub auth_peers: *mut iname,
+        pub tftp_interfaces: *mut iname,
+        pub bogus_addr: *mut bogus_addr,
+        pub ignore_addr: *mut bogus_addr,
+        pub servers: *mut server,
+        pub ipsets: *mut ipsets,
+        pub log_fac: libc::c_int,
+        pub log_file: *mut libc::c_char,
+        pub max_logs: libc::c_int,
+        pub cachesize: libc::c_int,
+        pub ftabsize: libc::c_int,
+        pub port: libc::c_int,
+        pub query_port: libc::c_int,
+        pub min_port: libc::c_int,
+        pub max_port: libc::c_int,
+        pub local_ttl: libc::c_ulong,
+        pub neg_ttl: libc::c_ulong,
+        pub max_ttl: libc::c_ulong,
+        pub min_cache_ttl: libc::c_ulong,
+        pub max_cache_ttl: libc::c_ulong,
+        pub auth_ttl: libc::c_ulong,
+        pub dhcp_ttl: libc::c_ulong,
+        pub use_dhcp_ttl: libc::c_ulong,
+        pub dns_client_id: *mut libc::c_char,
+        pub addn_hosts: *mut hostsfile,
+        pub dhcp: *mut dhcp_context,
+        pub dhcp6: *mut dhcp_context,
+        pub ra_interfaces: *mut ra_interface,
+        pub dhcp_conf: *mut dhcp_config,
+        pub dhcp_opts: *mut dhcp_opt,
+        pub dhcp_match: *mut dhcp_opt,
+        pub dhcp_opts6: *mut dhcp_opt,
+        pub dhcp_match6: *mut dhcp_opt,
+        pub dhcp_name_match: *mut dhcp_match_name,
+        pub dhcp_pxe_vendors: *mut dhcp_pxe_vendor,
+        pub dhcp_vendors: *mut dhcp_vendor,
+        pub dhcp_macs: *mut dhcp_mac,
+        pub boot_config: *mut dhcp_boot,
+        pub pxe_services: *mut pxe_service,
+        pub tag_if: *mut tag_if,
+        pub override_relays: *mut addr_list,
+        pub relay4: *mut dhcp_relay,
+        pub relay6: *mut dhcp_relay,
+        pub delay_conf: *mut delay_config,
+        pub override_0: libc::c_int,
+        pub enable_pxe: libc::c_int,
+        pub doing_ra: libc::c_int,
+        pub doing_dhcp6: libc::c_int,
+        pub dhcp_ignore: *mut dhcp_netid_list,
+        pub dhcp_ignore_names: *mut dhcp_netid_list,
+        pub dhcp_gen_names: *mut dhcp_netid_list,
+        pub force_broadcast: *mut dhcp_netid_list,
+        pub bootp_dynamic: *mut dhcp_netid_list,
+        pub dhcp_hosts_file: *mut hostsfile,
+        pub dhcp_opts_file: *mut hostsfile,
+        pub dynamic_dirs: *mut hostsfile,
+        pub dhcp_max: libc::c_int,
+        pub tftp_max: libc::c_int,
+        pub tftp_mtu: libc::c_int,
+        pub dhcp_server_port: libc::c_int,
+        pub dhcp_client_port: libc::c_int,
+        pub start_tftp_port: libc::c_int,
+        pub end_tftp_port: libc::c_int,
+        pub min_leasetime: libc::c_uint,
+        pub doctors: *mut doctor,
+        pub edns_pktsz: libc::c_ushort,
+        pub tftp_prefix: *mut libc::c_char,
+        pub if_prefix: *mut tftp_prefix,
+        pub duid_enterprise: libc::c_uint,
+        pub duid_config_len: libc::c_uint,
+        pub duid_config: *mut libc::c_uchar,
+        pub dbus_name: *mut libc::c_char,
+        pub ubus_name: *mut libc::c_char,
+        pub dump_file: *mut libc::c_char,
+        pub dump_mask: libc::c_int,
+        pub soa_sn: libc::c_ulong,
+        pub soa_refresh: libc::c_ulong,
+        pub soa_retry: libc::c_ulong,
+        pub soa_expiry: libc::c_ulong,
+        pub metrics: [u32_0; 20],
+        pub packet: *mut libc::c_char,
+        pub packet_buff_sz: libc::c_int,
+        pub namebuff: *mut libc::c_char,
+        pub frec_list: *mut frec,
+        pub free_frec_src: *mut frec_src,
+        pub frec_src_count: libc::c_int,
+        pub sfds: *mut serverfd,
+        pub interfaces: *mut irec,
+        pub listeners: *mut listener,
+        pub last_server: *mut server,
+        pub forwardtime: time_t,
+        pub forwardcount: libc::c_int,
+        pub srv_save: *mut server,
+        pub packet_len: size_t,
+        pub rfd_save: *mut randfd,
+        pub tcp_pids: [pid_t; 20],
+        pub tcp_pipes: [libc::c_int; 20],
+        pub pipe_to_parent: libc::c_int,
+        pub randomsocks: [randfd; 64],
+        pub v6pktinfo: libc::c_int,
+        pub interface_addrs: *mut addrlist,
+        pub log_id: libc::c_int,
+        pub log_display_id: libc::c_int,
+        pub log_source_addr: *mut mysockaddr,
+        pub dhcpfd: libc::c_int,
+        pub helperfd: libc::c_int,
+        pub pxefd: libc::c_int,
+        pub inotifyfd: libc::c_int,
+        pub netlinkfd: libc::c_int,
+        pub kernel_version: libc::c_int,
+        pub dhcp_packet: iovec,
+        pub dhcp_buff: *mut libc::c_char,
+        pub dhcp_buff2: *mut libc::c_char,
+        pub dhcp_buff3: *mut libc::c_char,
+        pub ping_results: *mut ping_result,
+        pub lease_stream: *mut FILE,
+        pub bridges: *mut dhcp_bridge,
+        pub shared_networks: *mut shared_network,
+        pub duid_len: libc::c_int,
+        pub duid: *mut libc::c_uchar,
+        pub outpacket: iovec,
+        pub dhcp6fd: libc::c_int,
+        pub icmp6fd: libc::c_int,
+        pub dbus: *mut libc::c_void,
+        pub tftp_trans: *mut tftp_transfer,
+        pub tftp_done_trans: *mut tftp_transfer,
+        pub addrbuff: *mut libc::c_char,
+        pub addrbuff2: *mut libc::c_char,
+        pub dumpfd: libc::c_int,
+    }
+    #[c2rust::src_loc = "535:9"]
+    pub const SERV_GOT_TCP: libc::c_int = 32768 as libc::c_int;
+    #[c2rust::src_loc = "388:9"]
+    pub const ADDRLIST_IPV6: libc::c_int = 2 as libc::c_int;
+    #[c2rust::src_loc = "531:9"]
+    pub const SERV_NO_REBIND: libc::c_int = 2048 as libc::c_int;
+    #[c2rust::src_loc = "484:9"]
+    pub const F_QUERY: libc::c_uint =
+        (1 as libc::c_uint) << 19 as libc::c_int;
+    #[c2rust::src_loc = "480:9"]
+    pub const F_DNSSECOK: libc::c_uint =
+        (1 as libc::c_uint) << 15 as libc::c_int;
+    #[c2rust::src_loc = "475:9"]
+    pub const F_NXDOMAIN: libc::c_uint =
+        (1 as libc::c_uint) << 10 as libc::c_int;
+    #[c2rust::src_loc = "485:9"]
+    pub const F_NOERR: libc::c_uint =
+        (1 as libc::c_uint) << 20 as libc::c_int;
+    #[c2rust::src_loc = "470:9"]
+    pub const F_NEG: libc::c_uint = (1 as libc::c_uint) << 5 as libc::c_int;
+    #[c2rust::src_loc = "478:9"]
+    pub const F_CONFIG: libc::c_uint =
+        (1 as libc::c_uint) << 13 as libc::c_int;
+    #[c2rust::src_loc = "530:9"]
+    pub const SERV_USE_RESOLV: libc::c_int = 1024 as libc::c_int;
+    #[c2rust::src_loc = "534:9"]
+    pub const SERV_DO_DNSSEC: libc::c_int = 16384 as libc::c_int;
+    #[c2rust::src_loc = "533:9"]
+    pub const SERV_LOOP: libc::c_int = 8192 as libc::c_int;
+    #[c2rust::src_loc = "472:9"]
+    pub const F_IPV4: libc::c_uint = (1 as libc::c_uint) << 7 as libc::c_int;
+    #[c2rust::src_loc = "483:9"]
+    pub const F_SERVER: libc::c_uint =
+        (1 as libc::c_uint) << 18 as libc::c_int;
+    #[c2rust::src_loc = "473:9"]
+    pub const F_IPV6: libc::c_uint = (1 as libc::c_uint) << 8 as libc::c_int;
+    #[c2rust::src_loc = "468:9"]
+    pub const F_FORWARD: libc::c_uint =
+        (1 as libc::c_uint) << 3 as libc::c_int;
+    #[c2rust::src_loc = "528:9"]
+    pub const SERV_TYPE: libc::c_int = SERV_HAS_DOMAIN | SERV_FOR_NODOTS;
+    #[c2rust::src_loc = "521:9"]
+    pub const SERV_LITERAL_ADDRESS: libc::c_int = 4 as libc::c_int;
+    #[c2rust::src_loc = "522:9"]
+    pub const SERV_HAS_DOMAIN: libc::c_int = 8 as libc::c_int;
+    #[c2rust::src_loc = "524:9"]
+    pub const SERV_FOR_NODOTS: libc::c_int = 32 as libc::c_int;
+    #[c2rust::src_loc = "520:9"]
+    pub const SERV_NO_ADDR: libc::c_int = 2 as libc::c_int;
+    #[c2rust::src_loc = "494:9"]
+    pub const F_RCODE: libc::c_uint =
+        (1 as libc::c_uint) << 29 as libc::c_int;
+    #[c2rust::src_loc = "525:9"]
+    pub const SERV_WARNED_RECURSIVE: libc::c_int = 64 as libc::c_int;
+    #[c2rust::src_loc = "481:9"]
+    pub const F_UPSTREAM: libc::c_uint =
+        (1 as libc::c_uint) << 16 as libc::c_int;
+    #[c2rust::src_loc = "631:9"]
+    pub const DUMP_REPLY: libc::c_int = 0x2 as libc::c_int;
+    #[c2rust::src_loc = "633:9"]
+    pub const DUMP_UP_REPLY: libc::c_int = 0x8 as libc::c_int;
+    #[c2rust::src_loc = "658:9"]
+    pub const FREC_ADDED_PHEADER: libc::c_int = 128 as libc::c_int;
+    #[c2rust::src_loc = "657:9"]
+    pub const FREC_DO_QUESTION: libc::c_int = 64 as libc::c_int;
+    #[c2rust::src_loc = "656:9"]
+    pub const FREC_AD_QUESTION: libc::c_int = 32 as libc::c_int;
+    #[c2rust::src_loc = "662:9"]
+    pub const FREC_NO_CACHE: libc::c_int = 2048 as libc::c_int;
+    #[c2rust::src_loc = "652:9"]
+    pub const FREC_CHECKING_DISABLED: libc::c_int = 2 as libc::c_int;
+    #[c2rust::src_loc = "651:9"]
+    pub const FREC_NOREBIND: libc::c_int = 1 as libc::c_int;
+    #[c2rust::src_loc = "659:9"]
+    pub const FREC_TEST_PKTSZ: libc::c_int = 256 as libc::c_int;
+    #[c2rust::src_loc = "632:9"]
+    pub const DUMP_UP_QUERY: libc::c_int = 0x4 as libc::c_int;
+    #[c2rust::src_loc = "660:9"]
+    pub const FREC_HAS_EXTRADATA: libc::c_int = 512 as libc::c_int;
+    #[c2rust::src_loc = "664:9"]
+    pub const HASH_SIZE: libc::c_int = 32 as libc::c_int;
+    #[c2rust::src_loc = "655:9"]
+    pub const FREC_DS_QUERY: libc::c_int = 16 as libc::c_int;
+    #[c2rust::src_loc = "654:9"]
+    pub const FREC_DNSKEY_QUERY: libc::c_int = 8 as libc::c_int;
+    #[c2rust::src_loc = "661:9"]
+    pub const FREC_HAS_PHEADER: libc::c_int = 1024 as libc::c_int;
+    #[c2rust::src_loc = "653:9"]
+    pub const FREC_HAS_SUBNET: libc::c_int = 4 as libc::c_int;
+    #[c2rust::src_loc = "635:9"]
+    pub const DUMP_SEC_REPLY: libc::c_int = 0x20 as libc::c_int;
+    #[c2rust::src_loc = "630:9"]
+    pub const DUMP_QUERY: libc::c_int = 0x1 as libc::c_int;
+    use super::in_h::{in_addr, in6_addr, sockaddr_in, sockaddr_in6,
+                      in_addr_t};
+    use super::time_t_h::time_t;
+    use super::socket_h::sockaddr;
+    use super::sys_types_h::{off_t, dev_t, ino_t, pid_t, ssize_t};
+    use super::stddef_h::size_t;
+    use super::struct_iovec_h::iovec;
+    use super::FILE_h::FILE;
+    use super::dns_protocol_h::dns_header;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "1240:1"]
+        pub fn check_for_local_domain(name: *mut libc::c_char, now: time_t)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1241:1"]
+        pub fn resize_packet(header: *mut dns_header, plen: size_t,
+                             pheader: *mut libc::c_uchar, hlen: size_t)
+         -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1251:1"]
+        pub fn answer_auth(header: *mut dns_header, limit: *mut libc::c_char,
+                           qlen: size_t, now: time_t,
+                           peer_addr: *mut mysockaddr,
+                           local_query: libc::c_int, do_bit: libc::c_int,
+                           have_pseudoheader: libc::c_int) -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1254:1"]
+        pub fn in_zone(zone: *mut auth_zone, name: *mut libc::c_char,
+                       cut: *mut *mut libc::c_char) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1237:1"]
+        pub fn check_for_bogus_wildcard(header: *mut dns_header, qlen: size_t,
+                                        name: *mut libc::c_char,
+                                        baddr: *mut bogus_addr, now: time_t)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1269:1"]
+        pub fn hash_questions(header: *mut dns_header, plen: size_t,
+                              name: *mut libc::c_char) -> *mut libc::c_uchar;
+        #[no_mangle]
+        #[c2rust::src_loc = "1282:1"]
+        pub fn rand16() -> libc::c_ushort;
+        #[no_mangle]
+        #[c2rust::src_loc = "1291:1"]
+        pub fn whine_malloc(size: size_t) -> *mut libc::c_void;
+        #[no_mangle]
+        #[c2rust::src_loc = "1292:1"]
+        pub fn sa_len(addr: *mut mysockaddr) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1293:1"]
+        pub fn sockaddr_isequal(s1: *mut mysockaddr, s2: *mut mysockaddr)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1294:1"]
+        pub fn hostname_isequal(a: *const libc::c_char,
+                                b: *const libc::c_char) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1298:1"]
+        pub fn is_same_net(a: in_addr, b: in_addr, mask: in_addr)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1299:1"]
+        pub fn is_same_net6(a: *mut in6_addr, b: *mut in6_addr,
+                            prefixlen: libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1302:1"]
+        pub fn retry_send(rc: ssize_t) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1304:1"]
+        pub fn prettyprint_addr(addr: *mut mysockaddr, buf: *mut libc::c_char)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1311:1"]
+        pub fn read_write(fd: libc::c_int, packet: *mut libc::c_uchar,
+                          size: libc::c_int, rw: libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1324:1"]
+        pub fn my_syslog(priority: libc::c_int, format: *const libc::c_char,
+                         _: ...);
+        #[no_mangle]
+        #[c2rust::src_loc = "1327:1"]
+        pub fn check_log_writer(force: libc::c_int);
+        #[no_mangle]
+        #[c2rust::src_loc = "1234:1"]
+        pub fn answer_request(header: *mut dns_header,
+                              limit: *mut libc::c_char, qlen: size_t,
+                              local_addr: in_addr, local_netmask: in_addr,
+                              now: time_t, ad_reqd: libc::c_int,
+                              do_bit: libc::c_int,
+                              have_pseudoheader: libc::c_int) -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1231:1"]
+        pub fn extract_addresses(header: *mut dns_header, qlen: size_t,
+                                 name: *mut libc::c_char, now: time_t,
+                                 ipsets: *mut *mut libc::c_char,
+                                 is_sign: libc::c_int,
+                                 check_rebind: libc::c_int,
+                                 no_cache_dnssec: libc::c_int,
+                                 secure: libc::c_int,
+                                 doctored: *mut libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1228:1"]
+        pub fn setup_reply(header: *mut dns_header, qlen: size_t,
+                           addrp: *mut all_addr, flags: libc::c_uint,
+                           ttl: libc::c_ulong) -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1226:1"]
+        pub fn extract_request(header: *mut dns_header, qlen: size_t,
+                               name: *mut libc::c_char,
+                               typep: *mut libc::c_ushort) -> libc::c_uint;
+        #[no_mangle]
+        #[c2rust::src_loc = "1179:1"]
+        pub fn querystr(desc: *mut libc::c_char, type_0: libc::c_ushort)
+         -> *mut libc::c_char;
+        #[no_mangle]
+        #[c2rust::src_loc = "1177:1"]
+        pub fn log_query(flags: libc::c_uint, name: *mut libc::c_char,
+                         addr: *mut all_addr, arg: *mut libc::c_char);
+        #[no_mangle]
+        #[c2rust::src_loc = "1172:4"]
+        pub static mut dnsmasq_daemon: *mut dnsmasq_daemon;
+        #[no_mangle]
+        #[c2rust::src_loc = "1360:1"]
+        pub fn random_sock(family: libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1239:1"]
+        pub fn check_for_ignored_address(header: *mut dns_header,
+                                         qlen: size_t, baddr: *mut bogus_addr)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1371:1"]
+        pub fn enumerate_interfaces(reset: libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1380:1"]
+        pub fn label_exception(index: libc::c_int, family: libc::c_int,
+                               addr: *mut all_addr) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1379:1"]
+        pub fn loopback_exception(fd: libc::c_int, family: libc::c_int,
+                                  addr: *mut all_addr,
+                                  name: *mut libc::c_char) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1378:1"]
+        pub fn iface_check(family: libc::c_int, addr: *mut all_addr,
+                           name: *mut libc::c_char, auth: *mut libc::c_int)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1358:1"]
+        pub fn indextoname(fd: libc::c_int, index: libc::c_int,
+                           name: *mut libc::c_char) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1359:1"]
+        pub fn local_bind(fd: libc::c_int, addr: *mut mysockaddr,
+                          intname: *mut libc::c_char, ifindex: libc::c_uint,
+                          is_tcp: libc::c_int) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1640:1"]
+        pub fn detect_loop(query: *mut libc::c_char, type_0: libc::c_int)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1662:1"]
+        pub fn find_pseudoheader(header: *mut dns_header, plen: size_t,
+                                 len: *mut size_t, p: *mut *mut libc::c_uchar,
+                                 is_sign: *mut libc::c_int,
+                                 is_last: *mut libc::c_int)
+         -> *mut libc::c_uchar;
+        #[no_mangle]
+        #[c2rust::src_loc = "1666:1"]
+        pub fn add_do_bit(header: *mut dns_header, plen: size_t,
+                          limit: *mut libc::c_uchar) -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1667:1"]
+        pub fn add_edns0_config(header: *mut dns_header, plen: size_t,
+                                limit: *mut libc::c_uchar,
+                                source: *mut mysockaddr, now: time_t,
+                                check_subnet: *mut libc::c_int,
+                                cacheable: *mut libc::c_int) -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1664:1"]
+        pub fn add_pseudoheader(header: *mut dns_header, plen: size_t,
+                                limit: *mut libc::c_uchar,
+                                udp_sz: libc::c_ushort, optno: libc::c_int,
+                                opt: *mut libc::c_uchar, optlen: size_t,
+                                set_do: libc::c_int, replace: libc::c_int)
+         -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1657:1"]
+        pub fn rrfilter(header: *mut dns_header, plen: size_t,
+                        mode: libc::c_int) -> size_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "1669:1"]
+        pub fn check_source(header: *mut dns_header, plen: size_t,
+                            pseudoheader: *mut libc::c_uchar,
+                            peer: *mut mysockaddr) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "1678:1"]
+        pub fn dump_packet(mask: libc::c_int, packet: *mut libc::c_void,
+                           len: size_t, src: *mut mysockaddr,
+                           dst: *mut mysockaddr);
+    }
+}
+#[c2rust::header_src = "/mnt/d/projects/dnsmasq-2.84/src/dns-protocol.h:17"]
+pub mod dns_protocol_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "86:8"]
+    pub struct dns_header {
+        pub id: u16_0,
+        pub hb3: u8_0,
+        pub hb4: u8_0,
+        pub qdcount: u16_0,
+        pub ancount: u16_0,
+        pub nscount: u16_0,
+        pub arcount: u16_0,
+    }
+    #[c2rust::src_loc = "26:9"]
+    pub const MAXDNAME: libc::c_int = 1025 as libc::c_int;
+    #[c2rust::src_loc = "27:9"]
+    pub const RRFIXEDSZ: libc::c_int = 10 as libc::c_int;
+    #[c2rust::src_loc = "32:9"]
+    pub const SERVFAIL: libc::c_int = 2 as libc::c_int;
+    #[c2rust::src_loc = "92:9"]
+    pub const HB3_QR: libc::c_int = 0x80 as libc::c_int;
+    #[c2rust::src_loc = "25:9"]
+    pub const PACKETSZ: libc::c_int = 512 as libc::c_int;
+    #[c2rust::src_loc = "35:9"]
+    pub const REFUSED: libc::c_int = 5 as libc::c_int;
+    #[c2rust::src_loc = "100:9"]
+    pub const HB4_CD: libc::c_int = 0x10 as libc::c_int;
+    #[c2rust::src_loc = "99:9"]
+    pub const HB4_AD: libc::c_int = 0x20 as libc::c_int;
+    #[c2rust::src_loc = "93:9"]
+    pub const HB3_OPCODE: libc::c_int = 0x78 as libc::c_int;
+    #[c2rust::src_loc = "37:9"]
+    pub const QUERY: libc::c_int = 0 as libc::c_int;
+    #[c2rust::src_loc = "30:9"]
+    pub const NOERROR: libc::c_int = 0 as libc::c_int;
+    #[c2rust::src_loc = "33:9"]
+    pub const NXDOMAIN: libc::c_int = 3 as libc::c_int;
+    #[c2rust::src_loc = "94:9"]
+    pub const HB3_AA: libc::c_int = 0x4 as libc::c_int;
+    #[c2rust::src_loc = "101:9"]
+    pub const HB4_RCODE: libc::c_int = 0xf as libc::c_int;
+    #[c2rust::src_loc = "95:9"]
+    pub const HB3_TC: libc::c_int = 0x2 as libc::c_int;
+    #[c2rust::src_loc = "98:9"]
+    pub const HB4_RA: libc::c_int = 0x80 as libc::c_int;
+    use super::dnsmasq_h::{u16_0, u8_0};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stat.h:17"]
+pub mod stat_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "46:8"]
+    pub struct stat {
+        pub st_dev: __dev_t,
+        pub st_ino: __ino_t,
+        pub st_nlink: __nlink_t,
+        pub st_mode: __mode_t,
+        pub st_uid: __uid_t,
+        pub st_gid: __gid_t,
+        pub __pad0: libc::c_int,
+        pub st_rdev: __dev_t,
+        pub st_size: __off_t,
+        pub st_blksize: __blksize_t,
+        pub st_blocks: __blkcnt_t,
+        pub st_atim: timespec,
+        pub st_mtim: timespec,
+        pub st_ctim: timespec,
+        pub __glibc_reserved: [__syscall_slong_t; 3],
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "119:8"]
+    pub struct stat64 {
+        pub st_dev: __dev_t,
+        pub st_ino: __ino64_t,
+        pub st_nlink: __nlink_t,
+        pub st_mode: __mode_t,
+        pub st_uid: __uid_t,
+        pub st_gid: __gid_t,
+        pub __pad0: libc::c_int,
+        pub st_rdev: __dev_t,
+        pub st_size: __off_t,
+        pub st_blksize: __blksize_t,
+        pub st_blocks: __blkcnt64_t,
+        pub st_atim: timespec,
+        pub st_mtim: timespec,
+        pub st_ctim: timespec,
+        pub __glibc_reserved: [__syscall_slong_t; 3],
+    }
+    #[c2rust::src_loc = "38:10"]
+    pub const _STAT_VER_LINUX: libc::c_int = 1 as libc::c_int;
+    #[c2rust::src_loc = "44:9"]
+    pub const _STAT_VER: libc::c_int = _STAT_VER_LINUX;
+    use super::types_h::{__dev_t, __ino_t, __nlink_t, __mode_t, __uid_t,
+                         __gid_t, __off_t, __blksize_t, __blkcnt_t,
+                         __syscall_slong_t, __ino64_t, __blkcnt64_t};
+    use super::struct_timespec_h::timespec;
+}
+#[c2rust::header_src = "/usr/include/net/if.h:17"]
+pub mod if_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "111:8"]
+    pub struct ifmap {
+        pub mem_start: libc::c_ulong,
+        pub mem_end: libc::c_ulong,
+        pub base_addr: libc::c_ushort,
+        pub irq: libc::c_uchar,
+        pub dma: libc::c_uchar,
+        pub port: libc::c_uchar,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "126:8"]
+    pub struct ifreq {
+        pub ifr_ifrn: C2RustUnnamed_4,
+        pub ifr_ifru: C2RustUnnamed_3,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "135:5"]
+    pub union C2RustUnnamed_3 {
+        pub ifru_addr: sockaddr,
+        pub ifru_dstaddr: sockaddr,
+        pub ifru_broadaddr: sockaddr,
+        pub ifru_netmask: sockaddr,
+        pub ifru_hwaddr: sockaddr,
+        pub ifru_flags: libc::c_short,
+        pub ifru_ivalue: libc::c_int,
+        pub ifru_mtu: libc::c_int,
+        pub ifru_map: ifmap,
+        pub ifru_slave: [libc::c_char; 16],
+        pub ifru_newname: [libc::c_char; 16],
+        pub ifru_data: __caddr_t,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "130:5"]
+    pub union C2RustUnnamed_4 {
+        pub ifrn_name: [libc::c_char; 16],
+    }
+    use super::socket_h::sockaddr;
+    use super::types_h::__caddr_t;
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:17"]
+pub mod struct_FILE_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "49:8"]
+    pub struct _IO_FILE {
+        pub _flags: libc::c_int,
+        pub _IO_read_ptr: *mut libc::c_char,
+        pub _IO_read_end: *mut libc::c_char,
+        pub _IO_read_base: *mut libc::c_char,
+        pub _IO_write_base: *mut libc::c_char,
+        pub _IO_write_ptr: *mut libc::c_char,
+        pub _IO_write_end: *mut libc::c_char,
+        pub _IO_buf_base: *mut libc::c_char,
+        pub _IO_buf_end: *mut libc::c_char,
+        pub _IO_save_base: *mut libc::c_char,
+        pub _IO_backup_base: *mut libc::c_char,
+        pub _IO_save_end: *mut libc::c_char,
+        pub _markers: *mut _IO_marker,
+        pub _chain: *mut _IO_FILE,
+        pub _fileno: libc::c_int,
+        pub _flags2: libc::c_int,
+        pub _old_offset: __off_t,
+        pub _cur_column: libc::c_ushort,
+        pub _vtable_offset: libc::c_schar,
+        pub _shortbuf: [libc::c_char; 1],
+        pub _lock: *mut libc::c_void,
+        pub _offset: __off64_t,
+        pub _codecvt: *mut _IO_codecvt,
+        pub _wide_data: *mut _IO_wide_data,
+        pub _freeres_list: *mut _IO_FILE,
+        pub _freeres_buf: *mut libc::c_void,
+        pub __pad5: size_t,
+        pub _mode: libc::c_int,
+        pub _unused2: [libc::c_char; 20],
+    }
+    #[c2rust::src_loc = "43:1"]
+    pub type _IO_lock_t = ();
+    #[c2rust::src_loc = "111:9"]
+    pub const _IO_EOF_SEEN: libc::c_int = 0x10 as libc::c_int;
+    #[c2rust::src_loc = "114:9"]
+    pub const _IO_ERR_SEEN: libc::c_int = 0x20 as libc::c_int;
+    use super::types_h::{__off_t, __off64_t};
+    use super::stddef_h::size_t;
+    extern "C" {
+        #[c2rust::src_loc = "38:8"]
+        pub type _IO_wide_data;
+        #[c2rust::src_loc = "37:8"]
+        pub type _IO_codecvt;
+        #[c2rust::src_loc = "36:8"]
+        pub type _IO_marker;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types/FILE.h:17"]
+pub mod FILE_h {
+    #[c2rust::src_loc = "7:1"]
+    pub type FILE = _IO_FILE;
+    use super::struct_FILE_h::_IO_FILE;
+}
+#[c2rust::header_src = "/usr/include/stdlib.h:17"]
+pub mod stdlib_h {
+    #[c2rust::src_loc = "808:1"]
+    pub type __compar_fn_t
+        =
+        Option<unsafe extern "C" fn(_: *const libc::c_void,
+                                    _: *const libc::c_void) -> libc::c_int>;
+    #[inline]
+    #[c2rust::src_loc = "360:1"]
+    pub unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char)
+     -> libc::c_int {
+        return strtol(__nptr,
+                      NULL as *mut libc::c_void as *mut *mut libc::c_char,
+                      10 as libc::c_int) as libc::c_int;
+    }
+    #[inline]
+    #[c2rust::src_loc = "365:1"]
+    pub unsafe extern "C" fn atol(mut __nptr: *const libc::c_char)
+     -> libc::c_long {
+        return strtol(__nptr,
+                      NULL as *mut libc::c_void as *mut *mut libc::c_char,
+                      10 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "372:15"]
+    pub unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
+     -> libc::c_longlong {
+        return strtoll(__nptr,
+                       NULL as *mut libc::c_void as *mut *mut libc::c_char,
+                       10 as libc::c_int);
+    }
+    use super::stddef_h::NULL;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "117:15"]
+        pub fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+         -> libc::c_double;
+        #[no_mangle]
+        #[c2rust::src_loc = "176:17"]
+        pub fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+                      _: libc::c_int) -> libc::c_long;
+        #[no_mangle]
+        #[c2rust::src_loc = "200:22"]
+        pub fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+                       _: libc::c_int) -> libc::c_longlong;
+    }
+}
+#[c2rust::header_src = "/usr/include/stdint.h:17"]
+pub mod stdint_h {
+    #[c2rust::src_loc = "101:1"]
+    pub type intmax_t = __intmax_t;
+    #[c2rust::src_loc = "102:1"]
+    pub type uintmax_t = __uintmax_t;
+    use super::types_h::{__intmax_t, __uintmax_t};
+}
+#[c2rust::header_src = "/usr/include/inttypes.h:17"]
+pub mod inttypes_h {
+    #[c2rust::src_loc = "34:1"]
+    pub type __gwchar_t = libc::c_int;
+    #[inline]
+    #[c2rust::src_loc = "323:1"]
+    pub unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
+                                       mut endptr: *mut *mut libc::c_char,
+                                       mut base: libc::c_int) -> intmax_t {
+        return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "335:1"]
+    pub unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
+                                       mut endptr: *mut *mut libc::c_char,
+                                       mut base: libc::c_int) -> uintmax_t {
+        return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "347:1"]
+    pub unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
+                                       mut endptr: *mut *mut __gwchar_t,
+                                       mut base: libc::c_int) -> intmax_t {
+        return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "361:1"]
+    pub unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
+                                       mut endptr: *mut *mut __gwchar_t,
+                                       mut base: libc::c_int) -> uintmax_t {
+        return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    use super::stdint_h::{intmax_t, uintmax_t};
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "318:1"]
+        pub fn __strtol_internal(__nptr: *const libc::c_char,
+                                 __endptr: *mut *mut libc::c_char,
+                                 __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_long;
+        #[no_mangle]
+        #[c2rust::src_loc = "330:1"]
+        pub fn __strtoul_internal(__nptr: *const libc::c_char,
+                                  __endptr: *mut *mut libc::c_char,
+                                  __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_ulong;
+        #[no_mangle]
+        #[c2rust::src_loc = "342:1"]
+        pub fn __wcstol_internal(__nptr: *const __gwchar_t,
+                                 __endptr: *mut *mut __gwchar_t,
+                                 __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_long;
+        #[no_mangle]
+        #[c2rust::src_loc = "354:1"]
+        pub fn __wcstoul_internal(__nptr: *const __gwchar_t,
+                                  __endptr: *mut *mut __gwchar_t,
+                                  __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_ulong;
+    }
+}
+#[c2rust::header_src = "/usr/include/stdio.h:17"]
+pub mod stdio_h {
+    use super::FILE_h::FILE;
+    use super::internal::__va_list_tag;
+    use super::stddef_h::size_t;
+    use super::types_h::__ssize_t;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "137:14"]
+        pub static mut stdin: *mut FILE;
+        #[no_mangle]
+        #[c2rust::src_loc = "138:14"]
+        pub static mut stdout: *mut FILE;
+        #[no_mangle]
+        #[c2rust::src_loc = "341:12"]
+        pub fn vfprintf(_: *mut FILE, _: *const libc::c_char,
+                        _: ::std::ffi::VaList) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "486:1"]
+        pub fn getc(__stream: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "522:1"]
+        pub fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "603:1"]
+        pub fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+                          __delimiter: libc::c_int, __stream: *mut FILE)
+         -> __ssize_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "858:1"]
+        pub fn __uflow(_: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "859:1"]
+        pub fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/stat.h:17"]
+pub mod sys_stat_h {
+    #[inline]
+    #[c2rust::src_loc = "452:1"]
+    pub unsafe extern "C" fn stat(mut __path: *const libc::c_char,
+                                  mut __statbuf: *mut stat) -> libc::c_int {
+        return __xstat(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "466:1"]
+    pub unsafe extern "C" fn fstat(mut __fd: libc::c_int,
+                                   mut __statbuf: *mut stat) -> libc::c_int {
+        return __fxstat(_STAT_VER, __fd, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "501:1"]
+    pub unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
+                                    mut __statbuf: *mut stat64)
+     -> libc::c_int {
+        return __xstat64(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "515:1"]
+    pub unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
+                                     mut __statbuf: *mut stat64)
+     -> libc::c_int {
+        return __fxstat64(_STAT_VER, __fd, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "473:1"]
+    pub unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
+                                     mut __filename: *const libc::c_char,
+                                     mut __statbuf: *mut stat,
+                                     mut __flag: libc::c_int) -> libc::c_int {
+        return __fxstatat(_STAT_VER, __fd, __filename, __statbuf, __flag);
+    }
+    #[inline]
+    #[c2rust::src_loc = "522:1"]
+    pub unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
+                                       mut __filename: *const libc::c_char,
+                                       mut __statbuf: *mut stat64,
+                                       mut __flag: libc::c_int)
+     -> libc::c_int {
+        return __fxstatat64(_STAT_VER, __fd, __filename, __statbuf, __flag);
+    }
+    #[inline]
+    #[c2rust::src_loc = "459:1"]
+    pub unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
+                                   mut __statbuf: *mut stat) -> libc::c_int {
+        return __lxstat(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "508:1"]
+    pub unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
+                                     mut __statbuf: *mut stat64)
+     -> libc::c_int {
+        return __lxstat64(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "482:1"]
+    pub unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
+                                   mut __mode: __mode_t, mut __dev: __dev_t)
+     -> libc::c_int {
+        return __xmknod(_MKNOD_VER, __path, __mode, &mut __dev);
+    }
+    #[c2rust::src_loc = "390:10"]
+    pub const _MKNOD_VER: libc::c_int = 0 as libc::c_int;
+    #[inline]
+    #[c2rust::src_loc = "490:1"]
+    pub unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
+                                     mut __path: *const libc::c_char,
+                                     mut __mode: __mode_t, mut __dev: __dev_t)
+     -> libc::c_int {
+        return __xmknodat(_MKNOD_VER, __fd, __path, __mode, &mut __dev);
+    }
+    use super::stat_h::{stat, _STAT_VER_LINUX, _STAT_VER, stat64};
+    use super::types_h::{__mode_t, __dev_t};
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "409:1"]
+        pub fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
+                       __stat_buf: *mut stat) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "406:1"]
+        pub fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
+                        __stat_buf: *mut stat) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "430:1"]
+        pub fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+                         __stat_buf: *mut stat64) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "428:1"]
+        pub fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
+                          __stat_buf: *mut stat64) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "415:1"]
+        pub fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
+                          __filename: *const libc::c_char,
+                          __stat_buf: *mut stat, __flag: libc::c_int)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "434:1"]
+        pub fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
+                            __filename: *const libc::c_char,
+                            __stat_buf: *mut stat64, __flag: libc::c_int)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "412:1"]
+        pub fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
+                        __stat_buf: *mut stat) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "432:1"]
+        pub fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+                          __stat_buf: *mut stat64) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "438:1"]
+        pub fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
+                        __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "441:1"]
+        pub fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
+                          __path: *const libc::c_char, __mode: __mode_t,
+                          __dev: *mut __dev_t) -> libc::c_int;
+    }
+}
+#[c2rust::header_src = "/usr/include/string.h:17"]
+pub mod string_h {
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "43:14"]
+        pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void,
+                      _: libc::c_ulong) -> *mut libc::c_void;
+        #[no_mangle]
+        #[c2rust::src_loc = "61:14"]
+        pub fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong)
+         -> *mut libc::c_void;
+        #[no_mangle]
+        #[c2rust::src_loc = "64:12"]
+        pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
+                      _: libc::c_ulong) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "122:14"]
+        pub fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
+         -> *mut libc::c_char;
+        #[no_mangle]
+        #[c2rust::src_loc = "226:14"]
+        pub fn strchr(_: *const libc::c_char, _: libc::c_int)
+         -> *mut libc::c_char;
+        #[no_mangle]
+        #[c2rust::src_loc = "385:15"]
+        pub fn strlen(_: *const libc::c_char) -> libc::c_ulong;
+        #[no_mangle]
+        #[c2rust::src_loc = "397:14"]
+        pub fn strerror(_: libc::c_int) -> *mut libc::c_char;
+    }
+}
+#[c2rust::header_src = "/usr/include/unistd.h:17"]
+pub mod unistd_h {
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "353:1"]
+        pub fn close(__fd: libc::c_int) -> libc::c_int;
+    }
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:17"]
+pub mod uintn_identity_h {
+    #[inline]
+    #[c2rust::src_loc = "44:1"]
+    pub unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t)
+     -> __uint64_t {
+        return __x;
+    }
+    #[inline]
+    #[c2rust::src_loc = "38:1"]
+    pub unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t)
+     -> __uint32_t {
+        return __x;
+    }
+    #[inline]
+    #[c2rust::src_loc = "32:1"]
+    pub unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t)
+     -> __uint16_t {
+        return __x;
+    }
+    use super::types_h::{__uint64_t, __uint32_t, __uint16_t};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/byteswap.h:17"]
+pub mod byteswap_h {
+    #[inline]
+    #[c2rust::src_loc = "69:15"]
+    pub unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+        return ((__bsx as libc::c_ulonglong &
+                     0xff00000000000000 as libc::c_ulonglong) >>
+                    56 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff000000000000 as libc::c_ulonglong) >>
+                        40 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff0000000000 as libc::c_ulonglong) >>
+                        24 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff00000000 as libc::c_ulonglong) >>
+                        8 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff000000 as libc::c_ulonglong) << 8 as libc::c_int
+                    |
+                    (__bsx as libc::c_ulonglong &
+                         0xff0000 as libc::c_ulonglong) << 24 as libc::c_int |
+                    (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong)
+                        << 40 as libc::c_int |
+                    (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong)
+                        << 56 as libc::c_int) as __uint64_t;
+    }
+    #[inline]
+    #[c2rust::src_loc = "48:1"]
+    pub unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+        return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
+                   (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
+                   (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
+                   (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
+    }
+    #[inline]
+    #[c2rust::src_loc = "33:1"]
+    pub unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+        return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int
+                    |
+                    (__bsx as libc::c_int & 0xff as libc::c_int) <<
+                        8 as libc::c_int) as __uint16_t;
+    }
+    use super::types_h::{__uint64_t, __uint32_t, __uint16_t};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdio.h:17"]
+pub mod bits_stdio_h {
+    #[inline]
+    #[c2rust::src_loc = "38:1"]
+    pub unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
+                                     mut __arg: ::std::ffi::VaList)
+     -> libc::c_int {
+        return vfprintf(stdout, __fmt, __arg.as_va_list());
+    }
+    #[inline]
+    #[c2rust::src_loc = "46:1"]
+    pub unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
+    #[inline]
+    #[c2rust::src_loc = "65:1"]
+    pub unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE)
+     -> libc::c_int {
+        return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __uflow(__fp)
+               } else {
+                   let fresh0 = (*__fp)._IO_read_ptr;
+                   (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+                   *(fresh0 as *mut libc::c_uchar) as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "72:1"]
+    pub unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
+        return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __uflow(stdin)
+               } else {
+                   let fresh1 = (*stdin)._IO_read_ptr;
+                   (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+                   *(fresh1 as *mut libc::c_uchar) as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "55:1"]
+    pub unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE)
+     -> libc::c_int {
+        return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __uflow(__fp)
+               } else {
+                   let fresh2 = (*__fp)._IO_read_ptr;
+                   (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+                   *(fresh2 as *mut libc::c_uchar) as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "81:1"]
+    pub unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
+        return putc(__c, stdout);
+    }
+    #[inline]
+    #[c2rust::src_loc = "90:1"]
+    pub unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
+                                            mut __stream: *mut FILE)
+     -> libc::c_int {
+        return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+               } else {
+                   let fresh3 = (*__stream)._IO_write_ptr;
+                   (*__stream)._IO_write_ptr =
+                       (*__stream)._IO_write_ptr.offset(1);
+                   *fresh3 = __c as libc::c_char;
+                   *fresh3 as libc::c_uchar as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "100:1"]
+    pub unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
+                                           mut __stream: *mut FILE)
+     -> libc::c_int {
+        return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+               } else {
+                   let fresh4 = (*__stream)._IO_write_ptr;
+                   (*__stream)._IO_write_ptr =
+                       (*__stream)._IO_write_ptr.offset(1);
+                   *fresh4 = __c as libc::c_char;
+                   *fresh4 as libc::c_uchar as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "107:1"]
+    pub unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int)
+     -> libc::c_int {
+        return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __overflow(stdout, __c as libc::c_uchar as libc::c_int)
+               } else {
+                   let fresh5 = (*stdout)._IO_write_ptr;
+                   (*stdout)._IO_write_ptr =
+                       (*stdout)._IO_write_ptr.offset(1);
+                   *fresh5 = __c as libc::c_char;
+                   *fresh5 as libc::c_uchar as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "117:1"]
+    pub unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
+                                     mut __n: *mut size_t,
+                                     mut __stream: *mut FILE) -> __ssize_t {
+        return __getdelim(__lineptr, __n, '\n' as i32, __stream);
+    }
+    #[inline]
+    #[c2rust::src_loc = "127:1"]
+    pub unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE)
+     -> libc::c_int {
+        return ((*__stream)._flags & _IO_EOF_SEEN != 0 as libc::c_int) as
+                   libc::c_int;
+    }
+    #[inline]
+    #[c2rust::src_loc = "134:1"]
+    pub unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE)
+     -> libc::c_int {
+        return ((*__stream)._flags & _IO_ERR_SEEN != 0 as libc::c_int) as
+                   libc::c_int;
+    }
+    use super::internal::__va_list_tag;
+    use super::stdio_h::{vfprintf, stdout, getc, stdin, __uflow, putc,
+                         __overflow, __getdelim};
+    use super::FILE_h::FILE;
+    use super::stddef_h::size_t;
+    use super::types_h::__ssize_t;
+    use super::struct_FILE_h::{_IO_EOF_SEEN, _IO_ERR_SEEN};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:17"]
+pub mod stdlib_float_h {
+    #[inline]
+    #[c2rust::src_loc = "24:1"]
+    pub unsafe extern "C" fn atof(mut __nptr: *const libc::c_char)
+     -> libc::c_double {
+        return strtod(__nptr,
+                      NULL as *mut libc::c_void as *mut *mut libc::c_char);
+    }
+    use super::stdlib_h::strtod;
+    use super::stddef_h::NULL;
+}
+#[c2rust::header_src = "/usr/include/errno.h:17"]
+pub mod errno_h {
+    #[c2rust::src_loc = "38:10"]
+    pub const errno: libc::c_int = *__errno_location();
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "37:1"]
+        pub fn __errno_location() -> *mut libc::c_int;
+    }
+}
+#[c2rust::header_src = "/mnt/d/projects/dnsmasq-2.84/src/config.h:17"]
+pub mod config_h {
+    #[c2rust::src_loc = "20:9"]
+    pub const TCP_MAX_QUERIES: libc::c_int = 100 as libc::c_int;
+    #[c2rust::src_loc = "29:9"]
+    pub const UDP_TEST_TIME: libc::c_int = 60 as libc::c_int;
+    #[c2rust::src_loc = "26:9"]
+    pub const TIMEOUT: libc::c_int = 10 as libc::c_int;
+    #[c2rust::src_loc = "27:9"]
+    pub const FORWARD_TEST: libc::c_int = 50 as libc::c_int;
+    #[c2rust::src_loc = "28:9"]
+    pub const FORWARD_TIME: libc::c_int = 20 as libc::c_int;
+    #[c2rust::src_loc = "32:9"]
+    pub const RANDOM_SOCKS: libc::c_int = 64 as libc::c_int;
+    #[c2rust::src_loc = "23:9"]
+    pub const SAFE_PKTSZ: libc::c_int = 1280 as libc::c_int;
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:17"]
+pub mod stdlib_bsearch_h {
+    #[inline]
+    #[c2rust::src_loc = "19:1"]
+    pub unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
+                                     mut __base: *const libc::c_void,
+                                     mut __nmemb: size_t, mut __size: size_t,
+                                     mut __compar: __compar_fn_t)
+     -> *mut libc::c_void {
+        let mut __l: size_t = 0;
+        let mut __u: size_t = 0;
+        let mut __idx: size_t = 0;
+        let mut __p = 0 as *const libc::c_void;
+        let mut __comparison: libc::c_int = 0;
+        __l = 0 as libc::c_int as size_t;
+        __u = __nmemb;
+        while __l < __u {
+            __idx =
+                __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
+                                                       libc::c_ulong);
+            __p =
+                (__base as
+                     *const libc::c_char).offset(__idx.wrapping_mul(__size) as
+                                                     isize) as
+                    *mut libc::c_void;
+            __comparison =
+                Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
+                                                                                                       __p);
+            if __comparison < 0 as libc::c_int {
+                __u = __idx
+            } else if __comparison > 0 as libc::c_int {
+                __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
+            } else { return __p as *mut libc::c_void }
+        }
+        return NULL as *mut libc::c_void;
+    }
+    use super::stddef_h::{size_t, NULL};
+    use super::stdlib_h::__compar_fn_t;
+}
+#[c2rust::header_src = "/usr/include/ctype.h:17"]
+pub mod ctype_h {
+    #[inline]
+    #[c2rust::src_loc = "206:1"]
+    pub unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
+        return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+                   *(*__ctype_tolower_loc()).offset(__c as isize)
+               } else { __c };
+    }
+    #[inline]
+    #[c2rust::src_loc = "212:1"]
+    pub unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
+        return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+                   *(*__ctype_toupper_loc()).offset(__c as isize)
+               } else { __c };
+    }
+    use super::types_h::__int32_t;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "81:1"]
+        pub fn __ctype_tolower_loc() -> *mut *const __int32_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "83:1"]
+        pub fn __ctype_toupper_loc() -> *mut *const __int32_t;
+    }
+}
+#[c2rust::header_src = "/usr/include/time.h:17"]
+pub mod time_h {
+    use super::time_t_h::time_t;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "78:1"]
+        pub fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/syslog.h:17"]
+pub mod syslog_h {
+    #[c2rust::src_loc = "55:9"]
+    pub const LOG_WARNING: libc::c_int = 4 as libc::c_int;
+    #[c2rust::src_loc = "54:9"]
+    pub const LOG_ERR: libc::c_int = 3 as libc::c_int;
+}
+#[c2rust::header_src = "/usr/include/asm-generic/errno-base.h:17"]
+pub mod errno_base_h {
+    #[c2rust::src_loc = "26:9"]
+    pub const EINVAL: libc::c_int = 22 as libc::c_int;
+}
+pub use self::internal::__va_list_tag;
+pub use self::types_h::{__uint8_t, __uint16_t, __int32_t, __uint32_t,
+                        __uint64_t, __intmax_t, __uintmax_t, __dev_t, __uid_t,
+                        __gid_t, __ino_t, __ino64_t, __mode_t, __nlink_t,
+                        __off_t, __off64_t, __pid_t, __time_t, __blksize_t,
+                        __blkcnt_t, __blkcnt64_t, __ssize_t,
+                        __syscall_slong_t, __caddr_t, __socklen_t};
+pub use self::sys_types_h::{ino_t, dev_t, off_t, pid_t, ssize_t};
+pub use self::time_t_h::time_t;
+pub use self::stddef_h::{size_t, NULL, NULL_0};
+pub use self::struct_timespec_h::timespec;
+pub use self::struct_iovec_h::iovec;
+pub use self::socket_h::{socklen_t, sockaddr, C2RustUnnamed, MSG_CMSG_CLOEXEC,
+                         MSG_FASTOPEN, MSG_ZEROCOPY, MSG_BATCH,
+                         MSG_WAITFORONE, MSG_MORE, MSG_NOSIGNAL, MSG_ERRQUEUE,
+                         MSG_RST, MSG_CONFIRM, MSG_SYN, MSG_FIN, MSG_WAITALL,
+                         MSG_EOR, MSG_DONTWAIT, MSG_TRUNC, MSG_PROXY,
+                         MSG_CTRUNC, MSG_TRYHARD, MSG_DONTROUTE, MSG_PEEK,
+                         MSG_OOB, msghdr, cmsghdr, __cmsg_nxthdr,
+                         MSG_FASTOPEN_0, MSG_TRUNC_0, AF_INET6, PF_INET6,
+                         AF_INET, PF_INET};
+pub use self::socket_type_h::{__socket_type, SOCK_NONBLOCK, SOCK_CLOEXEC,
+                              SOCK_PACKET, SOCK_DCCP, SOCK_SEQPACKET,
+                              SOCK_RDM, SOCK_RAW, SOCK_DGRAM, SOCK_STREAM,
+                              SOCK_STREAM_0};
+pub use self::sockaddr_h::sa_family_t;
+pub use self::sys_socket_h::{__SOCKADDR_ARG, __CONST_SOCKADDR_ARG,
+                             sockaddr_x25, sockaddr_ns, sockaddr_iso,
+                             sockaddr_ipx, sockaddr_inarp, sockaddr_eon,
+                             sockaddr_dl, sockaddr_ax25, sockaddr_at, socket,
+                             connect, getpeername, sendto, recvfrom, sendmsg,
+                             recvmsg};
+pub use self::un_h::sockaddr_un;
+pub use self::in_h::{sockaddr_in6, in6_addr, C2RustUnnamed_0, in_port_t,
+                     sockaddr_in, in_addr, in_addr_t, C2RustUnnamed_1,
+                     IPPROTO_MAX, IPPROTO_RAW, IPPROTO_MPLS, IPPROTO_UDPLITE,
+                     IPPROTO_SCTP, IPPROTO_COMP, IPPROTO_PIM, IPPROTO_ENCAP,
+                     IPPROTO_BEETPH, IPPROTO_MTP, IPPROTO_AH, IPPROTO_ESP,
+                     IPPROTO_GRE, IPPROTO_RSVP, IPPROTO_IPV6, IPPROTO_DCCP,
+                     IPPROTO_TP, IPPROTO_IDP, IPPROTO_UDP, IPPROTO_PUP,
+                     IPPROTO_EGP, IPPROTO_TCP, IPPROTO_IPIP, IPPROTO_IGMP,
+                     IPPROTO_ICMP, IPPROTO_IP, in6_pktinfo, IPPROTO_IP_0,
+                     IPPROTO_IPV6_0};
+pub use self::stdint_uintn_h::{uint32_t, uint16_t, uint8_t};
+pub use self::bits_in_h::{in_pktinfo, IP_PKTINFO};
+pub use self::metrics_h::{C2RustUnnamed_2, __METRIC_MAX,
+                          METRIC_LEASES_PRUNED_6, METRIC_LEASES_ALLOCATED_6,
+                          METRIC_LEASES_PRUNED_4, METRIC_LEASES_ALLOCATED_4,
+                          METRIC_NOANSWER, METRIC_DHCPREQUEST,
+                          METRIC_DHCPRELEASE, METRIC_DHCPOFFER,
+                          METRIC_DHCPNAK, METRIC_DHCPINFORM,
+                          METRIC_DHCPDISCOVER, METRIC_DHCPDECLINE,
+                          METRIC_DHCPACK, METRIC_PXE, METRIC_BOOTP,
+                          METRIC_DNS_LOCAL_ANSWERED, METRIC_DNS_AUTH_ANSWERED,
+                          METRIC_DNS_QUERIES_FORWARDED,
+                          METRIC_DNS_CACHE_LIVE_FREED,
+                          METRIC_DNS_CACHE_INSERTED};
+pub use self::dnsmasq_h::{u8_0, u16_0, u32_0, all_addr, C2RustUnnamed_5,
+                          C2RustUnnamed_6, blockdata, C2RustUnnamed_7,
+                          C2RustUnnamed_8, C2RustUnnamed_9, C2RustUnnamed_10,
+                          crec, C2RustUnnamed_11, bigname, bogus_addr, doctor,
+                          mx_srv_record, naptr, txt_record, ptr_record, cname,
+                          addrlist, auth_zone, auth_name_list, host_record,
+                          name_list, interface_name, mysockaddr, serverfd,
+                          randfd, server, ipsets, irec, listener, iname,
+                          mysubnet, resolvc, hostsfile, frec, frec_src,
+                          dhcp_netid, dhcp_netid_list, tag_if, delay_config,
+                          hwaddr_config, dhcp_config, dhcp_opt,
+                          C2RustUnnamed_12, dhcp_boot, dhcp_match_name,
+                          pxe_service, dhcp_vendor, dhcp_pxe_vendor, dhcp_mac,
+                          dhcp_bridge, cond_domain, ra_interface,
+                          dhcp_context, shared_network, ping_result,
+                          tftp_file, tftp_transfer, addr_list, tftp_prefix,
+                          dhcp_relay, dnsmasq_daemon, SERV_GOT_TCP,
+                          ADDRLIST_IPV6, SERV_NO_REBIND, F_QUERY, F_DNSSECOK,
+                          F_NXDOMAIN, F_NOERR, F_NEG, F_CONFIG,
+                          SERV_USE_RESOLV, SERV_DO_DNSSEC, SERV_LOOP, F_IPV4,
+                          F_SERVER, F_IPV6, F_FORWARD, SERV_TYPE,
+                          SERV_LITERAL_ADDRESS, SERV_HAS_DOMAIN,
+                          SERV_FOR_NODOTS, SERV_NO_ADDR, F_RCODE,
+                          SERV_WARNED_RECURSIVE, F_UPSTREAM, DUMP_REPLY,
+                          DUMP_UP_REPLY, FREC_ADDED_PHEADER, FREC_DO_QUESTION,
+                          FREC_AD_QUESTION, FREC_NO_CACHE,
+                          FREC_CHECKING_DISABLED, FREC_NOREBIND,
+                          FREC_TEST_PKTSZ, DUMP_UP_QUERY, FREC_HAS_EXTRADATA,
+                          HASH_SIZE, FREC_DS_QUERY, FREC_DNSKEY_QUERY,
+                          FREC_HAS_PHEADER, FREC_HAS_SUBNET, DUMP_SEC_REPLY,
+                          DUMP_QUERY, check_for_local_domain, resize_packet,
+                          answer_auth, in_zone, check_for_bogus_wildcard,
+                          hash_questions, rand16, whine_malloc, sa_len,
+                          sockaddr_isequal, hostname_isequal, is_same_net,
+                          is_same_net6, retry_send, prettyprint_addr,
+                          read_write, my_syslog, check_log_writer,
+                          answer_request, extract_addresses, setup_reply,
+                          extract_request, querystr, log_query, random_sock,
+                          check_for_ignored_address, enumerate_interfaces,
+                          label_exception, loopback_exception, iface_check,
+                          indextoname, local_bind, detect_loop,
+                          find_pseudoheader, add_do_bit, add_edns0_config,
+                          add_pseudoheader, rrfilter, check_source,
+                          dump_packet};
+pub use self::dns_protocol_h::{dns_header, MAXDNAME, RRFIXEDSZ, SERVFAIL,
+                               HB3_QR, PACKETSZ, REFUSED, HB4_CD, HB4_AD,
+                               HB3_OPCODE, QUERY, NOERROR, NXDOMAIN, HB3_AA,
+                               HB4_RCODE, HB3_TC, HB4_RA};
+pub use self::stat_h::{stat, stat64, _STAT_VER_LINUX, _STAT_VER};
+pub use self::if_h::{ifmap, ifreq, C2RustUnnamed_3, C2RustUnnamed_4};
+pub use self::struct_FILE_h::{_IO_FILE, _IO_lock_t, _IO_EOF_SEEN,
+                              _IO_ERR_SEEN, _IO_wide_data, _IO_codecvt,
+                              _IO_marker};
+pub use self::FILE_h::FILE;
+pub use self::stdlib_h::{__compar_fn_t, atoi, atol, atoll, strtod, strtol,
+                         strtoll};
+pub use self::stdint_h::{intmax_t, uintmax_t};
+pub use self::inttypes_h::{__gwchar_t, strtoimax, strtoumax, wcstoimax,
+                           wcstoumax, __strtol_internal, __strtoul_internal,
+                           __wcstol_internal, __wcstoul_internal};
+use self::stdio_h::{stdin, stdout, vfprintf, getc, putc, __getdelim, __uflow,
+                    __overflow};
+pub use self::sys_stat_h::{stat, fstat, stat64, fstat64, fstatat, fstatat64,
+                           lstat, lstat64, mknod, _MKNOD_VER, mknodat,
+                           __xstat, __fxstat, __xstat64, __fxstat64,
+                           __fxstatat, __fxstatat64, __lxstat, __lxstat64,
+                           __xmknod, __xmknodat};
+use self::string_h::{memcpy, memset, memcmp, strcpy, strchr, strlen,
+                     strerror};
+use self::unistd_h::close;
+pub use self::uintn_identity_h::{__uint64_identity, __uint32_identity,
+                                 __uint16_identity};
+pub use self::byteswap_h::{__bswap_64, __bswap_32, __bswap_16};
+pub use self::bits_stdio_h::{vprintf, getchar, getc_unlocked,
+                             getchar_unlocked, fgetc_unlocked, putchar,
+                             fputc_unlocked, putc_unlocked, putchar_unlocked,
+                             getline, feof_unlocked, ferror_unlocked};
+pub use self::stdlib_float_h::atof;
+pub use self::errno_h::{errno, __errno_location};
+pub use self::config_h::{TCP_MAX_QUERIES, UDP_TEST_TIME, TIMEOUT,
+                         FORWARD_TEST, FORWARD_TIME, RANDOM_SOCKS,
+                         SAFE_PKTSZ};
+pub use self::stdlib_bsearch_h::bsearch;
+pub use self::ctype_h::{tolower, toupper, __ctype_tolower_loc,
+                        __ctype_toupper_loc};
+use self::time_h::difftime;
+pub use self::syslog_h::{LOG_WARNING, LOG_ERR};
+pub use self::errno_base_h::EINVAL;
+#[derive(Copy, Clone)]
+#[repr(C)]
+#[c2rust::src_loc = "36:3"]
+pub union C2RustUnnamed_13 {
+    pub align: cmsghdr,
+    pub control: [libc::c_char; 32],
+    pub control6: [libc::c_char; 40],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+#[c2rust::src_loc = "1498:3"]
+pub union C2RustUnnamed_14 {
+    pub c: *mut libc::c_uchar,
+    pub p: *mut in6_pktinfo,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+#[c2rust::src_loc = "1459:8"]
+pub union C2RustUnnamed_15 {
+    pub c: *mut libc::c_uchar,
+    pub p: *mut in_pktinfo,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+#[c2rust::src_loc = "1338:3"]
+pub union C2RustUnnamed_16 {
+    pub align: cmsghdr,
+    pub control6: [libc::c_char; 40],
+    pub control: [libc::c_char; 32],
+}
+/* Send a UDP packet with its source address set as "source" 
+   unless nowild is true, when we just send it with the kernel default */
+#[no_mangle]
+#[c2rust::src_loc = "30:1"]
+pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
+                                   mut nowild: libc::c_int,
+                                   mut packet: *mut libc::c_char,
+                                   mut len: size_t, mut to: *mut mysockaddr,
+                                   mut source: *mut all_addr,
+                                   mut iface: libc::c_uint) -> libc::c_int {
+    let mut msg =
+        msghdr{msg_name: 0 as *mut libc::c_void,
+               msg_namelen: 0,
+               msg_iov: 0 as *mut iovec,
+               msg_iovlen: 0,
+               msg_control: 0 as *mut libc::c_void,
+               msg_controllen: 0,
+               msg_flags:
+                   0,}; /* Need iface for IPv6 to handle link-local addrs */
+    let mut iov: [iovec; 1] =
+        [iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,}; 1];
+    let mut control_u =
+        C2RustUnnamed_13{align:
+                             cmsghdr{cmsg_len: 0,
+                                     cmsg_level: 0,
+                                     cmsg_type: 0,
+                                     __cmsg_data: [],},};
+    iov[0 as libc::c_int as usize].iov_base = packet as *mut libc::c_void;
+    iov[0 as libc::c_int as usize].iov_len = len;
+    msg.msg_control = NULL_0 as *mut libc::c_void;
+    msg.msg_controllen = 0 as libc::c_int as size_t;
+    msg.msg_flags = 0 as libc::c_int;
+    msg.msg_name = to as *mut libc::c_void;
+    msg.msg_namelen = sa_len(to) as socklen_t;
+    msg.msg_iov = iov.as_mut_ptr();
+    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    if nowild == 0 {
+        let mut cmptr = 0 as *mut cmsghdr;
+        msg.msg_control =
+            &mut control_u as *mut C2RustUnnamed_13 as *mut libc::c_void;
+        msg.msg_controllen =
+            ::std::mem::size_of::<C2RustUnnamed_13>() as libc::c_ulong;
+        cmptr =
+            if msg.msg_controllen >=
+                   ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+                msg.msg_control as *mut cmsghdr
+            } else { 0 as *mut cmsghdr };
+        if (*to).sa.sa_family as libc::c_int == AF_INET {
+            let mut p =
+                in_pktinfo{ipi_ifindex: 0,
+                           ipi_spec_dst: in_addr{s_addr: 0,},
+                           ipi_addr: in_addr{s_addr: 0,},};
+            p.ipi_ifindex = 0 as libc::c_int;
+            p.ipi_spec_dst = (*source).addr4;
+            msg.msg_controllen =
+                ((::std::mem::size_of::<in_pktinfo>() as
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                      as
+                                                      libc::c_ulong).wrapping_sub(1
+                                                                                      as
+                                                                                      libc::c_int
+                                                                                      as
+                                                                                      libc::c_ulong)
+                     &
+                     !(::std::mem::size_of::<size_t>() as
+                           libc::c_ulong).wrapping_sub(1 as libc::c_int as
+                                                           libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
+                                                                                             as
+                                                                                             libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                                                             as
+                                                                                                                             libc::c_ulong).wrapping_sub(1
+                                                                                                                                                             as
+                                                                                                                                                             libc::c_int
+                                                                                                                                                             as
+                                                                                                                                                             libc::c_ulong)
+                                                                                            &
+                                                                                            !(::std::mem::size_of::<size_t>()
+                                                                                                  as
+                                                                                                  libc::c_ulong).wrapping_sub(1
+                                                                                                                                  as
+                                                                                                                                  libc::c_int
+                                                                                                                                  as
+                                                                                                                                  libc::c_ulong));
+            memcpy((*cmptr).__cmsg_data.as_mut_ptr() as *mut libc::c_void,
+                   &mut p as *mut in_pktinfo as *const libc::c_void,
+                   ::std::mem::size_of::<in_pktinfo>() as libc::c_ulong);
+            (*cmptr).cmsg_len =
+                ((::std::mem::size_of::<cmsghdr>() as
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                      as
+                                                      libc::c_ulong).wrapping_sub(1
+                                                                                      as
+                                                                                      libc::c_int
+                                                                                      as
+                                                                                      libc::c_ulong)
+                     &
+                     !(::std::mem::size_of::<size_t>() as
+                           libc::c_ulong).wrapping_sub(1 as libc::c_int as
+                                                           libc::c_ulong)).wrapping_add(::std::mem::size_of::<in_pktinfo>()
+                                                                                            as
+                                                                                            libc::c_ulong);
+            (*cmptr).cmsg_level = IPPROTO_IP_0;
+            (*cmptr).cmsg_type = IP_PKTINFO
+        } else {
+            let mut p_0 =
+                in6_pktinfo{ipi6_addr:
+                                in6_addr{__in6_u:
+                                             C2RustUnnamed_0{__u6_addr8:
+                                                                 [0; 16],},},
+                            ipi6_ifindex: 0,};
+            p_0.ipi6_ifindex = iface;
+            p_0.ipi6_addr = (*source).addr6;
+            msg.msg_controllen =
+                ((::std::mem::size_of::<in6_pktinfo>() as
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                      as
+                                                      libc::c_ulong).wrapping_sub(1
+                                                                                      as
+                                                                                      libc::c_int
+                                                                                      as
+                                                                                      libc::c_ulong)
+                     &
+                     !(::std::mem::size_of::<size_t>() as
+                           libc::c_ulong).wrapping_sub(1 as libc::c_int as
+                                                           libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
+                                                                                             as
+                                                                                             libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                                                             as
+                                                                                                                             libc::c_ulong).wrapping_sub(1
+                                                                                                                                                             as
+                                                                                                                                                             libc::c_int
+                                                                                                                                                             as
+                                                                                                                                                             libc::c_ulong)
+                                                                                            &
+                                                                                            !(::std::mem::size_of::<size_t>()
+                                                                                                  as
+                                                                                                  libc::c_ulong).wrapping_sub(1
+                                                                                                                                  as
+                                                                                                                                  libc::c_int
+                                                                                                                                  as
+                                                                                                                                  libc::c_ulong));
+            memcpy((*cmptr).__cmsg_data.as_mut_ptr() as *mut libc::c_void,
+                   &mut p_0 as *mut in6_pktinfo as *const libc::c_void,
+                   ::std::mem::size_of::<in6_pktinfo>() as libc::c_ulong);
+            (*cmptr).cmsg_len =
+                ((::std::mem::size_of::<cmsghdr>() as
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                      as
+                                                      libc::c_ulong).wrapping_sub(1
+                                                                                      as
+                                                                                      libc::c_int
+                                                                                      as
+                                                                                      libc::c_ulong)
+                     &
+                     !(::std::mem::size_of::<size_t>() as
+                           libc::c_ulong).wrapping_sub(1 as libc::c_int as
+                                                           libc::c_ulong)).wrapping_add(::std::mem::size_of::<in6_pktinfo>()
+                                                                                            as
+                                                                                            libc::c_ulong);
+            (*cmptr).cmsg_type = (*dnsmasq_daemon).v6pktinfo;
+            (*cmptr).cmsg_level = IPPROTO_IPV6_0
+        }
+    }
+    while retry_send(sendmsg(fd, &mut msg, 0 as libc::c_int)) != 0 { }
+    if errno != 0 as libc::c_int {
+        /* If interface is still in DAD, EINVAL results - ignore that. */
+        if errno != EINVAL {
+            my_syslog(LOG_ERR,
+                      b"failed to send packet: %s\x00" as *const u8 as
+                          *const libc::c_char, strerror(errno));
+        }
+        return 0 as libc::c_int
+    }
+    return 1 as libc::c_int;
+}
+#[c2rust::src_loc = "111:1"]
+unsafe extern "C" fn search_servers(mut now: time_t,
+                                    mut addrpp: *mut *mut all_addr,
+                                    mut qtype: libc::c_uint,
+                                    mut qdomain: *mut libc::c_char,
+                                    mut type_0: *mut libc::c_int,
+                                    mut domain: *mut *mut libc::c_char,
+                                    mut norebind: *mut libc::c_int)
+ -> libc::c_uint {
+    /* If the query ends in the domain in one of our servers, set
+     domain to point to that name. We find the largest match to allow both
+     domain.org and sub.domain.org to exist. */
+    let mut namelen = strlen(qdomain) as libc::c_uint;
+    let mut matchlen = 0 as libc::c_int as libc::c_uint;
+    let mut serv = 0 as *mut server;
+    let mut flags = 0 as libc::c_int as libc::c_uint;
+    static mut zero: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+    let mut current_block_45: u64;
+    serv = (*dnsmasq_daemon).servers;
+    while !serv.is_null() {
+        if !(qtype == F_DNSSECOK && (*serv).flags & SERV_DO_DNSSEC == 0) {
+            /* domain matches take priority over NODOTS matches */
+            if (*serv).flags & SERV_FOR_NODOTS != 0 &&
+                   *type_0 != SERV_HAS_DOMAIN &&
+                   strchr(qdomain, '.' as i32).is_null() &&
+                   namelen != 0 as libc::c_int as libc::c_uint {
+                let mut sflag =
+                    if (*serv).addr.sa.sa_family as libc::c_int == AF_INET {
+                        F_IPV4
+                    } else { F_IPV6 };
+                *type_0 = SERV_FOR_NODOTS;
+                if (*serv).flags & SERV_NO_REBIND != 0 && !norebind.is_null()
+                   {
+                    *norebind = 1 as libc::c_int
+                } else if (*serv).flags & SERV_NO_ADDR != 0 {
+                    flags = F_NXDOMAIN
+                } else if (*serv).flags & SERV_LITERAL_ADDRESS != 0 {
+                    /* literal address = '#' -> return all-zero address for IPv4 and IPv6 */
+                    if (*serv).flags & SERV_USE_RESOLV != 0 &&
+                           qtype & (F_IPV6 | F_IPV4) != 0 {
+                        memset(&mut zero as *mut all_addr as
+                                   *mut libc::c_void, 0 as libc::c_int,
+                               ::std::mem::size_of::<all_addr>() as
+                                   libc::c_ulong);
+                        flags = qtype;
+                        *addrpp = &mut zero
+                    } else if sflag & qtype != 0 {
+                        flags = sflag;
+                        if (*serv).addr.sa.sa_family as libc::c_int == AF_INET
+                           {
+                            *addrpp =
+                                &mut (*serv).addr.in_0.sin_addr as
+                                    *mut in_addr as *mut all_addr
+                        } else {
+                            *addrpp =
+                                &mut (*serv).addr.in6.sin6_addr as
+                                    *mut in6_addr as *mut all_addr
+                        }
+                    } else if flags == 0 || flags & F_NXDOMAIN != 0 {
+                        flags = F_NOERR
+                    }
+                }
+            } else if (*serv).flags & SERV_HAS_DOMAIN != 0 {
+                let mut domainlen = strlen((*serv).domain) as libc::c_uint;
+                let mut matchstart =
+                    qdomain.offset(namelen as
+                                       isize).offset(-(domainlen as isize));
+                if namelen >= domainlen &&
+                       hostname_isequal(matchstart, (*serv).domain) != 0 &&
+                       (domainlen == 0 as libc::c_int as libc::c_uint ||
+                            namelen == domainlen ||
+                            *matchstart.offset(-(1 as libc::c_int as isize))
+                                as libc::c_int == '.' as i32) {
+                    if (*serv).flags & SERV_NO_REBIND != 0 &&
+                           !norebind.is_null() {
+                        *norebind = 1 as libc::c_int
+                    } else {
+                        let mut sflag_0 =
+                            if (*serv).addr.sa.sa_family as libc::c_int ==
+                                   AF_INET {
+                                F_IPV4
+                            } else { F_IPV6 };
+                        /* implement priority rules for --address and --server for same domain.
+		   --address wins if the address is for the correct AF
+		   --server wins otherwise. */
+                        if domainlen != 0 as libc::c_int as libc::c_uint &&
+                               domainlen == matchlen {
+                            if (*serv).flags & SERV_LITERAL_ADDRESS != 0 {
+                                if sflag_0 & qtype == 0 &&
+                                       flags ==
+                                           0 as libc::c_int as libc::c_uint {
+                                    current_block_45 = 4644295000439058019;
+                                } else {
+                                    current_block_45 = 6450636197030046351;
+                                }
+                            } else if flags & (F_IPV4 | F_IPV6) != 0 {
+                                current_block_45 = 4644295000439058019;
+                            } else { current_block_45 = 6450636197030046351; }
+                        } else { current_block_45 = 6450636197030046351; }
+                        match current_block_45 {
+                            4644295000439058019 => { }
+                            _ => {
+                                if domainlen >= matchlen {
+                                    *type_0 =
+                                        (*serv).flags &
+                                            (SERV_HAS_DOMAIN | SERV_USE_RESOLV
+                                                 | SERV_NO_REBIND |
+                                                 SERV_DO_DNSSEC);
+                                    *domain = (*serv).domain;
+                                    matchlen = domainlen;
+                                    if (*serv).flags & SERV_NO_ADDR != 0 {
+                                        flags = F_NXDOMAIN
+                                    } else if (*serv).flags &
+                                                  SERV_LITERAL_ADDRESS != 0 {
+                                        /* literal address = '#' -> return all-zero address for IPv4 and IPv6 */
+                                        if (*serv).flags & SERV_USE_RESOLV !=
+                                               0 &&
+                                               qtype & (F_IPV6 | F_IPV4) != 0
+                                           {
+                                            memset(&mut zero as *mut all_addr
+                                                       as *mut libc::c_void,
+                                                   0 as libc::c_int,
+                                                   ::std::mem::size_of::<all_addr>()
+                                                       as libc::c_ulong);
+                                            flags = qtype;
+                                            *addrpp = &mut zero
+                                        } else if sflag_0 & qtype != 0 {
+                                            flags = sflag_0;
+                                            if (*serv).addr.sa.sa_family as
+                                                   libc::c_int == AF_INET {
+                                                *addrpp =
+                                                    &mut (*serv).addr.in_0.sin_addr
+                                                        as *mut in_addr as
+                                                        *mut all_addr
+                                            } else {
+                                                *addrpp =
+                                                    &mut (*serv).addr.in6.sin6_addr
+                                                        as *mut in6_addr as
+                                                        *mut all_addr
+                                            }
+                                        } else if flags == 0 ||
+                                                      flags & F_NXDOMAIN != 0
+                                         {
+                                            flags = F_NOERR
+                                        }
+                                    } else {
+                                        flags =
+                                            0 as libc::c_int as libc::c_uint
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        serv = (*serv).next
+    }
+    if flags == 0 as libc::c_int as libc::c_uint &&
+           qtype & (F_QUERY | F_DNSSECOK) == 0 &&
+           (*dnsmasq_daemon).options[(12 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (12 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 && strchr(qdomain, '.' as i32).is_null() &&
+           namelen != 0 as libc::c_int as libc::c_uint {
+        /* don't forward A or AAAA queries for simple names, except the empty name */
+        flags = F_NOERR
+    }
+    if flags == F_NXDOMAIN && check_for_local_domain(qdomain, now) != 0 {
+        flags = F_NOERR
+    }
+    if flags != 0 {
+        if flags == F_NXDOMAIN || flags == F_NOERR {
+            log_query(flags | qtype | F_NEG | F_CONFIG | F_FORWARD, qdomain,
+                      NULL_0 as *mut all_addr, NULL_0 as *mut libc::c_char);
+        } else {
+            /* handle F_IPV4 and F_IPV6 set on ANY query to 0.0.0.0/:: domain. */
+            if flags & F_IPV4 != 0 {
+                log_query((flags | F_CONFIG | F_FORWARD) & !F_IPV6, qdomain,
+                          *addrpp,
+                          NULL_0 as
+                              *mut libc::c_char); /* use normal servers for this domain */
+            }
+            if flags & F_IPV6 != 0 {
+                log_query((flags | F_CONFIG | F_FORWARD) & !F_IPV4, qdomain,
+                          *addrpp, NULL_0 as *mut libc::c_char);
+            }
+        }
+    } else if *type_0 & SERV_USE_RESOLV != 0 {
+        *type_0 = 0 as libc::c_int;
+        *domain = NULL_0 as *mut libc::c_char
+    }
+    return flags;
+}
+#[c2rust::src_loc = "251:1"]
+unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
+                                   mut udpaddr: *mut mysockaddr,
+                                   mut dst_addr: *mut all_addr,
+                                   mut dst_iface: libc::c_uint,
+                                   mut header: *mut dns_header,
+                                   mut plen: size_t, mut now: time_t,
+                                   mut forward: *mut frec,
+                                   mut ad_reqd: libc::c_int,
+                                   mut do_bit: libc::c_int) -> libc::c_int {
+    let mut domain = NULL_0 as *mut libc::c_char;
+    let mut type_0 = SERV_DO_DNSSEC;
+    let mut norebind = 0 as libc::c_int;
+    let mut addrp = NULL_0 as *mut all_addr;
+    let mut flags = 0 as libc::c_int as libc::c_uint;
+    let mut fwd_flags = 0 as libc::c_int as libc::c_uint;
+    let mut start = NULL_0 as *mut server;
+    let mut hash =
+        hash_questions(header, plen, (*dnsmasq_daemon).namebuff) as
+            *mut libc::c_void;
+    let mut gotname =
+        extract_request(header, plen, (*dnsmasq_daemon).namebuff,
+                        NULL_0 as *mut libc::c_ushort);
+    let mut oph =
+        find_pseudoheader(header, plen, NULL_0 as *mut size_t,
+                          NULL_0 as *mut *mut libc::c_uchar,
+                          NULL_0 as *mut libc::c_int,
+                          NULL_0 as *mut libc::c_int);
+    if (*header).hb4 as libc::c_int & HB4_CD != 0 {
+        fwd_flags |= FREC_CHECKING_DISABLED as libc::c_uint
+    }
+    if ad_reqd != 0 { fwd_flags |= FREC_AD_QUESTION as libc::c_uint }
+    if !oph.is_null() { fwd_flags |= FREC_HAS_PHEADER as libc::c_uint }
+    /* may be no servers available. */
+    if !forward.is_null() ||
+           {
+               forward =
+                   lookup_frec_by_sender(__bswap_16((*header).id), udpaddr,
+                                         hash);
+               !forward.is_null()
+           } {
+        /* If we didn't get an answer advertising a maximal packet in EDNS,
+	 fall back to 1280, which should work everywhere on IPv6.
+	 If that generates an answer, it will become the new default
+	 for this server */
+        (*forward).flags |= FREC_TEST_PKTSZ;
+        /* retry on existing query, send to all available servers  */
+        domain = (*(*forward).sentto).domain; /* at end of list, recycle */
+        (*(*forward).sentto).failed_queries =
+            (*(*forward).sentto).failed_queries.wrapping_add(1);
+        if (*dnsmasq_daemon).options[(7 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (7 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+            (*forward).forwardall = 1 as libc::c_int;
+            (*dnsmasq_daemon).last_server = NULL_0 as *mut server
+        }
+        type_0 = (*(*forward).sentto).flags & SERV_TYPE;
+        start = (*(*forward).sentto).next;
+        if start.is_null() { start = (*dnsmasq_daemon).servers }
+        (*header).id = __bswap_16((*forward).new_id)
+    } else {
+        /* Query from new source, but the same query may be in progress
+	 from another source. If so, just add this client to the
+	 list that will get the reply.*/
+        if (*dnsmasq_daemon).options[(32 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (32 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 &&
+               (*dnsmasq_daemon).options[(54 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (54 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   == 0 &&
+               {
+                   forward = lookup_frec_by_query(hash, fwd_flags);
+                   !forward.is_null()
+               } {
+            /* Note whine_malloc() zeros memory. */
+            if (*dnsmasq_daemon).free_frec_src.is_null() &&
+                   (*dnsmasq_daemon).frec_src_count <
+                       (*dnsmasq_daemon).ftabsize &&
+                   {
+                       (*dnsmasq_daemon).free_frec_src =
+                           whine_malloc(::std::mem::size_of::<frec_src>() as
+                                            libc::c_ulong) as *mut frec_src;
+                       !(*dnsmasq_daemon).free_frec_src.is_null()
+                   } {
+                (*dnsmasq_daemon).frec_src_count += 1;
+                (*(*dnsmasq_daemon).free_frec_src).next =
+                    NULL_0 as *mut frec_src
+            }
+            /* If we've been spammed with many duplicates, just drop the query. */
+            if !(*dnsmasq_daemon).free_frec_src.is_null() {
+                let mut new = (*dnsmasq_daemon).free_frec_src;
+                (*dnsmasq_daemon).free_frec_src = (*new).next;
+                (*new).next = (*forward).frec_src.next;
+                (*forward).frec_src.next = new;
+                (*new).orig_id = __bswap_16((*header).id);
+                (*new).source = *udpaddr;
+                (*new).dest = *dst_addr;
+                (*new).log_id = (*dnsmasq_daemon).log_id as libc::c_uint;
+                (*new).iface = dst_iface;
+                (*new).fd = udpfd
+            }
+            return 1 as libc::c_int
+        }
+        if gotname != 0 {
+            flags =
+                search_servers(now, &mut addrp, gotname,
+                               (*dnsmasq_daemon).namebuff, &mut type_0,
+                               &mut domain, &mut norebind)
+        }
+        type_0 &= !SERV_DO_DNSSEC;
+        if !(*dnsmasq_daemon).servers.is_null() && flags == 0 {
+            forward =
+                get_new_frec(now, NULL_0 as *mut libc::c_int,
+                             NULL_0 as *mut frec)
+        }
+        /* table full - flags == 0, return REFUSED */
+        if !forward.is_null() {
+            (*forward).frec_src.source = *udpaddr;
+            (*forward).frec_src.orig_id = __bswap_16((*header).id);
+            (*forward).frec_src.dest = *dst_addr;
+            (*forward).frec_src.iface = dst_iface;
+            (*forward).frec_src.next = NULL_0 as *mut frec_src;
+            (*forward).frec_src.fd = udpfd;
+            (*forward).new_id = get_id();
+            memcpy((*forward).hash.as_mut_ptr() as *mut libc::c_void, hash,
+                   HASH_SIZE as libc::c_ulong);
+            (*forward).forwardall = 0 as libc::c_int;
+            (*forward).flags = fwd_flags as libc::c_int;
+            if norebind != 0 { (*forward).flags |= FREC_NOREBIND }
+            if (*header).hb4 as libc::c_int & HB4_CD != 0 {
+                (*forward).flags |= FREC_CHECKING_DISABLED
+            }
+            if ad_reqd != 0 { (*forward).flags |= FREC_AD_QUESTION }
+            (*header).id = __bswap_16((*forward).new_id);
+            /* In strict_order mode, always try servers in the order 
+	     specified in resolv.conf, if a domain is given 
+	     always try all the available servers,
+	     otherwise, use the one last known to work. */
+            if type_0 == 0 as libc::c_int {
+                if (*dnsmasq_daemon).options[(7 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (7 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       != 0 {
+                    start = (*dnsmasq_daemon).servers
+                } else {
+                    start = (*dnsmasq_daemon).last_server;
+                    if start.is_null() ||
+                           {
+                               let fresh6 = (*dnsmasq_daemon).forwardcount;
+                               (*dnsmasq_daemon).forwardcount =
+                                   (*dnsmasq_daemon).forwardcount + 1;
+                               (fresh6) > FORWARD_TEST
+                           } ||
+                           difftime(now, (*dnsmasq_daemon).forwardtime) >
+                               FORWARD_TIME as libc::c_double {
+                        start = (*dnsmasq_daemon).servers;
+                        (*forward).forwardall = 1 as libc::c_int;
+                        (*dnsmasq_daemon).forwardcount = 0 as libc::c_int;
+                        (*dnsmasq_daemon).forwardtime = now
+                    }
+                }
+            } else {
+                start = (*dnsmasq_daemon).servers;
+                if (*dnsmasq_daemon).options[(7 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (7 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       == 0 {
+                    (*forward).forwardall = 1 as libc::c_int
+                }
+            }
+        }
+    }
+    /* check for send errors here (no route to host) 
+     if we fail to send to all nameservers, send back an error
+     packet straight away (helps modem users when offline)  */
+    if flags == 0 && !forward.is_null() {
+        let mut firstsentto = start;
+        let mut subnet: libc::c_int = 0;
+        let mut cacheable: libc::c_int = 0;
+        let mut forwarded = 0 as libc::c_int;
+        let mut edns0_len: size_t = 0;
+        let mut pheader = 0 as *mut libc::c_uchar;
+        /* cancel */
+        (*forward).frec_src.log_id = (*dnsmasq_daemon).log_id as libc::c_uint;
+        plen =
+            add_edns0_config(header, plen,
+                             (header as
+                                  *mut libc::c_uchar).offset(PACKETSZ as
+                                                                 isize),
+                             &mut (*forward).frec_src.source, now,
+                             &mut subnet, &mut cacheable);
+        if subnet != 0 { (*forward).flags |= FREC_HAS_SUBNET }
+        if cacheable == 0 { (*forward).flags |= FREC_NO_CACHE }
+        if !find_pseudoheader(header, plen, &mut edns0_len, &mut pheader,
+                              NULL_0 as *mut libc::c_int,
+                              NULL_0 as *mut libc::c_int).is_null() {
+            /* If a query is retried, use the log_id for the retry when logging the answer. */
+            /* If there wasn't a PH before, and there is now, we added it. */
+            if oph.is_null() { (*forward).flags |= FREC_ADDED_PHEADER }
+            /* If we're sending an EDNS0 with any options, we can't recreate the query from a reply. */
+            if edns0_len > 11 as libc::c_int as libc::c_ulong {
+                (*forward).flags |= FREC_HAS_EXTRADATA
+            }
+            /* Reduce udp size on retransmits. */
+            if (*forward).flags & FREC_TEST_PKTSZ != 0 {
+                let mut t_s = 1280 as libc::c_int as u16_0;
+                let mut t_cp = pheader;
+                let fresh7 = t_cp;
+                t_cp = t_cp.offset(1);
+                *fresh7 =
+                    (t_s as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
+                *t_cp = t_s as libc::c_uchar;
+                pheader = pheader.offset(2 as libc::c_int as isize)
+            }
+        }
+        loop 
+             /* only send to servers dealing with our domain.
+	     domain may be NULL, in which case server->domain 
+	     must be NULL also. */
+             {
+            if type_0 == (*start).flags & SERV_TYPE &&
+                   (type_0 != SERV_HAS_DOMAIN ||
+                        hostname_isequal(domain, (*start).domain) != 0) &&
+                   (*start).flags & (SERV_LITERAL_ADDRESS | SERV_LOOP) == 0 {
+                let mut fd: libc::c_int = 0;
+                /* find server socket to use, may need to get random one. */
+                if !(*start).sfd.is_null() {
+                    fd = (*(*start).sfd).fd
+                } else if (*start).addr.sa.sa_family as libc::c_int ==
+                              AF_INET6 {
+                    if (*forward).rfd6.is_null() &&
+                           {
+                               (*forward).rfd6 = allocate_rfd(AF_INET6);
+                               (*forward).rfd6.is_null()
+                           } {
+                        break ;
+                    }
+                    (*dnsmasq_daemon).rfd_save = (*forward).rfd6;
+                    fd = (*(*forward).rfd6).fd
+                } else {
+                    if (*forward).rfd4.is_null() &&
+                           {
+                               (*forward).rfd4 = allocate_rfd(AF_INET);
+                               (*forward).rfd4.is_null()
+                           } {
+                        break ;
+                    }
+                    (*dnsmasq_daemon).rfd_save = (*forward).rfd4;
+                    fd = (*(*forward).rfd4).fd
+                }
+                if retry_send(sendto(fd,
+                                     header as *mut libc::c_char as
+                                         *const libc::c_void, plen,
+                                     0 as libc::c_int,
+                                     __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                              &mut (*start).addr.sa,},
+                                     sa_len(&mut (*start).addr) as socklen_t))
+                       != 0 {
+                    continue ;
+                }
+                if errno == 0 as libc::c_int {
+                    dump_packet(DUMP_UP_QUERY, header as *mut libc::c_void,
+                                plen, NULL_0 as *mut mysockaddr,
+                                &mut (*start).addr);
+                    /* Keep info in case we want to re-send this packet */
+                    (*dnsmasq_daemon).srv_save = start;
+                    (*dnsmasq_daemon).packet_len = plen;
+                    if gotname == 0 {
+                        strcpy((*dnsmasq_daemon).namebuff,
+                               b"query\x00" as *const u8 as
+                                   *const libc::c_char);
+                    }
+                    if (*start).addr.sa.sa_family as libc::c_int == AF_INET {
+                        log_query(F_SERVER | F_IPV4 | F_FORWARD,
+                                  (*dnsmasq_daemon).namebuff,
+                                  &mut (*start).addr.in_0.sin_addr as
+                                      *mut in_addr as *mut all_addr,
+                                  NULL_0 as *mut libc::c_char);
+                    } else {
+                        log_query(F_SERVER | F_IPV6 | F_FORWARD,
+                                  (*dnsmasq_daemon).namebuff,
+                                  &mut (*start).addr.in6.sin6_addr as
+                                      *mut in6_addr as *mut all_addr,
+                                  NULL_0 as *mut libc::c_char);
+                    }
+                    (*start).queries = (*start).queries.wrapping_add(1);
+                    forwarded = 1 as libc::c_int;
+                    (*forward).sentto = start;
+                    if (*forward).forwardall == 0 { break ; }
+                    (*forward).forwardall += 1
+                }
+            }
+            start = (*start).next;
+            if start.is_null() { start = (*dnsmasq_daemon).servers }
+            if start == firstsentto { break ; }
+        }
+        if forwarded != 0 { return 1 as libc::c_int }
+        (*header).id = __bswap_16((*forward).frec_src.orig_id);
+        free_frec(forward);
+    }
+    /* could not send on, prepare to return */
+    /* could not send on, return empty answer or address if known for whole domain */
+    if udpfd != -(1 as libc::c_int) {
+        plen =
+            setup_reply(header, plen, addrp, flags,
+                        (*dnsmasq_daemon).local_ttl);
+        if !oph.is_null() {
+            plen =
+                add_pseudoheader(header, plen,
+                                 (header as
+                                      *mut libc::c_uchar).offset(PACKETSZ as
+                                                                     isize),
+                                 (*dnsmasq_daemon).edns_pktsz,
+                                 0 as libc::c_int,
+                                 NULL_0 as *mut libc::c_uchar,
+                                 0 as libc::c_int as size_t, do_bit,
+                                 0 as libc::c_int)
+        }
+        send_from(udpfd,
+                  ((*dnsmasq_daemon).options[(13 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (13 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       != 0 ||
+                       (*dnsmasq_daemon).options[(39 as libc::c_int as
+                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                       as
+                                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                                       as
+                                                                                                                       libc::c_int
+                                                                                                                       as
+                                                                                                                       libc::c_ulong))
+                                                     as usize] &
+                           (1 as libc::c_uint) <<
+                               (39 as libc::c_int as
+                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                     as
+                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                     as
+                                                                                                     libc::c_int
+                                                                                                     as
+                                                                                                     libc::c_ulong))
+                           != 0) as libc::c_int, header as *mut libc::c_char,
+                  plen, udpaddr, dst_addr, dst_iface);
+    }
+    return 0 as libc::c_int;
+}
+#[c2rust::src_loc = "623:1"]
+unsafe extern "C" fn process_reply(mut header: *mut dns_header,
+                                   mut now: time_t, mut server: *mut server,
+                                   mut n: size_t,
+                                   mut check_rebind: libc::c_int,
+                                   mut no_cache: libc::c_int,
+                                   mut cache_secure: libc::c_int,
+                                   mut bogusanswer: libc::c_int,
+                                   mut ad_reqd: libc::c_int,
+                                   mut do_bit: libc::c_int,
+                                   mut added_pheader: libc::c_int,
+                                   mut check_subnet: libc::c_int,
+                                   mut query_source: *mut mysockaddr)
+ -> size_t {
+    let mut pheader = 0 as *mut libc::c_uchar;
+    let mut sizep = 0 as *mut libc::c_uchar;
+    let mut sets = 0 as *mut *mut libc::c_char;
+    let mut munged = 0 as libc::c_int;
+    let mut is_sign: libc::c_int = 0;
+    let mut rcode =
+        ((*header).hb4 as libc::c_int & HB4_RCODE) as libc::c_uint;
+    let mut plen: size_t = 0;
+    if !(*dnsmasq_daemon).ipsets.is_null() &&
+           extract_request(header, n, (*dnsmasq_daemon).namebuff,
+                           NULL_0 as *mut libc::c_ushort) != 0 {
+        /* Similar algorithm to search_servers. */
+        let mut ipset_pos = 0 as *mut ipsets;
+        let mut namelen = strlen((*dnsmasq_daemon).namebuff) as libc::c_uint;
+        let mut matchlen = 0 as libc::c_int as libc::c_uint;
+        ipset_pos = (*dnsmasq_daemon).ipsets;
+        while !ipset_pos.is_null() {
+            let mut domainlen = strlen((*ipset_pos).domain) as libc::c_uint;
+            let mut matchstart =
+                (*dnsmasq_daemon).namebuff.offset(namelen as
+                                                      isize).offset(-(domainlen
+                                                                          as
+                                                                          isize));
+            if namelen >= domainlen &&
+                   hostname_isequal(matchstart, (*ipset_pos).domain) != 0 &&
+                   (domainlen == 0 as libc::c_int as libc::c_uint ||
+                        namelen == domainlen ||
+                        *matchstart.offset(-(1 as libc::c_int as isize)) as
+                            libc::c_int == '.' as i32) &&
+                   domainlen >= matchlen {
+                matchlen = domainlen;
+                sets = (*ipset_pos).sets
+            }
+            ipset_pos = (*ipset_pos).next
+        }
+    }
+    pheader =
+        find_pseudoheader(header, n, &mut plen, &mut sizep, &mut is_sign,
+                          NULL_0 as *mut libc::c_int);
+    if !pheader.is_null() {
+        /* Get extended RCODE. */
+        rcode |=
+            ((*sizep.offset(2 as libc::c_int as isize) as libc::c_int) <<
+                 4 as libc::c_int) as libc::c_uint;
+        if check_subnet != 0 &&
+               check_source(header, plen, pheader, query_source) == 0 {
+            my_syslog(LOG_WARNING,
+                      b"discarding DNS reply: subnet option mismatch\x00" as
+                          *const u8 as *const libc::c_char);
+            return 0 as libc::c_int as size_t
+        }
+        if is_sign == 0 {
+            if added_pheader != 0 {
+                /* client didn't send EDNS0, we added one, strip it off before returning answer. */
+                n = rrfilter(header, n, 0 as libc::c_int);
+                pheader = NULL_0 as *mut libc::c_uchar
+            } else {
+                let mut udpsz: libc::c_ushort = 0;
+                /* If upstream is advertising a larger UDP packet size
+		 than we allow, trim it so that we don't get overlarge
+		 requests for the client. We can't do this for signed packets. */
+                let mut t_cp = sizep;
+                udpsz =
+                    ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as
+                          libc::c_int) << 8 as libc::c_int |
+                         *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                             libc::c_int) as libc::c_ushort;
+                sizep = sizep.offset(2 as libc::c_int as isize);
+                if udpsz as libc::c_int >
+                       (*dnsmasq_daemon).edns_pktsz as libc::c_int {
+                    sizep = sizep.offset(-(2 as libc::c_int as isize));
+                    let mut t_s = (*dnsmasq_daemon).edns_pktsz;
+                    let mut t_cp_0 = sizep;
+                    let fresh8 = t_cp_0;
+                    t_cp_0 = t_cp_0.offset(1);
+                    *fresh8 =
+                        (t_s as libc::c_int >> 8 as libc::c_int) as
+                            libc::c_uchar;
+                    *t_cp_0 = t_s as libc::c_uchar;
+                    sizep = sizep.offset(2 as libc::c_int as isize)
+                }
+            }
+        }
+    }
+    /* RFC 4035 sect 4.6 para 3 */
+    if is_sign == 0 &&
+           (*dnsmasq_daemon).options[(33 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (33 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+        (*header).hb4 = ((*header).hb4 as libc::c_int & !HB4_AD) as u8_0
+    }
+    if ((*header).hb3 as libc::c_int & HB3_OPCODE) >> 3 as libc::c_int !=
+           QUERY {
+        return resize_packet(header, n, pheader, plen)
+    }
+    if rcode != NOERROR as libc::c_uint && rcode != NXDOMAIN as libc::c_uint {
+        let mut a = all_addr{addr4: in_addr{s_addr: 0,},};
+        a.log.rcode = rcode as libc::c_ushort;
+        log_query(F_UPSTREAM | F_RCODE,
+                  b"error\x00" as *const u8 as *const libc::c_char as
+                      *mut libc::c_char, &mut a, NULL_0 as *mut libc::c_char);
+        return resize_packet(header, n, pheader, plen)
+    }
+    /* Complain loudly if the upstream server is non-recursive. */
+    if (*header).hb4 as libc::c_int & HB4_RA == 0 &&
+           rcode == NOERROR as libc::c_uint && !server.is_null() &&
+           (*server).flags & SERV_WARNED_RECURSIVE == 0 {
+        prettyprint_addr(&mut (*server).addr, (*dnsmasq_daemon).namebuff);
+        my_syslog(LOG_WARNING,
+                  b"nameserver %s refused to do a recursive query\x00" as
+                      *const u8 as *const libc::c_char,
+                  (*dnsmasq_daemon).namebuff);
+        if (*dnsmasq_daemon).options[(2 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (2 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+            (*server).flags |= SERV_WARNED_RECURSIVE
+        }
+    }
+    if !(*dnsmasq_daemon).bogus_addr.is_null() &&
+           rcode != NXDOMAIN as libc::c_uint &&
+           check_for_bogus_wildcard(header, n, (*dnsmasq_daemon).namebuff,
+                                    (*dnsmasq_daemon).bogus_addr, now) != 0 {
+        munged = 1 as libc::c_int;
+        (*header).hb4 =
+            ((*header).hb4 as libc::c_int & !HB4_RCODE | 3 as libc::c_int) as
+                u8_0;
+        (*header).hb3 = ((*header).hb3 as libc::c_int & !HB3_AA) as u8_0;
+        cache_secure = 0 as libc::c_int
+    } else {
+        let mut doctored = 0 as libc::c_int;
+        if rcode == NXDOMAIN as libc::c_uint &&
+               extract_request(header, n, (*dnsmasq_daemon).namebuff,
+                               NULL_0 as *mut libc::c_ushort) != 0 &&
+               check_for_local_domain((*dnsmasq_daemon).namebuff, now) != 0 {
+            /* if we forwarded a query for a locally known name (because it was for 
+	     an unknown type) and the answer is NXDOMAIN, convert that to NODATA,
+	     since we know that the domain exists, even if upstream doesn't */
+            munged = 1 as libc::c_int;
+            (*header).hb3 = ((*header).hb3 as libc::c_int | HB3_AA) as u8_0;
+            (*header).hb4 =
+                ((*header).hb4 as libc::c_int & !HB4_RCODE | 0 as libc::c_int)
+                    as u8_0;
+            cache_secure = 0 as libc::c_int
+        }
+        if extract_addresses(header, n, (*dnsmasq_daemon).namebuff, now, sets,
+                             is_sign, check_rebind, no_cache, cache_secure,
+                             &mut doctored) != 0 {
+            my_syslog(LOG_WARNING,
+                      b"possible DNS-rebind attack detected: %s\x00" as
+                          *const u8 as *const libc::c_char,
+                      (*dnsmasq_daemon).namebuff);
+            munged = 1 as libc::c_int;
+            cache_secure = 0 as libc::c_int
+        }
+        if doctored != 0 { cache_secure = 0 as libc::c_int }
+    }
+    /* do this after extract_addresses. Ensure NODATA reply and remove
+     nameserver info. */
+    if munged != 0 {
+        (*header).ancount = __bswap_16(0 as libc::c_int as __uint16_t);
+        (*header).nscount = __bswap_16(0 as libc::c_int as __uint16_t);
+        (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
+        (*header).hb3 = ((*header).hb3 as libc::c_int & !HB3_TC) as u8_0
+    }
+    /* the bogus-nxdomain stuff, doctor and NXDOMAIN->NODATA munging can all elide
+     sections of the packet. Find the new length here and put back pseudoheader
+     if it was removed. */
+    return resize_packet(header, n, pheader, plen);
+}
+/* sets new last_server */
+#[no_mangle]
+#[c2rust::src_loc = "809:1"]
+pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
+                                     mut family: libc::c_int,
+                                     mut now: time_t) {
+    /* packet from peer server, extract data for cache, and send to
+     original requester */
+    let mut header = 0 as *mut dns_header;
+    let mut serveraddr =
+        mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+    let mut forward = 0 as *mut frec;
+    let mut addrlen =
+        ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
+    let mut n =
+        recvfrom(fd, (*dnsmasq_daemon).packet as *mut libc::c_void,
+                 (*dnsmasq_daemon).packet_buff_sz as size_t, 0 as libc::c_int,
+                 __SOCKADDR_ARG{__sockaddr__:
+                                    &mut serveraddr.sa as *mut sockaddr,},
+                 &mut addrlen);
+    let mut nn: size_t = 0;
+    let mut server = 0 as *mut server;
+    let mut hash = 0 as *mut libc::c_void;
+    /* packet buffer overwritten */
+    (*dnsmasq_daemon).srv_save = NULL_0 as *mut server;
+    /* Determine the address of the server replying  so that we can mark that as good */
+    serveraddr.sa.sa_family = family as sa_family_t;
+    if serveraddr.sa.sa_family as libc::c_int == AF_INET6 {
+        serveraddr.in6.sin6_flowinfo = 0 as libc::c_int as uint32_t
+    }
+    header = (*dnsmasq_daemon).packet as *mut dns_header;
+    if n <
+           ::std::mem::size_of::<dns_header>() as libc::c_ulong as libc::c_int
+               as libc::c_long || (*header).hb3 as libc::c_int & HB3_QR == 0 {
+        return
+    }
+    /* spoof check: answer must come from known server, */
+    server = (*dnsmasq_daemon).servers;
+    while !server.is_null() {
+        if (*server).flags & (SERV_LITERAL_ADDRESS | SERV_NO_ADDR) == 0 &&
+               sockaddr_isequal(&mut (*server).addr, &mut serveraddr) != 0 {
+            break ;
+        }
+        server = (*server).next
+    }
+    if server.is_null() { return }
+    /* If sufficient time has elapsed, try and expand UDP buffer size again. */
+    if difftime(now, (*server).pktsz_reduced) >
+           UDP_TEST_TIME as libc::c_double {
+        (*server).edns_pktsz = (*dnsmasq_daemon).edns_pktsz as libc::c_int
+    }
+    hash =
+        hash_questions(header, n as size_t, (*dnsmasq_daemon).namebuff) as
+            *mut libc::c_void;
+    forward = lookup_frec(__bswap_16((*header).id), fd, family, hash);
+    if forward.is_null() { return }
+    dump_packet(if (*forward).flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY) != 0
+                   {
+                    DUMP_SEC_REPLY
+                } else { DUMP_UP_REPLY }, header as *mut libc::c_void,
+                n as size_t, &mut serveraddr, NULL_0 as *mut mysockaddr);
+    /* log_query gets called indirectly all over the place, so 
+     pass these in global variables - sorry. */
+    (*dnsmasq_daemon).log_display_id =
+        (*forward).frec_src.log_id as libc::c_int;
+    (*dnsmasq_daemon).log_source_addr = &mut (*forward).frec_src.source;
+    if !(*dnsmasq_daemon).ignore_addr.is_null() &&
+           (*header).hb4 as libc::c_int & HB4_RCODE == NOERROR &&
+           check_for_ignored_address(header, n as size_t,
+                                     (*dnsmasq_daemon).ignore_addr) != 0 {
+        return
+    }
+    /* Note: if we send extra options in the EDNS0 header, we can't recreate
+     the query from the reply. */
+    if ((*header).hb4 as libc::c_int & HB4_RCODE == REFUSED ||
+            (*header).hb4 as libc::c_int & HB4_RCODE == SERVFAIL) &&
+           (*forward).forwardall == 0 as libc::c_int &&
+           (*forward).flags & FREC_HAS_EXTRADATA == 0 {
+        /* for broken servers, attempt to send to another one. */
+        let mut pheader = 0 as *mut libc::c_uchar;
+        let mut plen: size_t = 0;
+        let mut is_sign: libc::c_int = 0;
+        /* In strict order mode, there must be a server later in the chain
+	 left to send to, otherwise without the forwardall mechanism,
+	 code further on will cycle around the list forwever if they
+	 all return REFUSED. Note that server is always non-NULL before 
+	 this executes. */
+        if (*dnsmasq_daemon).options[(7 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (7 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+            server = (*(*forward).sentto).next;
+            while !server.is_null() {
+                if (*server).flags &
+                       (SERV_LITERAL_ADDRESS | SERV_HAS_DOMAIN |
+                            SERV_FOR_NODOTS | SERV_NO_ADDR | SERV_LOOP) == 0 {
+                    break ;
+                }
+                server = (*server).next
+            }
+        }
+        /* recreate query from reply */
+        pheader =
+            find_pseudoheader(header, n as size_t, &mut plen,
+                              NULL_0 as *mut *mut libc::c_uchar, &mut is_sign,
+                              NULL_0 as *mut libc::c_int);
+        if is_sign == 0 && !server.is_null() {
+            (*header).ancount = __bswap_16(0 as libc::c_int as __uint16_t);
+            (*header).nscount = __bswap_16(0 as libc::c_int as __uint16_t);
+            (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
+            nn = resize_packet(header, n as size_t, pheader, plen);
+            if nn != 0 {
+                (*header).hb3 =
+                    ((*header).hb3 as libc::c_int &
+                         !(HB3_QR | HB3_AA | HB3_TC)) as u8_0;
+                (*header).hb4 =
+                    ((*header).hb4 as libc::c_int &
+                         !(HB4_RA | HB4_RCODE | HB4_CD | HB4_AD)) as u8_0;
+                if (*forward).flags & FREC_CHECKING_DISABLED != 0 {
+                    (*header).hb4 =
+                        ((*header).hb4 as libc::c_int | HB4_CD) as u8_0
+                }
+                if (*forward).flags & FREC_AD_QUESTION != 0 {
+                    (*header).hb4 =
+                        ((*header).hb4 as libc::c_int | HB4_AD) as u8_0
+                }
+                if (*forward).flags & FREC_DO_QUESTION != 0 {
+                    add_do_bit(header, nn, pheader.offset(plen as isize));
+                }
+                forward_query(-(1 as libc::c_int), NULL_0 as *mut mysockaddr,
+                              NULL_0 as *mut all_addr,
+                              0 as libc::c_int as libc::c_uint, header, nn,
+                              now, forward,
+                              (*forward).flags & FREC_AD_QUESTION,
+                              (*forward).flags & FREC_DO_QUESTION);
+                return
+            }
+        }
+    }
+    server = (*forward).sentto;
+    if (*(*forward).sentto).flags & SERV_TYPE == 0 as libc::c_int {
+        if (*header).hb4 as libc::c_int & HB4_RCODE == REFUSED {
+            server = NULL_0 as *mut server
+        } else {
+            let mut last_server = 0 as *mut server;
+            /* find good server by address if possible, otherwise assume the last one we sent to */
+            last_server = (*dnsmasq_daemon).servers;
+            while !last_server.is_null() {
+                if (*last_server).flags &
+                       (SERV_LITERAL_ADDRESS | SERV_HAS_DOMAIN |
+                            SERV_FOR_NODOTS | SERV_NO_ADDR) == 0 &&
+                       sockaddr_isequal(&mut (*last_server).addr,
+                                        &mut serveraddr) != 0 {
+                    server = last_server;
+                    break ;
+                } else { last_server = (*last_server).next }
+            }
+        }
+        if (*dnsmasq_daemon).options[(23 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (23 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+            (*dnsmasq_daemon).last_server = server
+        }
+    }
+    /* We tried resending to this server with a smaller maximum size and got an answer.
+     Make that permanent. To avoid reduxing the packet size for a single dropped packet,
+     only do this when we get a truncated answer, or one larger than the safe size. */
+    if (*(*forward).sentto).edns_pktsz > SAFE_PKTSZ &&
+           (*forward).flags & FREC_TEST_PKTSZ != 0 &&
+           ((*header).hb3 as libc::c_int & HB3_TC != 0 ||
+                n >= SAFE_PKTSZ as libc::c_long) {
+        (*(*forward).sentto).edns_pktsz = SAFE_PKTSZ;
+        (*(*forward).sentto).pktsz_reduced = now;
+        prettyprint_addr(&mut (*(*forward).sentto).addr,
+                         (*dnsmasq_daemon).addrbuff);
+        my_syslog(LOG_WARNING,
+                  b"reducing DNS packet size for nameserver %s to %d\x00" as
+                      *const u8 as *const libc::c_char,
+                  (*dnsmasq_daemon).addrbuff, SAFE_PKTSZ);
+    }
+    /* If the answer is an error, keep the forward record in place in case
+     we get a good reply from another server. Kill it when we've
+     had replies from all to avoid filling the forwarding table when
+     everything is broken */
+    if (*forward).forwardall == 0 as libc::c_int ||
+           {
+               (*forward).forwardall -= 1;
+               ((*forward).forwardall) == 1 as libc::c_int
+           } || (*header).hb4 as libc::c_int & HB4_RCODE != REFUSED {
+        let mut check_rebind = 0 as libc::c_int;
+        let mut no_cache_dnssec = 0 as libc::c_int;
+        let mut cache_secure = 0 as libc::c_int;
+        let mut bogusanswer = 0 as libc::c_int;
+        if (*dnsmasq_daemon).options[(31 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (31 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+            check_rebind =
+                ((*forward).flags & FREC_NOREBIND == 0) as libc::c_int
+        }
+        /* cancel */
+        if (*header).hb4 as libc::c_int & HB4_CD != 0 ||
+               (*forward).flags & FREC_CHECKING_DISABLED != 0 {
+            no_cache_dnssec = 1 as libc::c_int
+        }
+        if (*forward).flags & FREC_CHECKING_DISABLED != 0 {
+            (*header).hb4 = ((*header).hb4 as libc::c_int | HB4_CD) as u8_0
+        } else {
+            (*header).hb4 = ((*header).hb4 as libc::c_int & !HB4_CD) as u8_0
+        }
+        if (*forward).flags & FREC_NO_CACHE != 0 {
+            no_cache_dnssec = 1 as libc::c_int
+        }
+        nn =
+            process_reply(header, now, (*forward).sentto, n as size_t,
+                          check_rebind, no_cache_dnssec, cache_secure,
+                          bogusanswer, (*forward).flags & FREC_AD_QUESTION,
+                          (*forward).flags & FREC_DO_QUESTION,
+                          (*forward).flags & FREC_ADDED_PHEADER,
+                          (*forward).flags & FREC_HAS_SUBNET,
+                          &mut (*forward).frec_src.source);
+        if nn != 0 {
+            let mut src = 0 as *mut frec_src;
+            (*header).id = __bswap_16((*forward).frec_src.orig_id);
+            /*   Don't cache replies where DNSSEC validation was turned off, either
+	   the upstream server told us so, or the original query specified it.  */
+            /* restore CD bit to the value in the query */
+            /* Never cache answers which are contingent on the source or MAC address EDSN0 option,
+	 since the cache is ignorant of such things. */
+            (*header).hb4 =
+                ((*header).hb4 as libc::c_int | HB4_RA) as
+                    u8_0; /* recursion if available */
+            src = &mut (*forward).frec_src; /* default if no EDNS0 */
+            while !src.is_null() {
+                (*header).id = __bswap_16((*src).orig_id);
+                dump_packet(DUMP_REPLY,
+                            (*dnsmasq_daemon).packet as *mut libc::c_void, nn,
+                            NULL_0 as *mut mysockaddr, &mut (*src).source);
+                send_from((*src).fd,
+                          ((*dnsmasq_daemon).options[(13 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (13 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               != 0 ||
+                               (*dnsmasq_daemon).options[(39 as libc::c_int as
+                                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                               as
+                                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                                               as
+                                                                                                                               libc::c_int
+                                                                                                                               as
+                                                                                                                               libc::c_ulong))
+                                                             as usize] &
+                                   (1 as libc::c_uint) <<
+                                       (39 as libc::c_int as
+                                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                             as
+                                                                             libc::c_ulong).wrapping_mul(8
+                                                                                                             as
+                                                                                                             libc::c_int
+                                                                                                             as
+                                                                                                             libc::c_ulong))
+                                   != 0) as libc::c_int,
+                          (*dnsmasq_daemon).packet, nn, &mut (*src).source,
+                          &mut (*src).dest, (*src).iface);
+                if (*dnsmasq_daemon).options[(51 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (51 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       != 0 &&
+                       src != &mut (*forward).frec_src as *mut frec_src {
+                    (*dnsmasq_daemon).log_display_id =
+                        (*src).log_id as libc::c_int;
+                    (*dnsmasq_daemon).log_source_addr = &mut (*src).source;
+                    log_query(F_UPSTREAM,
+                              b"query\x00" as *const u8 as *const libc::c_char
+                                  as *mut libc::c_char,
+                              NULL_0 as *mut all_addr,
+                              b"duplicate\x00" as *const u8 as
+                                  *const libc::c_char as *mut libc::c_char);
+                }
+                src = (*src).next
+            }
+        }
+        free_frec(forward);
+    };
+}
+#[no_mangle]
+#[c2rust::src_loc = "1321:1"]
+pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
+                                       mut now: time_t) {
+    let mut header = (*dnsmasq_daemon).packet as *mut dns_header;
+    let mut source_addr =
+        mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+    let mut pheader = 0 as *mut libc::c_uchar;
+    let mut type_0: libc::c_ushort = 0;
+    let mut udp_size = PACKETSZ as libc::c_ushort;
+    let mut dst_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+    let mut netmask = in_addr{s_addr: 0,};
+    let mut dst_addr_4 = in_addr{s_addr: 0,};
+    let mut m: size_t = 0;
+    let mut n: ssize_t = 0;
+    let mut if_index = 0 as libc::c_int;
+    let mut auth_dns = 0 as libc::c_int;
+    let mut do_bit = 0 as libc::c_int;
+    let mut have_pseudoheader = 0 as libc::c_int;
+    let mut local_auth = 0 as libc::c_int;
+    let mut iov: [iovec; 1] =
+        [iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,}; 1];
+    let mut msg =
+        msghdr{msg_name: 0 as *mut libc::c_void,
+               msg_namelen: 0,
+               msg_iov: 0 as *mut iovec,
+               msg_iovlen: 0,
+               msg_control: 0 as *mut libc::c_void,
+               msg_controllen: 0,
+               msg_flags: 0,};
+    let mut cmptr = 0 as *mut cmsghdr;
+    let mut control_u =
+        C2RustUnnamed_16{align:
+                             cmsghdr{cmsg_len: 0,
+                                     cmsg_level: 0,
+                                     cmsg_type: 0,
+                                     __cmsg_data: [],},};
+    let mut family = (*listen).addr.sa.sa_family as libc::c_int;
+    /* Can always get recvd interface for IPv6 */
+    let mut check_dst =
+        ((*dnsmasq_daemon).options[(13 as libc::c_int as
+                                        libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                                       as usize] &
+             (1 as libc::c_uint) <<
+                 (13 as libc::c_int as
+                      libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                       as
+                                                       libc::c_ulong).wrapping_mul(8
+                                                                                       as
+                                                                                       libc::c_int
+                                                                                       as
+                                                                                       libc::c_ulong))
+             == 0 || family == AF_INET6) as libc::c_int;
+    /* packet buffer overwritten */
+    (*dnsmasq_daemon).srv_save = NULL_0 as *mut server;
+    dst_addr.addr4.s_addr = 0 as libc::c_int as in_addr_t;
+    dst_addr_4.s_addr = dst_addr.addr4.s_addr;
+    netmask.s_addr = 0 as libc::c_int as in_addr_t;
+    if (*dnsmasq_daemon).options[(13 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (13 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 && !(*listen).iface.is_null() {
+        auth_dns = (*(*listen).iface).dns_auth;
+        if family == AF_INET {
+            dst_addr.addr4 = (*(*listen).iface).addr.in_0.sin_addr;
+            dst_addr_4 = dst_addr.addr4;
+            netmask = (*(*listen).iface).netmask
+        }
+    }
+    iov[0 as libc::c_int as usize].iov_base =
+        (*dnsmasq_daemon).packet as *mut libc::c_void;
+    iov[0 as libc::c_int as usize].iov_len =
+        (*dnsmasq_daemon).edns_pktsz as size_t;
+    msg.msg_control = control_u.control.as_mut_ptr() as *mut libc::c_void;
+    msg.msg_controllen =
+        ::std::mem::size_of::<C2RustUnnamed_16>() as libc::c_ulong;
+    msg.msg_flags = 0 as libc::c_int;
+    msg.msg_name = &mut source_addr as *mut mysockaddr as *mut libc::c_void;
+    msg.msg_namelen =
+        ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
+    msg.msg_iov = iov.as_mut_ptr();
+    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    n = recvmsg((*listen).fd, &mut msg, 0 as libc::c_int);
+    if n == -(1 as libc::c_int) as libc::c_long { return }
+    if n <
+           ::std::mem::size_of::<dns_header>() as libc::c_ulong as libc::c_int
+               as libc::c_long || msg.msg_flags & MSG_TRUNC_0 != 0 ||
+           (*header).hb3 as libc::c_int & HB3_QR != 0 {
+        return
+    }
+    /* Clear buffer beyond request to avoid risk of
+     information disclosure. */
+    memset((*dnsmasq_daemon).packet.offset(n as isize) as *mut libc::c_void,
+           0 as libc::c_int,
+           ((*dnsmasq_daemon).edns_pktsz as libc::c_long - n) as
+               libc::c_ulong);
+    source_addr.sa.sa_family = family as sa_family_t;
+    if family == AF_INET {
+        /* Source-port == 0 is an error, we can't send back to that. 
+	  http://www.ietf.org/mail-archive/web/dnsop/current/msg11441.html */
+        if source_addr.in_0.sin_port as libc::c_int == 0 as libc::c_int {
+            return
+        }
+    } else {
+        /* Source-port == 0 is an error, we can't send back to that. */
+        if source_addr.in6.sin6_port as libc::c_int == 0 as libc::c_int {
+            return
+        }
+        source_addr.in6.sin6_flowinfo = 0 as libc::c_int as uint32_t
+    }
+    /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
+    if (*dnsmasq_daemon).options[(49 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (49 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        let mut addr = 0 as *mut addrlist;
+        if family == AF_INET6 {
+            addr = (*dnsmasq_daemon).interface_addrs;
+            while !addr.is_null() {
+                if (*addr).flags & ADDRLIST_IPV6 != 0 &&
+                       is_same_net6(&mut (*addr).addr.addr6,
+                                    &mut source_addr.in6.sin6_addr,
+                                    (*addr).prefixlen) != 0 {
+                    break ;
+                }
+                addr = (*addr).next
+            }
+        } else {
+            let mut netmask_0 = in_addr{s_addr: 0,};
+            addr = (*dnsmasq_daemon).interface_addrs;
+            while !addr.is_null() {
+                netmask_0.s_addr =
+                    __bswap_32((!(0 as libc::c_int as in_addr_t)) <<
+                                   32 as libc::c_int - (*addr).prefixlen);
+                if (*addr).flags & ADDRLIST_IPV6 == 0 &&
+                       is_same_net((*addr).addr.addr4,
+                                   source_addr.in_0.sin_addr, netmask_0) != 0
+                   {
+                    break ;
+                }
+                addr = (*addr).next
+            }
+        }
+        if addr.is_null() {
+            static mut warned: libc::c_int = 0 as libc::c_int;
+            if warned == 0 {
+                my_syslog(LOG_WARNING,
+                          b"Ignoring query from non-local network\x00" as
+                              *const u8 as *const libc::c_char);
+                warned = 1 as libc::c_int
+            }
+            return
+        }
+    }
+    if check_dst != 0 {
+        let mut ifr =
+            ifreq{ifr_ifrn: C2RustUnnamed_4{ifrn_name: [0; 16],},
+                  ifr_ifru:
+                      C2RustUnnamed_3{ifru_addr:
+                                          sockaddr{sa_family: 0,
+                                                   sa_data: [0; 14],},},};
+        if msg.msg_controllen <
+               ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+            return
+        }
+        if family == AF_INET {
+            cmptr =
+                if msg.msg_controllen >=
+                       ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+                    msg.msg_control as *mut cmsghdr
+                } else { 0 as *mut cmsghdr };
+            while !cmptr.is_null() {
+                if (*cmptr).cmsg_level == IPPROTO_IP_0 &&
+                       (*cmptr).cmsg_type == IP_PKTINFO {
+                    let mut p = C2RustUnnamed_15{c: 0 as *mut libc::c_uchar,};
+                    p.c = (*cmptr).__cmsg_data.as_mut_ptr();
+                    dst_addr.addr4 = (*p.p).ipi_spec_dst;
+                    dst_addr_4 = dst_addr.addr4;
+                    if_index = (*p.p).ipi_ifindex
+                }
+                cmptr = __cmsg_nxthdr(&mut msg, cmptr)
+            }
+        }
+        if family == AF_INET6 {
+            cmptr =
+                if msg.msg_controllen >=
+                       ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+                    msg.msg_control as *mut cmsghdr
+                } else { 0 as *mut cmsghdr };
+            while !cmptr.is_null() {
+                if (*cmptr).cmsg_level == IPPROTO_IPV6_0 &&
+                       (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
+                    let mut p_0 =
+                        C2RustUnnamed_14{c: 0 as *mut libc::c_uchar,};
+                    p_0.c = (*cmptr).__cmsg_data.as_mut_ptr();
+                    dst_addr.addr6 = (*p_0.p).ipi6_addr;
+                    if_index = (*p_0.p).ipi6_ifindex as libc::c_int
+                }
+                cmptr = __cmsg_nxthdr(&mut msg, cmptr)
+            }
+        }
+        /* enforce available interface configuration */
+        if indextoname((*listen).fd, if_index,
+                       ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) == 0 {
+            return
+        }
+        if iface_check(family, &mut dst_addr,
+                       ifr.ifr_ifrn.ifrn_name.as_mut_ptr(), &mut auth_dns) ==
+               0 {
+            if (*dnsmasq_daemon).options[(39 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (39 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   == 0 {
+                enumerate_interfaces(0 as libc::c_int);
+            }
+            if loopback_exception((*listen).fd, family, &mut dst_addr,
+                                  ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) == 0 &&
+                   label_exception(if_index, family, &mut dst_addr) == 0 {
+                return
+            }
+        }
+        if family == AF_INET &&
+               (*dnsmasq_daemon).options[(18 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (18 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   != 0 {
+            let mut iface = 0 as *mut irec;
+            /* get the netmask of the interface which has the address we were sent to.
+	     This is no necessarily the interface we arrived on. */
+            iface = (*dnsmasq_daemon).interfaces;
+            while !iface.is_null() {
+                if (*iface).addr.sa.sa_family as libc::c_int == AF_INET &&
+                       (*iface).addr.in_0.sin_addr.s_addr == dst_addr_4.s_addr
+                   {
+                    break ;
+                }
+                iface = (*iface).next
+            }
+            /* interface may be new */
+            if iface.is_null() &&
+                   (*dnsmasq_daemon).options[(39 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (39 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       == 0 {
+                enumerate_interfaces(0 as libc::c_int);
+            }
+            iface = (*dnsmasq_daemon).interfaces;
+            while !iface.is_null() {
+                if (*iface).addr.sa.sa_family as libc::c_int == AF_INET &&
+                       (*iface).addr.in_0.sin_addr.s_addr == dst_addr_4.s_addr
+                   {
+                    break ;
+                }
+                iface = (*iface).next
+            }
+            /* If we failed, abandon localisation */
+            if !iface.is_null() {
+                netmask = (*iface).netmask
+            } else { dst_addr_4.s_addr = 0 as libc::c_int as in_addr_t }
+        }
+    }
+    /* log_query gets called indirectly all over the place, so 
+     pass these in global variables - sorry. */
+    (*dnsmasq_daemon).log_id += 1;
+    (*dnsmasq_daemon).log_display_id = (*dnsmasq_daemon).log_id;
+    (*dnsmasq_daemon).log_source_addr = &mut source_addr;
+    dump_packet(DUMP_QUERY, (*dnsmasq_daemon).packet as *mut libc::c_void,
+                n as size_t, &mut source_addr, NULL_0 as *mut mysockaddr);
+    if extract_request(header, n as size_t, (*dnsmasq_daemon).namebuff,
+                       &mut type_0) != 0 {
+        let mut zone = 0 as *mut auth_zone;
+        let mut types =
+            querystr(if auth_dns != 0 {
+                         b"auth\x00" as *const u8 as *const libc::c_char
+                     } else {
+                         b"query\x00" as *const u8 as *const libc::c_char
+                     } as *mut libc::c_char, type_0);
+        if family == AF_INET {
+            log_query(F_QUERY | F_IPV4 | F_FORWARD,
+                      (*dnsmasq_daemon).namebuff,
+                      &mut source_addr.in_0.sin_addr as *mut in_addr as
+                          *mut all_addr, types);
+        } else {
+            log_query(F_QUERY | F_IPV6 | F_FORWARD,
+                      (*dnsmasq_daemon).namebuff,
+                      &mut source_addr.in6.sin6_addr as *mut in6_addr as
+                          *mut all_addr, types);
+        }
+        /* find queries for zones we're authoritative for, and answer them directly */
+        if auth_dns == 0 &&
+               (*dnsmasq_daemon).options[(18 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (18 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   == 0 {
+            zone = (*dnsmasq_daemon).auth_zones;
+            while !zone.is_null() {
+                if in_zone(zone, (*dnsmasq_daemon).namebuff,
+                           NULL_0 as *mut *mut libc::c_char) != 0 {
+                    auth_dns = 1 as libc::c_int;
+                    local_auth = 1 as libc::c_int;
+                    break ;
+                } else { zone = (*zone).next }
+            }
+        }
+        /* Check for forwarding loop */
+        if detect_loop((*dnsmasq_daemon).namebuff, type_0 as libc::c_int) != 0
+           {
+            return
+        }
+    }
+    if !find_pseudoheader(header, n as size_t, NULL_0 as *mut size_t,
+                          &mut pheader, NULL_0 as *mut libc::c_int,
+                          NULL_0 as *mut libc::c_int).is_null() {
+        let mut flags: libc::c_ushort = 0;
+        have_pseudoheader = 1 as libc::c_int;
+        let mut t_cp = pheader;
+        udp_size =
+            ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+                 << 8 as libc::c_int |
+                 *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                     libc::c_int) as libc::c_ushort;
+        pheader = pheader.offset(2 as libc::c_int as isize);
+        /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
+        pheader = pheader.offset(2 as libc::c_int as isize); /* ext_rcode */
+        let mut t_cp_0 = pheader; /* do bit */
+        flags =
+            ((*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+                  libc::c_int) << 8 as libc::c_int |
+                 *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                     libc::c_int) as libc::c_ushort;
+        pheader = pheader.offset(2 as libc::c_int as isize);
+        if flags as libc::c_int & 0x8000 as libc::c_int != 0 {
+            do_bit = 1 as libc::c_int
+        }
+        if udp_size as libc::c_int >
+               (*dnsmasq_daemon).edns_pktsz as libc::c_int {
+            udp_size = (*dnsmasq_daemon).edns_pktsz
+        } else if (udp_size as libc::c_int) < PACKETSZ {
+            udp_size = PACKETSZ as libc::c_ushort
+        }
+    }
+    if auth_dns != 0 {
+        m =
+            answer_auth(header,
+                        (header as
+                             *mut libc::c_char).offset(udp_size as libc::c_int
+                                                           as isize),
+                        n as size_t, now, &mut source_addr, local_auth,
+                        do_bit, have_pseudoheader);
+        if m >= 1 as libc::c_int as libc::c_ulong {
+            send_from((*listen).fd,
+                      ((*dnsmasq_daemon).options[(13 as libc::c_int as
+                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                       as
+                                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                                       as
+                                                                                                                       libc::c_int
+                                                                                                                       as
+                                                                                                                       libc::c_ulong))
+                                                     as usize] &
+                           (1 as libc::c_uint) <<
+                               (13 as libc::c_int as
+                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                     as
+                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                     as
+                                                                                                     libc::c_int
+                                                                                                     as
+                                                                                                     libc::c_ulong))
+                           != 0 ||
+                           (*dnsmasq_daemon).options[(39 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (39 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               != 0) as libc::c_int,
+                      header as *mut libc::c_char, m, &mut source_addr,
+                      &mut dst_addr, if_index as libc::c_uint);
+            (*dnsmasq_daemon).metrics[METRIC_DNS_AUTH_ANSWERED as libc::c_int
+                                          as usize] =
+                (*dnsmasq_daemon).metrics[METRIC_DNS_AUTH_ANSWERED as
+                                              libc::c_int as
+                                              usize].wrapping_add(1)
+        }
+    } else {
+        let mut ad_reqd = do_bit;
+        /* If the client provides an EDNS0 UDP size, use that to limit our reply.
+	 (bounded by the maximum configured). If no EDNS0, then it
+	 defaults to 512 */
+        /* RFC 6840 5.7 */
+        if (*header).hb4 as libc::c_int & HB4_AD != 0 {
+            ad_reqd = 1 as libc::c_int
+        }
+        m =
+            answer_request(header,
+                           (header as
+                                *mut libc::c_char).offset(udp_size as
+                                                              libc::c_int as
+                                                              isize),
+                           n as size_t, dst_addr_4, netmask, now, ad_reqd,
+                           do_bit, have_pseudoheader);
+        if m >= 1 as libc::c_int as libc::c_ulong {
+            send_from((*listen).fd,
+                      ((*dnsmasq_daemon).options[(13 as libc::c_int as
+                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                       as
+                                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                                       as
+                                                                                                                       libc::c_int
+                                                                                                                       as
+                                                                                                                       libc::c_ulong))
+                                                     as usize] &
+                           (1 as libc::c_uint) <<
+                               (13 as libc::c_int as
+                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                     as
+                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                     as
+                                                                                                     libc::c_int
+                                                                                                     as
+                                                                                                     libc::c_ulong))
+                           != 0 ||
+                           (*dnsmasq_daemon).options[(39 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (39 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               != 0) as libc::c_int,
+                      header as *mut libc::c_char, m, &mut source_addr,
+                      &mut dst_addr, if_index as libc::c_uint);
+            (*dnsmasq_daemon).metrics[METRIC_DNS_LOCAL_ANSWERED as libc::c_int
+                                          as usize] =
+                (*dnsmasq_daemon).metrics[METRIC_DNS_LOCAL_ANSWERED as
+                                              libc::c_int as
+                                              usize].wrapping_add(1)
+        } else if forward_query((*listen).fd, &mut source_addr, &mut dst_addr,
+                                if_index as libc::c_uint, header, n as size_t,
+                                now, NULL_0 as *mut frec, ad_reqd, do_bit) !=
+                      0 {
+            (*dnsmasq_daemon).metrics[METRIC_DNS_QUERIES_FORWARDED as
+                                          libc::c_int as usize] =
+                (*dnsmasq_daemon).metrics[METRIC_DNS_QUERIES_FORWARDED as
+                                              libc::c_int as
+                                              usize].wrapping_add(1)
+        } else {
+            (*dnsmasq_daemon).metrics[METRIC_DNS_LOCAL_ANSWERED as libc::c_int
+                                          as usize] =
+                (*dnsmasq_daemon).metrics[METRIC_DNS_LOCAL_ANSWERED as
+                                              libc::c_int as
+                                              usize].wrapping_add(1)
+        }
+    };
+}
+/* The daemon forks before calling this: it should deal with one connection,
+   blocking as necessary, and then return. Note, need to be a bit careful
+   about resources for debug mode, when the fork is suppressed: that's
+   done by the caller. */
+#[no_mangle]
+#[c2rust::src_loc = "1825:1"]
+pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
+                                     mut local_addr: *mut mysockaddr,
+                                     mut netmask: in_addr,
+                                     mut auth_dns: libc::c_int)
+ -> *mut libc::c_uchar {
+    let mut size = 0 as libc::c_int as size_t;
+    let mut norebind = 0 as libc::c_int;
+    let mut local_auth = 0 as libc::c_int;
+    let mut checking_disabled: libc::c_int = 0;
+    let mut do_bit: libc::c_int = 0;
+    let mut added_pheader = 0 as libc::c_int;
+    let mut have_pseudoheader = 0 as libc::c_int;
+    let mut check_subnet: libc::c_int = 0;
+    let mut cacheable: libc::c_int = 0;
+    let mut no_cache_dnssec = 0 as libc::c_int;
+    let mut cache_secure = 0 as libc::c_int;
+    let mut bogusanswer = 0 as libc::c_int;
+    let mut m: size_t = 0;
+    let mut qtype: libc::c_ushort = 0;
+    let mut gotname: libc::c_uint = 0;
+    let mut c1: libc::c_uchar = 0;
+    let mut c2: libc::c_uchar = 0;
+    /* Max TCP packet + slop + size */
+    let mut packet =
+        whine_malloc(((65536 as libc::c_int + MAXDNAME + RRFIXEDSZ) as
+                          libc::c_ulong).wrapping_add(::std::mem::size_of::<u16_0>()
+                                                          as libc::c_ulong))
+            as *mut libc::c_uchar;
+    let mut payload: *mut libc::c_uchar =
+        &mut *packet.offset(2 as libc::c_int as isize) as *mut libc::c_uchar;
+    /* largest field in header is 16-bits, so this is still sufficiently aligned */
+    let mut header = payload as *mut dns_header;
+    let mut length = packet as *mut u16_0;
+    let mut last_server = 0 as *mut server;
+    let mut dst_addr_4 = in_addr{s_addr: 0,};
+    let mut peer_addr =
+        mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+    let mut peer_len =
+        ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
+    let mut query_count = 0 as libc::c_int;
+    let mut pheader = 0 as *mut libc::c_uchar;
+    let mut mark = 0 as libc::c_int as libc::c_uint;
+    let mut have_mark = 0 as libc::c_int;
+    if getpeername(confd,
+                   __SOCKADDR_ARG{__sockaddr__:
+                                      &mut peer_addr as *mut mysockaddr as
+                                          *mut sockaddr,}, &mut peer_len) ==
+           -(1 as libc::c_int) {
+        return packet
+    }
+    /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
+    if (*dnsmasq_daemon).options[(49 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (49 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        let mut addr = 0 as *mut addrlist;
+        if peer_addr.sa.sa_family as libc::c_int == AF_INET6 {
+            addr = (*dnsmasq_daemon).interface_addrs;
+            while !addr.is_null() {
+                if (*addr).flags & ADDRLIST_IPV6 != 0 &&
+                       is_same_net6(&mut (*addr).addr.addr6,
+                                    &mut peer_addr.in6.sin6_addr,
+                                    (*addr).prefixlen) != 0 {
+                    break ;
+                }
+                addr = (*addr).next
+            }
+        } else {
+            let mut netmask_0 = in_addr{s_addr: 0,};
+            addr = (*dnsmasq_daemon).interface_addrs;
+            while !addr.is_null() {
+                netmask_0.s_addr =
+                    __bswap_32((!(0 as libc::c_int as in_addr_t)) <<
+                                   32 as libc::c_int - (*addr).prefixlen);
+                if (*addr).flags & ADDRLIST_IPV6 == 0 &&
+                       is_same_net((*addr).addr.addr4,
+                                   peer_addr.in_0.sin_addr, netmask_0) != 0 {
+                    break ;
+                }
+                addr = (*addr).next
+            }
+        }
+        if addr.is_null() {
+            my_syslog(LOG_WARNING,
+                      b"Ignoring query from non-local network\x00" as
+                          *const u8 as *const libc::c_char);
+            return packet
+        }
+    }
+    loop  {
+        if query_count == TCP_MAX_QUERIES || packet.is_null() ||
+               read_write(confd, &mut c1, 1 as libc::c_int, 1 as libc::c_int)
+                   == 0 ||
+               read_write(confd, &mut c2, 1 as libc::c_int, 1 as libc::c_int)
+                   == 0 ||
+               {
+                   size =
+                       ((c1 as libc::c_int) << 8 as libc::c_int |
+                            c2 as libc::c_int) as size_t;
+                   (size) == 0
+               } ||
+               read_write(confd, payload, size as libc::c_int,
+                          1 as libc::c_int) == 0 {
+            return packet
+        }
+        if size <
+               ::std::mem::size_of::<dns_header>() as libc::c_ulong as
+                   libc::c_int as libc::c_ulong {
+            continue ;
+        }
+        /* Clear buffer beyond request to avoid risk of
+	 information disclosure. */
+        memset(payload.offset(size as isize) as *mut libc::c_void,
+               0 as libc::c_int,
+               (65536 as libc::c_int as libc::c_ulong).wrapping_sub(size));
+        query_count += 1;
+        /* log_query gets called indirectly all over the place, so 
+	 pass these in global variables - sorry. */
+        (*dnsmasq_daemon).log_id += 1;
+        (*dnsmasq_daemon).log_display_id = (*dnsmasq_daemon).log_id;
+        (*dnsmasq_daemon).log_source_addr = &mut peer_addr;
+        /* save state of "cd" flag in query */
+        checking_disabled = (*header).hb4 as libc::c_int & HB4_CD;
+        if checking_disabled != 0 { no_cache_dnssec = 1 as libc::c_int }
+        gotname =
+            extract_request(header, size as libc::c_uint as size_t,
+                            (*dnsmasq_daemon).namebuff, &mut qtype);
+        if gotname != 0 {
+            let mut zone = 0 as *mut auth_zone;
+            let mut types =
+                querystr(if auth_dns != 0 {
+                             b"auth\x00" as *const u8 as *const libc::c_char
+                         } else {
+                             b"query\x00" as *const u8 as *const libc::c_char
+                         } as *mut libc::c_char, qtype);
+            if peer_addr.sa.sa_family as libc::c_int == AF_INET {
+                log_query(F_QUERY | F_IPV4 | F_FORWARD,
+                          (*dnsmasq_daemon).namebuff,
+                          &mut peer_addr.in_0.sin_addr as *mut in_addr as
+                              *mut all_addr, types);
+            } else {
+                log_query(F_QUERY | F_IPV6 | F_FORWARD,
+                          (*dnsmasq_daemon).namebuff,
+                          &mut peer_addr.in6.sin6_addr as *mut in6_addr as
+                              *mut all_addr, types);
+            }
+            /* find queries for zones we're authoritative for, and answer them directly */
+            if auth_dns == 0 &&
+                   (*dnsmasq_daemon).options[(18 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (18 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       == 0 {
+                zone = (*dnsmasq_daemon).auth_zones;
+                while !zone.is_null() {
+                    if in_zone(zone, (*dnsmasq_daemon).namebuff,
+                               NULL_0 as *mut *mut libc::c_char) != 0 {
+                        auth_dns = 1 as libc::c_int;
+                        local_auth = 1 as libc::c_int;
+                        break ;
+                    } else { zone = (*zone).next }
+                }
+            }
+        }
+        if (*local_addr).sa.sa_family as libc::c_int == AF_INET {
+            dst_addr_4 = (*local_addr).in_0.sin_addr
+        } else { dst_addr_4.s_addr = 0 as libc::c_int as in_addr_t }
+        do_bit = 0 as libc::c_int;
+        if !find_pseudoheader(header, size, NULL_0 as *mut size_t,
+                              &mut pheader, NULL_0 as *mut libc::c_int,
+                              NULL_0 as *mut libc::c_int).is_null() {
+            let mut flags: libc::c_ushort = 0;
+            have_pseudoheader = 1 as libc::c_int;
+            /* do bit */
+            pheader =
+                pheader.offset(4 as libc::c_int as
+                                   isize); /* udp_size, ext_rcode */
+            let mut t_cp = pheader;
+            flags =
+                ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as
+                      libc::c_int) << 8 as libc::c_int |
+                     *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                         libc::c_int) as libc::c_ushort;
+            pheader = pheader.offset(2 as libc::c_int as isize);
+            if flags as libc::c_int & 0x8000 as libc::c_int != 0 {
+                do_bit = 1 as libc::c_int
+            }
+        }
+        if auth_dns != 0 {
+            m =
+                answer_auth(header,
+                            (header as
+                                 *mut libc::c_char).offset(65536 as
+                                                               libc::c_int as
+                                                               isize), size,
+                            now, &mut peer_addr, local_auth, do_bit,
+                            have_pseudoheader)
+        } else {
+            let mut ad_reqd = do_bit;
+            /* RFC 6840 5.7 */
+            if (*header).hb4 as libc::c_int & HB4_AD != 0 {
+                ad_reqd = 1 as libc::c_int
+            }
+            /* m > 0 if answered from cache */
+            m =
+                answer_request(header,
+                               (header as
+                                    *mut libc::c_char).offset(65536 as
+                                                                  libc::c_int
+                                                                  as isize),
+                               size, dst_addr_4, netmask, now, ad_reqd,
+                               do_bit, have_pseudoheader);
+            /* Do this by steam now we're not in the select() loop */
+            check_log_writer(1 as libc::c_int);
+            if m == 0 as libc::c_int as libc::c_ulong {
+                let mut flags_0 = 0 as libc::c_int as libc::c_uint;
+                let mut addrp = NULL_0 as *mut all_addr;
+                let mut type_0 = SERV_DO_DNSSEC;
+                let mut domain = NULL_0 as *mut libc::c_char;
+                let mut oph =
+                    find_pseudoheader(header, size, NULL_0 as *mut size_t,
+                                      NULL_0 as *mut *mut libc::c_uchar,
+                                      NULL_0 as *mut libc::c_int,
+                                      NULL_0 as *mut libc::c_int);
+                size =
+                    add_edns0_config(header, size,
+                                     (header as
+                                          *mut libc::c_uchar).offset(65536 as
+                                                                         libc::c_int
+                                                                         as
+                                                                         isize),
+                                     &mut peer_addr, now, &mut check_subnet,
+                                     &mut cacheable);
+                if gotname != 0 {
+                    flags_0 =
+                        search_servers(now, &mut addrp, gotname,
+                                       (*dnsmasq_daemon).namebuff,
+                                       &mut type_0, &mut domain,
+                                       &mut norebind)
+                }
+                /* Check if we added a pheader on forwarding - may need to
+		 strip it from the reply. */
+                if oph.is_null() &&
+                       !find_pseudoheader(header, size, NULL_0 as *mut size_t,
+                                          NULL_0 as *mut *mut libc::c_uchar,
+                                          NULL_0 as *mut libc::c_int,
+                                          NULL_0 as
+                                              *mut libc::c_int).is_null() {
+                    added_pheader = 1 as libc::c_int
+                }
+                type_0 &= !SERV_DO_DNSSEC;
+                if type_0 != 0 as libc::c_int ||
+                       (*dnsmasq_daemon).options[(7 as libc::c_int as
+                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                       as
+                                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                                       as
+                                                                                                                       libc::c_int
+                                                                                                                       as
+                                                                                                                       libc::c_ulong))
+                                                     as usize] &
+                           (1 as libc::c_uint) <<
+                               (7 as libc::c_int as
+                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                     as
+                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                     as
+                                                                                                     libc::c_int
+                                                                                                     as
+                                                                                                     libc::c_ulong))
+                           != 0 || (*dnsmasq_daemon).last_server.is_null() {
+                    last_server = (*dnsmasq_daemon).servers
+                } else { last_server = (*dnsmasq_daemon).last_server }
+                if flags_0 == 0 && !last_server.is_null() {
+                    let mut firstsendto = NULL_0 as *mut server;
+                    let mut hash: [libc::c_uchar; 32] = [0; 32];
+                    memcpy(hash.as_mut_ptr() as *mut libc::c_void,
+                           hash_questions(header,
+                                          size as libc::c_uint as size_t,
+                                          (*dnsmasq_daemon).namebuff) as
+                               *const libc::c_void,
+                           HASH_SIZE as libc::c_ulong);
+                    let mut current_block_93: u64;
+                    's_446:
+                        loop 
+                             /* Loop round available servers until we succeed in connecting to one.
+		     Note that this code subtly ensures that consecutive queries on this connection
+		     which can go to the same server, do so. */
+                             {
+                            let mut data_sent = 0 as libc::c_int;
+                            if firstsendto.is_null() {
+                                firstsendto = last_server
+                            } else {
+                                last_server = (*last_server).next;
+                                if last_server.is_null() {
+                                    last_server = (*dnsmasq_daemon).servers
+                                }
+                                if last_server == firstsendto { break ; }
+                            }
+                            /* server for wrong domain */
+                            if type_0 != (*last_server).flags & SERV_TYPE ||
+                                   type_0 == SERV_HAS_DOMAIN &&
+                                       hostname_isequal(domain,
+                                                        (*last_server).domain)
+                                           == 0 ||
+                                   (*last_server).flags &
+                                       (SERV_LITERAL_ADDRESS | SERV_LOOP) != 0
+                               {
+                                continue ;
+                            }
+                            loop  {
+                                *length = __bswap_16(size as __uint16_t);
+                                if (*last_server).tcpfd == -(1 as libc::c_int)
+                                   {
+                                    (*last_server).tcpfd =
+                                        socket((*last_server).addr.sa.sa_family
+                                                   as libc::c_int,
+                                               SOCK_STREAM_0,
+                                               0 as libc::c_int);
+                                    if (*last_server).tcpfd ==
+                                           -(1 as libc::c_int) {
+                                        continue 's_446 ;
+                                    }
+                                    if local_bind((*last_server).tcpfd,
+                                                  &mut (*last_server).source_addr,
+                                                  (*last_server).interface.as_mut_ptr(),
+                                                  0 as libc::c_int as
+                                                      libc::c_uint,
+                                                  1 as libc::c_int) == 0 {
+                                        close((*last_server).tcpfd);
+                                        (*last_server).tcpfd =
+                                            -(1 as libc::c_int);
+                                        continue 's_446 ;
+                                    } else {
+                                        while retry_send(sendto((*last_server).tcpfd,
+                                                                packet as
+                                                                    *const libc::c_void,
+                                                                size.wrapping_add(::std::mem::size_of::<u16_0>()
+                                                                                      as
+                                                                                      libc::c_ulong),
+                                                                MSG_FASTOPEN_0,
+                                                                __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                                                         &mut (*last_server).addr.sa,},
+                                                                sa_len(&mut (*last_server).addr)
+                                                                    as
+                                                                    socklen_t))
+                                                  != 0 {
+                                        }
+                                        if errno == 0 as libc::c_int {
+                                            data_sent = 1 as libc::c_int
+                                        }
+                                        if data_sent == 0 &&
+                                               connect((*last_server).tcpfd,
+                                                       __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                                                &mut (*last_server).addr.sa,},
+                                                       sa_len(&mut (*last_server).addr)
+                                                           as socklen_t) ==
+                                                   -(1 as libc::c_int) {
+                                            close((*last_server).tcpfd);
+                                            (*last_server).tcpfd =
+                                                -(1 as libc::c_int);
+                                            continue 's_446 ;
+                                        } else {
+                                            (*last_server).flags &=
+                                                !SERV_GOT_TCP
+                                        }
+                                    }
+                                }
+                                /* get query name again for logging - may have been overwritten */
+                                gotname =
+                                    extract_request(header,
+                                                    size as libc::c_uint as
+                                                        size_t,
+                                                    (*dnsmasq_daemon).namebuff,
+                                                    &mut qtype);
+                                if gotname == 0 {
+                                    strcpy((*dnsmasq_daemon).namebuff,
+                                           b"query\x00" as *const u8 as
+                                               *const libc::c_char);
+                                }
+                                if data_sent == 0 &&
+                                       read_write((*last_server).tcpfd,
+                                                  packet,
+                                                  size.wrapping_add(::std::mem::size_of::<u16_0>()
+                                                                        as
+                                                                        libc::c_ulong)
+                                                      as libc::c_int,
+                                                  0 as libc::c_int) == 0 ||
+                                       read_write((*last_server).tcpfd,
+                                                  &mut c1, 1 as libc::c_int,
+                                                  1 as libc::c_int) == 0 ||
+                                       read_write((*last_server).tcpfd,
+                                                  &mut c2, 1 as libc::c_int,
+                                                  1 as libc::c_int) == 0 ||
+                                       read_write((*last_server).tcpfd,
+                                                  payload,
+                                                  (c1 as libc::c_int) <<
+                                                      8 as libc::c_int |
+                                                      c2 as libc::c_int,
+                                                  1 as libc::c_int) == 0 {
+                                    close((*last_server).tcpfd);
+                                    (*last_server).tcpfd =
+                                        -(1 as libc::c_int);
+                                    /* We get data then EOF, reopen connection to same server,
+			     else try next. This avoids DoS from a server which accepts
+			     connections and then closes them. */
+                                    if !((*last_server).flags & SERV_GOT_TCP
+                                             != 0) {
+                                        continue 's_446 ;
+                                    }
+                                } else {
+                                    (*last_server).flags |= SERV_GOT_TCP;
+                                    m =
+                                        ((c1 as libc::c_int) <<
+                                             8 as libc::c_int |
+                                             c2 as libc::c_int) as size_t;
+                                    if (*last_server).addr.sa.sa_family as
+                                           libc::c_int == AF_INET {
+                                        log_query(F_SERVER | F_IPV4 |
+                                                      F_FORWARD,
+                                                  (*dnsmasq_daemon).namebuff,
+                                                  &mut (*last_server).addr.in_0.sin_addr
+                                                      as *mut in_addr as
+                                                      *mut all_addr,
+                                                  NULL_0 as
+                                                      *mut libc::c_char);
+                                    } else {
+                                        log_query(F_SERVER | F_IPV6 |
+                                                      F_FORWARD,
+                                                  (*dnsmasq_daemon).namebuff,
+                                                  &mut (*last_server).addr.in6.sin6_addr
+                                                      as *mut in6_addr as
+                                                      *mut all_addr,
+                                                  NULL_0 as
+                                                      *mut libc::c_char);
+                                    }
+                                    /* restore CD bit to the value in the query */
+                                    if checking_disabled != 0 {
+                                        (*header).hb4 =
+                                            ((*header).hb4 as libc::c_int |
+                                                 HB4_CD) as u8_0
+                                    } else {
+                                        (*header).hb4 =
+                                            ((*header).hb4 as libc::c_int &
+                                                 !HB4_CD) as u8_0
+                                    }
+                                    /* There's no point in updating the cache, since this process will exit and
+			 lose the information after a few queries. We make this call for the alias and 
+			 bogus-nxdomain side-effects. */
+		      /* If the crc of the question section doesn't match the crc we sent, then
+			 someone might be attempting to insert bogus values into the cache by 
+			 sending replies containing questions and bogus answers. */
+                                    if memcmp(hash.as_mut_ptr() as
+                                                  *const libc::c_void,
+                                              hash_questions(header,
+                                                             m as libc::c_uint
+                                                                 as size_t,
+                                                             (*dnsmasq_daemon).namebuff)
+                                                  as *const libc::c_void,
+                                              HASH_SIZE as libc::c_ulong) !=
+                                           0 as libc::c_int {
+                                        current_block_93 =
+                                            9430418855388998878;
+                                        break ;
+                                    } else {
+                                        current_block_93 =
+                                            7079180960716815705;
+                                        break ;
+                                    }
+                                }
+                            }
+                            match current_block_93 {
+                                9430418855388998878 => {
+                                    m = 0 as libc::c_int as size_t;
+                                    break ;
+                                }
+                                _ => {
+                                    /* Never cache answers which are contingent on the source or MAC address EDSN0 option,
+			 since the cache is ignorant of such things. */
+                                    if cacheable == 0 {
+                                        no_cache_dnssec = 1 as libc::c_int
+                                    }
+                                    m =
+                                        process_reply(header, now,
+                                                      last_server,
+                                                      m as libc::c_uint as
+                                                          size_t,
+                                                      ((*dnsmasq_daemon).options[(31
+                                                                                      as
+                                                                                      libc::c_int
+                                                                                      as
+                                                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                                                       as
+                                                                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                                                                       as
+                                                                                                                                                       libc::c_int
+                                                                                                                                                       as
+                                                                                                                                                       libc::c_ulong))
+                                                                                     as
+                                                                                     usize]
+                                                           &
+                                                           (1 as libc::c_uint)
+                                                               <<
+                                                               (31 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                                                     as
+                                                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                                                     as
+                                                                                                                                     libc::c_int
+                                                                                                                                     as
+                                                                                                                                     libc::c_ulong))
+                                                           != 0 &&
+                                                           norebind == 0) as
+                                                          libc::c_int,
+                                                      no_cache_dnssec,
+                                                      cache_secure,
+                                                      bogusanswer, ad_reqd,
+                                                      do_bit, added_pheader,
+                                                      check_subnet,
+                                                      &mut peer_addr);
+                                    break ;
+                                }
+                            }
+                        }
+                }
+                /* In case of local answer or no connections made. */
+                if m == 0 as libc::c_int as libc::c_ulong {
+                    m =
+                        setup_reply(header, size as libc::c_uint as size_t,
+                                    addrp, flags_0,
+                                    (*dnsmasq_daemon).local_ttl);
+                    if have_pseudoheader != 0 {
+                        m =
+                            add_pseudoheader(header, m,
+                                             (header as
+                                                  *mut libc::c_uchar).offset(65536
+                                                                                 as
+                                                                                 libc::c_int
+                                                                                 as
+                                                                                 isize),
+                                             (*dnsmasq_daemon).edns_pktsz,
+                                             0 as libc::c_int,
+                                             NULL_0 as *mut libc::c_uchar,
+                                             0 as libc::c_int as size_t,
+                                             do_bit, 0 as libc::c_int)
+                    }
+                }
+            }
+        }
+        check_log_writer(1 as libc::c_int);
+        *length = __bswap_16(m as __uint16_t);
+        if m == 0 as libc::c_int as libc::c_ulong ||
+               read_write(confd, packet,
+                          m.wrapping_add(::std::mem::size_of::<u16_0>() as
+                                             libc::c_ulong) as libc::c_int,
+                          0 as libc::c_int) == 0 {
+            return packet
+        }
+    };
+}
+#[c2rust::src_loc = "2216:1"]
+unsafe extern "C" fn allocate_frec(mut now: time_t) -> *mut frec {
+    let mut f = 0 as *mut frec;
+    f =
+        whine_malloc(::std::mem::size_of::<frec>() as libc::c_ulong) as
+            *mut frec;
+    if !f.is_null() {
+        (*f).next = (*dnsmasq_daemon).frec_list;
+        (*f).time = now;
+        (*f).sentto = NULL_0 as *mut server;
+        (*f).rfd4 = NULL_0 as *mut randfd;
+        (*f).flags = 0 as libc::c_int;
+        (*f).rfd6 = NULL_0 as *mut randfd;
+        (*dnsmasq_daemon).frec_list = f
+    }
+    return f;
+}
+#[no_mangle]
+#[c2rust::src_loc = "2239:1"]
+pub unsafe extern "C" fn allocate_rfd(mut family: libc::c_int)
+ -> *mut randfd {
+    static mut finger: libc::c_int = 0 as libc::c_int;
+    let mut i: libc::c_int = 0;
+    /* limit the number of sockets we have open to avoid starvation of 
+     (eg) TFTP. Once we have a reasonable number, randomness should be OK */
+    i = 0 as libc::c_int;
+    while i < RANDOM_SOCKS {
+        if (*dnsmasq_daemon).randomsocks[i as usize].refcount as libc::c_int
+               == 0 as libc::c_int {
+            (*dnsmasq_daemon).randomsocks[i as usize].fd =
+                random_sock(family);
+            if (*dnsmasq_daemon).randomsocks[i as usize].fd ==
+                   -(1 as libc::c_int) {
+                break ;
+            }
+            (*dnsmasq_daemon).randomsocks[i as usize].refcount =
+                1 as libc::c_int as libc::c_ushort;
+            (*dnsmasq_daemon).randomsocks[i as usize].family =
+                family as libc::c_ushort;
+            return &mut *(*dnsmasq_daemon).randomsocks.as_mut_ptr().offset(i
+                                                                               as
+                                                                               isize)
+                       as *mut randfd
+        } else { i += 1 }
+    }
+    /* No free ones or cannot get new socket, grab an existing one */
+    i = 0 as libc::c_int;
+    while i < RANDOM_SOCKS {
+        let mut j = (i + finger) % RANDOM_SOCKS;
+        if (*dnsmasq_daemon).randomsocks[j as usize].refcount as libc::c_int
+               != 0 as libc::c_int &&
+               (*dnsmasq_daemon).randomsocks[j as usize].family as libc::c_int
+                   == family &&
+               (*dnsmasq_daemon).randomsocks[j as usize].refcount as
+                   libc::c_int != 0xffff as libc::c_int {
+            finger = j;
+            (*dnsmasq_daemon).randomsocks[j as usize].refcount =
+                (*dnsmasq_daemon).randomsocks[j as
+                                                  usize].refcount.wrapping_add(1);
+            return &mut *(*dnsmasq_daemon).randomsocks.as_mut_ptr().offset(j
+                                                                               as
+                                                                               isize)
+                       as *mut randfd
+        }
+        i += 1
+    }
+    return NULL_0 as *mut randfd;
+    /* doom */
+}
+#[no_mangle]
+#[c2rust::src_loc = "2275:1"]
+pub unsafe extern "C" fn free_rfd(mut rfd: *mut randfd) {
+    if !rfd.is_null() &&
+           {
+               (*rfd).refcount = (*rfd).refcount.wrapping_sub(1);
+               ((*rfd).refcount as libc::c_int) == 0 as libc::c_int
+           } {
+        close((*rfd).fd);
+    };
+}
+#[c2rust::src_loc = "2281:1"]
+unsafe extern "C" fn free_frec(mut f: *mut frec) {
+    let mut last = 0 as *mut frec_src;
+    /* add back to freelist if not the record builtin to every frec. */
+    last = (*f).frec_src.next;
+    while !last.is_null() && !(*last).next.is_null() { last = (*last).next }
+    if !last.is_null() {
+        (*last).next = (*dnsmasq_daemon).free_frec_src;
+        (*dnsmasq_daemon).free_frec_src = (*f).frec_src.next
+    }
+    (*f).frec_src.next = NULL_0 as *mut frec_src;
+    free_rfd((*f).rfd4);
+    (*f).rfd4 = NULL_0 as *mut randfd;
+    (*f).sentto = NULL_0 as *mut server;
+    (*f).flags = 0 as libc::c_int;
+    free_rfd((*f).rfd6);
+    (*f).rfd6 = NULL_0 as *mut randfd;
+}
+/* if wait==NULL return a free or older than TIMEOUT record.
+   else return *wait zero if one available, or *wait is delay to
+   when the oldest in-use record will expire. Impose an absolute
+   limit of 4*TIMEOUT before we wipe things (for random sockets).
+   If force is non-NULL, always return a result, even if we have
+   to allocate above the limit, and never free the record pointed
+   to by the force argument. */
+#[no_mangle]
+#[c2rust::src_loc = "2325:1"]
+pub unsafe extern "C" fn get_new_frec(mut now: time_t,
+                                      mut wait: *mut libc::c_int,
+                                      mut force: *mut frec) -> *mut frec {
+    let mut f = 0 as *mut frec;
+    let mut oldest = 0 as *mut frec;
+    let mut target = 0 as *mut frec;
+    let mut count: libc::c_int = 0;
+    if !wait.is_null() { *wait = 0 as libc::c_int }
+    f = (*dnsmasq_daemon).frec_list;
+    oldest = NULL_0 as *mut frec;
+    target = NULL_0 as *mut frec;
+    count = 0 as libc::c_int;
+    while !f.is_null() {
+        if (*f).sentto.is_null() {
+            target = f
+        } else {
+            if difftime(now, (*f).time) >=
+                   (4 as libc::c_int * TIMEOUT) as libc::c_double {
+                free_frec(f);
+                target = f
+            }
+            if oldest.is_null() ||
+                   difftime((*f).time, (*oldest).time) <=
+                       0 as libc::c_int as libc::c_double {
+                oldest = f
+            }
+        }
+        f = (*f).next;
+        count += 1
+    }
+    if !target.is_null() { (*target).time = now; return target }
+    /* can't find empty one, use oldest if there is one
+     and it's older than timeout */
+    if force.is_null() && !oldest.is_null() &&
+           difftime(now, (*oldest).time) as libc::c_int >= TIMEOUT {
+        /* keep stuff for twice timeout if we can by allocating a new
+	 record instead */
+        if difftime(now, (*oldest).time) <
+               (2 as libc::c_int * TIMEOUT) as libc::c_double &&
+               count <= (*dnsmasq_daemon).ftabsize &&
+               { f = allocate_frec(now); !f.is_null() } {
+            return f
+        }
+        if wait.is_null() { free_frec(oldest); (*oldest).time = now }
+        return oldest
+    }
+    /* none available, calculate time 'till oldest record expires */
+    if force.is_null() && count > (*dnsmasq_daemon).ftabsize {
+        static mut last_log: time_t = 0 as libc::c_int as time_t;
+        if !oldest.is_null() && !wait.is_null() {
+            *wait = ((*oldest).time + TIMEOUT as time_t - now) as libc::c_int
+        }
+        if difftime(now, last_log) as libc::c_int > 5 as libc::c_int {
+            last_log = now;
+            my_syslog(LOG_WARNING,
+                      b"Maximum number of concurrent DNS queries reached (max: %d)\x00"
+                          as *const u8 as *const libc::c_char,
+                      (*dnsmasq_daemon).ftabsize);
+        }
+        return NULL_0 as *mut frec
+    }
+    f = allocate_frec(now);
+    if f.is_null() && !wait.is_null() {
+        /* wait one second on malloc failure */
+        *wait = 1 as libc::c_int
+    }
+    return f;
+    /* OK if malloc fails and this is NULL */
+}
+/* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,2418 +5514,146 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-//#include "dnsmasq.h"
-
-static struct frec *lookup_frec(unsigned short id, void *hash);
-static struct frec *lookup_frec_by_sender(unsigned short id,
-					  union mysockaddr *addr,
-					  void *hash);
-static unsigned short get_id(void);
-static void free_frec(struct frec *f);
-
-/* Send a UDP packet with its source address set as "source" 
-   unless nowild is true, when we just send it with the kernel default */
-int send_from(int fd, int nowild, char *packet, size_t len, 
-	      union mysockaddr *to, struct all_addr *source,
-	      unsigned int iface)
-{
-  struct msghdr msg;
-  struct iovec iov[1]; 
-  union {
-    struct cmsghdr align; /* this ensures alignment */
-//#if defined(HAVE_LINUX_NETWORK)
-    char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
-#elif defined(IP_SENDSRCADDR)
-    char control[CMSG_SPACE(sizeof(struct in_addr))];
-//#endif
-//#ifdef HAVE_IPV6
-    char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-//#endif
-  } control_u;
-  
-  iov[0].iov_base = packet;
-  iov[0].iov_len = len;
-
-  msg.msg_control = nullptr;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
-  msg.msg_name = to;
-  msg.msg_namelen = sa_len(to);
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 1;
-  
-  if (!nowild)
-    {
-      struct cmsghdr *cmptr;
-      msg.msg_control = &control_u;
-      msg.msg_controllen = sizeof(control_u);
-      cmptr = CMSG_FIRSTHDR(&msg);
-
-      if (to->sa.sa_family == AF_INET)
-	{
-//#if defined(HAVE_LINUX_NETWORK)
-	  struct in_pktinfo p;
-	  p.ipi_ifindex = 0;
-	  p.ipi_spec_dst = source->addr.addr4;
-	  memcpy(CMSG_DATA(cmptr), &p, sizeof(p));
-	  msg.msg_controllen = cmptr->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-	  cmptr->cmsg_level = IPPROTO_IP;
-	  cmptr->cmsg_type = IP_PKTINFO;
-#elif defined(IP_SENDSRCADDR)
-	  memcpy(CMSG_DATA(cmptr), &(source->addr.addr4), sizeof(source->addr.addr4));
-	  msg.msg_controllen = cmptr->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
-	  cmptr->cmsg_level = IPPROTO_IP;
-	  cmptr->cmsg_type = IP_SENDSRCADDR;
-//#endif
-	}
-      else
-//#ifdef HAVE_IPV6
-	{
-	  struct in6_pktinfo p;
-	  p.ipi6_ifindex = iface; /* Need iface for IPv6 to handle link-local addrs */
-	  p.ipi6_addr = source->addr.addr6;
-	  memcpy(CMSG_DATA(cmptr), &p, sizeof(p));
-	  msg.msg_controllen = cmptr->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
-	  cmptr->cmsg_type = daemon->v6pktinfo;
-	  cmptr->cmsg_level = IPPROTO_IPV6;
-	}
-//#else
-      (void)iface; /* eliminate warning */
-//#endif
+#[c2rust::src_loc = "2406:1"]
+unsafe extern "C" fn lookup_frec(mut id: libc::c_ushort, mut fd: libc::c_int,
+                                 mut family: libc::c_int,
+                                 mut hash: *mut libc::c_void) -> *mut frec {
+    let mut f = 0 as *mut frec;
+    f = (*dnsmasq_daemon).frec_list;
+    while !f.is_null() {
+        if !(*f).sentto.is_null() &&
+               (*f).new_id as libc::c_int == id as libc::c_int &&
+               memcmp(hash, (*f).hash.as_mut_ptr() as *const libc::c_void,
+                      HASH_SIZE as libc::c_ulong) == 0 as libc::c_int {
+            /* sent from random port */
+            if family == AF_INET && !(*f).rfd4.is_null() &&
+                   (*(*f).rfd4).fd == fd {
+                return f
+            }
+            if family == AF_INET6 && !(*f).rfd6.is_null() &&
+                   (*(*f).rfd6).fd == fd {
+                return f
+            }
+            /* sent to upstream from bound socket. */
+            if !(*(*f).sentto).sfd.is_null() && (*(*(*f).sentto).sfd).fd == fd
+               {
+                return f
+            }
+        }
+        f = (*f).next
     }
-  
-  while (retry_send(sendmsg(fd, &msg, 0)));
-
-  /* If interface is still in DAD, EINVAL results - ignore that. */
-  if (errno != 0 && errno != EINVAL)
-    {
-      my_syslog(LOG_ERR, _("failed to send packet: %s"), strerror(errno));
-      return 0;
-    }
-  
-  return 1;
+    return NULL_0 as *mut frec;
 }
-          
-static unsigned int search_servers(time_t now, struct all_addr **addrpp, unsigned int qtype,
-				   char *qdomain, int *type, char **domain, int *norebind)
-			      
-{
-  /* If the query ends in the domain in one of our servers, set
-     domain to point to that name. We find the largest match to allow both
-     domain.org and sub.domain.org to exist. */
-  
-  unsigned int namelen = strlen(qdomain);
-  unsigned int matchlen = 0;
-  struct server *serv;
-  unsigned int flags = 0;
-  static struct all_addr zero;
-  
-  for (serv = daemon->servers; serv; serv=serv->next)
-    if (qtype == F_DNSSECOK && !(serv->flags & SERV_DO_DNSSEC))
-      continue;
-    /* domain matches take priority over NODOTS matches */
-    else if ((serv->flags & SERV_FOR_NODOTS) && *type != SERV_HAS_DOMAIN && !strchr(qdomain, '.') && namelen != 0)
-      {
-	unsigned int sflag = serv->addr.sa.sa_family == AF_INET ? F_IPV4 : F_IPV6; 
-	*type = SERV_FOR_NODOTS;
-	if (serv->flags & SERV_NO_ADDR)
-	  flags = F_NXDOMAIN;
-	else if (serv->flags & SERV_LITERAL_ADDRESS)
-	  { 
-	    /* literal address = '#' -> return all-zero address for IPv4 and IPv6 */
-	    if ((serv->flags & SERV_USE_RESOLV) && (qtype & (F_IPV6 | F_IPV4)))
-	      {
-		memset(&zero, 0, sizeof(zero));
-		flags = qtype;
-		*addrpp = &zero;
-	      }
-	    else if (sflag & qtype)
-	      {
-		flags = sflag;
-		if (serv->addr.sa.sa_family == AF_INET) 
-		  *addrpp = (struct all_addr *)&serv->addr.in.sin_addr;
-//#ifdef HAVE_IPV6
-		else
-		  *addrpp = (struct all_addr *)&serv->addr.in6.sin6_addr;
-//#endif 
-	      }
-	    else if (!flags || (flags & F_NXDOMAIN))
-	      flags = F_NOERR;
-	  } 
-      }
-    else if (serv->flags & SERV_HAS_DOMAIN)
-      {
-	unsigned int domainlen = strlen(serv->domain);
-	char *matchstart = qdomain + namelen - domainlen;
-	if (namelen >= domainlen &&
-	    hostname_isequal(matchstart, serv->domain) &&
-	    (domainlen == 0 || namelen == domainlen || *(matchstart-1) == '.' ))
-	  {
-	    if ((serv->flags & SERV_NO_REBIND) && norebind)	
-	      *norebind = 1;
-	    else
-	      {
-		unsigned int sflag = serv->addr.sa.sa_family == AF_INET ? F_IPV4 : F_IPV6;
-		/* implement priority rules for --address and --server for same domain.
-		   --address wins if the address is for the correct AF
-		   --server wins otherwise. */
-		if (domainlen != 0 && domainlen == matchlen)
-		  {
-		    if ((serv->flags & SERV_LITERAL_ADDRESS))
-		      {
-			if (!(sflag & qtype) && flags == 0)
-			  continue;
-		      }
-		    else
-		      {
-			if (flags & (F_IPV4 | F_IPV6))
-			  continue;
-		      }
-		  }
-		
-		if (domainlen >= matchlen)
-		  {
-		    *type = serv->flags & (SERV_HAS_DOMAIN | SERV_USE_RESOLV | SERV_NO_REBIND | SERV_DO_DNSSEC);
-		    *domain = serv->domain;
-		    matchlen = domainlen;
-		    if (serv->flags & SERV_NO_ADDR)
-		      flags = F_NXDOMAIN;
-		    else if (serv->flags & SERV_LITERAL_ADDRESS)
-		      {
-			 /* literal address = '#' -> return all-zero address for IPv4 and IPv6 */
-			if ((serv->flags & SERV_USE_RESOLV) && (qtype & (F_IPV6 | F_IPV4)))
-			  {			    
-			    memset(&zero, 0, sizeof(zero));
-			    flags = qtype;
-			    *addrpp = &zero;
-			  }
-			else if (sflag & qtype)
-			  {
-			    flags = sflag;
-			    if (serv->addr.sa.sa_family == AF_INET) 
-			      *addrpp = (struct all_addr *)&serv->addr.in.sin_addr;
-//#ifdef HAVE_IPV6
-			    else
-			      *addrpp = (struct all_addr *)&serv->addr.in6.sin6_addr;
-//#endif
-			  }
-			else if (!flags || (flags & F_NXDOMAIN))
-			  flags = F_NOERR;
-		      }
-		    else
-		      flags = 0;
-		  } 
-	      }
-	  }
-      }
-  
-  if (flags == 0 && !(qtype & (F_QUERY | F_DNSSECOK)) && 
-      option_bool(OPT_NODOTS_LOCAL) && !strchr(qdomain, '.') && namelen != 0)
-    /* don't forward A or AAAA queries for simple names, except the empty name */
-    flags = F_NOERR;
-  
-  if (flags == F_NXDOMAIN && check_for_local_domain(qdomain, now))
-    flags = F_NOERR;
-
-  if (flags)
-    {
-       if (flags == F_NXDOMAIN || flags == F_NOERR)
-	 log_query(flags | qtype | F_NEG | F_CONFIG | F_FORWARD, qdomain, nullptr, nullptr);
-       else
-	 {
-	   /* handle F_IPV4 and F_IPV6 set on ANY query to 0.0.0.0/:: domain. */
-	   if (flags & F_IPV4)
-	     log_query((flags | F_CONFIG | F_FORWARD) & ~F_IPV6, qdomain, *addrpp, nullptr);
-//#ifdef HAVE_IPV6
-	   if (flags & F_IPV6)
-	     log_query((flags | F_CONFIG | F_FORWARD) & ~F_IPV4, qdomain, *addrpp, nullptr);
-//#endif
-	 }
+#[c2rust::src_loc = "2429:1"]
+unsafe extern "C" fn lookup_frec_by_sender(mut id: libc::c_ushort,
+                                           mut addr: *mut mysockaddr,
+                                           mut hash: *mut libc::c_void)
+ -> *mut frec {
+    let mut f = 0 as *mut frec;
+    let mut src = 0 as *mut frec_src;
+    f = (*dnsmasq_daemon).frec_list;
+    while !f.is_null() {
+        if !(*f).sentto.is_null() &&
+               (*f).flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY) == 0 &&
+               memcmp(hash, (*f).hash.as_mut_ptr() as *const libc::c_void,
+                      HASH_SIZE as libc::c_ulong) == 0 as libc::c_int {
+            src = &mut (*f).frec_src;
+            while !src.is_null() {
+                if (*src).orig_id as libc::c_int == id as libc::c_int &&
+                       sockaddr_isequal(&mut (*src).source, addr) != 0 {
+                    return f
+                }
+                src = (*src).next
+            }
+        }
+        f = (*f).next
     }
-  else if ((*type) & SERV_USE_RESOLV)
-    {
-      *type = 0; /* use normal servers for this domain */
-      *domain = nullptr;
-    }
-  return  flags;
+    return NULL_0 as *mut frec;
 }
-
-static int forward_query(int udpfd, union mysockaddr *udpaddr,
-			 struct all_addr *dst_addr, unsigned int dst_iface,
-			 struct dns_header *header, size_t plen, time_t now, 
-			 struct frec *forward, int ad_reqd, int do_bit)
-{
-  char *domain = nullptr;
-  int type = SERV_DO_DNSSEC, norebind = 0;
-  struct all_addr *addrp = nullptr;
-  unsigned int flags = 0;
-  struct server *start = nullptr;
-//#ifdef HAVE_DNSSEC
-  void *hash = hash_questions(header, plen, daemon->namebuff);
-  int do_dnssec = 0;
-//#else
-  unsigned int crc = questions_crc(header, plen, daemon->namebuff);
-  void *hash = &crc;
-//#endif
-  unsigned int gotname = extract_request(header, plen, daemon->namebuff, nullptr);
-  unsigned char *oph = find_pseudoheader(header, plen, nullptr, nullptr, nullptr, nullptr);
-  (void)do_bit;
-
-  /* may be no servers available. */
-  if (forward || (hash && (forward = lookup_frec_by_sender(ntohs(header->id), udpaddr, hash))))
-    {
-      /* If we didn't get an answer advertising a maximal packet in EDNS,
-	 fall back to 1280, which should work everywhere on IPv6.
-	 If that generates an answer, it will become the new default
-	 for this server */
-      forward->flags |= FREC_TEST_PKTSZ;
-      
-//#ifdef HAVE_DNSSEC
-      /* If we've already got an answer to this query, but we're awaiting keys for validation,
-	 there's no point retrying the query, retry the key query instead...... */
-      if (forward->blocking_query)
-	{
-	  int fd, is_sign;
-	  unsigned char *pheader;
-	  
-	  forward->flags &= ~FREC_TEST_PKTSZ;
-	  
-	  while (forward->blocking_query)
-	    forward = forward->blocking_query;
-	   
-	  blockdata_retrieve(forward->stash, forward->stash_len, (void *)header);
-	  plen = forward->stash_len;
-	  
-	  forward->flags |= FREC_TEST_PKTSZ;
-	  if (find_pseudoheader(header, plen, nullptr, &pheader, &is_sign, nullptr) && !is_sign)
-	    PUTSHORT(SAFE_PKTSZ, pheader);
-	  
-	  if (forward->sentto->addr.sa.sa_family == AF_INET) 
-	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV4, "retry", (struct all_addr *)&forward->sentto->addr.in.sin_addr, "dnssec");
-//#ifdef HAVE_IPV6
-	  else
-	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV6, "retry", (struct all_addr *)&forward->sentto->addr.in6.sin6_addr, "dnssec");
-//#endif
-  
-	  if (forward->sentto->sfd)
-	    fd = forward->sentto->sfd->fd;
-	  else
-	    {
-//#ifdef HAVE_IPV6
-	      if (forward->sentto->addr.sa.sa_family == AF_INET6)
-		fd = forward->rfd6->fd;
-	      else
-//#endif
-		fd = forward->rfd4->fd;
-	    }
-	  
-	  while (retry_send(sendto(fd, (char *)header, plen, 0,
-				   &forward->sentto->addr.sa,
-				   sa_len(&forward->sentto->addr))));
-	  
-	  return 1;
-	}
-//#endif
-
-      /* retry on existing query, send to all available servers  */
-      domain = forward->sentto->domain;
-      forward->sentto->failed_queries++;
-      if (!option_bool(OPT_ORDER))
-	{
-	  forward->forwardall = 1;
-	  daemon->last_server = nullptr;
-	}
-      type = forward->sentto->flags & SERV_TYPE;
-//#ifdef HAVE_DNSSEC
-      do_dnssec = forward->sentto->flags & SERV_DO_DNSSEC;
-//#endif
-
-      if (!(start = forward->sentto->next))
-	start = daemon->servers; /* at end of list, recycle */
-      header->id = htons(forward->new_id);
-    }
-  else 
-    {
-      if (gotname)
-	flags = search_servers(now, &addrp, gotname, daemon->namebuff, &type, &domain, &norebind);
-      
-//#ifdef HAVE_DNSSEC
-      do_dnssec = type & SERV_DO_DNSSEC;
-//#endif
-      type &= ~SERV_DO_DNSSEC;      
-
-      if (daemon->servers && !flags)
-	forward = get_new_frec(now, nullptr, 0);
-      /* table full - flags == 0, return REFUSED */
-      
-      if (forward)
-	{
-	  forward->source = *udpaddr;
-	  forward->dest = *dst_addr;
-	  forward->iface = dst_iface;
-	  forward->orig_id = ntohs(header->id);
-	  forward->new_id = get_id();
-	  forward->fd = udpfd;
-	  memcpy(forward->hash, hash, HASH_SIZE);
-	  forward->forwardall = 0;
-	  forward->flags = 0;
-	  if (norebind)
-	    forward->flags |= FREC_NOREBIND;
-	  if (header->hb4 & HB4_CD)
-	    forward->flags |= FREC_CHECKING_DISABLED;
-	  if (ad_reqd)
-	    forward->flags |= FREC_AD_QUESTION;
-//#ifdef HAVE_DNSSEC
-	  forward->work_counter = DNSSEC_WORK;
-	  if (do_bit)
-	    forward->flags |= FREC_DO_QUESTION;
-//#endif
-	  
-	  header->id = htons(forward->new_id);
-	  
-	  /* In strict_order mode, always try servers in the order 
-	     specified in resolv.conf, if a domain is given 
-	     always try all the available servers,
-	     otherwise, use the one last known to work. */
-	  
-	  if (type == 0)
-	    {
-	      if (option_bool(OPT_ORDER))
-		start = daemon->servers;
-	      else if (!(start = daemon->last_server) ||
-		       daemon->forwardcount++ > FORWARD_TEST ||
-		       difftime(now, daemon->forwardtime) > FORWARD_TIME)
-		{
-		  start = daemon->servers;
-		  forward->forwardall = 1;
-		  daemon->forwardcount = 0;
-		  daemon->forwardtime = now;
-		}
-	    }
-	  else
-	    {
-	      start = daemon->servers;
-	      if (!option_bool(OPT_ORDER))
-		forward->forwardall = 1;
-	    }
-	}
-    }
-
-  /* check for send errors here (no route to host) 
-     if we fail to send to all nameservers, send back an error
-     packet straight away (helps modem users when offline)  */
-  
-  if (!flags && forward)
-    {
-      struct server *firstsentto = start;
-      int subnet, forwarded = 0;
-      size_t edns0_len;
-      unsigned char *pheader;
-      
-      /* If a query is retried, use the log_id for the retry when logging the answer. */
-      forward->log_id = daemon->log_id;
-      
-      plen = add_edns0_config(header, plen, ((unsigned char *)header) + PACKETSZ, &forward->source, now, &subnet);
-      
-      if (subnet)
-	forward->flags |= FREC_HAS_SUBNET;
-      
-//#ifdef HAVE_DNSSEC
-      if (option_bool(OPT_DNSSEC_VALID) && do_dnssec)
-	{
-	  plen = add_do_bit(header, plen, ((unsigned char *) header) + PACKETSZ);
-	 	      
-	  /* For debugging, set Checking Disabled, otherwise, have the upstream check too,
-	     this allows it to select auth servers when one is returning bad data. */
-	  if (option_bool(OPT_DNSSEC_DEBUG))
-	    header->hb4 |= HB4_CD;
-
-	}
-//#endif
-
-      if (find_pseudoheader(header, plen, &edns0_len, &pheader, nullptr, nullptr))
-	{
-	  /* If there wasn't a PH before, and there is now, we added it. */
-	  if (!oph)
-	    forward->flags |= FREC_ADDED_PHEADER;
-
-	  /* If we're sending an EDNS0 with any options, we can't recreate the query from a reply. */
-	  if (edns0_len > 11)
-	    forward->flags |= FREC_HAS_EXTRADATA;
-
-	  /* Reduce udp size on retransmits. */
-	  if (forward->flags & FREC_TEST_PKTSZ)
-	    PUTSHORT(SAFE_PKTSZ, pheader);
-	}
-      
-      while (1)
-	{ 
-	  /* only send to servers dealing with our domain.
-	     domain may be NULL, in which case server->domain 
-	     must be NULL also. */
-	  
-	  if (type == (start->flags & SERV_TYPE) &&
-	      (type != SERV_HAS_DOMAIN || hostname_isequal(domain, start->domain)) &&
-	      !(start->flags & (SERV_LITERAL_ADDRESS | SERV_LOOP)))
-	    {
-	      int fd;
-
-	      /* find server socket to use, may need to get random one. */
-	      if (start->sfd)
-		fd = start->sfd->fd;
-	      else 
-		{
-//#ifdef HAVE_IPV6
-		  if (start->addr.sa.sa_family == AF_INET6)
-		    {
-		      if (!forward->rfd6 &&
-			  !(forward->rfd6 = allocate_rfd(AF_INET6)))
-			break;
-		      daemon->rfd_save = forward->rfd6;
-		      fd = forward->rfd6->fd;
-		    }
-		  else
-//#endif
-		    {
-		      if (!forward->rfd4 &&
-			  !(forward->rfd4 = allocate_rfd(AF_INET)))
-			break;
-		      daemon->rfd_save = forward->rfd4;
-		      fd = forward->rfd4->fd;
-		    }
-
-//#ifdef HAVE_CONNTRACK
-		  /* Copy connection mark of incoming query to outgoing connection. */
-		  if (option_bool(OPT_CONNTRACK))
-		    {
-		      unsigned int mark;
-		      if (get_incoming_mark(&forward->source, &forward->dest, 0, &mark))
-			setsockopt(fd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
-		    }
-//#endif
-		}
-	      
-//#ifdef HAVE_DNSSEC
-	      if (option_bool(OPT_DNSSEC_VALID) && (forward->flags & FREC_ADDED_PHEADER))
-		{
-		  /* Difficult one here. If our client didn't send EDNS0, we will have set the UDP
-		     packet size to 512. But that won't provide space for the RRSIGS in many cases.
-		     The RRSIGS will be stripped out before the answer goes back, so the packet should
-		     shrink again. So, if we added a do-bit, bump the udp packet size to the value
-		     known to be OK for this server. We check returned size after stripping and set
-		     the truncated bit if it's still too big. */		  
-		  unsigned char *pheader;
-		  int is_sign;
-		  if (find_pseudoheader(header, plen, nullptr, &pheader, &is_sign, nullptr) && !is_sign)
-		    PUTSHORT(start->edns_pktsz, pheader);
-		}
-//#endif
-
-	      if (retry_send(sendto(fd, (char *)header, plen, 0,
-				    &start->addr.sa,
-				    sa_len(&start->addr))))
-		continue;
-	    
-	      if (errno == 0)
-		{
-//#ifdef HAVE_DUMPFILE
-		  dump_packet(DUMP_UP_QUERY, (void *)header, plen, nullptr, &start->addr);
-//#endif
-		  
-		  /* Keep info in case we want to re-send this packet */
-		  daemon->srv_save = start;
-		  daemon->packet_len = plen;
-		  
-		  if (!gotname)
-		    strcpy(daemon->namebuff, "query");
-		  if (start->addr.sa.sa_family == AF_INET)
-		    log_query(F_SERVER | F_IPV4 | F_FORWARD, daemon->namebuff, 
-			      (struct all_addr *)&start->addr.in.sin_addr, nullptr);
-//#ifdef HAVE_IPV6
-		  else
-		    log_query(F_SERVER | F_IPV6 | F_FORWARD, daemon->namebuff, 
-			      (struct all_addr *)&start->addr.in6.sin6_addr, nullptr);
-//#endif 
-		  start->queries++;
-		  forwarded = 1;
-		  forward->sentto = start;
-		  if (!forward->forwardall) 
-		    break;
-		  forward->forwardall++;
-		}
-	    } 
-	  
-	  if (!(start = start->next))
- 	    start = daemon->servers;
-	  
-	  if (start == firstsentto)
-	    break;
-	}
-      
-      if (forwarded)
-	return 1;
-      
-      /* could not send on, prepare to return */ 
-      header->id = htons(forward->orig_id);
-      free_frec(forward); /* cancel */
-    }	  
-  
-  /* could not send on, return empty answer or address if known for whole domain */
-  if (udpfd != -1)
-    {
-      plen = setup_reply(header, plen, addrp, flags, daemon->local_ttl);
-      if (oph)
-	plen = add_pseudoheader(header, plen, ((unsigned char *) header) + PACKETSZ, daemon->edns_pktsz, 0, nullptr, 0, do_bit, 0);
-      send_from(udpfd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND), (char *)header, plen, udpaddr, dst_addr, dst_iface);
-    }
-
-  return 0;
-}
-
-static size_t process_reply(struct dns_header *header, time_t now, struct server *server, size_t n, int check_rebind, 
-			    int no_cache, int cache_secure, int bogusanswer, int ad_reqd, int do_bit, int added_pheader, 
-			    int check_subnet, union mysockaddr *query_source)
-{
-  unsigned char *pheader, *sizep;
-  char **sets = 0;
-  int munged = 0, is_sign;
-  unsigned int rcode = RCODE(header);
-  size_t plen; 
-  
-  (void)ad_reqd;
-  (void)do_bit;
-  (void)bogusanswer;
-
-//#ifdef HAVE_IPSET
-  if (daemon->ipsets && extract_request(header, n, daemon->namebuff, nullptr))
-    {
-      /* Similar algorithm to search_servers. */
-      struct ipsets *ipset_pos;
-      unsigned int namelen = strlen(daemon->namebuff);
-      unsigned int matchlen = 0;
-      for (ipset_pos = daemon->ipsets; ipset_pos; ipset_pos = ipset_pos->next) 
-	{
-	  unsigned int domainlen = strlen(ipset_pos->domain);
-	  char *matchstart = daemon->namebuff + namelen - domainlen;
-	  if (namelen >= domainlen && hostname_isequal(matchstart, ipset_pos->domain) &&
-	      (domainlen == 0 || namelen == domainlen || *(matchstart - 1) == '.' ) &&
-	      domainlen >= matchlen) 
-	    {
-	      matchlen = domainlen;
-	      sets = ipset_pos->sets;
-	    }
-	}
-    }
-//#endif
-  
-  if ((pheader = find_pseudoheader(header, n, &plen, &sizep, &is_sign, nullptr)))
-    {
-      /* Get extended RCODE. */
-      rcode |= sizep[2] << 4;
-
-      if (check_subnet && !check_source(header, plen, pheader, query_source))
-	{
-	  my_syslog(LOG_WARNING, _("discarding DNS reply: subnet option mismatch"));
-	  return 0;
-	}
-      
-      if (!is_sign)
-	{
-	  if (added_pheader)
-	    {
-	      /* client didn't send EDNS0, we added one, strip it off before returning answer. */
-	      n = rrfilter(header, n, 0);
-	      pheader = nullptr;
-	    }
-	  else
-	    {
-	      unsigned short udpsz;
-
-	      /* If upstream is advertising a larger UDP packet size
-		 than we allow, trim it so that we don't get overlarge
-		 requests for the client. We can't do this for signed packets. */
-	      GETSHORT(udpsz, sizep);
-	      if (udpsz > daemon->edns_pktsz)
-		{
-		  sizep -= 2;
-		  PUTSHORT(daemon->edns_pktsz, sizep);
-		}
-
-//#ifdef HAVE_DNSSEC
-	      /* If the client didn't set the do bit, but we did, reset it. */
-	      if (option_bool(OPT_DNSSEC_VALID) && !do_bit)
-		{
-		  unsigned short flags;
-		  sizep += 2; /* skip RCODE */
-		  GETSHORT(flags, sizep);
-		  flags &= ~0x8000;
-		  sizep -= 2;
-		  PUTSHORT(flags, sizep);
-		}
-//#endif
-	    }
-	}
-    }
-  
-  /* RFC 4035 sect 4.6 para 3 */
-  if (!is_sign && !option_bool(OPT_DNSSEC_PROXY))
-     header->hb4 &= ~HB4_AD;
-  
-  if (OPCODE(header) != QUERY)
-    return resize_packet(header, n, pheader, plen);
-
-  if (rcode != NOERROR && rcode != NXDOMAIN)
-    {
-      struct all_addr a;
-      a.addr.rcode.rcode = rcode;
-      log_query(F_UPSTREAM | F_RCODE, "error", &a, nullptr);
-      
-      return resize_packet(header, n, pheader, plen);
-    }
-  
-  /* Complain loudly if the upstream server is non-recursive. */
-  if (!(header->hb4 & HB4_RA) && rcode == NOERROR &&
-      server && !(server->flags & SERV_WARNED_RECURSIVE))
-    {
-      prettyprint_addr(&server->addr, daemon->namebuff);
-      my_syslog(LOG_WARNING, _("nameserver %s refused to do a recursive query"), daemon->namebuff);
-      if (!option_bool(OPT_LOG))
-	server->flags |= SERV_WARNED_RECURSIVE;
-    }  
-
-  if (daemon->bogus_addr && rcode != NXDOMAIN &&
-      check_for_bogus_wildcard(header, n, daemon->namebuff, daemon->bogus_addr, now))
-    {
-      munged = 1;
-      SET_RCODE(header, NXDOMAIN);
-      header->hb3 &= ~HB3_AA;
-      cache_secure = 0;
-    }
-  else 
-    {
-      int doctored = 0;
-      
-      if (rcode == NXDOMAIN && 
-	  extract_request(header, n, daemon->namebuff, nullptr) &&
-	  check_for_local_domain(daemon->namebuff, now))
-	{
-	  /* if we forwarded a query for a locally known name (because it was for 
-	     an unknown type) and the answer is NXDOMAIN, convert that to NODATA,
-	     since we know that the domain exists, even if upstream doesn't */
-	  munged = 1;
-	  header->hb3 |= HB3_AA;
-	  SET_RCODE(header, NOERROR);
-	  cache_secure = 0;
-	}
-      
-      if (extract_addresses(header, n, daemon->namebuff, now, sets, is_sign, check_rebind, no_cache, cache_secure, &doctored))
-	{
-	  my_syslog(LOG_WARNING, _("possible DNS-rebind attack detected: %s"), daemon->namebuff);
-	  munged = 1;
-	  cache_secure = 0;
-	}
-
-      if (doctored)
-	cache_secure = 0;
-    }
-  
-//#ifdef HAVE_DNSSEC
-  if (bogusanswer && !(header->hb4 & HB4_CD) && !option_bool(OPT_DNSSEC_DEBUG))
-    {
-      /* Bogus reply, turn into SERVFAIL */
-      SET_RCODE(header, SERVFAIL);
-      munged = 1;
-    }
-
-  if (option_bool(OPT_DNSSEC_VALID))
-    {
-      header->hb4 &= ~HB4_AD;
-      
-      if (!(header->hb4 & HB4_CD) && ad_reqd && cache_secure)
-	header->hb4 |= HB4_AD;
-      
-      /* If the requestor didn't set the DO bit, don't return DNSSEC info. */
-      if (!do_bit)
-	n = rrfilter(header, n, 1);
-    }
-//#endif
-
-  /* do this after extract_addresses. Ensure NODATA reply and remove
-     nameserver info. */
-  
-  if (munged)
-    {
-      header->ancount = htons(0);
-      header->nscount = htons(0);
-      header->arcount = htons(0);
-      header->hb3 &= ~HB3_TC;
-    }
-  
-  /* the bogus-nxdomain stuff, doctor and NXDOMAIN->NODATA munging can all elide
-     sections of the packet. Find the new length here and put back pseudoheader
-     if it was removed. */
-  return resize_packet(header, n, pheader, plen);
-}
-
-/* sets new last_server */
-void reply_query(int fd, int family, time_t now)
-{
-  /* packet from peer server, extract data for cache, and send to
-     original requester */
-  struct dns_header *header;
-  union mysockaddr serveraddr;
-  struct frec *forward;
-  socklen_t addrlen = sizeof(serveraddr);
-  ssize_t n = recvfrom(fd, daemon->packet, daemon->packet_buff_sz, 0, &serveraddr.sa, &addrlen);
-  size_t nn;
-  struct server *server;
-  void *hash;
-//#ifndef HAVE_DNSSEC
-  unsigned int crc;
-//#endif
-
-  /* packet buffer overwritten */
-  daemon->srv_save = nullptr;
-  
-  /* Determine the address of the server replying  so that we can mark that as good */
-  serveraddr.sa.sa_family = family;
-//#ifdef HAVE_IPV6
-  if (serveraddr.sa.sa_family == AF_INET6)
-    serveraddr.in6.sin6_flowinfo = 0;
-//#endif
-  
-  header = (struct dns_header *)daemon->packet;
-
-  if (n < (int)sizeof(struct dns_header) || !(header->hb3 & HB3_QR))
-    return;
-  
-  /* spoof check: answer must come from known server, */
-  for (server = daemon->servers; server; server = server->next)
-    if (!(server->flags & (SERV_LITERAL_ADDRESS | SERV_NO_ADDR)) &&
-	sockaddr_isequal(&server->addr, &serveraddr))
-      break;
-  
-  if (!server)
-    return;
-
-  /* If sufficient time has elapsed, try and expand UDP buffer size again. */
-  if (difftime(now, server->pktsz_reduced) > UDP_TEST_TIME)
-    server->edns_pktsz = daemon->edns_pktsz;
-
-//#ifdef HAVE_DNSSEC
-  hash = hash_questions(header, n, daemon->namebuff);
-//#else
-  hash = &crc;
-  crc = questions_crc(header, n, daemon->namebuff);
-//#endif
-  
-  if (!(forward = lookup_frec(ntohs(header->id), hash)))
-    return;
-  
-//#ifdef HAVE_DUMPFILE
-  dump_packet((forward->flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY)) ? DUMP_SEC_REPLY : DUMP_UP_REPLY,
-	      (void *)header, n, &serveraddr, nullptr);
-//#endif
-
-  /* log_query gets called indirectly all over the place, so 
-     pass these in global variables - sorry. */
-  daemon->log_display_id = forward->log_id;
-  daemon->log_source_addr = &forward->source;
-  
-  if (daemon->ignore_addr && RCODE(header) == NOERROR &&
-      check_for_ignored_address(header, n, daemon->ignore_addr))
-    return;
-
-  /* Note: if we send extra options in the EDNS0 header, we can't recreate
-     the query from the reply. */
-  if ((RCODE(header) == REFUSED || RCODE(header) == SERVFAIL) &&
-      forward->forwardall == 0 &&
-      !(forward->flags & FREC_HAS_EXTRADATA))
-    /* for broken servers, attempt to send to another one. */
-    {
-      unsigned char *pheader;
-      size_t plen;
-      int is_sign;
-
-//#ifdef HAVE_DNSSEC
-      /* For DNSSEC originated queries, just retry the query to the same server. */
-      if (forward->flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY))
-	{
-	  struct server *start;
-	  
-	  blockdata_retrieve(forward->stash, forward->stash_len, (void *)header);
-	  plen = forward->stash_len;
-
-	  forward->forwardall = 2; /* only retry once */
-	  start = forward->sentto;
-
-	  /* for non-domain specific servers, see if we can find another to try. */
-	  if ((forward->sentto->flags & SERV_TYPE) == 0)
-	    while (1)
-	      {
-		if (!(start = start->next))
-		  start = daemon->servers;
-		if (start == forward->sentto)
-		  break;
-		
-		if ((start->flags & SERV_TYPE) == 0 &&
-		    (start->flags & SERV_DO_DNSSEC))
-		  break;
-	      }
-	    
-	  
-	  if (start->sfd)
-	    fd = start->sfd->fd;
-	  else
-	    {
-//#ifdef HAVE_IPV6
-	      if (start->addr.sa.sa_family == AF_INET6)
-		{
-		  /* may have changed family */
-		  if (!forward->rfd6)
-		    forward->rfd6 = allocate_rfd(AF_INET6);
-		  fd = forward->rfd6->fd;
-		}
-	      else
-//#endif
-		{
-		  /* may have changed family */
-		  if (!forward->rfd4)
-		    forward->rfd4 = allocate_rfd(AF_INET);
-		  fd = forward->rfd4->fd;
-		}
-	    }
-	
-	  while (retry_send(sendto(fd, (char *)header, plen, 0,
-				   &start->addr.sa,
-				   sa_len(&start->addr))));
-	  
-	  if (start->addr.sa.sa_family == AF_INET) 
-	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV4, "retry", (struct all_addr *)&start->addr.in.sin_addr, "dnssec");
-//#ifdef HAVE_IPV6
-	  else
-	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV6, "retry", (struct all_addr *)&start->addr.in6.sin6_addr, "dnssec");
-//#endif
-	  
-	  return;
-	}
-//#endif
-      
-      /* In strict order mode, there must be a server later in the chain
-	 left to send to, otherwise without the forwardall mechanism,
-	 code further on will cycle around the list forwever if they
-	 all return REFUSED. Note that server is always non-NULL before 
-	 this executes. */
-      if (option_bool(OPT_ORDER))
-	for (server = forward->sentto->next; server; server = server->next)
-	  if (!(server->flags & (SERV_LITERAL_ADDRESS | SERV_HAS_DOMAIN | SERV_FOR_NODOTS | SERV_NO_ADDR | SERV_LOOP)))
-	    break;
-
-      /* recreate query from reply */
-      pheader = find_pseudoheader(header, (size_t)n, &plen, nullptr, &is_sign, nullptr);
-      if (!is_sign && server)
-	{
-	  header->ancount = htons(0);
-	  header->nscount = htons(0);
-	  header->arcount = htons(0);
-	  if ((nn = resize_packet(header, (size_t)n, pheader, plen)))
-	    {
-	      header->hb3 &= ~(HB3_QR | HB3_AA | HB3_TC);
-	      header->hb4 &= ~(HB4_RA | HB4_RCODE | HB4_CD | HB4_AD);
-	      if (forward->flags & FREC_CHECKING_DISABLED)
-		header->hb4 |= HB4_CD;
-	      if (forward->flags & FREC_AD_QUESTION)
-		header->hb4 |= HB4_AD;
-	      if (forward->flags & FREC_DO_QUESTION)
-		add_do_bit(header, nn,  (unsigned char *)pheader + plen);
-	      forward_query(-1, nullptr, nullptr, 0, header, nn, now, forward, forward->flags & FREC_AD_QUESTION, forward->flags & FREC_DO_QUESTION);
-	      return;
-	    }
-	}
-    }   
-   
-  server = forward->sentto;
-  if ((forward->sentto->flags & SERV_TYPE) == 0)
-    {
-      if (RCODE(header) == REFUSED)
-	server = nullptr;
-      else
-	{
-	  struct server *last_server;
-	  
-	  /* find good server by address if possible, otherwise assume the last one we sent to */ 
-	  for (last_server = daemon->servers; last_server; last_server = last_server->next)
-	    if (!(last_server->flags & (SERV_LITERAL_ADDRESS | SERV_HAS_DOMAIN | SERV_FOR_NODOTS | SERV_NO_ADDR)) &&
-		sockaddr_isequal(&last_server->addr, &serveraddr))
-	      {
-		server = last_server;
-		break;
-	      }
-	} 
-      if (!option_bool(OPT_ALL_SERVERS))
-	daemon->last_server = server;
-    }
- 
-  /* We tried resending to this server with a smaller maximum size and got an answer.
-     Make that permanent. To avoid reduxing the packet size for a single dropped packet,
-     only do this when we get a truncated answer, or one larger than the safe size. */
-  if (server && server->edns_pktsz > SAFE_PKTSZ && (forward->flags & FREC_TEST_PKTSZ) && 
-      ((header->hb3 & HB3_TC) || n >= SAFE_PKTSZ))
-    {
-      server->edns_pktsz = SAFE_PKTSZ;
-      server->pktsz_reduced = now;
-      prettyprint_addr(&server->addr, daemon->addrbuff);
-      my_syslog(LOG_WARNING, _("reducing DNS packet size for nameserver %s to %d"), daemon->addrbuff, SAFE_PKTSZ);
-    }
-
-    
-  /* If the answer is an error, keep the forward record in place in case
-     we get a good reply from another server. Kill it when we've
-     had replies from all to avoid filling the forwarding table when
-     everything is broken */
-  if (forward->forwardall == 0 || --forward->forwardall == 1 ||
-      (RCODE(header) != REFUSED && RCODE(header) != SERVFAIL))
-    {
-      int check_rebind = 0, no_cache_dnssec = 0, cache_secure = 0, bogusanswer = 0;
-      
-      if (option_bool(OPT_NO_REBIND))
-	check_rebind = !(forward->flags & FREC_NOREBIND);
-      
-      /*   Don't cache replies where DNSSEC validation was turned off, either
-	   the upstream server told us so, or the original query specified it.  */
-      if ((header->hb4 & HB4_CD) || (forward->flags & FREC_CHECKING_DISABLED))
-	no_cache_dnssec = 1;
-      
-//#ifdef HAVE_DNSSEC
-      if (server && (server->flags & SERV_DO_DNSSEC) && 
-	  option_bool(OPT_DNSSEC_VALID) && !(forward->flags & FREC_CHECKING_DISABLED))
-	{
-	  int status = 0;
-
-	  /* We've had a reply already, which we're validating. Ignore this duplicate */
-	  if (forward->blocking_query)
-	    return;
-	  
-	   /* Truncated answer can't be validated.
-	      If this is an answer to a DNSSEC-generated query, we still
-	      need to get the client to retry over TCP, so return
-	      an answer with the TC bit set, even if the actual answer fits.
-	   */
-	  if (header->hb3 & HB3_TC)
-	    status = STAT_TRUNCATED;
-	  
-	  while (1)
-	    {
-	      /* As soon as anything returns BOGUS, we stop and unwind, to do otherwise
-		 would invite infinite loops, since the answers to DNSKEY and DS queries
-		 will not be cached, so they'll be repeated. */
-	      if (status != STAT_BOGUS && status != STAT_TRUNCATED && status != STAT_ABANDONED)
-		{
-		  if (forward->flags & FREC_DNSKEY_QUERY)
-		    status = dnssec_validate_by_ds(now, header, n, daemon->namebuff, daemon->keyname, forward->_class);
-		  else if (forward->flags & FREC_DS_QUERY)
-		    status = dnssec_validate_ds(now, header, n, daemon->namebuff, daemon->keyname, forward->_class);
-		  else
-		    status = dnssec_validate_reply(now, header, n, daemon->namebuff, daemon->keyname, &forward->_class,
-						   !option_bool(OPT_DNSSEC_IGN_NS) && (server->flags & SERV_DO_DNSSEC),
-						   nullptr, nullptr);
-//#ifdef HAVE_DUMPFILE
-		  if (status == STAT_BOGUS)
-		    dump_packet((forward->flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY)) ? DUMP_SEC_BOGUS : DUMP_BOGUS,
-				header, (size_t)n, &serveraddr, nullptr);
-//#endif
-		}
-	      
-	      /* Can't validate, as we're missing key data. Put this
-		 answer aside, whilst we get that. */     
-	      if (status == STAT_NEED_DS || status == STAT_NEED_KEY)
-		{
-		  struct frec *new, *orig;
-		  
-		  /* Free any saved query */
-		  if (forward->stash)
-		    blockdata_free(forward->stash);
-		  
-		  /* Now save reply pending receipt of key data */
-		  if (!(forward->stash = blockdata_alloc((char *)header, n)))
-		    return;
-		  forward->stash_len = n;
-		  
-		  /* Find the original query that started it all.... */
-		  for (orig = forward; orig->dependent; orig = orig->dependent);
-		  
-		  if (--orig->work_counter == 0 || !(new = get_new_frec(now, nullptr, 1)))
-		    status = STAT_ABANDONED;
-		  else
-		    {
-		      int querytype, fd, type = SERV_DO_DNSSEC;
-		      struct frec *next = new->next;
-		      char *domain;
-		      
-		      *new = *forward; /* copy everything, then overwrite */
-		      new->next = next;
-		      new->blocking_query = nullptr;
-
-		      /* Find server to forward to. This will normally be the 
-			 same as for the original query, but may be another if
-			 servers for domains are involved. */		      
-		      if (search_servers(now, nullptr, F_DNSSECOK, daemon->keyname, &type, &domain, nullptr) == 0)
-			{
-			  struct server *start = server, *new_server = nullptr;
-			  
-			  while (1)
-			    {
-			      if (type == (start->flags & (SERV_TYPE | SERV_DO_DNSSEC)) &&
-				  ((type & SERV_TYPE) != SERV_HAS_DOMAIN || hostname_isequal(domain, start->domain)) &&
-				  !(start->flags & (SERV_LITERAL_ADDRESS | SERV_LOOP)))
-				{
-				  new_server = start;
-				  if (server == start)
-				    {
-				      new_server = nullptr;
-				      break;
-				    }
-				}
-			      
-			      if (!(start = start->next))
-				start = daemon->servers;
-			      if (start == server)
-				break;
-			    }
-			  
-			  if (new_server)
-			    server = new_server;
-			}
-		      
-		      new->sentto = server;
-		      new->rfd4 = nullptr;
-//#ifdef HAVE_IPV6
-		      new->rfd6 = nullptr;
-//#endif
-		      new->flags &= ~(FREC_DNSKEY_QUERY | FREC_DS_QUERY | FREC_HAS_EXTRADATA);
-		      new->forwardall = 0;
-		      
-		      new->dependent = forward; /* to find query awaiting new one. */
-		      forward->blocking_query = new; /* for garbage cleaning */
-		      /* validate routines leave name of required record in daemon->keyname */
-		      if (status == STAT_NEED_KEY)
-			{
-			  new->flags |= FREC_DNSKEY_QUERY; 
-			  querytype = T_DNSKEY;
-			}
-		      else 
-			{
-			  new->flags |= FREC_DS_QUERY;
-			  querytype = T_DS;
-			}
-
-		      nn = dnssec_generate_query(header,((unsigned char *) header) + server->edns_pktsz,
-						 daemon->keyname, forward->_class, querytype, server->edns_pktsz);
-
-		      if (server->addr.sa.sa_family == AF_INET) 
-			log_query(F_NOEXTRA | F_DNSSEC | F_IPV4, daemon->keyname, (struct all_addr *)&(server->addr.in.sin_addr),
-				  querystr("dnssec-query", querytype));
-//#ifdef HAVE_IPV6
-		      else
-			log_query(F_NOEXTRA | F_DNSSEC | F_IPV6, daemon->keyname, (struct all_addr *)&(server->addr.in6.sin6_addr),
-				  querystr("dnssec-query", querytype));
-//#endif
-  
-		      if ((hash = hash_questions(header, nn, daemon->namebuff)))
-			memcpy(new->hash, hash, HASH_SIZE);
-		      new->new_id = get_id();
-		      header->id = htons(new->new_id);
-		      /* Save query for retransmission */
-		      new->stash = blockdata_alloc((char *)header, nn);
-		      new->stash_len = nn;
-		      
-		      /* Don't resend this. */
-		      daemon->srv_save = nullptr;
-		      
-		      if (server->sfd)
-			fd = server->sfd->fd;
-		      else
-			{
-			  fd = -1;
-//#ifdef HAVE_IPV6
-			  if (server->addr.sa.sa_family == AF_INET6)
-			    {
-			      if (new->rfd6 || (new->rfd6 = allocate_rfd(AF_INET6)))
-				fd = new->rfd6->fd;
-			    }
-			  else
-//#endif
-			    {
-			      if (new->rfd4 || (new->rfd4 = allocate_rfd(AF_INET)))
-				fd = new->rfd4->fd;
-			    }
-			}
-		      
-		      if (fd != -1)
-			{
-//#ifdef HAVE_CONNTRACK
-			  /* Copy connection mark of incoming query to outgoing connection. */
-			  if (option_bool(OPT_CONNTRACK))
-			    {
-			      unsigned int mark;
-			      if (get_incoming_mark(&orig->source, &orig->dest, 0, &mark))
-				setsockopt(fd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
-			    }
-//#endif
-			  
-//#ifdef HAVE_DUMPFILE
-			  dump_packet(DUMP_SEC_QUERY, (void *)header, (size_t)nn, nullptr, &server->addr);
-//#endif
-			  
-			  while (retry_send(sendto(fd, (char *)header, nn, 0, 
-						   &server->addr.sa, 
-						   sa_len(&server->addr)))); 
-			  server->queries++;
-			}
-		    }		  
-		  return;
-		}
-	  
-	      /* Validated original answer, all done. */
-	      if (!forward->dependent)
-		break;
-	      
-	      /* validated subsidiary query, (and cached result)
-		 pop that and return to the previous query we were working on. */
-	      struct frec *prev = forward->dependent;
-	      free_frec(forward);
-	      forward = prev;
-	      forward->blocking_query = nullptr; /* already gone */
-	      blockdata_retrieve(forward->stash, forward->stash_len, (void *)header);
-	      n = forward->stash_len;
-	    }
-	
-	  
-	  no_cache_dnssec = 0;
-	  
-	  if (status == STAT_TRUNCATED)
-	    header->hb3 |= HB3_TC;
-	  else
-	    {
-	      char *result, *domain = "result";
-	      
-	      if (status == STAT_ABANDONED)
-		{
-		  result = "ABANDONED";
-		  status = STAT_BOGUS;
-		}
-	      else
-		result = (status == STAT_SECURE ? "SECURE" : (status == STAT_INSECURE ? "INSECURE" : "BOGUS"));
-	      
-	      if (status == STAT_BOGUS && extract_request(header, n, daemon->namebuff, nullptr))
-		domain = daemon->namebuff;
-	      
-	      log_query(F_SECSTAT, domain, nullptr, result);
-	    }
-	  
-	  if (status == STAT_SECURE)
-	    cache_secure = 1;
-	  else if (status == STAT_BOGUS)
-	    {
-	      no_cache_dnssec = 1;
-	      bogusanswer = 1;
-	    }
-	}
-//#endif
-
-      /* restore CD bit to the value in the query */
-      if (forward->flags & FREC_CHECKING_DISABLED)
-	header->hb4 |= HB4_CD;
-      else
-	header->hb4 &= ~HB4_CD;
-      
-      if ((nn = process_reply(header, now, forward->sentto, (size_t)n, check_rebind, no_cache_dnssec, cache_secure, bogusanswer, 
-			      forward->flags & FREC_AD_QUESTION, forward->flags & FREC_DO_QUESTION, 
-			      forward->flags & FREC_ADDED_PHEADER, forward->flags & FREC_HAS_SUBNET, &forward->source)))
-	{
-	  header->id = htons(forward->orig_id);
-	  header->hb4 |= HB4_RA; /* recursion if available */
-//#ifdef HAVE_DNSSEC
-	  /* We added an EDNSO header for the purpose of getting DNSSEC RRs, and set the value of the UDP payload size
-	     greater than the no-EDNS0-implied 512 to have space for the RRSIGS. If, having stripped them and the EDNS0
-             header, the answer is still bigger than 512, truncate it and mark it so. The client then retries with TCP. */
-	  if (option_bool(OPT_DNSSEC_VALID) && (forward->flags & FREC_ADDED_PHEADER) && (nn > PACKETSZ))
-	    {
-	      header->ancount = htons(0);
-	      header->nscount = htons(0);
-	      header->arcount = htons(0);
-	      header->hb3 |= HB3_TC;
-	      nn = resize_packet(header, nn, nullptr, 0);
-	    }
-//#endif
-
-//#ifdef HAVE_DUMPFILE
-	  dump_packet(DUMP_REPLY, daemon->packet, (size_t)nn, nullptr, &forward->source);
-//#endif
-	  
-	  send_from(forward->fd, option_bool(OPT_NOWILD) || option_bool (OPT_CLEVERBIND), daemon->packet, nn, 
-		    &forward->source, &forward->dest, forward->iface);
-	}
-      free_frec(forward); /* cancel */
-    }
-}
-
-
-void receive_query(struct listener *listen, time_t now)
-{
-  struct dns_header *header = (struct dns_header *)daemon->packet;
-  union mysockaddr source_addr;
-  unsigned char *pheader;
-  unsigned short type, udp_size = PACKETSZ; /* default if no EDNS0 */
-  struct all_addr dst_addr;
-  struct in_addr netmask, dst_addr_4;
-  size_t m;
-  ssize_t n;
-  int if_index = 0, auth_dns = 0, do_bit = 0, have_pseudoheader = 0;
-//#ifdef HAVE_AUTH
-  int local_auth = 0;
-//#endif
-  struct iovec iov[1];
-  struct msghdr msg;
-  struct cmsghdr *cmptr;
-  union {
-    struct cmsghdr align; /* this ensures alignment */
-//#ifdef HAVE_IPV6
-    char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-//#endif
-//#if defined(HAVE_LINUX_NETWORK)
-    char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
-#elif defined(IP_RECVDSTADDR) && defined(HAVE_SOLARIS_NETWORK)
-    char control[CMSG_SPACE(sizeof(struct in_addr)) +
-		 CMSG_SPACE(sizeof(unsigned int))];
-#elif defined(IP_RECVDSTADDR)
-    char control[CMSG_SPACE(sizeof(struct in_addr)) +
-		 CMSG_SPACE(sizeof(struct sockaddr_dl))];
-//#endif
-  } control_u;
-//#ifdef HAVE_IPV6
-   /* Can always get recvd interface for IPv6 */
-  int check_dst = !option_bool(OPT_NOWILD) || listen->family == AF_INET6;
-//#else
-  int check_dst = !option_bool(OPT_NOWILD);
-//#endif
-
-  /* packet buffer overwritten */
-  daemon->srv_save = nullptr;
-  
-  dst_addr_4.s_addr = dst_addr.addr.addr4.s_addr = 0;
-  netmask.s_addr = 0;
-  
-  if (option_bool(OPT_NOWILD) && listen->iface)
-    {
-      auth_dns = listen->iface->dns_auth;
+#[c2rust::src_loc = "2448:1"]
+unsafe extern "C" fn lookup_frec_by_query(mut hash: *mut libc::c_void,
+                                          mut flags: libc::c_uint)
+ -> *mut frec {
+    let mut f = 0 as *mut frec;
+    /* FREC_DNSKEY and FREC_DS_QUERY are never set in flags, so the test below 
+     ensures that no frec created for internal DNSSEC query can be returned here.
      
-      if (listen->family == AF_INET)
-	{
-	  dst_addr_4 = dst_addr.addr.addr4 = listen->iface->addr.in.sin_addr;
-	  netmask = listen->iface->netmask;
-	}
+     Similarly FREC_NO_CACHE is never set in flags, so a query which is
+     contigent on a particular source address EDNS0 option will never be matched. */
+    f = (*dnsmasq_daemon).frec_list;
+    while !f.is_null() {
+        if !(*f).sentto.is_null() &&
+               ((*f).flags & FLAGMASK) as libc::c_uint == flags &&
+               memcmp(hash, (*f).hash.as_mut_ptr() as *const libc::c_void,
+                      HASH_SIZE as libc::c_ulong) == 0 as libc::c_int {
+            return f
+        }
+        f = (*f).next
     }
-  
-  iov[0].iov_base = daemon->packet;
-  iov[0].iov_len = daemon->edns_pktsz;
-    
-  msg.msg_control = control_u.control;
-  msg.msg_controllen = sizeof(control_u);
-  msg.msg_flags = 0;
-  msg.msg_name = &source_addr;
-  msg.msg_namelen = sizeof(source_addr);
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 1;
-  
-  if ((n = recvmsg(listen->fd, &msg, 0)) == -1)
-    return;
-  
-  if (n < (int)sizeof(struct dns_header) || 
-      (msg.msg_flags & MSG_TRUNC) ||
-      (header->hb3 & HB3_QR))
-    return;
-
-  /* Clear buffer beyond request to avoid risk of
-     information disclosure. */
-  memset(daemon->packet + n, 0, daemon->edns_pktsz - n);
-  
-  source_addr.sa.sa_family = listen->family;
-  
-  if (listen->family == AF_INET)
-    {
-       /* Source-port == 0 is an error, we can't send back to that. 
-	  http://www.ietf.org/mail-archive/web/dnsop/current/msg11441.html */
-      if (source_addr.in.sin_port == 0)
-	return;
-    }
-//#ifdef HAVE_IPV6
-  else
-    {
-      /* Source-port == 0 is an error, we can't send back to that. */
-      if (source_addr.in6.sin6_port == 0)
-	return;
-      source_addr.in6.sin6_flowinfo = 0;
-    }
-//#endif
-  
-  /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
-  if (option_bool(OPT_LOCAL_SERVICE))
-    {
-      struct addrlist *addr;
-//#ifdef HAVE_IPV6
-      if (listen->family == AF_INET6) 
-	{
-	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-	    if ((addr->flags & ADDRLIST_IPV6) &&
-		is_same_net6(&addr->addr.addr.addr6, &source_addr.in6.sin6_addr, addr->prefixlen))
-	      break;
-	}
-      else
-//#endif
-	{
-	  struct in_addr netmask;
-	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-	    {
-	      netmask.s_addr = htonl(~(in_addr_t)0 << (32 - addr->prefixlen));
-	      if (!(addr->flags & ADDRLIST_IPV6) &&
-		  is_same_net(addr->addr.addr.addr4, source_addr.in.sin_addr, netmask))
-		break;
-	    }
-	}
-      if (!addr)
-	{
-	  static int warned = 0;
-	  if (!warned)
-	    {
-	      my_syslog(LOG_WARNING, _("Ignoring query from non-local network"));
-	      warned = 1;
-	    }
-	  return;
-	}
-    }
-		
-  if (check_dst)
-    {
-      struct ifreq ifr;
-
-      if (msg.msg_controllen < sizeof(struct cmsghdr))
-	return;
-
-//#if defined(HAVE_LINUX_NETWORK)
-      if (listen->family == AF_INET)
-	for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-	  if (cmptr->cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_PKTINFO)
-	    {
-	      union {
-		unsigned char *c;
-		struct in_pktinfo *p;
-	      } p;
-	      p.c = CMSG_DATA(cmptr);
-	      dst_addr_4 = dst_addr.addr.addr4 = p.p->ipi_spec_dst;
-	      if_index = p.p->ipi_ifindex;
-	    }
-#elif defined(IP_RECVDSTADDR) && defined(IP_RECVIF)
-      if (listen->family == AF_INET)
-	{
-	  for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-	    {
-	      union {
-		unsigned char *c;
-		unsigned int *i;
-		struct in_addr *a;
-//#ifndef HAVE_SOLARIS_NETWORK
-		struct sockaddr_dl *s;
-//#endif
-	      } p;
-	       p.c = CMSG_DATA(cmptr);
-	       if (cmptr->cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_RECVDSTADDR)
-		 dst_addr_4 = dst_addr.addr.addr4 = *(p.a);
-	       else if (cmptr->cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_RECVIF)
-//#ifdef HAVE_SOLARIS_NETWORK
-		 if_index = *(p.i);
-//#else
-  	         if_index = p.s->sdl_index;
-//#endif
-	    }
-	}
-//#endif
-      
-//#ifdef HAVE_IPV6
-      if (listen->family == AF_INET6)
-	{
-	  for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-	    if (cmptr->cmsg_level == IPPROTO_IPV6 && cmptr->cmsg_type == daemon->v6pktinfo)
-	      {
-		union {
-		  unsigned char *c;
-		  struct in6_pktinfo *p;
-		} p;
-		p.c = CMSG_DATA(cmptr);
-		  
-		dst_addr.addr.addr6 = p.p->ipi6_addr;
-		if_index = p.p->ipi6_ifindex;
-	      }
-	}
-//#endif
-      
-      /* enforce available interface configuration */
-      
-      if (!indextoname(listen->fd, if_index, ifr.ifr_name))
-	return;
-      
-      if (!iface_check(listen->family, &dst_addr, ifr.ifr_name, &auth_dns))
-	{
-	   if (!option_bool(OPT_CLEVERBIND))
-	     enumerate_interfaces(0); 
-	   if (!loopback_exception(listen->fd, listen->family, &dst_addr, ifr.ifr_name) &&
-	       !label_exception(if_index, listen->family, &dst_addr))
-	     return;
-	}
-
-      if (listen->family == AF_INET && option_bool(OPT_LOCALISE))
-	{
-	  struct irec *iface;
-	  
-	  /* get the netmask of the interface which has the address we were sent to.
-	     This is no necessarily the interface we arrived on. */
-	  
-	  for (iface = daemon->interfaces; iface; iface = iface->next)
-	    if (iface->addr.sa.sa_family == AF_INET &&
-		iface->addr.in.sin_addr.s_addr == dst_addr_4.s_addr)
-	      break;
-	  
-	  /* interface may be new */
-	  if (!iface && !option_bool(OPT_CLEVERBIND))
-	    enumerate_interfaces(0); 
-	  
-	  for (iface = daemon->interfaces; iface; iface = iface->next)
-	    if (iface->addr.sa.sa_family == AF_INET &&
-		iface->addr.in.sin_addr.s_addr == dst_addr_4.s_addr)
-	      break;
-	  
-	  /* If we failed, abandon localisation */
-	  if (iface)
-	    netmask = iface->netmask;
-	  else
-	    dst_addr_4.s_addr = 0;
-	}
-    }
-   
-  /* log_query gets called indirectly all over the place, so 
-     pass these in global variables - sorry. */
-  daemon->log_display_id = ++daemon->log_id;
-  daemon->log_source_addr = &source_addr;
-
-//#ifdef HAVE_DUMPFILE
-  dump_packet(DUMP_QUERY, daemon->packet, (size_t)n, &source_addr, nullptr);
-//#endif
-	  
-  if (extract_request(header, (size_t)n, daemon->namebuff, &type))
-    {
-//#ifdef HAVE_AUTH
-      struct auth_zone *zone;
-//#endif
-      char *types = querystr(auth_dns ? "auth" : "query", type);
-      
-      if (listen->family == AF_INET) 
-	log_query(F_QUERY | F_IPV4 | F_FORWARD, daemon->namebuff, 
-		  (struct all_addr *)&source_addr.in.sin_addr, types);
-//#ifdef HAVE_IPV6
-      else
-	log_query(F_QUERY | F_IPV6 | F_FORWARD, daemon->namebuff, 
-		  (struct all_addr *)&source_addr.in6.sin6_addr, types);
-//#endif
-
-//#ifdef HAVE_AUTH
-      /* find queries for zones we're authoritative for, and answer them directly */
-      if (!auth_dns && !option_bool(OPT_LOCALISE))
-	for (zone = daemon->auth_zones; zone; zone = zone->next)
-	  if (in_zone(zone, daemon->namebuff, nullptr))
-	    {
-	      auth_dns = 1;
-	      local_auth = 1;
-	      break;
-	    }
-//#endif
-      
-//#ifdef HAVE_LOOP
-      /* Check for forwarding loop */
-      if (detect_loop(daemon->namebuff, type))
-	return;
-//#endif
-    }
-  
-  if (find_pseudoheader(header, (size_t)n, nullptr, &pheader, nullptr, nullptr))
-    { 
-      unsigned short flags;
-      
-      have_pseudoheader = 1;
-      GETSHORT(udp_size, pheader);
-      pheader += 2; /* ext_rcode */
-      GETSHORT(flags, pheader);
-      
-      if (flags & 0x8000)
-	do_bit = 1;/* do bit */ 
-	
-      /* If the client provides an EDNS0 UDP size, use that to limit our reply.
-	 (bounded by the maximum configured). If no EDNS0, then it
-	 defaults to 512 */
-      if (udp_size > daemon->edns_pktsz)
-	udp_size = daemon->edns_pktsz;
-      else if (udp_size < PACKETSZ)
-	udp_size = PACKETSZ; /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
-    }
-
-//#ifdef HAVE_AUTH
-  if (auth_dns)
-    {
-      m = answer_auth(header, ((char *) header) + udp_size, (size_t)n, now, &source_addr, 
-		      local_auth, do_bit, have_pseudoheader);
-      if (m >= 1)
-	{
-	  send_from(listen->fd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND),
-		    (char *)header, m, &source_addr, &dst_addr, if_index);
-	  daemon->metrics[METRIC_DNS_AUTH_ANSWERED]++;
-	}
-    }
-  else
-//#endif
-    {
-      int ad_reqd = do_bit;
-       /* RFC 6840 5.7 */
-      if (header->hb4 & HB4_AD)
-	ad_reqd = 1;
-
-      m = answer_request(header, ((char *) header) + udp_size, (size_t)n, 
-			 dst_addr_4, netmask, now, ad_reqd, do_bit, have_pseudoheader);
-      
-      if (m >= 1)
-	{
-	  send_from(listen->fd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND),
-		    (char *)header, m, &source_addr, &dst_addr, if_index);
-	  daemon->metrics[METRIC_DNS_LOCAL_ANSWERED]++;
-	}
-      else if (forward_query(listen->fd, &source_addr, &dst_addr, if_index,
-			     header, (size_t)n, now, nullptr, ad_reqd, do_bit))
-	daemon->metrics[METRIC_DNS_QUERIES_FORWARDED]++;
-      else
-	daemon->metrics[METRIC_DNS_LOCAL_ANSWERED]++;
-    }
+    return NULL_0 as *mut frec;
 }
-
-//#ifdef HAVE_DNSSEC
-/* Recurse up the key hierarchy */
-static int tcp_key_recurse(time_t now, int status, struct dns_header *header, size_t n, 
-			   int _class, char *name, char *keyname, struct server *server,
-			   int have_mark, unsigned int mark, int *keycount)
-{
-  int new_status;
-  unsigned char *packet = nullptr;
-  unsigned char *payload = nullptr;
-  struct dns_header *new_header = nullptr;
-  uint16_t *length = nullptr;
- 
-  while (1)
-    {
-      int type = SERV_DO_DNSSEC;
-      char *domain;
-      size_t m; 
-      unsigned char c1, c2;
-      struct server *firstsendto = nullptr;
-      
-      /* limit the amount of work we do, to avoid cycling forever on loops in the DNS */
-      if (--(*keycount) == 0)
-	new_status = STAT_ABANDONED;
-      else if (status == STAT_NEED_KEY)
-	new_status = dnssec_validate_by_ds(now, header, n, name, keyname, _class);
-      else if (status == STAT_NEED_DS)
-	new_status = dnssec_validate_ds(now, header, n, name, keyname, _class);
-      else 
-	new_status = dnssec_validate_reply(now, header, n, name, keyname, &_class,
-					   !option_bool(OPT_DNSSEC_IGN_NS) && (server->flags & SERV_DO_DNSSEC),
-					   nullptr, nullptr);
-      
-      if (new_status != STAT_NEED_DS && new_status != STAT_NEED_KEY)
-	break;
-
-      /* Can't validate because we need a key/DS whose name now in keyname.
-	 Make query for same, and recurse to validate */
-      if (!packet)
-	{
-	  packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(uint16_t));
-	  payload = &packet[2];
-	  new_header = (struct dns_header *)payload;
-	  length = (uint16_t *)packet;
-	}
-      
-      if (!packet)
-	{
-	  new_status = STAT_ABANDONED;
-	  break;
-	}
-
-      m = dnssec_generate_query(new_header, ((unsigned char *) new_header) + 65536, keyname, _class,
-				new_status == STAT_NEED_KEY ? T_DNSKEY : T_DS, server->edns_pktsz);
-      
-      *length = htons(m);
-
-      /* Find server to forward to. This will normally be the 
-	 same as for the original query, but may be another if
-	 servers for domains are involved. */		      
-      if (search_servers(now, nullptr, F_DNSSECOK, keyname, &type, &domain, nullptr) != 0)
-	{
-	  new_status = STAT_ABANDONED;
-	  break;
-	}
-	
-      while (1)
-	{
-	  if (!firstsendto)
-	    firstsendto = server;
-	  else
-	    {
-	      if (!(server = server->next))
-		server = daemon->servers;
-	      if (server == firstsendto)
-		{
-		  /* can't find server to accept our query. */
-		  new_status = STAT_ABANDONED;
-		  break;
-		}
-	    }
-	  
-	  if (type != (server->flags & (SERV_TYPE | SERV_DO_DNSSEC)) ||
-	      (type == SERV_HAS_DOMAIN && !hostname_isequal(domain, server->domain)) ||
-	      (server->flags & (SERV_LITERAL_ADDRESS | SERV_LOOP)))
-	    continue;
-
-	retry:
-	  /* may need to make new connection. */
-	  if (server->tcpfd == -1)
-	    {
-	      if ((server->tcpfd = socket(server->addr.sa.sa_family, SOCK_STREAM, 0)) == -1)
-		continue; /* No good, next server */
-	      
-//#ifdef HAVE_CONNTRACK
-	      /* Copy connection mark of incoming query to outgoing connection. */
-	      if (have_mark)
-		setsockopt(server->tcpfd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
-//#endif	
-	      
-	      if (!local_bind(server->tcpfd,  &server->source_addr, server->interface, 0, 1) ||
-		  connect(server->tcpfd, &server->addr.sa, sa_len(&server->addr)) == -1)
-		{
-		  close(server->tcpfd);
-		  server->tcpfd = -1;
-		  continue; /* No good, next server */
-		}
-	      
-	      server->flags &= ~SERV_GOT_TCP;
-	    }
-	  
-	  if (!read_write(server->tcpfd, packet, m + sizeof(uint16_t), 0) ||
-	      !read_write(server->tcpfd, &c1, 1, 1) ||
-	      !read_write(server->tcpfd, &c2, 1, 1) ||
-	      !read_write(server->tcpfd, payload, (c1 << 8) | c2, 1))
-	    {
-	      close(server->tcpfd);
-	      server->tcpfd = -1;
-	      /* We get data then EOF, reopen connection to same server,
-		 else try next. This avoids DoS from a server which accepts
-		 connections and then closes them. */
-	      if (server->flags & SERV_GOT_TCP)
-		goto retry;
-	      else
-		continue;
-	    }
-
-
-	  if (server->addr.sa.sa_family == AF_INET) 
-	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV4, keyname, (struct all_addr *)&(server->addr.in.sin_addr),
-		      querystr("dnssec-query", new_status == STAT_NEED_KEY ? T_DNSKEY : T_DS));
-//#ifdef HAVE_IPV6
-	  else
-	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV6, keyname, (struct all_addr *)&(server->addr.in6.sin6_addr),
-		      querystr("dnssec-query", new_status == STAT_NEED_KEY ? T_DNSKEY : T_DS));
-//#endif
-	  
-	  server->flags |= SERV_GOT_TCP;
-	  
-	  m = (c1 << 8) | c2;
-	  new_status = tcp_key_recurse(now, new_status, new_header, m, _class, name, keyname, server, have_mark, mark, keycount);
-	  break;
-	}
-      
-      if (new_status != STAT_OK)
-	break;
-    }
-    
-  if (packet)
-    free(packet);
-    
-  return new_status;
-}
-//#endif
-
-
-/* The daemon forks before calling this: it should deal with one connection,
-   blocking as necessary, and then return. Note, need to be a bit careful
-   about resources for debug mode, when the fork is suppressed: that's
-   done by the caller. */
-unsigned char *tcp_request(int confd, time_t now,
-			   union mysockaddr *local_addr, struct in_addr netmask, int auth_dns)
-{
-  size_t size = 0;
-  int norebind = 0;
-//#ifdef HAVE_AUTH
-  int local_auth = 0;
-//#endif
-  int checking_disabled, do_bit, added_pheader = 0, have_pseudoheader = 0;
-  int check_subnet, no_cache_dnssec = 0, cache_secure = 0, bogusanswer = 0;
-  size_t m;
-  unsigned short qtype;
-  unsigned int gotname;
-  unsigned char c1, c2;
-  /* Max TCP packet + slop + size */
-  unsigned char *packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(uint16_t));
-  unsigned char *payload = &packet[2];
-  /* largest field in header is 16-bits, so this is still sufficiently aligned */
-  struct dns_header *header = (struct dns_header *)payload;
-  uint16_t *length = (uint16_t *)packet;
-  struct server *last_server;
-  struct in_addr dst_addr_4;
-  union mysockaddr peer_addr;
-  socklen_t peer_len = sizeof(union mysockaddr);
-  int query_count = 0;
-  unsigned char *pheader;
-  unsigned int mark = 0;
-  int have_mark = 0;
-
-  (void)mark;
-  (void)have_mark;
-
-  if (getpeername(confd, (struct sockaddr *)&peer_addr, &peer_len) == -1)
-    return packet;
-
-//#ifdef HAVE_CONNTRACK
-  /* Get connection mark of incoming query to set on outgoing connections. */
-  if (option_bool(OPT_CONNTRACK))
-    {
-      struct all_addr local;
-//#ifdef HAVE_IPV6		      
-      if (local_addr->sa.sa_family == AF_INET6)
-	local.addr.addr6 = local_addr->in6.sin6_addr;
-      else
-//#endif
-	local.addr.addr4 = local_addr->in.sin_addr;
-      
-      have_mark = get_incoming_mark(&peer_addr, &local, 1, &mark);
-    }
-//#endif	
-
-  /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
-  if (option_bool(OPT_LOCAL_SERVICE))
-    {
-      struct addrlist *addr;
-//#ifdef HAVE_IPV6
-      if (peer_addr.sa.sa_family == AF_INET6) 
-	{
-	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-	    if ((addr->flags & ADDRLIST_IPV6) &&
-		is_same_net6(&addr->addr.addr.addr6, &peer_addr.in6.sin6_addr, addr->prefixlen))
-	      break;
-	}
-      else
-//#endif
-	{
-	  struct in_addr netmask;
-	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-	    {
-	      netmask.s_addr = htonl(~(in_addr_t)0 << (32 - addr->prefixlen));
-	      if (!(addr->flags & ADDRLIST_IPV6) && 
-		  is_same_net(addr->addr.addr.addr4, peer_addr.in.sin_addr, netmask))
-		break;
-	    }
-	}
-      if (!addr)
-	{
-	  my_syslog(LOG_WARNING, _("Ignoring query from non-local network"));
-	  return packet;
-	}
-    }
-
-  while (1)
-    {
-      if (query_count == TCP_MAX_QUERIES ||
-	  !packet ||
-	  !read_write(confd, &c1, 1, 1) || !read_write(confd, &c2, 1, 1) ||
-	  !(size = c1 << 8 | c2) ||
-	  !read_write(confd, payload, size, 1))
-       	return packet; 
-  
-      if (size < (int)sizeof(struct dns_header))
-	continue;
-
-      /* Clear buffer beyond request to avoid risk of
-	 information disclosure. */
-      memset(payload + size, 0, 65536 - size);
-      
-      query_count++;
-
-      /* log_query gets called indirectly all over the place, so 
-	 pass these in global variables - sorry. */
-      daemon->log_display_id = ++daemon->log_id;
-      daemon->log_source_addr = &peer_addr;
-      
-      /* save state of "cd" flag in query */
-      if ((checking_disabled = header->hb4 & HB4_CD))
-	no_cache_dnssec = 1;
-       
-      if ((gotname = extract_request(header, (unsigned int)size, daemon->namebuff, &qtype)))
-	{
-//#ifdef HAVE_AUTH
-	  struct auth_zone *zone;
-//#endif
-	  char *types = querystr(auth_dns ? "auth" : "query", qtype);
-	  
-	  if (peer_addr.sa.sa_family == AF_INET) 
-	    log_query(F_QUERY | F_IPV4 | F_FORWARD, daemon->namebuff, 
-		      (struct all_addr *)&peer_addr.in.sin_addr, types);
-//#ifdef HAVE_IPV6
-	  else
-	    log_query(F_QUERY | F_IPV6 | F_FORWARD, daemon->namebuff, 
-		      (struct all_addr *)&peer_addr.in6.sin6_addr, types);
-//#endif
-	  
-//#ifdef HAVE_AUTH
-	  /* find queries for zones we're authoritative for, and answer them directly */
-	  if (!auth_dns && !option_bool(OPT_LOCALISE))
-	    for (zone = daemon->auth_zones; zone; zone = zone->next)
-	      if (in_zone(zone, daemon->namebuff, nullptr))
-		{
-		  auth_dns = 1;
-		  local_auth = 1;
-		  break;
-		}
-//#endif
-	}
-      
-      if (local_addr->sa.sa_family == AF_INET)
-	dst_addr_4 = local_addr->in.sin_addr;
-      else
-	dst_addr_4.s_addr = 0;
-      
-      do_bit = 0;
-
-      if (find_pseudoheader(header, (size_t)size, nullptr, &pheader, nullptr, nullptr))
-	{ 
-	  unsigned short flags;
-	  
-	  have_pseudoheader = 1;
-	  pheader += 4; /* udp_size, ext_rcode */
-	  GETSHORT(flags, pheader);
-      
-	  if (flags & 0x8000)
-	    do_bit = 1; /* do bit */ 
-	}
-
-//#ifdef HAVE_AUTH
-      if (auth_dns)
-	m = answer_auth(header, ((char *) header) + 65536, (size_t)size, now, &peer_addr, 
-			local_auth, do_bit, have_pseudoheader);
-      else
-//#endif
-	{
-	   int ad_reqd = do_bit;
-	   /* RFC 6840 5.7 */
-	   if (header->hb4 & HB4_AD)
-	     ad_reqd = 1;
-	   
-	   /* m > 0 if answered from cache */
-	   m = answer_request(header, ((char *) header) + 65536, (size_t)size, 
-			      dst_addr_4, netmask, now, ad_reqd, do_bit, have_pseudoheader);
-	  
-	  /* Do this by steam now we're not in the select() loop */
-	  check_log_writer(1); 
-	  
-	  if (m == 0)
-	    {
-	      unsigned int flags = 0;
-	      struct all_addr *addrp = nullptr;
-	      int type = SERV_DO_DNSSEC;
-	      char *domain = nullptr;
-	      unsigned char *oph = find_pseudoheader(header, size, nullptr, nullptr, nullptr, nullptr);
-
-	      size = add_edns0_config(header, size, ((unsigned char *) header) + 65536, &peer_addr, now, &check_subnet);
-
-	      if (gotname)
-		flags = search_servers(now, &addrp, gotname, daemon->namebuff, &type, &domain, &norebind);
-
-//#ifdef HAVE_DNSSEC
-	      if (option_bool(OPT_DNSSEC_VALID) && (type & SERV_DO_DNSSEC))
-		{
-		  size = add_do_bit(header, size, ((unsigned char *) header) + 65536);
-		  
-		  /* For debugging, set Checking Disabled, otherwise, have the upstream check too,
-		     this allows it to select auth servers when one is returning bad data. */
-		  if (option_bool(OPT_DNSSEC_DEBUG))
-		    header->hb4 |= HB4_CD;
-		}
-//#endif
-
-	      /* Check if we added a pheader on forwarding - may need to
-		 strip it from the reply. */
-	      if (!oph && find_pseudoheader(header, size, nullptr, nullptr, nullptr, nullptr))
-		added_pheader = 1;
-
-	      type &= ~SERV_DO_DNSSEC;
-	      
-	      if (type != 0  || option_bool(OPT_ORDER) || !daemon->last_server)
-		last_server = daemon->servers;
-	      else
-		last_server = daemon->last_server;
-	      
-	      if (!flags && last_server)
-		{
-		  struct server *firstsendto = nullptr;
-//#ifdef HAVE_DNSSEC
-		  unsigned char *newhash, hash[HASH_SIZE];
-		  if ((newhash = hash_questions(header, (unsigned int)size, daemon->namebuff)))
-		    memcpy(hash, newhash, HASH_SIZE);
-		  else
-		    memset(hash, 0, HASH_SIZE);
-//#else
-		  unsigned int crc = questions_crc(header, (unsigned int)size, daemon->namebuff);
-//#endif		  
-		  /* Loop round available servers until we succeed in connecting to one.
-		     Note that this code subtly ensures that consecutive queries on this connection
-		     which can go to the same server, do so. */
-		  while (1) 
-		    {
-		      if (!firstsendto)
-			firstsendto = last_server;
-		      else
-			{
-			  if (!(last_server = last_server->next))
-			    last_server = daemon->servers;
-			  
-			  if (last_server == firstsendto)
-			    break;
-			}
-		      
-		      /* server for wrong domain */
-		      if (type != (last_server->flags & SERV_TYPE) ||
-			  (type == SERV_HAS_DOMAIN && !hostname_isequal(domain, last_server->domain)) ||
-			  (last_server->flags & (SERV_LITERAL_ADDRESS | SERV_LOOP)))
-			continue;
-
-		    retry:
-		      if (last_server->tcpfd == -1)
-			{
-			  if ((last_server->tcpfd = socket(last_server->addr.sa.sa_family, SOCK_STREAM, 0)) == -1)
-			    continue;
-			  
-//#ifdef HAVE_CONNTRACK
-			  /* Copy connection mark of incoming query to outgoing connection. */
-			  if (have_mark)
-			    setsockopt(last_server->tcpfd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
-//#endif	
-		      
-			  if ((!local_bind(last_server->tcpfd,  &last_server->source_addr, last_server->interface, 0, 1) ||
-			       connect(last_server->tcpfd, &last_server->addr.sa, sa_len(&last_server->addr)) == -1))
-			    {
-			      close(last_server->tcpfd);
-			      last_server->tcpfd = -1;
-			      continue;
-			    }
-			  
-			  last_server->flags &= ~SERV_GOT_TCP;
-			}
-		      
-		      *length = htons(size);
-
-		      /* get query name again for logging - may have been overwritten */
-		      if (!(gotname = extract_request(header, (unsigned int)size, daemon->namebuff, &qtype)))
-			strcpy(daemon->namebuff, "query");
-		      
-		      if (!read_write(last_server->tcpfd, packet, size + sizeof(uint16_t), 0) ||
-			  !read_write(last_server->tcpfd, &c1, 1, 1) ||
-			  !read_write(last_server->tcpfd, &c2, 1, 1) ||
-			  !read_write(last_server->tcpfd, payload, (c1 << 8) | c2, 1))
-			{
-			  close(last_server->tcpfd);
-			  last_server->tcpfd = -1;
-			  /* We get data then EOF, reopen connection to same server,
-			     else try next. This avoids DoS from a server which accepts
-			     connections and then closes them. */
-			  if (last_server->flags & SERV_GOT_TCP)
-			    goto retry;
-			  else
-			    continue;
-			}
-		      
-		      last_server->flags |= SERV_GOT_TCP;
-
-		      m = (c1 << 8) | c2;
-		      
-		      if (last_server->addr.sa.sa_family == AF_INET)
-			log_query(F_SERVER | F_IPV4 | F_FORWARD, daemon->namebuff, 
-				  (struct all_addr *)&last_server->addr.in.sin_addr, nullptr);
-//#ifdef HAVE_IPV6
-		      else
-			log_query(F_SERVER | F_IPV6 | F_FORWARD, daemon->namebuff, 
-				  (struct all_addr *)&last_server->addr.in6.sin6_addr, nullptr);
-//#endif 
-
-//#ifdef HAVE_DNSSEC
-		      if (option_bool(OPT_DNSSEC_VALID) && !checking_disabled && (last_server->flags & SERV_DO_DNSSEC))
-			{
-			  int keycount = DNSSEC_WORK; /* Limit to number of DNSSEC questions, to catch loops and avoid filling cache. */
-			  int status = tcp_key_recurse(now, STAT_OK, header, m, 0, daemon->namebuff, daemon->keyname, 
-						       last_server, have_mark, mark, &keycount);
-			  char *result, *domain = "result";
-			  
-			  if (status == STAT_ABANDONED)
-			    {
-			      result = "ABANDONED";
-			      status = STAT_BOGUS;
-			    }
-			  else
-			    result = (status == STAT_SECURE ? "SECURE" : (status == STAT_INSECURE ? "INSECURE" : "BOGUS"));
-			  
-			  if (status == STAT_BOGUS && extract_request(header, m, daemon->namebuff, nullptr))
-			    domain = daemon->namebuff;
-
-			  log_query(F_SECSTAT, domain, nullptr, result);
-			  
-			  if (status == STAT_BOGUS)
-			    {
-			      no_cache_dnssec = 1;
-			      bogusanswer = 1;
-			    }
-
-			  if (status == STAT_SECURE)
-			    cache_secure = 1;
-			}
-//#endif
-
-		      /* restore CD bit to the value in the query */
-		      if (checking_disabled)
-			header->hb4 |= HB4_CD;
-		      else
-			header->hb4 &= ~HB4_CD;
-		      
-		      /* There's no point in updating the cache, since this process will exit and
-			 lose the information after a few queries. We make this call for the alias and 
-			 bogus-nxdomain side-effects. */
-		      /* If the crc of the question section doesn't match the crc we sent, then
-			 someone might be attempting to insert bogus values into the cache by 
-			 sending replies containing questions and bogus answers. */
-//#ifdef HAVE_DNSSEC
-		      newhash = hash_questions(header, (unsigned int)m, daemon->namebuff);
-		      if (!newhash || memcmp(hash, newhash, HASH_SIZE) != 0)
-			{ 
-			  m = 0;
-			  break;
-			}
-//#else			  
-		      if (crc != questions_crc(header, (unsigned int)m, daemon->namebuff))
-			{
-			  m = 0;
-			  break;
-			}
-//#endif
-
-		      m = process_reply(header, now, last_server, (unsigned int)m, 
-					option_bool(OPT_NO_REBIND) && !norebind, no_cache_dnssec, cache_secure, bogusanswer,
-					ad_reqd, do_bit, added_pheader, check_subnet, &peer_addr); 
-		      
-		      break;
-		    }
-		}
-	
-	      /* In case of local answer or no connections made. */
-	      if (m == 0)
-		{
-		  m = setup_reply(header, (unsigned int)size, addrp, flags, daemon->local_ttl);
-		  if (have_pseudoheader)
-		    m = add_pseudoheader(header, m, ((unsigned char *) header) + 65536, daemon->edns_pktsz, 0, nullptr, 0, do_bit, 0);
-		}
-	    }
-	}
-	  
-      check_log_writer(1);
-      
-      *length = htons(m);
-           
-      if (m == 0 || !read_write(confd, packet, m + sizeof(uint16_t), 0))
-	return packet;
-    }
-}
-
-static struct frec *allocate_frec(time_t now)
-{
-  struct frec *f;
-  
-  if ((f = (struct frec *)whine_malloc(sizeof(struct frec))))
-    {
-      f->next = daemon->frec_list;
-      f->time = now;
-      f->sentto = nullptr;
-      f->rfd4 = nullptr;
-      f->flags = 0;
-//#ifdef HAVE_IPV6
-      f->rfd6 = nullptr;
-//#endif
-//#ifdef HAVE_DNSSEC
-      f->dependent = nullptr;
-      f->blocking_query = nullptr;
-      f->stash = nullptr;
-//#endif
-      daemon->frec_list = f;
-    }
-
-  return f;
-}
-
-struct randfd *allocate_rfd(int family)
-{
-  static int finger = 0;
-  int i;
-
-  /* limit the number of sockets we have open to avoid starvation of 
-     (eg) TFTP. Once we have a reasonable number, randomness should be OK */
-
-  for (i = 0; i < RANDOM_SOCKS; i++)
-    if (daemon->randomsocks[i].refcount == 0)
-      {
-	if ((daemon->randomsocks[i].fd = random_sock(family)) == -1)
-	  break;
-      
-	daemon->randomsocks[i].refcount = 1;
-	daemon->randomsocks[i].family = family;
-	return &daemon->randomsocks[i];
-      }
-
-  /* No free ones or cannot get new socket, grab an existing one */
-  for (i = 0; i < RANDOM_SOCKS; i++)
-    {
-      int j = (i+finger) % RANDOM_SOCKS;
-      if (daemon->randomsocks[j].refcount != 0 &&
-	  daemon->randomsocks[j].family == family && 
-	  daemon->randomsocks[j].refcount != 0xffff)
-	{
-	  finger = j;
-	  daemon->randomsocks[j].refcount++;
-	  return &daemon->randomsocks[j];
-	}
-    }
-
-  return nullptr; /* doom */
-}
-
-void free_rfd(struct randfd *rfd)
-{
-  if (rfd && --(rfd->refcount) == 0)
-    close(rfd->fd);
-}
-
-static void free_frec(struct frec *f)
-{
-  free_rfd(f->rfd4);
-  f->rfd4 = nullptr;
-  f->sentto = nullptr;
-  f->flags = 0;
-  
-//#ifdef HAVE_IPV6
-  free_rfd(f->rfd6);
-  f->rfd6 = nullptr;
-//#endif
-
-//#ifdef HAVE_DNSSEC
-  if (f->stash)
-    {
-      blockdata_free(f->stash);
-      f->stash = nullptr;
-    }
-
-  /* Anything we're waiting on is pointless now, too */
-  if (f->blocking_query)
-    free_frec(f->blocking_query);
-  f->blocking_query = nullptr;
-  f->dependent = nullptr;
-//#endif
-}
-
-
-
-/* if wait==NULL return a free or older than TIMEOUT record.
-   else return *wait zero if one available, or *wait is delay to
-   when the oldest in-use record will expire. Impose an absolute
-   limit of 4*TIMEOUT before we wipe things (for random sockets).
-   If force is set, always return a result, even if we have
-   to allocate above the limit. */
-struct frec *get_new_frec(time_t now, int *wait, int force)
-{
-  struct frec *f, *oldest, *target;
-  int count;
-  
-  if (wait)
-    *wait = 0;
-
-  for (f = daemon->frec_list, oldest = nullptr, target =  nullptr, count = 0; f; f = f->next, count++)
-    if (!f->sentto)
-      target = f;
-    else 
-      {
-//#ifdef HAVE_DNSSEC
-	    /* Don't free DNSSEC sub-queries here, as we may end up with
-	       dangling references to them. They'll go when their "real" query 
-	       is freed. */
-	    if (!f->dependent)
-//#endif
-	      {
-		if (difftime(now, f->time) >= 4*TIMEOUT)
-		  {
-		    free_frec(f);
-		    target = f;
-		  }
-	     
-	    
-		if (!oldest || difftime(f->time, oldest->time) <= 0)
-		  oldest = f;
-	      }
-      }
-
-  if (target)
-    {
-      target->time = now;
-      return target;
-    }
-  
-  /* can't find empty one, use oldest if there is one
-     and it's older than timeout */
-  if (!force && oldest && ((int)difftime(now, oldest->time)) >= TIMEOUT)
-    { 
-      /* keep stuff for twice timeout if we can by allocating a new
-	 record instead */
-      if (difftime(now, oldest->time) < 2*TIMEOUT && 
-	  count <= daemon->ftabsize &&
-	  (f = allocate_frec(now)))
-	return f;
-
-      if (!wait)
-	{
-	  free_frec(oldest);
-	  oldest->time = now;
-	}
-      return oldest;
-    }
-  
-  /* none available, calculate time 'till oldest record expires */
-  if (!force && count > daemon->ftabsize)
-    {
-      static time_t last_log = 0;
-      
-      if (oldest && wait)
-	*wait = oldest->time + (time_t)TIMEOUT - now;
-      
-      if ((int)difftime(now, last_log) > 5)
-	{
-	  last_log = now;
-	  my_syslog(LOG_WARNING, _("Maximum number of concurrent DNS queries reached (max: %d)"), daemon->ftabsize);
-	}
-
-      return nullptr;
-    }
-  
-  if (!(f = allocate_frec(now)) && wait)
-    /* wait one second on malloc failure */
-    *wait = 1;
-
-  return f; /* OK if malloc fails and this is NULL */
-}
-
-/* crc is all-ones if not known. */
-static struct frec *lookup_frec(unsigned short id, void *hash)
-{
-  struct frec *f;
-
-  for(f = daemon->frec_list; f; f = f->next)
-    if (f->sentto && f->new_id == id && 
-	(!hash || memcmp(hash, f->hash, HASH_SIZE) == 0))
-      return f;
-      
-  return nullptr;
-}
-
-static struct frec *lookup_frec_by_sender(unsigned short id,
-					  union mysockaddr *addr,
-					  void *hash)
-{
-  struct frec *f;
-  
-  for(f = daemon->frec_list; f; f = f->next)
-    if (f->sentto &&
-	f->orig_id == id && 
-	memcmp(hash, f->hash, HASH_SIZE) == 0 &&
-	sockaddr_isequal(&f->source, addr))
-      return f;
-   
-  return nullptr;
-}
- 
+#[c2rust::src_loc = "2458:9"]
+pub const FLAGMASK: libc::c_int =
+    FREC_CHECKING_DISABLED | FREC_AD_QUESTION | FREC_DO_QUESTION |
+        FREC_HAS_PHEADER | FREC_DNSKEY_QUERY | FREC_DS_QUERY | FREC_NO_CACHE;
 /* Send query packet again, if we can. */
-void resend_query()
-{
-  if (daemon->srv_save)
-    {
-      int fd;
-      
-      if (daemon->srv_save->sfd)
-	fd = daemon->srv_save->sfd->fd;
-      else if (daemon->rfd_save && daemon->rfd_save->refcount != 0)
-	fd = daemon->rfd_save->fd;
-      else
-	return;
-      
-      while(retry_send(sendto(fd, daemon->packet, daemon->packet_len, 0,
-			      &daemon->srv_save->addr.sa, 
-			      sa_len(&daemon->srv_save->addr)))); 
-    }
+#[no_mangle]
+#[c2rust::src_loc = "2471:1"]
+pub unsafe extern "C" fn resend_query() {
+    if !(*dnsmasq_daemon).srv_save.is_null() {
+        let mut fd: libc::c_int = 0;
+        if !(*(*dnsmasq_daemon).srv_save).sfd.is_null() {
+            fd = (*(*(*dnsmasq_daemon).srv_save).sfd).fd
+        } else if !(*dnsmasq_daemon).rfd_save.is_null() &&
+                      (*(*dnsmasq_daemon).rfd_save).refcount as libc::c_int !=
+                          0 as libc::c_int {
+            fd = (*(*dnsmasq_daemon).rfd_save).fd
+        } else { return }
+        while retry_send(sendto(fd,
+                                (*dnsmasq_daemon).packet as
+                                    *const libc::c_void,
+                                (*dnsmasq_daemon).packet_len,
+                                0 as libc::c_int,
+                                __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                         &mut (*(*dnsmasq_daemon).srv_save).addr.sa,},
+                                sa_len(&mut (*(*dnsmasq_daemon).srv_save).addr)
+                                    as socklen_t)) != 0 {
+        }
+    };
 }
-
 /* A server record is going away, remove references to it */
-void server_gone(struct server *server)
-{
-  struct frec *f;
-  
-  for (f = daemon->frec_list; f; f = f->next)
-    if (f->sentto && f->sentto == server)
-      free_frec(f);
-  
-  if (daemon->last_server == server)
-    daemon->last_server = nullptr;
-
-  if (daemon->srv_save == server)
-    daemon->srv_save = nullptr;
+#[no_mangle]
+#[c2rust::src_loc = "2491:1"]
+pub unsafe extern "C" fn server_gone(mut server: *mut server) {
+    let mut f = 0 as *mut frec;
+    f = (*dnsmasq_daemon).frec_list;
+    while !f.is_null() {
+        if !(*f).sentto.is_null() && (*f).sentto == server { free_frec(f); }
+        f = (*f).next
+    }
+    if (*dnsmasq_daemon).last_server == server {
+        (*dnsmasq_daemon).last_server = NULL_0 as *mut server
+    }
+    if (*dnsmasq_daemon).srv_save == server {
+        (*dnsmasq_daemon).srv_save = NULL_0 as *mut server
+    };
 }
-
 /* return unique random ids. */
-static unsigned short get_id(void)
-{
-  unsigned short ret = 0;
-  
-  do 
-    ret = rand16();
-  while (lookup_frec(ret, nullptr));
-  
-  return ret;
+#[c2rust::src_loc = "2507:1"]
+unsafe extern "C" fn get_id() -> libc::c_ushort {
+    let mut ret = 0 as libc::c_int as libc::c_ushort;
+    let mut f = 0 as *mut frec;
+    loop  {
+        ret = rand16();
+        /* ensure id is unique. */
+        f = (*dnsmasq_daemon).frec_list;
+        while !f.is_null() {
+            if !(*f).sentto.is_null() &&
+                   (*f).new_id as libc::c_int == ret as libc::c_int {
+                break ;
+            }
+            f = (*f).next
+        }
+        if f.is_null() { return ret }
+    };
 }
-
-
-
-
-

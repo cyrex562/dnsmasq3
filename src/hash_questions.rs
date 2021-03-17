@@ -1,8 +1,8 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
          non_upper_case_globals, unused_assignments, unused_mut)]
 #![register_tool(c2rust)]
-#![feature(const_raw_ptr_to_usize_cast, const_transmute, extern_types,
-           register_tool)]
+#![feature(const_raw_ptr_to_usize_cast, extern_types,
+           ptr_wrapping_offset_from, register_tool)]
 #[c2rust::header_src = "internal:0"]
 pub mod internal {
     #[derive(Copy, Clone)]
@@ -15,7 +15,7 @@ pub mod internal {
         pub reg_save_area: *mut libc::c_void,
     }
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types.h:17"]
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types.h:29"]
 pub mod types_h {
     #[c2rust::src_loc = "40:1"]
     pub type __uint16_t = libc::c_ushort;
@@ -63,7 +63,7 @@ pub mod types_h {
     pub type __socklen_t = libc::c_uint;
 }
 #[c2rust::header_src =
-  "/usr/lib/llvm-10/lib/clang/10.0.0/include/stddef.h:17"]
+  "/usr/lib/llvm-10/lib/clang/10.0.0/include/stddef.h:29"]
 pub mod stddef_h {
     #[c2rust::src_loc = "46:1"]
     pub type size_t = libc::c_ulong;
@@ -71,7 +71,7 @@ pub mod stddef_h {
     pub const NULL: libc::c_int = 0 as libc::c_int;
 }
 #[c2rust::header_src =
-  "/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:17"]
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:29"]
 pub mod struct_timespec_h {
     #[derive(Copy, Clone)]
     #[repr(C)]
@@ -83,7 +83,7 @@ pub mod struct_timespec_h {
     use super::types_h::{__time_t, __syscall_slong_t};
 }
 #[c2rust::header_src =
-  "/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:17"]
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:29"]
 pub mod struct_iovec_h {
     #[derive(Copy, Clone)]
     #[repr(C)]
@@ -94,7 +94,7 @@ pub mod struct_iovec_h {
     }
     use super::stddef_h::size_t;
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/socket.h:17"]
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/socket.h:29"]
 pub mod socket_h {
     #[c2rust::src_loc = "33:1"]
     pub type socklen_t = __socklen_t;
@@ -178,7 +178,40 @@ pub mod socket_h {
     use super::struct_iovec_h::iovec;
     use super::stddef_h::size_t;
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stat.h:17"]
+#[c2rust::header_src = "/mnt/d/projects/dnsmasq-2.84/src/dnsmasq.h:29"]
+pub mod dnsmasq_h {
+    #[c2rust::src_loc = "68:1"]
+    pub type u8_0 = libc::c_uchar;
+    #[c2rust::src_loc = "69:1"]
+    pub type u16_0 = libc::c_ushort;
+    use super::dns_protocol_h::dns_header;
+    use super::stddef_h::size_t;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "1221:1"]
+        pub fn extract_name(header: *mut dns_header, plen: size_t,
+                            pp: *mut *mut libc::c_uchar,
+                            name: *mut libc::c_char, isExtract: libc::c_int,
+                            extrabytes: libc::c_int) -> libc::c_int;
+    }
+}
+#[c2rust::header_src = "/mnt/d/projects/dnsmasq-2.84/src/dns-protocol.h:29"]
+pub mod dns_protocol_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "86:8"]
+    pub struct dns_header {
+        pub id: u16_0,
+        pub hb3: u8_0,
+        pub hb4: u8_0,
+        pub qdcount: u16_0,
+        pub ancount: u16_0,
+        pub nscount: u16_0,
+        pub arcount: u16_0,
+    }
+    use super::dnsmasq_h::{u16_0, u8_0};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stat.h:29"]
 pub mod stat_h {
     #[derive(Copy, Clone)]
     #[repr(C)]
@@ -230,7 +263,7 @@ pub mod stat_h {
     use super::struct_timespec_h::timespec;
 }
 #[c2rust::header_src =
-  "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:17"]
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:29"]
 pub mod struct_FILE_h {
     #[derive(Copy, Clone)]
     #[repr(C)]
@@ -283,13 +316,13 @@ pub mod struct_FILE_h {
         pub type _IO_marker;
     }
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types/FILE.h:17"]
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types/FILE.h:29"]
 pub mod FILE_h {
     #[c2rust::src_loc = "7:1"]
     pub type FILE = _IO_FILE;
     use super::struct_FILE_h::_IO_FILE;
 }
-#[c2rust::header_src = "/usr/include/stdlib.h:17"]
+#[c2rust::header_src = "/usr/include/stdlib.h:29"]
 pub mod stdlib_h {
     #[c2rust::src_loc = "808:1"]
     pub type __compar_fn_t
@@ -336,7 +369,7 @@ pub mod stdlib_h {
                        _: libc::c_int) -> libc::c_longlong;
     }
 }
-#[c2rust::header_src = "/usr/include/stdint.h:17"]
+#[c2rust::header_src = "/usr/include/stdint.h:29"]
 pub mod stdint_h {
     #[c2rust::src_loc = "101:1"]
     pub type intmax_t = __intmax_t;
@@ -344,7 +377,7 @@ pub mod stdint_h {
     pub type uintmax_t = __uintmax_t;
     use super::types_h::{__intmax_t, __uintmax_t};
 }
-#[c2rust::header_src = "/usr/include/inttypes.h:17"]
+#[c2rust::header_src = "/usr/include/inttypes.h:29"]
 pub mod inttypes_h {
     #[c2rust::src_loc = "34:1"]
     pub type __gwchar_t = libc::c_int;
@@ -404,7 +437,7 @@ pub mod inttypes_h {
          -> libc::c_ulong;
     }
 }
-#[c2rust::header_src = "/usr/include/stdio.h:17"]
+#[c2rust::header_src = "/usr/include/stdio.h:29"]
 pub mod stdio_h {
     use super::FILE_h::FILE;
     use super::internal::__va_list_tag;
@@ -425,11 +458,11 @@ pub mod stdio_h {
         #[c2rust::src_loc = "486:1"]
         pub fn getc(__stream: *mut FILE) -> libc::c_int;
         #[no_mangle]
-        #[c2rust::src_loc = "858:1"]
-        pub fn __uflow(_: *mut FILE) -> libc::c_int;
-        #[no_mangle]
         #[c2rust::src_loc = "522:1"]
         pub fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "858:1"]
+        pub fn __uflow(_: *mut FILE) -> libc::c_int;
         #[no_mangle]
         #[c2rust::src_loc = "859:1"]
         pub fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
@@ -440,7 +473,7 @@ pub mod stdio_h {
          -> __ssize_t;
     }
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/byteswap.h:17"]
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/byteswap.h:29"]
 pub mod byteswap_h {
     #[inline]
     #[c2rust::src_loc = "33:1"]
@@ -486,7 +519,7 @@ pub mod byteswap_h {
     use super::types_h::{__uint16_t, __uint32_t, __uint64_t};
 }
 #[c2rust::header_src =
-  "/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:17"]
+  "/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:29"]
 pub mod uintn_identity_h {
     #[inline]
     #[c2rust::src_loc = "32:1"]
@@ -508,7 +541,7 @@ pub mod uintn_identity_h {
     }
     use super::types_h::{__uint16_t, __uint32_t, __uint64_t};
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/stat.h:17"]
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/stat.h:29"]
 pub mod sys_stat_h {
     #[inline]
     #[c2rust::src_loc = "452:1"]
@@ -633,15 +666,17 @@ pub mod sys_stat_h {
                           __dev: *mut __dev_t) -> libc::c_int;
     }
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdio.h:17"]
-pub mod bits_stdio_h {
-    #[inline]
-    #[c2rust::src_loc = "127:1"]
-    pub unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE)
-     -> libc::c_int {
-        return ((*__stream)._flags & _IO_EOF_SEEN != 0 as libc::c_int) as
-                   libc::c_int;
+#[c2rust::header_src = "/usr/include/string.h:29"]
+pub mod string_h {
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "61:14"]
+        pub fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong)
+         -> *mut libc::c_void;
     }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdio.h:29"]
+pub mod bits_stdio_h {
     #[inline]
     #[c2rust::src_loc = "38:1"]
     pub unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
@@ -750,21 +785,28 @@ pub mod bits_stdio_h {
         return __getdelim(__lineptr, __n, '\n' as i32, __stream);
     }
     #[inline]
+    #[c2rust::src_loc = "127:1"]
+    pub unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE)
+     -> libc::c_int {
+        return ((*__stream)._flags & _IO_EOF_SEEN != 0 as libc::c_int) as
+                   libc::c_int;
+    }
+    #[inline]
     #[c2rust::src_loc = "134:1"]
     pub unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE)
      -> libc::c_int {
         return ((*__stream)._flags & _IO_ERR_SEEN != 0 as libc::c_int) as
                    libc::c_int;
     }
-    use super::FILE_h::FILE;
-    use super::struct_FILE_h::{_IO_EOF_SEEN, _IO_ERR_SEEN};
     use super::internal::__va_list_tag;
     use super::stdio_h::{vfprintf, stdout, getc, stdin, __uflow, putc,
                          __overflow, __getdelim};
+    use super::FILE_h::FILE;
     use super::stddef_h::size_t;
     use super::types_h::__ssize_t;
+    use super::struct_FILE_h::{_IO_EOF_SEEN, _IO_ERR_SEEN};
 }
-#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:17"]
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:29"]
 pub mod stdlib_float_h {
     #[inline]
     #[c2rust::src_loc = "24:1"]
@@ -777,7 +819,7 @@ pub mod stdlib_float_h {
     use super::stddef_h::NULL;
 }
 #[c2rust::header_src =
-  "/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:17"]
+  "/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:29"]
 pub mod stdlib_bsearch_h {
     #[inline]
     #[c2rust::src_loc = "19:1"]
@@ -816,7 +858,7 @@ pub mod stdlib_bsearch_h {
     use super::stddef_h::{size_t, NULL};
     use super::stdlib_h::__compar_fn_t;
 }
-#[c2rust::header_src = "/usr/include/ctype.h:17"]
+#[c2rust::header_src = "/usr/include/ctype.h:29"]
 pub mod ctype_h {
     #[inline]
     #[c2rust::src_loc = "206:1"]
@@ -853,6 +895,8 @@ pub use self::stddef_h::{size_t, NULL};
 pub use self::struct_timespec_h::timespec;
 pub use self::struct_iovec_h::iovec;
 pub use self::socket_h::{socklen_t, msghdr, cmsghdr, __cmsg_nxthdr};
+pub use self::dnsmasq_h::{u8_0, u16_0, extract_name};
+pub use self::dns_protocol_h::dns_header;
 pub use self::stat_h::{stat, stat64, _STAT_VER_LINUX, _STAT_VER};
 pub use self::struct_FILE_h::{_IO_FILE, _IO_lock_t, _IO_EOF_SEEN,
                               _IO_ERR_SEEN, _IO_wide_data, _IO_codecvt,
@@ -864,7 +908,7 @@ pub use self::stdint_h::{intmax_t, uintmax_t};
 pub use self::inttypes_h::{__gwchar_t, strtoimax, strtoumax, wcstoimax,
                            wcstoumax, __strtol_internal, __strtoul_internal,
                            __wcstol_internal, __wcstoul_internal};
-use self::stdio_h::{stdin, stdout, vfprintf, getc, __uflow, putc, __overflow,
+use self::stdio_h::{stdin, stdout, vfprintf, getc, putc, __uflow, __overflow,
                     __getdelim};
 pub use self::byteswap_h::{__bswap_16, __bswap_32, __bswap_64};
 pub use self::uintn_identity_h::{__uint16_identity, __uint32_identity,
@@ -874,15 +918,16 @@ pub use self::sys_stat_h::{stat, fstat, stat64, fstat64, fstatat, fstatat64,
                            __xstat, __fxstat, __xstat64, __fxstat64,
                            __fxstatat, __fxstatat64, __lxstat, __lxstat64,
                            __xmknod, __xmknodat};
-pub use self::bits_stdio_h::{feof_unlocked, vprintf, getchar, getc_unlocked,
+use self::string_h::memset;
+pub use self::bits_stdio_h::{vprintf, getchar, getc_unlocked,
                              getchar_unlocked, fgetc_unlocked, putchar,
                              fputc_unlocked, putc_unlocked, putchar_unlocked,
-                             getline, ferror_unlocked};
+                             getline, feof_unlocked, ferror_unlocked};
 pub use self::stdlib_float_h::atof;
 pub use self::stdlib_bsearch_h::bsearch;
 pub use self::ctype_h::{tolower, toupper, __ctype_tolower_loc,
                         __ctype_toupper_loc};
-/* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
+/* Copyright (c) 2012-2020 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -897,32 +942,488 @@ pub use self::ctype_h::{tolower, toupper, __ctype_tolower_loc,
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+/* Hash the question section. This is used to safely detect query 
+   retransmission and to detect answers to questions we didn't ask, which 
+   might be poisoning attacks. Note that we decode the name rather 
+   than CRC the raw bytes, since replies might be compressed differently. 
+   We ignore case in the names for the same reason. 
+
+   The hash used is SHA-256. If we're building with DNSSEC support,
+   we use the Nettle cypto library. If not, we prefer not to
+   add a dependency on Nettle, and use a stand-alone implementaion. 
+*/
+/* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
+// SHA256 outputs a 32 byte digest
+#[c2rust::src_loc = "80:1"]
+pub type BYTE = libc::c_uchar;
+#[derive(Copy, Clone)]
+#[repr(C)]
+#[c2rust::src_loc = "83:9"]
+pub struct SHA256_CTX {
+    pub data: [BYTE; 64],
+    pub datalen: WORD,
+    pub bitlen: libc::c_ulonglong,
+    pub state: [WORD; 8],
+}
+// 8-bit byte
+#[c2rust::src_loc = "81:1"]
+pub type WORD = libc::c_uint;
 #[no_mangle]
-#[c2rust::src_loc = "19:14"]
-pub static mut metric_names: [*const libc::c_char; 20] =
-    [b"dns_cache_inserted\x00" as *const u8 as *const libc::c_char,
-     b"dns_cache_live_freed\x00" as *const u8 as *const libc::c_char,
-     b"dns_queries_forwarded\x00" as *const u8 as *const libc::c_char,
-     b"dns_auth_answered\x00" as *const u8 as *const libc::c_char,
-     b"dns_local_answered\x00" as *const u8 as *const libc::c_char,
-     b"bootp\x00" as *const u8 as *const libc::c_char,
-     b"pxe\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_ack\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_decline\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_discover\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_inform\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_nak\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_offer\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_release\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_request\x00" as *const u8 as *const libc::c_char,
-     b"noanswer\x00" as *const u8 as *const libc::c_char,
-     b"leases_allocated_4\x00" as *const u8 as *const libc::c_char,
-     b"leases_pruned_4\x00" as *const u8 as *const libc::c_char,
-     b"leases_allocated_6\x00" as *const u8 as *const libc::c_char,
-     b"leases_pruned_6\x00" as *const u8 as *const libc::c_char];
+#[c2rust::src_loc = "94:1"]
+pub unsafe extern "C" fn hash_questions_init() { }
 #[no_mangle]
-#[c2rust::src_loc = "42:1"]
-pub unsafe extern "C" fn get_metric_name(mut i: libc::c_int)
- -> *const libc::c_char {
-    return metric_names[i as usize];
+#[c2rust::src_loc = "98:1"]
+pub unsafe extern "C" fn hash_questions(mut header: *mut dns_header,
+                                        mut plen: size_t,
+                                        mut name: *mut libc::c_char)
+ -> *mut libc::c_uchar {
+    let mut q: libc::c_int = 0;
+    let mut p =
+        header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
+    let mut ctx =
+        SHA256_CTX{data: [0; 64], datalen: 0, bitlen: 0, state: [0; 8],};
+    static mut digest: [BYTE; 32] = [0; 32];
+    sha256_init(&mut ctx);
+    q = __bswap_16((*header).qdcount) as libc::c_int;
+    while q != 0 as libc::c_int {
+        let mut cp = 0 as *mut libc::c_char;
+        let mut c: libc::c_char = 0;
+        /* bad packet */
+        if extract_name(header, plen, &mut p, name, 1 as libc::c_int,
+                        4 as libc::c_int) == 0 {
+            break ; /* bad packet */
+        }
+        cp = name;
+        loop  {
+            c = *cp;
+            if !(c != 0) { break ; }
+            if c as libc::c_int >= 'A' as i32 &&
+                   c as libc::c_int <= 'Z' as i32 {
+                *cp =
+                    (*cp as libc::c_int + ('a' as i32 - 'A' as i32)) as
+                        libc::c_char
+            }
+            cp = cp.offset(1)
+        }
+        sha256_update(&mut ctx, name as *mut BYTE as *const BYTE,
+                      cp.wrapping_offset_from(name) as libc::c_long as
+                          size_t);
+        /* CRC the class and type as well */
+        sha256_update(&mut ctx, p as *mut BYTE as *const BYTE,
+                      4 as libc::c_int as size_t);
+        p = p.offset(4 as libc::c_int as isize);
+        if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as
+                  libc::c_long + 0 as libc::c_int as libc::c_long) as size_t
+                 <= plen) {
+            break ;
+        }
+        q -= 1
+    }
+    sha256_final(&mut ctx, digest.as_mut_ptr());
+    return digest.as_mut_ptr() as *mut libc::c_uchar;
+}
+/* *************************** VARIABLES *****************************/
+#[c2rust::src_loc = "151:19"]
+static mut k: [WORD; 64] =
+    [0x428a2f98 as libc::c_int as WORD, 0x71374491 as libc::c_int as WORD,
+     0xb5c0fbcf as libc::c_uint, 0xe9b5dba5 as libc::c_uint,
+     0x3956c25b as libc::c_int as WORD, 0x59f111f1 as libc::c_int as WORD,
+     0x923f82a4 as libc::c_uint, 0xab1c5ed5 as libc::c_uint,
+     0xd807aa98 as libc::c_uint, 0x12835b01 as libc::c_int as WORD,
+     0x243185be as libc::c_int as WORD, 0x550c7dc3 as libc::c_int as WORD,
+     0x72be5d74 as libc::c_int as WORD, 0x80deb1fe as libc::c_uint,
+     0x9bdc06a7 as libc::c_uint, 0xc19bf174 as libc::c_uint,
+     0xe49b69c1 as libc::c_uint, 0xefbe4786 as libc::c_uint,
+     0xfc19dc6 as libc::c_int as WORD, 0x240ca1cc as libc::c_int as WORD,
+     0x2de92c6f as libc::c_int as WORD, 0x4a7484aa as libc::c_int as WORD,
+     0x5cb0a9dc as libc::c_int as WORD, 0x76f988da as libc::c_int as WORD,
+     0x983e5152 as libc::c_uint, 0xa831c66d as libc::c_uint,
+     0xb00327c8 as libc::c_uint, 0xbf597fc7 as libc::c_uint,
+     0xc6e00bf3 as libc::c_uint, 0xd5a79147 as libc::c_uint,
+     0x6ca6351 as libc::c_int as WORD, 0x14292967 as libc::c_int as WORD,
+     0x27b70a85 as libc::c_int as WORD, 0x2e1b2138 as libc::c_int as WORD,
+     0x4d2c6dfc as libc::c_int as WORD, 0x53380d13 as libc::c_int as WORD,
+     0x650a7354 as libc::c_int as WORD, 0x766a0abb as libc::c_int as WORD,
+     0x81c2c92e as libc::c_uint, 0x92722c85 as libc::c_uint,
+     0xa2bfe8a1 as libc::c_uint, 0xa81a664b as libc::c_uint,
+     0xc24b8b70 as libc::c_uint, 0xc76c51a3 as libc::c_uint,
+     0xd192e819 as libc::c_uint, 0xd6990624 as libc::c_uint,
+     0xf40e3585 as libc::c_uint, 0x106aa070 as libc::c_int as WORD,
+     0x19a4c116 as libc::c_int as WORD, 0x1e376c08 as libc::c_int as WORD,
+     0x2748774c as libc::c_int as WORD, 0x34b0bcb5 as libc::c_int as WORD,
+     0x391c0cb3 as libc::c_int as WORD, 0x4ed8aa4a as libc::c_int as WORD,
+     0x5b9cca4f as libc::c_int as WORD, 0x682e6ff3 as libc::c_int as WORD,
+     0x748f82ee as libc::c_int as WORD, 0x78a5636f as libc::c_int as WORD,
+     0x84c87814 as libc::c_uint, 0x8cc70208 as libc::c_uint,
+     0x90befffa as libc::c_uint, 0xa4506ceb as libc::c_uint,
+     0xbef9a3f7 as libc::c_uint, 0xc67178f2 as libc::c_uint];
+/* ********************** FUNCTION DEFINITIONS ***********************/
+#[c2rust::src_loc = "163:1"]
+unsafe extern "C" fn sha256_transform(mut ctx: *mut SHA256_CTX,
+                                      mut data: *const BYTE) {
+    let mut a: WORD = 0;
+    let mut b: WORD = 0;
+    let mut c: WORD = 0;
+    let mut d: WORD = 0;
+    let mut e: WORD = 0;
+    let mut f: WORD = 0;
+    let mut g: WORD = 0;
+    let mut h: WORD = 0;
+    let mut i: WORD = 0;
+    let mut j: WORD = 0;
+    let mut t1: WORD = 0;
+    let mut t2: WORD = 0;
+    let mut m: [WORD; 64] = [0; 64];
+    i = 0 as libc::c_int as WORD;
+    j = 0 as libc::c_int as WORD;
+    while i < 16 as libc::c_int as libc::c_uint {
+        m[i as usize] =
+            ((*data.offset(j as isize) as libc::c_int) << 24 as libc::c_int |
+                 (*data.offset(j.wrapping_add(1 as libc::c_int as
+                                                  libc::c_uint) as isize) as
+                      libc::c_int) << 16 as libc::c_int |
+                 (*data.offset(j.wrapping_add(2 as libc::c_int as
+                                                  libc::c_uint) as isize) as
+                      libc::c_int) << 8 as libc::c_int |
+                 *data.offset(j.wrapping_add(3 as libc::c_int as libc::c_uint)
+                                  as isize) as libc::c_int) as WORD;
+        i = i.wrapping_add(1);
+        j =
+            (j as libc::c_uint).wrapping_add(4 as libc::c_int as libc::c_uint)
+                as WORD as WORD
+    }
+    while i < 64 as libc::c_int as libc::c_uint {
+        m[i as usize] =
+            ((m[i.wrapping_sub(2 as libc::c_int as libc::c_uint) as usize] >>
+                  17 as libc::c_int |
+                  m[i.wrapping_sub(2 as libc::c_int as libc::c_uint) as usize]
+                      << 32 as libc::c_int - 17 as libc::c_int) ^
+                 (m[i.wrapping_sub(2 as libc::c_int as libc::c_uint) as usize]
+                      >> 19 as libc::c_int |
+                      m[i.wrapping_sub(2 as libc::c_int as libc::c_uint) as
+                            usize] << 32 as libc::c_int - 19 as libc::c_int) ^
+                 m[i.wrapping_sub(2 as libc::c_int as libc::c_uint) as usize]
+                     >>
+                     10 as
+                         libc::c_int).wrapping_add(m[i.wrapping_sub(7 as
+                                                                        libc::c_int
+                                                                        as
+                                                                        libc::c_uint)
+                                                         as
+                                                         usize]).wrapping_add((m[i.wrapping_sub(15
+                                                                                                    as
+                                                                                                    libc::c_int
+                                                                                                    as
+                                                                                                    libc::c_uint)
+                                                                                     as
+                                                                                     usize]
+                                                                                   >>
+                                                                                   7
+                                                                                       as
+                                                                                       libc::c_int
+                                                                                   |
+                                                                                   m[i.wrapping_sub(15
+                                                                                                        as
+                                                                                                        libc::c_int
+                                                                                                        as
+                                                                                                        libc::c_uint)
+                                                                                         as
+                                                                                         usize]
+                                                                                       <<
+                                                                                       32
+                                                                                           as
+                                                                                           libc::c_int
+                                                                                           -
+                                                                                           7
+                                                                                               as
+                                                                                               libc::c_int)
+                                                                                  ^
+                                                                                  (m[i.wrapping_sub(15
+                                                                                                        as
+                                                                                                        libc::c_int
+                                                                                                        as
+                                                                                                        libc::c_uint)
+                                                                                         as
+                                                                                         usize]
+                                                                                       >>
+                                                                                       18
+                                                                                           as
+                                                                                           libc::c_int
+                                                                                       |
+                                                                                       m[i.wrapping_sub(15
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_uint)
+                                                                                             as
+                                                                                             usize]
+                                                                                           <<
+                                                                                           32
+                                                                                               as
+                                                                                               libc::c_int
+                                                                                               -
+                                                                                               18
+                                                                                                   as
+                                                                                                   libc::c_int)
+                                                                                  ^
+                                                                                  m[i.wrapping_sub(15
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_uint)
+                                                                                        as
+                                                                                        usize]
+                                                                                      >>
+                                                                                      3
+                                                                                          as
+                                                                                          libc::c_int).wrapping_add(m[i.wrapping_sub(16
+                                                                                                                                         as
+                                                                                                                                         libc::c_int
+                                                                                                                                         as
+                                                                                                                                         libc::c_uint)
+                                                                                                                          as
+                                                                                                                          usize]);
+        i = i.wrapping_add(1)
+    }
+    a = (*ctx).state[0 as libc::c_int as usize];
+    b = (*ctx).state[1 as libc::c_int as usize];
+    c = (*ctx).state[2 as libc::c_int as usize];
+    d = (*ctx).state[3 as libc::c_int as usize];
+    e = (*ctx).state[4 as libc::c_int as usize];
+    f = (*ctx).state[5 as libc::c_int as usize];
+    g = (*ctx).state[6 as libc::c_int as usize];
+    h = (*ctx).state[7 as libc::c_int as usize];
+    i = 0 as libc::c_int as WORD;
+    while i < 64 as libc::c_int as libc::c_uint {
+        t1 =
+            h.wrapping_add((e >> 6 as libc::c_int |
+                                e << 32 as libc::c_int - 6 as libc::c_int) ^
+                               (e >> 11 as libc::c_int |
+                                    e <<
+                                        32 as libc::c_int - 11 as libc::c_int)
+                               ^
+                               (e >> 25 as libc::c_int |
+                                    e <<
+                                        32 as libc::c_int -
+                                            25 as
+                                                libc::c_int)).wrapping_add(e &
+                                                                               f
+                                                                               ^
+                                                                               !e
+                                                                                   &
+                                                                                   g).wrapping_add(k[i
+                                                                                                         as
+                                                                                                         usize]).wrapping_add(m[i
+                                                                                                                                    as
+                                                                                                                                    usize]);
+        t2 =
+            ((a >> 2 as libc::c_int |
+                  a << 32 as libc::c_int - 2 as libc::c_int) ^
+                 (a >> 13 as libc::c_int |
+                      a << 32 as libc::c_int - 13 as libc::c_int) ^
+                 (a >> 22 as libc::c_int |
+                      a <<
+                          32 as libc::c_int -
+                              22 as
+                                  libc::c_int)).wrapping_add(a & b ^ a & c ^
+                                                                 b & c);
+        h = g;
+        g = f;
+        f = e;
+        e = d.wrapping_add(t1);
+        d = c;
+        c = b;
+        b = a;
+        a = t1.wrapping_add(t2);
+        i = i.wrapping_add(1)
+    }
+    (*ctx).state[0 as libc::c_int as usize] =
+        ((*ctx).state[0 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(a) as WORD as WORD;
+    (*ctx).state[1 as libc::c_int as usize] =
+        ((*ctx).state[1 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(b) as WORD as WORD;
+    (*ctx).state[2 as libc::c_int as usize] =
+        ((*ctx).state[2 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(c) as WORD as WORD;
+    (*ctx).state[3 as libc::c_int as usize] =
+        ((*ctx).state[3 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(d) as WORD as WORD;
+    (*ctx).state[4 as libc::c_int as usize] =
+        ((*ctx).state[4 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(e) as WORD as WORD;
+    (*ctx).state[5 as libc::c_int as usize] =
+        ((*ctx).state[5 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(f) as WORD as WORD;
+    (*ctx).state[6 as libc::c_int as usize] =
+        ((*ctx).state[6 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(g) as WORD as WORD;
+    (*ctx).state[7 as libc::c_int as usize] =
+        ((*ctx).state[7 as libc::c_int as usize] as
+             libc::c_uint).wrapping_add(h) as WORD as WORD;
+}
+#[c2rust::src_loc = "205:1"]
+unsafe extern "C" fn sha256_init(mut ctx: *mut SHA256_CTX) {
+    (*ctx).datalen = 0 as libc::c_int as WORD;
+    (*ctx).bitlen = 0 as libc::c_int as libc::c_ulonglong;
+    (*ctx).state[0 as libc::c_int as usize] =
+        0x6a09e667 as libc::c_int as WORD;
+    (*ctx).state[1 as libc::c_int as usize] = 0xbb67ae85 as libc::c_uint;
+    (*ctx).state[2 as libc::c_int as usize] =
+        0x3c6ef372 as libc::c_int as WORD;
+    (*ctx).state[3 as libc::c_int as usize] = 0xa54ff53a as libc::c_uint;
+    (*ctx).state[4 as libc::c_int as usize] =
+        0x510e527f as libc::c_int as WORD;
+    (*ctx).state[5 as libc::c_int as usize] = 0x9b05688c as libc::c_uint;
+    (*ctx).state[6 as libc::c_int as usize] =
+        0x1f83d9ab as libc::c_int as WORD;
+    (*ctx).state[7 as libc::c_int as usize] =
+        0x5be0cd19 as libc::c_int as WORD;
+}
+#[c2rust::src_loc = "219:1"]
+unsafe extern "C" fn sha256_update(mut ctx: *mut SHA256_CTX,
+                                   mut data: *const BYTE, mut len: size_t) {
+    let mut i: WORD = 0;
+    i = 0 as libc::c_int as WORD;
+    while (i as libc::c_ulong) < len {
+        (*ctx).data[(*ctx).datalen as usize] = *data.offset(i as isize);
+        (*ctx).datalen = (*ctx).datalen.wrapping_add(1);
+        if (*ctx).datalen == 64 as libc::c_int as libc::c_uint {
+            sha256_transform(ctx, (*ctx).data.as_mut_ptr() as *const BYTE);
+            (*ctx).bitlen =
+                (*ctx).bitlen.wrapping_add(512 as libc::c_int as
+                                               libc::c_ulonglong);
+            (*ctx).datalen = 0 as libc::c_int as WORD
+        }
+        i = i.wrapping_add(1)
+    };
+}
+#[c2rust::src_loc = "235:1"]
+unsafe extern "C" fn sha256_final(mut ctx: *mut SHA256_CTX,
+                                  mut hash: *mut BYTE) {
+    let mut i: WORD = 0;
+    i = (*ctx).datalen;
+    // Pad whatever data is left in the buffer.
+    if (*ctx).datalen < 56 as libc::c_int as libc::c_uint {
+        let fresh6 = i;
+        i = i.wrapping_add(1);
+        (*ctx).data[fresh6 as usize] = 0x80 as libc::c_int as BYTE;
+        while i < 56 as libc::c_int as libc::c_uint {
+            let fresh7 = i;
+            i = i.wrapping_add(1);
+            (*ctx).data[fresh7 as usize] = 0 as libc::c_int as BYTE
+        }
+    } else {
+        let fresh8 = i;
+        i = i.wrapping_add(1);
+        (*ctx).data[fresh8 as usize] = 0x80 as libc::c_int as BYTE;
+        while i < 64 as libc::c_int as libc::c_uint {
+            let fresh9 = i;
+            i = i.wrapping_add(1);
+            (*ctx).data[fresh9 as usize] = 0 as libc::c_int as BYTE
+        }
+        sha256_transform(ctx, (*ctx).data.as_mut_ptr() as *const BYTE);
+        memset((*ctx).data.as_mut_ptr() as *mut libc::c_void,
+               0 as libc::c_int, 56 as libc::c_int as libc::c_ulong);
+    }
+    // Append to the padding the total message's length in bits and transform.
+    (*ctx).bitlen =
+        (*ctx).bitlen.wrapping_add((*ctx).datalen.wrapping_mul(8 as
+                                                                   libc::c_int
+                                                                   as
+                                                                   libc::c_uint)
+                                       as libc::c_ulonglong);
+    (*ctx).data[63 as libc::c_int as usize] = (*ctx).bitlen as BYTE;
+    (*ctx).data[62 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 8 as libc::c_int) as BYTE;
+    (*ctx).data[61 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 16 as libc::c_int) as BYTE;
+    (*ctx).data[60 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 24 as libc::c_int) as BYTE;
+    (*ctx).data[59 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 32 as libc::c_int) as BYTE;
+    (*ctx).data[58 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 40 as libc::c_int) as BYTE;
+    (*ctx).data[57 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 48 as libc::c_int) as BYTE;
+    (*ctx).data[56 as libc::c_int as usize] =
+        ((*ctx).bitlen >> 56 as libc::c_int) as BYTE;
+    sha256_transform(ctx, (*ctx).data.as_mut_ptr() as *const BYTE);
+    // Since this implementation uses little endian byte ordering and SHA uses big endian,
+  // reverse all the bytes when copying the final state to the output hash.
+    i = 0 as libc::c_int as WORD;
+    while i < 4 as libc::c_int as libc::c_uint {
+        *hash.offset(i as isize) =
+            ((*ctx).state[0 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(4 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[1 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(8 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[2 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(12 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[3 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(16 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[4 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(20 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[5 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(24 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[6 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        *hash.offset(i.wrapping_add(28 as libc::c_int as libc::c_uint) as
+                         isize) =
+            ((*ctx).state[7 as libc::c_int as usize] >>
+                 (24 as libc::c_int as
+                      libc::c_uint).wrapping_sub(i.wrapping_mul(8 as
+                                                                    libc::c_int
+                                                                    as
+                                                                    libc::c_uint))
+                 & 0xff as libc::c_int as libc::c_uint) as BYTE;
+        i = i.wrapping_add(1)
+    };
 }

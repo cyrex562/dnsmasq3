@@ -1,5 +1,889 @@
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
+         non_upper_case_globals, unused_assignments, unused_mut)]
+#![register_tool(c2rust)]
+#![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
+#[c2rust::header_src = "internal:0"]
+pub mod internal {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "0:0"]
+    pub struct __va_list_tag {
+        pub gp_offset: libc::c_uint,
+        pub fp_offset: libc::c_uint,
+        pub overflow_arg_area: *mut libc::c_void,
+        pub reg_save_area: *mut libc::c_void,
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types.h:18"]
+pub mod types_h {
+    #[c2rust::src_loc = "40:1"]
+    pub type __uint16_t = libc::c_ushort;
+    #[c2rust::src_loc = "41:1"]
+    pub type __int32_t = libc::c_int;
+    #[c2rust::src_loc = "42:1"]
+    pub type __uint32_t = libc::c_uint;
+    #[c2rust::src_loc = "45:1"]
+    pub type __uint64_t = libc::c_ulong;
+    #[c2rust::src_loc = "72:1"]
+    pub type __intmax_t = libc::c_long;
+    #[c2rust::src_loc = "73:1"]
+    pub type __uintmax_t = libc::c_ulong;
+    #[c2rust::src_loc = "145:1"]
+    pub type __dev_t = libc::c_ulong;
+    #[c2rust::src_loc = "146:1"]
+    pub type __uid_t = libc::c_uint;
+    #[c2rust::src_loc = "147:1"]
+    pub type __gid_t = libc::c_uint;
+    #[c2rust::src_loc = "148:1"]
+    pub type __ino_t = libc::c_ulong;
+    #[c2rust::src_loc = "149:1"]
+    pub type __ino64_t = libc::c_ulong;
+    #[c2rust::src_loc = "150:1"]
+    pub type __mode_t = libc::c_uint;
+    #[c2rust::src_loc = "151:1"]
+    pub type __nlink_t = libc::c_ulong;
+    #[c2rust::src_loc = "152:1"]
+    pub type __off_t = libc::c_long;
+    #[c2rust::src_loc = "153:1"]
+    pub type __off64_t = libc::c_long;
+    #[c2rust::src_loc = "160:1"]
+    pub type __time_t = libc::c_long;
+    #[c2rust::src_loc = "174:1"]
+    pub type __blksize_t = libc::c_long;
+    #[c2rust::src_loc = "179:1"]
+    pub type __blkcnt_t = libc::c_long;
+    #[c2rust::src_loc = "180:1"]
+    pub type __blkcnt64_t = libc::c_long;
+    #[c2rust::src_loc = "193:1"]
+    pub type __ssize_t = libc::c_long;
+    #[c2rust::src_loc = "196:1"]
+    pub type __syscall_slong_t = libc::c_long;
+    #[c2rust::src_loc = "209:1"]
+    pub type __socklen_t = libc::c_uint;
+}
+#[c2rust::header_src =
+  "/usr/lib/llvm-10/lib/clang/10.0.0/include/stddef.h:18"]
+pub mod stddef_h {
+    #[c2rust::src_loc = "46:1"]
+    pub type size_t = libc::c_ulong;
+    #[c2rust::src_loc = "89:11"]
+    pub const NULL: libc::c_int = 0 as libc::c_int;
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:18"]
+pub mod struct_timespec_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "10:8"]
+    pub struct timespec {
+        pub tv_sec: __time_t,
+        pub tv_nsec: __syscall_slong_t,
+    }
+    use super::types_h::{__time_t, __syscall_slong_t};
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:18"]
+pub mod struct_iovec_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "26:8"]
+    pub struct iovec {
+        pub iov_base: *mut libc::c_void,
+        pub iov_len: size_t,
+    }
+    use super::stddef_h::size_t;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/socket.h:18"]
+pub mod socket_h {
+    #[c2rust::src_loc = "33:1"]
+    pub type socklen_t = __socklen_t;
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "257:8"]
+    pub struct msghdr {
+        pub msg_name: *mut libc::c_void,
+        pub msg_namelen: socklen_t,
+        pub msg_iov: *mut iovec,
+        pub msg_iovlen: size_t,
+        pub msg_control: *mut libc::c_void,
+        pub msg_controllen: size_t,
+        pub msg_flags: libc::c_int,
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "275:8"]
+    pub struct cmsghdr {
+        pub cmsg_len: size_t,
+        pub cmsg_level: libc::c_int,
+        pub cmsg_type: libc::c_int,
+        pub __cmsg_data: [libc::c_uchar; 0],
+    }
+    #[inline]
+    #[c2rust::src_loc = "311:1"]
+    pub unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
+                                           mut __cmsg: *mut cmsghdr)
+     -> *mut cmsghdr {
+        if (*__cmsg).cmsg_len <
+               ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+            return 0 as *mut cmsghdr
+        }
+        __cmsg =
+            (__cmsg as
+                 *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                 as
+                                                                                 libc::c_ulong).wrapping_sub(1
+                                                                                                                 as
+                                                                                                                 libc::c_int
+                                                                                                                 as
+                                                                                                                 libc::c_ulong)
+                                                 &
+                                                 !(::std::mem::size_of::<size_t>()
+                                                       as
+                                                       libc::c_ulong).wrapping_sub(1
+                                                                                       as
+                                                                                       libc::c_int
+                                                                                       as
+                                                                                       libc::c_ulong))
+                                                as isize) as *mut cmsghdr;
+        if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
+               ((*__mhdr).msg_control as
+                    *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+                                                   isize) ||
+               (__cmsg as
+                    *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                    as
+                                                                                    libc::c_ulong).wrapping_sub(1
+                                                                                                                    as
+                                                                                                                    libc::c_int
+                                                                                                                    as
+                                                                                                                    libc::c_ulong)
+                                                    &
+                                                    !(::std::mem::size_of::<size_t>()
+                                                          as
+                                                          libc::c_ulong).wrapping_sub(1
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                                                   as isize) >
+                   ((*__mhdr).msg_control as
+                        *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+                                                       isize) {
+            return 0 as *mut cmsghdr
+        }
+        return __cmsg;
+    }
+    use super::types_h::__socklen_t;
+    use super::struct_iovec_h::iovec;
+    use super::stddef_h::size_t;
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stat.h:18"]
+pub mod stat_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "46:8"]
+    pub struct stat {
+        pub st_dev: __dev_t,
+        pub st_ino: __ino_t,
+        pub st_nlink: __nlink_t,
+        pub st_mode: __mode_t,
+        pub st_uid: __uid_t,
+        pub st_gid: __gid_t,
+        pub __pad0: libc::c_int,
+        pub st_rdev: __dev_t,
+        pub st_size: __off_t,
+        pub st_blksize: __blksize_t,
+        pub st_blocks: __blkcnt_t,
+        pub st_atim: timespec,
+        pub st_mtim: timespec,
+        pub st_ctim: timespec,
+        pub __glibc_reserved: [__syscall_slong_t; 3],
+    }
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "119:8"]
+    pub struct stat64 {
+        pub st_dev: __dev_t,
+        pub st_ino: __ino64_t,
+        pub st_nlink: __nlink_t,
+        pub st_mode: __mode_t,
+        pub st_uid: __uid_t,
+        pub st_gid: __gid_t,
+        pub __pad0: libc::c_int,
+        pub st_rdev: __dev_t,
+        pub st_size: __off_t,
+        pub st_blksize: __blksize_t,
+        pub st_blocks: __blkcnt64_t,
+        pub st_atim: timespec,
+        pub st_mtim: timespec,
+        pub st_ctim: timespec,
+        pub __glibc_reserved: [__syscall_slong_t; 3],
+    }
+    #[c2rust::src_loc = "38:10"]
+    pub const _STAT_VER_LINUX: libc::c_int = 1 as libc::c_int;
+    #[c2rust::src_loc = "44:9"]
+    pub const _STAT_VER: libc::c_int = _STAT_VER_LINUX;
+    use super::types_h::{__dev_t, __ino_t, __nlink_t, __mode_t, __uid_t,
+                         __gid_t, __off_t, __blksize_t, __blkcnt_t,
+                         __syscall_slong_t, __ino64_t, __blkcnt64_t};
+    use super::struct_timespec_h::timespec;
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:18"]
+pub mod struct_FILE_h {
+    #[derive(Copy, Clone)]
+    #[repr(C)]
+    #[c2rust::src_loc = "49:8"]
+    pub struct _IO_FILE {
+        pub _flags: libc::c_int,
+        pub _IO_read_ptr: *mut libc::c_char,
+        pub _IO_read_end: *mut libc::c_char,
+        pub _IO_read_base: *mut libc::c_char,
+        pub _IO_write_base: *mut libc::c_char,
+        pub _IO_write_ptr: *mut libc::c_char,
+        pub _IO_write_end: *mut libc::c_char,
+        pub _IO_buf_base: *mut libc::c_char,
+        pub _IO_buf_end: *mut libc::c_char,
+        pub _IO_save_base: *mut libc::c_char,
+        pub _IO_backup_base: *mut libc::c_char,
+        pub _IO_save_end: *mut libc::c_char,
+        pub _markers: *mut _IO_marker,
+        pub _chain: *mut _IO_FILE,
+        pub _fileno: libc::c_int,
+        pub _flags2: libc::c_int,
+        pub _old_offset: __off_t,
+        pub _cur_column: libc::c_ushort,
+        pub _vtable_offset: libc::c_schar,
+        pub _shortbuf: [libc::c_char; 1],
+        pub _lock: *mut libc::c_void,
+        pub _offset: __off64_t,
+        pub _codecvt: *mut _IO_codecvt,
+        pub _wide_data: *mut _IO_wide_data,
+        pub _freeres_list: *mut _IO_FILE,
+        pub _freeres_buf: *mut libc::c_void,
+        pub __pad5: size_t,
+        pub _mode: libc::c_int,
+        pub _unused2: [libc::c_char; 20],
+    }
+    #[c2rust::src_loc = "43:1"]
+    pub type _IO_lock_t = ();
+    #[c2rust::src_loc = "111:9"]
+    pub const _IO_EOF_SEEN: libc::c_int = 0x10 as libc::c_int;
+    #[c2rust::src_loc = "114:9"]
+    pub const _IO_ERR_SEEN: libc::c_int = 0x20 as libc::c_int;
+    use super::types_h::{__off_t, __off64_t};
+    use super::stddef_h::size_t;
+    extern "C" {
+        #[c2rust::src_loc = "38:8"]
+        pub type _IO_wide_data;
+        #[c2rust::src_loc = "37:8"]
+        pub type _IO_codecvt;
+        #[c2rust::src_loc = "36:8"]
+        pub type _IO_marker;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/types/FILE.h:18"]
+pub mod FILE_h {
+    #[c2rust::src_loc = "7:1"]
+    pub type FILE = _IO_FILE;
+    use super::struct_FILE_h::_IO_FILE;
+}
+#[c2rust::header_src = "/usr/include/stdlib.h:18"]
+pub mod stdlib_h {
+    #[c2rust::src_loc = "808:1"]
+    pub type __compar_fn_t
+        =
+        Option<unsafe extern "C" fn(_: *const libc::c_void,
+                                    _: *const libc::c_void) -> libc::c_int>;
+    #[inline]
+    #[c2rust::src_loc = "360:1"]
+    pub unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char)
+     -> libc::c_int {
+        return strtol(__nptr,
+                      NULL as *mut libc::c_void as *mut *mut libc::c_char,
+                      10 as libc::c_int) as libc::c_int;
+    }
+    #[inline]
+    #[c2rust::src_loc = "365:1"]
+    pub unsafe extern "C" fn atol(mut __nptr: *const libc::c_char)
+     -> libc::c_long {
+        return strtol(__nptr,
+                      NULL as *mut libc::c_void as *mut *mut libc::c_char,
+                      10 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "372:15"]
+    pub unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
+     -> libc::c_longlong {
+        return strtoll(__nptr,
+                       NULL as *mut libc::c_void as *mut *mut libc::c_char,
+                       10 as libc::c_int);
+    }
+    use super::stddef_h::NULL;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "117:15"]
+        pub fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+         -> libc::c_double;
+        #[no_mangle]
+        #[c2rust::src_loc = "176:17"]
+        pub fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+                      _: libc::c_int) -> libc::c_long;
+        #[no_mangle]
+        #[c2rust::src_loc = "200:22"]
+        pub fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+                       _: libc::c_int) -> libc::c_longlong;
+    }
+}
+#[c2rust::header_src = "/usr/include/stdint.h:18"]
+pub mod stdint_h {
+    #[c2rust::src_loc = "101:1"]
+    pub type intmax_t = __intmax_t;
+    #[c2rust::src_loc = "102:1"]
+    pub type uintmax_t = __uintmax_t;
+    use super::types_h::{__intmax_t, __uintmax_t};
+}
+#[c2rust::header_src = "/usr/include/inttypes.h:18"]
+pub mod inttypes_h {
+    #[c2rust::src_loc = "34:1"]
+    pub type __gwchar_t = libc::c_int;
+    #[inline]
+    #[c2rust::src_loc = "361:1"]
+    pub unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
+                                       mut endptr: *mut *mut __gwchar_t,
+                                       mut base: libc::c_int) -> uintmax_t {
+        return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "323:1"]
+    pub unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
+                                       mut endptr: *mut *mut libc::c_char,
+                                       mut base: libc::c_int) -> intmax_t {
+        return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "335:1"]
+    pub unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
+                                       mut endptr: *mut *mut libc::c_char,
+                                       mut base: libc::c_int) -> uintmax_t {
+        return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    #[inline]
+    #[c2rust::src_loc = "347:1"]
+    pub unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
+                                       mut endptr: *mut *mut __gwchar_t,
+                                       mut base: libc::c_int) -> intmax_t {
+        return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
+    }
+    use super::stdint_h::{uintmax_t, intmax_t};
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "318:1"]
+        pub fn __strtol_internal(__nptr: *const libc::c_char,
+                                 __endptr: *mut *mut libc::c_char,
+                                 __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_long;
+        #[no_mangle]
+        #[c2rust::src_loc = "330:1"]
+        pub fn __strtoul_internal(__nptr: *const libc::c_char,
+                                  __endptr: *mut *mut libc::c_char,
+                                  __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_ulong;
+        #[no_mangle]
+        #[c2rust::src_loc = "342:1"]
+        pub fn __wcstol_internal(__nptr: *const __gwchar_t,
+                                 __endptr: *mut *mut __gwchar_t,
+                                 __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_long;
+        #[no_mangle]
+        #[c2rust::src_loc = "354:1"]
+        pub fn __wcstoul_internal(__nptr: *const __gwchar_t,
+                                  __endptr: *mut *mut __gwchar_t,
+                                  __base: libc::c_int, __group: libc::c_int)
+         -> libc::c_ulong;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdio.h:18"]
+pub mod bits_stdio_h {
+    #[inline]
+    #[c2rust::src_loc = "38:1"]
+    pub unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
+                                     mut __arg: ::std::ffi::VaList)
+     -> libc::c_int {
+        return vfprintf(stdout, __fmt, __arg.as_va_list());
+    }
+    #[inline]
+    #[c2rust::src_loc = "46:1"]
+    pub unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
+    #[inline]
+    #[c2rust::src_loc = "55:1"]
+    pub unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE)
+     -> libc::c_int {
+        return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __uflow(__fp)
+               } else {
+                   let fresh0 = (*__fp)._IO_read_ptr;
+                   (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+                   *(fresh0 as *mut libc::c_uchar) as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "65:1"]
+    pub unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE)
+     -> libc::c_int {
+        return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __uflow(__fp)
+               } else {
+                   let fresh1 = (*__fp)._IO_read_ptr;
+                   (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+                   *(fresh1 as *mut libc::c_uchar) as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "72:1"]
+    pub unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
+        return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __uflow(stdin)
+               } else {
+                   let fresh2 = (*stdin)._IO_read_ptr;
+                   (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+                   *(fresh2 as *mut libc::c_uchar) as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "90:1"]
+    pub unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
+                                            mut __stream: *mut FILE)
+     -> libc::c_int {
+        return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+               } else {
+                   let fresh3 = (*__stream)._IO_write_ptr;
+                   (*__stream)._IO_write_ptr =
+                       (*__stream)._IO_write_ptr.offset(1);
+                   *fresh3 = __c as libc::c_char;
+                   *fresh3 as libc::c_uchar as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "81:1"]
+    pub unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
+        return putc(__c, stdout);
+    }
+    #[inline]
+    #[c2rust::src_loc = "100:1"]
+    pub unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
+                                           mut __stream: *mut FILE)
+     -> libc::c_int {
+        return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+               } else {
+                   let fresh4 = (*__stream)._IO_write_ptr;
+                   (*__stream)._IO_write_ptr =
+                       (*__stream)._IO_write_ptr.offset(1);
+                   *fresh4 = __c as libc::c_char;
+                   *fresh4 as libc::c_uchar as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "107:1"]
+    pub unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int)
+     -> libc::c_int {
+        return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
+                      libc::c_int as libc::c_long != 0 {
+                   __overflow(stdout, __c as libc::c_uchar as libc::c_int)
+               } else {
+                   let fresh5 = (*stdout)._IO_write_ptr;
+                   (*stdout)._IO_write_ptr =
+                       (*stdout)._IO_write_ptr.offset(1);
+                   *fresh5 = __c as libc::c_char;
+                   *fresh5 as libc::c_uchar as libc::c_int
+               };
+    }
+    #[inline]
+    #[c2rust::src_loc = "117:1"]
+    pub unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
+                                     mut __n: *mut size_t,
+                                     mut __stream: *mut FILE) -> __ssize_t {
+        return __getdelim(__lineptr, __n, '\n' as i32, __stream);
+    }
+    #[inline]
+    #[c2rust::src_loc = "127:1"]
+    pub unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE)
+     -> libc::c_int {
+        return ((*__stream)._flags & _IO_EOF_SEEN != 0 as libc::c_int) as
+                   libc::c_int;
+    }
+    #[inline]
+    #[c2rust::src_loc = "134:1"]
+    pub unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE)
+     -> libc::c_int {
+        return ((*__stream)._flags & _IO_ERR_SEEN != 0 as libc::c_int) as
+                   libc::c_int;
+    }
+    use super::internal::__va_list_tag;
+    use super::stdio_h::{vfprintf, stdout, getc, stdin, __uflow, __overflow,
+                         putc, __getdelim};
+    use super::FILE_h::FILE;
+    use super::stddef_h::size_t;
+    use super::types_h::__ssize_t;
+    use super::struct_FILE_h::{_IO_EOF_SEEN, _IO_ERR_SEEN};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/byteswap.h:18"]
+pub mod byteswap_h {
+    #[inline]
+    #[c2rust::src_loc = "33:1"]
+    pub unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+        return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int
+                    |
+                    (__bsx as libc::c_int & 0xff as libc::c_int) <<
+                        8 as libc::c_int) as __uint16_t;
+    }
+    #[inline]
+    #[c2rust::src_loc = "48:1"]
+    pub unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+        return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
+                   (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
+                   (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
+                   (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
+    }
+    #[inline]
+    #[c2rust::src_loc = "69:15"]
+    pub unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+        return ((__bsx as libc::c_ulonglong &
+                     0xff00000000000000 as libc::c_ulonglong) >>
+                    56 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff000000000000 as libc::c_ulonglong) >>
+                        40 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff0000000000 as libc::c_ulonglong) >>
+                        24 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff00000000 as libc::c_ulonglong) >>
+                        8 as libc::c_int |
+                    (__bsx as libc::c_ulonglong &
+                         0xff000000 as libc::c_ulonglong) << 8 as libc::c_int
+                    |
+                    (__bsx as libc::c_ulonglong &
+                         0xff0000 as libc::c_ulonglong) << 24 as libc::c_int |
+                    (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong)
+                        << 40 as libc::c_int |
+                    (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong)
+                        << 56 as libc::c_int) as __uint64_t;
+    }
+    use super::types_h::{__uint16_t, __uint32_t, __uint64_t};
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:18"]
+pub mod uintn_identity_h {
+    #[inline]
+    #[c2rust::src_loc = "32:1"]
+    pub unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t)
+     -> __uint16_t {
+        return __x;
+    }
+    #[inline]
+    #[c2rust::src_loc = "38:1"]
+    pub unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t)
+     -> __uint32_t {
+        return __x;
+    }
+    #[inline]
+    #[c2rust::src_loc = "44:1"]
+    pub unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t)
+     -> __uint64_t {
+        return __x;
+    }
+    use super::types_h::{__uint16_t, __uint32_t, __uint64_t};
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/sys/stat.h:18"]
+pub mod sys_stat_h {
+    #[inline]
+    #[c2rust::src_loc = "452:1"]
+    pub unsafe extern "C" fn stat(mut __path: *const libc::c_char,
+                                  mut __statbuf: *mut stat) -> libc::c_int {
+        return __xstat(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "466:1"]
+    pub unsafe extern "C" fn fstat(mut __fd: libc::c_int,
+                                   mut __statbuf: *mut stat) -> libc::c_int {
+        return __fxstat(_STAT_VER, __fd, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "501:1"]
+    pub unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
+                                    mut __statbuf: *mut stat64)
+     -> libc::c_int {
+        return __xstat64(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "515:1"]
+    pub unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
+                                     mut __statbuf: *mut stat64)
+     -> libc::c_int {
+        return __fxstat64(_STAT_VER, __fd, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "473:1"]
+    pub unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
+                                     mut __filename: *const libc::c_char,
+                                     mut __statbuf: *mut stat,
+                                     mut __flag: libc::c_int) -> libc::c_int {
+        return __fxstatat(_STAT_VER, __fd, __filename, __statbuf, __flag);
+    }
+    #[inline]
+    #[c2rust::src_loc = "522:1"]
+    pub unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
+                                       mut __filename: *const libc::c_char,
+                                       mut __statbuf: *mut stat64,
+                                       mut __flag: libc::c_int)
+     -> libc::c_int {
+        return __fxstatat64(_STAT_VER, __fd, __filename, __statbuf, __flag);
+    }
+    #[inline]
+    #[c2rust::src_loc = "459:1"]
+    pub unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
+                                   mut __statbuf: *mut stat) -> libc::c_int {
+        return __lxstat(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "508:1"]
+    pub unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
+                                     mut __statbuf: *mut stat64)
+     -> libc::c_int {
+        return __lxstat64(_STAT_VER, __path, __statbuf);
+    }
+    #[inline]
+    #[c2rust::src_loc = "482:1"]
+    pub unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
+                                   mut __mode: __mode_t, mut __dev: __dev_t)
+     -> libc::c_int {
+        return __xmknod(_MKNOD_VER, __path, __mode, &mut __dev);
+    }
+    #[c2rust::src_loc = "390:10"]
+    pub const _MKNOD_VER: libc::c_int = 0 as libc::c_int;
+    #[inline]
+    #[c2rust::src_loc = "490:1"]
+    pub unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
+                                     mut __path: *const libc::c_char,
+                                     mut __mode: __mode_t, mut __dev: __dev_t)
+     -> libc::c_int {
+        return __xmknodat(_MKNOD_VER, __fd, __path, __mode, &mut __dev);
+    }
+    use super::stat_h::{stat, _STAT_VER_LINUX, _STAT_VER, stat64};
+    use super::types_h::{__mode_t, __dev_t};
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "409:1"]
+        pub fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
+                       __stat_buf: *mut stat) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "406:1"]
+        pub fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
+                        __stat_buf: *mut stat) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "430:1"]
+        pub fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+                         __stat_buf: *mut stat64) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "428:1"]
+        pub fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
+                          __stat_buf: *mut stat64) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "415:1"]
+        pub fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
+                          __filename: *const libc::c_char,
+                          __stat_buf: *mut stat, __flag: libc::c_int)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "434:1"]
+        pub fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
+                            __filename: *const libc::c_char,
+                            __stat_buf: *mut stat64, __flag: libc::c_int)
+         -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "412:1"]
+        pub fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
+                        __stat_buf: *mut stat) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "432:1"]
+        pub fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+                          __stat_buf: *mut stat64) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "438:1"]
+        pub fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
+                        __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "441:1"]
+        pub fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
+                          __path: *const libc::c_char, __mode: __mode_t,
+                          __dev: *mut __dev_t) -> libc::c_int;
+    }
+}
+#[c2rust::header_src = "/usr/include/stdio.h:18"]
+pub mod stdio_h {
+    use super::FILE_h::FILE;
+    use super::internal::__va_list_tag;
+    use super::stddef_h::size_t;
+    use super::types_h::__ssize_t;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "137:14"]
+        pub static mut stdin: *mut FILE;
+        #[no_mangle]
+        #[c2rust::src_loc = "138:14"]
+        pub static mut stdout: *mut FILE;
+        #[no_mangle]
+        #[c2rust::src_loc = "341:12"]
+        pub fn vfprintf(_: *mut FILE, _: *const libc::c_char,
+                        _: ::std::ffi::VaList) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "486:1"]
+        pub fn getc(__stream: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "858:1"]
+        pub fn __uflow(_: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "522:1"]
+        pub fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
+        #[no_mangle]
+        #[c2rust::src_loc = "603:1"]
+        pub fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+                          __delimiter: libc::c_int, __stream: *mut FILE)
+         -> __ssize_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "859:1"]
+        pub fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
+    }
+}
+#[c2rust::header_src = "/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:18"]
+pub mod stdlib_float_h {
+    #[inline]
+    #[c2rust::src_loc = "24:1"]
+    pub unsafe extern "C" fn atof(mut __nptr: *const libc::c_char)
+     -> libc::c_double {
+        return strtod(__nptr,
+                      NULL as *mut libc::c_void as *mut *mut libc::c_char);
+    }
+    use super::stdlib_h::strtod;
+    use super::stddef_h::NULL;
+}
+#[c2rust::header_src =
+  "/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:18"]
+pub mod stdlib_bsearch_h {
+    #[inline]
+    #[c2rust::src_loc = "19:1"]
+    pub unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
+                                     mut __base: *const libc::c_void,
+                                     mut __nmemb: size_t, mut __size: size_t,
+                                     mut __compar: __compar_fn_t)
+     -> *mut libc::c_void {
+        let mut __l: size_t = 0;
+        let mut __u: size_t = 0;
+        let mut __idx: size_t = 0;
+        let mut __p = 0 as *const libc::c_void;
+        let mut __comparison: libc::c_int = 0;
+        __l = 0 as libc::c_int as size_t;
+        __u = __nmemb;
+        while __l < __u {
+            __idx =
+                __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
+                                                       libc::c_ulong);
+            __p =
+                (__base as
+                     *const libc::c_char).offset(__idx.wrapping_mul(__size) as
+                                                     isize) as
+                    *mut libc::c_void;
+            __comparison =
+                Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
+                                                                                                       __p);
+            if __comparison < 0 as libc::c_int {
+                __u = __idx
+            } else if __comparison > 0 as libc::c_int {
+                __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
+            } else { return __p as *mut libc::c_void }
+        }
+        return NULL as *mut libc::c_void;
+    }
+    use super::stddef_h::{size_t, NULL};
+    use super::stdlib_h::__compar_fn_t;
+}
+#[c2rust::header_src = "/usr/include/ctype.h:18"]
+pub mod ctype_h {
+    #[inline]
+    #[c2rust::src_loc = "206:1"]
+    pub unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
+        return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+                   *(*__ctype_tolower_loc()).offset(__c as isize)
+               } else { __c };
+    }
+    #[inline]
+    #[c2rust::src_loc = "212:1"]
+    pub unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
+        return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+                   *(*__ctype_toupper_loc()).offset(__c as isize)
+               } else { __c };
+    }
+    use super::types_h::__int32_t;
+    extern "C" {
+        #[no_mangle]
+        #[c2rust::src_loc = "81:1"]
+        pub fn __ctype_tolower_loc() -> *mut *const __int32_t;
+        #[no_mangle]
+        #[c2rust::src_loc = "83:1"]
+        pub fn __ctype_toupper_loc() -> *mut *const __int32_t;
+    }
+}
+pub use self::internal::__va_list_tag;
+pub use self::types_h::{__uint16_t, __int32_t, __uint32_t, __uint64_t,
+                        __intmax_t, __uintmax_t, __dev_t, __uid_t, __gid_t,
+                        __ino_t, __ino64_t, __mode_t, __nlink_t, __off_t,
+                        __off64_t, __time_t, __blksize_t, __blkcnt_t,
+                        __blkcnt64_t, __ssize_t, __syscall_slong_t,
+                        __socklen_t};
+pub use self::stddef_h::{size_t, NULL};
+pub use self::struct_timespec_h::timespec;
+pub use self::struct_iovec_h::iovec;
+pub use self::socket_h::{socklen_t, msghdr, cmsghdr, __cmsg_nxthdr};
+pub use self::stat_h::{stat, stat64, _STAT_VER_LINUX, _STAT_VER};
+pub use self::struct_FILE_h::{_IO_FILE, _IO_lock_t, _IO_EOF_SEEN,
+                              _IO_ERR_SEEN, _IO_wide_data, _IO_codecvt,
+                              _IO_marker};
+pub use self::FILE_h::FILE;
+pub use self::stdlib_h::{__compar_fn_t, atoi, atol, atoll, strtod, strtol,
+                         strtoll};
+pub use self::stdint_h::{intmax_t, uintmax_t};
+pub use self::inttypes_h::{__gwchar_t, wcstoumax, strtoimax, strtoumax,
+                           wcstoimax, __strtol_internal, __strtoul_internal,
+                           __wcstol_internal, __wcstoul_internal};
+pub use self::bits_stdio_h::{vprintf, getchar, fgetc_unlocked, getc_unlocked,
+                             getchar_unlocked, fputc_unlocked, putchar,
+                             putc_unlocked, putchar_unlocked, getline,
+                             feof_unlocked, ferror_unlocked};
+pub use self::byteswap_h::{__bswap_16, __bswap_32, __bswap_64};
+pub use self::uintn_identity_h::{__uint16_identity, __uint32_identity,
+                                 __uint64_identity};
+pub use self::sys_stat_h::{stat, fstat, stat64, fstat64, fstatat, fstatat64,
+                           lstat, lstat64, mknod, _MKNOD_VER, mknodat,
+                           __xstat, __fxstat, __xstat64, __fxstat64,
+                           __fxstatat, __fxstatat64, __lxstat, __lxstat64,
+                           __xmknod, __xmknodat};
+use self::stdio_h::{stdin, stdout, vfprintf, getc, __uflow, putc, __getdelim,
+                    __overflow};
+pub use self::stdlib_float_h::atof;
+pub use self::stdlib_bsearch_h::bsearch;
+pub use self::ctype_h::{tolower, toupper, __ctype_tolower_loc,
+                        __ctype_toupper_loc};
+/* HAVE_DNSSEC */
 /* dnssec.c is Copyright (c) 2012 Giovanni Bajo <rasky@develer.com>
-           and Copyright (c) 2012-2018 Simon Kelley
+           and Copyright (c) 2012-2020 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,2080 +898,3 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-//#include "dnsmasq.h"
-
-//#ifdef HAVE_DNSSEC
-
-#define SERIAL_UNDEF  -100
-#define SERIAL_EQ        0
-#define SERIAL_LT       -1
-#define SERIAL_GT        1
-
-/* Convert from presentation format to wire format, in place.
-   Also map UC -> LC.
-   Note that using extract_name to get presentation format
-   then calling to_wire() removes compression and maps case,
-   thus generating names in canonical form.
-   Calling to_wire followed by from_wire is almost an identity,
-   except that the UC remains mapped to LC. 
-
-   Note that both /000 and '.' are allowed within labels. These get
-   represented in presentation format using NAME_ESCAPE as an escape
-   character. In theory, if all the characters in a name were /000 or
-   '.' or NAME_ESCAPE then all would have to be escaped, so the 
-   presentation format would be twice as long as the spec (1024). 
-   The buffers are all declared as 2049 (allowing for the trailing zero) 
-   for this reason.
-*/
-static int to_wire(char *name)
-{
-  unsigned char *l, *p, *q, term;
-  int len;
-
-  for (l = (unsigned char*)name; *l != 0; l = p)
-    {
-      for (p = l; *p != '.' && *p != 0; p++)
-	if (*p >= 'A' && *p <= 'Z')
-	  *p = *p - 'A' + 'a';
-	else if (*p == NAME_ESCAPE)
-	  {
-	    for (q = p; *q; q++)
-	      *q = *(q+1);
-	    (*p)--;
-	  }
-      term = *p;
-      
-      if ((len = p - l) != 0)
-	memmove(l+1, l, len);
-      *l = len;
-      
-      p++;
-      
-      if (term == 0)
-	*p = 0;
-    }
-  
-  return l + 1 - (unsigned char *)name;
-}
-
-/* Note: no compression  allowed in input. */
-static void from_wire(char *name)
-{
-  unsigned char *l, *p, *last;
-  int len;
-  
-  for (last = (unsigned char *)name; *last != 0; last += *last+1);
-  
-  for (l = (unsigned char *)name; *l != 0; l += len+1)
-    {
-      len = *l;
-      memmove(l, l+1, len);
-      for (p = l; p < l + len; p++)
-	if (*p == '.' || *p == 0 || *p == NAME_ESCAPE)
-	  {
-	    memmove(p+1, p, 1 + last - p);
-	    len++;
-	    *p++ = NAME_ESCAPE; 
-	    (*p)++;
-	  }
-	
-      l[len] = '.';
-    }
-
-  if ((char *)l != name)
-    *(l-1) = 0;
-}
-
-/* Input in presentation format */
-static int count_labels(char *name)
-{
-  int i;
-  char *p;
-  
-  if (*name == 0)
-    return 0;
-
-  for (p = name, i = 0; *p; p++)
-    if (*p == '.')
-      i++;
-
-  /* Don't count empty first label. */
-  return *name == '.' ? i : i+1;
-}
-
-/* Implement RFC1982 wrapped compare for 32-bit numbers */
-static int serial_compare_32(uint32_t s1, uint32_t s2)
-{
-  if (s1 == s2)
-    return SERIAL_EQ;
-
-  if ((s1 < s2 && (s2 - s1) < (1UL<<31)) ||
-      (s1 > s2 && (s1 - s2) > (1UL<<31)))
-    return SERIAL_LT;
-  if ((s1 < s2 && (s2 - s1) > (1UL<<31)) ||
-      (s1 > s2 && (s1 - s2) < (1UL<<31)))
-    return SERIAL_GT;
-  return SERIAL_UNDEF;
-}
-
-/* Called at startup. If the timestamp file is configured and exists, put its mtime on
-   timestamp_time. If it doesn't exist, create it, and set the mtime to 1-1-2015.
-   return -1 -> Cannot create file.
-           0 -> not using timestamp, or timestamp exists and is in past.
-           1 -> timestamp exists and is in future.
-*/
-
-static time_t timestamp_time;
-
-int setup_timestamp(void)
-{
-  struct stat statbuf;
-  
-  daemon->back_to_the_future = 0;
-  
-  if (!daemon->timestamp_file)
-    return 0;
-  
-  if (stat(daemon->timestamp_file, &statbuf) != -1)
-    {
-      timestamp_time = statbuf.st_mtime;
-    check_and_exit:
-      if (difftime(timestamp_time, time(0)) <=  0)
-	{
-	  /* time already OK, update timestamp, and do key checking from the start. */
-	  if (utimes(daemon->timestamp_file, nullptr) == -1)
-	    my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon->timestamp_file, strerror(errno));
-	  daemon->back_to_the_future = 1;
-	  return 0;
-	}
-      return 1;
-    }
-  
-  if (errno == ENOENT)
-    {
-      /* NB. for explanation of O_EXCL flag, see comment on pidfile in dnsmasq.c */ 
-      int fd = open(daemon->timestamp_file, O_WRONLY | O_CREAT | O_NONBLOCK | O_EXCL, 0666);
-      if (fd != -1)
-	{
-	  struct timeval tv[2];
-
-	  close(fd);
-	  
-	  timestamp_time = 1420070400; /* 1-1-2015 */
-	  tv[0].tv_sec = tv[1].tv_sec = timestamp_time;
-	  tv[0].tv_usec = tv[1].tv_usec = 0;
-	  if (utimes(daemon->timestamp_file, tv) == 0)
-	    goto check_and_exit;
-	}
-    }
-
-  return -1;
-}
-
-/* Check whether today/now is between date_start and date_end */
-static int check_date_range(uint32_t date_start, uint32_t date_end)
-{
-  unsigned long curtime = time(0);
- 
-  /* Checking timestamps may be temporarily disabled */
-    
-  /* If the current time if _before_ the timestamp
-     on our persistent timestamp file, then assume the
-     time if not yet correct, and don't check the
-     key timestamps. As soon as the current time is
-     later then the timestamp, update the timestamp
-     and start checking keys */
-  if (daemon->timestamp_file)
-    {
-      if (daemon->back_to_the_future == 0 && difftime(timestamp_time, curtime) <= 0)
-	{
-	  if (utimes(daemon->timestamp_file, nullptr) != 0)
-	    my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon->timestamp_file, strerror(errno));
-	  
-	  my_syslog(LOG_INFO, _("system time considered valid, now checking DNSSEC signature timestamps."));
-	  daemon->back_to_the_future = 1;
-	  daemon->dnssec_no_time_check = 0;
-	  queue_event(EVENT_RELOAD); /* purge cache */
-	} 
-
-      if (daemon->back_to_the_future == 0)
-	return 1;
-    }
-  else if (daemon->dnssec_no_time_check)
-    return 1;
-  
-  /* We must explicitly check against wanted values, because of SERIAL_UNDEF */
-  return serial_compare_32(curtime, date_start) == SERIAL_GT
-    && serial_compare_32(curtime, date_end) == SERIAL_LT;
-}
-
-/* Return bytes of canonicalised rdata, when the return value is zero, the remaining 
-   data, pointed to by *p, should be used raw. */
-static int get_rdata(struct dns_header *header, size_t plen, unsigned char *end, char *buff, int bufflen,
-		     unsigned char **p, uint16_t **desc)
-{
-  int d = **desc;
-  
-  /* No more data needs mangling */
-  if (d == (uint16_t)-1)
-    {
-      /* If there's more data than we have space for, just return what fits,
-	 we'll get called again for more chunks */
-      if (end - *p > bufflen)
-	{
-	  memcpy(buff, *p, bufflen);
-	  *p += bufflen;
-	  return bufflen;
-	}
-      
-      return 0;
-    }
- 
-  (*desc)++;
-  
-  if (d == 0 && extract_name(header, plen, p, buff, 1, 0))
-    /* domain-name, canonicalise */
-    return to_wire(buff);
-  else
-    { 
-      /* plain data preceding a domain-name, don't run off the end of the data */
-      if ((end - *p) < d)
-	d = end - *p;
-      
-      if (d != 0)
-	{
-	  memcpy(buff, *p, d);
-	  *p += d;
-	}
-      
-      return d;
-    }
-}
-
-/* Bubble sort the RRset into the canonical order. 
-   Note that the byte-streams from two RRs may get unsynced: consider 
-   RRs which have two domain-names at the start and then other data.
-   The domain-names may have different lengths in each RR, but sort equal
-
-   ------------
-   |abcde|fghi|
-   ------------
-   |abcd|efghi|
-   ------------
-
-   leaving the following bytes as deciding the order. Hence the nasty left1 and left2 variables.
-*/
-
-static int sort_rrset(struct dns_header *header, size_t plen, uint16_t *rr_desc, int rrsetidx,
-		      unsigned char **rrset, char *buff1, char *buff2)
-{
-  int swap, quit, i, j;
-  
-  do
-    {
-      for (swap = 0, i = 0; i < rrsetidx-1; i++)
-	{
-	  int rdlen1, rdlen2, left1, left2, len1, len2, len, rc;
-	  uint16_t *dp1, *dp2;
-	  unsigned char *end1, *end2;
-	  /* Note that these have been determined to be OK previously,
-	     so we don't need to check for NULL return here. */
-	  unsigned char *p1 = skip_name(rrset[i], header, plen, 10);
-	  unsigned char *p2 = skip_name(rrset[i+1], header, plen, 10);
-	  
-	  p1 += 8; /* skip class, type, ttl */
-	  GETSHORT(rdlen1, p1);
-	  end1 = p1 + rdlen1;
-	  
-	  p2 += 8; /* skip class, type, ttl */
-	  GETSHORT(rdlen2, p2);
-	  end2 = p2 + rdlen2; 
-	  
-	  dp1 = dp2 = rr_desc;
-	  
-	  for (quit = 0, left1 = 0, left2 = 0, len1 = 0, len2 = 0; !quit;)
-	    {
-	      if (left1 != 0)
-		memmove(buff1, buff1 + len1 - left1, left1);
-	      
-	      if ((len1 = get_rdata(header, plen, end1, buff1 + left1, (MAXDNAME * 2) - left1, &p1, &dp1)) == 0)
-		{
-		  quit = 1;
-		  len1 = end1 - p1;
-		  memcpy(buff1 + left1, p1, len1);
-		}
-	      len1 += left1;
-	      
-	      if (left2 != 0)
-		memmove(buff2, buff2 + len2 - left2, left2);
-	      
-	      if ((len2 = get_rdata(header, plen, end2, buff2 + left2, (MAXDNAME *2) - left2, &p2, &dp2)) == 0)
-		{
-		  quit = 1;
-		  len2 = end2 - p2;
-		  memcpy(buff2 + left2, p2, len2);
-		}
-	      len2 += left2;
-	       
-	      if (len1 > len2)
-		left1 = len1 - len2, left2 = 0, len = len2;
-	      else
-		left2 = len2 - len1, left1 = 0, len = len1;
-	      
-	      rc = (len == 0) ? 0 : memcmp(buff1, buff2, len);
-	      
-	      if (rc > 0 || (rc == 0 && quit && len1 > len2))
-		{
-		  unsigned char *tmp = rrset[i+1];
-		  rrset[i+1] = rrset[i];
-		  rrset[i] = tmp;
-		  swap = quit = 1;
-		}
-	      else if (rc == 0 && quit && len1 == len2)
-		{
-		  /* Two RRs are equal, remove one copy. RFC 4034, para 6.3 */
-		  for (j = i+1; j < rrsetidx-1; j++)
-		    rrset[j] = rrset[j+1];
-		  rrsetidx--;
-		  i--;
-		}
-	      else if (rc < 0)
-		quit = 1;
-	    }
-	}
-    } while (swap);
-
-  return rrsetidx;
-}
-
-static unsigned char **rrset = nullptr, **sigs = nullptr;
-
-/* Get pointers to RRset members and signature(s) for same.
-   Check signatures, and return keyname associated in keyname. */
-static int explore_rrset(struct dns_header *header, size_t plen, int _class, int type,
-			 char *name, char *keyname, int *sigcnt, int *rrcnt)
-{
-  static int rrset_sz = 0, sig_sz = 0; 
-  unsigned char *p;
-  int rrsetidx, sigidx, j, rdlen, res;
-  int gotkey = 0;
-
-  if (!(p = skip_questions(header, plen)))
-    return STAT_BOGUS;
-
-   /* look for RRSIGs for this RRset and get pointers to each RR in the set. */
-  for (rrsetidx = 0, sigidx = 0, j = ntohs(header->ancount) + ntohs(header->nscount); 
-       j != 0; j--) 
-    {
-      unsigned char *pstart, *pdata;
-      int stype, sclass, type_covered;
-
-      pstart = p;
-      
-      if (!(res = extract_name(header, plen, &p, name, 0, 10)))
-	return STAT_BOGUS; /* bad packet */
-      
-      GETSHORT(stype, p);
-      GETSHORT(sclass, p);
-      p += 4; /* TTL */
-      
-      pdata = p;
-
-      GETSHORT(rdlen, p);
-      
-      if (!CHECK_LEN(header, p, plen, rdlen))
-	return 0; 
-      
-      if (res == 1 && sclass == _class)
-	{
-	  if (stype == type)
-	    {
-	      if (!expand_workspace(&rrset, &rrset_sz, rrsetidx))
-		return 0; 
-	      
-	      rrset[rrsetidx++] = pstart;
-	    }
-	  
-	  if (stype == T_RRSIG)
-	    {
-	      if (rdlen < 18)
-		return 0; /* bad packet */ 
-	      
-	      GETSHORT(type_covered, p);
-	      p += 16; /* algo, labels, orig_ttl, sig_expiration, sig_inception, key_tag */
-	      
-	      if (gotkey)
-		{
-		  /* If there's more than one SIG, ensure they all have same keyname */
-		  if (extract_name(header, plen, &p, keyname, 0, 0) != 1)
-		    return 0;
-		}
-	      else
-		{
-		  gotkey = 1;
-		  
-		  if (!extract_name(header, plen, &p, keyname, 1, 0))
-		    return 0;
-		  
-		  /* RFC 4035 5.3.1 says that the Signer's Name field MUST equal
-		     the name of the zone containing the RRset. We can't tell that
-		     for certain, but we can check that  the RRset name is equal to
-		     or encloses the signers name, which should be enough to stop 
-		     an attacker using signatures made with the key of an unrelated 
-		     zone he controls. Note that the root key is always allowed. */
-		  if (*keyname != 0)
-		    {
-		      char *name_start;
-		      for (name_start = name; !hostname_isequal(name_start, keyname); )
-			if ((name_start = strchr(name_start, '.')))
-			  name_start++; /* chop a label off and try again */
-			else
-			  return 0;
-		    }
-		}
-		  
-	      
-	      if (type_covered == type)
-		{
-		  if (!expand_workspace(&sigs, &sig_sz, sigidx))
-		    return 0; 
-		  
-		  sigs[sigidx++] = pdata;
-		} 
-	      
-	      p = pdata + 2; /* restore for ADD_RDLEN */
-	    }
-	}
-      
-      if (!ADD_RDLEN(header, p, plen, rdlen))
-	return 0;
-    }
-  
-  *sigcnt = sigidx;
-  *rrcnt = rrsetidx;
-
-  return 1;
-}
-
-/* Validate a single RRset (class, type, name) in the supplied DNS reply 
-   Return code:
-   STAT_SECURE   if it validates.
-   STAT_SECURE_WILDCARD if it validates and is the result of wildcard expansion.
-   (In this case *wildcard_out points to the "body" of the wildcard within name.) 
-   STAT_BOGUS    signature is wrong, bad packet.
-   STAT_NEED_KEY need DNSKEY to complete validation (name is returned in keyname)
-   STAT_NEED_DS  need DS to complete validation (name is returned in keyname)
-
-   If key is non-NULL, use that key, which has the algo and tag given in the params of those names,
-   otherwise find the key in the cache.
-
-   Name is unchanged on exit. keyname is used as workspace and trashed.
-
-   Call explore_rrset first to find and count RRs and sigs.
-*/
-static int validate_rrset(time_t now, struct dns_header *header, size_t plen, int _class, int type, int sigidx, int rrsetidx,
-			  char *name, char *keyname, char **wildcard_out, struct blockdata *key, int keylen, int algo_in, int keytag_in)
-{
-  unsigned char *p;
-  int rdlen, j, name_labels, algo, labels, orig_ttl, key_tag;
-  struct crec *crecp = nullptr;
-  uint16_t *rr_desc = rrfilter_desc(type);
-  u32 sig_expiration, sig_inception
-;
-  if (wildcard_out)
-    *wildcard_out = nullptr;
-  
-  name_labels = count_labels(name); /* For 4035 5.3.2 check */
-
-  /* Sort RRset records into canonical order. 
-     Note that at this point keyname and daemon->workspacename buffs are
-     unused, and used as workspace by the sort. */
-  rrsetidx = sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon->workspacename, keyname);
-         
-  /* Now try all the sigs to try and find one which validates */
-  for (j = 0; j <sigidx; j++)
-    {
-      unsigned char *psav, *sig, *digest;
-      int i, wire_len, sig_len;
-      const struct nettle_hash *hash;
-      void *ctx;
-      char *name_start;
-      u32 nsigttl;
-      
-      p = sigs[j];
-      GETSHORT(rdlen, p); /* rdlen >= 18 checked previously */
-      psav = p;
-      
-      p += 2; /* type_covered - already checked */
-      algo = *p++;
-      labels = *p++;
-      GETLONG(orig_ttl, p);
-      GETLONG(sig_expiration, p);
-      GETLONG(sig_inception, p);
-      GETSHORT(key_tag, p);
-      
-      if (!extract_name(header, plen, &p, keyname, 1, 0))
-	return STAT_BOGUS;
-
-      if (!check_date_range(sig_inception, sig_expiration) ||
-	  labels > name_labels ||
-	  !(hash = hash_find(algo_digest_name(algo))) ||
-	  !hash_init(hash, &ctx, &digest))
-	continue;
-      
-      /* OK, we have the signature record, see if the relevant DNSKEY is in the cache. */
-      if (!key && !(crecp = cache_find_by_name(nullptr, keyname, now, F_DNSKEY)))
-	return STAT_NEED_KEY;
-      
-      sig = p;
-      sig_len = rdlen - (p - psav);
-              
-      nsigttl = htonl(orig_ttl);
-      
-      hash->update(ctx, 18, psav);
-      wire_len = to_wire(keyname);
-      hash->update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
-      from_wire(keyname);
-      
-      for (i = 0; i < rrsetidx; ++i)
-	{
-	  int seg;
-	  unsigned char *end, *cp;
-	  uint16_t len, *dp;
-	  
-	  p = rrset[i];
-	 	  
-	  if (!extract_name(header, plen, &p, name, 1, 10)) 
-	    return STAT_BOGUS;
-
-	  name_start = name;
-	  
-	  /* if more labels than in RRsig name, hash *.<no labels in rrsig labels field>  4035 5.3.2 */
-	  if (labels < name_labels)
-	    {
-	      int k;
-	      for (k = name_labels - labels; k != 0; k--)
-		{
-		  while (*name_start != '.' && *name_start != 0)
-		    name_start++;
-		  if (k != 1 && *name_start == '.')
-		    name_start++;
-		}
-	      
-	      if (wildcard_out)
-		*wildcard_out = name_start+1;
-
-	      name_start--;
-	      *name_start = '*';
-	    }
-	  
-	  wire_len = to_wire(name_start);
-	  hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name_start);
-	  hash->update(ctx, 4, p); /* class and type */
-	  hash->update(ctx, 4, (unsigned char *)&nsigttl);
-	  
-	  p += 8; /* skip class, type, ttl */
-	  GETSHORT(rdlen, p);
-	  if (!CHECK_LEN(header, p, plen, rdlen))
-	    return STAT_BOGUS; 
-	  
-	  end = p + rdlen;
-	  
-	  /* canonicalise rdata and calculate length of same, use name buffer as workspace.
-	     Note that name buffer is twice MAXDNAME long in DNSSEC mode. */
-	  cp = p;
-	  dp = rr_desc;
-	  for (len = 0; (seg = get_rdata(header, plen, end, name, MAXDNAME * 2, &cp, &dp)) != 0; len += seg);
-	  len += end - cp;
-	  len = htons(len);
-	  hash->update(ctx, 2, (unsigned char *)&len); 
-	  
-	  /* Now canonicalise again and digest. */
-	  cp = p;
-	  dp = rr_desc;
-	  while ((seg = get_rdata(header, plen, end, name, MAXDNAME * 2, &cp, &dp)))
-	    hash->update(ctx, seg, (unsigned char *)name);
-	  if (cp != end)
-	    hash->update(ctx, end - cp, cp);
-	}
-     
-      hash->digest(ctx, hash->digest_size, digest);
-      
-      /* namebuff used for workspace above, restore to leave unchanged on exit */
-      p = (unsigned char*)(rrset[0]);
-      extract_name(header, plen, &p, name, 1, 0);
-
-      if (key)
-	{
-	  if (algo_in == algo && keytag_in == key_tag &&
-	      verify(key, keylen, sig, sig_len, digest, hash->digest_size, algo))
-	    return STAT_SECURE;
-	}
-      else
-	{
-	  /* iterate through all possible keys 4035 5.3.1 */
-	  for (; crecp; crecp = cache_find_by_name(crecp, keyname, now, F_DNSKEY))
-	    if (crecp->addr.key.algo == algo && 
-		crecp->addr.key.keytag == key_tag &&
-		crecp->uid == (unsigned int)_class &&
-		verify(crecp->addr.key.keydata, crecp->addr.key.keylen, sig, sig_len, digest, hash->digest_size, algo))
-	      return (labels < name_labels) ? STAT_SECURE_WILDCARD : STAT_SECURE;
-	}
-    }
-
-  return STAT_BOGUS;
-}
- 
-
-/* The DNS packet is expected to contain the answer to a DNSKEY query.
-   Put all DNSKEYs in the answer which are valid into the cache.
-   return codes:
-         STAT_OK        Done, key(s) in cache.
-	 STAT_BOGUS     No DNSKEYs found, which  can be validated with DS,
-	                or self-sign for DNSKEY RRset is not valid, bad packet.
-	 STAT_NEED_DS   DS records to validate a key not found, name in keyname 
-	 STAT_NEED_KEY  DNSKEY records to validate a key not found, name in keyname 
-*/
-int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int _class)
-{
-  unsigned char *psave, *p = (unsigned char *)(header+1);
-  struct crec *crecp, *recp1;
-  int rc, j, qtype, qclass, ttl, rdlen, flags, algo, valid, keytag;
-  struct blockdata *key;
-  struct all_addr a;
-
-  if (ntohs(header->qdcount) != 1 ||
-      !extract_name(header, plen, &p, name, 1, 4))
-    return STAT_BOGUS;
-
-  GETSHORT(qtype, p);
-  GETSHORT(qclass, p);
-  
-  if (qtype != T_DNSKEY || qclass != _class || ntohs(header->ancount) == 0)
-    return STAT_BOGUS;
-
-  /* See if we have cached a DS record which validates this key */
-  if (!(crecp = cache_find_by_name(nullptr, name, now, F_DS)))
-    {
-      strcpy(keyname, name);
-      return STAT_NEED_DS;
-    }
-  
-  /* NOTE, we need to find ONE DNSKEY which matches the DS */
-  for (valid = 0, j = ntohs(header->ancount); j != 0 && !valid; j--) 
-    {
-      /* Ensure we have type, class  TTL and length */
-      if (!(rc = extract_name(header, plen, &p, name, 0, 10)))
-	return STAT_BOGUS; /* bad packet */
-  
-      GETSHORT(qtype, p); 
-      GETSHORT(qclass, p);
-      GETLONG(ttl, p);
-      GETSHORT(rdlen, p);
- 
-      if (!CHECK_LEN(header, p, plen, rdlen) || rdlen < 4)
-	return STAT_BOGUS; /* bad packet */
-      
-      if (qclass != _class || qtype != T_DNSKEY || rc == 2)
-	{
-	  p += rdlen;
-	  continue;
-	}
-            
-      psave = p;
-      
-      GETSHORT(flags, p);
-      if (*p++ != 3)
-	return STAT_BOGUS;
-      algo = *p++;
-      keytag = dnskey_keytag(algo, flags, p, rdlen - 4);
-      key = nullptr;
-      
-      /* key must have zone key flag set */
-      if (flags & 0x100)
-	key = blockdata_alloc((char*)p, rdlen - 4);
-      
-      p = psave;
-      
-      if (!ADD_RDLEN(header, p, plen, rdlen))
-	{
-	  if (key)
-	    blockdata_free(key);
-	  return STAT_BOGUS; /* bad packet */
-	}
-
-      /* No zone key flag or malloc failure */
-      if (!key)
-	continue;
-      
-      for (recp1 = crecp; recp1; recp1 = cache_find_by_name(recp1, name, now, F_DS))
-	{
-	  void *ctx;
-	  unsigned char *digest, *ds_digest;
-	  const struct nettle_hash *hash;
-	  int sigcnt, rrcnt;
-
-	  if (recp1->addr.ds.algo == algo && 
-	      recp1->addr.ds.keytag == keytag &&
-	      recp1->uid == (unsigned int)_class &&
-	      (hash = hash_find(ds_digest_name(recp1->addr.ds.digest))) &&
-	      hash_init(hash, &ctx, &digest))
-	    
-	    {
-	      int wire_len = to_wire(name);
-	      
-	      /* Note that digest may be different between DSs, so 
-		 we can't move this outside the loop. */
-	      hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name);
-	      hash->update(ctx, (unsigned int)rdlen, psave);
-	      hash->digest(ctx, hash->digest_size, digest);
-	      
-	      from_wire(name);
-	      
-	      if (!(recp1->flags & F_NEG) &&
-		  recp1->addr.ds.keylen == (int)hash->digest_size &&
-		  (ds_digest = blockdata_retrieve(recp1->addr.key.keydata, recp1->addr.ds.keylen, nullptr)) &&
-		  memcmp(ds_digest, digest, recp1->addr.ds.keylen) == 0 &&
-		  explore_rrset(header, plen, _class, T_DNSKEY, name, keyname, &sigcnt, &rrcnt) &&
-		  sigcnt != 0 && rrcnt != 0 &&
-		  validate_rrset(now, header, plen, _class, T_DNSKEY, sigcnt, rrcnt, name, keyname,
-				 nullptr, key, rdlen - 4, algo, keytag) == STAT_SECURE)
-		{
-		  valid = 1;
-		  break;
-		}
-	    }
-	}
-      blockdata_free(key);
-    }
-
-  if (valid)
-    {
-      /* DNSKEY RRset determined to be OK, now cache it. */
-      cache_start_insert();
-      
-      p = skip_questions(header, plen);
-
-      for (j = ntohs(header->ancount); j != 0; j--) 
-	{
-	  /* Ensure we have type, class  TTL and length */
-	  if (!(rc = extract_name(header, plen, &p, name, 0, 10)))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  GETSHORT(qtype, p); 
-	  GETSHORT(qclass, p);
-	  GETLONG(ttl, p);
-	  GETSHORT(rdlen, p);
-	    
-	  if (!CHECK_LEN(header, p, plen, rdlen))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  if (qclass == _class && rc == 1)
-	    {
-	      psave = p;
-	      
-	      if (qtype == T_DNSKEY)
-		{
-		  if (rdlen < 4)
-		    return STAT_BOGUS; /* bad packet */
-		  
-		  GETSHORT(flags, p);
-		  if (*p++ != 3)
-		    return STAT_BOGUS;
-		  algo = *p++;
-		  keytag = dnskey_keytag(algo, flags, p, rdlen - 4);
-		  
-		  /* Cache needs to known class for DNSSEC stuff */
-		  a.addr.dnssec._class = _class;
-		  
-		  if ((key = blockdata_alloc((char*)p, rdlen - 4)))
-		    {
-		      if (!(recp1 = cache_insert(name, &a, now, ttl, F_FORWARD | F_DNSKEY | F_DNSSECOK)))
-			{
-			  blockdata_free(key);
-			  return STAT_BOGUS;
-			}
-		      else
-			{
-			  a.addr.log.keytag = keytag;
-			  a.addr.log.algo = algo;
-			  if (algo_digest_name(algo))
-			    log_query(F_NOEXTRA | F_KEYTAG | F_UPSTREAM, name, &a, "DNSKEY keytag %hu, algo %hu");
-			  else
-			    log_query(F_NOEXTRA | F_KEYTAG | F_UPSTREAM, name, &a, "DNSKEY keytag %hu, algo %hu (not supported)");
-			  
-			  recp1->addr.key.keylen = rdlen - 4;
-			  recp1->addr.key.keydata = key;
-			  recp1->addr.key.algo = algo;
-			  recp1->addr.key.keytag = keytag;
-			  recp1->addr.key.flags = flags;
-			}
-		    }
-		}
-	      	      
-	      p = psave;
-	    }
-
-	  if (!ADD_RDLEN(header, p, plen, rdlen))
-	    return STAT_BOGUS; /* bad packet */
-	}
-      
-      /* commit cache insert. */
-      cache_end_insert();
-      return STAT_OK;
-    }
-
-  log_query(F_NOEXTRA | F_UPSTREAM, name, nullptr, "BOGUS DNSKEY");
-  return STAT_BOGUS;
-}
-
-/* The DNS packet is expected to contain the answer to a DS query
-   Put all DSs in the answer which are valid into the cache.
-   Also handles replies which prove that there's no DS at this location, 
-   either because the zone is unsigned or this isn't a zone cut. These are
-   cached too.
-   return codes:
-   STAT_OK          At least one valid DS found and in cache.
-   STAT_BOGUS       no DS in reply or not signed, fails validation, bad packet.
-   STAT_NEED_KEY    DNSKEY records to validate a DS not found, name in keyname
-   STAT_NEED_DS     DS record needed.
-*/
-
-int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int _class)
-{
-  unsigned char *p = (unsigned char *)(header+1);
-  int qtype, qclass, rc, i, neganswer, nons;
-  int aclass, atype, rdlen;
-  unsigned long ttl;
-  struct all_addr a;
-
-  if (ntohs(header->qdcount) != 1 ||
-      !(p = skip_name(p, header, plen, 4)))
-    return STAT_BOGUS;
-  
-  GETSHORT(qtype, p);
-  GETSHORT(qclass, p);
-
-  if (qtype != T_DS || qclass != _class)
-    rc = STAT_BOGUS;
-  else
-    rc = dnssec_validate_reply(now, header, plen, name, keyname, nullptr, 0, &neganswer, &nons);
-  
-  if (rc == STAT_INSECURE)
-    {
-      my_syslog(LOG_WARNING, _("Insecure DS reply received, do upstream DNS servers support DNSSEC?"));
-      rc = STAT_BOGUS;
-    }
-  
-  p = (unsigned char *)(header+1);
-  extract_name(header, plen, &p, name, 1, 4);
-  p += 4; /* qtype, qclass */
-  
-  /* If the key needed to validate the DS is on the same domain as the DS, we'll
-     loop getting nowhere. Stop that now. This can happen of the DS answer comes
-     from the DS's zone, and not the parent zone. */
-  if (rc == STAT_BOGUS || (rc == STAT_NEED_KEY && hostname_isequal(name, keyname)))
-    {
-      log_query(F_NOEXTRA | F_UPSTREAM, name, nullptr, "BOGUS DS");
-      return STAT_BOGUS;
-    }
-  
-  if (rc != STAT_SECURE)
-    return rc;
-   
-  if (!neganswer)
-    {
-      cache_start_insert();
-      
-      for (i = 0; i < ntohs(header->ancount); i++)
-	{
-	  if (!(rc = extract_name(header, plen, &p, name, 0, 10)))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  GETSHORT(atype, p);
-	  GETSHORT(aclass, p);
-	  GETLONG(ttl, p);
-	  GETSHORT(rdlen, p);
-	  
-	  if (!CHECK_LEN(header, p, plen, rdlen))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  if (aclass == _class && atype == T_DS && rc == 1)
-	    { 
-	      int algo, digest, keytag;
-	      unsigned char *psave = p;
-	      struct blockdata *key;
-	      struct crec *crecp;
-
-	      if (rdlen < 4)
-		return STAT_BOGUS; /* bad packet */
-	      
-	      GETSHORT(keytag, p);
-	      algo = *p++;
-	      digest = *p++;
-	      
-	      /* Cache needs to known class for DNSSEC stuff */
-	      a.addr.dnssec._class = _class;
-	      
-	      if ((key = blockdata_alloc((char*)p, rdlen - 4)))
-		{
-		  if (!(crecp = cache_insert(name, &a, now, ttl, F_FORWARD | F_DS | F_DNSSECOK)))
-		    {
-		      blockdata_free(key);
-		      return STAT_BOGUS;
-		    }
-		  else
-		    {
-		      a.addr.log.keytag = keytag;
-		      a.addr.log.algo = algo;
-		      a.addr.log.digest = digest;
-		      if (ds_digest_name(digest) && algo_digest_name(algo))
-			log_query(F_NOEXTRA | F_KEYTAG | F_UPSTREAM, name, &a, "DS keytag %hu, algo %hu, digest %hu");
-		      else
-			log_query(F_NOEXTRA | F_KEYTAG | F_UPSTREAM, name, &a, "DS keytag %hu, algo %hu, digest %hu (not supported)");
-		      
-		      crecp->addr.ds.digest = digest;
-		      crecp->addr.ds.keydata = key;
-		      crecp->addr.ds.algo = algo;
-		      crecp->addr.ds.keytag = keytag;
-		      crecp->addr.ds.keylen = rdlen - 4; 
-		    } 
-		}
-	      
-	      p = psave;
-	    }
-	  if (!ADD_RDLEN(header, p, plen, rdlen))
-	    return STAT_BOGUS; /* bad packet */
-	}
-
-      cache_end_insert();
-
-    }
-  else
-    {
-      int flags = F_FORWARD | F_DS | F_NEG | F_DNSSECOK;
-      unsigned long minttl = ULONG_MAX;
-      
-      if (!(p = skip_section(p, ntohs(header->ancount), header, plen)))
-	return STAT_BOGUS;
-      
-      if (RCODE(header) == NXDOMAIN)
-	flags |= F_NXDOMAIN;
-      
-      /* We only cache validated DS records, DNSSECOK flag hijacked 
-	 to store presence/absence of NS. */
-      if (nons)
-	flags &= ~F_DNSSECOK;
-      
-      for (i = ntohs(header->nscount); i != 0; i--)
-	{
-	  if (!(p = skip_name(p, header, plen, 0)))
-	    return STAT_BOGUS;
-	  
-	  GETSHORT(atype, p); 
-	  GETSHORT(aclass, p);
-	  GETLONG(ttl, p);
-	  GETSHORT(rdlen, p);
-	  
-	  if (!CHECK_LEN(header, p, plen, rdlen))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  if (aclass != _class || atype != T_SOA)
-	    {
-	      p += rdlen;
-	      continue;
-	    }
-	  
-	  if (ttl < minttl)
-	    minttl = ttl;
-	  
-	  /* MNAME */
-	  if (!(p = skip_name(p, header, plen, 0)))
-	    return STAT_BOGUS;
-	  /* RNAME */
-	  if (!(p = skip_name(p, header, plen, 20)))
-	    return STAT_BOGUS;
-	  p += 16; /* SERIAL REFRESH RETRY EXPIRE */
-	  
-	  GETLONG(ttl, p); /* minTTL */
-	  if (ttl < minttl)
-	    minttl = ttl;
-	  
-	  break;
-	}
-      
-      if (i != 0)
-	{
-	  cache_start_insert();
-	  
-	  a.addr.dnssec._class = _class;
-	  if (!cache_insert(name, &a, now, ttl, flags))
-	    return STAT_BOGUS;
-	  
-	  cache_end_insert();  
-	  
-	  log_query(F_NOEXTRA | F_UPSTREAM, name, nullptr, "no DS");
-	}
-    }
-      
-  return STAT_OK;
-}
-
-
-/* 4034 6.1 */
-static int hostname_cmp(const char *a, const char *b)
-{
-  char *sa, *ea, *ca, *sb, *eb, *cb;
-  unsigned char ac, bc;
-  
-  sa = ea = (char *)a + strlen(a);
-  sb = eb = (char *)b + strlen(b);
- 
-  while (1)
-    {
-      while (sa != a && *(sa-1) != '.')
-	sa--;
-      
-      while (sb != b && *(sb-1) != '.')
-	sb--;
-
-      ca = sa;
-      cb = sb;
-
-      while (1) 
-	{
-	  if (ca == ea)
-	    {
-	      if (cb == eb)
-		break;
-	      
-	      return -1;
-	    }
-	  
-	  if (cb == eb)
-	    return 1;
-	  
-	  ac = (unsigned char) *ca++;
-	  bc = (unsigned char) *cb++;
-	  
-	  if (ac >= 'A' && ac <= 'Z')
-	    ac += 'a' - 'A';
-	  if (bc >= 'A' && bc <= 'Z')
-	    bc += 'a' - 'A';
-	  
-	  if (ac < bc)
-	    return -1;
-	  else if (ac != bc)
-	    return 1;
-	}
-
-     
-      if (sa == a)
-	{
-	  if (sb == b)
-	    return 0;
-	  
-	  return -1;
-	}
-      
-      if (sb == b)
-	return 1;
-      
-      ea = --sa;
-      eb = --sb;
-    }
-}
-
-static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsigned char **nsecs, unsigned char **labels, int nsec_count,
-				    char *workspace1_in, char *workspace2, char *name, int type, int *nons)
-{
-  int i, rc, rdlen;
-  unsigned char *p, *psave;
-  int offset = (type & 0xff) >> 3;
-  int mask = 0x80 >> (type & 0x07);
-
-  if (nons)
-    *nons = 1;
-  
-  /* Find NSEC record that proves name doesn't exist */
-  for (i = 0; i < nsec_count; i++)
-    {
-      char *workspace1 = workspace1_in;
-      int sig_labels, name_labels;
-
-      p = nsecs[i];
-      if (!extract_name(header, plen, &p, workspace1, 1, 10))
-	return 0;
-      p += 8; /* class, type, TTL */
-      GETSHORT(rdlen, p);
-      psave = p;
-      if (!extract_name(header, plen, &p, workspace2, 1, 10))
-	return 0;
-
-      /* If NSEC comes from wildcard expansion, use original wildcard
-	 as name for computation. */
-      sig_labels = *labels[i];
-      name_labels = count_labels(workspace1);
-
-      if (sig_labels < name_labels)
-	{
-	  int k;
-	  for (k = name_labels - sig_labels; k != 0; k--)
-	    {
-	      while (*workspace1 != '.' && *workspace1 != 0)
-		workspace1++;
-	      if (k != 1 && *workspace1 == '.')
-		workspace1++;
-	    }
-	  
-	  workspace1--;
-	  *workspace1 = '*';
-	}
-	  
-      rc = hostname_cmp(workspace1, name);
-      
-      if (rc == 0)
-	{
-	  /* 4035 para 5.4. Last sentence */
-	  if (type == T_NSEC || type == T_RRSIG)
-	    return 1;
-
-	  /* NSEC with the same name as the RR we're testing, check
-	     that the type in question doesn't appear in the type map */
-	  rdlen -= p - psave;
-	  /* rdlen is now length of type map, and p points to it */
-	  
-	  /* If we can prove that there's no NS record, return that information. */
-	  if (nons && rdlen >= 2 && p[0] == 0 && (p[2] & (0x80 >> T_NS)) != 0)
-	    *nons = 0;
-	  
-	  if (rdlen >= 2 && p[0] == 0)
-	    {
-	      /* A CNAME answer would also be valid, so if there's a CNAME is should 
-		 have been returned. */
-	      if ((p[2] & (0x80 >> T_CNAME)) != 0)
-		return 0;
-	      
-	      /* If the SOA bit is set for a DS record, then we have the
-		 DS from the wrong side of the delegation. For the root DS, 
-		 this is expected. */
-	      if (name_labels != 0 && type == T_DS && (p[2] & (0x80 >> T_SOA)) != 0)
-		return 0;
-	    }
-
-	  while (rdlen >= 2)
-	    {
-	      if (!CHECK_LEN(header, p, plen, rdlen))
-		return 0;
-	      
-	      if (p[0] == type >> 8)
-		{
-		  /* Does the NSEC say our type exists? */
-		  if (offset < p[1] && (p[offset+2] & mask) != 0)
-		    return 0;
-		  
-		  break; /* finished checking */
-		}
-	      
-	      rdlen -= p[1];
-	      p +=  p[1];
-	    }
-	  
-	  return 1;
-	}
-      else if (rc == -1)
-	{
-	  /* Normal case, name falls between NSEC name and next domain name,
-	     wrap around case, name falls between NSEC name (rc == -1) and end */
-	  if (hostname_cmp(workspace2, name) >= 0 || hostname_cmp(workspace1, workspace2) >= 0)
-	    return 1;
-	}
-      else 
-	{
-	  /* wrap around case, name falls between start and next domain name */
-	  if (hostname_cmp(workspace1, workspace2) >= 0 && hostname_cmp(workspace2, name) >=0 )
-	    return 1;
-	}
-    }
-  
-  return 0;
-}
-
-/* return digest length, or zero on error */
-static int hash_name(char *in, unsigned char **out, struct nettle_hash const *hash, 
-		     unsigned char *salt, int salt_len, int iterations)
-{
-  void *ctx;
-  unsigned char *digest;
-  int i;
-
-  if (!hash_init(hash, &ctx, &digest))
-    return 0;
- 
-  hash->update(ctx, to_wire(in), (unsigned char *)in);
-  hash->update(ctx, salt_len, salt);
-  hash->digest(ctx, hash->digest_size, digest);
-
-  for(i = 0; i < iterations; i++)
-    {
-      hash->update(ctx, hash->digest_size, digest);
-      hash->update(ctx, salt_len, salt);
-      hash->digest(ctx, hash->digest_size, digest);
-    }
-   
-  from_wire(in);
-
-  *out = digest;
-  return hash->digest_size;
-}
-
-/* Decode base32 to first "." or end of string */
-static int base32_decode(char *in, unsigned char *out)
-{
-  int oc, on, c, mask, i;
-  unsigned char *p = out;
- 
-  for (c = *in, oc = 0, on = 0; c != 0 && c != '.'; c = *++in) 
-    {
-      if (c >= '0' && c <= '9')
-	c -= '0';
-      else if (c >= 'a' && c <= 'v')
-	c -= 'a', c += 10;
-      else if (c >= 'A' && c <= 'V')
-	c -= 'A', c += 10;
-      else
-	return 0;
-      
-      for (mask = 0x10, i = 0; i < 5; i++)
-        {
-	  if (c & mask)
-	    oc |= 1;
-	  mask = mask >> 1;
-	  if (((++on) & 7) == 0)
-	    *p++ = oc;
-	  oc = oc << 1;
-	}
-    }
-  
-  if ((on & 7) != 0)
-    return 0;
-
-  return p - out;
-}
-
-static int check_nsec3_coverage(struct dns_header *header, size_t plen, int digest_len, unsigned char *digest, int type,
-				char *workspace1, char *workspace2, unsigned char **nsecs, int nsec_count, int *nons, int name_labels)
-{
-  int i, hash_len, salt_len, base32_len, rdlen, flags;
-  unsigned char *p, *psave;
-
-  for (i = 0; i < nsec_count; i++)
-    if ((p = nsecs[i]))
-      {
-       	if (!extract_name(header, plen, &p, workspace1, 1, 0) ||
-	    !(base32_len = base32_decode(workspace1, (unsigned char *)workspace2)))
-	  return 0;
-	
-	p += 8; /* class, type, TTL */
-	GETSHORT(rdlen, p);
-	psave = p;
-	p++; /* algo */
-	flags = *p++; /* flags */
-	p += 2; /* iterations */
-	salt_len = *p++; /* salt_len */
-	p += salt_len; /* salt */
-	hash_len = *p++; /* p now points to next hashed name */
-	
-	if (!CHECK_LEN(header, p, plen, hash_len))
-	  return 0;
-	
-	if (digest_len == base32_len && hash_len == base32_len)
-	  {
-	    int rc = memcmp(workspace2, digest, digest_len);
-
-	    if (rc == 0)
-	      {
-		/* We found an NSEC3 whose hashed name exactly matches the query, so
-		   we just need to check the type map. p points to the RR data for the record. */
-		
-		int offset = (type & 0xff) >> 3;
-		int mask = 0x80 >> (type & 0x07);
-		
-		p += hash_len; /* skip next-domain hash */
-		rdlen -= p - psave;
-
-		if (!CHECK_LEN(header, p, plen, rdlen))
-		  return 0;
-		
-		if (rdlen >= 2 && p[0] == 0)
-		  {
-		    /* If we can prove that there's no NS record, return that information. */
-		    if (nons && (p[2] & (0x80 >> T_NS)) != 0)
-		      *nons = 0;
-		
-		    /* A CNAME answer would also be valid, so if there's a CNAME is should 
-		       have been returned. */
-		    if ((p[2] & (0x80 >> T_CNAME)) != 0)
-		      return 0;
-		    
-		    /* If the SOA bit is set for a DS record, then we have the
-		       DS from the wrong side of the delegation. For the root DS, 
-		       this is expected.  */
-		    if (name_labels != 0 && type == T_DS && (p[2] & (0x80 >> T_SOA)) != 0)
-		      return 0;
-		  }
-
-		while (rdlen >= 2)
-		  {
-		    if (p[0] == type >> 8)
-		      {
-			/* Does the NSEC3 say our type exists? */
-			if (offset < p[1] && (p[offset+2] & mask) != 0)
-			  return 0;
-			
-			break; /* finished checking */
-		      }
-		    
-		    rdlen -= p[1];
-		    p +=  p[1];
-		  }
-		
-		return 1;
-	      }
-	    else if (rc < 0)
-	      {
-		/* Normal case, hash falls between NSEC3 name-hash and next domain name-hash,
-		   wrap around case, name-hash falls between NSEC3 name-hash and end */
-		if (memcmp(p, digest, digest_len) >= 0 || memcmp(workspace2, p, digest_len) >= 0)
-		  {
-		    if ((flags & 0x01) && nons) /* opt out */
-		      *nons = 0;
-
-		    return 1;
-		  }
-	      }
-	    else 
-	      {
-		/* wrap around case, name falls between start and next domain name */
-		if (memcmp(workspace2, p, digest_len) >= 0 && memcmp(p, digest, digest_len) >= 0)
-		  {
-		    if ((flags & 0x01) && nons) /* opt out */
-		      *nons = 0;
-
-		    return 1;
-		  }
-	      }
-	  }
-      }
-
-  return 0;
-}
-
-static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, unsigned char **nsecs, int nsec_count,
-				     char *workspace1, char *workspace2, char *name, int type, char *wildname, int *nons)
-{
-  unsigned char *salt, *p, *digest;
-  int digest_len, i, iterations, salt_len, base32_len, algo = 0;
-  struct nettle_hash const *hash;
-  char *closest_encloser, *next_closest, *wildcard;
-  
-  if (nons)
-    *nons = 1;
-  
-  /* Look though the NSEC3 records to find the first one with 
-     an algorithm we support.
-
-     Take the algo, iterations, and salt of that record
-     as the ones we're going to use, and prune any 
-     that don't match. */
-  
-  for (i = 0; i < nsec_count; i++)
-    {
-      if (!(p = skip_name(nsecs[i], header, plen, 15)))
-	return 0; /* bad packet */
-      
-      p += 10; /* type, class, TTL, rdlen */
-      algo = *p++;
-      
-      if ((hash = hash_find(nsec3_digest_name(algo))))
-	break; /* known algo */
-    }
-
-  /* No usable NSEC3s */
-  if (i == nsec_count)
-    return 0;
-
-  p++; /* flags */
-
-  GETSHORT (iterations, p);
-  /* Upper-bound iterations, to avoid DoS.
-     Strictly, there are lower bounds for small keys, but
-     since we don't have key size info here, at least limit
-     to the largest bound, for 4096-bit keys. RFC 5155 10.3 */
-  if (iterations > 2500)
-    return 0;
-  
-  salt_len = *p++;
-  salt = p;
-  if (!CHECK_LEN(header, salt, plen, salt_len))
-    return 0; /* bad packet */
-    
-  /* Now prune so we only have NSEC3 records with same iterations, salt and algo */
-  for (i = 0; i < nsec_count; i++)
-    {
-      unsigned char *nsec3p = nsecs[i];
-      int this_iter, flags;
-
-      nsecs[i] = nullptr; /* Speculative, will be restored if OK. */
-      
-      if (!(p = skip_name(nsec3p, header, plen, 15)))
-	return 0; /* bad packet */
-      
-      p += 10; /* type, class, TTL, rdlen */
-      
-      if (*p++ != algo)
-	continue;
- 
-      flags = *p++; /* flags */
-      
-      /* 5155 8.2 */
-      if (flags != 0 && flags != 1)
-	continue;
-
-      GETSHORT(this_iter, p);
-      if (this_iter != iterations)
-	continue;
-
-      if (salt_len != *p++)
-	continue;
-      
-      if (!CHECK_LEN(header, p, plen, salt_len))
-	return 0; /* bad packet */
-
-      if (memcmp(p, salt, salt_len) != 0)
-	continue;
-
-      /* All match, put the pointer back */
-      nsecs[i] = nsec3p;
-    }
-
-  if ((digest_len = hash_name(name, &digest, hash, salt, salt_len, iterations)) == 0)
-    return 0;
-  
-  if (check_nsec3_coverage(header, plen, digest_len, digest, type, workspace1, workspace2, nsecs, nsec_count, nons, count_labels(name)))
-    return 1;
-
-  /* Can't find an NSEC3 which covers the name directly, we need the "closest encloser NSEC3" 
-     or an answer inferred from a wildcard record. */
-  closest_encloser = name;
-  next_closest = nullptr;
-
-  do
-    {
-      if (*closest_encloser == '.')
-	closest_encloser++;
-
-      if (wildname && hostname_isequal(closest_encloser, wildname))
-	break;
-
-      if ((digest_len = hash_name(closest_encloser, &digest, hash, salt, salt_len, iterations)) == 0)
-	return 0;
-      
-      for (i = 0; i < nsec_count; i++)
-	if ((p = nsecs[i]))
-	  {
-	    if (!extract_name(header, plen, &p, workspace1, 1, 0) ||
-		!(base32_len = base32_decode(workspace1, (unsigned char *)workspace2)))
-	      return 0;
-	  
-	    if (digest_len == base32_len &&
-		memcmp(digest, workspace2, digest_len) == 0)
-	      break; /* Gotit */
-	  }
-      
-      if (i != nsec_count)
-	break;
-      
-      next_closest = closest_encloser;
-    }
-  while ((closest_encloser = strchr(closest_encloser, '.')));
-  
-  if (!closest_encloser || !next_closest)
-    return 0;
-  
-  /* Look for NSEC3 that proves the non-existence of the next-closest encloser */
-  if ((digest_len = hash_name(next_closest, &digest, hash, salt, salt_len, iterations)) == 0)
-    return 0;
-
-  if (!check_nsec3_coverage(header, plen, digest_len, digest, type, workspace1, workspace2, nsecs, nsec_count, nullptr, 1))
-    return 0;
-  
-  /* Finally, check that there's no seat of wildcard synthesis */
-  if (!wildname)
-    {
-      if (!(wildcard = strchr(next_closest, '.')) || wildcard == next_closest)
-	return 0;
-      
-      wildcard--;
-      *wildcard = '*';
-      
-      if ((digest_len = hash_name(wildcard, &digest, hash, salt, salt_len, iterations)) == 0)
-	return 0;
-      
-      if (!check_nsec3_coverage(header, plen, digest_len, digest, type, workspace1, workspace2, nsecs, nsec_count, nullptr, 1))
-	return 0;
-    }
-  
-  return 1;
-}
-
-static int prove_non_existence(struct dns_header *header, size_t plen, char *keyname, char *name, int qtype, int qclass, char *wildname, int *nons)
-{
-  static unsigned char **nsecset = nullptr, **rrsig_labels = nullptr;
-  static int nsecset_sz = 0, rrsig_labels_sz = 0;
-  
-  int type_found = 0;
-  unsigned char *auth_start, *p = skip_questions(header, plen);
-  int type, _class, rdlen, i, nsecs_found;
-  
-  /* Move to NS section */
-  if (!p || !(p = skip_section(p, ntohs(header->ancount), header, plen)))
-    return 0;
-
-  auth_start = p;
-  
-  for (nsecs_found = 0, i = ntohs(header->nscount); i != 0; i--)
-    {
-      unsigned char *pstart = p;
-      
-      if (!extract_name(header, plen, &p, daemon->workspacename, 1, 10))
-	return 0;
-	  
-      GETSHORT(type, p); 
-      GETSHORT(_class, p);
-      p += 4; /* TTL */
-      GETSHORT(rdlen, p);
-
-      if (_class == qclass && (type == T_NSEC || type == T_NSEC3))
-	{
-	  /* No mixed NSECing 'round here, thankyouverymuch */
-	  if (type_found != 0 && type_found != type)
-	    return 0;
-
-	  type_found = type;
-
-	  if (!expand_workspace(&nsecset, &nsecset_sz, nsecs_found))
-	    return 0; 
-	  
-	  if (type == T_NSEC)
-	    {
-	      /* If we're looking for NSECs, find the corresponding SIGs, to 
-		 extract the labels value, which we need in case the NSECs
-		 are the result of wildcard expansion.
-		 Note that the NSEC may not have been validated yet
-		 so if there are multiple SIGs, make sure the label value
-		 is the same in all, to avoid be duped by a rogue one.
-		 If there are no SIGs, that's an error */
-	      unsigned char *p1 = auth_start;
-	      int res, j, rdlen1, type1, class1;
-	      
-	      if (!expand_workspace(&rrsig_labels, &rrsig_labels_sz, nsecs_found))
-		return 0;
-	      
-	      rrsig_labels[nsecs_found] = nullptr;
-	      
-	      for (j = ntohs(header->nscount); j != 0; j--)
-		{
-		  if (!(res = extract_name(header, plen, &p1, daemon->workspacename, 0, 10)))
-		    return 0;
-
-		   GETSHORT(type1, p1); 
-		   GETSHORT(class1, p1);
-		   p1 += 4; /* TTL */
-		   GETSHORT(rdlen1, p1);
-
-		   if (!CHECK_LEN(header, p1, plen, rdlen1))
-		     return 0;
-		   
-		   if (res == 1 && class1 == qclass && type1 == T_RRSIG)
-		     {
-		       int type_covered;
-		       unsigned char *psav = p1;
-		       
-		       if (rdlen1 < 18)
-			 return 0; /* bad packet */
-
-		       GETSHORT(type_covered, p1);
-
-		       if (type_covered == T_NSEC)
-			 {
-			   p1++; /* algo */
-			   
-			   /* labels field must be the same in every SIG we find. */
-			   if (!rrsig_labels[nsecs_found])
-			     rrsig_labels[nsecs_found] = p1;
-			   else if (*rrsig_labels[nsecs_found] != *p1) /* algo */
-			     return 0;
-			   }
-		       p1 = psav;
-		     }
-		   
-		   if (!ADD_RDLEN(header, p1, plen, rdlen1))
-		     return 0;
-		}
-
-	      /* Must have found at least one sig. */
-	      if (!rrsig_labels[nsecs_found])
-		return 0;
-	    }
-
-	  nsecset[nsecs_found++] = pstart;   
-	}
-      
-      if (!ADD_RDLEN(header, p, plen, rdlen))
-	return 0;
-    }
-  
-  if (type_found == T_NSEC)
-    return prove_non_existence_nsec(header, plen, nsecset, rrsig_labels, nsecs_found, daemon->workspacename, keyname, name, qtype, nons);
-  else if (type_found == T_NSEC3)
-    return prove_non_existence_nsec3(header, plen, nsecset, nsecs_found, daemon->workspacename, keyname, name, qtype, wildname, nons);
-  else
-    return 0;
-}
-
-/* Check signing status of name.
-   returns:
-   STAT_SECURE   zone is signed.
-   STAT_INSECURE zone proved unsigned.
-   STAT_NEED_DS  require DS record of name returned in keyname.
-   STAT_NEED_KEY require DNSKEY record of name returned in keyname.
-   name returned unaltered.
-*/
-static int zone_status(char *name, int _class, char *keyname, time_t now)
-{
-  int name_start = strlen(name); /* for when TA is root */
-  struct crec *crecp;
-  char *p;
-
-  /* First, work towards the root, looking for a trust anchor.
-     This can either be one configured, or one previously cached.
-     We can assume, if we don't find one first, that there is
-     a trust anchor at the root. */
-  for (p = name; p; p = strchr(p, '.'))
-    {
-      if (*p == '.')
-	p++;
-
-      if (cache_find_by_name(nullptr, p, now, F_DS))
-	{
-	  name_start = p - name;
-	  break;
-	}
-    }
-
-  /* Now work away from the trust anchor */
-  while (1)
-    {
-      strcpy(keyname, &name[name_start]);
-      
-      if (!(crecp = cache_find_by_name(nullptr, keyname, now, F_DS)))
-	return STAT_NEED_DS;
-      
-       /* F_DNSSECOK misused in DS cache records to non-existence of NS record.
-	  F_NEG && !F_DNSSECOK implies that we've proved there's no DS record here,
-	  but that's because there's no NS record either, ie this isn't the start
-	  of a zone. We only prove that the DNS tree below a node is unsigned when
-	  we prove that we're at a zone cut AND there's no DS record. */
-      if (crecp->flags & F_NEG)
-	{
-	  if (crecp->flags & F_DNSSECOK)
-	    return STAT_INSECURE; /* proved no DS here */
-	}
-      else
-	{
-	  /* If all the DS records have digest and/or sig algos we don't support,
-	     then the zone is insecure. Note that if an algo
-	     appears in the DS, then RRSIGs for that algo MUST
-	     exist for each RRset: 4035 para 2.2  So if we find
-	     a DS here with digest and sig we can do, we're entitled
-	     to assume we can validate the zone and if we can't later,
-	     because an RRSIG is missing we return BOGUS.
-	  */
-	  do 
-	    {
-	      if (crecp->uid == (unsigned int)_class &&
-		  ds_digest_name(crecp->addr.ds.digest) &&
-		  algo_digest_name(crecp->addr.ds.algo))
-		break;
-	    }
-	  while ((crecp = cache_find_by_name(crecp, keyname, now, F_DS)));
-
-	  if (!crecp)
-	    return STAT_INSECURE;
-	}
-
-      if (name_start == 0)
-	break;
-
-      for (p = &name[name_start-2]; (*p != '.') && (p != name); p--);
-      
-      if (p != name)
-        p++;
-      
-      name_start = p - name;
-    } 
-
-  return STAT_SECURE;
-}
-       
-/* Validate all the RRsets in the answer and authority sections of the reply (4035:3.2.3) 
-   Return code:
-   STAT_SECURE   if it validates.
-   STAT_INSECURE at least one RRset not validated, because in unsigned zone.
-   STAT_BOGUS    signature is wrong, bad packet, no validation where there should be.
-   STAT_NEED_KEY need DNSKEY to complete validation (name is returned in keyname, class in *class)
-   STAT_NEED_DS  need DS to complete validation (name is returned in keyname)
-
-   daemon->rr_status points to a char array which corressponds to the RRs in the 
-   answer section (only). This is set to 1 for each RR which is validated, and 0 for any which aren't.
-*/
-int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, 
-			  int *_class, int check_unsigned, int *neganswer, int *nons)
-{
-  static unsigned char **targets = nullptr;
-  static int target_sz = 0;
-
-  unsigned char *ans_start, *p1, *p2;
-  int type1, class1, rdlen1 = 0, type2, class2, rdlen2, qclass, qtype, targetidx;
-  int i, j, rc = STAT_INSECURE;
-  int secure = STAT_SECURE;
-
-  /* extend rr_status if necessary */
-  if (daemon->rr_status_sz < ntohs(header->ancount))
-    {
-      char *new = whine_malloc(ntohs(header->ancount) + 64);
-
-      if (!new)
-	return STAT_BOGUS;
-
-      free(daemon->rr_status);
-      daemon->rr_status = new;
-      daemon->rr_status_sz = ntohs(header->ancount) + 64;
-    }
-  
-  memset(daemon->rr_status, 0, ntohs(header->ancount));
-  
-  if (neganswer)
-    *neganswer = 0;
-  
-  if (RCODE(header) == SERVFAIL || ntohs(header->qdcount) != 1)
-    return STAT_BOGUS;
-  
-  if (RCODE(header) != NXDOMAIN && RCODE(header) != NOERROR)
-    return STAT_INSECURE;
-
-  p1 = (unsigned char *)(header+1);
-  
-   /* Find all the targets we're looking for answers to.
-     The zeroth array element is for the query, subsequent ones
-     for CNAME targets, unless the query is for a CNAME. */
-
-  if (!expand_workspace(&targets, &target_sz, 0))
-    return STAT_BOGUS;
-  
-  targets[0] = p1;
-  targetidx = 1;
-   
-  if (!extract_name(header, plen, &p1, name, 1, 4))
-    return STAT_BOGUS;
-  
-  GETSHORT(qtype, p1);
-  GETSHORT(qclass, p1);
-  ans_start = p1;
- 
-  /* Can't validate an RRSIG query */
-  if (qtype == T_RRSIG)
-    return STAT_INSECURE;
-  
-  if (qtype != T_CNAME)
-    for (j = ntohs(header->ancount); j != 0; j--) 
-      {
-	if (!(p1 = skip_name(p1, header, plen, 10)))
-	  return STAT_BOGUS; /* bad packet */
-	
-	GETSHORT(type2, p1); 
-	p1 += 6; /* class, TTL */
-	GETSHORT(rdlen2, p1);  
-	
-	if (type2 == T_CNAME)
-	  {
-	    if (!expand_workspace(&targets, &target_sz, targetidx))
-	      return STAT_BOGUS;
-	    
-	    targets[targetidx++] = p1; /* pointer to target name */
-	  }
-	
-	if (!ADD_RDLEN(header, p1, plen, rdlen2))
-	  return STAT_BOGUS;
-      }
-  
-  for (p1 = ans_start, i = 0; i < ntohs(header->ancount) + ntohs(header->nscount); i++)
-    {
-      if (i != 0 && !ADD_RDLEN(header, p1, plen, rdlen1))
-	return STAT_BOGUS;
-      
-      if (!extract_name(header, plen, &p1, name, 1, 10))
-	return STAT_BOGUS; /* bad packet */
-      
-      GETSHORT(type1, p1);
-      GETSHORT(class1, p1);
-      p1 += 4; /* TTL */
-      GETSHORT(rdlen1, p1);
-      
-      /* Don't try and validate RRSIGs! */
-      if (type1 == T_RRSIG)
-	continue;
-      
-      /* Check if we've done this RRset already */
-      for (p2 = ans_start, j = 0; j < i; j++)
-	{
-	  if (!(rc = extract_name(header, plen, &p2, name, 0, 10)))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  GETSHORT(type2, p2);
-	  GETSHORT(class2, p2);
-	  p2 += 4; /* TTL */
-	  GETSHORT(rdlen2, p2);
-	  
-	  if (type2 == type1 && class2 == class1 && rc == 1)
-	    break; /* Done it before: name, type, class all match. */
-	  
-	  if (!ADD_RDLEN(header, p2, plen, rdlen2))
-	    return STAT_BOGUS;
-	}
-      
-      if (j != i)
-	{
-	  /* Done already: copy the validation status */
-	  if (i < ntohs(header->ancount))
-	    daemon->rr_status[i] = daemon->rr_status[j];
-	}
-      else
-	{
-	  /* Not done, validate now */
-	  int sigcnt, rrcnt;
-	  char *wildname;
-	  
-	  if (!explore_rrset(header, plen, class1, type1, name, keyname, &sigcnt, &rrcnt))
-	    return STAT_BOGUS;
-	  
-	  /* No signatures for RRset. We can be configured to assume this is OK and return an INSECURE result. */
-	  if (sigcnt == 0)
-	    {
-	      if (check_unsigned)
-		{
-		  rc = zone_status(name, class1, keyname, now);
-		  if (rc == STAT_SECURE)
-		    rc = STAT_BOGUS;
-		  if (_class)
-		    *_class = class1; /* Class for NEED_DS or NEED_KEY */
-		}
-	      else 
-		rc = STAT_INSECURE; 
-	      
-	      if (rc != STAT_INSECURE)
-		return rc;
-	    }
-	  else
-	    {
-	      /* explore_rrset() gives us key name from sigs in keyname.
-		 Can't overwrite name here. */
-	      strcpy(daemon->workspacename, keyname);
-	      rc = zone_status(daemon->workspacename, class1, keyname, now);
-	      
-	      if (rc == STAT_BOGUS || rc == STAT_NEED_KEY || rc == STAT_NEED_DS)
-		{
-		  if (_class)
-		    *_class = class1; /* Class for NEED_DS or NEED_KEY */
-		  return rc;
-		}
-	      
-	      /* Zone is insecure, don't need to validate RRset */
-	      if (rc == STAT_SECURE)
-		{
-		  rc = validate_rrset(now, header, plen, class1, type1, sigcnt,
-				      rrcnt, name, keyname, &wildname, nullptr, 0, 0, 0);
-		  
-		  if (rc == STAT_BOGUS || rc == STAT_NEED_KEY || rc == STAT_NEED_DS)
-		    {
-		      if (_class)
-			*_class = class1; /* Class for DS or DNSKEY */
-		      return rc;
-		    } 
-		  
-		  /* rc is now STAT_SECURE or STAT_SECURE_WILDCARD */
-		  
-		  /* Note that RR is validated */
-		   if (i < ntohs(header->ancount))
-		     daemon->rr_status[i] = 1;
-		   
-		  /* Note if we've validated either the answer to the question
-		     or the target of a CNAME. Any not noted will need NSEC or
-		     to be in unsigned space. */
-		  for (j = 0; j <targetidx; j++)
-		    if ((p2 = targets[j]))
-		      {
-			int rc1;
-			if (!(rc1 = extract_name(header, plen, &p2, name, 0, 10)))
-			  return STAT_BOGUS; /* bad packet */
-			
-			if (class1 == qclass && rc1 == 1 && (type1 == T_CNAME || type1 == qtype || qtype == T_ANY ))
-			  targets[j] = nullptr;
-		      }
-		  
-		  /* An attacker replay a wildcard answer with a different
-		     answer and overlay a genuine RR. To prove this
-		     hasn't happened, the answer must prove that
-		     the genuine record doesn't exist. Check that here. 
-		     Note that we may not yet have validated the NSEC/NSEC3 RRsets. 
-		     That's not a problem since if the RRsets later fail
-		     we'll return BOGUS then. */
-		  if (rc == STAT_SECURE_WILDCARD &&
-		      !prove_non_existence(header, plen, keyname, name, type1, class1, wildname, nullptr))
-		    return STAT_BOGUS;
-
-		  rc = STAT_SECURE;
-		}
-	    }
-	}
-
-      if (rc == STAT_INSECURE)
-	secure = STAT_INSECURE;
-    }
-
-  /* OK, all the RRsets validate, now see if we have a missing answer or CNAME target. */
-  if (secure == STAT_SECURE)
-    for (j = 0; j <targetidx; j++)
-      if ((p2 = targets[j]))
-	{
-	  if (neganswer)
-	    *neganswer = 1;
-	  
-	  if (!extract_name(header, plen, &p2, name, 1, 10))
-	    return STAT_BOGUS; /* bad packet */
-	  
-	  /* NXDOMAIN or NODATA reply, unanswered question is (name, qclass, qtype) */
-	  
-	  /* For anything other than a DS record, this situation is OK if either
-	     the answer is in an unsigned zone, or there's a NSEC records. */
-	  if (!prove_non_existence(header, plen, keyname, name, qtype, qclass, nullptr, nons))
-	    {
-	      /* Empty DS without NSECS */
-	      if (qtype == T_DS)
-		return STAT_BOGUS;
-	      
-	      if ((rc = zone_status(name, qclass, keyname, now)) != STAT_SECURE)
-		{
-		  if (_class)
-		    *_class = qclass; /* Class for NEED_DS or NEED_KEY */
-		  return rc;
-		} 
-	      
-	      return STAT_BOGUS; /* signed zone, no NSECs */
-	    }
-	}
-  
-  return secure;
-}
-
-
-/* Compute keytag (checksum to quickly index a key). See RFC4034 */
-int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen)
-{
-  if (alg == 1)
-    {
-      /* Algorithm 1 (RSAMD5) has a different (older) keytag calculation algorithm.
-         See RFC4034, Appendix B.1 */
-      return key[keylen-4] * 256 + key[keylen-3];
-    }
-  else
-    {
-      unsigned long ac = flags + 0x300 + alg;
-      int i;
-
-      for (i = 0; i < keylen; ++i)
-        ac += (i & 1) ? key[i] : key[i] << 8;
-
-      ac += (ac >> 16) & 0xffff;
-      return ac & 0xffff;
-    }
-}
-
-size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char *name, int _class,
-			     int type, int edns_pktsz)
-{
-  unsigned char *p;
-  size_t ret;
-
-  header->qdcount = htons(1);
-  header->ancount = htons(0);
-  header->nscount = htons(0);
-  header->arcount = htons(0);
-
-  header->hb3 = HB3_RD; 
-  SET_OPCODE(header, QUERY);
-  /* For debugging, set Checking Disabled, otherwise, have the upstream check too,
-     this allows it to select auth servers when one is returning bad data. */
-  header->hb4 = option_bool(OPT_DNSSEC_DEBUG) ? HB4_CD : 0;
-
-  /* ID filled in later */
-
-  p = (unsigned char *)(header+1);
-	
-  p = do_rfc1035_name(p, name, nullptr);
-  *p++ = 0;
-  PUTSHORT(type, p);
-  PUTSHORT(_class, p);
-
-  ret = add_do_bit(header, p - (unsigned char *)header, end);
-
-  if (find_pseudoheader(header, ret, nullptr, &p, nullptr, nullptr))
-    PUTSHORT(edns_pktsz, p);
-
-  return ret;
-}
-
-unsigned char* hash_questions(struct dns_header *header, size_t plen, char *name)
-{
-  int q;
-  unsigned int len;
-  unsigned char *p = (unsigned char *)(header+1);
-  const struct nettle_hash *hash;
-  void *ctx;
-  unsigned char *digest;
-  
-  if (!(hash = hash_find("sha1")) || !hash_init(hash, &ctx, &digest))
-    return nullptr;
-  
-  for (q = ntohs(header->qdcount); q != 0; q--) 
-    {
-      if (!extract_name(header, plen, &p, name, 1, 4))
-	break; /* bad packet */
-      
-      len = to_wire(name);
-      hash->update(ctx, len, (unsigned char *)name);
-      /* CRC the class and type as well */
-      hash->update(ctx, 4, p);
-
-      p += 4;
-      if (!CHECK_LEN(header, p, plen, 0))
-	break; /* bad packet */
-    }
-  
-  hash->digest(ctx, hash->digest_size, digest);
-  return digest;
-}
-
-//#endif /* HAVE_DNSSEC */
