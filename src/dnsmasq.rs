@@ -8,6 +8,8 @@ mod option;
 use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
 
 use libc;
+use crate::util::dnsmasq_time;
+use crate::defines::__user_cap_header_struct;
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -32,6 +34,7 @@ use libc;
 // static mut pipewrite: libc::c_int = 0;
 unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
  -> libc::c_int {
+     let mut compiler_opts: String = String::from("");
     let mut bind_fallback: libc::c_int = 0 as libc::c_int;
     let mut now: time_t = 0;
     let mut sigact: sigaction =
@@ -52,7 +55,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     let mut baduser: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut log_err: libc::c_int = 0;
     let mut chown_warn: libc::c_int = 0 as libc::c_int;
-    let mut hdr: cap_user_header_t = 0 as cap_user_header_t;
+    // let mut hdr: cap_user_header_t = 0 as cap_user_header_t;
+    let mut hdr: __user_cap_header_struct = Default::default();
     let mut data: cap_user_data_t = 0 as cap_user_data_t;
     let mut need_cap_net_admin: libc::c_int = 0 as libc::c_int;
     let mut need_cap_net_raw: libc::c_int = 0 as libc::c_int;
@@ -67,7 +71,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     sigact.__sigaction_handler.sa_handler =
         Some(sig_handler as unsafe extern "C" fn(_: libc::c_int) -> ());
     sigact.sa_flags = 0 as libc::c_int;
-    libc::sigemptyset(&mut sigact.sa_mask);
+    libc::sigemptyset(&mut sigact.sa_mask as *mut __sigset_t);
     libc::sigaction(10 as libc::c_int, &mut sigact, 0 as *mut sigaction);
     libc::sigaction(12 as libc::c_int, &mut sigact, 0 as *mut sigaction);
     libc::sigaction(1 as libc::c_int, &mut sigact, 0 as *mut sigaction);
@@ -84,12 +88,14 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
               0 as *mut sigaction); /* Must precede read_opts() */
     libc::umask(0o22 as libc::c_int as defines::__mode_t);
     util::rand_init();
-    option::read_opts(argc, argv, option::compile_opts);
+    option::read_opts(argc, argv, compile_opts);
 
-    let mut daemon: dnsmasq_daemon = dnsmasq_daemon{ options: (), default_resolv: (), resolv_files: (), last_resolv: (), servers_file: (), mxnames: (), naptr: (), txt: (), rr: (), ptr: (), host_records: (), host_records_tail: (), cnames: (), auth_zones: (), int_names: (), mxtarget: (), add_subnet4: (), add_subnet6: (), lease_file: (), username: (), groupname: (), scriptuser: (), luascript: (), authserver: (), hostmaster: (), authinterface: (), secondary_forward_server: (), group_set: (), osport: (), domain_suffix: (), cond_domain: (), synth_domains: (), runfile: (), lease_change_command: (), if_names: (), if_addrs: (), if_except: (), dhcp_except: (), auth_peers: (), tftp_interfaces: (), bogus_addr: (), ignore_addr: (), servers: (), ipsets: (), log_fac: (), log_file: (), max_logs: (), cachesize: (), ftabsize: (), port: (), query_port: (), min_port: (), max_port: (), local_ttl: (), neg_ttl: (), max_ttl: (), min_cache_ttl: (), max_cache_ttl: (), auth_ttl: (), dhcp_ttl: (), use_dhcp_ttl: (), dns_client_id: (), addn_hosts: (), dhcp: (), dhcp6: (), ra_interfaces: (), dhcp_conf: (), dhcp_opts: (), dhcp_match: (), dhcp_opts6: (), dhcp_match6: (), dhcp_name_match: (), dhcp_pxe_vendors: (), dhcp_vendors: (), dhcp_macs: (), boot_config: (), pxe_services: (), tag_if: (), override_relays: (), relay4: (), relay6: (), delay_conf: (), override_0: (), enable_pxe: (), doing_ra: (), doing_dhcp6: (), dhcp_ignore: (), dhcp_ignore_names: (), dhcp_gen_names: (), force_broadcast: (), bootp_dynamic: (), dhcp_hosts_file: (), dhcp_opts_file: (), dynamic_dirs: (), dhcp_max: (), tftp_max: (), tftp_mtu: (), dhcp_server_port: (), dhcp_client_port: (), start_tftp_port: (), end_tftp_port: (), min_leasetime: (), doctors: (), edns_pktsz: (), tftp_prefix: (), if_prefix: (), duid_enterprise: (), duid_config_len: (), duid_config: (), dbus_name: (), ubus_name: (), dump_file: (), dump_mask: (), soa_sn: (), soa_refresh: (), soa_retry: (), soa_expiry: (), metrics: (), packet: (), packet_buff_sz: (), namebuff: (), frec_list: (), free_frec_src: (), frec_src_count: (), sfds: (), interfaces: (), listeners: (), last_server: (), forwardtime: (), forwardcount: (), srv_save: (), packet_len: (), rfd_save: (), tcp_pids: (), tcp_pipes: (), pipe_to_parent: (), randomsocks: (), v6pktinfo: (), interface_addrs: (), log_id: (), log_display_id: (), log_source_addr: (), dhcpfd: (), helperfd: (), pxefd: (), inotifyfd: (), netlinkfd: (), kernel_version: (), dhcp_packet: (), dhcp_buff: (), dhcp_buff2: (), dhcp_buff3: (), ping_results: (), lease_stream: (), bridges: (), shared_networks: (), duid_len: (), duid: (), outpacket: (), dhcp6fd: (), icmp6fd: (), dbus: (), tftp_trans: (), tftp_done_trans: (), addrbuff: (), addrbuff2: (), dumpfd: ()};
+    let mut daemon: dnsmasq_daemon = dnsmasq_daemon{ options: [0,0], default_resolv: Default::default(), resolv_files: Default::default(), last_resolv: 0, servers_file: Default::default(), mxnames: Default::default(), naptr: Default::default(), txt: Default::default(), rr: Default::default(), ptr: Default::default(), host_records: Default::default(), host_records_tail: Default::default(), cnames: Default::default(), auth_zones: Default::default(), int_names: Default::default(), mxtarget: Default::default(), add_subnet4: Default::default(), add_subnet6: Default::default(), lease_file: Default::default(), username: Default::default(), groupname: Default::default(), scriptuser: Default::default(), luascript: Default::default(), authserver: Default::default(), hostmaster: Default::default(), authinterface: Default::default(), secondary_forward_server: Default::default(), group_set: 0, osport: 0, domain_suffix: Default::default(), cond_domain: Default::default(), synth_domains: Default::default(), runfile: Default::default(), lease_change_command: Default::default(), if_names: Default::default(), if_addrs: Default::default(), if_except: Default::default(), dhcp_except: Default::default(), auth_peers: Default::default(), tftp_interfaces: Default::default(), bogus_addr: Default::default(), ignore_addr: Default::default(), servers: Default::default(), ipsets: Default::default(), log_fac: Default::default(), log_file: Default::default(), max_logs: Default::default(), cachesize: Default::default(), ftabsize: Default::default(), port: Default::default(), query_port: Default::default(), min_port: Default::default(), max_port: Default::default(), local_ttl: Default::default(), neg_ttl: Default::default(), max_ttl: Default::default(), min_cache_ttl: Default::default(), max_cache_ttl: Default::default(), auth_ttl: Default::default(), dhcp_ttl: Default::default(), use_dhcp_ttl: Default::default(), dns_client_id: Default::default(), addn_hosts: Default::default(), dhcp: Default::default(), dhcp6: Default::default(), ra_interfaces: Default::default(), dhcp_conf: Default::default(), dhcp_opts: Default::default(), dhcp_match: Default::default(), dhcp_opts6: Default::default(), dhcp_match6: Default::default(), dhcp_name_match: Default::default(), dhcp_pxe_vendors: Default::default(), dhcp_vendors: Default::default(), dhcp_macs: Default::default(), boot_config: Default::default(), pxe_services: Default::default(), tag_if: Default::default(), override_relays: Default::default(), relay4: Default::default(), relay6: Default::default(), delay_conf: Default::default(), override_0: Default::default(), enable_pxe: Default::default(), doing_ra: Default::default(), doing_dhcp6: Default::default(), dhcp_ignore: Default::default(), dhcp_ignore_names: Default::default(), dhcp_gen_names: Default::default(), force_broadcast: Default::default(), bootp_dynamic: Default::default(), dhcp_hosts_file: Default::default(), dhcp_opts_file: Default::default(), dynamic_dirs: Default::default(), dhcp_max: Default::default(), tftp_max: Default::default(), tftp_mtu: Default::default(), dhcp_server_port: Default::default(), dhcp_client_port: Default::default(), start_tftp_port: Default::default(), end_tftp_port: Default::default(), min_leasetime: Default::default(), doctors: Default::default(), edns_pktsz: Default::default(), tftp_prefix: Default::default(), if_prefix: Default::default(), duid_enterprise: Default::default(), duid_config_len: Default::default(), duid_config: Default::default(), dbus_name: Default::default(), ubus_name: Default::default(), dump_file: Default::default(), dump_mask: Default::default(), soa_sn: Default::default(), soa_refresh: Default::default(), soa_retry: Default::default(), soa_expiry: Default::default(), metrics: Default::default(), packet: Default::default(), namebuff: Default::default(), frec_list: Default::default(), free_frec_src: Default::default(), frec_src_count: Default::default(), sfds: Default::default(), interfaces: Default::default(), listeners: Default::default(), last_server: Default::default(), forwardtime: Default::default(), forwardcount: Default::default(), srv_save: Default::default(), packet_len: Default::default(), rfd_save: Default::default(), tcp_pids: Default::default(), tcp_pipes: Default::default(), pipe_to_parent: Default::default(), randomsocks: Default::default(), v6pktinfo: Default::default(), interface_addrs: Default::default(), log_id: Default::default(), log_display_id: Default::default(), log_source_addr: Default::default(), dhcpfd: Default::default(), helperfd: Default::default(), pxefd: Default::default(), inotifyfd: Default::default(), netlinkfd: Default::default(), kernel_version: Default::default(), dhcp_packet: Default::default(), dhcp_buff: Default::default(), dhcp_buff2: Default::default(), dhcp_buff3: Default::default(), ping_results: Default::default(), lease_stream: Default::default(), bridges: Default::default(), shared_networks: Default::default(), duid_len: Default::default(), duid: Default::default(), outpacket: Default::default(), dhcp6fd: Default::default(), icmp6fd: Default::default(), dbus: Default::default(), tftp_trans: Default::default(), tftp_done_trans: Default::default(), addrbuff: Default::default(), addrbuff2: Default::default(), dumpfd: Default::default()};
 
+    if cfg!(target_os = "linux") {
+        daemon.kernel_version = util::get_linux_kernel_version();
+    }
 
-    daemon.kernel_version = kernel_version();
     if (daemon.edns_pktsz as libc::c_int) < 512 as libc::c_int {
         daemon.edns_pktsz = 512 as libc::c_int as libc::c_ushort
     }
@@ -100,11 +106,13 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     daemon.packet_buff_sz =
         daemon.edns_pktsz as libc::c_int + 1025 as libc::c_int +
             10 as libc::c_int;
-    daemon.packet =
-        safe_malloc(daemon.packet_buff_sz as libc::ABDAY_3size_t) as
-            *mut libc::c_char;
-    daemon.addrbuff =
-        safe_malloc(46 as libc::c_int as libc::size_t) as *mut libc::c_char;
+    // daemon.packet =
+    //     safe_malloc(daemon.packet_buff_sz as libc::ABDAY_3size_t) as
+    //         *mut libc::c_char;
+    daemon.packet = Vec::new();
+    // daemon.addrbuff =
+    //     safe_malloc(46 as libc::c_int as libc::size_t) as *mut libc::c_char;
+    daemon.addrbuff = Vec::new();
     if daemon.options[(51 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
@@ -124,8 +132,9 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                                                                                      as
                                                                                      libc::c_ulong))
            != 0 {
-        daemon.addrbuff2 =
-            safe_malloc(46 as libc::c_int as size_t) as *mut libc::c_char
+        // daemon.addrbuff2 =
+        //     safe_malloc(46 as libc::c_int as libc::size_t) as *mut libc::c_char
+        daemon.addrbuff2 = Vec::new();
     }
     if daemon.lease_file.is_null() {
         if !daemon.dhcp.is_null() ||
@@ -148,8 +157,9 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         i += 1
     }
     /* Close any file descriptors we inherited apart from std{in|out|err} */
-    close_fds(max_fd, -(1 as libc::c_int), -(1 as libc::c_int),
-              -(1 as libc::c_int));
+    // TODO:
+    // close_fds(max_fd, -(1 as libc::c_int), -(1 as libc::c_int),
+    //           -(1 as libc::c_int));
     if daemon.options[(45 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
@@ -685,20 +695,20 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     let mut capsize: libc::c_int =
         1 as libc::c_int; /* for header version 1 */
     let mut fail: *mut libc::c_char = 0 as *mut libc::c_char;
-    hdr =
-        safe_malloc(::std::mem::size_of::<__user_cap_header_struct>() as
-                        libc::c_ulong) as cap_user_header_t;
-    /* find version supported by kernel */
-    memset(hdr as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<__user_cap_header_struct>() as
-               libc::c_ulong);
+    // hdr =
+    //     safe_malloc(::std::mem::size_of::<__user_cap_header_struct>() as
+    //                     libc::c_ulong) as cap_user_header_t;
+    // /* find version supported by kernel */
+    // memset(hdr as *mut libc::c_void, 0 as libc::c_int,
+    //        ::std::mem::size_of::<__user_cap_header_struct>() as
+    //            libc::c_ulong);
     capget(hdr, 0 as cap_user_data_t);
-    if (*hdr).version != 0x19980330 as libc::c_int as libc::c_uint {
+    if hdr.version != 0x19980330 {
         /* if unknown version, use largest supported version (3) */
-        if (*hdr).version != 0x20071026 as libc::c_int as libc::c_uint {
-            (*hdr).version = 0x20080522 as libc::c_int as __u32
+        if hdr.version != 0x20071026 {
+            hdr.version = 0x20071026;
         } /* Get current values, for verification */
-        capsize = 2 as libc::c_int
+        capsize = 2
     }
     data =
         safe_malloc((::std::mem::size_of::<__user_cap_data_struct>() as

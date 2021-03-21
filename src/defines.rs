@@ -969,8 +969,8 @@ pub struct dnsmasq_daemon {
     pub soa_retry: libc::c_ulong,
     pub soa_expiry: libc::c_ulong,
     pub metrics: [u32_0; 20],
-    pub packet: *mut libc::c_char,
-    pub packet_buff_sz: libc::c_int,
+    pub packet: Vec<u8>,
+    // pub packet_buff_sz: libc::c_int,
     pub namebuff: *mut libc::c_char,
     pub frec_list: *mut frec,
     pub free_frec_src: *mut frec_src,
@@ -1015,8 +1015,8 @@ pub struct dnsmasq_daemon {
     pub dbus: *mut libc::c_void,
     pub tftp_trans: *mut tftp_transfer,
     pub tftp_done_trans: *mut tftp_transfer,
-    pub addrbuff: *mut libc::c_char,
-    pub addrbuff2: *mut libc::c_char,
+    pub addrbuff: Vec<u8>,
+    pub addrbuff2: Vec<u8>,
     pub dumpfd: libc::c_int,
 }
 
@@ -2760,7 +2760,7 @@ pub struct __dirstream {
 
 
 pub type DIR = __dirstream;
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct __user_cap_header_struct {
     pub version: __u32,
