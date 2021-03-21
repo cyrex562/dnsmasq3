@@ -1,3 +1,5 @@
+
+
 #![allow(
     dead_code,
     mutable_transmutes,
@@ -7,7 +9,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
 
 pub type __uint8_t = libc::c_uchar;
 
@@ -3122,3 +3123,12 @@ struct _IO_codecvt
 //   _IO_iconv_t __cd_out;
     pub __cd_out: _IO_iconv_t,
 }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _code {
+    pub c_name: *mut libc::c_char,
+    pub c_val: libc::c_int,
+}
+
+pub type CODE = _code;
