@@ -11,7 +11,7 @@ use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_us
 use libc;
 use crate::util::dnsmasq_time;
 use crate::defines::{__user_cap_header_struct, __user_cap_data_struct};
-use crate::dhcp_common::{dhcp_common_init, whichdevice, bindtodevice};
+use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -64,7 +64,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     let mut need_cap_net_raw: libc::c_int = 0;
     let mut need_cap_net_bind_service: libc::c_int = 0;
     let mut bound_device: String = String::new();
-    let mut did_bind: libc::c_int = 0;
+    let mut did_bind: bool = false;
     let mut serv: server = Default::default();
     let mut netlink_warn: String = String::new();
     let mut context: dhcp_context = Default::default();
@@ -92,7 +92,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     util::rand_init();
     option::read_opts(argc, argv, compile_opts);
 
-    let mut daemon: dnsmasq_daemon = dnsmasq_daemon{ options: [0,0], default_resolv: Default::default(), resolv_files: Default::default(), last_resolv: 0, servers_file: Default::default(), mxnames: Default::default(), naptr: Default::default(), txt: Default::default(), rr: Default::default(), ptr: Default::default(), host_records: Default::default(), host_records_tail: Default::default(), cnames: Default::default(), auth_zones: Default::default(), int_names: Default::default(), mxtarget: Default::default(), add_subnet4: Default::default(), add_subnet6: Default::default(), lease_file: Default::default(), username: Default::default(), groupname: Default::default(), scriptuser: Default::default(), luascript: Default::default(), authserver: Default::default(), hostmaster: Default::default(), authinterface: Default::default(), secondary_forward_server: Default::default(), group_set: 0, osport: 0, domain_suffix: Default::default(), cond_domain: Default::default(), synth_domains: Default::default(), runfile: Default::default(), lease_change_command: Default::default(), if_names: Default::default(), if_addrs: Default::default(), if_except: Default::default(), dhcp_except: Default::default(), auth_peers: Default::default(), tftp_interfaces: Default::default(), bogus_addr: Default::default(), ignore_addr: Default::default(), servers: Default::default(), ipsets: Default::default(), log_fac: Default::default(), log_file: Default::default(), max_logs: Default::default(), cachesize: Default::default(), ftabsize: Default::default(), port: Default::default(), query_port: Default::default(), min_port: Default::default(), max_port: Default::default(), local_ttl: Default::default(), neg_ttl: Default::default(), max_ttl: Default::default(), min_cache_ttl: Default::default(), max_cache_ttl: Default::default(), auth_ttl: Default::default(), dhcp_ttl: Default::default(), use_dhcp_ttl: Default::default(), dns_client_id: Default::default(), addn_hosts: Default::default(), dhcp: Default::default(), dhcp6: Default::default(), ra_interfaces: Default::default(), dhcp_conf: Default::default(), dhcp_opts: Default::default(), dhcp_match: Default::default(), dhcp_opts6: Default::default(), dhcp_match6: Default::default(), dhcp_name_match: Default::default(), dhcp_pxe_vendors: Default::default(), dhcp_vendors: Default::default(), dhcp_macs: Default::default(), boot_config: Default::default(), pxe_services: Default::default(), tag_if: Default::default(), override_relays: Default::default(), relay4: Default::default(), relay6: Default::default(), delay_conf: Default::default(), override_0: Default::default(), enable_pxe: Default::default(), doing_ra: Default::default(), doing_dhcp6: Default::default(), dhcp_ignore: Default::default(), dhcp_ignore_names: Default::default(), dhcp_gen_names: Default::default(), force_broadcast: Default::default(), bootp_dynamic: Default::default(), dhcp_hosts_file: Default::default(), dhcp_opts_file: Default::default(), dynamic_dirs: Default::default(), dhcp_max: Default::default(), tftp_max: Default::default(), tftp_mtu: Default::default(), dhcp_server_port: Default::default(), dhcp_client_port: Default::default(), start_tftp_port: Default::default(), end_tftp_port: Default::default(), min_leasetime: Default::default(), doctors: Default::default(), edns_pktsz: Default::default(), tftp_prefix: Default::default(), if_prefix: Default::default(), duid_enterprise: Default::default(), duid_config_len: Default::default(), duid_config: Default::default(), dbus_name: Default::default(), ubus_name: Default::default(), dump_file: Default::default(), dump_mask: Default::default(), soa_sn: Default::default(), soa_refresh: Default::default(), soa_retry: Default::default(), soa_expiry: Default::default(), metrics: Default::default(), packet: Default::default(), namebuff: Default::default(), frec_list: Default::default(), free_frec_src: Default::default(), frec_src_count: Default::default(), sfds: Default::default(), interfaces: Default::default(), listeners: Default::default(), last_server: Default::default(), forwardtime: Default::default(), forwardcount: Default::default(), srv_save: Default::default(), packet_len: Default::default(), rfd_save: Default::default(), tcp_pids: Default::default(), tcp_pipes: Default::default(), pipe_to_parent: Default::default(), randomsocks: Default::default(), v6pktinfo: Default::default(), interface_addrs: Default::default(), log_id: Default::default(), log_display_id: Default::default(), log_source_addr: Default::default(), dhcpfd: Default::default(), helperfd: Default::default(), pxefd: Default::default(), inotifyfd: Default::default(), netlinkfd: Default::default(), kernel_version: Default::default(), dhcp_packet: Default::default(), dhcp_buff: Default::default(), dhcp_buff2: Default::default(), dhcp_buff3: Default::default(), ping_results: Default::default(), lease_stream: Default::default(), bridges: Default::default(), shared_networks: Default::default(), duid_len: Default::default(), duid: Default::default(), outpacket: Default::default(), dhcp6fd: Default::default(), icmp6fd: Default::default(), dbus: Default::default(), tftp_trans: Default::default(), tftp_done_trans: Default::default(), addrbuff: Default::default(), addrbuff2: Default::default(), dumpfd: Default::default()};
+    let mut daemon: dnsmasq_daemon = Default::default();
 
     if cfg!(target_os = "linux") {
         daemon.kernel_version = util::get_linux_kernel_version();
@@ -271,11 +271,11 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         while !context.is_null() {
             if (*context).flags as libc::c_uint &
                    (1 as libc::c_uint) << 8 as libc::c_int != 0 {
-                daemon.doing_dhcp6 = 1 as libc::c_int
+                daemon.doing_dhcp6 = true
             }
             if (*context).flags as libc::c_uint &
                    (1 as libc::c_uint) << 13 as libc::c_int != 0 {
-                daemon.doing_ra = 1 as libc::c_int
+                daemon.doing_ra = true
             }
             context = (*context).next
         }
@@ -286,7 +286,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
      before lease_init to allocate buffers it uses.
      The script subsystem relies on DHCP buffers, hence the last two
      conditions below. */
-    if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != 0
+    if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != false
            || !daemon.relay4.is_null() ||
            !daemon.relay6.is_null() ||
            daemon.options[(40 as libc::c_int as
@@ -329,7 +329,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                != 0 {
         dhcp_common_init(&mut daemon);
         if !daemon.dhcp.is_null() ||
-               daemon.doing_dhcp6 != 0 {
+               daemon.doing_dhcp6 != false {
             lease_init(now);
         }
     }
@@ -359,13 +359,13 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         }
         need_cap_net_admin = 1 as libc::c_int
     }
-    if daemon.doing_ra != 0 || daemon.doing_dhcp6 != 0
+    if daemon.doing_ra != false || daemon.doing_dhcp6 != false
            || !daemon.relay6.is_null() {
         ra_init(now);
         need_cap_net_raw = 1 as libc::c_int;
         need_cap_net_admin = 1 as libc::c_int
     }
-    if daemon.doing_dhcp6 != 0 ||
+    if daemon.doing_dhcp6 != false ||
            !daemon.relay6.is_null() {
         dhcp6_init();
     }
@@ -491,27 +491,30 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
             }
         }
         /* after enumerate_interfaces()  */
-        bound_device = whichdevice();
-        if !daemon.dhcp.is_null() {
-            if daemon.relay4.is_null() && !bound_device.is_null() {
-                bindtodevice(bound_device, daemon.dhcpfd);
-                did_bind = 1 as libc::c_int
+        match whichdevice(&mut daemon) {
+            Some(x) => bound_device = x,
+            None => info!("bound_device not found")
+        };
+
+        if daemon.doing_dhcp {
+            if daemon.doing_relay4 == false && !bound_device.is_empty() {
+                bind_to_device(&bound_device, &mut daemon.dhcpfd);
+                did_bind = true
             }
-            if daemon.enable_pxe != 0 && !bound_device.is_null() {
-                bindtodevice(bound_device, daemon.pxefd);
-                did_bind = 1 as libc::c_int
+            if daemon.enable_pxe != 0 && !bound_device.is_empty() {
+                bind_to_device(&bound_device, &mut daemon.pxefd);
+                did_bind = true
             }
         }
-        if daemon.doing_dhcp6 != 0 &&
-               daemon.relay6.is_null() && !bound_device.is_null() {
-            bindtodevice(bound_device, daemon.dhcp6fd);
-            did_bind = 1 as libc::c_int
+        if daemon.doing_dhcp6 && daemon.doing_relay6 == false && !bound_device.is_empty() {
+            bind_to_device(&bound_device, &mut daemon.dhcp6fd);
+            did_bind = true
         }
     } else { create_wildcard_listeners(); }
     /* after enumerate_interfaces() */
-    if daemon.doing_dhcp6 != 0 ||
-           !daemon.relay6.is_null() ||
-           daemon.doing_ra != 0 {
+    if daemon.doing_dhcp6 == true ||
+           daemon.doing_relay_6 == true ||
+           daemon.doing_ra == true {
         join_multicast(1 as libc::c_int);
     }
     /* After netlink_init() and before create_helper() */

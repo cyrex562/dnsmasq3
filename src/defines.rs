@@ -10,6 +10,8 @@
     unused_mut
 )]
 
+use socket2::Socket;
+
 pub type __uint8_t = libc::c_uchar;
 
 pub type __uint16_t = libc::c_ushort;
@@ -99,11 +101,12 @@ pub struct sockaddr {
 #[derive(Clone)]
 #[repr(C)]
 pub struct msghdr {
-    pub msg_name: *mut libc::c_void,
+    pub msg_name: Vec<u8>,
     pub msg_namelen: socklen_t,
-    pub msg_iov: *mut iovec,
+    pub msg_iov: iovec,
     pub msg_iovlen: size_t,
-    pub msg_control: *mut libc::c_void,
+    pub msg_buf: Vec<u8>,
+    pub msg_control: Vec<u8>,
     pub msg_controllen: size_t,
     pub msg_flags: libc::c_int,
 }
@@ -304,7 +307,7 @@ pub struct crec {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_6 {
+pub union C2RustUnnamed_32 {
     pub sname: [libc::c_char; 50],
     pub bname: *mut bigname,
     pub namep: *mut libc::c_char,
@@ -668,7 +671,7 @@ pub struct dhcp_opt {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_7 {
+pub union C2RustUnnamed_31 {
     pub encap: libc::c_int,
     pub wildcard_mask: libc::c_uint,
     pub vendor_class: Vec<u8>,
@@ -878,7 +881,7 @@ pub struct opttab_t {
     pub size: u16_0,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[repr(C)]
 pub struct dnsmasq_daemon {
     pub options: [libc::c_uint; 2],
@@ -961,12 +964,15 @@ pub struct dnsmasq_daemon {
     pub tag_if: tag_if,
     pub override_relays: addr_list,
     pub relay4: dhcp_relay,
+    pub doing_relay_6: bool,
     pub relay6: dhcp_relay,
     pub delay_conf: delay_config,
     pub override_0: libc::c_int,
-    pub enable_pxe: libc::c_int,
-    pub doing_ra: libc::c_int,
-    pub doing_dhcp6: libc::c_int,
+    pub enable_pxe: bool,
+    pub doing_ra: bool,
+    pub doing_dhcp: bool,
+    pub doing_relay4: bool,
+    pub doing_dhcp6: bool,
     pub dhcp_ignore: dhcp_netid_list,
     pub dhcp_ignore_names: dhcp_netid_list,
     pub dhcp_gen_names: dhcp_netid_list,
@@ -1023,13 +1029,13 @@ pub struct dnsmasq_daemon {
     pub log_id: libc::c_int,
     pub log_display_id: libc::c_int,
     pub log_source_addr: mysockaddr,
-    pub dhcpfd: libc::c_int,
-    pub helperfd: libc::c_int,
-    pub pxefd: libc::c_int,
+    pub dhcpfd: Socket,
+    pub helperfd: Socket,
+    pub pxefd: Socket,
     pub inotifyfd: libc::c_int,
     pub netlinkfd: libc::c_int,
     pub kernel_version: libc::c_int,
-    pub dhcp_packet: iovec,
+    pub dhcp_packet: Vec<u8>,
     pub dhcp_buff: Vec<u8>,
     pub dhcp_buff2: Vec<u8>,
     pub dhcp_buff3: Vec<u8>,
@@ -1039,8 +1045,8 @@ pub struct dnsmasq_daemon {
     pub shared_networks: shared_network,
     pub duid_len: libc::c_int,
     pub duid: Vec<u8>,
-    pub outpacket: iovec,
-    pub dhcp6fd: libc::c_int,
+    pub outpacket: Vec<u8>,
+    pub dhcp6fd: Socket,
     pub icmp6fd: libc::c_int,
     pub dbus: *mut libc::c_void,
     pub tftp_trans: tftp_transfer,

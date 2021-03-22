@@ -19,8 +19,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{dnsmasq_daemon, irec, iname};
+use crate::defines::{dnsmasq_daemon, irec, iname, msghdr};
 use crate::util::expand_buf;
+use socket2::Socket;
+use std::io;
 
 pub fn dhcp_common_init(daemon: &mut dnsmasq_daemon) {
     /* These each hold a DHCP option max size 255
@@ -42,7 +44,7 @@ pub fn dhcp_common_init(daemon: &mut dnsmasq_daemon) {
 
 #[no_mangle]
 pub unsafe extern "C" fn recv_dhcp_packet(mut fd: libc::c_int,
-                                          mut msg: *mut msghdr) -> ssize_t {
+                                          mut msg: &mut msghdr) -> ssize_t {
     let mut sz: ssize_t = 0;
     let mut new_sz: ssize_t = 0;
     loop  {
@@ -745,22 +747,10 @@ pub fn whichdevice(daemon: &mut dnsmasq_daemon) -> Option<String> {
     return None;
 }
 
-pub unsafe fn bindtodevice(mut device: *mut libc::c_char,
-                                      mut fd: libc::c_int) {
-    let mut len: size_t =
-        strlen(device).wrapping_add(1 as libc::c_int as libc::c_ulong);
-    if len > 16 as libc::c_int as libc::c_ulong {
-        len = 16 as libc::c_int as size_t
-    }
-    /* only allowed by root. */
-    if setsockopt(fd, 1 as libc::c_int, 25 as libc::c_int,
-                  device as *const libc::c_void, len as socklen_t) ==
-           -(1 as libc::c_int) && *__errno_location() != 1 as libc::c_int {
-        die(b"failed to set SO_BINDTODEVICE on DHCP socket: %s\x00" as
-                *const u8 as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char, 2 as libc::c_int);
-    };
+pub fn bind_to_device(device: &String, fd: &mut Socket) -> io::Result<()> {
+    return fd.bind_device(device.as_bytes())
 }
+
 static mut opttab: [opttab_t; 74] =
     [{
          let mut init =
