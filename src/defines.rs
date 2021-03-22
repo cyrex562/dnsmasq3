@@ -81,11 +81,11 @@ pub struct timespec {
     pub tv_nsec: __syscall_slong_t,
 }
 
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone, Default)]
 #[repr(C)]
 pub struct iovec {
     pub iov_base: *mut libc::c_void,
-    pub iov_len: size_t,
+    pub iov_len: libc::size_t,
 }
 
 pub type socklen_t = __socklen_t;
@@ -234,16 +234,7 @@ pub union all_addr {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_0 {
-    pub keytag: libc::c_ushort,
-    pub algo: libc::c_ushort,
-    pub digest: libc::c_ushort,
-    pub rcode: libc::c_ushort,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_1 {
+pub struct C2RustUnnamed_29 {
     pub target: *mut blockdata,
     pub targetlen: libc::c_ushort,
     pub srvport: libc::c_ushort,
@@ -260,22 +251,27 @@ pub struct blockdata {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
+pub struct C2RustUnnamed_6 {
+    pub target: C2RustUnnamed_7,
+    pub uid: libc::c_uint,
+    pub is_name_ptr: libc::c_int,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_7 {
+    pub cache: *mut crec,
+    pub name: *mut libc::c_char,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub keydata: *mut blockdata,
     pub keylen: libc::c_ushort,
     pub keytag: libc::c_ushort,
     pub algo: libc::c_uchar,
     pub digest: libc::c_uchar,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_3 {
-    pub keydata: *mut blockdata,
-    pub keylen: libc::c_ushort,
-    pub flags: libc::c_ushort,
-    pub keytag: libc::c_ushort,
-    pub algo: libc::c_uchar,
 }
 
 #[derive(Copy, Clone)]
@@ -476,7 +472,7 @@ pub struct randfd {
     pub refcount: libc::c_ushort,
     pub family: libc::c_ushort,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct server {
     pub addr: mysockaddr,
@@ -490,9 +486,10 @@ pub struct server {
     pub pktsz_reduced: time_t,
     pub queries: libc::c_uint,
     pub failed_queries: libc::c_uint,
-    pub uid: u32_0,
+    pub uid: u32,
     pub next: *mut server,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ipsets {
@@ -500,7 +497,8 @@ pub struct ipsets {
     pub domain: *mut libc::c_char,
     pub next: *mut ipsets,
 }
-#[derive(Copy, Clone)]
+
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct irec {
     pub addr: mysockaddr,
@@ -516,9 +514,10 @@ pub struct irec {
     pub multicast_done: libc::c_int,
     pub found: libc::c_int,
     pub label: libc::c_int,
-    pub name: *mut libc::c_char,
+    pub name: String,
     pub next: *mut irec,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct listener {
@@ -527,17 +526,19 @@ pub struct listener {
     pub tftpfd: libc::c_int,
     pub used: libc::c_int,
     pub addr: mysockaddr,
-    pub iface: *mut irec,
+    pub iface: irec,
     pub next: *mut listener,
 }
-#[derive(Copy, Clone)]
+
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct iname {
-    pub name: *mut libc::c_char,
+    pub name: String,
     pub addr: mysockaddr,
     pub used: libc::c_int,
     pub next: *mut iname,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mysubnet {
@@ -545,6 +546,7 @@ pub struct mysubnet {
     pub addr_used: libc::c_int,
     pub mask: libc::c_int,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct resolvc {
@@ -552,33 +554,36 @@ pub struct resolvc {
     pub is_default: libc::c_int,
     pub logged: libc::c_int,
     pub mtime: time_t,
-    pub name: *mut libc::c_char,
+    pub name: String,
     pub wd: libc::c_int,
-    pub file: *mut libc::c_char,
+    pub file: String,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct hostsfile {
     pub next: *mut hostsfile,
     pub flags: libc::c_int,
-    pub fname: *mut libc::c_char,
+    pub fname: String,
     pub wd: libc::c_int,
     pub index: libc::c_uint,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct frec {
     pub frec_src: frec_src,
-    pub sentto: *mut server,
-    pub rfd4: *mut randfd,
-    pub rfd6: *mut randfd,
+    pub sentto: server,
+    pub rfd4: randfd,
+    pub rfd6: randfd,
     pub new_id: libc::c_ushort,
     pub forwardall: libc::c_int,
     pub flags: libc::c_int,
     pub time: time_t,
-    pub hash: [*mut libc::c_uchar; 32],
+    pub hash: Vec<u8>,
     pub next: *mut frec,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct frec_src {
@@ -590,18 +595,21 @@ pub struct frec_src {
     pub orig_id: libc::c_ushort,
     pub next: *mut frec_src,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_netid {
-    pub net: *mut libc::c_char,
+    pub net: String,
     pub next: *mut dhcp_netid,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_netid_list {
     pub list: *mut dhcp_netid,
     pub next: *mut dhcp_netid_list,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct tag_if {
@@ -609,6 +617,7 @@ pub struct tag_if {
     pub tag: *mut dhcp_netid,
     pub next: *mut tag_if,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct delay_config {
@@ -616,32 +625,35 @@ pub struct delay_config {
     pub netid: *mut dhcp_netid,
     pub next: *mut delay_config,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct hwaddr_config {
     pub hwaddr_len: libc::c_int,
     pub hwaddr_type: libc::c_int,
-    pub hwaddr: [libc::c_uchar; 16],
+    pub hwaddr: Vec<u8>,
     pub wildcard_mask: libc::c_uint,
     pub next: *mut hwaddr_config,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_config {
     pub flags: libc::c_uint,
     pub clid_len: libc::c_int,
-    pub clid: *mut libc::c_uchar,
-    pub hostname: *mut libc::c_char,
-    pub domain: *mut libc::c_char,
-    pub netid: *mut dhcp_netid_list,
-    pub filter: *mut dhcp_netid,
-    pub addr6: *mut addrlist,
+    pub clid: Vec<u8>,
+    pub hostname: String,
+    pub domain: String,
+    pub netid: dhcp_netid_list,
+    pub filter: dhcp_netid,
+    pub addr6: addrlist,
     pub addr: in_addr,
     pub decline_time: time_t,
     pub lease_time: libc::c_uint,
-    pub hwaddr: *mut hwaddr_config,
+    pub hwaddr: hwaddr_config,
     pub next: *mut dhcp_config,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_opt {
@@ -649,57 +661,63 @@ pub struct dhcp_opt {
     pub len: libc::c_int,
     pub flags: libc::c_int,
     pub u: C2RustUnnamed_7,
-    pub val: *mut libc::c_uchar,
-    pub netid: *mut dhcp_netid,
+    pub val: Vec<u8>,
+    pub netid: dhcp_netid,
     pub next: *mut dhcp_opt,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_7 {
     pub encap: libc::c_int,
     pub wildcard_mask: libc::c_uint,
-    pub vendor_class: *mut libc::c_uchar,
+    pub vendor_class: Vec<u8>,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_boot {
-    pub file: *mut libc::c_char,
-    pub sname: *mut libc::c_char,
-    pub tftp_sname: *mut libc::c_char,
+    pub file: String,
+    pub sname: String,
+    pub tftp_sname: String,
     pub next_server: in_addr,
-    pub netid: *mut dhcp_netid,
+    pub netid: dhcp_netid,
     pub next: *mut dhcp_boot,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_match_name {
-    pub name: *mut libc::c_char,
+    pub name: String,
     pub wildcard: libc::c_int,
-    pub netid: *mut dhcp_netid,
+    pub netid: dhcp_netid,
     pub next: *mut dhcp_match_name,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct pxe_service {
     pub CSA: libc::c_ushort,
     pub type_0: libc::c_ushort,
-    pub menu: *mut libc::c_char,
-    pub basename: *mut libc::c_char,
-    pub sname: *mut libc::c_char,
+    pub menu: String,
+    pub basename: String,
+    pub sname: String,
     pub server: in_addr,
-    pub netid: *mut dhcp_netid,
+    pub netid: dhcp_netid,
     pub next: *mut pxe_service,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_vendor {
     pub len: libc::c_int,
     pub match_type: libc::c_int,
     pub enterprise: libc::c_uint,
-    pub data: *mut libc::c_char,
+    pub data: String,
     pub netid: dhcp_netid,
     pub next: *mut dhcp_vendor,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_pxe_vendor {
@@ -747,7 +765,8 @@ pub struct ra_interface {
     pub mtu: libc::c_int,
     pub next: *mut ra_interface,
 }
-#[derive(Copy, Clone)]
+
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct dhcp_context {
     pub lease_time: libc::c_uint,
@@ -769,13 +788,14 @@ pub struct dhcp_context {
     pub ra_time: time_t,
     pub ra_short_period_start: time_t,
     pub address_lost_time: time_t,
-    pub template_interface: *mut libc::c_char,
+    pub template_interface: String,
     pub flags: libc::c_int,
     pub netid: dhcp_netid,
-    pub filter: *mut dhcp_netid,
-    pub next: *mut dhcp_context,
-    pub current: *mut dhcp_context,
+    pub filter: hcp_netid,
+    pub next: dhcp_context,
+    pub current: dhcp_context,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct shared_network {
@@ -838,7 +858,8 @@ pub struct tftp_prefix {
     pub missing: libc::c_int,
     pub next: *mut tftp_prefix,
 }
-#[derive(Copy, Clone)]
+
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct dhcp_relay {
     pub local: all_addr,
@@ -848,55 +869,64 @@ pub struct dhcp_relay {
     pub current: *mut dhcp_relay,
     pub next: *mut dhcp_relay,
 }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct opttab_t {
+    pub name: *mut libc::c_char,
+    pub val: u16_0,
+    pub size: u16_0,
+}
+
 #[derive(Clone)]
 #[repr(C)]
 pub struct dnsmasq_daemon {
     pub options: [libc::c_uint; 2],
     pub default_resolv: resolvc,
-    pub resolv_files: *mut resolvc,
+    pub resolv_files: resolvc,
     pub last_resolv: time_t,
-    pub servers_file: *mut libc::c_char,
-    pub mxnames: *mut mx_srv_record,
-    pub naptr: *mut naptr,
-    pub txt: *mut txt_record,
-    pub rr: *mut txt_record,
-    pub ptr: *mut ptr_record,
-    pub host_records: *mut host_record,
-    pub host_records_tail: *mut host_record,
-    pub cnames: *mut cname,
-    pub auth_zones: *mut auth_zone,
-    pub int_names: *mut interface_name,
-    pub mxtarget: *mut libc::c_char,
-    pub add_subnet4: *mut mysubnet,
-    pub add_subnet6: *mut mysubnet,
-    pub lease_file: *mut libc::c_char,
-    pub username: *mut libc::c_char,
-    pub groupname: *mut libc::c_char,
-    pub scriptuser: *mut libc::c_char,
-    pub luascript: *mut libc::c_char,
-    pub authserver: *mut libc::c_char,
-    pub hostmaster: *mut libc::c_char,
-    pub authinterface: *mut iname,
-    pub secondary_forward_server: *mut name_list,
+    pub servers_file: String,
+    pub mxnames: mx_srv_record,
+    pub naptr: naptr,
+    pub txt: txt_record,
+    pub rr: txt_record,
+    pub ptr: ptr_record,
+    pub host_records: host_record,
+    pub host_records_tail: host_record,
+    pub cnames: cname,
+    pub auth_zones: auth_zone,
+    pub int_names: interface_name,
+    pub mxtarget: String,
+    pub add_subnet4: mysubnet,
+    pub add_subnet6: mysubnet,
+    pub lease_file: String,
+    pub username: String,
+    pub groupname: String,
+    pub scriptuser: String,
+    pub luascript: String,
+    pub authserver: String,
+    pub hostmaster: String,
+    pub authinterface: iname,
+    pub secondary_forward_server: name_list,
     pub group_set: libc::c_int,
     pub osport: libc::c_int,
-    pub domain_suffix: *mut libc::c_char,
-    pub cond_domain: *mut cond_domain,
-    pub synth_domains: *mut cond_domain,
-    pub runfile: *mut libc::c_char,
-    pub lease_change_command: *mut libc::c_char,
-    pub if_names: *mut iname,
-    pub if_addrs: *mut iname,
-    pub if_except: *mut iname,
-    pub dhcp_except: *mut iname,
-    pub auth_peers: *mut iname,
-    pub tftp_interfaces: *mut iname,
-    pub bogus_addr: *mut bogus_addr,
-    pub ignore_addr: *mut bogus_addr,
-    pub servers: *mut server,
-    pub ipsets: *mut ipsets,
+    pub domain_suffix: String,
+    pub cond_domain: cond_domain,
+    pub synth_domains: cond_domain,
+    pub runfile: String,
+    pub lease_change_command: String,
+    pub if_names: iname,
+    pub if_addrs: iname,
+    pub if_except: iname,
+    pub dhcp_except: iname,
+    pub auth_peers: iname,
+    pub tftp_interfaces: iname,
+    pub bogus_addr: bogus_addr,
+    pub ignore_addr: bogus_addr,
+    pub servers: server,
+    pub ipsets: ipsets,
     pub log_fac: libc::c_int,
-    pub log_file: *mut libc::c_char,
+    pub log_file: String,
     pub max_logs: libc::c_int,
     pub cachesize: libc::c_int,
     pub ftabsize: libc::c_int,
@@ -912,39 +942,39 @@ pub struct dnsmasq_daemon {
     pub auth_ttl: libc::c_ulong,
     pub dhcp_ttl: libc::c_ulong,
     pub use_dhcp_ttl: libc::c_ulong,
-    pub dns_client_id: *mut libc::c_char,
-    pub addn_hosts: *mut hostsfile,
-    pub dhcp: *mut dhcp_context,
-    pub dhcp6: *mut dhcp_context,
-    pub ra_interfaces: *mut ra_interface,
-    pub dhcp_conf: *mut dhcp_config,
-    pub dhcp_opts: *mut dhcp_opt,
-    pub dhcp_match: *mut dhcp_opt,
-    pub dhcp_opts6: *mut dhcp_opt,
-    pub dhcp_match6: *mut dhcp_opt,
-    pub dhcp_name_match: *mut dhcp_match_name,
-    pub dhcp_pxe_vendors: *mut dhcp_pxe_vendor,
-    pub dhcp_vendors: *mut dhcp_vendor,
-    pub dhcp_macs: *mut dhcp_mac,
-    pub boot_config: *mut dhcp_boot,
-    pub pxe_services: *mut pxe_service,
-    pub tag_if: *mut tag_if,
-    pub override_relays: *mut addr_list,
-    pub relay4: *mut dhcp_relay,
-    pub relay6: *mut dhcp_relay,
-    pub delay_conf: *mut delay_config,
+    pub dns_client_id: String,
+    pub addn_hosts: hostsfile,
+    pub dhcp: dhcp_context,
+    pub dhcp6: dhcp_context,
+    pub ra_interfaces: ra_interface,
+    pub dhcp_conf: dhcp_config,
+    pub dhcp_opts: dhcp_opt,
+    pub dhcp_match: dhcp_opt,
+    pub dhcp_opts6: dhcp_opt,
+    pub dhcp_match6: dhcp_opt,
+    pub dhcp_name_match: dhcp_match_name,
+    pub dhcp_pxe_vendors: dhcp_pxe_vendor,
+    pub dhcp_vendors: dhcp_vendor,
+    pub dhcp_macs: dhcp_mac,
+    pub boot_config: dhcp_boot,
+    pub pxe_services: pxe_service,
+    pub tag_if: tag_if,
+    pub override_relays: addr_list,
+    pub relay4: dhcp_relay,
+    pub relay6: dhcp_relay,
+    pub delay_conf: delay_config,
     pub override_0: libc::c_int,
     pub enable_pxe: libc::c_int,
     pub doing_ra: libc::c_int,
     pub doing_dhcp6: libc::c_int,
-    pub dhcp_ignore: *mut dhcp_netid_list,
-    pub dhcp_ignore_names: *mut dhcp_netid_list,
-    pub dhcp_gen_names: *mut dhcp_netid_list,
-    pub force_broadcast: *mut dhcp_netid_list,
-    pub bootp_dynamic: *mut dhcp_netid_list,
-    pub dhcp_hosts_file: *mut hostsfile,
-    pub dhcp_opts_file: *mut hostsfile,
-    pub dynamic_dirs: *mut hostsfile,
+    pub dhcp_ignore: dhcp_netid_list,
+    pub dhcp_ignore_names: dhcp_netid_list,
+    pub dhcp_gen_names: dhcp_netid_list,
+    pub force_broadcast: dhcp_netid_list,
+    pub bootp_dynamic: dhcp_netid_list,
+    pub dhcp_hosts_file: hostsfile,
+    pub dhcp_opts_file: hostsfile,
+    pub dynamic_dirs: hostsfile,
     pub dhcp_max: libc::c_int,
     pub tftp_max: libc::c_int,
     pub tftp_mtu: libc::c_int,
@@ -953,16 +983,16 @@ pub struct dnsmasq_daemon {
     pub start_tftp_port: libc::c_int,
     pub end_tftp_port: libc::c_int,
     pub min_leasetime: libc::c_uint,
-    pub doctors: *mut doctor,
+    pub doctors: doctor,
     pub edns_pktsz: libc::c_ushort,
-    pub tftp_prefix: *mut libc::c_char,
-    pub if_prefix: *mut tftp_prefix,
+    pub tftp_prefix: String,
+    pub if_prefix: tftp_prefix,
     pub duid_enterprise: libc::c_uint,
     pub duid_config_len: libc::c_uint,
-    pub duid_config: *mut libc::c_uchar,
-    pub dbus_name: *mut libc::c_char,
-    pub ubus_name: *mut libc::c_char,
-    pub dump_file: *mut libc::c_char,
+    pub duid_config: String,
+    pub dbus_name: String,
+    pub ubus_name: String,
+    pub dump_file: String,
     pub dump_mask: libc::c_int,
     pub soa_sn: libc::c_ulong,
     pub soa_refresh: libc::c_ulong,
@@ -971,28 +1001,28 @@ pub struct dnsmasq_daemon {
     pub metrics: [u32_0; 20],
     pub packet: Vec<u8>,
     // pub packet_buff_sz: libc::c_int,
-    pub namebuff: *mut libc::c_char,
-    pub frec_list: *mut frec,
-    pub free_frec_src: *mut frec_src,
+    pub namebuff: String,
+    pub frec_list: frec,
+    pub free_frec_src: frec_src,
     pub frec_src_count: libc::c_int,
-    pub sfds: *mut serverfd,
-    pub interfaces: *mut irec,
-    pub listeners: *mut listener,
-    pub last_server: *mut server,
+    pub sfds: serverfd,
+    pub interfaces: irec,
+    pub listeners: listener,
+    pub last_server: server,
     pub forwardtime: time_t,
     pub forwardcount: libc::c_int,
-    pub srv_save: *mut server,
+    pub srv_save: server,
     pub packet_len: size_t,
-    pub rfd_save: *mut randfd,
+    pub rfd_save: randfd,
     pub tcp_pids: [pid_t; 20],
     pub tcp_pipes: [libc::c_int; 20],
     pub pipe_to_parent: libc::c_int,
     pub randomsocks: [randfd; 64],
     pub v6pktinfo: libc::c_int,
-    pub interface_addrs: *mut addrlist,
+    pub interface_addrs: addrlist,
     pub log_id: libc::c_int,
     pub log_display_id: libc::c_int,
-    pub log_source_addr: *mut mysockaddr,
+    pub log_source_addr: mysockaddr,
     pub dhcpfd: libc::c_int,
     pub helperfd: libc::c_int,
     pub pxefd: libc::c_int,
@@ -1000,21 +1030,21 @@ pub struct dnsmasq_daemon {
     pub netlinkfd: libc::c_int,
     pub kernel_version: libc::c_int,
     pub dhcp_packet: iovec,
-    pub dhcp_buff: *mut libc::c_char,
-    pub dhcp_buff2: *mut libc::c_char,
-    pub dhcp_buff3: *mut libc::c_char,
-    pub ping_results: *mut ping_result,
-    pub lease_stream: *mut FILE,
-    pub bridges: *mut dhcp_bridge,
-    pub shared_networks: *mut shared_network,
+    pub dhcp_buff: Vec<u8>,
+    pub dhcp_buff2: Vec<u8>,
+    pub dhcp_buff3: Vec<u8>,
+    pub ping_results: ping_result,
+    pub lease_stream: FILE,
+    pub bridges: dhcp_bridge,
+    pub shared_networks: shared_network,
     pub duid_len: libc::c_int,
-    pub duid: *mut libc::c_uchar,
+    pub duid: Vec<u8>,
     pub outpacket: iovec,
     pub dhcp6fd: libc::c_int,
     pub icmp6fd: libc::c_int,
     pub dbus: *mut libc::c_void,
-    pub tftp_trans: *mut tftp_transfer,
-    pub tftp_done_trans: *mut tftp_transfer,
+    pub tftp_trans: tftp_transfer,
+    pub tftp_done_trans: tftp_transfer,
     pub addrbuff: Vec<u8>,
     pub addrbuff2: Vec<u8>,
     pub dumpfd: libc::c_int,
@@ -1277,10 +1307,6 @@ pub type __compar_fn_t = Option<unsafe extern "C" fn(_: *const libc::c_void, _: 
 // pub fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //                 _: libc::c_int) -> libc::c_longlong;
 
-pub type intmax_t = __intmax_t;
-pub type uintmax_t = __uintmax_t;
-pub type __gwchar_t = libc::c_int;
-
 // #[inline]
 // pub unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
 //                                     mut endptr: *mut *mut libc::c_char,
@@ -1373,24 +1399,6 @@ pub unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
                     << 40 as libc::c_int |
                 (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong)
                     << 56 as libc::c_int) as __uint64_t;
-}
-
-#[inline]
-pub unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t)
-    -> __uint16_t {
-    return __x;
-}
-
-#[inline]
-pub unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t)
-    -> __uint32_t {
-    return __x;
-}
-
-#[inline]
-pub unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t)
-    -> __uint64_t {
-    return __x;
 }
 
 // #[inline]
@@ -2774,8 +2782,9 @@ pub struct __user_cap_data_struct {
     pub permitted: __u32,
     pub inheritable: __u32,
 }
-pub type cap_user_data_t = *mut __user_cap_data_struct;
-#[derive(Copy, Clone)]
+
+// pub type cap_user_data_t = *mut __user_cap_data_struct;
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct event_desc {
     pub event: libc::c_int,
@@ -3132,3 +3141,251 @@ pub struct _code {
 }
 
 pub type CODE = _code;
+
+#[inline]
+unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
+    return __x;
+}
+#[inline]
+unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+    return __x;
+}
+#[inline]
+unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
+    return __x;
+}
+
+pub type C2RustUnnamed_1 = libc::c_uint;
+pub const _ISalnum: C2RustUnnamed_1 = 8;
+pub const _ISpunct: C2RustUnnamed_1 = 4;
+pub const _IScntrl: C2RustUnnamed_1 = 2;
+pub const _ISblank: C2RustUnnamed_1 = 1;
+pub const _ISgraph: C2RustUnnamed_1 = 32768;
+pub const _ISprint: C2RustUnnamed_1 = 16384;
+pub const _ISspace: C2RustUnnamed_1 = 8192;
+pub const _ISxdigit: C2RustUnnamed_1 = 4096;
+pub const _ISdigit: C2RustUnnamed_1 = 2048;
+pub const _ISalpha: C2RustUnnamed_1 = 1024;
+pub const _ISlower: C2RustUnnamed_1 = 512;
+pub const _ISupper: C2RustUnnamed_1 = 256;
+pub type intmax_t = __intmax_t;
+pub type uintmax_t = __uintmax_t;
+pub type __gwchar_t = libc::c_int;
+
+pub const MSG_CMSG_CLOEXEC: libc::c_uint = 1073741824;
+pub const MSG_FASTOPEN: libc::c_uint = 536870912;
+pub const MSG_ZEROCOPY: libc::c_uint = 67108864;
+pub const MSG_BATCH: libc::c_uint = 262144;
+pub const MSG_WAITFORONE: libc::c_uint = 65536;
+pub const MSG_MORE: libc::c_uint = 32768;
+pub const MSG_NOSIGNAL: libc::c_uint = 16384;
+pub const MSG_ERRQUEUE: libc::c_uint = 8192;
+pub const MSG_RST: libc::c_uint = 4096;
+pub const MSG_CONFIRM: libc::c_uint = 2048;
+pub const MSG_SYN: libc::c_uint = 1024;
+pub const MSG_FIN: libc::c_uint = 512;
+pub const MSG_WAITALL: libc::c_uint = 256;
+pub const MSG_EOR: libc::c_uint = 128;
+pub const MSG_DONTWAIT: libc::c_uint = 64;
+pub const MSG_TRUNC: libc::c_uint = 32;
+pub const MSG_PROXY: libc::c_uint = 16;
+pub const MSG_CTRUNC: libc::c_uint = 8;
+pub const MSG_TRYHARD: libc::c_uint = 4;
+pub const MSG_DONTROUTE: libc::c_uint = 4;
+pub const MSG_PEEK: libc::c_uint = 2;
+pub const MSG_OOB: libc::c_uint = 1;
+
+// pub type _IO_wide_data;
+// pub type _IO_codecvt;
+// pub type _IO_marker;
+// #[no_mangle]
+// fn recvmsg(__fd: libc::c_int, __message: *mut msghdr,
+//            __flags: libc::c_int) -> ssize_t;
+// #[no_mangle]
+// fn setsockopt(__fd: libc::c_int, __level: libc::c_int,
+//               __optname: libc::c_int, __optval: *const libc::c_void,
+//               __optlen: socklen_t) -> libc::c_int;
+// #[no_mangle]
+// fn inet_ntop(__af: libc::c_int, __cp: *const libc::c_void,
+//              __buf: *mut libc::c_char, __len: socklen_t)
+//  -> *const libc::c_char;
+// #[no_mangle]
+// fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
+//            __stat_buf: *mut stat) -> libc::c_int;
+// #[no_mangle]
+// fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
+//             __stat_buf: *mut stat) -> libc::c_int;
+// #[no_mangle]
+// fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+//              __stat_buf: *mut stat64) -> libc::c_int;
+// #[no_mangle]
+// fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
+//               __stat_buf: *mut stat64) -> libc::c_int;
+// #[no_mangle]
+// fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
+//               __filename: *const libc::c_char, __stat_buf: *mut stat,
+//               __flag: libc::c_int) -> libc::c_int;
+// #[no_mangle]
+// fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
+//                 __filename: *const libc::c_char, __stat_buf: *mut stat64,
+//                 __flag: libc::c_int) -> libc::c_int;
+// #[no_mangle]
+// fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
+//             __stat_buf: *mut stat) -> libc::c_int;
+// #[no_mangle]
+// fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+//               __stat_buf: *mut stat64) -> libc::c_int;
+// #[no_mangle]
+// fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
+//             __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
+// #[no_mangle]
+// fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
+//               __path: *const libc::c_char, __mode: __mode_t,
+//               __dev: *mut __dev_t) -> libc::c_int;
+// #[no_mangle]
+// fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
+//  -> *mut libc::c_void;
+// #[no_mangle]
+// fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong)
+//  -> *mut libc::c_void;
+// #[no_mangle]
+// fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
+//           _: libc::c_ulong) -> libc::c_int;
+// #[no_mangle]
+// fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
+//  -> *mut libc::c_char;
+// #[no_mangle]
+// fn strncpy(_: *mut libc::c_char, _: *const libc::c_char, _: libc::c_ulong)
+//  -> *mut libc::c_char;
+// #[no_mangle]
+// fn strncat(_: *mut libc::c_char, _: *const libc::c_char, _: libc::c_ulong)
+//  -> *mut libc::c_char;
+// #[no_mangle]
+// fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
+// #[no_mangle]
+// fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
+// #[no_mangle]
+// fn strlen(_: *const libc::c_char) -> libc::c_ulong;
+// #[no_mangle]
+// fn strcasecmp(_: *const libc::c_char, _: *const libc::c_char)
+//  -> libc::c_int;
+// #[no_mangle]
+// static mut stdin: *mut FILE;
+// #[no_mangle]
+// static mut stdout: *mut FILE;
+// #[no_mangle]
+// fn printf(_: *const libc::c_char, _: ...) -> libc::c_int;
+// #[no_mangle]
+// fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...)
+//  -> libc::c_int;
+//
+// #[no_mangle]
+// fn getc(__stream: *mut FILE) -> libc::c_int;
+// #[no_mangle]
+// fn __uflow(_: *mut FILE) -> libc::c_int;
+// #[no_mangle]
+// fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
+// #[no_mangle]
+// fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
+// #[no_mangle]
+// fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+//               __delimiter: libc::c_int, __stream: *mut FILE) -> __ssize_t;
+// #[no_mangle]
+// fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+//  -> libc::c_double;
+// #[no_mangle]
+// fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//           _: libc::c_int) -> libc::c_long;
+// #[no_mangle]
+// fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//            _: libc::c_int) -> libc::c_longlong;
+// #[no_mangle]
+// fn __ctype_b_loc() -> *mut *const libc::c_ushort;
+// #[no_mangle]
+// fn __ctype_tolower_loc() -> *mut *const __int32_t;
+// #[no_mangle]
+// fn __ctype_toupper_loc() -> *mut *const __int32_t;
+// #[no_mangle]
+// fn __errno_location() -> *mut libc::c_int;
+// #[no_mangle]
+// fn __strtol_internal(__nptr: *const libc::c_char,
+//                      __endptr: *mut *mut libc::c_char,
+//                      __base: libc::c_int, __group: libc::c_int)
+//  -> libc::c_long;
+// #[no_mangle]
+// fn __strtoul_internal(__nptr: *const libc::c_char,
+//                       __endptr: *mut *mut libc::c_char,
+//                       __base: libc::c_int, __group: libc::c_int)
+//  -> libc::c_ulong;
+// #[no_mangle]
+// fn __wcstol_internal(__nptr: *const __gwchar_t,
+//                      __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
+//                      __group: libc::c_int) -> libc::c_long;
+// #[no_mangle]
+// fn __wcstoul_internal(__nptr: *const __gwchar_t,
+//                       __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
+//                       __group: libc::c_int) -> libc::c_ulong;
+// #[no_mangle]
+// static mut dnsmasq_daemon: *mut dnsmasq_daemon;
+// #[no_mangle]
+// fn cache_find_by_name(crecp: *mut crec, name: *mut libc::c_char,
+//                       now: time_t, prot: libc::c_uint) -> *mut crec;
+// #[no_mangle]
+// fn safe_malloc(size: size_t) -> *mut libc::c_void;
+// #[no_mangle]
+// fn whine_malloc(size: size_t) -> *mut libc::c_void;
+// #[no_mangle]
+// fn hostname_isequal(a: *const libc::c_char, b: *const libc::c_char)
+//  -> libc::c_int;
+// #[no_mangle]
+// fn is_same_net(a: in_addr, b: in_addr, mask: in_addr) -> libc::c_int;
+// #[no_mangle]
+// fn is_same_net6(a: *mut in6_addr, b: *mut in6_addr,
+//                 prefixlen: libc::c_int) -> libc::c_int;
+// #[no_mangle]
+// fn setaddr6part(addr: *mut in6_addr, host: u64_0);
+// #[no_mangle]
+// fn prettyprint_time(buf: *mut libc::c_char, t: libc::c_uint);
+// #[no_mangle]
+// fn memcmp_masked(a: *mut libc::c_uchar, b: *mut libc::c_uchar,
+//                  len: libc::c_int, mask: libc::c_uint) -> libc::c_int;
+// #[no_mangle]
+// fn expand_buf(iov: *mut iovec, size: size_t) -> libc::c_int;
+// #[no_mangle]
+// fn print_mac(buff: *mut libc::c_char, mac: *mut libc::c_uchar,
+//              len: libc::c_int) -> *mut libc::c_char;
+// #[no_mangle]
+// fn die(message: *mut libc::c_char, arg1: *mut libc::c_char,
+//        exit_code: libc::c_int) -> !;
+// #[no_mangle]
+// fn my_syslog(priority: libc::c_int, format: *const libc::c_char, _: ...);
+// #[no_mangle]
+// fn config_find_by_address6(configs: *mut dhcp_config, net: *mut in6_addr,
+//                            prefix: libc::c_int, addr: *mut in6_addr)
+//  -> *mut dhcp_config;
+// #[no_mangle]
+// fn indextoname(fd: libc::c_int, index: libc::c_int,
+//                name: *mut libc::c_char) -> libc::c_int;
+// #[no_mangle]
+// fn config_find_by_address(configs: *mut dhcp_config, addr: in_addr)
+//  -> *mut dhcp_config;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct dhcp_packet {
+    pub op: u8_0,
+    pub htype: u8_0,
+    pub hlen: u8_0,
+    pub hops: u8_0,
+    pub xid: u32_0,
+    pub secs: u16_0,
+    pub flags: u16_0,
+    pub ciaddr: in_addr,
+    pub yiaddr: in_addr,
+    pub siaddr: in_addr,
+    pub giaddr: in_addr,
+    pub chaddr: [u8_0; 16],
+    pub sname: [u8_0; 64],
+    pub file: [u8_0; 128],
+    pub options: [u8_0; 312],
+}

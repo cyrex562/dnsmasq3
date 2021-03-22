@@ -19,6 +19,8 @@
 /* The SURF random number generator was taken from djbdns-1.05, by 
    Daniel J Bernstein, which is public domain. */
 /* SURF random number generator */
+use crate::defines::iovec;
+
 static mut seed: [u32_0; 32] = [0; 32];
 static mut in_0: [u32_0; 12] = [0; 12];
 static mut out: [u32_0; 8] = [0; 8];
@@ -901,25 +903,26 @@ pub unsafe extern "C" fn memcmp_masked(mut a: *mut libc::c_uchar,
     }
     return count;
 }
+
 /* _note_ may copy buffer */
-#[no_mangle]
-pub unsafe extern "C" fn expand_buf(mut iov: *mut iovec, mut size: size_t)
- -> libc::c_int {
+pub unsafe fn expand_buf(mut iov: &mut iovec, mut size: usize)
+ -> u8 {
     let mut new: *mut libc::c_void = 0 as *mut libc::c_void;
-    if size <= (*iov).iov_len { return 1 as libc::c_int }
+    if size <= iov.iov_len { return 1; }
     new = whine_malloc(size);
     if new.is_null() {
-        *__errno_location() = 12 as libc::c_int;
-        return 0 as libc::c_int
+        *__errno_location() = 12;
+        return 0;
     }
-    if !(*iov).iov_base.is_null() {
-        memcpy(new, (*iov).iov_base, (*iov).iov_len);
-        free((*iov).iov_base);
+    if !iov.iov_base.is_null() {
+        memcpy(new, iov.iov_base, iov.iov_len);
+        free(iov.iov_base);
     }
-    (*iov).iov_base = new;
-    (*iov).iov_len = size;
-    return 1 as libc::c_int;
+    iov.iov_base = new;
+    iov.iov_len = size;
+    return 1;
 }
+
 #[no_mangle]
 pub unsafe extern "C" fn print_mac(mut buff: *mut libc::c_char,
                                    mut mac: *mut libc::c_uchar,

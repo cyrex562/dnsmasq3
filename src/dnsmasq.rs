@@ -4,12 +4,14 @@
 mod defines;
 mod util;
 mod option;
+mod dhcp_common;
 
 use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
 
 use libc;
 use crate::util::dnsmasq_time;
-use crate::defines::__user_cap_header_struct;
+use crate::defines::{__user_cap_header_struct, __user_cap_data_struct};
+use crate::dhcp_common::{dhcp_common_init, whichdevice, bindtodevice};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -42,7 +44,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                   sa_mask: __sigset_t{__val: [0; 16],},
                   sa_flags: 0,
                   sa_restorer: None,};
-    let mut if_tmp: *mut iname = 0 as *mut iname;
+    let mut if_tmp: iname = Default::default();
     let mut piperead: libc::c_int = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     let mut err_pipe: [libc::c_int; 2] = [0; 2];
@@ -57,17 +59,17 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     let mut chown_warn: libc::c_int = 0 as libc::c_int;
     // let mut hdr: cap_user_header_t = 0 as cap_user_header_t;
     let mut hdr: __user_cap_header_struct = Default::default();
-    let mut data: cap_user_data_t = 0 as cap_user_data_t;
-    let mut need_cap_net_admin: libc::c_int = 0 as libc::c_int;
-    let mut need_cap_net_raw: libc::c_int = 0 as libc::c_int;
-    let mut need_cap_net_bind_service: libc::c_int = 0 as libc::c_int;
-    let mut bound_device: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut did_bind: libc::c_int = 0 as libc::c_int;
-    let mut serv: *mut server = 0 as *mut server;
-    let mut netlink_warn: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut relay: *mut dhcp_relay = 0 as *mut dhcp_relay;
-    let mut tftp_prefix_missing: libc::c_int = 0 as libc::c_int;
+    let mut data: __user_cap_data_struct = Default::default();
+    let mut need_cap_net_admin: libc::c_int = 0;
+    let mut need_cap_net_raw: libc::c_int = 0;
+    let mut need_cap_net_bind_service: libc::c_int = 0;
+    let mut bound_device: String = String::new();
+    let mut did_bind: libc::c_int = 0;
+    let mut serv: server = Default::default();
+    let mut netlink_warn: String = String::new();
+    let mut context: dhcp_context = Default::default();
+    let mut relay: dhcp_relay = Default::default();
+    let mut tftp_prefix_missing: libc::c_int = 0;
     sigact.__sigaction_handler.sa_handler =
         Some(sig_handler as unsafe extern "C" fn(_: libc::c_int) -> ());
     sigact.sa_flags = 0 as libc::c_int;
@@ -139,9 +141,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     if daemon.lease_file.is_null() {
         if !daemon.dhcp.is_null() ||
                !daemon.dhcp6.is_null() {
-            daemon.lease_file =
-                b"/var/lib/misc/dnsmasq.leases\x00" as *const u8 as
-                    *const libc::c_char as *mut libc::c_char
+            daemon.lease_file = String::from("/var/lib/misc/dnsmasq.leases\x00");
         }
     }
     /* Ensure that at least stdin, stdout and stderr (fd 0, 1, 2) exist,
@@ -327,7 +327,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                                                                                          as
                                                                                          libc::c_ulong))
                != 0 {
-        dhcp_common_init();
+        dhcp_common_init(&mut daemon);
         if !daemon.dhcp.is_null() ||
                daemon.doing_dhcp6 != 0 {
             lease_init(now);
