@@ -1996,15 +1996,15 @@ pub type FILE = _IO_FILE;
 
 
 /* No MAC addr */
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct arp_record {
-    pub hwlen: libc::c_ushort,
-    pub status: libc::c_ushort,
+    pub hwlen: u16,
+    pub status: u16,
     pub family: libc::c_int,
-    pub hwaddr: [libc::c_uchar; 16],
+    pub hwaddr: [u8; 16],
     pub addr: all_addr,
-    pub next: *mut arp_record,
+    // pub next: *mut arp_record,
 }
 
 pub type __kernel_sa_family_t = libc::c_ushort;

@@ -5,6 +5,7 @@ mod defines;
 mod util;
 mod option;
 mod dhcp_common;
+mod arp;
 
 use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
 
