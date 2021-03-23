@@ -1,4 +1,587 @@
-/* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
+         non_upper_case_globals, unused_assignments, unused_mut)]
+#![register_tool(c2rust)]
+#![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
+extern "C" {
+    pub type _IO_wide_data;
+    pub type _IO_codecvt;
+    pub type _IO_marker;
+    #[no_mangle]
+    fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
+               __stat_buf: *mut stat) -> libc::c_int;
+    #[no_mangle]
+    fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
+                __stat_buf: *mut stat) -> libc::c_int;
+    #[no_mangle]
+    fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+                 __stat_buf: *mut stat64) -> libc::c_int;
+    #[no_mangle]
+    fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
+                  __stat_buf: *mut stat64) -> libc::c_int;
+    #[no_mangle]
+    fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
+                  __filename: *const libc::c_char, __stat_buf: *mut stat,
+                  __flag: libc::c_int) -> libc::c_int;
+    #[no_mangle]
+    fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
+                    __filename: *const libc::c_char, __stat_buf: *mut stat64,
+                    __flag: libc::c_int) -> libc::c_int;
+    #[no_mangle]
+    fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
+                __stat_buf: *mut stat) -> libc::c_int;
+    #[no_mangle]
+    fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+                  __stat_buf: *mut stat64) -> libc::c_int;
+    #[no_mangle]
+    fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
+                __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
+    #[no_mangle]
+    fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
+                  __path: *const libc::c_char, __mode: __mode_t,
+                  __dev: *mut __dev_t) -> libc::c_int;
+    #[no_mangle]
+    static mut stdin: *mut FILE;
+    #[no_mangle]
+    static mut stdout: *mut FILE;
+    #[no_mangle]
+    fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
+     -> libc::c_int;
+    #[no_mangle]
+    fn getc(__stream: *mut FILE) -> libc::c_int;
+    #[no_mangle]
+    fn __uflow(_: *mut FILE) -> libc::c_int;
+    #[no_mangle]
+    fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
+    #[no_mangle]
+    fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+                  __delimiter: libc::c_int, __stream: *mut FILE) -> __ssize_t;
+    #[no_mangle]
+    fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+     -> libc::c_double;
+    #[no_mangle]
+    fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+              _: libc::c_int) -> libc::c_long;
+    #[no_mangle]
+    fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+               _: libc::c_int) -> libc::c_longlong;
+    #[no_mangle]
+    fn __ctype_tolower_loc() -> *mut *const __int32_t;
+    #[no_mangle]
+    fn __ctype_toupper_loc() -> *mut *const __int32_t;
+    #[no_mangle]
+    fn __strtol_internal(__nptr: *const libc::c_char,
+                         __endptr: *mut *mut libc::c_char,
+                         __base: libc::c_int, __group: libc::c_int)
+     -> libc::c_long;
+    #[no_mangle]
+    fn __strtoul_internal(__nptr: *const libc::c_char,
+                          __endptr: *mut *mut libc::c_char,
+                          __base: libc::c_int, __group: libc::c_int)
+     -> libc::c_ulong;
+    #[no_mangle]
+    fn __wcstol_internal(__nptr: *const __gwchar_t,
+                         __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
+                         __group: libc::c_int) -> libc::c_long;
+    #[no_mangle]
+    fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
+    #[no_mangle]
+    fn __wcstoul_internal(__nptr: *const __gwchar_t,
+                          __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
+                          __group: libc::c_int) -> libc::c_ulong;
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct __va_list_tag {
+    pub gp_offset: libc::c_uint,
+    pub fp_offset: libc::c_uint,
+    pub overflow_arg_area: *mut libc::c_void,
+    pub reg_save_area: *mut libc::c_void,
+}
+pub type __uint16_t = libc::c_ushort;
+pub type __int32_t = libc::c_int;
+pub type __uint32_t = libc::c_uint;
+pub type __uint64_t = libc::c_ulong;
+pub type __intmax_t = libc::c_long;
+pub type __uintmax_t = libc::c_ulong;
+pub type __dev_t = libc::c_ulong;
+pub type __uid_t = libc::c_uint;
+pub type __gid_t = libc::c_uint;
+pub type __ino_t = libc::c_ulong;
+pub type __ino64_t = libc::c_ulong;
+pub type __mode_t = libc::c_uint;
+pub type __nlink_t = libc::c_ulong;
+pub type __off_t = libc::c_long;
+pub type __off64_t = libc::c_long;
+pub type __time_t = libc::c_long;
+pub type __blksize_t = libc::c_long;
+pub type __blkcnt_t = libc::c_long;
+pub type __blkcnt64_t = libc::c_long;
+pub type __ssize_t = libc::c_long;
+pub type __syscall_slong_t = libc::c_long;
+pub type __socklen_t = libc::c_uint;
+pub type size_t = libc::c_ulong;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct timespec {
+    pub tv_sec: __time_t,
+    pub tv_nsec: __syscall_slong_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct iovec {
+    pub iov_base: *mut libc::c_void,
+    pub iov_len: size_t,
+}
+pub type socklen_t = __socklen_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct msghdr {
+    pub msg_name: *mut libc::c_void,
+    pub msg_namelen: socklen_t,
+    pub msg_iov: *mut iovec,
+    pub msg_iovlen: size_t,
+    pub msg_control: *mut libc::c_void,
+    pub msg_controllen: size_t,
+    pub msg_flags: libc::c_int,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct cmsghdr {
+    pub cmsg_len: size_t,
+    pub cmsg_level: libc::c_int,
+    pub cmsg_type: libc::c_int,
+    pub __cmsg_data: [libc::c_uchar; 0],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct stat {
+    pub st_dev: __dev_t,
+    pub st_ino: __ino_t,
+    pub st_nlink: __nlink_t,
+    pub st_mode: __mode_t,
+    pub st_uid: __uid_t,
+    pub st_gid: __gid_t,
+    pub __pad0: libc::c_int,
+    pub st_rdev: __dev_t,
+    pub st_size: __off_t,
+    pub st_blksize: __blksize_t,
+    pub st_blocks: __blkcnt_t,
+    pub st_atim: timespec,
+    pub st_mtim: timespec,
+    pub st_ctim: timespec,
+    pub __glibc_reserved: [__syscall_slong_t; 3],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct stat64 {
+    pub st_dev: __dev_t,
+    pub st_ino: __ino64_t,
+    pub st_nlink: __nlink_t,
+    pub st_mode: __mode_t,
+    pub st_uid: __uid_t,
+    pub st_gid: __gid_t,
+    pub __pad0: libc::c_int,
+    pub st_rdev: __dev_t,
+    pub st_size: __off_t,
+    pub st_blksize: __blksize_t,
+    pub st_blocks: __blkcnt64_t,
+    pub st_atim: timespec,
+    pub st_mtim: timespec,
+    pub st_ctim: timespec,
+    pub __glibc_reserved: [__syscall_slong_t; 3],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _IO_FILE {
+    pub _flags: libc::c_int,
+    pub _IO_read_ptr: *mut libc::c_char,
+    pub _IO_read_end: *mut libc::c_char,
+    pub _IO_read_base: *mut libc::c_char,
+    pub _IO_write_base: *mut libc::c_char,
+    pub _IO_write_ptr: *mut libc::c_char,
+    pub _IO_write_end: *mut libc::c_char,
+    pub _IO_buf_base: *mut libc::c_char,
+    pub _IO_buf_end: *mut libc::c_char,
+    pub _IO_save_base: *mut libc::c_char,
+    pub _IO_backup_base: *mut libc::c_char,
+    pub _IO_save_end: *mut libc::c_char,
+    pub _markers: *mut _IO_marker,
+    pub _chain: *mut _IO_FILE,
+    pub _fileno: libc::c_int,
+    pub _flags2: libc::c_int,
+    pub _old_offset: __off_t,
+    pub _cur_column: libc::c_ushort,
+    pub _vtable_offset: libc::c_schar,
+    pub _shortbuf: [libc::c_char; 1],
+    pub _lock: *mut libc::c_void,
+    pub _offset: __off64_t,
+    pub _codecvt: *mut _IO_codecvt,
+    pub _wide_data: *mut _IO_wide_data,
+    pub _freeres_list: *mut _IO_FILE,
+    pub _freeres_buf: *mut libc::c_void,
+    pub __pad5: size_t,
+    pub _mode: libc::c_int,
+    pub _unused2: [libc::c_char; 20],
+}
+pub type _IO_lock_t = ();
+pub type FILE = _IO_FILE;
+pub type __compar_fn_t
+    =
+    Option<unsafe extern "C" fn(_: *const libc::c_void,
+                                _: *const libc::c_void) -> libc::c_int>;
+pub type intmax_t = __intmax_t;
+pub type uintmax_t = __uintmax_t;
+pub type __gwchar_t = libc::c_int;
+#[inline]
+unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
+                             mut __arg: ::std::ffi::VaList) -> libc::c_int {
+    return vfprintf(stdout, __fmt, __arg.as_va_list());
+}
+#[inline]
+unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
+#[inline]
+unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
+    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
+                  libc::c_long != 0 {
+               __uflow(__fp)
+           } else {
+               let fresh0 = (*__fp)._IO_read_ptr;
+               (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+               *(fresh0 as *mut libc::c_uchar) as libc::c_int
+           };
+}
+#[inline]
+unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
+    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
+                  libc::c_long != 0 {
+               __uflow(__fp)
+           } else {
+               let fresh1 = (*__fp)._IO_read_ptr;
+               (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+               *(fresh1 as *mut libc::c_uchar) as libc::c_int
+           };
+}
+#[inline]
+unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
+    return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as libc::c_int
+                  as libc::c_long != 0 {
+               __uflow(stdin)
+           } else {
+               let fresh2 = (*stdin)._IO_read_ptr;
+               (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+               *(fresh2 as *mut libc::c_uchar) as libc::c_int
+           };
+}
+#[inline]
+unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
+                               mut endptr: *mut *mut __gwchar_t,
+                               mut base: libc::c_int) -> uintmax_t {
+    return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
+}
+#[inline]
+unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+    return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
+                (__bsx as libc::c_int & 0xff as libc::c_int) <<
+                    8 as libc::c_int) as __uint16_t;
+}
+#[inline]
+unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+    return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
+               (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
+               (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
+               (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
+}
+#[inline]
+unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+    return ((__bsx as libc::c_ulonglong &
+                 0xff00000000000000 as libc::c_ulonglong) >> 56 as libc::c_int
+                |
+                (__bsx as libc::c_ulonglong &
+                     0xff000000000000 as libc::c_ulonglong) >>
+                    40 as libc::c_int |
+                (__bsx as libc::c_ulonglong &
+                     0xff0000000000 as libc::c_ulonglong) >> 24 as libc::c_int
+                |
+                (__bsx as libc::c_ulonglong &
+                     0xff00000000 as libc::c_ulonglong) >> 8 as libc::c_int |
+                (__bsx as libc::c_ulonglong & 0xff000000 as libc::c_ulonglong)
+                    << 8 as libc::c_int |
+                (__bsx as libc::c_ulonglong & 0xff0000 as libc::c_ulonglong)
+                    << 24 as libc::c_int |
+                (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong) <<
+                    40 as libc::c_int |
+                (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong) <<
+                    56 as libc::c_int) as __uint64_t;
+}
+#[inline]
+unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
+    return __x;
+}
+#[inline]
+unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+    return __x;
+}
+#[inline]
+unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
+    return __x;
+}
+#[inline]
+unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
+                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
+    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
+       {
+        return 0 as *mut cmsghdr
+    }
+    __cmsg =
+        (__cmsg as
+             *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+                                                                             as
+                                                                             libc::c_ulong).wrapping_sub(1
+                                                                                                             as
+                                                                                                             libc::c_int
+                                                                                                             as
+                                                                                                             libc::c_ulong)
+                                             &
+                                             !(::std::mem::size_of::<size_t>()
+                                                   as
+                                                   libc::c_ulong).wrapping_sub(1
+                                                                                   as
+                                                                                   libc::c_int
+                                                                                   as
+                                                                                   libc::c_ulong))
+                                            as isize) as *mut cmsghdr;
+    if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
+           ((*__mhdr).msg_control as
+                *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
+           ||
+           (__cmsg as
+                *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                as
+                                                                                libc::c_ulong).wrapping_sub(1
+                                                                                                                as
+                                                                                                                libc::c_int
+                                                                                                                as
+                                                                                                                libc::c_ulong)
+                                                &
+                                                !(::std::mem::size_of::<size_t>()
+                                                      as
+                                                      libc::c_ulong).wrapping_sub(1
+                                                                                      as
+                                                                                      libc::c_int
+                                                                                      as
+                                                                                      libc::c_ulong))
+                                               as isize) >
+               ((*__mhdr).msg_control as
+                    *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+                                                   isize) {
+        return 0 as *mut cmsghdr
+    }
+    return __cmsg;
+}
+#[inline]
+unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
+                                    mut __stream: *mut FILE) -> libc::c_int {
+    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+                  libc::c_int as libc::c_long != 0 {
+               __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+           } else {
+               let fresh3 = (*__stream)._IO_write_ptr;
+               (*__stream)._IO_write_ptr =
+                   (*__stream)._IO_write_ptr.offset(1);
+               *fresh3 = __c as libc::c_char;
+               *fresh3 as libc::c_uchar as libc::c_int
+           };
+}
+#[inline]
+unsafe extern "C" fn stat(mut __path: *const libc::c_char,
+                          mut __statbuf: *mut stat) -> libc::c_int {
+    return __xstat(1 as libc::c_int, __path, __statbuf);
+}
+#[inline]
+unsafe extern "C" fn fstat(mut __fd: libc::c_int, mut __statbuf: *mut stat)
+ -> libc::c_int {
+    return __fxstat(1 as libc::c_int, __fd, __statbuf);
+}
+#[inline]
+unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
+                            mut __statbuf: *mut stat64) -> libc::c_int {
+    return __xstat64(1 as libc::c_int, __path, __statbuf);
+}
+#[inline]
+unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
+                             mut __statbuf: *mut stat64) -> libc::c_int {
+    return __fxstat64(1 as libc::c_int, __fd, __statbuf);
+}
+#[inline]
+unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
+                             mut __filename: *const libc::c_char,
+                             mut __statbuf: *mut stat,
+                             mut __flag: libc::c_int) -> libc::c_int {
+    return __fxstatat(1 as libc::c_int, __fd, __filename, __statbuf, __flag);
+}
+#[inline]
+unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
+                               mut __filename: *const libc::c_char,
+                               mut __statbuf: *mut stat64,
+                               mut __flag: libc::c_int) -> libc::c_int {
+    return __fxstatat64(1 as libc::c_int, __fd, __filename, __statbuf,
+                        __flag);
+}
+#[inline]
+unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
+                           mut __statbuf: *mut stat) -> libc::c_int {
+    return __lxstat(1 as libc::c_int, __path, __statbuf);
+}
+#[inline]
+unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
+                             mut __statbuf: *mut stat64) -> libc::c_int {
+    return __lxstat64(1 as libc::c_int, __path, __statbuf);
+}
+#[inline]
+unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
+                           mut __mode: __mode_t, mut __dev: __dev_t)
+ -> libc::c_int {
+    return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
+}
+#[inline]
+unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
+                             mut __path: *const libc::c_char,
+                             mut __mode: __mode_t, mut __dev: __dev_t)
+ -> libc::c_int {
+    return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
+}
+#[inline]
+unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
+    return putc(__c, stdout);
+}
+#[inline]
+unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
+                                   mut __stream: *mut FILE) -> libc::c_int {
+    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+                  libc::c_int as libc::c_long != 0 {
+               __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+           } else {
+               let fresh4 = (*__stream)._IO_write_ptr;
+               (*__stream)._IO_write_ptr =
+                   (*__stream)._IO_write_ptr.offset(1);
+               *fresh4 = __c as libc::c_char;
+               *fresh4 as libc::c_uchar as libc::c_int
+           };
+}
+#[inline]
+unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
+    return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
+                  libc::c_int as libc::c_long != 0 {
+               __overflow(stdout, __c as libc::c_uchar as libc::c_int)
+           } else {
+               let fresh5 = (*stdout)._IO_write_ptr;
+               (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
+               *fresh5 = __c as libc::c_char;
+               *fresh5 as libc::c_uchar as libc::c_int
+           };
+}
+#[inline]
+unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
+                             mut __n: *mut size_t, mut __stream: *mut FILE)
+ -> __ssize_t {
+    return __getdelim(__lineptr, __n, '\n' as i32, __stream);
+}
+#[inline]
+unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) -> libc::c_int {
+    return ((*__stream)._flags & 0x10 as libc::c_int != 0 as libc::c_int) as
+               libc::c_int;
+}
+#[inline]
+unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) -> libc::c_int {
+    return ((*__stream)._flags & 0x20 as libc::c_int != 0 as libc::c_int) as
+               libc::c_int;
+}
+#[inline]
+unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
+    return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
+}
+#[inline]
+unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) -> libc::c_int {
+    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+                  10 as libc::c_int) as libc::c_int;
+}
+#[inline]
+unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
+    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+                  10 as libc::c_int);
+}
+#[inline]
+unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
+ -> libc::c_longlong {
+    return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+                   10 as libc::c_int);
+}
+#[inline]
+unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
+                             mut __base: *const libc::c_void,
+                             mut __nmemb: size_t, mut __size: size_t,
+                             mut __compar: __compar_fn_t)
+ -> *mut libc::c_void {
+    let mut __l: size_t = 0;
+    let mut __u: size_t = 0;
+    let mut __idx: size_t = 0;
+    let mut __p: *const libc::c_void = 0 as *const libc::c_void;
+    let mut __comparison: libc::c_int = 0;
+    __l = 0 as libc::c_int as size_t;
+    __u = __nmemb;
+    while __l < __u {
+        __idx =
+            __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
+                                                   libc::c_ulong);
+        __p =
+            (__base as
+                 *const libc::c_char).offset(__idx.wrapping_mul(__size) as
+                                                 isize) as *mut libc::c_void;
+        __comparison =
+            Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
+                                                                                                   __p);
+        if __comparison < 0 as libc::c_int {
+            __u = __idx
+        } else if __comparison > 0 as libc::c_int {
+            __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
+        } else { return __p as *mut libc::c_void }
+    }
+    return 0 as *mut libc::c_void;
+}
+#[inline]
+unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
+    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+               *(*__ctype_tolower_loc()).offset(__c as isize)
+           } else { __c };
+}
+#[inline]
+unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
+    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+               *(*__ctype_toupper_loc()).offset(__c as isize)
+           } else { __c };
+}
+#[inline]
+unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
+                               mut endptr: *mut *mut libc::c_char,
+                               mut base: libc::c_int) -> intmax_t {
+    return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
+}
+#[inline]
+unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
+                               mut endptr: *mut *mut libc::c_char,
+                               mut base: libc::c_int) -> uintmax_t {
+    return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
+}
+#[inline]
+unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
+                               mut endptr: *mut *mut __gwchar_t,
+                               mut base: libc::c_int) -> intmax_t {
+    return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
+}
+/* HAVE_BSD_NETWORK */
+/* defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP) */
+/* defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK) */
+/* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,438 +596,3 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#include "dnsmasq.h"
-
-#if defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
-#include <ifaddrs.h>
-
-#include <sys/param.h>
-#if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
-#include <sys/sysctl.h>
-#endif
-#include <net/if.h>
-#include <net/route.h>
-#include <net/if_dl.h>
-#include <netinet/if_ether.h>
-#if defined(__FreeBSD__)
-#  include <net/if_var.h> 
-#endif
-#include <netinet/in_var.h>
-#ifdef HAVE_IPV6
-#  include <netinet6/in6_var.h>
-#endif
-
-#ifndef SA_SIZE
-#define SA_SIZE(sa)                                             \
-    (  (!(sa) || ((struct sockaddr *)(sa))->sa_len == 0) ?      \
-        sizeof(long)            :                               \
-        1 + ( (((struct sockaddr *)(sa))->sa_len - 1) | (sizeof(long) - 1) ) )
-#endif
-
-#ifdef HAVE_BSD_NETWORK
-static int del_family = 0;
-static struct all_addr del_addr;
-#endif
-
-#if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
-
-int arp_enumerate(void *parm, int (*callback)())
-{
-  int mib[6];
-  size_t needed;
-  char *next;
-  struct rt_msghdr *rtm;
-  struct sockaddr_inarp *sin2;
-  struct sockaddr_dl *sdl;
-  struct iovec buff;
-  int rc;
-
-  buff.iov_base = nullptr;
-  buff.iov_len = 0;
-
-  mib[0] = CTL_NET;
-  mib[1] = PF_ROUTE;
-  mib[2] = 0;
-  mib[3] = AF_INET;
-  mib[4] = NET_RT_FLAGS;
-#ifdef RTF_LLINFO
-  mib[5] = RTF_LLINFO;
-#else
-  mib[5] = 0;
-#endif	
-  if (sysctl(mib, 6, nullptr, &needed, nullptr, 0) == -1 || needed == 0)
-    return 0;
-
-  while (1) 
-    {
-      if (!expand_buf(&buff, needed))
-	return 0;
-      if ((rc = sysctl(mib, 6, buff.iov_base, &needed, nullptr, 0)) == 0 ||
-	  errno != ENOMEM)
-	break;
-      needed += needed / 8;
-    }
-  if (rc == -1)
-    return 0;
-  
-  for (next = buff.iov_base ; next < (char *)buff.iov_base + needed; next += rtm->rtm_msglen)
-    {
-      rtm = (struct rt_msghdr *)next;
-      sin2 = (struct sockaddr_inarp *)(rtm + 1);
-      sdl = (struct sockaddr_dl *)((char *)sin2 + SA_SIZE(sin2));
-      if (!(*callback)(AF_INET, &sin2->sin_addr, LLADDR(sdl), sdl->sdl_alen, parm))
-	return 0;
-    }
-
-  return 1;
-}
-#endif /* defined(HAVE_BSD_NETWORK) && !defined(__APPLE__) */
-
-
-int iface_enumerate(int family, void *parm, int (*callback)())
-{
-  struct ifaddrs *head, *addrs;
-  int errsave, fd = -1, ret = 0;
-
-  if (family == AF_UNSPEC)
-#if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
-    return  arp_enumerate(parm, callback);
-#else
-  return 0; /* need code for Solaris and MacOS*/
-#endif
-
-  /* AF_LINK doesn't exist in Linux, so we can't use it in our API */
-  if (family == AF_LOCAL)
-    family = AF_LINK;
-
-  if (getifaddrs(&head) == -1)
-    return 0;
-
-#if defined(HAVE_BSD_NETWORK) && defined(HAVE_IPV6)
-  if (family == AF_INET6)
-    fd = socket(PF_INET6, SOCK_DGRAM, 0);
-#endif
-  
-  for (addrs = head; addrs; addrs = addrs->ifa_next)
-    {
-      if (addrs->ifa_addr->sa_family == family)
-	{
-	  int iface_index = if_nametoindex(addrs->ifa_name);
-
-	  if (iface_index == 0 || !addrs->ifa_addr || 
-	      (!addrs->ifa_netmask && family != AF_LINK))
-	    continue;
-
-	  if (family == AF_INET)
-	    {
-	      struct in_addr addr, netmask, broadcast;
-	      addr = ((struct sockaddr_in *) addrs->ifa_addr)->sin_addr;
-#ifdef HAVE_BSD_NETWORK
-	      if (del_family == AF_INET && del_addr.addr.addr4.s_addr == addr.s_addr)
-		continue;
-#endif
-	      netmask = ((struct sockaddr_in *) addrs->ifa_netmask)->sin_addr;
-	      if (addrs->ifa_broadaddr)
-		broadcast = ((struct sockaddr_in *) addrs->ifa_broadaddr)->sin_addr; 
-	      else 
-		broadcast.s_addr = 0;	      
-	      if (!((*callback)(addr, iface_index, nullptr, netmask, broadcast, parm)))
-		goto err;
-	    }
-#ifdef HAVE_IPV6
-	  else if (family == AF_INET6)
-	    {
-	      struct in6_addr *addr = &((struct sockaddr_in6 *) addrs->ifa_addr)->sin6_addr;
-	      unsigned char *netmask = (unsigned char *) &((struct sockaddr_in6 *) addrs->ifa_netmask)->sin6_addr;
-	      int scope_id = ((struct sockaddr_in6 *) addrs->ifa_addr)->sin6_scope_id;
-	      int i, j, prefix = 0;
-	      uint32_t valid = 0xffffffff, preferred = 0xffffffff;
-	      int flags = 0;
-#ifdef HAVE_BSD_NETWORK
-	      if (del_family == AF_INET6 && IN6_ARE_ADDR_EQUAL(&del_addr.addr.addr6, addr))
-		continue;
-#endif
-#if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
-	      struct in6_ifreq ifr6;
-
-	      memset(&ifr6, 0, sizeof(ifr6));
-	      safe_strncpy(ifr6.ifr_name, addrs->ifa_name, sizeof(ifr6.ifr_name));
-	      
-	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs->ifa_addr);
-	      if (fd != -1 && ioctl(fd, SIOCGIFAFLAG_IN6, &ifr6) != -1)
-		{
-		  if (ifr6.ifr_ifru.ifru_flags6 & IN6_IFF_TENTATIVE)
-		    flags |= IFACE_TENTATIVE;
-		  
-		  if (ifr6.ifr_ifru.ifru_flags6 & IN6_IFF_DEPRECATED)
-		    flags |= IFACE_DEPRECATED;
-
-#ifdef IN6_IFF_TEMPORARY
-		  if (!(ifr6.ifr_ifru.ifru_flags6 & (IN6_IFF_AUTOCONF | IN6_IFF_TEMPORARY)))
-		    flags |= IFACE_PERMANENT;
-#endif
-
-#ifdef IN6_IFF_PRIVACY
-		  if (!(ifr6.ifr_ifru.ifru_flags6 & (IN6_IFF_AUTOCONF | IN6_IFF_PRIVACY)))
-		    flags |= IFACE_PERMANENT;
-#endif
-		}
-	      
-	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs->ifa_addr);
-	      if (fd != -1 && ioctl(fd, SIOCGIFALIFETIME_IN6, &ifr6) != -1)
-		{
-		  valid = ifr6.ifr_ifru.ifru_lifetime.ia6t_vltime;
-		  preferred = ifr6.ifr_ifru.ifru_lifetime.ia6t_pltime;
-		}
-#endif
-	      	      
-	      for (i = 0; i < IN6ADDRSZ; i++, prefix += 8) 
-                if (netmask[i] != 0xff)
-		  break;
-	      
-	      if (i != IN6ADDRSZ && netmask[i]) 
-                for (j = 7; j > 0; j--, prefix++) 
-		  if ((netmask[i] & (1 << j)) == 0)
-		    break;
-	      
-	      /* voodoo to clear interface field in address */
-	      if (!option_bool(OPT_NOWILD) && IN6_IS_ADDR_LINKLOCAL(addr))
-		{
-		  addr->s6_addr[2] = 0;
-		  addr->s6_addr[3] = 0;
-		} 
-	     
-	      if (!((*callback)(addr, prefix, scope_id, iface_index, flags,
-				(int) preferred, (int)valid, parm)))
-		goto err;	      
-	    }
-#endif /* HAVE_IPV6 */
-
-#ifdef HAVE_DHCP6      
-	  else if (family == AF_LINK)
-	    { 
-	      /* Assume ethernet again here */
-	      struct sockaddr_dl *sdl = (struct sockaddr_dl *) addrs->ifa_addr;
-	      if (sdl->sdl_alen != 0 && 
-		  !((*callback)(iface_index, ARPHRD_ETHER, LLADDR(sdl), sdl->sdl_alen, parm)))
-		goto err;
-	    }
-#endif 
-	}
-    }
-  
-  ret = 1;
-
- err:
-  errsave = errno;
-  freeifaddrs(head); 
-  if (fd != -1)
-    close(fd);
-  errno = errsave;
-
-  return ret;
-}
-#endif /* defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK) */
-
-
-#if defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP)
-#include <net/bpf.h>
-
-void init_bpf(void)
-{
-  int i = 0;
-
-  while (1) 
-    {
-      sprintf(daemon->dhcp_buff, "/dev/bpf%d", i++);
-      if ((daemon->dhcp_raw_fd = open(daemon->dhcp_buff, O_RDWR, 0)) != -1)
-	return;
-
-      if (errno != EBUSY)
-	die(_("cannot create DHCP BPF socket: %s"), nullptr, EC_BADNET);
-    }	     
-}
-
-void send_via_bpf(struct dhcp_packet *mess, size_t len,
-		  struct in_addr iface_addr, struct ifreq *ifr)
-{
-   /* Hairy stuff, packet either has to go to the
-      net broadcast or the destination can't reply to ARP yet,
-      but we do know the physical address. 
-      Build the packet by steam, and send directly, bypassing
-      the kernel IP stack */
-  
-  struct ether_header ether; 
-  struct ip ip;
-  struct udphdr {
-    uint16_t uh_sport;               /* source port */
-    uint16_t uh_dport;               /* destination port */
-    uint16_t uh_ulen;                /* udp length */
-    uint16_t uh_sum;                 /* udp checksum */
-  } udp;
-  
-  uint32_t i, sum;
-  struct iovec iov[4];
-
-  /* Only know how to do ethernet on *BSD */
-  if (mess->htype != ARPHRD_ETHER || mess->hlen != ETHER_ADDR_LEN)
-    {
-      my_syslog(MS_DHCP | LOG_WARNING, _("DHCP request for unsupported hardware type (%d) received on %s"), 
-		mess->htype, ifr->ifr_name);
-      return;
-    }
-   
-  ifr->ifr_addr.sa_family = AF_LINK;
-  if (ioctl(daemon->dhcpfd, SIOCGIFADDR, ifr) < 0)
-    return;
-  
-  memcpy(ether.ether_shost, LLADDR((struct sockaddr_dl *)&ifr->ifr_addr), ETHER_ADDR_LEN);
-  ether.ether_type = htons(ETHERTYPE_IP);
-  
-  if (ntohs(mess->flags) & 0x8000)
-    {
-      memset(ether.ether_dhost, 255,  ETHER_ADDR_LEN);
-      ip.ip_dst.s_addr = INADDR_BROADCAST;
-    }
-  else
-    {
-      memcpy(ether.ether_dhost, mess->chaddr, ETHER_ADDR_LEN); 
-      ip.ip_dst.s_addr = mess->yiaddr.s_addr;
-    }
-  
-  ip.ip_p = IPPROTO_UDP;
-  ip.ip_src.s_addr = iface_addr.s_addr;
-  ip.ip_len = htons(sizeof(struct ip) + 
-		    sizeof(struct udphdr) +
-		    len) ;
-  ip.ip_hl = sizeof(struct ip) / 4;
-  ip.ip_v = IPVERSION;
-  ip.ip_tos = 0;
-  ip.ip_id = htons(0);
-  ip.ip_off = htons(0x4000); /* don't fragment */
-  ip.ip_ttl = IPDEFTTL;
-  ip.ip_sum = 0;
-  for (sum = 0, i = 0; i < sizeof(struct ip) / 2; i++)
-    sum += ((uint16_t *)&ip)[i];
-  while (sum>>16)
-    sum = (sum & 0xffff) + (sum >> 16);  
-  ip.ip_sum = (sum == 0xffff) ? sum : ~sum;
-  
-  udp.uh_sport = htons(daemon->dhcp_server_port);
-  udp.uh_dport = htons(daemon->dhcp_client_port);
-  if (len & 1)
-    ((char *)mess)[len] = 0; /* for checksum, in case length is odd. */
-  udp.uh_sum = 0;
-  udp.uh_ulen = sum = htons(sizeof(struct udphdr) + len);
-  sum += htons(IPPROTO_UDP);
-  sum += ip.ip_src.s_addr & 0xffff;
-  sum += (ip.ip_src.s_addr >> 16) & 0xffff;
-  sum += ip.ip_dst.s_addr & 0xffff;
-  sum += (ip.ip_dst.s_addr >> 16) & 0xffff;
-  for (i = 0; i < sizeof(struct udphdr)/2; i++)
-    sum += ((uint16_t *)&udp)[i];
-  for (i = 0; i < (len + 1) / 2; i++)
-    sum += ((uint16_t *)mess)[i];
-  while (sum>>16)
-    sum = (sum & 0xffff) + (sum >> 16);
-  udp.uh_sum = (sum == 0xffff) ? sum : ~sum;
-  
-  ioctl(daemon->dhcp_raw_fd, BIOCSETIF, ifr);
-  
-  iov[0].iov_base = &ether;
-  iov[0].iov_len = sizeof(ether);
-  iov[1].iov_base = &ip;
-  iov[1].iov_len = sizeof(ip);
-  iov[2].iov_base = &udp;
-  iov[2].iov_len = sizeof(udp);
-  iov[3].iov_base = mess;
-  iov[3].iov_len = len;
-
-  while (retry_send(writev(daemon->dhcp_raw_fd, iov, 4)));
-}
-
-#endif /* defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP) */
- 
-
-#ifdef HAVE_BSD_NETWORK
-
-void route_init(void)
-{
-  /* AF_UNSPEC: all addr families */
-  daemon->routefd = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-  
-  if (daemon->routefd == -1 || !fix_fd(daemon->routefd))
-    die(_("cannot create PF_ROUTE socket: %s"), nullptr, EC_BADNET);
-}
-
-void route_sock(void)
-{
-  struct if_msghdr *msg;
-  int rc = recv(daemon->routefd, daemon->packet, daemon->packet_buff_sz, 0);
-
-  if (rc < 4)
-    return;
-
-  msg = (struct if_msghdr *)daemon->packet;
-  
-  if (rc < msg->ifm_msglen)
-    return;
-
-   if (msg->ifm_version != RTM_VERSION)
-     {
-       static int warned = 0;
-       if (!warned)
-	 {
-	   my_syslog(LOG_WARNING, _("Unknown protocol version from route socket"));
-	   warned = 1;
-	 }
-     }
-   else if (msg->ifm_type == RTM_NEWADDR)
-     {
-       del_family = 0;
-       queue_event(EVENT_NEWADDR);
-     }
-   else if (msg->ifm_type == RTM_DELADDR)
-     {
-       /* There's a race in the kernel, such that if we run iface_enumerate() immediately
-	  we get a DELADDR event, the deleted address still appears. Here we store the deleted address
-	  in a static variable, and omit it from the set returned by iface_enumerate() */
-       int mask = ((struct ifa_msghdr *)msg)->ifam_addrs;
-       int maskvec[] = { RTA_DST, RTA_GATEWAY, RTA_NETMASK, RTA_GENMASK,
-			 RTA_IFP, RTA_IFA, RTA_AUTHOR, RTA_BRD };
-       int of;
-       unsigned int i;
-       
-       for (i = 0,  of = sizeof(struct ifa_msghdr); of < rc && i < sizeof(maskvec)/sizeof(maskvec[0]); i++) 
-	 if (mask & maskvec[i]) 
-	   {
-	     struct sockaddr *sa = (struct sockaddr *)((char *)msg + of);
-	     size_t diff = (sa->sa_len != 0) ? sa->sa_len : sizeof(long);
-	     
-	     if (maskvec[i] == RTA_IFA)
-	       {
-		 del_family = sa->sa_family;
-		 if (del_family == AF_INET)
-		   del_addr.addr.addr4 = ((struct sockaddr_in *)sa)->sin_addr;
-#ifdef HAVE_IPV6
-		 else if (del_family == AF_INET6)
-		   del_addr.addr.addr6 = ((struct sockaddr_in6 *)sa)->sin6_addr;
-#endif
-		 else
-		   del_family = 0;
-	       }
-	     
-	     of += diff;
-	     /* round up as needed */
-	     if (diff & (sizeof(long) - 1)) 
-	       of += sizeof(long) - (diff & (sizeof(long) - 1));
-	   }
-       
-       queue_event(EVENT_NEWADDR);
-     }
-}
-
-#endif /* HAVE_BSD_NETWORK */
-
-

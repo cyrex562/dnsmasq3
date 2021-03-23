@@ -1,4 +1,20 @@
-/* dnsmasq is Copyright (c) 2000-2018 Simon Kelley
+
+
+#![allow(dead_code, mutable_transmutes, unused_assignments, unused_mut)]
+mod defines;
+mod util;
+mod option;
+mod dhcp_common;
+mod arp;
+
+use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
+
+use libc;
+use crate::util::dnsmasq_time;
+use crate::defines::{__user_cap_header_struct, __user_cap_data_struct};
+use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device};
+
+/* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,528 +29,839 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 /* Declare static char *compiler_opts  in config.h */
-#define DNSMASQ_COMPILE_OPTS
+// #[no_mangle]
+// pub static mut daemon: *mut dnsmasq_daemon = 0 as *const daemon as *mut dnsmasq_daemon;
 
-#include "dnsmasq.h"
+// static mut pid: pid_t = 0 as libc::c_int;
+// static mut pipewrite: libc::c_int = 0;
+unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
+ -> libc::c_int {
+     let mut compiler_opts: String = String::from("");
+    let mut bind_fallback: libc::c_int = 0 as libc::c_int;
+    let mut now: time_t = 0;
+    let mut sigact: sigaction =
+        sigaction{__sigaction_handler: C2RustUnnamed_12{sa_handler: None,},
+                  sa_mask: __sigset_t{__val: [0; 16],},
+                  sa_flags: 0,
+                  sa_restorer: None,};
+    let mut if_tmp: iname = Default::default();
+    let mut piperead: libc::c_int = 0;
+    let mut pipefd: [libc::c_int; 2] = [0; 2];
+    let mut err_pipe: [libc::c_int; 2] = [0; 2];
+    let mut ent_pw: *mut passwd = 0 as *mut passwd;
+    let mut script_uid: uid_t = 0 as libc::c_int as uid_t;
+    let mut script_gid: gid_t = 0 as libc::c_int as gid_t;
+    let mut gp: *mut group = 0 as *mut group;
+    let mut i: libc::c_long = 0;
+    let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX as libc::c_int);
+    let mut baduser: *mut libc::c_char = 0 as *mut libc::c_char;
+    let mut log_err: libc::c_int = 0;
+    let mut chown_warn: libc::c_int = 0 as libc::c_int;
+    // let mut hdr: cap_user_header_t = 0 as cap_user_header_t;
+    let mut hdr: __user_cap_header_struct = Default::default();
+    let mut data: __user_cap_data_struct = Default::default();
+    let mut need_cap_net_admin: libc::c_int = 0;
+    let mut need_cap_net_raw: libc::c_int = 0;
+    let mut need_cap_net_bind_service: libc::c_int = 0;
+    let mut bound_device: String = String::new();
+    let mut did_bind: bool = false;
+    let mut serv: server = Default::default();
+    let mut netlink_warn: String = String::new();
+    let mut context: dhcp_context = Default::default();
+    let mut relay: dhcp_relay = Default::default();
+    let mut tftp_prefix_missing: libc::c_int = 0;
+    sigact.__sigaction_handler.sa_handler =
+        Some(sig_handler as unsafe extern "C" fn(_: libc::c_int) -> ());
+    sigact.sa_flags = 0 as libc::c_int;
+    libc::sigemptyset(&mut sigact.sa_mask as *mut __sigset_t);
+    libc::sigaction(10 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    libc::sigaction(12 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    libc::sigaction(1 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    libc::sigaction(15 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    libc::sigaction(14 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    libc::sigaction(17 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    libc::sigaction(2 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    /* ignore SIGPIPE */
+    sigact.__sigaction_handler.sa_handler =
+        ::std::mem::transmute::<libc::intptr_t,
+                                __sighandler_t>(1 as libc::c_int as
+                                                    libc::intptr_t); /* known umask, create leases and pid files as 0644 */
+    libc::sigaction(13 as libc::c_int, &mut sigact,
+              0 as *mut sigaction); /* Must precede read_opts() */
+    libc::umask(0o22 as libc::c_int as defines::__mode_t);
+    util::rand_init();
+    option::read_opts(argc, argv, compile_opts);
 
-struct daemon *daemon;
+    let mut daemon: dnsmasq_daemon = Default::default();
 
-static volatile pid_t pid = 0;
-static volatile int pipewrite;
+    if cfg!(target_os = "linux") {
+        daemon.kernel_version = util::get_linux_kernel_version();
+    }
 
-static int set_dns_listeners(time_t now);
-static void check_dns_listeners(time_t now);
-static void sig_handler(int sig);
-static void async_event(int pipe, time_t now);
-static void fatal_event(struct event_desc *ev, char *msg);
-static int read_event(int fd, struct event_desc *evp, char **msg);
-static void poll_resolv(int force, int do_reload, time_t now);
-
-int main (int argc, char **argv)
-{
-  int bind_fallback = 0;
-  time_t now;
-  struct sigaction sigact;
-  struct Iname *if_tmp;
-  int piperead, pipefd[2], err_pipe[2];
-  struct passwd *ent_pw = nullptr;
-#if defined(HAVE_SCRIPT)
-  uid_t script_uid = 0;
-  gid_t script_gid = 0;
-#endif
-  struct group *gp = nullptr;
-  long i, max_fd = sysconf(_SC_OPEN_MAX);
-  char *baduser = nullptr;
-  int log_err;
-  int chown_warn = 0;
-#if defined(HAVE_LINUX_NETWORK)
-  cap_user_header_t hdr = nullptr;
-  cap_user_data_t data = nullptr;
-  char *bound_device = nullptr;
-  int did_bind = 0;
-#endif 
-#if defined(HAVE_DHCP) || defined(HAVE_DHCP6)
-  struct DhcpContext *context;
-  struct DhcpRelay *relay;
-#endif
-#ifdef HAVE_TFTP
-  int tftp_prefix_missing = 0;
-#endif
-
-#ifdef LOCALEDIR
-  setlocale(LC_ALL, "");
-  bindtextdomain("dnsmasq", LOCALEDIR); 
-  textdomain("dnsmasq");
-#endif
-
-  sigact.sa_handler = sig_handler;
-  sigact.sa_flags = 0;
-  sigemptyset(&sigact.sa_mask);
-  sigaction(SIGUSR1, &sigact, nullptr);
-  sigaction(SIGUSR2, &sigact, nullptr);
-  sigaction(SIGHUP, &sigact, nullptr);
-  sigaction(SIGTERM, &sigact, nullptr);
-  sigaction(SIGALRM, &sigact, nullptr);
-  sigaction(SIGCHLD, &sigact, nullptr);
-  sigaction(SIGINT, &sigact, nullptr);
-  
-  /* ignore SIGPIPE */
-  sigact.sa_handler = SIG_IGN;
-  sigaction(SIGPIPE, &sigact, nullptr);
-
-  umask(022); /* known umask, create leases and pid files as 0644 */
- 
-  rand_init(); /* Must precede read_opts() */
-  
-  read_opts(argc, argv, compile_opts);
- 
-  if (daemon->edns_pktsz < PACKETSZ)
-    daemon->edns_pktsz = PACKETSZ;
-
-  /* Min buffer size: we check after adding each record, so there must be 
+    if (daemon.edns_pktsz as libc::c_int) < 512 as libc::c_int {
+        daemon.edns_pktsz = 512 as libc::c_int as libc::c_ushort
+    }
+    /* Min buffer size: we check after adding each record, so there must be 
      memory for the largest packet, and the largest record so the
      min for DNS is PACKETSZ+MAXDNAME+RRFIXEDSZ which is < 1000.
-     This might be increased is EDNS packet size if greater than the minimum. */ 
-  daemon->packet_buff_sz = daemon->edns_pktsz + MAXDNAME + RRFIXEDSZ;
-  daemon->packet = safe_malloc(daemon->packet_buff_sz);
-  
-  daemon->addrbuff = safe_malloc(ADDRSTRLEN);
-  if (option_bool(OPT_EXTRALOG))
-    daemon->addrbuff2 = safe_malloc(ADDRSTRLEN);
-  
-#ifdef HAVE_DNSSEC
-  if (option_bool(OPT_DNSSEC_VALID))
-    {
-      /* Note that both /000 and '.' are allowed within labels. These get
-	 represented in presentation format using NAME_ESCAPE as an escape
-	 character when in DNSSEC mode. 
-	 In theory, if all the characters in a name were /000 or
-	 '.' or NAME_ESCAPE then all would have to be escaped, so the 
-	 presentation format would be twice as long as the spec.
-
-	 daemon->namebuff was previously allocated by the option-reading
-	 code before we knew if we're in DNSSEC mode, so reallocate here. */
-      free(daemon->namebuff);
-      daemon->namebuff = safe_malloc(MAXDNAME * 2);
-      daemon->keyname = safe_malloc(MAXDNAME * 2);
-      daemon->workspacename = safe_malloc(MAXDNAME * 2);
-      /* one char flag per possible RR in answer section (may get extended). */
-      daemon->rr_status_sz = 64;
-      daemon->rr_status = safe_malloc(daemon->rr_status_sz);
+     This might be increased is EDNS packet size if greater than the minimum. */
+    daemon.packet_buff_sz =
+        daemon.edns_pktsz as libc::c_int + 1025 as libc::c_int +
+            10 as libc::c_int;
+    // daemon.packet =
+    //     safe_malloc(daemon.packet_buff_sz as libc::ABDAY_3size_t) as
+    //         *mut libc::c_char;
+    daemon.packet = Vec::new();
+    // daemon.addrbuff =
+    //     safe_malloc(46 as libc::c_int as libc::size_t) as *mut libc::c_char;
+    daemon.addrbuff = Vec::new();
+    if daemon.options[(51 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (51 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        // daemon.addrbuff2 =
+        //     safe_malloc(46 as libc::c_int as libc::size_t) as *mut libc::c_char
+        daemon.addrbuff2 = Vec::new();
     }
-#endif
-
-#ifdef HAVE_DHCP
-  if (!daemon->lease_file)
-    {
-      if (daemon->dhcp || daemon->dhcp6)
-	daemon->lease_file = LEASEFILE;
+    if daemon.lease_file.is_null() {
+        if !daemon.dhcp.is_null() ||
+               !daemon.dhcp6.is_null() {
+            daemon.lease_file = String::from("/var/lib/misc/dnsmasq.leases\x00");
+        }
     }
-#endif
-  
-  /* Close any file descriptors we inherited apart from std{in|out|err} 
-     
-     Ensure that at least stdin, stdout and stderr (fd 0, 1, 2) exist,
+    /* Ensure that at least stdin, stdout and stderr (fd 0, 1, 2) exist,
      otherwise file descriptors we create can end up being 0, 1, or 2 
      and then get accidentally closed later when we make 0, 1, and 2 
      open to /dev/null. Normally we'll be started with 0, 1 and 2 open, 
      but it's not guaranteed. By opening /dev/null three times, we 
      ensure that we're not using those fds for real stuff. */
-  for (i = 0; i < max_fd; i++)
-    if (i != STDOUT_FILENO && i != STDERR_FILENO && i != STDIN_FILENO)
-      close(i);
-    else
-      open("/dev/null", O_RDWR); 
-
-#ifndef HAVE_LINUX_NETWORK
-#  if !(defined(IP_RECVDSTADDR) && defined(IP_RECVIF) && defined(IP_SENDSRCADDR))
-  if (!option_bool(OPT_NOWILD))
-    {
-      bind_fallback = 1;
-      set_option_bool(OPT_NOWILD);
+    i = 0 as libc::c_int as libc::c_long;
+    while i < 3 as libc::c_int as libc::c_long {
+        open(b"/dev/null\x00" as *const u8 as *const libc::c_char,
+             0o2 as libc::c_int);
+        i += 1
     }
-#  endif
-  
-  /* -- bind-dynamic not supported on !Linux, fall back to --bind-interfaces */
-  if (option_bool(OPT_CLEVERBIND))
-    {
-      bind_fallback = 1;
-      set_option_bool(OPT_NOWILD);
-      reset_option_bool(OPT_CLEVERBIND);
+    /* Close any file descriptors we inherited apart from std{in|out|err} */
+    // TODO:
+    // close_fds(max_fd, -(1 as libc::c_int), -(1 as libc::c_int),
+    //           -(1 as libc::c_int));
+    if daemon.options[(45 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (45 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        die(b"DNSSEC not available: set HAVE_DNSSEC in src/config.h\x00" as
+                *const u8 as *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
     }
-#endif
-
-#ifndef HAVE_INOTIFY
-  if (daemon->dynamic_dirs)
-    die(_("dhcp-hostsdir, dhcp-optsdir and hostsdir are not supported on this platform"), nullptr, EC_BADCONF);
-#endif
-  
-  if (option_bool(OPT_DNSSEC_VALID))
-    {
-#ifdef HAVE_DNSSEC
-      struct ds_config *ds;
-
-      /* Must have at least a root trust anchor, or the DNSSEC code
-	 can loop forever. */
-      for (ds = daemon->ds; ds; ds = ds->next)
-	if (ds->name[0] == 0)
-	  break;
-
-      if (!ds)
-	die(_("no root trust anchor provided for DNSSEC"), nullptr, EC_BADCONF);
-      
-      if (daemon->cachesize < CACHESIZ)
-	die(_("cannot reduce cache size from default when DNSSEC enabled"), nullptr, EC_BADCONF);
-#else 
-      die(_("DNSSEC not available: set HAVE_DNSSEC in src/config.h"), nullptr, EC_BADCONF);
-#endif
+    if daemon.options[(35 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (35 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        die(b"conntrack support not available: set HAVE_CONNTRACK in src/config.h\x00"
+                as *const u8 as *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
     }
-
-#ifndef HAVE_TFTP
-  if (option_bool(OPT_TFTP))
-    die(_("TFTP server not available: set HAVE_TFTP in src/config.h"), nullptr, EC_BADCONF);
-#endif
-
-#ifdef HAVE_CONNTRACK
-  if (option_bool(OPT_CONNTRACK) && (daemon->query_port != 0 || daemon->osport))
-    die (_("cannot use --conntrack AND --query-port"), nullptr, EC_BADCONF);
-#else
-  if (option_bool(OPT_CONNTRACK))
-    die(_("conntrack support not available: set HAVE_CONNTRACK in src/config.h"), nullptr, EC_BADCONF);
-#endif
-
-#ifdef HAVE_SOLARIS_NETWORK
-  if (daemon->max_logs != 0)
-    die(_("asynchronous logging is not available under Solaris"), nullptr, EC_BADCONF);
-#endif
-  
-#ifdef __ANDROID__
-  if (daemon->max_logs != 0)
-    die(_("asynchronous logging is not available under Android"), nullptr, EC_BADCONF);
-#endif
-
-#ifndef HAVE_AUTH
-  if (daemon->auth_zones)
-    die(_("authoritative DNS not available: set HAVE_AUTH in src/config.h"), nullptr, EC_BADCONF);
-#endif
-
-#ifndef HAVE_LOOP
-  if (option_bool(OPT_LOOP_DETECT))
-    die(_("loop detection not available: set HAVE_LOOP in src/config.h"), nullptr, EC_BADCONF);
-#endif
-
-#ifndef HAVE_UBUS
-  if (option_bool(OPT_UBUS))
-    die(_("Ubus not available: set HAVE_UBUS in src/config.h"), nullptr, EC_BADCONF);
-#endif
-  
-  if (daemon->max_port < daemon->min_port)
-    die(_("max_port cannot be smaller than min_port"), nullptr, EC_BADCONF);
-
-  now = dnsmasq_time();
-
-  if (daemon->auth_zones)
-    {
-      if (!daemon->authserver)
-	die(_("--auth-server required when an auth zone is defined."), nullptr, EC_BADCONF);
-
-      /* Create a serial at startup if not configured. */
-#ifdef HAVE_BROKEN_RTC
-      if (daemon->soa_sn == 0)
-	die(_("zone serial must be configured in --auth-soa"), nullptr, EC_BADCONF);
-#else
-      if (daemon->soa_sn == 0)
-	daemon->soa_sn = now;
-#endif
+    if daemon.options[(58 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (58 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        die(b"Ubus not available: set HAVE_UBUS in src/config.h\x00" as
+                *const u8 as *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
     }
-  
-#ifdef HAVE_DHCP6
-  if (daemon->dhcp6)
-    {
-      daemon->doing_ra = option_bool(OPT_RA);
-      
-      for (context = daemon->dhcp6; context; context = context->next)
-	{
-	  if (context->flags & CONTEXT_DHCP)
-	    daemon->doing_dhcp6 = 1;
-	  if (context->flags & CONTEXT_RA)
-	    daemon->doing_ra = 1;
-#if !defined(HAVE_LINUX_NETWORK) && !defined(HAVE_BSD_NETWORK)
-	  if (context->flags & CONTEXT_TEMPLATE)
-	    die (_("dhcp-range constructor not available on this platform"), nullptr, EC_BADCONF);
-#endif 
-	}
+    if daemon.max_port < daemon.min_port {
+        die(b"max_port cannot be smaller than min_port\x00" as *const u8 as
+                *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
     }
-#endif
-  
-#ifdef HAVE_DHCP
-  /* Note that order matters here, we must call lease_init before
+    now = dnsmasq_time();
+    if !daemon.auth_zones.is_null() {
+        if daemon.authserver.is_null() {
+            die(b"--auth-server required when an auth zone is defined.\x00" as
+                    *const u8 as *const libc::c_char as *mut libc::c_char,
+                0 as *mut libc::c_char, 1 as libc::c_int);
+        }
+        /* Create a serial at startup if not configured. */
+        if daemon.soa_sn == 0 as libc::c_int as libc::c_ulong {
+            daemon.soa_sn = now as libc::c_ulong
+        }
+    }
+    if !daemon.dhcp6.is_null() {
+        daemon.doing_ra =
+            (daemon.options[(37 as libc::c_int as
+                                            libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                             as
+                                                                             libc::c_ulong).wrapping_mul(8
+                                                                                                             as
+                                                                                                             libc::c_int
+                                                                                                             as
+                                                                                                             libc::c_ulong))
+                                           as usize] &
+                 (1 as libc::c_uint) <<
+                     (37 as libc::c_int as
+                          libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                           as
+                                                           libc::c_ulong).wrapping_mul(8
+                                                                                           as
+                                                                                           libc::c_int
+                                                                                           as
+                                                                                           libc::c_ulong)))
+                as libc::c_int;
+        context = daemon.dhcp6;
+        while !context.is_null() {
+            if (*context).flags as libc::c_uint &
+                   (1 as libc::c_uint) << 8 as libc::c_int != 0 {
+                daemon.doing_dhcp6 = true
+            }
+            if (*context).flags as libc::c_uint &
+                   (1 as libc::c_uint) << 13 as libc::c_int != 0 {
+                daemon.doing_ra = true
+            }
+            context = (*context).next
+        }
+    }
+    /* Note that order matters here, we must call lease_init before
      creating any file descriptors which shouldn't be leaked
      to the lease-script init process. We need to call common_init
      before lease_init to allocate buffers it uses.
      The script subsystem relies on DHCP buffers, hence the last two
-     conditions below. */  
-  if (daemon->dhcp || daemon->doing_dhcp6 || daemon->relay4 || 
-      daemon->relay6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP))
-    {
-      dhcp_common_init();
-      if (daemon->dhcp || daemon->doing_dhcp6)
-	lease_init(now);
+     conditions below. */
+    if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != false
+           || !daemon.relay4.is_null() ||
+           !daemon.relay6.is_null() ||
+           daemon.options[(40 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (40 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 ||
+           daemon.options[(53 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (53 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+        dhcp_common_init(&mut daemon);
+        if !daemon.dhcp.is_null() ||
+               daemon.doing_dhcp6 != false {
+            lease_init(now);
+        }
     }
-  
-  if (daemon->dhcp || daemon->relay4)
-    dhcp_init();
-  
-#  ifdef HAVE_DHCP6
-  if (daemon->doing_ra || daemon->doing_dhcp6 || daemon->relay6)
-    ra_init(now);
-  
-  if (daemon->doing_dhcp6 || daemon->relay6)
-    dhcp6_init();
-#  endif
-
-#endif
-
-#ifdef HAVE_IPSET
-  if (daemon->ipsets)
-    ipset_init();
-#endif
-
-#if  defined(HAVE_LINUX_NETWORK)
-  netlink_init();
-#elif defined(HAVE_BSD_NETWORK)
-  route_init();
-#endif
-
-  if (option_bool(OPT_NOWILD) && option_bool(OPT_CLEVERBIND))
-    die(_("cannot set --bind-interfaces and --bind-dynamic"), nullptr, EC_BADCONF);
-  
-  if (!enumerate_interfaces(1) || !enumerate_interfaces(0))
-    die(_("failed to find list of interfaces: %s"), nullptr, EC_MISC);
-  
-  if (option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND)) 
-    {
-      create_bound_listeners(1);
-      
-      if (!option_bool(OPT_CLEVERBIND))
-	for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
-	  if (if_tmp->name && !if_tmp->used)
-	    die(_("unknown interface %s"), if_tmp->name, EC_BADNET);
-
-#if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP)
-      /* after enumerate_interfaces()  */
-      bound_device = whichdevice();
-      
-      if (daemon->dhcp)
-	{
-	  if (!daemon->relay4 && bound_device)
-	    {
-	      bindtodevice(bound_device, daemon->dhcpfd);
-	      did_bind = 1;
-	    }
-	  if (daemon->enable_pxe && bound_device)
-	    {
-	      bindtodevice(bound_device, daemon->pxefd);
-	      did_bind = 1;
-	    }
-	}
-#endif
-
-#if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP6)
-      if (daemon->doing_dhcp6 && !daemon->relay6 && bound_device)
-	{
-	  bindtodevice(bound_device, daemon->dhcp6fd);
-	  did_bind = 1;
-	}
-#endif
+    if !daemon.dhcp.is_null() ||
+           !daemon.relay4.is_null() {
+        dhcp_init();
+        if daemon.options[(21 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (21 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+            need_cap_net_raw = 1 as libc::c_int
+        }
+        need_cap_net_admin = 1 as libc::c_int
     }
-  else 
-    create_wildcard_listeners();
- 
-#ifdef HAVE_DHCP6
-  /* after enumerate_interfaces() */
-  if (daemon->doing_dhcp6 || daemon->relay6 || daemon->doing_ra)
-    join_multicast(1);
-
-  /* After netlink_init() and before create_helper() */
-  lease_make_duid(now);
-#endif
-  
-  if (daemon->port != 0)
-    {
-      cache_init();
-
-#ifdef HAVE_DNSSEC
-      blockdata_init();
-#endif
+    if daemon.doing_ra != false || daemon.doing_dhcp6 != false
+           || !daemon.relay6.is_null() {
+        ra_init(now);
+        need_cap_net_raw = 1 as libc::c_int;
+        need_cap_net_admin = 1 as libc::c_int
     }
-
-#ifdef HAVE_INOTIFY
-  if ((daemon->port != 0 || daemon->dhcp || daemon->doing_dhcp6)
-      && (!option_bool(OPT_NO_RESOLV) || daemon->dynamic_dirs))
-    inotify_dnsmasq_init();
-  else
-    daemon->inotifyfd = -1;
-#endif
-
-  if (daemon->dump_file)
-#ifdef HAVE_DUMPFILE
-    dump_init();
-  else 
-    daemon->dumpfd = -1;
-#else
-  die(_("Packet dumps not available: set HAVE_DUMP in src/config.h"), nullptr, EC_BADCONF);
-#endif
-  
-  if (option_bool(OPT_DBUS))
-#ifdef HAVE_DBUS
-    {
-      char *err;
-      daemon->dbus = nullptr;
-      daemon->watches = nullptr;
-      if ((err = dbus_init()))
-	die(_("DBus error: %s"), err, EC_MISC);
+    if daemon.doing_dhcp6 != false ||
+           !daemon.relay6.is_null() {
+        dhcp6_init();
     }
-#else
-  die(_("DBus not available: set HAVE_DBUS in src/config.h"), nullptr, EC_BADCONF);
-#endif
-
-  if (daemon->port != 0)
-    pre_allocate_sfds();
-
-#if defined(HAVE_SCRIPT)
-  /* Note getpwnam returns static storage */
-  if ((daemon->dhcp || daemon->dhcp6) && 
-      daemon->scriptuser && 
-      (daemon->lease_change_command || daemon->luascript))
-    {
-      struct passwd *scr_pw;
-      
-      if ((scr_pw = getpwnam(daemon->scriptuser)))
-	{
-	  script_uid = scr_pw->pw_uid;
-	  script_gid = scr_pw->pw_gid;
-	 }
-      else
-	baduser = daemon->scriptuser;
+    if !daemon.ipsets.is_null() {
+        ipset_init();
+        need_cap_net_admin = 1 as libc::c_int
     }
-#endif
-  
-  if (daemon->username && !(ent_pw = getpwnam(daemon->username)))
-    baduser = daemon->username;
-  else if (daemon->groupname && !(gp = getgrnam(daemon->groupname)))
-    baduser = daemon->groupname;
-
-  if (baduser)
-    die(_("unknown user or group: %s"), baduser, EC_BADCONF);
-
-  /* implement group defaults, "dip" if available, or group associated with uid */
-  if (!daemon->group_set && !gp)
-    {
-      if (!(gp = getgrnam(CHGRP)) && ent_pw)
-	gp = getgrgid(ent_pw->pw_gid);
-      
-      /* for error message */
-      if (gp)
-	daemon->groupname = gp->gr_name; 
+    netlink_warn = netlink_init();
+    if daemon.options[(13 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (13 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 &&
+           daemon.options[(39 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (39 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+        die(b"cannot set --bind-interfaces and --bind-dynamic\x00" as
+                *const u8 as *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
     }
+    if enumerate_interfaces(1 as libc::c_int) == 0 ||
+           enumerate_interfaces(0 as libc::c_int) == 0 {
+        die(b"failed to find list of interfaces: %s\x00" as *const u8 as
+                *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 5 as libc::c_int);
+    }
+    if daemon.options[(13 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (13 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 ||
+           daemon.options[(39 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (39 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+        create_bound_listeners(1 as libc::c_int);
+        if daemon.options[(39 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (39 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+            if_tmp = daemon.if_names;
+            while !if_tmp.is_null() {
+                if !(*if_tmp).name.is_null() && (*if_tmp).used == 0 {
+                    die(b"unknown interface %s\x00" as *const u8 as
+                            *const libc::c_char as *mut libc::c_char,
+                        (*if_tmp).name, 2 as libc::c_int);
+                }
+                if_tmp = (*if_tmp).next
+            }
+        }
+        /* after enumerate_interfaces()  */
+        match whichdevice(&mut daemon) {
+            Some(x) => bound_device = x,
+            None => info!("bound_device not found")
+        };
 
-#if defined(HAVE_LINUX_NETWORK)
-  /* determine capability API version here, while we can still
+        if daemon.doing_dhcp {
+            if daemon.doing_relay4 == false && !bound_device.is_empty() {
+                bind_to_device(&bound_device, &mut daemon.dhcpfd);
+                did_bind = true
+            }
+            if daemon.enable_pxe != 0 && !bound_device.is_empty() {
+                bind_to_device(&bound_device, &mut daemon.pxefd);
+                did_bind = true
+            }
+        }
+        if daemon.doing_dhcp6 && daemon.doing_relay6 == false && !bound_device.is_empty() {
+            bind_to_device(&bound_device, &mut daemon.dhcp6fd);
+            did_bind = true
+        }
+    } else { create_wildcard_listeners(); }
+    /* after enumerate_interfaces() */
+    if daemon.doing_dhcp6 == true ||
+           daemon.doing_relay_6 == true ||
+           daemon.doing_ra == true {
+        join_multicast(1 as libc::c_int);
+    }
+    /* After netlink_init() and before create_helper() */
+    lease_make_duid(now);
+    if daemon.port != 0 as libc::c_int {
+        cache_init();
+        blockdata_init();
+        hash_questions_init();
+    }
+    if (daemon.port != 0 as libc::c_int ||
+            !daemon.dhcp.is_null() ||
+            daemon.doing_dhcp6 != 0) &&
+           (daemon.options[(8 as libc::c_int as
+                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                            as
+                                                                            libc::c_ulong).wrapping_mul(8
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_ulong))
+                                          as usize] &
+                (1 as libc::c_uint) <<
+                    (8 as libc::c_int as
+                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                          as
+                                                          libc::c_ulong).wrapping_mul(8
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                == 0 || !daemon.dynamic_dirs.is_null()) {
+        inotify_dnsmasq_init();
+    } else { daemon.inotifyfd = -(1 as libc::c_int) }
+    if !daemon.dump_file.is_null() {
+        dump_init();
+    } else { daemon.dumpfd = -(1 as libc::c_int) }
+    if daemon.options[(19 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (19 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        die(b"DBus not available: set HAVE_DBUS in src/config.h\x00" as
+                *const u8 as *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
+    }
+    if daemon.options[(58 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (58 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        die(b"UBus not available: set HAVE_UBUS in src/config.h\x00" as
+                *const u8 as *const libc::c_char as *mut libc::c_char,
+            0 as *mut libc::c_char, 1 as libc::c_int);
+    }
+    if daemon.port != 0 as libc::c_int { pre_allocate_sfds(); }
+    /* Note getpwnam returns static storage */
+    if (!daemon.dhcp.is_null() ||
+            !daemon.dhcp6.is_null()) &&
+           !daemon.scriptuser.is_null() &&
+           (!daemon.lease_change_command.is_null() ||
+                !daemon.luascript.is_null()) {
+        let mut scr_pw: *mut passwd = 0 as *mut passwd;
+        scr_pw = getpwnam(daemon.scriptuser);
+        if !scr_pw.is_null() {
+            script_uid = (*scr_pw).pw_uid;
+            script_gid = (*scr_pw).pw_gid
+        } else { baduser = daemon.scriptuser }
+    }
+    if !daemon.username.is_null() &&
+           { ent_pw = getpwnam(daemon.username); ent_pw.is_null() }
+       {
+        baduser = daemon.username
+    } else if !daemon.groupname.is_null() &&
+                  { gp = getgrnam(daemon.groupname); gp.is_null() }
+     {
+        baduser = daemon.groupname
+    }
+    if !baduser.is_null() {
+        die(b"unknown user or group: %s\x00" as *const u8 as
+                *const libc::c_char as *mut libc::c_char, baduser,
+            1 as libc::c_int);
+    }
+    /* implement group defaults, "dip" if available, or group associated with uid */
+    if daemon.group_set == 0 && gp.is_null() {
+        gp = getgrnam(b"dip\x00" as *const u8 as *const libc::c_char);
+        if gp.is_null() && !ent_pw.is_null() {
+            gp = getgrgid((*ent_pw).pw_gid)
+        }
+        /* for error message */
+        if !gp.is_null() { daemon.groupname = (*gp).gr_name }
+    }
+    /* We keep CAP_NETADMIN (for ARP-injection) and
+     CAP_NET_RAW (for icmp) if we're doing dhcp,
+     if we have yet to bind ports because of DAD, 
+     or we're doing it dynamically, we need CAP_NET_BIND_SERVICE. */
+    if (is_dad_listeners() != 0 ||
+            daemon.options[(39 as libc::c_int as
+                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                            as
+                                                                            libc::c_ulong).wrapping_mul(8
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_ulong))
+                                          as usize] &
+                (1 as libc::c_uint) <<
+                    (39 as libc::c_int as
+                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                          as
+                                                          libc::c_ulong).wrapping_mul(8
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                != 0) &&
+           (daemon.options[(40 as libc::c_int as
+                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                            as
+                                                                            libc::c_ulong).wrapping_mul(8
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_ulong))
+                                          as usize] &
+                (1 as libc::c_uint) <<
+                    (40 as libc::c_int as
+                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                          as
+                                                          libc::c_ulong).wrapping_mul(8
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                != 0 ||
+                daemon.port != 0 as libc::c_int &&
+                    daemon.port <= 1024 as libc::c_int) {
+        need_cap_net_bind_service = 1 as libc::c_int
+    }
+    /* usptream servers which bind to an interface call SO_BINDTODEVICE
+     for each TCP connection, so need CAP_NET_RAW */
+    serv = daemon.servers;
+    while !serv.is_null() {
+        if (*serv).interface[0 as libc::c_int as usize] as libc::c_int !=
+               0 as libc::c_int {
+            need_cap_net_raw = 1 as libc::c_int
+        }
+        serv = (*serv).next
+    }
+    /* If we're doing Dbus or UBus, the above can be set dynamically,
+     (as can ports) so always (potentially) needed. */
+    /* determine capability API version here, while we can still
      call safe_malloc */
-  if (ent_pw && ent_pw->pw_uid != 0)
-    {
-      int capsize = 1; /* for header version 1 */
-      hdr = safe_malloc(sizeof(*hdr));
-
-      /* find version supported by kernel */
-      memset(hdr, 0, sizeof(*hdr));
-      capget(hdr, nullptr);
-      
-      if (hdr->version != LINUX_CAPABILITY_VERSION_1)
-	{
-	  /* if unknown version, use largest supported version (3) */
-	  if (hdr->version != LINUX_CAPABILITY_VERSION_2)
-	    hdr->version = LINUX_CAPABILITY_VERSION_3;
-	  capsize = 2;
-	}
-      
-      data = safe_malloc(sizeof(*data) * capsize);
-      memset(data, 0, sizeof(*data) * capsize);
+    let mut capsize: libc::c_int =
+        1 as libc::c_int; /* for header version 1 */
+    let mut fail: *mut libc::c_char = 0 as *mut libc::c_char;
+    // hdr =
+    //     safe_malloc(::std::mem::size_of::<__user_cap_header_struct>() as
+    //                     libc::c_ulong) as cap_user_header_t;
+    // /* find version supported by kernel */
+    // memset(hdr as *mut libc::c_void, 0 as libc::c_int,
+    //        ::std::mem::size_of::<__user_cap_header_struct>() as
+    //            libc::c_ulong);
+    capget(hdr, 0 as cap_user_data_t);
+    if hdr.version != 0x19980330 {
+        /* if unknown version, use largest supported version (3) */
+        if hdr.version != 0x20071026 {
+            hdr.version = 0x20071026;
+        } /* Get current values, for verification */
+        capsize = 2
     }
-#endif
-
-  /* Use a pipe to carry signals and other events back to the event loop 
+    data =
+        safe_malloc((::std::mem::size_of::<__user_cap_data_struct>() as
+                         libc::c_ulong).wrapping_mul(capsize as
+                                                         libc::c_ulong)) as
+            cap_user_data_t;
+    capget(hdr, data);
+    if need_cap_net_admin != 0 &&
+           (*data).permitted &
+               ((1 as libc::c_int) << 12 as libc::c_int) as libc::c_uint == 0
+       {
+        fail =
+            b"NET_ADMIN\x00" as *const u8 as *const libc::c_char as
+                *mut libc::c_char
+    } else if need_cap_net_raw != 0 &&
+                  (*data).permitted &
+                      ((1 as libc::c_int) << 13 as libc::c_int) as
+                          libc::c_uint == 0 {
+        fail =
+            b"NET_RAW\x00" as *const u8 as *const libc::c_char as
+                *mut libc::c_char
+    } else if need_cap_net_bind_service != 0 &&
+                  (*data).permitted &
+                      ((1 as libc::c_int) << 10 as libc::c_int) as
+                          libc::c_uint == 0 {
+        fail =
+            b"NET_BIND_SERVICE\x00" as *const u8 as *const libc::c_char as
+                *mut libc::c_char
+    }
+    if !fail.is_null() {
+        die(b"process is missing required capability %s\x00" as *const u8 as
+                *const libc::c_char as *mut libc::c_char, fail,
+            5 as libc::c_int);
+    }
+    /* Now set bitmaps to set caps after daemonising */
+    memset(data as *mut libc::c_void, 0 as libc::c_int,
+           (::std::mem::size_of::<__user_cap_data_struct>() as
+                libc::c_ulong).wrapping_mul(capsize as libc::c_ulong));
+    if need_cap_net_admin != 0 {
+        (*data).effective |=
+            ((1 as libc::c_int) << 12 as libc::c_int) as libc::c_uint
+    }
+    if need_cap_net_raw != 0 {
+        (*data).effective |=
+            ((1 as libc::c_int) << 13 as libc::c_int) as libc::c_uint
+    }
+    if need_cap_net_bind_service != 0 {
+        (*data).effective |=
+            ((1 as libc::c_int) << 10 as libc::c_int) as libc::c_uint
+    }
+    (*data).permitted = (*data).effective;
+    /* Use a pipe to carry signals and other events back to the event loop 
      in a race-free manner and another to carry errors to daemon-invoking process */
-  safe_pipe(pipefd, 1);
-  
-  piperead = pipefd[0];
-  pipewrite = pipefd[1];
-  /* prime the pipe to load stuff first time. */
-  send_event(pipewrite, EVENT_INIT, 0, nullptr);
-
-  err_pipe[1] = -1;
-  
-  if (!option_bool(OPT_DEBUG))   
-    {
-      /* The following code "daemonizes" the process. 
+    safe_pipe(pipefd.as_mut_ptr(), 1 as libc::c_int);
+    piperead = pipefd[0 as libc::c_int as usize];
+    ::std::ptr::write_volatile(&mut pipewrite as *mut libc::c_int,
+                               pipefd[1 as libc::c_int as usize]);
+    /* prime the pipe to load stuff first time. */
+    send_event(pipewrite, 21 as libc::c_int, 0 as libc::c_int,
+               0 as *mut libc::c_char);
+    err_pipe[1 as libc::c_int as usize] = -(1 as libc::c_int);
+    if daemon.options[(6 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (6 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 {
+        /* The following code "daemonizes" the process. 
 	 See Stevens section 12.4 */
-      
-      if (chdir("/") != 0)
-	die(_("cannot chdir to filesystem root: %s"), nullptr, EC_MISC);
-
-#ifndef NO_FORK      
-      if (!option_bool(OPT_NO_FORK))
-	{
-	  pid_t pid;
-	  
-	  /* pipe to carry errors back to original process.
+        if chdir(b"/\x00" as *const u8 as *const libc::c_char) !=
+               0 as libc::c_int {
+            die(b"cannot chdir to filesystem root: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char,
+                0 as *mut libc::c_char, 5 as libc::c_int);
+        }
+        if daemon.options[(16 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (16 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               == 0 {
+            let mut pid_0: pid_t = 0;
+            /* pipe to carry errors back to original process.
 	     When startup is complete we close this and the process terminates. */
-	  safe_pipe(err_pipe, 0);
-	  
-	  if ((pid = fork()) == -1)
-	    /* fd == -1 since we've not forked, never returns. */
-	    send_event(-1, EVENT_FORK_ERR, errno, nullptr);
-	   
-	  if (pid != 0)
-	    {
-	      struct event_desc ev;
-	      char *msg;
-
-	      /* close our copy of write-end */
-	      while (retry_send(close(err_pipe[1])));
-	      
-	      /* check for errors after the fork */
-	      if (read_event(err_pipe[0], &ev, &msg))
-		fatal_event(&ev, msg);
-	      
-	      _exit(EC_GOOD);
-	    } 
-	  
-	  while (retry_send(close(err_pipe[0])));
-
-	  /* NO calls to die() from here on. */
-	  
-	  setsid();
-	 
-	  if ((pid = fork()) == -1)
-	    send_event(err_pipe[1], EVENT_FORK_ERR, errno, nullptr);
-	 
-	  if (pid != 0)
-	    _exit(0);
-	}
-#endif
-            
-      /* write pidfile _after_ forking ! */
-      if (daemon->runfile)
-	{
-	  int fd, err = 0;
-
-	  sprintf(daemon->namebuff, "%d\n", (int) getpid());
-
-	  /* Explanation: Some installations of dnsmasq (eg Debian/Ubuntu) locate the pid-file
+            safe_pipe(err_pipe.as_mut_ptr(), 0 as libc::c_int);
+            pid_0 = fork();
+            if pid_0 == -(1 as libc::c_int) {
+                /* fd == -1 since we've not forked, never returns. */
+                send_event(-(1 as libc::c_int), 18 as libc::c_int,
+                           *__errno_location(), 0 as *mut libc::c_char);
+            }
+            if pid_0 != 0 as libc::c_int {
+                let mut ev: event_desc =
+                    event_desc{event: 0, data: 0, msg_sz: 0,};
+                let mut msg: *mut libc::c_char = 0 as *mut libc::c_char;
+                /* close our copy of write-end */
+                close(err_pipe[1 as libc::c_int as usize]);
+                /* check for errors after the fork */
+                if read_event(err_pipe[0 as libc::c_int as usize], &mut ev,
+                              &mut msg) != 0 {
+                    fatal_event(&mut ev, msg);
+                }
+                _exit(0 as libc::c_int);
+            }
+            close(err_pipe[0 as libc::c_int as usize]);
+            /* NO calls to die() from here on. */
+            setsid();
+            pid_0 = fork();
+            if pid_0 == -(1 as libc::c_int) {
+                send_event(err_pipe[1 as libc::c_int as usize],
+                           18 as libc::c_int, *__errno_location(),
+                           0 as *mut libc::c_char);
+            }
+            if pid_0 != 0 as libc::c_int { _exit(0 as libc::c_int); }
+        }
+        /* write pidfile _after_ forking ! */
+        if !daemon.runfile.is_null() {
+            let mut fd: libc::c_int = 0;
+            let mut err: libc::c_int = 0 as libc::c_int;
+            sprintf(daemon.namebuff,
+                    b"%d\n\x00" as *const u8 as *const libc::c_char,
+                    getpid());
+            /* Explanation: Some installations of dnsmasq (eg Debian/Ubuntu) locate the pid-file
 	     in a directory which is writable by the non-privileged user that dnsmasq runs as. This
 	     allows the daemon to delete the file as part of its shutdown. This is a security hole to the 
 	     extent that an attacker running as the unprivileged  user could replace the pidfile with a 
@@ -552,1127 +879,1659 @@ int main (int argc, char **argv)
 	     Note that if dnsmasq is started as non-root (eg for testing) it silently ignores 
 	     failure to write the pid-file.
 	  */
-
-	  unlink(daemon->runfile); 
-	  
-	  if ((fd = open(daemon->runfile, O_WRONLY|O_CREAT|O_TRUNC|O_EXCL, S_IWUSR|S_IRUSR|S_IRGRP|S_IROTH)) == -1)
-	    {
-	      /* only complain if started as root */
-	      if (getuid() == 0)
-		err = 1;
-	    }
-	  else
-	    {
-	      /* We're still running as root here. Change the ownership of the PID file
+            unlink(daemon.runfile);
+            fd =
+                open(daemon.runfile,
+                     0o1 as libc::c_int | 0o100 as libc::c_int |
+                         0o1000 as libc::c_int | 0o200 as libc::c_int,
+                     0o200 as libc::c_int | 0o400 as libc::c_int |
+                         0o400 as libc::c_int >> 3 as libc::c_int |
+                         0o400 as libc::c_int >> 3 as libc::c_int >>
+                             3 as libc::c_int);
+            if fd == -(1 as libc::c_int) {
+                /* only complain if started as root */
+                if getuid() == 0 as libc::c_int as libc::c_uint {
+                    err = 1 as libc::c_int
+                }
+            } else {
+                /* We're still running as root here. Change the ownership of the PID file
 		 to the user we will be running as. Note that this is not to allow
 		 us to delete the file, since that depends on the permissions 
 		 of the directory containing the file. That directory will
 		 need to by owned by the dnsmasq user, and the ownership of the
 		 file has to match, to keep systemd >273 happy. */
-	      if (getuid() == 0 && ent_pw && ent_pw->pw_uid != 0 && fchown(fd, ent_pw->pw_uid, ent_pw->pw_gid) == -1)
-		chown_warn = errno;
-
-	      if (!read_write(fd, (unsigned char *)daemon->namebuff, strlen(daemon->namebuff), 0))
-		err = 1;
-	      else
-		{
-		  while (retry_send(close(fd)));
-		  if (errno != 0)
-		    err = 1;
-		}
-	    }
-
-	  if (err)
-	    {
-	      send_event(err_pipe[1], EVENT_PIDFILE, errno, daemon->runfile);
-	      _exit(0);
-	    }
-	}
+                if getuid() == 0 as libc::c_int as libc::c_uint &&
+                       !ent_pw.is_null() &&
+                       (*ent_pw).pw_uid != 0 as libc::c_int as libc::c_uint &&
+                       fchown(fd, (*ent_pw).pw_uid, (*ent_pw).pw_gid) ==
+                           -(1 as libc::c_int) {
+                    chown_warn = *__errno_location()
+                }
+                if read_write(fd,
+                              daemon.namebuff as
+                                  *mut libc::c_uchar,
+                              strlen(daemon.namebuff) as
+                                  libc::c_int, 0 as libc::c_int) == 0 {
+                    err = 1 as libc::c_int
+                } else if close(fd) == -(1 as libc::c_int) {
+                    err = 1 as libc::c_int
+                }
+            }
+            if err != 0 {
+                send_event(err_pipe[1 as libc::c_int as usize],
+                           13 as libc::c_int, *__errno_location(),
+                           daemon.runfile);
+                _exit(0 as libc::c_int);
+            }
+        }
     }
-  
-   log_err = log_start(ent_pw, err_pipe[1]);
-
-   if (!option_bool(OPT_DEBUG)) 
-     {       
-       /* open  stdout etc to /dev/null */
-       int nullfd = open("/dev/null", O_RDWR);
-       if (nullfd != -1)
-	 {
-	   dup2(nullfd, STDOUT_FILENO);
-	   dup2(nullfd, STDERR_FILENO);
-	   dup2(nullfd, STDIN_FILENO);
-	   close(nullfd);
-	 }
-     }
-   
-   /* if we are to run scripts, we need to fork a helper before dropping root. */
-  daemon->helperfd = -1;
-#ifdef HAVE_SCRIPT 
-  if ((daemon->dhcp || daemon->dhcp6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP)) && 
-      (daemon->lease_change_command || daemon->luascript))
-      daemon->helperfd = create_helper(pipewrite, err_pipe[1], script_uid, script_gid, max_fd);
-#endif
-
-  if (!option_bool(OPT_DEBUG) && getuid() == 0)   
-    {
-      int bad_capabilities = 0;
-      gid_t dummy;
-      
-      /* remove all supplementary groups */
-      if (gp && 
-	  (setgroups(0, &dummy) == -1 ||
-	   setgid(gp->gr_gid) == -1))
-	{
-	  send_event(err_pipe[1], EVENT_GROUP_ERR, errno, daemon->groupname);
-	  _exit(0);
-	}
-  
-      if (ent_pw && ent_pw->pw_uid != 0)
-	{     
-#if defined(HAVE_LINUX_NETWORK)	  
-	  /* On linux, we keep CAP_NETADMIN (for ARP-injection) and
-	     CAP_NET_RAW (for icmp) if we're doing dhcp. If we have yet to bind 
-	     ports because of DAD, or we're doing it dynamically,
-	     we need CAP_NET_BIND_SERVICE too. */
-	  if (is_dad_listeners() || option_bool(OPT_CLEVERBIND))
-	    data->effective = data->permitted = data->inheritable =
-	      (1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | 
-	      (1 << CAP_SETUID) | (1 << CAP_NET_BIND_SERVICE);
-	  else
-	    data->effective = data->permitted = data->inheritable =
-	      (1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_SETUID);
-	  
-	  /* Tell kernel to not clear capabilities when dropping root */
-	  if (capset(hdr, data) == -1 || prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0) == -1)
-	    bad_capabilities = errno;
-			  
-#elif defined(HAVE_SOLARIS_NETWORK)
-	  /* http://developers.sun.com/solaris/articles/program_privileges.html */
-	  priv_set_t *priv_set;
-	  
-	  if (!(priv_set = priv_str_to_set("basic", ",", nullptr)) ||
-	      priv_addset(priv_set, PRIV_NET_ICMPACCESS) == -1 ||
-	      priv_addset(priv_set, PRIV_SYS_NET_CONFIG) == -1)
-	    bad_capabilities = errno;
-
-	  if (priv_set && bad_capabilities == 0)
-	    {
-	      priv_inverse(priv_set);
-	  
-	      if (setppriv(PRIV_OFF, PRIV_LIMIT, priv_set) == -1)
-		bad_capabilities = errno;
-	    }
-
-	  if (priv_set)
-	    priv_freeset(priv_set);
-
-#endif    
-
-	  if (bad_capabilities != 0)
-	    {
-	      send_event(err_pipe[1], EVENT_CAP_ERR, bad_capabilities, nullptr);
-	      _exit(0);
-	    }
-	  
-	  /* finally drop root */
-	  if (setuid(ent_pw->pw_uid) == -1)
-	    {
-	      send_event(err_pipe[1], EVENT_USER_ERR, errno, daemon->username);
-	      _exit(0);
-	    }     
-
-#ifdef HAVE_LINUX_NETWORK
-	  if (is_dad_listeners() || option_bool(OPT_CLEVERBIND))
-	   data->effective = data->permitted =
-	     (1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW) | (1 << CAP_NET_BIND_SERVICE);
-	 else
-	   data->effective = data->permitted = 
-	     (1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW);
-	  data->inheritable = 0;
-	  
-	  /* lose the setuid and setgid capabilities */
-	  if (capset(hdr, data) == -1)
-	    {
-	      send_event(err_pipe[1], EVENT_CAP_ERR, errno, nullptr);
-	      _exit(0);
-	    }
-#endif
-	  
-	}
+    log_err = log_start(ent_pw, err_pipe[1 as libc::c_int as usize]);
+    if daemon.options[(6 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (6 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 {
+        /* open  stdout etc to /dev/null */
+        let mut nullfd: libc::c_int =
+            open(b"/dev/null\x00" as *const u8 as *const libc::c_char,
+                 0o2 as libc::c_int);
+        if nullfd != -(1 as libc::c_int) {
+            dup2(nullfd, 1 as libc::c_int);
+            dup2(nullfd, 2 as libc::c_int);
+            dup2(nullfd, 0 as libc::c_int);
+            close(nullfd);
+        }
     }
-  
-#ifdef HAVE_LINUX_NETWORK
-  free(hdr);
-  free(data);
-  if (option_bool(OPT_DEBUG)) 
-    prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
-#endif
-
-#ifdef HAVE_TFTP
-  if (option_bool(OPT_TFTP))
-    {
-      DIR *dir;
-      struct TftpPrefix *p;
-      
-      if (daemon->tftp_prefix)
-	{
-	  if (!((dir = opendir(daemon->tftp_prefix))))
-	    {
-	      tftp_prefix_missing = 1;
-	      if (!option_bool(OPT_TFTP_NO_FAIL))
-	        {
-	          send_event(err_pipe[1], EVENT_TFTP_ERR, errno, daemon->tftp_prefix);
-	          _exit(0);
-	        }
-	    }
-	  else
-	    closedir(dir);
-	}
-
-      for (p = daemon->if_prefix; p; p = p->next)
-	{
-	  p->missing = 0;
-	  if (!((dir = opendir(p->prefix))))
-	    {
-	      p->missing = 1;
-	      if (!option_bool(OPT_TFTP_NO_FAIL))
-		{
-		  send_event(err_pipe[1], EVENT_TFTP_ERR, errno, p->prefix);
-		  _exit(0);
-		}
-	    }
-	  else
-	    closedir(dir);
-	}
+    /* if we are to run scripts, we need to fork a helper before dropping root. */
+    daemon.helperfd = -(1 as libc::c_int);
+    if (!daemon.dhcp.is_null() ||
+            !daemon.dhcp6.is_null() ||
+            daemon.options[(40 as libc::c_int as
+                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                            as
+                                                                            libc::c_ulong).wrapping_mul(8
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_ulong))
+                                          as usize] &
+                (1 as libc::c_uint) <<
+                    (40 as libc::c_int as
+                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                          as
+                                                          libc::c_ulong).wrapping_mul(8
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                != 0 ||
+            daemon.options[(53 as libc::c_int as
+                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                            as
+                                                                            libc::c_ulong).wrapping_mul(8
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_ulong))
+                                          as usize] &
+                (1 as libc::c_uint) <<
+                    (53 as libc::c_int as
+                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                          as
+                                                          libc::c_ulong).wrapping_mul(8
+                                                                                          as
+                                                                                          libc::c_int
+                                                                                          as
+                                                                                          libc::c_ulong))
+                != 0) &&
+           (!daemon.lease_change_command.is_null() ||
+                !daemon.luascript.is_null()) {
+        daemon.helperfd =
+            create_helper(pipewrite, err_pipe[1 as libc::c_int as usize],
+                          script_uid, script_gid, max_fd)
     }
-#endif
-
-  if (daemon->port == 0)
-    my_syslog(LOG_INFO, _("started, version %s DNS disabled"), VERSION);
-  else 
-    {
-      if (daemon->cachesize != 0)
-	{
-	  my_syslog(LOG_INFO, _("started, version %s cachesize %d"), VERSION, daemon->cachesize);
-	  if (daemon->cachesize > 10000)
-	    my_syslog(LOG_WARNING, _("cache size greater than 10000 may cause performance issues, and is unlikely to be useful."));
-	}
-      else
-	my_syslog(LOG_INFO, _("started, version %s cache disabled"), VERSION);
-
-      if (option_bool(OPT_LOCAL_SERVICE))
-	my_syslog(LOG_INFO, _("DNS service limited to local subnets"));
+    if daemon.options[(6 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (6 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 && getuid() == 0 as libc::c_int as libc::c_uint {
+        let mut bad_capabilities: libc::c_int = 0 as libc::c_int;
+        let mut dummy: gid_t = 0;
+        /* remove all supplementary groups */
+        if !gp.is_null() &&
+               (setgroups(0 as libc::c_int as size_t, &mut dummy) ==
+                    -(1 as libc::c_int) ||
+                    setgid((*gp).gr_gid) == -(1 as libc::c_int)) {
+            send_event(err_pipe[1 as libc::c_int as usize], 15 as libc::c_int,
+                       *__errno_location(), daemon.groupname);
+            _exit(0 as libc::c_int);
+        }
+        if !ent_pw.is_null() &&
+               (*ent_pw).pw_uid != 0 as libc::c_int as libc::c_uint {
+            /* Need to be able to drop root. */
+            (*data).effective |=
+                ((1 as libc::c_int) << 7 as libc::c_int) as libc::c_uint;
+            (*data).permitted |=
+                ((1 as libc::c_int) << 7 as libc::c_int) as libc::c_uint;
+            /* Tell kernel to not clear capabilities when dropping root */
+            if capset(hdr, data) == -(1 as libc::c_int) ||
+                   prctl(8 as libc::c_int, 1 as libc::c_int, 0 as libc::c_int,
+                         0 as libc::c_int, 0 as libc::c_int) ==
+                       -(1 as libc::c_int) {
+                bad_capabilities = *__errno_location()
+            }
+            if bad_capabilities != 0 as libc::c_int {
+                send_event(err_pipe[1 as libc::c_int as usize],
+                           12 as libc::c_int, bad_capabilities,
+                           0 as *mut libc::c_char);
+                _exit(0 as libc::c_int);
+            }
+            /* finally drop root */
+            if setuid((*ent_pw).pw_uid) == -(1 as libc::c_int) {
+                send_event(err_pipe[1 as libc::c_int as usize],
+                           11 as libc::c_int, *__errno_location(),
+                           daemon.username);
+                _exit(0 as libc::c_int);
+            }
+            (*data).effective &=
+                !((1 as libc::c_int) << 7 as libc::c_int) as libc::c_uint;
+            (*data).permitted &=
+                !((1 as libc::c_int) << 7 as libc::c_int) as libc::c_uint;
+            /* lose the setuid capability */
+            if capset(hdr, data) == -(1 as libc::c_int) {
+                send_event(err_pipe[1 as libc::c_int as usize],
+                           12 as libc::c_int, *__errno_location(),
+                           0 as *mut libc::c_char);
+                _exit(0 as libc::c_int);
+            }
+        }
     }
-  
-  my_syslog(LOG_INFO, _("compile time options: %s"), compile_opts);
-
-  if (chown_warn != 0)
-    my_syslog(LOG_WARNING, "chown of PID file %s failed: %s", daemon->runfile, strerror(chown_warn));
-  
-#ifdef HAVE_DBUS
-  if (option_bool(OPT_DBUS))
-    {
-      if (daemon->dbus)
-	my_syslog(LOG_INFO, _("DBus support enabled: connected to system bus"));
-      else
-	my_syslog(LOG_INFO, _("DBus support enabled: bus connection pending"));
+    free(hdr as *mut libc::c_void);
+    free(data as *mut libc::c_void);
+    if daemon.options[(6 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (6 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        prctl(4 as libc::c_int, 1 as libc::c_int, 0 as libc::c_int,
+              0 as libc::c_int, 0 as libc::c_int);
     }
-#endif
-
-#ifdef HAVE_DNSSEC
-  if (option_bool(OPT_DNSSEC_VALID))
-    {
-      int rc;
-      struct ds_config *ds;
-      
-      /* Delay creating the timestamp file until here, after we've changed user, so that
-	 it has the correct owner to allow updating the mtime later. 
-	 This means we have to report fatal errors via the pipe. */
-      if ((rc = setup_timestamp()) == -1)
-	{
-	  send_event(err_pipe[1], EVENT_TIME_ERR, errno, daemon->timestamp_file);
-	  _exit(0);
-	}
-      
-      if (option_bool(OPT_DNSSEC_IGN_NS))
-	my_syslog(LOG_INFO, _("DNSSEC validation enabled but all unsigned answers are trusted"));
-      else
-	my_syslog(LOG_INFO, _("DNSSEC validation enabled"));
-      
-      daemon->dnssec_no_time_check = option_bool(OPT_DNSSEC_TIME);
-      if (option_bool(OPT_DNSSEC_TIME) && !daemon->back_to_the_future)
-	my_syslog(LOG_INFO, _("DNSSEC signature timestamps not checked until receipt of SIGINT"));
-      
-      if (rc == 1)
-	my_syslog(LOG_INFO, _("DNSSEC signature timestamps not checked until system time valid"));
-
-      for (ds = daemon->ds; ds; ds = ds->next)
-	my_syslog(LOG_INFO, _("configured with trust anchor for %s keytag %u"),
-		  ds->name[0] == 0 ? "<root>" : ds->name, ds->keytag);
+    if daemon.options[(40 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (40 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        let mut dir: *mut DIR = 0 as *mut DIR;
+        let mut p: *mut tftp_prefix = 0 as *mut tftp_prefix;
+        if !daemon.tftp_prefix.is_null() {
+            dir = opendir(daemon.tftp_prefix);
+            if dir.is_null() {
+                tftp_prefix_missing = 1 as libc::c_int;
+                if daemon.options[(52 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (52 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       == 0 {
+                    send_event(err_pipe[1 as libc::c_int as usize],
+                               20 as libc::c_int, *__errno_location(),
+                               daemon.tftp_prefix);
+                    _exit(0 as libc::c_int);
+                }
+            } else { closedir(dir); }
+        }
+        p = daemon.if_prefix;
+        while !p.is_null() {
+            (*p).missing = 0 as libc::c_int;
+            dir = opendir((*p).prefix);
+            if dir.is_null() {
+                (*p).missing = 1 as libc::c_int;
+                if daemon.options[(52 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (52 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       == 0 {
+                    send_event(err_pipe[1 as libc::c_int as usize],
+                               20 as libc::c_int, *__errno_location(),
+                               (*p).prefix);
+                    _exit(0 as libc::c_int);
+                }
+            } else { closedir(dir); }
+            p = (*p).next
+        }
     }
-#endif
-
-  if (log_err != 0)
-    my_syslog(LOG_WARNING, _("warning: failed to change owner of %s: %s"), 
-	      daemon->log_file, strerror(log_err));
-  
-  if (bind_fallback)
-    my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));
-
-  if (option_bool(OPT_NOWILD))
-    warn_bound_listeners();
-  else if (!option_bool(OPT_CLEVERBIND))
-    warn_wild_labels();
-
-  warn_int_names();
-  
-  if (!option_bool(OPT_NOWILD)) 
-    for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
-      if (if_tmp->name && !if_tmp->used)
-	my_syslog(LOG_WARNING, _("warning: interface %s does not currently exist"), if_tmp->name);
-   
-  if (daemon->port != 0 && option_bool(OPT_NO_RESOLV))
-    {
-      if (daemon->resolv_files && !daemon->resolv_files->is_default)
-	my_syslog(LOG_WARNING, _("warning: ignoring resolv-file flag because no-resolv is set"));
-      daemon->resolv_files = nullptr;
-      if (!daemon->servers)
-	my_syslog(LOG_WARNING, _("warning: no upstream servers configured"));
-    } 
-
-  if (daemon->max_logs != 0)
-    my_syslog(LOG_INFO, _("asynchronous logging enabled, queue limit is %d messages"), daemon->max_logs);
-  
-
-#ifdef HAVE_DHCP
-  for (context = daemon->dhcp; context; context = context->next)
-    log_context(AF_INET, context);
-
-  for (relay = daemon->relay4; relay; relay = relay->next)
-    log_relay(AF_INET, relay);
-
-#  ifdef HAVE_DHCP6
-  for (context = daemon->dhcp6; context; context = context->next)
-    log_context(AF_INET6, context);
-
-  for (relay = daemon->relay6; relay; relay = relay->next)
-    log_relay(AF_INET6, relay);
-  
-  if (daemon->doing_dhcp6 || daemon->doing_ra)
-    dhcp_construct_contexts(now);
-  
-  if (option_bool(OPT_RA))
-    my_syslog(MS_DHCP | LOG_INFO, _("IPv6 router advertisement enabled"));
-#  endif
-
-#  ifdef HAVE_LINUX_NETWORK
-  if (did_bind)
-    my_syslog(MS_DHCP | LOG_INFO, _("DHCP, sockets bound exclusively to interface %s"), bound_device);
-#  endif
-
-  /* after dhcp_construct_contexts */
-  if (daemon->dhcp || daemon->doing_dhcp6)
-    lease_find_interfaces(now);
-#endif
-
-#ifdef HAVE_TFTP
-  if (option_bool(OPT_TFTP))
-    {
-      struct TftpPrefix *p;
-
-      my_syslog(MS_TFTP | LOG_INFO, "TFTP %s%s %s", 
-		daemon->tftp_prefix ? _("root is ") : _("enabled"),
-		daemon->tftp_prefix ? daemon->tftp_prefix: "",
-		option_bool(OPT_TFTP_SECURE) ? _("secure mode") : "");
-
-      if (tftp_prefix_missing)
-	my_syslog(MS_TFTP | LOG_WARNING, _("warning: %s inaccessible"), daemon->tftp_prefix);
-
-      for (p = daemon->if_prefix; p; p = p->next)
-	if (p->missing)
-	   my_syslog(MS_TFTP | LOG_WARNING, _("warning: TFTP directory %s inaccessible"), p->prefix);
-
-      /* This is a guess, it assumes that for small limits, 
+    if daemon.port == 0 as libc::c_int {
+        my_syslog(6 as libc::c_int,
+                  b"started, version %s DNS disabled\x00" as *const u8 as
+                      *const libc::c_char,
+                  b"2.84rc2\x00" as *const u8 as *const libc::c_char);
+    } else {
+        if daemon.cachesize != 0 as libc::c_int {
+            my_syslog(6 as libc::c_int,
+                      b"started, version %s cachesize %d\x00" as *const u8 as
+                          *const libc::c_char,
+                      b"2.84rc2\x00" as *const u8 as *const libc::c_char,
+                      daemon.cachesize);
+            if daemon.cachesize > 10000 as libc::c_int {
+                my_syslog(4 as libc::c_int,
+                          b"cache size greater than 10000 may cause performance issues, and is unlikely to be useful.\x00"
+                              as *const u8 as *const libc::c_char);
+            }
+        } else {
+            my_syslog(6 as libc::c_int,
+                      b"started, version %s cache disabled\x00" as *const u8
+                          as *const libc::c_char,
+                      b"2.84rc2\x00" as *const u8 as *const libc::c_char);
+        }
+        if daemon.options[(49 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (49 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+            my_syslog(6 as libc::c_int,
+                      b"DNS service limited to local subnets\x00" as *const u8
+                          as *const libc::c_char);
+        }
+    }
+    my_syslog(6 as libc::c_int,
+              b"compile time options: %s\x00" as *const u8 as
+                  *const libc::c_char, compile_opts);
+    if chown_warn != 0 as libc::c_int {
+        my_syslog(4 as libc::c_int,
+                  b"chown of PID file %s failed: %s\x00" as *const u8 as
+                      *const libc::c_char, daemon.runfile,
+                  strerror(chown_warn));
+    }
+    if log_err != 0 as libc::c_int {
+        my_syslog(4 as libc::c_int,
+                  b"warning: failed to change owner of %s: %s\x00" as
+                      *const u8 as *const libc::c_char,
+                  daemon.log_file, strerror(log_err));
+    }
+    if bind_fallback != 0 {
+        my_syslog(4 as libc::c_int,
+                  b"setting --bind-interfaces option because of OS limitations\x00"
+                      as *const u8 as *const libc::c_char);
+    }
+    if daemon.options[(13 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (13 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        warn_bound_listeners();
+    } else if daemon.options[(39 as libc::c_int as
+                                             libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                              as
+                                                                              libc::c_ulong).wrapping_mul(8
+                                                                                                              as
+                                                                                                              libc::c_int
+                                                                                                              as
+                                                                                                              libc::c_ulong))
+                                            as usize] &
+                  (1 as libc::c_uint) <<
+                      (39 as libc::c_int as
+                           libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                            as
+                                                            libc::c_ulong).wrapping_mul(8
+                                                                                            as
+                                                                                            libc::c_int
+                                                                                            as
+                                                                                            libc::c_ulong))
+                  == 0 {
+        warn_wild_labels();
+    }
+    warn_int_names();
+    if daemon.options[(13 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (13 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 {
+        if_tmp = daemon.if_names;
+        while !if_tmp.is_null() {
+            if !(*if_tmp).name.is_null() && (*if_tmp).used == 0 {
+                my_syslog(4 as libc::c_int,
+                          b"warning: interface %s does not currently exist\x00"
+                              as *const u8 as *const libc::c_char,
+                          (*if_tmp).name);
+            }
+            if_tmp = (*if_tmp).next
+        }
+    }
+    if daemon.port != 0 as libc::c_int &&
+           daemon.options[(8 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (8 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+        if !daemon.resolv_files.is_null() &&
+               (*daemon.resolv_files).is_default == 0 {
+            my_syslog(4 as libc::c_int,
+                      b"warning: ignoring resolv-file flag because no-resolv is set\x00"
+                          as *const u8 as *const libc::c_char);
+        }
+        daemon.resolv_files = 0 as *mut resolvc;
+        if daemon.servers.is_null() {
+            my_syslog(4 as libc::c_int,
+                      b"warning: no upstream servers configured\x00" as
+                          *const u8 as *const libc::c_char);
+        }
+    }
+    if daemon.max_logs != 0 as libc::c_int {
+        my_syslog(6 as libc::c_int,
+                  b"asynchronous logging enabled, queue limit is %d messages\x00"
+                      as *const u8 as *const libc::c_char,
+                  daemon.max_logs);
+    }
+    context = daemon.dhcp;
+    while !context.is_null() {
+        log_context(2 as libc::c_int, context);
+        context = (*context).next
+    }
+    relay = daemon.relay4;
+    while !relay.is_null() {
+        log_relay(2 as libc::c_int, relay);
+        relay = (*relay).next
+    }
+    context = daemon.dhcp6;
+    while !context.is_null() {
+        log_context(10 as libc::c_int, context);
+        context = (*context).next
+    }
+    relay = daemon.relay6;
+    while !relay.is_null() {
+        log_relay(10 as libc::c_int, relay);
+        relay = (*relay).next
+    }
+    if daemon.doing_dhcp6 != 0 || daemon.doing_ra != 0 {
+        dhcp_construct_contexts(now);
+    }
+    if daemon.options[(37 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (37 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        my_syslog((3 as libc::c_int) << 3 as libc::c_int | 6 as libc::c_int,
+                  b"IPv6 router advertisement enabled\x00" as *const u8 as
+                      *const libc::c_char);
+    }
+    if did_bind != 0 {
+        my_syslog((3 as libc::c_int) << 3 as libc::c_int | 6 as libc::c_int,
+                  b"DHCP, sockets bound exclusively to interface %s\x00" as
+                      *const u8 as *const libc::c_char, bound_device);
+    }
+    if !netlink_warn.is_null() { my_syslog(4 as libc::c_int, netlink_warn); }
+    /* after dhcp_construct_contexts */
+    if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != 0
+       {
+        lease_find_interfaces(now);
+    }
+    if daemon.options[(40 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (40 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           != 0 {
+        let mut p_0: *mut tftp_prefix = 0 as *mut tftp_prefix;
+        my_syslog((1 as libc::c_int) << 3 as libc::c_int | 6 as libc::c_int,
+                  b"TFTP %s%s %s %s\x00" as *const u8 as *const libc::c_char,
+                  if !daemon.tftp_prefix.is_null() {
+                      b"root is \x00" as *const u8 as *const libc::c_char
+                  } else {
+                      b"enabled\x00" as *const u8 as *const libc::c_char
+                  },
+                  if !daemon.tftp_prefix.is_null() {
+                      daemon.tftp_prefix as *const libc::c_char
+                  } else { b"\x00" as *const u8 as *const libc::c_char },
+                  if daemon.options[(26 as libc::c_int as
+                                                    libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                     as
+                                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                                     as
+                                                                                                                     libc::c_int
+                                                                                                                     as
+                                                                                                                     libc::c_ulong))
+                                                   as usize] &
+                         (1 as libc::c_uint) <<
+                             (26 as libc::c_int as
+                                  libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                   as
+                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                   as
+                                                                                                   libc::c_int
+                                                                                                   as
+                                                                                                   libc::c_ulong))
+                         != 0 {
+                      b"secure mode\x00" as *const u8 as *const libc::c_char
+                  } else { b"\x00" as *const u8 as *const libc::c_char },
+                  if daemon.options[(60 as libc::c_int as
+                                                    libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                     as
+                                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                                     as
+                                                                                                                     libc::c_int
+                                                                                                                     as
+                                                                                                                     libc::c_ulong))
+                                                   as usize] &
+                         (1 as libc::c_uint) <<
+                             (60 as libc::c_int as
+                                  libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                   as
+                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                   as
+                                                                                                   libc::c_int
+                                                                                                   as
+                                                                                                   libc::c_ulong))
+                         != 0 {
+                      b"single port mode\x00" as *const u8 as
+                          *const libc::c_char
+                  } else { b"\x00" as *const u8 as *const libc::c_char });
+        if tftp_prefix_missing != 0 {
+            my_syslog((1 as libc::c_int) << 3 as libc::c_int |
+                          4 as libc::c_int,
+                      b"warning: %s inaccessible\x00" as *const u8 as
+                          *const libc::c_char, daemon.tftp_prefix);
+        }
+        p_0 = daemon.if_prefix;
+        while !p_0.is_null() {
+            if (*p_0).missing != 0 {
+                my_syslog((1 as libc::c_int) << 3 as libc::c_int |
+                              4 as libc::c_int,
+                          b"warning: TFTP directory %s inaccessible\x00" as
+                              *const u8 as *const libc::c_char,
+                          (*p_0).prefix);
+            }
+            p_0 = (*p_0).next
+        }
+        /* This is a guess, it assumes that for small limits, 
 	 disjoint files might be served, but for large limits, 
 	 a single file will be sent to may clients (the file only needs
 	 one fd). */
-
-      max_fd -= 30; /* use other than TFTP */
-      
-      if (max_fd < 0)
-	max_fd = 5;
-      else if (max_fd < 100)
-	max_fd = max_fd/2;
-      else
-	max_fd = max_fd - 20;
-      
-      /* if we have to use a limited range of ports, 
+        max_fd -= 30 as libc::c_int as libc::c_long; /* use other than TFTP */
+        if max_fd < 0 as libc::c_int as libc::c_long {
+            max_fd = 5 as libc::c_int as libc::c_long
+        } else if max_fd < 100 as libc::c_int as libc::c_long &&
+                      daemon.options[(60 as libc::c_int as
+                                                     libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                      as
+                                                                                      libc::c_ulong).wrapping_mul(8
+                                                                                                                      as
+                                                                                                                      libc::c_int
+                                                                                                                      as
+                                                                                                                      libc::c_ulong))
+                                                    as usize] &
+                          (1 as libc::c_uint) <<
+                              (60 as libc::c_int as
+                                   libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                    as
+                                                                    libc::c_ulong).wrapping_mul(8
+                                                                                                    as
+                                                                                                    libc::c_int
+                                                                                                    as
+                                                                                                    libc::c_ulong))
+                          == 0 {
+            max_fd = max_fd / 2 as libc::c_int as libc::c_long
+        } else { max_fd = max_fd - 20 as libc::c_int as libc::c_long }
+        /* if we have to use a limited range of ports, 
 	 that will limit the number of transfers */
-      if (daemon->start_tftp_port != 0 &&
-	  daemon->end_tftp_port - daemon->start_tftp_port + 1 < max_fd)
-	max_fd = daemon->end_tftp_port - daemon->start_tftp_port + 1;
-
-      if (daemon->tftp_max > max_fd)
-	{
-	  daemon->tftp_max = max_fd;
-	  my_syslog(MS_TFTP | LOG_WARNING, 
-		    _("restricting maximum simultaneous TFTP transfers to %d"), 
-		    daemon->tftp_max);
-	}
+        if daemon.start_tftp_port != 0 as libc::c_int &&
+               ((daemon.end_tftp_port -
+                     daemon.start_tftp_port + 1 as libc::c_int) as
+                    libc::c_long) < max_fd {
+            max_fd =
+                (daemon.end_tftp_port -
+                     daemon.start_tftp_port + 1 as libc::c_int) as
+                    libc::c_long
+        }
+        if daemon.tftp_max as libc::c_long > max_fd {
+            daemon.tftp_max = max_fd as libc::c_int;
+            my_syslog((1 as libc::c_int) << 3 as libc::c_int |
+                          4 as libc::c_int,
+                      b"restricting maximum simultaneous TFTP transfers to %d\x00"
+                          as *const u8 as *const libc::c_char,
+                      daemon.tftp_max);
+        }
     }
-#endif
-
-  /* finished start-up - release original process */
-  if (err_pipe[1] != -1)
-    while (retry_send(close(err_pipe[1])));
-  
-  if (daemon->port != 0)
-    check_servers();
-  
-  pid = getpid();
-  
-#ifdef HAVE_INOTIFY
-  /* Using inotify, have to select a resolv file at startup */
-  poll_resolv(1, 0, now);
-#endif
-  
-  while (1)
-    {
-      int t, timeout = -1;
-      
-      poll_reset();
-      
-      /* if we are out of resources, find how long we have to wait
+    /* finished start-up - release original process */
+    if err_pipe[1 as libc::c_int as usize] != -(1 as libc::c_int) {
+        close(err_pipe[1 as libc::c_int as usize]);
+    }
+    if daemon.port != 0 as libc::c_int { check_servers(); }
+    ::std::ptr::write_volatile(&mut pid as *mut pid_t, getpid());
+    daemon.pipe_to_parent = -(1 as libc::c_int);
+    i = 0 as libc::c_int as libc::c_long;
+    while i < 20 as libc::c_int as libc::c_long {
+        daemon.tcp_pipes[i as usize] = -(1 as libc::c_int);
+        i += 1
+    }
+    /* Using inotify, have to select a resolv file at startup */
+    poll_resolv(1 as libc::c_int, 0 as libc::c_int, now);
+    loop  {
+        let mut t: libc::c_int = 0;
+        let mut timeout: libc::c_int = -(1 as libc::c_int);
+        poll_reset();
+        /* if we are out of resources, find how long we have to wait
 	 for some to come free, we'll loop around then and restart
 	 listening for queries */
-      if ((t = set_dns_listeners(now)) != 0)
-	timeout = t * 1000;
-
-      /* Whilst polling for the dbus, or doing a tftp transfer, wake every quarter second */
-      if (daemon->tftp_trans ||
-	  (option_bool(OPT_DBUS) && !daemon->dbus))
-	timeout = 250;
-
-      /* Wake every second whilst waiting for DAD to complete */
-      else if (is_dad_listeners())
-	timeout = 1000;
-
-#ifdef HAVE_DBUS
-      set_dbus_listeners();
-#endif
-
-#ifdef HAVE_UBUS
-      if (option_bool(OPT_UBUS))
-	  set_ubus_listeners();
-#endif
-	  
-#ifdef HAVE_DHCP
-      if (daemon->dhcp || daemon->relay4)
-	{
-	  poll_listen(daemon->dhcpfd, POLLIN);
-	  if (daemon->pxefd != -1)
-	    poll_listen(daemon->pxefd, POLLIN);
-	}
-#endif
-
-#ifdef HAVE_DHCP6
-      if (daemon->doing_dhcp6 || daemon->relay6)
-	poll_listen(daemon->dhcp6fd, POLLIN);
-	
-      if (daemon->doing_ra)
-	poll_listen(daemon->icmp6fd, POLLIN); 
-#endif
-    
-#ifdef HAVE_INOTIFY
-      if (daemon->inotifyfd != -1)
-	poll_listen(daemon->inotifyfd, POLLIN);
-#endif
-
-#if defined(HAVE_LINUX_NETWORK)
-      poll_listen(daemon->netlinkfd, POLLIN);
-#elif defined(HAVE_BSD_NETWORK)
-      poll_listen(daemon->routefd, POLLIN);
-#endif
-      
-      poll_listen(piperead, POLLIN);
-
-#ifdef HAVE_SCRIPT
-#    ifdef HAVE_DHCP
-      while (helper_buf_empty() && do_script_run(now)); 
-#    endif
-
-      /* Refresh cache */
-      if (option_bool(OPT_SCRIPT_ARP))
-	find_mac(nullptr, nullptr, 0, now);
-      while (helper_buf_empty() && do_arp_script_run());
-
-#    ifdef HAVE_TFTP
-      while (helper_buf_empty() && do_tftp_script_run());
-#    endif
-
-      if (!helper_buf_empty())
-	poll_listen(daemon->helperfd, POLLOUT);
-#else
-      /* need this for other side-effects */
-#    ifdef HAVE_DHCP
-      while (do_script_run(now));
-#    endif
-
-      while (do_arp_script_run());
-
-#    ifdef HAVE_TFTP 
-      while (do_tftp_script_run());
-#    endif
-
-#endif
-
-   
-      /* must do this just before select(), when we know no
+        t = set_dns_listeners(now);
+        if t != 0 as libc::c_int { timeout = t * 1000 as libc::c_int }
+        /* Whilst polling for the dbus, or doing a tftp transfer, wake every quarter second */
+        if !daemon.tftp_trans.is_null() ||
+               daemon.options[(19 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (19 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   != 0 && daemon.dbus.is_null() {
+            timeout = 250 as libc::c_int
+        } else if is_dad_listeners() != 0 { timeout = 1000 as libc::c_int }
+        if !daemon.dhcp.is_null() ||
+               !daemon.relay4.is_null() {
+            poll_listen(daemon.dhcpfd,
+                        0x1 as libc::c_int as libc::c_short);
+            if daemon.pxefd != -(1 as libc::c_int) {
+                poll_listen(daemon.pxefd,
+                            0x1 as libc::c_int as libc::c_short);
+            }
+        }
+        if daemon.doing_dhcp6 != 0 ||
+               !daemon.relay6.is_null() {
+            poll_listen(daemon.dhcp6fd,
+                        0x1 as libc::c_int as libc::c_short);
+        }
+        if daemon.doing_ra != 0 {
+            poll_listen(daemon.icmp6fd,
+                        0x1 as libc::c_int as libc::c_short);
+        }
+        if daemon.inotifyfd != -(1 as libc::c_int) {
+            poll_listen(daemon.inotifyfd,
+                        0x1 as libc::c_int as libc::c_short);
+        }
+        poll_listen(daemon.netlinkfd,
+                    0x1 as libc::c_int as libc::c_short);
+        poll_listen(piperead, 0x1 as libc::c_int as libc::c_short);
+        while helper_buf_empty() != 0 && do_script_run(now) != 0 { }
+        /* Wake every second whilst waiting for DAD to complete */
+        /* Refresh cache */
+        if daemon.options[(53 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (53 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+            find_mac(0 as *mut mysockaddr, 0 as *mut libc::c_uchar,
+                     0 as libc::c_int, now);
+        }
+        while helper_buf_empty() != 0 && do_arp_script_run() != 0 { }
+        while helper_buf_empty() != 0 && do_tftp_script_run() != 0 { }
+        if helper_buf_empty() == 0 {
+            poll_listen(daemon.helperfd,
+                        0x4 as libc::c_int as libc::c_short);
+        }
+        /* must do this just before do_poll(), when we know no
 	 more calls to my_syslog() can occur */
-      set_log_writer();
-      
-      if (do_poll(timeout) < 0)
-	continue;
-      
-      now = dnsmasq_time();
-
-      check_log_writer(0);
-
-      /* prime. */
-      enumerate_interfaces(1);
-
-      /* Check the interfaces to see if any have exited DAD state
+        set_log_writer();
+        if do_poll(timeout) < 0 as libc::c_int { continue ; }
+        now = dnsmasq_time();
+        check_log_writer(0 as libc::c_int);
+        /* prime. */
+        enumerate_interfaces(1 as libc::c_int);
+        /* Check the interfaces to see if any have exited DAD state
 	 and if so, bind the address. */
-      if (is_dad_listeners())
-	{
-	  enumerate_interfaces(0);
-	  /* NB, is_dad_listeners() == 1 --> we're binding interfaces */
-	  create_bound_listeners(0);
-	  warn_bound_listeners();
-	}
-
-#if defined(HAVE_LINUX_NETWORK)
-      if (poll_check(daemon->netlinkfd, POLLIN))
-	netlink_multicast();
-#elif defined(HAVE_BSD_NETWORK)
-      if (poll_check(daemon->routefd, POLLIN))
-	route_sock();
-#endif
-
-#ifdef HAVE_INOTIFY
-      if  (daemon->inotifyfd != -1 && poll_check(daemon->inotifyfd, POLLIN) && inotify_check(now))
-	{
-	  if (daemon->port != 0 && !option_bool(OPT_NO_POLL))
-	    poll_resolv(1, 1, now);
-	} 	  
-#else
-      /* Check for changes to resolv files once per second max. */
-      /* Don't go silent for long periods if the clock goes backwards. */
-      if (daemon->last_resolv == 0 || 
-	  difftime(now, daemon->last_resolv) > 1.0 || 
-	  difftime(now, daemon->last_resolv) < -1.0)
-	{
-	  /* poll_resolv doesn't need to reload first time through, since 
-	     that's queued anyway. */
-
-	  poll_resolv(0, daemon->last_resolv != 0, now); 	  
-	  daemon->last_resolv = now;
-	}
-#endif
-
-      if (poll_check(piperead, POLLIN))
-	async_event(piperead, now);
-      
-#ifdef HAVE_DBUS
-      /* if we didn't create a DBus connection, retry now. */ 
-     if (option_bool(OPT_DBUS) && !daemon->dbus)
-	{
-	  char *err;
-	  if ((err = dbus_init()))
-	    my_syslog(LOG_WARNING, _("DBus error: %s"), err);
-	  if (daemon->dbus)
-	    my_syslog(LOG_INFO, _("connected to system DBus"));
-	}
-      check_dbus_listeners();
-#endif
-
-#ifdef HAVE_UBUS
-      if (option_bool(OPT_UBUS))
-        check_ubus_listeners();
-#endif
-
-      check_dns_listeners(now);
-
-#ifdef HAVE_TFTP
-      check_tftp_listeners(now);
-#endif      
-
-#ifdef HAVE_DHCP
-      if (daemon->dhcp || daemon->relay4)
-	{
-	  if (poll_check(daemon->dhcpfd, POLLIN))
-	    dhcp_packet(now, 0);
-	  if (daemon->pxefd != -1 && poll_check(daemon->pxefd, POLLIN))
-	    dhcp_packet(now, 1);
-	}
-
-#ifdef HAVE_DHCP6
-      if ((daemon->doing_dhcp6 || daemon->relay6) && poll_check(daemon->dhcp6fd, POLLIN))
-	dhcp6_packet(now);
-
-      if (daemon->doing_ra && poll_check(daemon->icmp6fd, POLLIN))
-	icmp6_packet(now);
-#endif
-
-#  ifdef HAVE_SCRIPT
-      if (daemon->helperfd != -1 && poll_check(daemon->helperfd, POLLOUT))
-	helper_write();
-#  endif
-#endif
-
-    }
+        if is_dad_listeners() != 0 {
+            enumerate_interfaces(0 as libc::c_int);
+            /* NB, is_dad_listeners() == 1 --> we're binding interfaces */
+            create_bound_listeners(0 as libc::c_int);
+            warn_bound_listeners();
+        }
+        if poll_check(daemon.netlinkfd,
+                      0x1 as libc::c_int as libc::c_short) != 0 {
+            netlink_multicast();
+        }
+        if daemon.inotifyfd != -(1 as libc::c_int) &&
+               poll_check(daemon.inotifyfd,
+                          0x1 as libc::c_int as libc::c_short) != 0 &&
+               inotify_check(now) != 0 {
+            if daemon.port != 0 as libc::c_int &&
+                   daemon.options[(5 as libc::c_int as
+                                                  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   as
+                                                                                   libc::c_ulong).wrapping_mul(8
+                                                                                                                   as
+                                                                                                                   libc::c_int
+                                                                                                                   as
+                                                                                                                   libc::c_ulong))
+                                                 as usize] &
+                       (1 as libc::c_uint) <<
+                           (5 as libc::c_int as
+                                libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                 as
+                                                                 libc::c_ulong).wrapping_mul(8
+                                                                                                 as
+                                                                                                 libc::c_int
+                                                                                                 as
+                                                                                                 libc::c_ulong))
+                       == 0 {
+                poll_resolv(1 as libc::c_int, 1 as libc::c_int, now);
+            }
+        }
+        if poll_check(piperead, 0x1 as libc::c_int as libc::c_short) != 0 {
+            async_event(piperead, now);
+        }
+        check_dns_listeners(now);
+        check_tftp_listeners(now);
+        if !daemon.dhcp.is_null() ||
+               !daemon.relay4.is_null() {
+            if poll_check(daemon.dhcpfd,
+                          0x1 as libc::c_int as libc::c_short) != 0 {
+                dhcp_packet(now, 0 as libc::c_int);
+            }
+            if daemon.pxefd != -(1 as libc::c_int) &&
+                   poll_check(daemon.pxefd,
+                              0x1 as libc::c_int as libc::c_short) != 0 {
+                dhcp_packet(now, 1 as libc::c_int);
+            }
+        }
+        if (daemon.doing_dhcp6 != 0 ||
+                !daemon.relay6.is_null()) &&
+               poll_check(daemon.dhcp6fd,
+                          0x1 as libc::c_int as libc::c_short) != 0 {
+            dhcp6_packet(now);
+        }
+        if daemon.doing_ra != 0 &&
+               poll_check(daemon.icmp6fd,
+                          0x1 as libc::c_int as libc::c_short) != 0 {
+            icmp6_packet(now);
+        }
+        if daemon.helperfd != -(1 as libc::c_int) &&
+               poll_check(daemon.helperfd,
+                          0x4 as libc::c_int as libc::c_short) != 0 {
+            helper_write();
+        }
+    };
 }
-
-static void sig_handler(int sig)
-{
-  if (pid == 0)
-    {
-      /* ignore anything other than TERM during startup
+unsafe extern "C" fn sig_handler(mut sig: libc::c_int) {
+    if pid == 0 as libc::c_int {
+        /* ignore anything other than TERM during startup
 	 and in helper proc. (helper ignore TERM too) */
-      if (sig == SIGTERM || sig == SIGINT)
-	exit(EC_MISC);
-    }
-  else if (pid != getpid())
-    {
-      /* alarm is used to kill TCP children after a fixed time. */
-      if (sig == SIGALRM)
-	_exit(0);
-    }
-  else
-    {
-      /* master process */
-      int event, errsave = errno;
-      
-      if (sig == SIGHUP)
-	event = EVENT_RELOAD;
-      else if (sig == SIGCHLD)
-	event = EVENT_CHILD;
-      else if (sig == SIGALRM)
-	event = EVENT_ALARM;
-      else if (sig == SIGTERM)
-	event = EVENT_TERM;
-      else if (sig == SIGUSR1)
-	event = EVENT_DUMP;
-      else if (sig == SIGUSR2)
-	event = EVENT_REOPEN;
-      else if (sig == SIGINT)
-	{
-	  /* Handle SIGINT normally in debug mode, so
+        if sig == 15 as libc::c_int || sig == 2 as libc::c_int {
+            exit(5 as libc::c_int);
+        }
+    } else if pid != getpid() {
+        /* alarm is used to kill TCP children after a fixed time. */
+        if sig == 14 as libc::c_int { _exit(0 as libc::c_int); }
+    } else {
+        /* master process */
+        let mut event: libc::c_int = 0;
+        let mut errsave: libc::c_int = *__errno_location();
+        if sig == 1 as libc::c_int {
+            event = 1 as libc::c_int
+        } else if sig == 17 as libc::c_int {
+            event = 5 as libc::c_int
+        } else if sig == 14 as libc::c_int {
+            event = 3 as libc::c_int
+        } else if sig == 15 as libc::c_int {
+            event = 4 as libc::c_int
+        } else if sig == 10 as libc::c_int {
+            event = 2 as libc::c_int
+        } else if sig == 12 as libc::c_int {
+            event = 6 as libc::c_int
+        } else if sig == 2 as libc::c_int {
+            /* Handle SIGINT normally in debug mode, so
 	     ctrl-c continues to operate. */
-	  if (option_bool(OPT_DEBUG))
-	    exit(EC_MISC);
-	  else
-	    event = EVENT_TIME;
-	}
-      else
-	return;
-
-      send_event(pipewrite, event, 0, nullptr);
-      errno = errsave;
-    }
+            if daemon.options[(6 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (6 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   != 0 {
+                exit(5 as libc::c_int);
+            } else { event = 26 as libc::c_int }
+        } else { return }
+        send_event(pipewrite, event, 0 as libc::c_int,
+                   0 as *mut libc::c_char);
+        *__errno_location() = errsave
+    };
 }
-
 /* now == 0 -> queue immediate callback */
-void send_alarm(time_t event, time_t now)
-{
-  if (now == 0 || event != 0)
-    {
-      /* alarm(0) or alarm(-ve) doesn't do what we want.... */
-      if ((now == 0 || difftime(event, now) <= 0.0))
-	send_event(pipewrite, EVENT_ALARM, 0, nullptr);
-      else 
-	alarm((unsigned)difftime(event, now)); 
-    }
+#[no_mangle]
+pub unsafe extern "C" fn send_alarm(mut event: time_t, mut now: time_t) {
+    if now == 0 as libc::c_int as libc::c_long ||
+           event != 0 as libc::c_int as libc::c_long {
+        /* alarm(0) or alarm(-ve) doesn't do what we want.... */
+        if now == 0 as libc::c_int as libc::c_long ||
+               difftime(event, now) <= 0.0f64 {
+            send_event(pipewrite, 3 as libc::c_int, 0 as libc::c_int,
+                       0 as *mut libc::c_char);
+        } else { alarm(difftime(event, now) as libc::c_uint); }
+    };
 }
-
-void queue_event(int event)
-{
-  send_event(pipewrite, event, 0, nullptr);
+#[no_mangle]
+pub unsafe extern "C" fn queue_event(mut event: libc::c_int) {
+    send_event(pipewrite, event, 0 as libc::c_int, 0 as *mut libc::c_char);
 }
-
-void send_event(int fd, int event, int data, char *msg)
-{
-  struct event_desc ev;
-  struct iovec iov[2];
-
-  ev.event = event;
-  ev.data = data;
-  ev.msg_sz = msg ? strlen(msg) : 0;
-  
-  iov[0].iov_base = &ev;
-  iov[0].iov_len = sizeof(ev);
-  iov[1].iov_base = msg;
-  iov[1].iov_len = ev.msg_sz;
-  
-  /* error pipe, debug mode. */
-  if (fd == -1)
-    fatal_event(&ev, msg);
-  else
-    /* pipe is non-blocking and struct event_desc is smaller than
+#[no_mangle]
+pub unsafe extern "C" fn send_event(mut fd: libc::c_int,
+                                    mut event: libc::c_int,
+                                    mut data: libc::c_int,
+                                    mut msg: *mut libc::c_char) {
+    let mut ev: event_desc = event_desc{event: 0, data: 0, msg_sz: 0,};
+    let mut iov: [iovec; 2] =
+        [iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,}; 2];
+    ev.event = event;
+    ev.data = data;
+    ev.msg_sz =
+        if !msg.is_null() {
+            strlen(msg)
+        } else { 0 as libc::c_int as libc::c_ulong } as libc::c_int;
+    iov[0 as libc::c_int as usize].iov_base =
+        &mut ev as *mut event_desc as *mut libc::c_void;
+    iov[0 as libc::c_int as usize].iov_len =
+        ::std::mem::size_of::<event_desc>() as libc::c_ulong;
+    iov[1 as libc::c_int as usize].iov_base = msg as *mut libc::c_void;
+    iov[1 as libc::c_int as usize].iov_len = ev.msg_sz as size_t;
+    /* error pipe, debug mode. */
+    if fd == -(1 as libc::c_int) {
+        fatal_event(&mut ev, msg);
+    } else {
+        /* pipe is non-blocking and struct event_desc is smaller than
        PIPE_BUF, so this either fails or writes everything */
-    while (writev(fd, iov, msg ? 2 : 1) == -1 && errno == EINTR);
+        while writev(fd, iov.as_mut_ptr(),
+                     (if !msg.is_null() {
+                          2 as libc::c_int
+                      } else { 1 as libc::c_int })) ==
+                  -(1 as libc::c_int) as libc::c_long &&
+                  *__errno_location() == 4 as libc::c_int {
+        }
+    };
 }
-
 /* NOTE: the memory used to return msg is leaked: use msgs in events only
    to describe fatal errors. */
-static int read_event(int fd, struct event_desc *evp, char **msg)
-{
-  char *buf;
-
-  if (!read_write(fd, (unsigned char *)evp, sizeof(struct event_desc), 1))
-    return 0;
-  
-  *msg = nullptr;
-  
-  if (evp->msg_sz != 0 && 
-      (buf = malloc(evp->msg_sz + 1)) &&
-      read_write(fd, (unsigned char *)buf, evp->msg_sz, 1))
-    {
-      buf[evp->msg_sz] = 0;
-      *msg = buf;
+unsafe extern "C" fn read_event(mut fd: libc::c_int, mut evp: *mut event_desc,
+                                mut msg: *mut *mut libc::c_char)
+ -> libc::c_int {
+    let mut buf: *mut libc::c_char = 0 as *mut libc::c_char;
+    if read_write(fd, evp as *mut libc::c_uchar,
+                  ::std::mem::size_of::<event_desc>() as libc::c_ulong as
+                      libc::c_int, 1 as libc::c_int) == 0 {
+        return 0 as libc::c_int
     }
-
-  return 1;
+    *msg = 0 as *mut libc::c_char;
+    if (*evp).msg_sz != 0 as libc::c_int &&
+           {
+               buf =
+                   malloc(((*evp).msg_sz + 1 as libc::c_int) as libc::c_ulong)
+                       as *mut libc::c_char;
+               !buf.is_null()
+           } &&
+           read_write(fd, buf as *mut libc::c_uchar, (*evp).msg_sz,
+                      1 as libc::c_int) != 0 {
+        *buf.offset((*evp).msg_sz as isize) =
+            0 as libc::c_int as libc::c_char;
+        *msg = buf
+    }
+    return 1 as libc::c_int;
 }
-    
-static void fatal_event(struct event_desc *ev, char *msg)
-{
-  errno = ev->data;
-  
-  switch (ev->event)
-    {
-    case EVENT_DIE:
-      exit(0);
-
-    case EVENT_FORK_ERR:
-      die(_("cannot fork into background: %s"), nullptr, EC_MISC);
-
-      /* fall through */
-    case EVENT_PIPE_ERR:
-      die(_("failed to create helper: %s"), nullptr, EC_MISC);
-
-      /* fall through */
-    case EVENT_CAP_ERR:
-      die(_("setting capabilities failed: %s"), nullptr, EC_MISC);
-
-      /* fall through */
-    case EVENT_USER_ERR:
-      die(_("failed to change user-id to %s: %s"), msg, EC_MISC);
-
-      /* fall through */
-    case EVENT_GROUP_ERR:
-      die(_("failed to change group-id to %s: %s"), msg, EC_MISC);
-
-      /* fall through */
-    case EVENT_PIDFILE:
-      die(_("failed to open pidfile %s: %s"), msg, EC_FILE);
-
-      /* fall through */
-    case EVENT_LOG_ERR:
-      die(_("cannot open log %s: %s"), msg, EC_FILE);
-
-      /* fall through */
-    case EVENT_LUA_ERR:
-      die(_("failed to load Lua script: %s"), msg, EC_MISC);
-
-      /* fall through */
-    case EVENT_TFTP_ERR:
-      die(_("TFTP directory %s inaccessible: %s"), msg, EC_FILE);
-
-      /* fall through */
-    case EVENT_TIME_ERR:
-      die(_("cannot create timestamp file %s: %s" ), msg, EC_BADCONF);
-    }
-}	
-      
-static void async_event(int pipe, time_t now)
-{
-  pid_t p;
-  struct event_desc ev;
-  int i, check = 0;
-  char *msg;
-  
-  /* NOTE: the memory used to return msg is leaked: use msgs in events only
+unsafe extern "C" fn fatal_event(mut ev: *mut event_desc,
+                                 mut msg: *mut libc::c_char) {
+    *__errno_location() = (*ev).data;
+    match (*ev).event {
+        16 => { exit(0 as libc::c_int); }
+        18 => {
+            die(b"cannot fork into background: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char,
+                0 as *mut libc::c_char, 5 as libc::c_int);
+        }
+        10 => {
+            /* fall through */
+            die(b"failed to create helper: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char,
+                0 as *mut libc::c_char, 5 as libc::c_int);
+        }
+        12 => {
+            /* fall through */
+            die(b"setting capabilities failed: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char,
+                0 as *mut libc::c_char, 5 as libc::c_int);
+        }
+        11 => {
+            /* fall through */
+            die(b"failed to change user-id to %s: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                5 as libc::c_int);
+        }
+        15 => {
+            /* fall through */
+            die(b"failed to change group-id to %s: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                5 as libc::c_int);
+        }
+        13 => {
+            /* fall through */
+            die(b"failed to open pidfile %s: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                3 as libc::c_int);
+        }
+        17 => {
+            /* fall through */
+            die(b"cannot open log %s: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                3 as libc::c_int);
+        }
+        19 => {
+            /* fall through */
+            die(b"failed to load Lua script: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                5 as libc::c_int);
+        }
+        20 => {
+            /* fall through */
+            die(b"TFTP directory %s inaccessible: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                3 as libc::c_int);
+        }
+        24 => {
+            /* fall through */
+            die(b"cannot create timestamp file %s: %s\x00" as *const u8 as
+                    *const libc::c_char as *mut libc::c_char, msg,
+                1 as libc::c_int);
+        }
+        _ => { }
+    };
+}
+unsafe extern "C" fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
+    let mut p: pid_t = 0;
+    let mut ev: event_desc = event_desc{event: 0, data: 0, msg_sz: 0,};
+    let mut i: libc::c_int = 0;
+    let mut check: libc::c_int = 0 as libc::c_int;
+    let mut msg: *mut libc::c_char = 0 as *mut libc::c_char;
+    /* NOTE: the memory used to return msg is leaked: use msgs in events only
      to describe fatal errors. */
-  
-  if (read_event(pipe, &ev, &msg))
-    switch (ev.event)
-      {
-      case EVENT_RELOAD:
-	daemon->soa_sn++; /* Bump zone serial, as it may have changed. */
-	
-	/* fall through */
-	
-      case EVENT_INIT:
-	clear_cache_and_reload(now);
-	
-	if (daemon->port != 0)
-	  {
-	    if (daemon->resolv_files && option_bool(OPT_NO_POLL))
-	      {
-		reload_servers(daemon->resolv_files->name);
-		check = 1;
-	      }
-
-	    if (daemon->servers_file)
-	      {
-		read_servers_file();
-		check = 1;
-	      }
-
-	    if (check)
-	      check_servers();
-	  }
-
-#ifdef HAVE_DHCP
-	rerun_scripts();
-#endif
-	break;
-	
-      case EVENT_DUMP:
-	if (daemon->port != 0)
-	  dump_cache(now);
-	break;
-	
-      case EVENT_ALARM:
-#ifdef HAVE_DHCP
-	if (daemon->dhcp || daemon->doing_dhcp6)
-	  {
-	    lease_prune(nullptr, now);
-	    lease_update_file(now);
-	  }
-#ifdef HAVE_DHCP6
-	else if (daemon->doing_ra)
-	  /* Not doing DHCP, so no lease system, manage alarms for ra only */
-	    send_alarm(periodic_ra(now), now);
-#endif
-#endif
-	break;
-		
-      case EVENT_CHILD:
-	/* See Stevens 5.10 */
-	while ((p = waitpid(-1, nullptr, WNOHANG)) != 0)
-	  if (p == -1)
-	    {
-	      if (errno != EINTR)
-		break;
-	    }      
-	  else 
-	    for (i = 0 ; i < MAX_PROCS; i++)
-	      if (daemon->tcp_pids[i] == p)
-		daemon->tcp_pids[i] = 0;
-	break;
-	
-#if defined(HAVE_SCRIPT)	
-      case EVENT_KILLED:
-	my_syslog(LOG_WARNING, _("script process killed by signal %d"), ev.data);
-	break;
-
-      case EVENT_EXITED:
-	my_syslog(LOG_WARNING, _("script process exited with status %d"), ev.data);
-	break;
-
-      case EVENT_EXEC_ERR:
-	my_syslog(LOG_ERR, _("failed to execute %s: %s"), 
-		  daemon->lease_change_command, strerror(ev.data));
-	break;
-
-      case EVENT_SCRIPT_LOG:
-	my_syslog(MS_SCRIPT | LOG_DEBUG, "%s", msg ? msg : "");
-        free(msg);
-	msg = nullptr;
-	break;
-
-	/* necessary for fatal errors in helper */
-      case EVENT_USER_ERR:
-      case EVENT_DIE:
-      case EVENT_LUA_ERR:
-	fatal_event(&ev, msg);
-	break;
-#endif
-
-      case EVENT_REOPEN:
-	/* Note: this may leave TCP-handling processes with the old file still open.
+    if read_event(pipe_0, &mut ev, &mut msg) != 0 {
+        let mut current_block_60:
+                u64; /* Bump zone serial, as it may have changed. */
+        match ev.event {
+            1 => {
+                daemon.soa_sn =
+                    daemon.soa_sn.wrapping_add(1);
+                current_block_60 = 11195962526119371365;
+            }
+            21 => { current_block_60 = 11195962526119371365; }
+            2 => {
+                if daemon.port != 0 as libc::c_int {
+                    dump_cache(now);
+                }
+                current_block_60 = 6367734732029634840;
+            }
+            3 => {
+                if !daemon.dhcp.is_null() ||
+                       daemon.doing_dhcp6 != 0 {
+                    lease_prune(0 as *mut dhcp_lease, now);
+                    lease_update_file(now);
+                } else if daemon.doing_ra != 0 {
+                    /* Not doing DHCP, so no lease system, manage alarms for ra only */
+                    send_alarm(periodic_ra(now), now);
+                }
+                current_block_60 = 6367734732029634840;
+            }
+            5 => {
+                loop 
+                     /* See Stevens 5.10 */
+                     {
+                    p =
+                        waitpid(-(1 as libc::c_int), 0 as *mut libc::c_int,
+                                1 as libc::c_int);
+                    if !(p != 0 as libc::c_int) { break ; }
+                    if p == -(1 as libc::c_int) {
+                        if *__errno_location() != 4 as libc::c_int { break ; }
+                    } else {
+                        i = 0 as libc::c_int;
+                        while i < 20 as libc::c_int {
+                            if daemon.tcp_pids[i as usize] == p {
+                                daemon.tcp_pids[i as usize] =
+                                    0 as libc::c_int
+                            }
+                            i += 1
+                        }
+                    }
+                }
+                current_block_60 = 6367734732029634840;
+            }
+            8 => {
+                my_syslog(4 as libc::c_int,
+                          b"script process killed by signal %d\x00" as
+                              *const u8 as *const libc::c_char, ev.data);
+                current_block_60 = 6367734732029634840;
+            }
+            7 => {
+                my_syslog(4 as libc::c_int,
+                          b"script process exited with status %d\x00" as
+                              *const u8 as *const libc::c_char, ev.data);
+                current_block_60 = 6367734732029634840;
+            }
+            9 => {
+                my_syslog(3 as libc::c_int,
+                          b"failed to execute %s: %s\x00" as *const u8 as
+                              *const libc::c_char,
+                          daemon.lease_change_command,
+                          strerror(ev.data));
+                current_block_60 = 6367734732029634840;
+            }
+            25 => {
+                my_syslog((2 as libc::c_int) << 3 as libc::c_int |
+                              7 as libc::c_int,
+                          b"%s\x00" as *const u8 as *const libc::c_char,
+                          if !msg.is_null() {
+                              msg as *const libc::c_char
+                          } else {
+                              b"\x00" as *const u8 as *const libc::c_char
+                          });
+                free(msg as *mut libc::c_void);
+                msg = 0 as *mut libc::c_char;
+                current_block_60 = 6367734732029634840;
+            }
+            11 | 16 | 19 => {
+                /* necessary for fatal errors in helper */
+                fatal_event(&mut ev, msg);
+                current_block_60 = 6367734732029634840;
+            }
+            6 => {
+                /* Note: this may leave TCP-handling processes with the old file still open.
 	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
 	   we leave them logging to the old file. */
-	if (daemon->log_file != nullptr)
-	  log_reopen(daemon->log_file);
-	break;
-
-      case EVENT_NEWADDR:
-	newaddress(now);
-	break;
-
-      case EVENT_NEWROUTE:
-	resend_query();
-	/* Force re-reading resolv file right now, for luck. */
-	poll_resolv(0, 1, now);
-	break;
-
-      case EVENT_TIME:
-#ifdef HAVE_DNSSEC
-	if (daemon->dnssec_no_time_check && option_bool(OPT_DNSSEC_VALID) && option_bool(OPT_DNSSEC_TIME))
-	  {
-	    my_syslog(LOG_INFO, _("now checking DNSSEC signature timestamps"));
-	    daemon->dnssec_no_time_check = 0;
-	    clear_cache_and_reload(now);
-	  }
-#endif
-	break;
-	
-      case EVENT_TERM:
-	/* Knock all our children on the head. */
-	for (i = 0; i < MAX_PROCS; i++)
-	  if (daemon->tcp_pids[i] != 0)
-	    kill(daemon->tcp_pids[i], SIGALRM);
-	
-#if defined(HAVE_SCRIPT) && defined(HAVE_DHCP)
-	/* handle pending lease transitions */
-	if (daemon->helperfd != -1)
-	  {
-	    /* block in writes until all done */
-	    if ((i = fcntl(daemon->helperfd, F_GETFL)) != -1)
-	      fcntl(daemon->helperfd, F_SETFL, i & ~O_NONBLOCK); 
-	    do {
-	      helper_write();
-	    } while (!helper_buf_empty() || do_script_run(now));
-	    while (retry_send(close(daemon->helperfd)));
-	  }
-#endif
-	
-	if (daemon->lease_stream)
-	  fclose(daemon->lease_stream);
-
-#ifdef HAVE_DNSSEC
-	/* update timestamp file on TERM if time is considered valid */
-	if (daemon->back_to_the_future)
-	  {
-	     if (utimes(daemon->timestamp_file, nullptr) == -1)
-		my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon->timestamp_file, strerror(errno));
-	  }
-#endif
-
-	if (daemon->runfile)
-	  unlink(daemon->runfile);
-
-#ifdef HAVE_DUMPFILE
-	if (daemon->dumpfd != -1)
-	  close(daemon->dumpfd);
-#endif
-	
-	my_syslog(LOG_INFO, _("exiting on receipt of SIGTERM"));
-	flush_log();
-	exit(EC_GOOD);
-      }
+                if !daemon.log_file.is_null() {
+                    log_reopen(daemon.log_file);
+                }
+                current_block_60 = 6367734732029634840;
+            }
+            22 => { newaddress(now); current_block_60 = 6367734732029634840; }
+            23 => {
+                resend_query();
+                /* Force re-reading resolv file right now, for luck. */
+                poll_resolv(0 as libc::c_int, 1 as libc::c_int, now);
+                current_block_60 = 6367734732029634840;
+            }
+            4 => {
+                /* Knock all our children on the head. */
+                i = 0 as libc::c_int;
+                while i < 20 as libc::c_int {
+                    if daemon.tcp_pids[i as usize] !=
+                           0 as libc::c_int {
+                        kill(daemon.tcp_pids[i as usize],
+                             14 as libc::c_int);
+                    }
+                    i += 1
+                }
+                /* handle pending lease transitions */
+                if daemon.helperfd != -(1 as libc::c_int) {
+                    /* block in writes until all done */
+                    i = fcntl(daemon.helperfd, 3 as libc::c_int);
+                    if i != -(1 as libc::c_int) {
+                        fcntl(daemon.helperfd, 4 as libc::c_int,
+                              i & !(0o4000 as libc::c_int));
+                    }
+                    loop  {
+                        helper_write();
+                        if !(helper_buf_empty() == 0 ||
+                                 do_script_run(now) != 0) {
+                            break ;
+                        }
+                    }
+                    close(daemon.helperfd);
+                }
+                if !daemon.lease_stream.is_null() {
+                    fclose(daemon.lease_stream);
+                }
+                if !daemon.runfile.is_null() {
+                    unlink(daemon.runfile);
+                }
+                if daemon.dumpfd != -(1 as libc::c_int) {
+                    close(daemon.dumpfd);
+                }
+                my_syslog(6 as libc::c_int,
+                          b"exiting on receipt of SIGTERM\x00" as *const u8 as
+                              *const libc::c_char);
+                flush_log();
+                exit(0 as libc::c_int);
+            }
+            26 | _ => { current_block_60 = 6367734732029634840; }
+        }
+        match current_block_60 {
+            11195962526119371365 =>
+            /* fall through */
+            {
+                clear_cache_and_reload(now);
+                if daemon.port != 0 as libc::c_int {
+                    if !daemon.resolv_files.is_null() &&
+                           daemon.options[(5 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (5 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               != 0 {
+                        reload_servers((*daemon.resolv_files).name);
+                        check = 1 as libc::c_int
+                    }
+                    if !daemon.servers_file.is_null() {
+                        read_servers_file();
+                        check = 1 as libc::c_int
+                    }
+                    if check != 0 { check_servers(); }
+                }
+                rerun_scripts();
+            }
+            _ => { }
+        }
+    };
 }
-
-static void poll_resolv(int force, int do_reload, time_t now)
-{
-  struct resolvc *res, *latest;
-  struct stat statbuf;
-  time_t last_change = 0;
-  /* There may be more than one possible file. 
+unsafe extern "C" fn poll_resolv(mut force: libc::c_int,
+                                 mut do_reload: libc::c_int,
+                                 mut now: time_t) {
+    let mut res: *mut resolvc = 0 as *mut resolvc;
+    let mut latest: *mut resolvc = 0 as *mut resolvc;
+    let mut statbuf: stat =
+        stat{st_dev: 0,
+             st_ino: 0,
+             st_nlink: 0,
+             st_mode: 0,
+             st_uid: 0,
+             st_gid: 0,
+             __pad0: 0,
+             st_rdev: 0,
+             st_size: 0,
+             st_blksize: 0,
+             st_blocks: 0,
+             st_atim: timespec{tv_sec: 0, tv_nsec: 0,},
+             st_mtim: timespec{tv_sec: 0, tv_nsec: 0,},
+             st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
+             __glibc_reserved: [0; 3],};
+    let mut last_change: time_t = 0 as libc::c_int as time_t;
+    /* There may be more than one possible file. 
      Go through and find the one which changed _last_.
      Warn of any which can't be read. */
-
-  if (daemon->port == 0 || option_bool(OPT_NO_POLL))
-    return;
-  
-  for (latest = nullptr, res = daemon->resolv_files; res; res = res->next)
-    if (stat(res->name, &statbuf) == -1)
-      {
-	if (force)
-	  {
-	    res->mtime = 0; 
-	    continue;
-	  }
-
-	if (!res->logged)
-	  my_syslog(LOG_WARNING, _("failed to access %s: %s"), res->name, strerror(errno));
-	res->logged = 1;
-	
-	if (res->mtime != 0)
-	  { 
-	    /* existing file evaporated, force selection of the latest
+    if daemon.port == 0 as libc::c_int ||
+           daemon.options[(5 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (5 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+        return
+    }
+    latest = 0 as *mut resolvc;
+    res = daemon.resolv_files;
+    while !res.is_null() {
+        if stat((*res).name, &mut statbuf) == -(1 as libc::c_int) {
+            if force != 0 {
+                (*res).mtime = 0 as libc::c_int as time_t
+            } else {
+                if (*res).logged == 0 {
+                    my_syslog(4 as libc::c_int,
+                              b"failed to access %s: %s\x00" as *const u8 as
+                                  *const libc::c_char, (*res).name,
+                              strerror(*__errno_location()));
+                }
+                (*res).logged = 1 as libc::c_int;
+                if (*res).mtime != 0 as libc::c_int as libc::c_long {
+                    /* existing file evaporated, force selection of the latest
 	       file even if its mtime hasn't changed since we last looked */
-	    poll_resolv(1, do_reload, now);
-	    return;
-	  }
-      }
-    else
-      {
-	res->logged = 0;
-	if (force || (statbuf.st_mtime != res->mtime))
-          {
-            res->mtime = statbuf.st_mtime;
-	    if (difftime(statbuf.st_mtime, last_change) > 0.0)
-	      {
-		last_change = statbuf.st_mtime;
-		latest = res;
-	      }
-	  }
-      }
-  
-  if (latest)
-    {
-      static int warned = 0;
-      if (reload_servers(latest->name))
-	{
-	  my_syslog(LOG_INFO, _("reading %s"), latest->name);
-	  warned = 0;
-	  check_servers();
-	  if (option_bool(OPT_RELOAD) && do_reload)
-	    clear_cache_and_reload(now);
-	}
-      else 
-	{
-	  latest->mtime = 0;
-	  if (!warned)
-	    {
-	      my_syslog(LOG_WARNING, _("no servers found in %s, will retry"), latest->name);
-	      warned = 1;
-	    }
-	}
+                    poll_resolv(1 as libc::c_int, do_reload, now);
+                    return
+                }
+            }
+        } else {
+            (*res).logged = 0 as libc::c_int;
+            if force != 0 || statbuf.st_mtim.tv_sec != (*res).mtime {
+                (*res).mtime = statbuf.st_mtim.tv_sec;
+                if difftime(statbuf.st_mtim.tv_sec, last_change) > 0.0f64 {
+                    last_change = statbuf.st_mtim.tv_sec;
+                    latest = res
+                }
+            }
+        }
+        res = (*res).next
     }
-}       
-
-void clear_cache_and_reload(time_t now)
-{
-  (void)now;
-
-  if (daemon->port != 0)
-    cache_reload();
-  
-#ifdef HAVE_DHCP
-  if (daemon->dhcp || daemon->doing_dhcp6)
-    {
-      if (option_bool(OPT_ETHERS))
-	dhcp_read_ethers();
-      reread_dhcp();
-      dhcp_update_configs(daemon->dhcp_conf);
-      lease_update_from_configs(); 
-      lease_update_file(now); 
-      lease_update_dns(1);
-    }
-#ifdef HAVE_DHCP6
-  else if (daemon->doing_ra)
-    /* Not doing DHCP, so no lease system, manage 
+    if !latest.is_null() {
+        static mut warned: libc::c_int = 0 as libc::c_int;
+        if reload_servers((*latest).name) != 0 {
+            my_syslog(6 as libc::c_int,
+                      b"reading %s\x00" as *const u8 as *const libc::c_char,
+                      (*latest).name);
+            warned = 0 as libc::c_int;
+            check_servers();
+            if daemon.options[(24 as libc::c_int as
+                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                               as
+                                                                               libc::c_ulong).wrapping_mul(8
+                                                                                                               as
+                                                                                                               libc::c_int
+                                                                                                               as
+                                                                                                               libc::c_ulong))
+                                             as usize] &
+                   (1 as libc::c_uint) <<
+                       (24 as libc::c_int as
+                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             as
+                                                             libc::c_ulong).wrapping_mul(8
+                                                                                             as
+                                                                                             libc::c_int
+                                                                                             as
+                                                                                             libc::c_ulong))
+                   != 0 && do_reload != 0 {
+                clear_cache_and_reload(now);
+            }
+        } else {
+            (*latest).mtime = 0 as libc::c_int as time_t;
+            if warned == 0 {
+                my_syslog(4 as libc::c_int,
+                          b"no servers found in %s, will retry\x00" as
+                              *const u8 as *const libc::c_char,
+                          (*latest).name);
+                warned = 1 as libc::c_int
+            }
+        }
+    };
+}
+#[no_mangle]
+pub unsafe extern "C" fn clear_cache_and_reload(mut now: time_t) {
+    if daemon.port != 0 as libc::c_int { cache_reload(); }
+    if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != 0
+       {
+        if daemon.options[(14 as libc::c_int as
+                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                           as
+                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                           as
+                                                                                                           libc::c_int
+                                                                                                           as
+                                                                                                           libc::c_ulong))
+                                         as usize] &
+               (1 as libc::c_uint) <<
+                   (14 as libc::c_int as
+                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                         as
+                                                         libc::c_ulong).wrapping_mul(8
+                                                                                         as
+                                                                                         libc::c_int
+                                                                                         as
+                                                                                         libc::c_ulong))
+               != 0 {
+            dhcp_read_ethers();
+        }
+        reread_dhcp();
+        dhcp_update_configs(daemon.dhcp_conf);
+        lease_update_from_configs();
+        lease_update_file(now);
+        lease_update_dns(1 as libc::c_int);
+    } else if daemon.doing_ra != 0 {
+        /* Not doing DHCP, so no lease system, manage 
        alarms for ra only */
-    send_alarm(periodic_ra(now), now);
-#endif
-#endif
+        send_alarm(periodic_ra(now), now);
+    };
 }
-
-static int set_dns_listeners(time_t now)
-{
-  struct ServerFd *serverfdp;
-  struct listener *listener;
-  int wait = 0, i;
-  
-#ifdef HAVE_TFTP
-  int  tftp = 0;
-  struct tftp_transfer *transfer;
-  for (transfer = daemon->tftp_trans; transfer; transfer = transfer->next)
-    {
-      tftp++;
-      poll_listen(transfer->sockfd, POLLIN);
+unsafe extern "C" fn set_dns_listeners(mut now: time_t) -> libc::c_int {
+    let mut serverfdp: *mut serverfd = 0 as *mut serverfd;
+    let mut listener: *mut listener = 0 as *mut listener;
+    let mut wait: libc::c_int = 0 as libc::c_int;
+    let mut i: libc::c_int = 0;
+    let mut tftp: libc::c_int = 0 as libc::c_int;
+    let mut transfer: *mut tftp_transfer = 0 as *mut tftp_transfer;
+    if daemon.options[(60 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (60 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 {
+        transfer = daemon.tftp_trans;
+        while !transfer.is_null() {
+            tftp += 1;
+            poll_listen((*transfer).sockfd,
+                        0x1 as libc::c_int as libc::c_short);
+            transfer = (*transfer).next
+        }
     }
-#endif
-  
-  /* will we be able to get memory? */
-  if (daemon->port != 0)
-    get_new_frec(now, &wait, 0);
-  
-  for (serverfdp = daemon->sfds; serverfdp; serverfdp = serverfdp->next)
-    poll_listen(serverfdp->fd, POLLIN);
-    
-  if (daemon->port != 0 && !daemon->osport)
-    for (i = 0; i < RANDOM_SOCKS; i++)
-      if (daemon->randomsocks[i].refcount != 0)
-	poll_listen(daemon->randomsocks[i].fd, POLLIN);
-	  
-  for (listener = daemon->listeners; listener; listener = listener->next)
-    {
-      /* only listen for queries if we have resources */
-      if (listener->fd != -1 && wait == 0)
-	poll_listen(listener->fd, POLLIN);
-	
-      /* death of a child goes through the select loop, so
+    /* will we be able to get memory? */
+    if daemon.port != 0 as libc::c_int {
+        get_new_frec(now, &mut wait, 0 as *mut frec);
+    }
+    serverfdp = daemon.sfds;
+    while !serverfdp.is_null() {
+        poll_listen((*serverfdp).fd, 0x1 as libc::c_int as libc::c_short);
+        serverfdp = (*serverfdp).next
+    }
+    if daemon.port != 0 as libc::c_int &&
+           daemon.osport == 0 {
+        i = 0 as libc::c_int;
+        while i < 64 as libc::c_int {
+            if daemon.randomsocks[i as usize].refcount as
+                   libc::c_int != 0 as libc::c_int {
+                poll_listen(daemon.randomsocks[i as usize].fd,
+                            0x1 as libc::c_int as libc::c_short);
+            }
+            i += 1
+        }
+    }
+    listener = daemon.listeners;
+    while !listener.is_null() {
+        /* only listen for queries if we have resources */
+        if (*listener).fd != -(1 as libc::c_int) && wait == 0 as libc::c_int {
+            poll_listen((*listener).fd, 0x1 as libc::c_int as libc::c_short);
+        }
+        /* death of a child goes through the select loop, so
 	 we don't need to explicitly arrange to wake up here */
-      if  (listener->tcpfd != -1)
-	for (i = 0; i < MAX_PROCS; i++)
-	  if (daemon->tcp_pids[i] == 0)
-	    {
-	      poll_listen(listener->tcpfd, POLLIN);
-	      break;
-	    }
-
-#ifdef HAVE_TFTP
-      if (tftp <= daemon->tftp_max && listener->tftpfd != -1)
-	poll_listen(listener->tftpfd, POLLIN);
-#endif
-
+        if (*listener).tcpfd != -(1 as libc::c_int) {
+            i = 0 as libc::c_int;
+            while i < 20 as libc::c_int {
+                if daemon.tcp_pids[i as usize] == 0 as libc::c_int
+                       &&
+                       daemon.tcp_pipes[i as usize] ==
+                           -(1 as libc::c_int) {
+                    poll_listen((*listener).tcpfd,
+                                0x1 as libc::c_int as libc::c_short);
+                    break ;
+                } else { i += 1 }
+            }
+        }
+        /* tftp == 0 in single-port mode. */
+        if tftp <= daemon.tftp_max &&
+               (*listener).tftpfd != -(1 as libc::c_int) {
+            poll_listen((*listener).tftpfd,
+                        0x1 as libc::c_int as libc::c_short);
+        }
+        listener = (*listener).next
     }
-  
-  return wait;
+    if daemon.options[(6 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (6 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 {
+        i = 0 as libc::c_int;
+        while i < 20 as libc::c_int {
+            if daemon.tcp_pipes[i as usize] != -(1 as libc::c_int)
+               {
+                poll_listen(daemon.tcp_pipes[i as usize],
+                            0x1 as libc::c_int as libc::c_short);
+            }
+            i += 1
+        }
+    }
+    return wait;
 }
-
-static void check_dns_listeners(time_t now)
-{
-  struct ServerFd *serverfdp;
-  struct listener *listener;
-  int i;
-
-  for (serverfdp = daemon->sfds; serverfdp; serverfdp = serverfdp->next)
-    if (poll_check(serverfdp->fd, POLLIN))
-      reply_query(serverfdp->fd, serverfdp->source_addr.sa.sa_family, now);
-  
-  if (daemon->port != 0 && !daemon->osport)
-    for (i = 0; i < RANDOM_SOCKS; i++)
-      if (daemon->randomsocks[i].refcount != 0 && 
-	  poll_check(daemon->randomsocks[i].fd, POLLIN))
-	reply_query(daemon->randomsocks[i].fd, daemon->randomsocks[i].family, now);
-  
-  for (listener = daemon->listeners; listener; listener = listener->next)
-    {
-      if (listener->fd != -1 && poll_check(listener->fd, POLLIN))
-	receive_query(listener, now); 
-      
-#ifdef HAVE_TFTP     
-      if (listener->tftpfd != -1 && poll_check(listener->tftpfd, POLLIN))
-	tftp_request(listener, now);
-#endif
-
-      if (listener->tcpfd != -1 && poll_check(listener->tcpfd, POLLIN))
-	{
-	  int confd, client_ok = 1;
-	  struct irec *iface = nullptr;
-	  pid_t p;
-	  union mysockaddr tcp_addr;
-	  socklen_t tcp_len = sizeof(union mysockaddr);
-
-	  while ((confd = accept(listener->tcpfd, nullptr, nullptr)) == -1 && errno == EINTR);
-	  
-	  if (confd == -1)
-	    continue;
-	  
-	  if (getsockname(confd, (struct sockaddr *)&tcp_addr, &tcp_len) == -1)
-	    {
-	      while (retry_send(close(confd)));
-	      continue;
-	    }
-	  
-	  /* Make sure that the interface list is up-to-date.
+unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
+    let mut serverfdp: *mut serverfd = 0 as *mut serverfd;
+    let mut listener: *mut listener = 0 as *mut listener;
+    let mut i: libc::c_int = 0;
+    let mut pipefd: [libc::c_int; 2] = [0; 2];
+    serverfdp = daemon.sfds;
+    while !serverfdp.is_null() {
+        if poll_check((*serverfdp).fd, 0x1 as libc::c_int as libc::c_short) !=
+               0 {
+            reply_query((*serverfdp).fd,
+                        (*serverfdp).source_addr.sa.sa_family as libc::c_int,
+                        now);
+        }
+        serverfdp = (*serverfdp).next
+    }
+    if daemon.port != 0 as libc::c_int &&
+           daemon.osport == 0 {
+        i = 0 as libc::c_int;
+        while i < 64 as libc::c_int {
+            if daemon.randomsocks[i as usize].refcount as
+                   libc::c_int != 0 as libc::c_int &&
+                   poll_check(daemon.randomsocks[i as usize].fd,
+                              0x1 as libc::c_int as libc::c_short) != 0 {
+                reply_query(daemon.randomsocks[i as usize].fd,
+                            daemon.randomsocks[i as usize].family
+                                as libc::c_int, now);
+            }
+            i += 1
+        }
+    }
+    /* Races. The child process can die before we read all of the data from the
+     pipe, or vice versa. Therefore send tcp_pids to zero when we wait() the 
+     process, and tcp_pipes to -1 and close the FD when we read the last
+     of the data - indicated by cache_recv_insert returning zero.
+     The order of these events is indeterminate, and both are needed
+     to free the process slot. Once the child process has gone, poll()
+     returns POLLHUP, not POLLIN, so have to check for both here. */
+    if daemon.options[(6 as libc::c_int as
+                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                       as
+                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                       as
+                                                                                                       libc::c_int
+                                                                                                       as
+                                                                                                       libc::c_ulong))
+                                     as usize] &
+           (1 as libc::c_uint) <<
+               (6 as libc::c_int as
+                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                     as
+                                                     libc::c_ulong).wrapping_mul(8
+                                                                                     as
+                                                                                     libc::c_int
+                                                                                     as
+                                                                                     libc::c_ulong))
+           == 0 {
+        i = 0 as libc::c_int;
+        while i < 20 as libc::c_int {
+            if daemon.tcp_pipes[i as usize] != -(1 as libc::c_int)
+                   &&
+                   poll_check(daemon.tcp_pipes[i as usize],
+                              (0x1 as libc::c_int | 0x10 as libc::c_int) as
+                                  libc::c_short) != 0 &&
+                   cache_recv_insert(now,
+                                     daemon.tcp_pipes[i as usize])
+                       == 0 {
+                close(daemon.tcp_pipes[i as usize]);
+                daemon.tcp_pipes[i as usize] = -(1 as libc::c_int)
+            }
+            i += 1
+        }
+    }
+    listener = daemon.listeners;
+    while !listener.is_null() {
+        if (*listener).fd != -(1 as libc::c_int) &&
+               poll_check((*listener).fd, 0x1 as libc::c_int as libc::c_short)
+                   != 0 {
+            receive_query(listener, now);
+        }
+        if (*listener).tftpfd != -(1 as libc::c_int) &&
+               poll_check((*listener).tftpfd,
+                          0x1 as libc::c_int as libc::c_short) != 0 {
+            tftp_request(listener, now);
+        }
+        if (*listener).tcpfd != -(1 as libc::c_int) &&
+               poll_check((*listener).tcpfd,
+                          0x1 as libc::c_int as libc::c_short) != 0 {
+            let mut confd: libc::c_int = 0;
+            let mut client_ok: libc::c_int = 1 as libc::c_int;
+            let mut iface: *mut irec = 0 as *mut irec;
+            let mut p: pid_t = 0;
+            let mut tcp_addr: mysockaddr =
+                mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+            let mut tcp_len: socklen_t =
+                ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as
+                    socklen_t;
+            loop  {
+                confd =
+                    accept((*listener).tcpfd,
+                           __SOCKADDR_ARG{__sockaddr__:
+                                              0 as *mut libc::c_void as
+                                                  *mut sockaddr,},
+                           0 as *mut socklen_t);
+                if !(confd == -(1 as libc::c_int) &&
+                         *__errno_location() == 4 as libc::c_int) {
+                    break ;
+                }
+            }
+            if !(confd == -(1 as libc::c_int)) {
+                if getsockname(confd,
+                               __SOCKADDR_ARG{__sockaddr__:
+                                                  &mut tcp_addr as
+                                                      *mut mysockaddr as
+                                                      *mut sockaddr,},
+                               &mut tcp_len) == -(1 as libc::c_int) {
+                    close(confd);
+                } else {
+                    /* Make sure that the interface list is up-to-date.
 	     
 	     We do this here as we may need the results below, and
 	     the DNS code needs them for --interface-name stuff.
@@ -1682,291 +2541,502 @@ static void check_dns_listeners(time_t now)
 	     have no effect. This avoids two processes reading from the same
 	     netlink fd and screwing the pooch entirely.
 	  */
- 
-	  enumerate_interfaces(0);
-	  
-	  if (option_bool(OPT_NOWILD))
-	    iface = listener->iface; /* May be NULL */
-	  else 
-	    {
-	      int if_index;
-	      char intr_name[IF_NAMESIZE];
-	      
-	      /* if we can find the arrival interface, check it's one that's allowed */
-	      if ((if_index = tcp_interface(confd, tcp_addr.sa.sa_family)) != 0 &&
-		  indextoname(listener->tcpfd, if_index, intr_name))
-		{
-		  struct all_addr addr;
-		  addr.addr.addr4 = tcp_addr.in.sin_addr;
-#ifdef HAVE_IPV6
-		  if (tcp_addr.sa.sa_family == AF_INET6)
-		    addr.addr.addr6 = tcp_addr.in6.sin6_addr;
-#endif
-		  
-		  for (iface = daemon->interfaces; iface; iface = iface->next)
-		    if (iface->index == if_index)
-		      break;
-		  
-		  if (!iface && !loopback_exception(listener->tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
-		    client_ok = 0;
-		}
-	      
-	      if (option_bool(OPT_CLEVERBIND))
-		iface = listener->iface; /* May be NULL */
-	      else
-		{
-		  /* Check for allowed interfaces when binding the wildcard address:
+                    enumerate_interfaces(0 as libc::c_int); /* May be NULL */
+                    if daemon.options[(13 as libc::c_int as
+                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                       as
+                                                                                       libc::c_ulong).wrapping_mul(8
+                                                                                                                       as
+                                                                                                                       libc::c_int
+                                                                                                                       as
+                                                                                                                       libc::c_ulong))
+                                                     as usize] &
+                           (1 as libc::c_uint) <<
+                               (13 as libc::c_int as
+                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                     as
+                                                                     libc::c_ulong).wrapping_mul(8
+                                                                                                     as
+                                                                                                     libc::c_int
+                                                                                                     as
+                                                                                                     libc::c_ulong))
+                           != 0 {
+                        iface = (*listener).iface
+                    } else {
+                        let mut if_index: libc::c_int = 0;
+                        let mut intr_name: [libc::c_char; 16] = [0; 16];
+                        /* if we can find the arrival interface, check it's one that's allowed */
+                        if_index =
+                            tcp_interface(confd,
+                                          tcp_addr.sa.sa_family as
+                                              libc::c_int); /* May be NULL */
+                        if if_index != 0 as libc::c_int &&
+                               indextoname((*listener).tcpfd, if_index,
+                                           intr_name.as_mut_ptr()) != 0 {
+                            let mut addr: all_addr =
+                                all_addr{addr4: in_addr{s_addr: 0,},};
+                            if tcp_addr.sa.sa_family as libc::c_int ==
+                                   10 as libc::c_int {
+                                addr.addr6 = tcp_addr.in6.sin6_addr
+                            } else { addr.addr4 = tcp_addr.in_0.sin_addr }
+                            iface = daemon.interfaces;
+                            while !iface.is_null() {
+                                if (*iface).index == if_index &&
+                                       (*iface).addr.sa.sa_family as
+                                           libc::c_int ==
+                                           tcp_addr.sa.sa_family as
+                                               libc::c_int {
+                                    break ;
+                                }
+                                iface = (*iface).next
+                            }
+                            if iface.is_null() &&
+                                   loopback_exception((*listener).tcpfd,
+                                                      tcp_addr.sa.sa_family as
+                                                          libc::c_int,
+                                                      &mut addr,
+                                                      intr_name.as_mut_ptr())
+                                       == 0 {
+                                client_ok = 0 as libc::c_int
+                            }
+                        }
+                        if daemon.options[(39 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (39 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               != 0 {
+                            iface = (*listener).iface
+                        } else {
+                            /* Check for allowed interfaces when binding the wildcard address:
 		     we do this by looking for an interface with the same address as 
 		     the local address of the TCP connection, then looking to see if that's
 		     an allowed interface. As a side effect, we get the netmask of the
 		     interface too, for localisation. */
-		  
-		  for (iface = daemon->interfaces; iface; iface = iface->next)
-		    if (sockaddr_isequal(&iface->addr, &tcp_addr))
-		      break;
-		  
-		  if (!iface)
-		    client_ok = 0;
-		}
-	    }
-	  
-	  if (!client_ok)
-	    {
-	      shutdown(confd, SHUT_RDWR);
-	      while (retry_send(close(confd)));
-	    }
-#ifndef NO_FORK
-	  else if (!option_bool(OPT_DEBUG) && (p = fork()) != 0)
-	    {
-	      if (p != -1)
-		{
-		  int i;
-		  for (i = 0; i < MAX_PROCS; i++)
-		    if (daemon->tcp_pids[i] == 0)
-		      {
-			daemon->tcp_pids[i] = p;
-			break;
-		      }
-		}
-	      while (retry_send(close(confd)));
-
-	      /* The child can use up to TCP_MAX_QUERIES ids, so skip that many. */
-	      daemon->log_id += TCP_MAX_QUERIES;
-	    }
-#endif
-	  else
-	    {
-	      unsigned char *buff;
-	      struct server *s; 
-	      int flags;
-	      struct in_addr netmask;
-	      int auth_dns;
-
-	      if (iface)
-		{
-		  netmask = iface->netmask;
-		  auth_dns = iface->dns_auth;
-		}
-	      else
-		{
-		  netmask.s_addr = 0;
-		  auth_dns = 0;
-		}
-
-#ifndef NO_FORK
-	      /* Arrange for SIGALRM after CHILD_LIFETIME seconds to
+                            iface =
+                                daemon.interfaces; /* parent needs read pipe end. */
+                            while !iface.is_null() {
+                                if sockaddr_isequal(&mut (*iface).addr,
+                                                    &mut tcp_addr) != 0 {
+                                    break ;
+                                }
+                                iface = (*iface).next
+                            }
+                            if iface.is_null() {
+                                client_ok = 0 as libc::c_int
+                            }
+                        }
+                    }
+                    if client_ok == 0 {
+                        shutdown(confd, SHUT_RDWR as libc::c_int);
+                        close(confd);
+                    } else if daemon.options[(6 as libc::c_int as
+                                                             libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                              as
+                                                                                              libc::c_ulong).wrapping_mul(8
+                                                                                                                              as
+                                                                                                                              libc::c_int
+                                                                                                                              as
+                                                                                                                              libc::c_ulong))
+                                                            as usize] &
+                                  (1 as libc::c_uint) <<
+                                      (6 as libc::c_int as
+                                           libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                            as
+                                                                            libc::c_ulong).wrapping_mul(8
+                                                                                                            as
+                                                                                                            libc::c_int
+                                                                                                            as
+                                                                                                            libc::c_ulong))
+                                  == 0 &&
+                                  pipe(pipefd.as_mut_ptr()) ==
+                                      0 as libc::c_int &&
+                                  { p = fork(); (p) != 0 as libc::c_int } {
+                        close(pipefd[1 as libc::c_int as usize]);
+                        if p == -(1 as libc::c_int) {
+                            close(pipefd[0 as libc::c_int as usize]);
+                        } else {
+                            let mut i_0: libc::c_int = 0;
+                            /* The child process inherits the netlink socket, 
+		     which it never uses, but when the parent (us) 
+		     uses it in the future, the answer may go to the 
+		     child, resulting in the parent blocking
+		     forever awaiting the result. To avoid this
+		     the child closes the netlink socket, but there's
+		     a nasty race, since the parent may use netlink
+		     before the child has done the close.
+		     
+		     To avoid this, the parent blocks here until a 
+		     single byte comes back up the pipe, which
+		     is sent by the child after it has closed the
+		     netlink socket. */
+                            let mut a: libc::c_uchar = 0;
+                            read_write(pipefd[0 as libc::c_int as usize],
+                                       &mut a, 1 as libc::c_int,
+                                       1 as libc::c_int);
+                            i_0 = 0 as libc::c_int;
+                            while i_0 < 20 as libc::c_int {
+                                if daemon.tcp_pids[i_0 as usize] ==
+                                       0 as libc::c_int &&
+                                       daemon.tcp_pipes[i_0 as
+                                                                       usize]
+                                           == -(1 as libc::c_int) {
+                                    daemon.tcp_pids[i_0 as usize] =
+                                        p;
+                                    daemon.tcp_pipes[i_0 as usize]
+                                        = pipefd[0 as libc::c_int as usize];
+                                    break ;
+                                } else { i_0 += 1 }
+                            }
+                        }
+                        close(confd);
+                        /* The child can use up to TCP_MAX_QUERIES ids, so skip that many. */
+                        daemon.log_id += 100 as libc::c_int
+                    } else {
+                        let mut buff: *mut libc::c_uchar =
+                            0 as *mut libc::c_uchar;
+                        let mut s: *mut server = 0 as *mut server;
+                        let mut flags: libc::c_int = 0;
+                        let mut netmask: in_addr = in_addr{s_addr: 0,};
+                        let mut auth_dns: libc::c_int = 0;
+                        if !iface.is_null() {
+                            netmask = (*iface).netmask;
+                            auth_dns = (*iface).dns_auth
+                        } else {
+                            netmask.s_addr = 0 as libc::c_int as in_addr_t;
+                            auth_dns = 0 as libc::c_int
+                        }
+                        /* Arrange for SIGALRM after CHILD_LIFETIME seconds to
 		 terminate the process. */
-	      if (!option_bool(OPT_DEBUG))
-		alarm(CHILD_LIFETIME);
-#endif
-
-	      /* start with no upstream connections. */
-	      for (s = daemon->servers; s; s = s->next)
-		 s->tcpfd = -1; 
-	      
-	      /* The connected socket inherits non-blocking
+                        if daemon.options[(6 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (6 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               == 0 {
+                            /* See comment above re: netlink socket. */
+                            let mut a_0: libc::c_uchar =
+                                0 as libc::c_int as
+                                    libc::c_uchar; /* close read end in child. */
+                            close(daemon.netlinkfd);
+                            read_write(pipefd[1 as libc::c_int as usize],
+                                       &mut a_0, 1 as libc::c_int,
+                                       0 as libc::c_int);
+                            alarm(150 as libc::c_int as libc::c_uint);
+                            close(pipefd[0 as libc::c_int as usize]);
+                            daemon.pipe_to_parent =
+                                pipefd[1 as libc::c_int as usize]
+                        }
+                        /* start with no upstream connections. */
+                        s = daemon.servers;
+                        while !s.is_null() {
+                            (*s).tcpfd = -(1 as libc::c_int);
+                            s = (*s).next
+                        }
+                        /* The connected socket inherits non-blocking
 		 attribute from the listening socket. 
 		 Reset that here. */
-	      if ((flags = fcntl(confd, F_GETFL, 0)) != -1)
-		fcntl(confd, F_SETFL, flags & ~O_NONBLOCK);
-	      
-	      buff = tcp_request(confd, now, &tcp_addr, netmask, auth_dns);
-	       
-	      shutdown(confd, SHUT_RDWR);
-	      while (retry_send(close(confd)));
-	      
-	      if (buff)
-		free(buff);
-	      
-	      for (s = daemon->servers; s; s = s->next)
-		if (s->tcpfd != -1)
-		  {
-		    shutdown(s->tcpfd, SHUT_RDWR);
-		    while (retry_send(close(s->tcpfd)));
-		  }
-#ifndef NO_FORK		   
-	      if (!option_bool(OPT_DEBUG))
-		{
-		  flush_log();
-		  _exit(0);
-		}
-#endif
-	    }
-	}
+                        flags =
+                            fcntl(confd, 3 as libc::c_int, 0 as libc::c_int);
+                        if flags != -(1 as libc::c_int) {
+                            fcntl(confd, 4 as libc::c_int,
+                                  flags & !(0o4000 as libc::c_int));
+                        }
+                        buff =
+                            tcp_request(confd, now, &mut tcp_addr, netmask,
+                                        auth_dns);
+                        shutdown(confd, SHUT_RDWR as libc::c_int);
+                        close(confd);
+                        if !buff.is_null() {
+                            free(buff as *mut libc::c_void);
+                        }
+                        s = daemon.servers;
+                        while !s.is_null() {
+                            if (*s).tcpfd != -(1 as libc::c_int) {
+                                shutdown((*s).tcpfd,
+                                         SHUT_RDWR as libc::c_int);
+                                close((*s).tcpfd);
+                            }
+                            s = (*s).next
+                        }
+                        if daemon.options[(6 as libc::c_int as
+                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           as
+                                                                                           libc::c_ulong).wrapping_mul(8
+                                                                                                                           as
+                                                                                                                           libc::c_int
+                                                                                                                           as
+                                                                                                                           libc::c_ulong))
+                                                         as usize] &
+                               (1 as libc::c_uint) <<
+                                   (6 as libc::c_int as
+                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                         as
+                                                                         libc::c_ulong).wrapping_mul(8
+                                                                                                         as
+                                                                                                         libc::c_int
+                                                                                                         as
+                                                                                                         libc::c_ulong))
+                               == 0 {
+                            close(daemon.pipe_to_parent);
+                            flush_log();
+                            _exit(0 as libc::c_int);
+                        }
+                    }
+                }
+            }
+        }
+        listener = (*listener).next
+    };
+}
+#[no_mangle]
+pub unsafe extern "C" fn make_icmp_sock() -> libc::c_int {
+    let mut fd: libc::c_int = 0;
+    let mut zeroopt: libc::c_int = 0 as libc::c_int;
+    fd =
+        socket(2 as libc::c_int, SOCK_RAW as libc::c_int,
+               IPPROTO_ICMP as libc::c_int);
+    if fd != -(1 as libc::c_int) {
+        if fix_fd(fd) == 0 ||
+               setsockopt(fd, 1 as libc::c_int, 5 as libc::c_int,
+                          &mut zeroopt as *mut libc::c_int as
+                              *const libc::c_void,
+                          ::std::mem::size_of::<libc::c_int>() as
+                              libc::c_ulong as socklen_t) ==
+                   -(1 as libc::c_int) {
+            close(fd);
+            fd = -(1 as libc::c_int)
+        }
     }
+    return fd;
 }
-
-#ifdef HAVE_DHCP
-int make_icmp_sock(void)
-{
-  int fd;
-  int zeroopt = 0;
-
-  if ((fd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) != -1)
-    {
-      if (!fix_fd(fd) ||
-	  setsockopt(fd, SOL_SOCKET, SO_DONTROUTE, &zeroopt, sizeof(zeroopt)) == -1)
-	{
-	  close(fd);
-	  fd = -1;
-	}
+#[no_mangle]
+pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
+    /* Try and get an ICMP echo from a machine. */
+    let mut fd: libc::c_int = 0;
+    let mut saddr: sockaddr_in =
+        sockaddr_in{sin_family: 0,
+                    sin_port: 0,
+                    sin_addr: in_addr{s_addr: 0,},
+                    sin_zero: [0; 8],};
+    let mut packet: C2RustUnnamed_27 =
+        C2RustUnnamed_27{ip:
+                             ip{ip_hl_ip_v: [0; 1],
+                                ip_tos: 0,
+                                ip_len: 0,
+                                ip_id: 0,
+                                ip_off: 0,
+                                ip_ttl: 0,
+                                ip_p: 0,
+                                ip_sum: 0,
+                                ip_src: in_addr{s_addr: 0,},
+                                ip_dst: in_addr{s_addr: 0,},},
+                         icmp:
+                             icmp{icmp_type: 0,
+                                  icmp_code: 0,
+                                  icmp_cksum: 0,
+                                  icmp_hun: C2RustUnnamed_17{ih_pptr: 0,},
+                                  icmp_dun:
+                                      C2RustUnnamed_14{id_ts:
+                                                           C2RustUnnamed_16{its_otime:
+                                                                                0,
+                                                                            its_rtime:
+                                                                                0,
+                                                                            its_ttime:
+                                                                                0,},},},};
+    let mut id: libc::c_ushort = rand16();
+    let mut i: libc::c_uint = 0;
+    let mut j: libc::c_uint = 0;
+    let mut gotreply: libc::c_int = 0 as libc::c_int;
+    fd = make_icmp_sock();
+    if fd == -(1 as libc::c_int) { return 0 as libc::c_int }
+    saddr.sin_family = 2 as libc::c_int as sa_family_t;
+    saddr.sin_port = 0 as libc::c_int as in_port_t;
+    saddr.sin_addr = addr;
+    memset(&mut packet.icmp as *mut icmp as *mut libc::c_void,
+           0 as libc::c_int, ::std::mem::size_of::<icmp>() as libc::c_ulong);
+    packet.icmp.icmp_type = 8 as libc::c_int as uint8_t;
+    packet.icmp.icmp_hun.ih_idseq.icd_id = id;
+    j = 0 as libc::c_int as libc::c_uint;
+    i = 0 as libc::c_int as libc::c_uint;
+    while (i as libc::c_ulong) <
+              (::std::mem::size_of::<icmp>() as
+                   libc::c_ulong).wrapping_div(2 as libc::c_int as
+                                                   libc::c_ulong) {
+        j =
+            j.wrapping_add(*(&mut packet.icmp as *mut icmp as
+                                 *mut u16_0).offset(i as isize) as
+                               libc::c_uint);
+        i = i.wrapping_add(1)
     }
-
-  return fd;
+    while j >> 16 as libc::c_int != 0 {
+        j =
+            (j &
+                 0xffff as libc::c_int as
+                     libc::c_uint).wrapping_add(j >> 16 as libc::c_int)
+    }
+    packet.icmp.icmp_cksum =
+        if j == 0xffff as libc::c_int as libc::c_uint { j } else { !j } as
+            uint16_t;
+    while retry_send(sendto(fd,
+                            &mut packet.icmp as *mut icmp as *mut libc::c_char
+                                as *const libc::c_void,
+                            ::std::mem::size_of::<icmp>() as libc::c_ulong,
+                            0 as libc::c_int,
+                            __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                     &mut saddr as
+                                                         *mut sockaddr_in as
+                                                         *mut sockaddr,},
+                            ::std::mem::size_of::<sockaddr_in>() as
+                                libc::c_ulong as socklen_t)) != 0 {
+    }
+    gotreply =
+        delay_dhcp(dnsmasq_time(), 3 as libc::c_int, fd, addr.s_addr, id);
+    close(fd);
+    return gotreply;
 }
-
-int icmp_ping(struct in_addr addr)
-{
-  /* Try and get an ICMP echo from a machine. */
-
-  int fd;
-  struct sockaddr_in saddr;
-  struct { 
-    struct ip ip;
-    struct icmp icmp;
-  } packet;
-  unsigned short id = rand16();
-  unsigned int i, j;
-  int gotreply = 0;
-
-#if defined(HAVE_LINUX_NETWORK) || defined (HAVE_SOLARIS_NETWORK)
-  if ((fd = make_icmp_sock()) == -1)
-    return 0;
-#else
-  int opt = 2000;
-  fd = daemon->dhcp_icmp_fd;
-  setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
-#endif
-
-  saddr.sin_family = AF_INET;
-  saddr.sin_port = 0;
-  saddr.sin_addr = addr;
-#ifdef HAVE_SOCKADDR_SA_LEN
-  saddr.sin_len = sizeof(struct sockaddr_in);
-#endif
-  
-  memset(&packet.icmp, 0, sizeof(packet.icmp));
-  packet.icmp.icmp_type = ICMP_ECHO;
-  packet.icmp.icmp_id = id;
-  for (j = 0, i = 0; i < sizeof(struct icmp) / 2; i++)
-    j += ((uint16_t *)&packet.icmp)[i];
-  while (j>>16)
-    j = (j & 0xffff) + (j >> 16);  
-  packet.icmp.icmp_cksum = (j == 0xffff) ? j : ~j;
-  
-  while (retry_send(sendto(fd, (char *)&packet.icmp, sizeof(struct icmp), 0, 
-			   (struct sockaddr *)&saddr, sizeof(saddr))));
-  
-  gotreply = delay_dhcp(dnsmasq_time(), PING_WAIT, fd, addr.s_addr, id);
-
-#if defined(HAVE_LINUX_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
-  while (retry_send(close(fd)));
-#else
-  opt = 1;
-  setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
-#endif
-
-  return gotreply;
-}
-
-int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id)
-{
-  /* Delay processing DHCP packets for "sec" seconds counting from "start".
+#[no_mangle]
+pub unsafe extern "C" fn delay_dhcp(mut start: time_t, mut sec: libc::c_int,
+                                    mut fd: libc::c_int, mut addr: uint32_t,
+                                    mut id: libc::c_ushort) -> libc::c_int {
+    /* Delay processing DHCP packets for "sec" seconds counting from "start".
      If "fd" is not -1 it will stop waiting if an ICMP echo reply is received
      from "addr" with ICMP ID "id" and return 1 */
-
-  /* Note that whilst waiting, we check for
+    /* Note that whilst waiting, we check for
      (and service) events on the DNS and TFTP  sockets, (so doing that
      better not use any resources our caller has in use...)
      but we remain deaf to signals or further DHCP packets. */
-
-  /* There can be a problem using dnsmasq_time() to end the loop, since
+    /* There can be a problem using dnsmasq_time() to end the loop, since
      it's not monotonic, and can go backwards if the system clock is
      tweaked, leading to the code getting stuck in this loop and
      ignoring DHCP requests. To fix this, we check to see if select returned
      as a result of a timeout rather than a socket becoming available. We
      only allow this to happen as many times as it takes to get to the wait time
      in quarter-second chunks. This provides a fallback way to end loop. */
-
-  int rc, timeout_count;
-  time_t now;
-
-  for (now = dnsmasq_time(), timeout_count = 0;
-       (difftime(now, start) <= (float)sec) && (timeout_count < sec * 4);)
-    {
-      poll_reset();
-      if (fd != -1)
-        poll_listen(fd, POLLIN);
-      set_dns_listeners(now);
-      set_log_writer();
-      
-#ifdef HAVE_DHCP6
-      if (daemon->doing_ra)
-	poll_listen(daemon->icmp6fd, POLLIN); 
-#endif
-      
-      rc = do_poll(250);
-      
-      if (rc < 0)
-	continue;
-      else if (rc == 0)
-	timeout_count++;
-
-      now = dnsmasq_time();
-      
-      check_log_writer(0);
-      check_dns_listeners(now);
-      
-#ifdef HAVE_DHCP6
-      if (daemon->doing_ra && poll_check(daemon->icmp6fd, POLLIN))
-	icmp6_packet(now);
-#endif
-      
-#ifdef HAVE_TFTP
-      check_tftp_listeners(now);
-#endif
-
-      if (fd != -1)
-        {
-          struct {
-            struct ip ip;
-            struct icmp icmp;
-          } packet;
-          struct sockaddr_in faddr;
-          socklen_t len = sizeof(faddr);
-	  
-          if (poll_check(fd, POLLIN) &&
-	      recvfrom(fd, &packet, sizeof(packet), 0, (struct sockaddr *)&faddr, &len) == sizeof(packet) &&
-	      addr == faddr.sin_addr.s_addr &&
-	      packet.icmp.icmp_type == ICMP_ECHOREPLY &&
-	      packet.icmp.icmp_seq == 0 &&
-	      packet.icmp.icmp_id == id)
-	    return 1;
-	}
+    let mut rc: libc::c_int = 0;
+    let mut timeout_count: libc::c_int = 0;
+    let mut now: time_t = 0;
+    now = dnsmasq_time();
+    timeout_count = 0 as libc::c_int;
+    while difftime(now, start) <= sec as libc::c_float as libc::c_double &&
+              timeout_count < sec * 4 as libc::c_int {
+        poll_reset();
+        if fd != -(1 as libc::c_int) {
+            poll_listen(fd, 0x1 as libc::c_int as libc::c_short);
+        }
+        set_dns_listeners(now);
+        set_log_writer();
+        if daemon.doing_ra != 0 {
+            poll_listen(daemon.icmp6fd,
+                        0x1 as libc::c_int as libc::c_short);
+        }
+        rc = do_poll(250 as libc::c_int);
+        if rc < 0 as libc::c_int { continue ; }
+        if rc == 0 as libc::c_int { timeout_count += 1 }
+        now = dnsmasq_time();
+        check_log_writer(0 as libc::c_int);
+        check_dns_listeners(now);
+        if daemon.doing_ra != 0 &&
+               poll_check(daemon.icmp6fd,
+                          0x1 as libc::c_int as libc::c_short) != 0 {
+            icmp6_packet(now);
+        }
+        check_tftp_listeners(now);
+        if fd != -(1 as libc::c_int) {
+            let mut packet: C2RustUnnamed_26 =
+                C2RustUnnamed_26{ip:
+                                     ip{ip_hl_ip_v: [0; 1],
+                                        ip_tos: 0,
+                                        ip_len: 0,
+                                        ip_id: 0,
+                                        ip_off: 0,
+                                        ip_ttl: 0,
+                                        ip_p: 0,
+                                        ip_sum: 0,
+                                        ip_src: in_addr{s_addr: 0,},
+                                        ip_dst: in_addr{s_addr: 0,},},
+                                 icmp:
+                                     icmp{icmp_type: 0,
+                                          icmp_code: 0,
+                                          icmp_cksum: 0,
+                                          icmp_hun:
+                                              C2RustUnnamed_17{ih_pptr: 0,},
+                                          icmp_dun:
+                                              C2RustUnnamed_14{id_ts:
+                                                                   C2RustUnnamed_16{its_otime:
+                                                                                        0,
+                                                                                    its_rtime:
+                                                                                        0,
+                                                                                    its_ttime:
+                                                                                        0,},},},};
+            let mut faddr: sockaddr_in =
+                sockaddr_in{sin_family: 0,
+                            sin_port: 0,
+                            sin_addr: in_addr{s_addr: 0,},
+                            sin_zero: [0; 8],};
+            let mut len: socklen_t =
+                ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as
+                    socklen_t;
+            if poll_check(fd, 0x1 as libc::c_int as libc::c_short) != 0 &&
+                   recvfrom(fd,
+                            &mut packet as *mut C2RustUnnamed_26 as
+                                *mut libc::c_void,
+                            ::std::mem::size_of::<C2RustUnnamed_26>() as
+                                libc::c_ulong, 0 as libc::c_int,
+                            __SOCKADDR_ARG{__sockaddr__:
+                                               &mut faddr as *mut sockaddr_in
+                                                   as *mut sockaddr,},
+                            &mut len) as libc::c_ulong ==
+                       ::std::mem::size_of::<C2RustUnnamed_26>() as
+                           libc::c_ulong && addr == faddr.sin_addr.s_addr &&
+                   packet.icmp.icmp_type as libc::c_int == 0 as libc::c_int &&
+                   packet.icmp.icmp_hun.ih_idseq.icd_seq as libc::c_int ==
+                       0 as libc::c_int &&
+                   packet.icmp.icmp_hun.ih_idseq.icd_id as libc::c_int ==
+                       id as libc::c_int {
+                return 1 as libc::c_int
+            }
+        }
     }
-
-  return 0;
+    return 0 as libc::c_int;
 }
-#endif
-
- 
+#[main]
+pub fn main() {
+    let mut args: Vec<*mut libc::c_char> = Vec::new();
+    for arg in ::std::env::args() {
+        args.push(::std::ffi::CString::new(arg).expect("Failed to convert argument into CString.").into_raw());
+    };
+    args.push(::std::ptr::null_mut());
+    unsafe {
+        ::std::process::exit(main_0((args.len() - 1) as libc::c_int,
+                                    args.as_mut_ptr() as
+                                        *mut *mut libc::c_char) as i32)
+    }
+}
+/* HAVE_DHCP */
