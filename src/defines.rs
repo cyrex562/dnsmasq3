@@ -1,4 +1,6 @@
 use socket2::Socket;
+use std::path::PathBuf;
+use std::fs::File;
 
 pub type __dev_t = libc::c_ulong;
 pub type __uid_t = u32;
@@ -23,6 +25,7 @@ pub type off_t = __off64_t;
 pub type pid_t = __pid_t;
 pub type time_t = __time_t;
 pub type size_t = libc::c_ulong;
+pub type in_addr_t = u32;
 
 pub const NULL: i32 = 0 as i32;
 pub const NULL_0: i32 = 0 as i32;
@@ -930,7 +933,7 @@ pub struct dnsmasq_daemon {
     pub duid_config: String,
     pub dbus_name: String,
     pub ubus_name: String,
-    pub dump_file: String,
+    pub dump_file: PathBuf,
     pub dump_mask: i32,
     pub soa_sn: libc::c_ulong,
     pub soa_refresh: libc::c_ulong,
@@ -985,7 +988,7 @@ pub struct dnsmasq_daemon {
     pub tftp_done_trans: tftp_transfer,
     pub addrbuff: Vec<u8>,
     pub addrbuff2: Vec<u8>,
-    pub dumpfd: i32,
+    pub dumpfd: File,
 }
 
 pub const F_IPV4: u32 = (1 as u32) << 7 as i32;
@@ -2741,7 +2744,7 @@ pub struct C2RustUnnamed_18 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_19 {
-    pub target: *mut blockdata,
+    pub target: blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -2751,7 +2754,7 @@ pub struct C2RustUnnamed_19 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_20 {
-    pub keydata: *mut blockdata,
+    pub keydata: blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: u8,
@@ -2760,7 +2763,7 @@ pub struct C2RustUnnamed_20 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_21 {
-    pub keydata: *mut blockdata,
+    pub keydata: blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -2776,7 +2779,7 @@ pub struct C2RustUnnamed_22 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_23 {
-    pub cache: *mut crec,
+    pub cache: crec,
     pub name: String,
 }
 
@@ -2784,7 +2787,7 @@ pub union C2RustUnnamed_23 {
 #[repr(C)]
 pub union C2RustUnnamed_24 {
     pub sname: [i8; 50],
-    pub bname: *mut bigname,
+    pub bname: bigname,
     pub namep: String,
 }
 
@@ -2799,7 +2802,6 @@ pub type __gconv_trans_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut 
 pub type __gconv_trans_context_fct = fn(*mut libc::c_void, *mut u8, *mut u8, *mut u8, *mut u8) -> i32;
 pub type __gconv_trans_query_fct = fn(String, *mut*mutString, *mut libc::size_t);
 pub type __gconv_trans_init_fct = fn(*mut*mut libc::c_void, String) -> i32;
-
 pub type __gconv_trans_end_fct = fn(*mut libc::c_void);
 
 
@@ -2866,8 +2868,6 @@ pub struct __gconv_step {
     pub __max_needed_to: i32,
     pub __data: *mut libc::c_void,
 }
-
-
 
 
 // struct __gconv_trans_data
@@ -2957,7 +2957,7 @@ pub union _IO_iconv_t {
 #[repr(C)]
 pub struct dhcp_lease {
     pub clid_len: i32,
-    pub clid: *mut u8,
+    pub clid: Vec<u8>,
     pub hostname: String,
     pub fqdn: String,
     pub old_hostname: String,
@@ -2977,9 +2977,9 @@ pub struct dhcp_lease {
     pub new_prefixlen: i32,
     pub addr6: in6_addr,
     pub iaid: u32,
-    pub slaac_address: *mut slaac_address,
+    pub slaac_address: slaac_address,
     pub vendorclass_count: i32,
-    pub next: *mut dhcp_lease,
+    // pub next: *mut dhcp_lease,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2987,14 +2987,14 @@ pub struct slaac_address {
     pub addr: in6_addr,
     pub ping_time: time_t,
     pub backoff: i32,
-    pub next: *mut slaac_address,
+    // pub next: *mut slaac_address,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_25 {
     pub encap: i32,
     pub wildcard_mask: u32,
-    pub vendor_class: *mut u8,
+    pub vendor_class: Vec<u8>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -3008,8 +3008,6 @@ pub struct C2RustUnnamed_27 {
     pub ip: ip,
     pub icmp: icmp,
 }
-
-
 
 
 #[derive(Copy,Clone)]

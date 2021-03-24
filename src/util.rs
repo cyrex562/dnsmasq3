@@ -20,6 +20,7 @@
    Daniel J Bernstein, which is public domain. */
 /* SURF random number generator */
 use crate::defines::iovec;
+use std::fs::File;
 
 static mut seed: [u32_0; 32] = [0; 32];
 static mut in_0: [u32_0; 12] = [0; 12];
@@ -981,17 +982,23 @@ pub unsafe extern "C" fn retry_send(mut rc: ssize_t) -> libc::c_int {
     if *__errno_location() == 4 as libc::c_int { return 1 as libc::c_int }
     return 0 as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn read_write(mut fd: libc::c_int,
-                                    mut packet: *mut libc::c_uchar,
-                                    mut size: libc::c_int,
-                                    mut rw: libc::c_int) -> libc::c_int {
-    let mut n: ssize_t = 0;
-    let mut done: ssize_t = 0;
-    done = 0 as libc::c_int as ssize_t;
+
+enum ReadWriteMode {
+    READ,
+    WRITE
+}
+
+pub fn read_write(fd: &mut File,
+                  packet: &mut Vec<u8>,
+                  size: &mut usize,
+                  rw: &ReadWriteMode) -> Result<(), &'static str> {
+    let mut n: usize = 0;
+    let mut done: usize = 0;
     while done < size as libc::c_long {
         loop  {
-            if rw != 0 {
+            if rw == ReadWriteMode::READ {
+                fd.seek(done)?;
+                n = fd.read(packet, size)?;
                 n =
                     read(fd,
                          &mut *packet.offset(done as isize) as

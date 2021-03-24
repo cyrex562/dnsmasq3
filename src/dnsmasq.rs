@@ -7,10 +7,44 @@ mod option;
 mod dhcp_common;
 mod arp;
 mod auth;
+mod blockdata;
+mod bpf;
+mod cache;
+mod conntrack;
+mod crypto;
+mod dbus;
+mod dhcp;
+mod dnssec;
+mod domain;
+mod dump;
+mod edns0;
+mod forward;
+mod hash_questions;
+mod helper;
+mod inotify;
+mod ipset;
+mod lease;
+mod dhcp_loop;
+mod metrics;
+mod netlink;
+mod network;
+mod outpacket;
+mod poll;
+mod radv;
+mod rfc1035;
+mod rfc2131;
+mod rfc3315;
+mod rrfilter;
+mod slaac;
+mod tables;
+mod tftp;
+mod ubus;
+mod dhcp_log;
 
-use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
+use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
 
 use libc;
+use log;
 use crate::util::dnsmasq_time;
 use crate::defines::{__user_cap_header_struct, __user_cap_data_struct};
 use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device};
@@ -55,7 +89,9 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     let mut script_gid: gid_t = 0 as libc::c_int as gid_t;
     let mut gp: *mut group = 0 as *mut group;
     let mut i: libc::c_long = 0;
-    let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX as libc::c_int);
+    // if cfg!(target_os = "linux") {
+    //     let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX as libc::c_int);
+    // }
     let mut baduser: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut log_err: libc::c_int = 0;
     let mut chown_warn: libc::c_int = 0 as libc::c_int;
@@ -75,22 +111,27 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     sigact.__sigaction_handler.sa_handler =
         Some(sig_handler as unsafe extern "C" fn(_: libc::c_int) -> ());
     sigact.sa_flags = 0 as libc::c_int;
-    libc::sigemptyset(&mut sigact.sa_mask as *mut __sigset_t);
-    libc::sigaction(10 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    libc::sigaction(12 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    libc::sigaction(1 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    libc::sigaction(15 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    libc::sigaction(14 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    libc::sigaction(17 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    libc::sigaction(2 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+    if cfg!(target = "linux") {
+        libc::sigemptyset(&mut sigact.sa_mask as *mut __sigset_t);
+        libc::sigaction(10 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigaction(12 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigaction(1 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigaction(15 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigaction(14 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigaction(17 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigaction(2 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        sigact.__sigaction_handler.sa_handler =
+            ::std::mem::transmute::<libc::intptr_t,
+                __sighandler_t>(1 as libc::c_int as
+                libc::intptr_t); /* known umask, create leases and pid files as 0644 */
+        libc::sigaction(13 as libc::c_int, &mut sigact,
+                        0 as *mut sigaction); /* Must precede read_opts() */
+        libc::umask(0o22 as libc::c_int as defines::__mode_t);
+    }
+
+
     /* ignore SIGPIPE */
-    sigact.__sigaction_handler.sa_handler =
-        ::std::mem::transmute::<libc::intptr_t,
-                                __sighandler_t>(1 as libc::c_int as
-                                                    libc::intptr_t); /* known umask, create leases and pid files as 0644 */
-    libc::sigaction(13 as libc::c_int, &mut sigact,
-              0 as *mut sigaction); /* Must precede read_opts() */
-    libc::umask(0o22 as libc::c_int as defines::__mode_t);
+
     util::rand_init();
     option::read_opts(argc, argv, compile_opts);
 
@@ -495,7 +536,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         /* after enumerate_interfaces()  */
         match whichdevice(&mut daemon) {
             Some(x) => bound_device = x,
-            None => info!("bound_device not found")
+            None => log::info!("bound_device not found")
         };
 
         if daemon.doing_dhcp {
