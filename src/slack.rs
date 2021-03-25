@@ -1,3 +1,5 @@
+use crate::defines::C2RustUnnamed_1A;
+
 extern "C" {
     #[no_mangle]
     fn cache_enumerate(init: libc::c_int) -> *mut crec;
@@ -8037,28 +8039,8 @@ pub struct ifmap {
     pub dma: libc::c_uchar,
     pub port: libc::c_uchar,
 }
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct ifreq {
-    pub ifr_ifrn: C2RustUnnamed_2,
-    pub ifr_ifru: C2RustUnnamed_1,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_1 {
-    pub ifru_addr: sockaddr,
-    pub ifru_dstaddr: sockaddr,
-    pub ifru_broadaddr: sockaddr,
-    pub ifru_netmask: sockaddr,
-    pub ifru_hwaddr: sockaddr,
-    pub ifru_flags: libc::c_short,
-    pub ifru_ivalue: libc::c_int,
-    pub ifru_mtu: libc::c_int,
-    pub ifru_map: ifmap,
-    pub ifru_slave: [libc::c_char; 16],
-    pub ifru_newname: [libc::c_char; 16],
-    pub ifru_data: __caddr_t,
-}
+
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_2 {

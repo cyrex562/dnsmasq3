@@ -1,4 +1,5 @@
 use socket2::Socket;
+use crate::slack::{__caddr_t, ifmap};
 
 pub type __dev_t = libc::c_ulong;
 pub type __uid_t = u32;
@@ -191,6 +192,31 @@ pub struct C2RustUnnamed_6 {
     pub uid: u32,
     pub is_name_ptr: i32,
 }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_1A {
+    pub ifru_addr: sockaddr,
+    pub ifru_dstaddr: sockaddr,
+    pub ifru_broadaddr: sockaddr,
+    pub ifru_netmask: sockaddr,
+    pub ifru_hwaddr: sockaddr,
+    pub ifru_flags: libc::c_short,
+    pub ifru_ivalue: libc::c_int,
+    pub ifru_mtu: libc::c_int,
+    pub ifru_map: ifmap,
+    pub ifru_slave: [libc::c_char; 16],
+    pub ifru_newname: [libc::c_char; 16],
+    pub ifru_data: __caddr_t,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ifreq {
+    pub ifr_ifrn: C2RustUnnamed_2,
+    pub ifr_ifru: C2RustUnnamed_1A,
+}
+
 
 #[derive(Copy, Clone)]
 #[repr(C)]

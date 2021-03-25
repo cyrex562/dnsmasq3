@@ -1,19 +1,23 @@
+use crate::defines::{dnsmasq_daemon, uid_t, gid_t, pid_t, sigaction, C2RustUnnamed_10, __sigset_t, C2RustUnnamed_12};
+use crate::network::fix_fd;
+use crate::send_event;
+use crate::util::{close_fds, read_write};
 
-static mut buf: *mut script_data =
-    0 as *const script_data as *mut script_data;
-static mut bytes_in_buf: size_t = 0 as libc::c_int as size_t;
-static mut buf_size: size_t = 0 as libc::c_int as size_t;
-#[no_mangle]
-pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
-                                       mut err_fd: libc::c_int,
-                                       mut uid: uid_t, mut gid: gid_t,
-                                       mut max_fd: libc::c_long)
- -> libc::c_int {
+// static mut buf: script_data;
+// static mut bytes_in_buf: size_t = 0;
+// static mut buf_size: size_t = 0;
+
+pub fn create_helper(mut event_fd: libc::c_int,
+                                       mut err_fd: i32,
+                                       mut uid: uid_t,
+                     mut gid: gid_t,
+                                       mut max_fd: i32)
+ -> i32 {
     let mut pid: pid_t = 0;
     let mut i: libc::c_int = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     let mut sigact: sigaction =
-        sigaction{__sigaction_handler: C2RustUnnamed_10{sa_handler: None,},
+        sigaction{__sigaction_handler: C2RustUnnamed_12{sa_handler: None,},
                   sa_mask: __sigset_t{__val: [0; 16],},
                   sa_flags: 0,
                   sa_restorer: None,};
@@ -45,7 +49,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
     sigaction(15 as libc::c_int, &mut sigact, 0 as *mut sigaction);
     sigaction(14 as libc::c_int, &mut sigact, 0 as *mut sigaction);
     sigaction(2 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-    if (*dnsmasq_daemon).options[(6 as libc::c_int as
+    if daemon.options[(6 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
                                                                        libc::c_ulong).wrapping_mul(8
@@ -68,7 +72,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
         if setgroups(0 as libc::c_int as size_t, &mut dummy) ==
                -(1 as libc::c_int) || setgid(gid) == -(1 as libc::c_int) ||
                setuid(uid) == -(1 as libc::c_int) {
-            if (*dnsmasq_daemon).options[(16 as libc::c_int as
+            if daemon.options[(16 as libc::c_int as
                                               libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                as
                                                                                libc::c_ulong).wrapping_mul(8
@@ -89,14 +93,14 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                    != 0 {
                 /* send error to daemon process if no-fork */
                 send_event(event_fd, 11 as libc::c_int, *__errno_location(),
-                           (*dnsmasq_daemon).scriptuser);
+                           daemon.scriptuser);
             } else {
                 /* kill daemon */
                 send_event(event_fd, 16 as libc::c_int, 0 as libc::c_int,
                            0 as *mut libc::c_char);
                 /* return error */
                 send_event(err_fd, 11 as libc::c_int, *__errno_location(),
-                           (*dnsmasq_daemon).scriptuser);
+                           daemon.scriptuser);
             }
             _exit(0 as libc::c_int);
         }
@@ -137,7 +141,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
         let mut hostname: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut domain: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut buf_0: *mut libc::c_uchar =
-            (*dnsmasq_daemon).namebuff as *mut libc::c_uchar;
+            daemon.namebuff as *mut libc::c_uchar;
         let mut end: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
         let mut extradata: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
         let mut is6: libc::c_int = 0;
@@ -190,7 +194,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
             data.action = 6 as libc::c_int
         }
         /* stringify MAC into dhcp_buff */
-        p = (*dnsmasq_daemon).dhcp_buff;
+        p = daemon.dhcp_buff;
         if data.hwaddr_type != 1 as libc::c_int ||
                data.hwaddr_len == 0 as libc::c_int {
             p =
@@ -234,7 +238,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
             continue ;
         }
         /* CLID into packet */
-        p = (*dnsmasq_daemon).packet;
+        p = daemon.packet;
         i = 0 as libc::c_int;
         while i < data.clid_len {
             p =
@@ -253,23 +257,23 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
         }
         if is6 != 0 {
             /* or IAID and server DUID for IPv6 */
-            sprintf((*dnsmasq_daemon).dhcp_buff3,
+            sprintf(daemon.dhcp_buff3,
                     b"%s%u\x00" as *const u8 as *const libc::c_char,
                     if data.flags & 64 as libc::c_int != 0 {
                         b"T\x00" as *const u8 as *const libc::c_char
                     } else { b"\x00" as *const u8 as *const libc::c_char },
                     data.iaid);
-            p = (*dnsmasq_daemon).dhcp_packet.iov_base as *mut libc::c_char;
+            p = daemon.dhcp_packet.iov_base as *mut libc::c_char;
             i = 0 as libc::c_int;
-            while i < (*dnsmasq_daemon).duid_len {
+            while i < daemon.duid_len {
                 p =
                     p.offset(sprintf(p,
                                      b"%.2x\x00" as *const u8 as
                                          *const libc::c_char,
-                                     *(*dnsmasq_daemon).duid.offset(i as
+                                     *daemon.duid.offset(i as
                                                                         isize)
                                          as libc::c_int) as isize);
-                if i != (*dnsmasq_daemon).duid_len - 1 as libc::c_int {
+                if i != daemon.duid_len - 1 as libc::c_int {
                     p =
                         p.offset(sprintf(p,
                                          b":\x00" as *const u8 as
@@ -300,26 +304,26 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
         if is6 == 0 {
             inet_ntop(2 as libc::c_int,
                       &mut data.addr as *mut in_addr as *const libc::c_void,
-                      (*dnsmasq_daemon).addrbuff,
+                      daemon.addrbuff,
                       46 as libc::c_int as socklen_t);
         } else {
             inet_ntop(10 as libc::c_int,
                       &mut data.addr6 as *mut in6_addr as *const libc::c_void,
-                      (*dnsmasq_daemon).addrbuff,
+                      daemon.addrbuff,
                       46 as libc::c_int as socklen_t);
         }
         /* file length */
         if data.action == 5 as libc::c_int {
             sprintf(if is6 != 0 {
-                        (*dnsmasq_daemon).packet
-                    } else { (*dnsmasq_daemon).dhcp_buff },
+                        daemon.packet
+                    } else { daemon.dhcp_buff },
                     b"%lu\x00" as *const u8 as *const libc::c_char,
                     data.file_len as libc::c_ulong);
         }
         /* no script, just lua */
-        if (*dnsmasq_daemon).lease_change_command.is_null() { continue ; }
+        if daemon.lease_change_command.is_null() { continue ; }
         /* Pipe to capture stdout and stderr from script */
-        if (*dnsmasq_daemon).options[(6 as libc::c_int as
+        if daemon.options[(6 as libc::c_int as
                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                            as
                                                                            libc::c_ulong).wrapping_mul(8
@@ -352,7 +356,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
             sleep(2 as libc::c_int as libc::c_uint);
         }
         if pid == -(1 as libc::c_int) {
-            if (*dnsmasq_daemon).options[(6 as libc::c_int as
+            if daemon.options[(6 as libc::c_int as
                                               libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                as
                                                                                libc::c_ulong).wrapping_mul(8
@@ -375,7 +379,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 close(pipeout[1 as libc::c_int as usize]);
             }
         } else if pid != 0 as libc::c_int {
-            if (*dnsmasq_daemon).options[(6 as libc::c_int as
+            if daemon.options[(6 as libc::c_int as
                                               libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                as
                                                                                libc::c_ulong).wrapping_mul(8
@@ -404,23 +408,23 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 if fp.is_null() {
                     close(pipeout[0 as libc::c_int as usize]);
                 } else {
-                    while !fgets((*dnsmasq_daemon).packet,
-                                 (*dnsmasq_daemon).packet_buff_sz,
+                    while !fgets(daemon.packet,
+                                 daemon.packet_buff_sz,
                                  fp).is_null() {
                         /* do not include new lines, log will append them */
                         let mut len: size_t =
-                            strlen((*dnsmasq_daemon).packet);
+                            strlen(daemon.packet);
                         if len > 0 as libc::c_int as libc::c_ulong {
                             len = len.wrapping_sub(1);
-                            if *(*dnsmasq_daemon).packet.offset(len as isize)
+                            if *daemon.packet.offset(len as isize)
                                    as libc::c_int == '\n' as i32 {
-                                *(*dnsmasq_daemon).packet.offset(len as isize)
+                                *daemon.packet.offset(len as isize)
                                     = 0 as libc::c_int as libc::c_char
                             }
                         }
                         send_event(event_fd, 25 as libc::c_int,
                                    0 as libc::c_int,
-                                   (*dnsmasq_daemon).packet);
+                                   daemon.packet);
                     }
                     fclose(fp);
                 }
@@ -454,7 +458,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 }
             }
         } else {
-            if (*dnsmasq_daemon).options[(6 as libc::c_int as
+            if daemon.options[(6 as libc::c_int as
                                               libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                as
                                                                                libc::c_ulong).wrapping_mul(8
@@ -484,23 +488,23 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 my_setenv(b"DNSMASQ_IAID\x00" as *const u8 as
                               *const libc::c_char,
                           if is6 != 0 {
-                              (*dnsmasq_daemon).dhcp_buff3
+                              daemon.dhcp_buff3
                           } else { 0 as *mut libc::c_char }, &mut err);
                 my_setenv(b"DNSMASQ_SERVER_DUID\x00" as *const u8 as
                               *const libc::c_char,
                           if is6 != 0 {
-                              (*dnsmasq_daemon).dhcp_packet.iov_base
+                              daemon.dhcp_packet.iov_base
                           } else { 0 as *mut libc::c_void } as
                               *const libc::c_char, &mut err);
                 my_setenv(b"DNSMASQ_MAC\x00" as *const u8 as
                               *const libc::c_char,
                           if is6 != 0 && data.hwaddr_len != 0 as libc::c_int {
-                              (*dnsmasq_daemon).dhcp_buff
+                              daemon.dhcp_buff
                           } else { 0 as *mut libc::c_char }, &mut err);
                 my_setenv(b"DNSMASQ_CLIENT_ID\x00" as *const u8 as
                               *const libc::c_char,
                           if is6 == 0 && data.clid_len != 0 as libc::c_int {
-                              (*dnsmasq_daemon).packet
+                              daemon.packet
                           } else { 0 as *mut libc::c_char }, &mut err);
                 my_setenv(b"DNSMASQ_INTERFACE\x00" as *const u8 as
                               *const libc::c_char,
@@ -508,12 +512,12 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                                  0 as libc::c_int as libc::c_ulong {
                               data.interface.as_mut_ptr()
                           } else { 0 as *mut libc::c_char }, &mut err);
-                sprintf((*dnsmasq_daemon).dhcp_buff2,
+                sprintf(daemon.dhcp_buff2,
                         b"%lu\x00" as *const u8 as *const libc::c_char,
                         data.expires as libc::c_ulong);
                 my_setenv(b"DNSMASQ_LEASE_EXPIRES\x00" as *const u8 as
                               *const libc::c_char,
-                          (*dnsmasq_daemon).dhcp_buff2, &mut err);
+                          daemon.dhcp_buff2, &mut err);
                 my_setenv(b"DNSMASQ_DOMAIN\x00" as *const u8 as
                               *const libc::c_char, domain, &mut err);
                 end = extradata.offset(data.ed_len as isize);
@@ -532,12 +536,12 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                                            *mut libc::c_char, &mut err);
                     i = 0 as libc::c_int;
                     while i < data.vendorclass_count - 1 as libc::c_int {
-                        sprintf((*dnsmasq_daemon).dhcp_buff2,
+                        sprintf(daemon.dhcp_buff2,
                                 b"DNSMASQ_VENDOR_CLASS%i\x00" as *const u8 as
                                     *const libc::c_char, i);
                         buf_0 =
                             grab_extradata(buf_0, end,
-                                           (*dnsmasq_daemon).dhcp_buff2,
+                                           daemon.dhcp_buff2,
                                            &mut err);
                         i += 1
                     }
@@ -605,16 +609,16 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 }
                 i = 0 as libc::c_int;
                 while !buf_0.is_null() {
-                    sprintf((*dnsmasq_daemon).dhcp_buff2,
+                    sprintf(daemon.dhcp_buff2,
                             b"DNSMASQ_USER_CLASS%i\x00" as *const u8 as
                                 *const libc::c_char, i);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       (*dnsmasq_daemon).dhcp_buff2,
+                                       daemon.dhcp_buff2,
                                        &mut err);
                     i += 1
                 }
-                sprintf((*dnsmasq_daemon).dhcp_buff2,
+                sprintf(daemon.dhcp_buff2,
                         b"%u\x00" as *const u8 as *const libc::c_char,
                         data.remaining_time);
                 my_setenv(b"DNSMASQ_TIME_REMAINING\x00" as *const u8 as
@@ -622,7 +626,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                           if data.action != 1 as libc::c_int &&
                                  data.remaining_time !=
                                      0 as libc::c_int as libc::c_uint {
-                              (*dnsmasq_daemon).dhcp_buff2
+                              daemon.dhcp_buff2
                           } else { 0 as *mut libc::c_char }, &mut err);
                 my_setenv(b"DNSMASQ_OLD_HOSTNAME\x00" as *const u8 as
                               *const libc::c_char,
@@ -634,7 +638,7 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 }
                 my_setenv(b"DNSMASQ_LOG_DHCP\x00" as *const u8 as
                               *const libc::c_char,
-                          if (*dnsmasq_daemon).options[(28 as libc::c_int as
+                          if daemon.options[(28 as libc::c_int as
                                                             libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                              as
                                                                                              libc::c_ulong).wrapping_mul(8
@@ -662,17 +666,17 @@ pub unsafe extern "C" fn create_helper(mut event_fd: libc::c_int,
                 fcntl(event_fd, 2 as libc::c_int, i | 1 as libc::c_int);
             }
             close(pipefd[0 as libc::c_int as usize]);
-            p = strrchr((*dnsmasq_daemon).lease_change_command, '/' as i32);
+            p = strrchr(daemon.lease_change_command, '/' as i32);
             if err == 0 as libc::c_int {
-                execl((*dnsmasq_daemon).lease_change_command,
+                execl(daemon.lease_change_command,
                       if !p.is_null() {
                           p.offset(1 as libc::c_int as isize)
-                      } else { (*dnsmasq_daemon).lease_change_command },
+                      } else { daemon.lease_change_command },
                       action_str,
                       if is6 != 0 && data.action != 6 as libc::c_int {
-                          (*dnsmasq_daemon).packet
-                      } else { (*dnsmasq_daemon).dhcp_buff },
-                      (*dnsmasq_daemon).addrbuff, hostname,
+                          daemon.packet
+                      } else { daemon.dhcp_buff },
+                      daemon.addrbuff, hostname,
                       0 as *mut libc::c_void as *mut libc::c_char);
                 err = *__errno_location()
             }
@@ -781,10 +785,10 @@ pub unsafe extern "C" fn queue_script(mut action: libc::c_int,
     let mut hostname_len: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     let mut clid_len: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     let mut ed_len: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-    let mut fd: libc::c_int = (*dnsmasq_daemon).dhcpfd;
-    if (*dnsmasq_daemon).dhcp.is_null() { fd = (*dnsmasq_daemon).dhcp6fd }
+    let mut fd: libc::c_int = daemon.dhcpfd;
+    if daemon.dhcp.is_null() { fd = daemon.dhcp6fd }
     /* no script */
-    if (*dnsmasq_daemon).helperfd == -(1 as libc::c_int) { return }
+    if daemon.helperfd == -(1 as libc::c_int) { return }
     if !(*lease).extradata.is_null() { ed_len = (*lease).extradata_len }
     if !(*lease).clid.is_null() {
         clid_len = (*lease).clid_len as libc::c_uint
@@ -854,7 +858,7 @@ pub unsafe extern "C" fn queue_tftp(mut file_len: off_t,
                                     mut peer: *mut mysockaddr) {
     let mut filename_len: libc::c_uint = 0;
     /* no script */
-    if (*dnsmasq_daemon).helperfd == -(1 as libc::c_int) { return }
+    if daemon.helperfd == -(1 as libc::c_int) { return }
     filename_len =
         strlen(filename).wrapping_add(1 as libc::c_int as libc::c_ulong) as
             libc::c_uint;
@@ -877,14 +881,14 @@ pub unsafe extern "C" fn queue_tftp(mut file_len: off_t,
         (::std::mem::size_of::<script_data>() as
              libc::c_ulong).wrapping_add(filename_len as libc::c_ulong);
 }
-#[no_mangle]
-pub unsafe extern "C" fn queue_arp(mut action: libc::c_int,
-                                   mut mac: *mut libc::c_uchar,
-                                   mut maclen: libc::c_int,
-                                   mut family: libc::c_int,
-                                   mut addr: *mut all_addr) {
+
+pub fn queue_arp(daemon: &mut dnsmasq_daemon,
+                 mut action: u32,
+                 mut mac: &[u8;6],
+                 mut family: u32,
+                 mut addr: all_addr) {
     /* no script */
-    if (*dnsmasq_daemon).helperfd == -(1 as libc::c_int) { return }
+    if daemon.helperfd == -(1 as libc::c_int) { return }
     buff_alloc(::std::mem::size_of::<script_data>() as libc::c_ulong);
     memset(buf as *mut libc::c_void, 0 as libc::c_int,
            ::std::mem::size_of::<script_data>() as libc::c_ulong);
@@ -908,7 +912,7 @@ pub unsafe extern "C" fn helper_write() {
     let mut rc: ssize_t = 0;
     if bytes_in_buf == 0 as libc::c_int as libc::c_ulong { return }
     rc =
-        write((*dnsmasq_daemon).helperfd, buf as *const libc::c_void,
+        write(daemon.helperfd, buf as *const libc::c_void,
               bytes_in_buf);
     if rc != -(1 as libc::c_int) as libc::c_long {
         if bytes_in_buf != rc as size_t {

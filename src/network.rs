@@ -14,6 +14,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::slack::ifreq;
+use crate::defines::{C2RustUnnamed_2, sockaddr, C2RustUnnamed_1A};
+
 #[no_mangle]
 pub unsafe extern "C" fn indextoname(mut fd: libc::c_int,
                                      mut index: libc::c_int,
@@ -22,7 +25,7 @@ pub unsafe extern "C" fn indextoname(mut fd: libc::c_int,
     let mut ifr: ifreq =
         ifreq{ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_2{ifru_addr:
+                  C2RustUnnamed_1A{ifru_addr:
                                       sockaddr{sa_family: 0,
                                                sa_data: [0; 14],},},};
     if index == 0 as libc::c_int { return 0 as libc::c_int }
@@ -951,8 +954,7 @@ pub unsafe extern "C" fn enumerate_interfaces(mut reset: libc::c_int)
     return ret;
 }
 /* set NONBLOCK bit on fd: See Stevens 16.6 */
-#[no_mangle]
-pub unsafe extern "C" fn fix_fd(mut fd: libc::c_int) -> libc::c_int {
+pub fn fix_fd(mut fd: &mut ) -> libc::c_int {
     let mut flags: libc::c_int = 0;
     flags = fcntl(fd, 3 as libc::c_int);
     if flags == -(1 as libc::c_int) ||
