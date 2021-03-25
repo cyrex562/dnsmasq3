@@ -1,4 +1,5 @@
 use crate::defines::{arp_record, in_addr, in6_addr, time_t, mysockaddr, size_t, dnsmasq_daemon};
+use crate::helper::queue_arp;
 
 // #![register_tool(c2rust)]
 // #![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
@@ -78,7 +79,7 @@ pub fn find_mac(addr: Optiona<mysockaddr>,
                 lazy: libc::c_int,
                 now: time_t,
                 arps: &mut Vec<arp_record>)
- -> libc::c_int {
+ -> u16 {
     let mut arp: arp_record = Default::default();
     // let mut tmp: arp_record = Default::default();
     // let mut up: arp_record = Default::default();
