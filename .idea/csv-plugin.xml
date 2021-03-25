@@ -31,6 +31,20 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\src\helper.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\src\option.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\src\util.rs">
           <value>
             <Attribute>

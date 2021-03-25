@@ -14,17 +14,17 @@ mod conntrack;
 mod crypto;
 mod dbus;
 mod dhcp;
-mod dnssec;
+mod dhcp6;
 mod domain;
 mod dump;
-mod edns0;
 mod forward;
 mod hash_questions;
 mod helper;
 mod inotify;
 mod ipset;
 mod lease;
-mod dhcp_loop;
+mod dnsmasq_log;
+mod dnsmasq_loop;
 mod metrics;
 mod netlink;
 mod network;
@@ -34,14 +34,15 @@ mod radv;
 mod rfc1035;
 mod rfc2131;
 mod rfc3315;
-mod rrfilter;
 mod slaac;
+mod rrfilter;
 mod tables;
 mod tftp;
 mod ubus;
-mod dhcp_log;
+mod slack;
 
-use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
+
+use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
 
 use libc;
 use log;
@@ -291,24 +292,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     }
     if !daemon.dhcp6.is_null() {
         daemon.doing_ra =
-            (daemon.options[(37 as libc::c_int as
-                                            libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                             as
-                                                                             libc::c_ulong).wrapping_mul(8
-                                                                                                             as
-                                                                                                             libc::c_int
-                                                                                                             as
-                                                                                                             libc::c_ulong))
-                                           as usize] &
-                 (1 as libc::c_uint) <<
-                     (37 as libc::c_int as
-                          libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                           as
-                                                           libc::c_ulong).wrapping_mul(8
-                                                                                           as
-                                                                                           libc::c_int
-                                                                                           as
-                                                                                           libc::c_ulong)))
+            (daemon.options[(37).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) as usize] &
+                 (1) << (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)))
                 as libc::c_int;
         context = daemon.dhcp6;
         while !context.is_null() {
