@@ -14,63 +14,64 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{addrlist, all_addr, in_addr, __bswap_32, in_addr_t};
-use crate::util::{is_same_net, is_same_net6};
+use crate::defines::{addrlist, all_addr, in_addr, __bswap_32, in_addr_t, auth_zone, dns_header, size_t, time_t, mysockaddr, dnsmasq_daemon, crec, mx_srv_record, txt_record, interface_name, naptr, cname, __bswap_16, in6_addr, iname, in_port_t, socklen_t, name_list};
+use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdomain, sockaddr_isequal};
+use crate::rfc1035::{skip_questions, extract_name, in_arpa_name_2_addr, add_resource_record};
+use crate::cache::{log_query, cache_find_by_addr, cache_get_name, record_source, querystr, cache_find_by_name, cache_find_non_terminal, cache_enumerate};
+use crate::dnsmasq_log::my_syslog;
 
-fn find_addrlist(list: &mut addrlist, flag: libc::c_int, addr_u: &mut all_addr) -> addrlist {
-    loop  {
-        if (*list).flags & 2 as libc::c_int == 0 {
+pub fn find_addrlist(list: &mut Vec<addrlist>, flag: libc::c_int, addr_u: &mut all_addr) -> Option<addrlist> {
+    for list_addr in list {
+        if list_addr.flags & 2 as libc::c_int == 0 {
             let mut netmask: in_addr = in_addr{s_addr: 0,};
-            let mut addr: in_addr = (*addr_u).addr4;
+            let mut addr: in_addr = addr_u.addr4;
             if !(flag as libc::c_uint &
-                     (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as in_addr_t)) << 32 as libc::c_int - (*list).prefixlen);
+                (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as in_addr_t)) << 32 as libc::c_int - (*list).prefixlen);
                 if is_same_net(addr, (*list).addr.addr4, netmask) != 0 {
-                    return list
+                    return Some(list_addr.clone())
                 }
             }
-        } else if is_same_net6(&mut (*addr_u).addr6, &mut (*list).addr.addr6,
+        } else if is_same_net6(&mut addr_u.addr6, &mut (*list).addr.addr6,
                                (*list).prefixlen) != 0 {
-            return list
+            return Some(list_addr.clone())
         }
-        list = (*list).next;
-        if list.is_null() { break ; }
     }
-    return 0;
+    return None
 }
 
 
-unsafe extern "C" fn find_subnet(mut zone: *mut auth_zone,
+pub fn find_subnet(mut zone: &mut auth_zone,
                                  mut flag: libc::c_int,
-                                 mut addr_u: *mut all_addr) -> *mut addrlist {
-    if (*zone).subnet.is_null() { return 0 as *mut addrlist }
-    return find_addrlist((*zone).subnet, flag, addr_u);
+                                 mut addr_u: &mut all_addr) -> Option<addrlist> {
+    if zone.subnet.is_null() { return None }
+    return find_addrlist(zone.subnet, flag, addr_u);
 }
-unsafe extern "C" fn find_exclude(mut zone: *mut auth_zone,
+pub fn find_exclude(mut zone: &mut auth_zone,
                                   mut flag: libc::c_int,
-                                  mut addr_u: *mut all_addr)
- -> *mut addrlist {
-    if (*zone).exclude.is_null() { return 0 as *mut addrlist }
-    return find_addrlist((*zone).exclude, flag, addr_u);
+                                  mut addr_u:&mut all_addr)
+ -> Option<addrlist> {
+    if zone.exclude.is_null() { return None }
+    return find_addrlist(zone.exclude, flag, addr_u);
 }
-unsafe extern "C" fn filter_zone(mut zone: *mut auth_zone,
+pub fn filter_zone(mut zone: *mut auth_zone,
                                  mut flag: libc::c_int,
                                  mut addr_u: *mut all_addr) -> libc::c_int {
     if !find_exclude(zone, flag, addr_u).is_null() { return 0 as libc::c_int }
     /* No subnets specified, no filter */
-    if (*zone).subnet.is_null() { return 1 as libc::c_int }
+    if zone.subnet.is_null() { return 1 as libc::c_int }
     return (find_subnet(zone, flag, addr_u) !=
                 0 as *mut libc::c_void as *mut addrlist) as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn in_zone(mut zone: *mut auth_zone,
-                                 mut name: *mut libc::c_char,
-                                 mut cut: *mut *mut libc::c_char)
+
+pub pub fn in_zone(mut zone: &mut auth_zone,
+                                 mut name: &mut String,
+                                 mut cut: &String)
  -> libc::c_int {
-    let mut namelen: size_t = strlen(name);
-    let mut domainlen: size_t = strlen((*zone).domain);
+    let mut namelen: usize = strlen(name);
+    let mut domainlen: usize = strlen(zone.domain);
     if !cut.is_null() { *cut = 0 as *mut libc::c_char }
     if namelen >= domainlen &&
-           hostname_isequal((*zone).domain,
+           hostname_isequal(zone.domain,
                             &mut *name.offset(namelen.wrapping_sub(domainlen)
                                                   as isize)) != 0 {
         if namelen == domainlen { return 1 as libc::c_int }
@@ -93,8 +94,8 @@ pub unsafe extern "C" fn in_zone(mut zone: *mut auth_zone,
     }
     return 0 as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
+
+pub pub fn answer_auth(mut header: *mut dns_header,
                                      mut limit: *mut libc::c_char,
                                      mut qlen: size_t, mut now: time_t,
                                      mut peer_addr: *mut mysockaddr,
@@ -160,16 +161,16 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
         } /* bad packet */
         let mut t_cp: *mut libc::c_uchar = p; /* must be bare name */
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if qclass != 1 as libc::c_int {
@@ -188,7 +189,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                     subnet =
                         find_subnet(zone, flag as libc::c_int, &mut addr);
                     if !subnet.is_null() { break ; }
-                    zone = (*zone).next
+                    zone = zone.next
                 }
                 if zone.is_null() {
                     auth = 0 as libc::c_int;
@@ -392,7 +393,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                         strcat(name,
                                                b".\x00" as *const u8 as
                                                    *const libc::c_char);
-                                        strcat(name, (*zone).domain);
+                                        strcat(name, zone.domain);
                                     }
                                     log_query(flag |
                                                   (1 as libc::c_uint) <<
@@ -500,7 +501,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                     if in_zone(zone, name, &mut cut) != 0 {
                                         break ;
                                     }
-                                    zone = (*zone).next
+                                    zone = zone.next
                                 }
                                 if zone.is_null() {
                                     auth = 0 as libc::c_int;
@@ -894,7 +895,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                                   17 as libc::c_int |
                                                   (1 as libc::c_uint) <<
                                                       21 as libc::c_int,
-                                              (*zone).domain,
+                                              zone.domain,
                                               0 as *mut all_addr,
                                               b"<SOA>\x00" as *const u8 as
                                                   *const libc::c_char as
@@ -910,7 +911,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                         (*peer_addr).in6.sin6_port =
                                             0 as libc::c_int as in_port_t;
                                         (*peer_addr).in6.sin6_scope_id =
-                                            0 as libc::c_int as uint32_t
+                                            0 as libc::c_int as u32
                                     }
                                     peers = (*dnsmasq_daemon).auth_peers;
                                     while !peers.is_null() {
@@ -964,7 +965,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                                   17 as libc::c_int |
                                                   (1 as libc::c_uint) <<
                                                       21 as libc::c_int,
-                                              (*zone).domain,
+                                              zone.domain,
                                               0 as *mut all_addr,
                                               b"<AXFR>\x00" as *const u8 as
                                                   *const libc::c_char as
@@ -977,7 +978,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                                   17 as libc::c_int |
                                                   (1 as libc::c_uint) <<
                                                       21 as libc::c_int,
-                                              (*zone).domain,
+                                              zone.domain,
                                               0 as *mut all_addr,
                                               b"<NS>\x00" as *const u8 as
                                                   *const libc::c_char as
@@ -1287,7 +1288,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                                     strcat(name,
                                            b".\x00" as *const u8 as
                                                *const libc::c_char);
-                                    strcat(name, (*zone).domain);
+                                    strcat(name, zone.domain);
                                 }
                                 found = 1 as libc::c_int;
                                 if add_resource_record(header, limit,
@@ -1346,7 +1347,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
         let mut newoffset: libc::c_int = 0;
         let mut offset: libc::c_int = 0 as libc::c_int;
         if subnet.is_null() {
-            authname = (*zone).domain
+            authname = zone.domain
         } else {
             /* handle NS and SOA for PTR records */
             authname = name;
@@ -1730,7 +1731,7 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
                     if strchr(name, '.' as i32).is_null() {
                         strcat(name,
                                b".\x00" as *const u8 as *const libc::c_char);
-                        strcat(name, (*zone).domain);
+                        strcat(name, zone.domain);
                     }
                     if !cut.is_null() {
                         *cut = 0 as libc::c_int as libc::c_char
@@ -1954,41 +1955,41 @@ pub unsafe extern "C" fn answer_auth(mut header: *mut dns_header,
     (*header).hb3 =
         ((*header).hb3 as libc::c_int &
              !(0x4 as libc::c_int | 0x2 as libc::c_int) | 0x80 as libc::c_int)
-            as u8_0;
+            as u8;
     if local_query != 0 {
         /* set RA flag */
         (*header).hb4 =
-            ((*header).hb4 as libc::c_int | 0x80 as libc::c_int) as u8_0
+            ((*header).hb4 as libc::c_int | 0x80 as libc::c_int) as u8
     } else {
         /* clear RA flag */
         (*header).hb4 =
-            ((*header).hb4 as libc::c_int & !(0x80 as libc::c_int)) as u8_0
+            ((*header).hb4 as libc::c_int & !(0x80 as libc::c_int)) as u8
     }
     /* data is never DNSSEC signed. */
     (*header).hb4 =
-        ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8_0;
+        ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8;
     /* authoritative */
     if auth != 0 {
         (*header).hb3 =
-            ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8_0
+            ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8
     }
     /* truncation */
     if trunc != 0 {
         (*header).hb3 =
-            ((*header).hb3 as libc::c_int | 0x2 as libc::c_int) as u8_0
+            ((*header).hb3 as libc::c_int | 0x2 as libc::c_int) as u8
     } /* no error */
     if (auth != 0 || local_query != 0) && nxdomain != 0 {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 3 as libc::c_int) as u8_0
+                 3 as libc::c_int) as u8
     } else {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 0 as libc::c_int) as u8_0
+                 0 as libc::c_int) as u8
     }
-    (*header).ancount = __bswap_16(anscount as __uint16_t);
-    (*header).nscount = __bswap_16(authcount as __uint16_t);
-    (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
+    (*header).ancount = __bswap_16(anscount as u16);
+    (*header).nscount = __bswap_16(authcount as u16);
+    (*header).arcount = __bswap_16(0 as libc::c_int as u16);
     /* Advertise our packet size limit in our reply */
     if have_pseudoheader != 0 {
         return add_pseudoheader(header,

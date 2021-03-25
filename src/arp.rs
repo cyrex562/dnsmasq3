@@ -173,7 +173,7 @@ pub fn do_arp_script_run(daemon: &mut dnsmasq_daemon) -> libc::c_int {
     /* Notify any which went, then move to free list */
     if !old.is_null() {
         if daemon.options[(53).wrapping_div((()).wrapping_mul(8))] & (1) << (53).wrapping_rem((()).wrapping_mul(8)) != 0 {
-            queue_arp(7 as libc::c_int, (*old).hwaddr.as_mut_ptr(), (*old).hwlen, (*old).family, &mut (*old).addr);
+            queue_arp(daemon,7, old.hwaddr.as_mut_ptr(),  old.family, &mut old.addr);
         }
         arp = old;
         old = arp.next;
@@ -184,9 +184,8 @@ pub fn do_arp_script_run(daemon: &mut dnsmasq_daemon) -> libc::c_int {
     arp = arps;
     while !arp.is_null() {
         if arp.status as libc::c_int == 2 as libc::c_int {
-            if (daemon).options[(53).wrapping_div(().wrapping_mul(8))] & (1) << (53).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
-                   != false {
-                queue_arp(6, arp.hwaddr, arp.hwlen, arp.family, arp.addr);
+            if ((daemon).options[(53).wrapping_div(().wrapping_mul(8))] & (1) << (53).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) == 1) != false {
+                queue_arp(daemon,6, &arp.hwaddr, arp.family, arp.addr);
             }
             arp.status = 1;
             return 1

@@ -19,12 +19,16 @@
 /* The SURF random number generator was taken from djbdns-1.05, by 
    Daniel J Bernstein, which is public domain. */
 /* SURF random number generator */
-use crate::defines::iovec;
-use std::fs::File;
+use crate::defines::{iovec, in_addr, in6_addr, _IScntrl, mysockaddr, sockaddr_in6, sockaddr_in, time_t, socklen_t, __bswap_16, _ISxdigit, timespec, __time_t, __syscall_slong_t, DIR};
+use std::fs::{File, read, write};
+use crate::dnsmasq_log::{die, my_syslog};
+use crate::network::fix_fd;
+use crate::slack::{time, u8, dirent, utsname};
+use std::io::{Seek, Read};
 
-static mut seed: [u32_0; 32] = [0; 32];
-static mut in_0: [u32_0; 12] = [0; 12];
-static mut out: [u32_0; 8] = [0; 8];
+static mut seed: [u32; 32] = [0; 32];
+static mut in_0: [u32; 12] = [0; 12];
+static mut out: [u32; 8] = [0; 8];
 static mut outleft: libc::c_int = 0 as libc::c_int;
 #[no_mangle]
 pub unsafe extern "C" fn rand_init() {
@@ -32,11 +36,11 @@ pub unsafe extern "C" fn rand_init() {
         open(b"/dev/urandom\x00" as *const u8 as *const libc::c_char,
              0 as libc::c_int);
     if fd == -(1 as libc::c_int) ||
-           read_write(fd, &mut seed as *mut [u32_0; 32] as *mut libc::c_uchar,
-                      ::std::mem::size_of::<[u32_0; 32]>() as libc::c_ulong as
+           read_write(fd, &mut seed as *mut [u32; 32] as *mut libc::c_uchar,
+                      ::std::mem::size_of::<[u32; 32]>() as libc::c_ulong as
                           libc::c_int, 1 as libc::c_int) == 0 ||
-           read_write(fd, &mut in_0 as *mut [u32_0; 12] as *mut libc::c_uchar,
-                      ::std::mem::size_of::<[u32_0; 12]>() as libc::c_ulong as
+           read_write(fd, &mut in_0 as *mut [u32; 12] as *mut libc::c_uchar,
+                      ::std::mem::size_of::<[u32; 12]>() as libc::c_ulong as
                           libc::c_int, 1 as libc::c_int) == 0 {
         die(b"failed to seed the random number generator: %s\x00" as *const u8
                 as *const libc::c_char as *mut libc::c_char,
@@ -45,9 +49,9 @@ pub unsafe extern "C" fn rand_init() {
     close(fd);
 }
 unsafe extern "C" fn surf() {
-    let mut t: [u32_0; 12] = [0; 12];
-    let mut x: u32_0 = 0;
-    let mut sum: u32_0 = 0 as libc::c_int as u32_0;
+    let mut t: [u32; 12] = [0; 12];
+    let mut x: u32 = 0;
+    let mut sum: u32 = 0 as libc::c_int as u32;
     let mut r: libc::c_int = 0;
     let mut i: libc::c_int = 0;
     let mut loop_0: libc::c_int = 0;
@@ -69,7 +73,7 @@ unsafe extern "C" fn surf() {
         while r < 16 as libc::c_int {
             sum =
                 (sum as libc::c_uint).wrapping_add(0x9e3779b9 as libc::c_uint)
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             t[0 as libc::c_int as usize] =
                 (t[0 as libc::c_int as usize] as
                      libc::c_uint).wrapping_add((x ^
@@ -82,7 +86,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  5 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[0 as libc::c_int as usize];
             t[1 as libc::c_int as usize] =
                 (t[1 as libc::c_int as usize] as
@@ -96,7 +100,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  7 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[1 as libc::c_int as usize];
             t[2 as libc::c_int as usize] =
                 (t[2 as libc::c_int as usize] as
@@ -110,7 +114,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  9 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[2 as libc::c_int as usize];
             t[3 as libc::c_int as usize] =
                 (t[3 as libc::c_int as usize] as
@@ -124,7 +128,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  13 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[3 as libc::c_int as usize];
             t[4 as libc::c_int as usize] =
                 (t[4 as libc::c_int as usize] as
@@ -138,7 +142,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  5 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[4 as libc::c_int as usize];
             t[5 as libc::c_int as usize] =
                 (t[5 as libc::c_int as usize] as
@@ -152,7 +156,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  7 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[5 as libc::c_int as usize];
             t[6 as libc::c_int as usize] =
                 (t[6 as libc::c_int as usize] as
@@ -166,7 +170,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  9 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[6 as libc::c_int as usize];
             t[7 as libc::c_int as usize] =
                 (t[7 as libc::c_int as usize] as
@@ -180,7 +184,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  13 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[7 as libc::c_int as usize];
             t[8 as libc::c_int as usize] =
                 (t[8 as libc::c_int as usize] as
@@ -194,7 +198,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  5 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[8 as libc::c_int as usize];
             t[9 as libc::c_int as usize] =
                 (t[9 as libc::c_int as usize] as
@@ -208,7 +212,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  7 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[9 as libc::c_int as usize];
             t[10 as libc::c_int as usize] =
                 (t[10 as libc::c_int as usize] as
@@ -222,7 +226,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  9 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[10 as libc::c_int as usize];
             t[11 as libc::c_int as usize] =
                 (t[11 as libc::c_int as usize] as
@@ -236,7 +240,7 @@ unsafe extern "C" fn surf() {
                                                                  -
                                                                  13 as
                                                                      libc::c_int))
-                    as u32_0 as u32_0;
+                    as u32 as u32;
             x = t[11 as libc::c_int as usize];
             r += 1
         }
@@ -272,7 +276,7 @@ pub unsafe extern "C" fn rand16() -> libc::c_ushort {
     return out[outleft as usize] as libc::c_ushort;
 }
 #[no_mangle]
-pub unsafe extern "C" fn rand32() -> u32_0 {
+pub unsafe extern "C" fn rand32() -> u32 {
     if outleft == 0 {
         in_0[0 as libc::c_int as usize] =
             in_0[0 as libc::c_int as usize].wrapping_add(1);
@@ -295,7 +299,7 @@ pub unsafe extern "C" fn rand32() -> u32_0 {
     return out[outleft as usize];
 }
 #[no_mangle]
-pub unsafe extern "C" fn rand64() -> u64_0 {
+pub unsafe extern "C" fn rand64() -> u64 {
     static mut outleft_0: libc::c_int = 0 as libc::c_int;
     if outleft_0 < 2 as libc::c_int {
         in_0[0 as libc::c_int as usize] =
@@ -317,15 +321,15 @@ pub unsafe extern "C" fn rand64() -> u64_0 {
     }
     outleft_0 -= 2 as libc::c_int;
     return (out[(outleft_0 + 1 as libc::c_int) as usize] as
-                u64_0).wrapping_add((out[outleft_0 as usize] as u64_0) <<
+                u64).wrapping_add((out[outleft_0 as usize] as u64) <<
                                         32 as libc::c_int);
 }
 /* returns 2 if names is OK but contains one or more underscores */
 unsafe extern "C" fn check_name(mut in_1: *mut libc::c_char) -> libc::c_int {
     /* remove trailing . 
      also fail empty string and label > 63 chars */
-    let mut dotgap: size_t = 0 as libc::c_int as size_t;
-    let mut l: size_t = strlen(in_1);
+    let mut dotgap: usize = 0 as libc::c_int as usize;
+    let mut l: usize = strlen(in_1);
     let mut c: libc::c_char = 0;
     let mut nowhite: libc::c_int = 0 as libc::c_int;
     let mut hasuscore: libc::c_int = 0 as libc::c_int;
@@ -343,7 +347,7 @@ unsafe extern "C" fn check_name(mut in_1: *mut libc::c_char) -> libc::c_int {
         c = *in_1;
         if !(c != 0) { break ; }
         if c as libc::c_int == '.' as i32 {
-            dotgap = 0 as libc::c_int as size_t
+            dotgap = 0 as libc::c_int as usize
         } else {
             dotgap = dotgap.wrapping_add(1);
             if dotgap > 63 as libc::c_int as libc::c_ulong {
@@ -464,7 +468,7 @@ pub unsafe extern "C" fn do_rfc1035_name(mut p: *mut libc::c_uchar,
 }
 /* for use during startup */
 #[no_mangle]
-pub unsafe extern "C" fn safe_malloc(mut size: size_t) -> *mut libc::c_void {
+pub unsafe extern "C" fn safe_malloc(mut size: usize) -> *mut libc::c_void {
     let mut ret: *mut libc::c_void =
         calloc(1 as libc::c_int as libc::c_ulong, size);
     if ret.is_null() {
@@ -478,7 +482,7 @@ pub unsafe extern "C" fn safe_malloc(mut size: size_t) -> *mut libc::c_void {
 #[no_mangle]
 pub unsafe extern "C" fn safe_strncpy(mut dest: *mut libc::c_char,
                                       mut src: *const libc::c_char,
-                                      mut size: size_t) {
+                                      mut size: usize) {
     if size != 0 as libc::c_int as libc::c_ulong {
         *dest.offset(size.wrapping_sub(1 as libc::c_int as libc::c_ulong) as
                          isize) = '\u{0}' as i32 as libc::c_char;
@@ -499,7 +503,7 @@ pub unsafe extern "C" fn safe_pipe(mut fd: *mut libc::c_int,
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn whine_malloc(mut size: size_t) -> *mut libc::c_void {
+pub unsafe extern "C" fn whine_malloc(mut size: usize) -> *mut libc::c_void {
     let mut ret: *mut libc::c_void =
         calloc(1 as libc::c_int as libc::c_ulong, size);
     if ret.is_null() {
@@ -646,39 +650,38 @@ pub unsafe extern "C" fn netmask_length(mut mask: in_addr) -> libc::c_int {
     }
     return 32 as libc::c_int - zero_count;
 }
-#[no_mangle]
-pub unsafe extern "C" fn is_same_net(mut a: in_addr, mut b: in_addr,
-                                     mut mask: in_addr) -> libc::c_int {
+pub fn is_same_net(mut a: in_addr, mut b: in_addr, mut mask: in_addr) -> libc::c_int {
     return (a.s_addr & mask.s_addr == b.s_addr & mask.s_addr) as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn is_same_net6(mut a: *mut in6_addr,
+
+pub fn is_same_net6(mut a: *mut in6_addr,
                                       mut b: *mut in6_addr,
                                       mut prefixlen: libc::c_int)
  -> libc::c_int {
     let mut pfbytes: libc::c_int = prefixlen >> 3 as libc::c_int;
     let mut pfbits: libc::c_int = prefixlen & 7 as libc::c_int;
-    if memcmp(&mut (*a).__in6_u.__u6_addr8 as *mut [uint8_t; 16] as
+    if memcmp(&mut a.__in6_u.__u6_addr8 as *mut [u8; 16] as
                   *const libc::c_void,
-              &mut (*b).__in6_u.__u6_addr8 as *mut [uint8_t; 16] as
+              &mut b.__in6_u.__u6_addr8 as *mut [u8; 16] as
                   *const libc::c_void, pfbytes as libc::c_ulong) !=
            0 as libc::c_int {
         return 0 as libc::c_int
     }
     if pfbits == 0 as libc::c_int ||
-           (*a).__in6_u.__u6_addr8[pfbytes as usize] as libc::c_int >>
+           a.__in6_u.__u6_addr8[pfbytes as usize] as libc::c_int >>
                8 as libc::c_int - pfbits ==
-               (*b).__in6_u.__u6_addr8[pfbytes as usize] as libc::c_int >>
+               b.__in6_u.__u6_addr8[pfbytes as usize] as libc::c_int >>
                    8 as libc::c_int - pfbits {
         return 1 as libc::c_int
     }
     return 0 as libc::c_int;
 }
+
 /* return least significant 64 bits if IPv6 address */
 #[no_mangle]
-pub unsafe extern "C" fn addr6part(mut addr: *mut in6_addr) -> u64_0 {
+pub unsafe extern "C" fn addr6part(mut addr: *mut in6_addr) -> u64 {
     let mut i: libc::c_int = 0;
-    let mut ret: u64_0 = 0 as libc::c_int as u64_0;
+    let mut ret: u64 = 0 as libc::c_int as u64;
     i = 8 as libc::c_int;
     while i < 16 as libc::c_int {
         ret =
@@ -693,11 +696,11 @@ pub unsafe extern "C" fn addr6part(mut addr: *mut in6_addr) -> u64_0 {
 }
 #[no_mangle]
 pub unsafe extern "C" fn setaddr6part(mut addr: *mut in6_addr,
-                                      mut host: u64_0) {
+                                      mut host: u64) {
     let mut i: libc::c_int = 0;
     i = 15 as libc::c_int;
     while i >= 8 as libc::c_int {
-        (*addr).__in6_u.__u6_addr8[i as usize] = host as uint8_t;
+        (*addr).__in6_u.__u6_addr8[i as usize] = host as u8;
         host = host >> 8 as libc::c_int;
         i -= 1
     };
@@ -957,7 +960,7 @@ pub unsafe extern "C" fn print_mac(mut buff: *mut libc::c_char,
    Return 1 if we should retry.
    Set errno to zero if we succeeded. */
 #[no_mangle]
-pub unsafe extern "C" fn retry_send(mut rc: ssize_t) -> libc::c_int {
+pub unsafe extern "C" fn retry_send(mut rc: susize) -> libc::c_int {
     static mut retries: libc::c_int = 0 as libc::c_int;
     let mut waiter: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
     if rc != -(1 as libc::c_int) as libc::c_long {
@@ -1003,13 +1006,13 @@ pub fn read_write(fd: &mut File,
                     read(fd,
                          &mut *packet.offset(done as isize) as
                              *mut libc::c_uchar as *mut libc::c_void,
-                         (size as libc::c_long - done) as size_t)
+                         (size as libc::c_long - done) as usize)
             } else {
                 n =
                     write(fd,
                           &mut *packet.offset(done as isize) as
                               *mut libc::c_uchar as *const libc::c_void,
-                          (size as libc::c_long - done) as size_t)
+                          (size as libc::c_long - done) as usize)
             }
             if n == 0 as libc::c_int as libc::c_long {
                 return 0 as libc::c_int

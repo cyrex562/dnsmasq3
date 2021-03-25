@@ -42,13 +42,34 @@ mod ubus;
 mod slack;
 
 
-use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, sigaction, time_t, uid_t};
+use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, time_t, uid_t};
 
 use libc;
 use log;
-use crate::util::dnsmasq_time;
-use crate::defines::{__user_cap_header_struct, __user_cap_data_struct};
-use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device};
+use crate::util::{dnsmasq_time, safe_malloc, safe_pipe, read_write, sockaddr_isequal, rand16, retry_send};
+use crate::defines::{__user_cap_header_struct, __user_cap_data_struct, SIGUSR1, SIGUSR2, SIGHUP, SIGTERM, SIGALRM, SIGCHLD, SIGINT, sigaction, SIGPIPE, event_desc, size_t, DIR, tftp_prefix, resolvc, mysockaddr, dhcp_packet, iovec, dhcp_lease, stat, timespec, serverfd, listener, tftp_transfer, irec, sockaddr, socklen_t, __SOCKADDR_ARG, all_addr, in_addr, SHUT_RDWR, in_addr_t, SOCK_RAW, IPPROTO_ICMP, sockaddr_in, C2RustUnnamed_27, ip, icmp, C2RustUnnamed_17, C2RustUnnamed_14, C2RustUnnamed_16, sa_family_t, in_port_t, __CONST_SOCKADDR_ARG, C2RustUnnamed_26};
+use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device, log_context, log_relay, dhcp_update_configs};
+use crate::dnsmasq_log::{die, log_start, my_syslog, set_log_writer, check_log_writer, log_reopen, flush_log};
+use crate::lease::{lease_init, lease_make_duid, lease_find_interfaces, do_script_run, lease_prune, lease_update_file, rerun_scripts, lease_update_from_configs, lease_update_dns};
+use crate::dhcp::{dhcp_init, dhcp_read_ethers};
+use crate::radv::{ra_init, icmp6_packet, periodic_ra};
+use crate::dhcp6::{dhcp6_init, dhcp_construct_contexts, dhcp6_packet};
+use crate::ipset::ipset_init;
+use crate::netlink::{netlink_init, netlink_multicast};
+use crate::network::{enumerate_interfaces, create_bound_listeners, create_wildcard_listeners, join_multicast, pre_allocate_sfds, is_dad_listeners, warn_bound_listeners, warn_wild_labels, warn_int_names, check_servers, newaddress, reload_servers, tcp_interface, indextoname, loopback_exception, fix_fd};
+use crate::cache::{cache_init, dump_cache, cache_reload, cache_recv_insert};
+use crate::blockdata::blockdata_init;
+use crate::hash_questions::hash_questions_init;
+use crate::inotify::{inotify_dnsmasq_init, inotify_check};
+use crate::dump::dump_init;
+use crate::helper::{create_helper, helper_buf_empty, helper_write};
+use crate::poll::{poll_reset, poll_listen, do_poll, poll_check};
+use crate::arp::{find_mac, do_arp_script_run};
+use crate::tftp::{do_tftp_script_run, check_tftp_listeners, tftp_request};
+use std::process::exit;
+use crate::forward::{resend_query, get_new_frec, reply_query, receive_query, tcp_request};
+use crate::option::{read_servers_file, reread_dhcp};
+use crate::slack::uint8_t;
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -76,9 +97,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
      let mut compiler_opts: String = String::from("");
     let mut bind_fallback: libc::c_int = 0 as libc::c_int;
     let mut now: time_t = 0;
-    let mut sigact: sigaction =
-        sigaction{__sigaction_handler: C2RustUnnamed_12{sa_handler: None,},
-                  sa_mask: __sigset_t{__val: [0; 16],},
+    let mut sigact: libc::sigaction = libc::sigaction{sa_sigaction: 0,
+                  sa_mask: libc::sigset_t{ __val: [0;16] },
                   sa_flags: 0,
                   sa_restorer: None,};
     let mut if_tmp: iname = Default::default();
@@ -113,20 +133,20 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         Some(sig_handler as unsafe extern "C" fn(_: libc::c_int) -> ());
     sigact.sa_flags = 0 as libc::c_int;
     if cfg!(target = "linux") {
-        libc::sigemptyset(&mut sigact.sa_mask as *mut __sigset_t);
-        libc::sigaction(10 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-        libc::sigaction(12 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-        libc::sigaction(1 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-        libc::sigaction(15 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-        libc::sigaction(14 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-        libc::sigaction(17 as libc::c_int, &mut sigact, 0 as *mut sigaction);
-        libc::sigaction(2 as libc::c_int, &mut sigact, 0 as *mut sigaction);
+        libc::sigemptyset(&mut sigact.sa_mask as *mut libc::sigset_t);
+        libc::sigaction(SIGUSR1, &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigaction(SIGUSR2, &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigaction(SIGHUP , &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigaction(SIGTERM, &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigaction(SIGALRM, &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigaction(SIGCHLD, &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigaction(SIGINT, &mut sigact, 0 as *mut libc::sigaction);
         sigact.__sigaction_handler.sa_handler =
             ::std::mem::transmute::<libc::intptr_t,
                 __sighandler_t>(1 as libc::c_int as
                 libc::intptr_t); /* known umask, create leases and pid files as 0644 */
-        libc::sigaction(13 as libc::c_int, &mut sigact,
-                        0 as *mut sigaction); /* Must precede read_opts() */
+        libc::sigaction(SIGPIPE as libc::c_int, &mut sigact,
+                        0 as *mut libc::sigaction); /* Must precede read_opts() */
         libc::umask(0o22 as libc::c_int as defines::__mode_t);
     }
 
@@ -291,9 +311,10 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         }
     }
     if !daemon.dhcp6.is_null() {
+        // TODO read in options differently
         daemon.doing_ra =
             (daemon.options[(37).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) as usize] &
-                 (1) << (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)))
+                 (1) << (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) == 1
                 as libc::c_int;
         context = daemon.dhcp6;
         while !context.is_null() {
@@ -2918,7 +2939,7 @@ pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
                                                    libc::c_ulong) {
         j =
             j.wrapping_add(*(&mut packet.icmp as *mut icmp as
-                                 *mut u16_0).offset(i as isize) as
+                                 *mut u16).offset(i as isize) as
                                libc::c_uint);
         i = i.wrapping_add(1)
     }
@@ -2930,7 +2951,7 @@ pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
     }
     packet.icmp.icmp_cksum =
         if j == 0xffff as libc::c_int as libc::c_uint { j } else { !j } as
-            uint16_t;
+            u16;
     while retry_send(sendto(fd,
                             &mut packet.icmp as *mut icmp as *mut libc::c_char
                                 as *const libc::c_void,
@@ -2950,7 +2971,7 @@ pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
 }
 #[no_mangle]
 pub unsafe extern "C" fn delay_dhcp(mut start: time_t, mut sec: libc::c_int,
-                                    mut fd: libc::c_int, mut addr: uint32_t,
+                                    mut fd: libc::c_int, mut addr: u32,
                                     mut id: libc::c_ushort) -> libc::c_int {
     /* Delay processing DHCP packets for "sec" seconds counting from "start".
      If "fd" is not -1 it will stop waiting if an ICMP echo reply is received

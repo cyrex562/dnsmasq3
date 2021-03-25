@@ -1,5 +1,7 @@
 use socket2::Socket;
 use crate::slack::{__caddr_t, ifmap};
+use std::fs::File;
+use std::path::PathBuf;
 
 pub type __dev_t = libc::c_ulong;
 pub type __uid_t = u32;
@@ -162,11 +164,11 @@ pub struct in_addr {
 pub union all_addr {
     pub addr4: in_addr,
     pub addr6: in6_addr,
-    pub cname: C2RustUnnamed_4,
-    pub key: C2RustUnnamed_3,
+    pub cname: String,
+    pub key: Vec<u8>,
     pub ds: C2RustUnnamed_2,
-    pub srv: C2RustUnnamed_1,
-    pub log: C2RustUnnamed_0,
+    pub srv: String,
+    pub log: u8,
 }
 
 #[derive(Copy, Clone)]
@@ -359,17 +361,17 @@ pub struct addrlist {
     pub flags: i32,
     pub prefixlen: i32,
     pub decline_time: time_t,
-    pub next: *mut addrlist,
+    // pub next: *mut addrlist,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct auth_zone {
     pub domain: String,
-    pub interface_names: *mut auth_name_list,
-    pub subnet: *mut addrlist,
-    pub exclude: *mut addrlist,
-    pub next: *mut auth_zone,
+    pub interface_names: Vec<auth_name_list>,
+    pub subnet: Vec<addrlist>,
+    pub exclude: Vec<ddrlist>,
+    // pub next: *mut auth_zone,
 }
 
 #[derive(Copy, Clone)]
@@ -377,7 +379,7 @@ pub struct auth_zone {
 pub struct auth_name_list {
     pub name: String,
     pub flags: i32,
-    pub next: *mut auth_name_list,
+    // pub next: *mut auth_name_list,
 }
 
 #[derive(Copy, Clone)]
@@ -385,17 +387,17 @@ pub struct auth_name_list {
 pub struct host_record {
     pub ttl: i32,
     pub flags: i32,
-    pub names: *mut name_list,
+    pub names: Vec<name_list>,
     pub addr: in_addr,
     pub addr6: in6_addr,
-    pub next: *mut host_record,
+    // pub next: *mut host_record,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct name_list {
     pub name: String,
-    pub next: *mut name_list,
+    // pub next: *mut name_list,
 }
 
 #[derive(Copy, Clone)]
@@ -404,8 +406,8 @@ pub struct interface_name {
     pub name: String,
     pub intr: String,
     pub family: i32,
-    pub addr: *mut addrlist,
-    pub next: *mut interface_name,
+    pub addr: addrlist,
+    // pub next: *mut interface_name,
 }
 
 #[derive(Clone, Copy)]
@@ -425,7 +427,7 @@ pub struct serverfd {
     pub ifindex: u32,
     pub used: u32,
     pub preallocated: u32,
-    pub next: *mut serverfd,
+    // pub next: *mut serverfd,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -449,7 +451,7 @@ pub struct server {
     pub queries: u32,
     pub failed_queries: u32,
     pub uid: u32,
-    pub next: *mut server,
+    // pub next: *mut server,
 }
 
 #[derive(Copy, Clone)]
@@ -457,7 +459,7 @@ pub struct server {
 pub struct ipsets {
     pub sets: *mut String,
     pub domain: String,
-    pub next: *mut ipsets,
+    // pub next: *mut ipsets,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -477,7 +479,7 @@ pub struct irec {
     pub found: i32,
     pub label: i32,
     pub name: String,
-    pub next: *mut irec,
+    // pub next: *mut irec,
 }
 
 #[derive(Copy, Clone)]
@@ -489,7 +491,7 @@ pub struct listener {
     pub used: i32,
     pub addr: mysockaddr,
     pub iface: irec,
-    pub next: *mut listener,
+    // pub next: *mut listener,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -498,7 +500,7 @@ pub struct iname {
     pub name: String,
     pub addr: mysockaddr,
     pub used: i32,
-    pub next: *mut iname,
+    // pub next: *mut iname,
 }
 
 #[derive(Copy, Clone)]
@@ -506,7 +508,7 @@ pub struct iname {
 pub struct mysubnet {
     pub addr: mysockaddr,
     pub addr_used: i32,
-    pub mask: i32,
+    // pub mask: i32,
 }
 
 #[derive(Copy, Clone)]
@@ -518,7 +520,7 @@ pub struct resolvc {
     pub mtime: time_t,
     pub name: String,
     pub wd: i32,
-    pub file: String,
+    // pub file: String,
 }
 
 #[derive(Copy, Clone)]
@@ -528,7 +530,7 @@ pub struct hostsfile {
     pub flags: i32,
     pub fname: String,
     pub wd: i32,
-    pub index: u32,
+    // pub index: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -543,7 +545,7 @@ pub struct frec {
     pub flags: i32,
     pub time: time_t,
     pub hash: Vec<u8>,
-    pub next: *mut frec,
+    // pub next: *mut frec,
 }
 
 #[derive(Copy, Clone)]
@@ -555,37 +557,37 @@ pub struct frec_src {
     pub log_id: u32,
     pub fd: i32,
     pub orig_id: u16,
-    pub next: *mut frec_src,
+    // pub next: *mut frec_src,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_netid {
     pub net: String,
-    pub next: *mut dhcp_netid,
+    // pub next: *mut dhcp_netid,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_netid_list {
-    pub list: *mut dhcp_netid,
-    pub next: *mut dhcp_netid_list,
+    pub list: Vec<dhcp_netid>,
+    // pub next: *mut dhcp_netid_list,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct tag_if {
-    pub set: *mut dhcp_netid_list,
-    pub tag: *mut dhcp_netid,
-    pub next: *mut tag_if,
+    pub set: dhcp_netid_list,
+    pub tag: dhcp_netid,
+    // pub next: *mut tag_if,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct delay_config {
     pub delay: i32,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut delay_config,
+    pub netid: dhcp_netid,
+    // pub next: *mut delay_config,
 }
 
 #[derive(Copy, Clone)]
@@ -595,7 +597,7 @@ pub struct hwaddr_config {
     pub hwaddr_type: i32,
     pub hwaddr: Vec<u8>,
     pub wildcard_mask: u32,
-    pub next: *mut hwaddr_config,
+    // pub next: *mut hwaddr_config,
 }
 
 #[derive(Copy, Clone)]
@@ -613,7 +615,7 @@ pub struct dhcp_config {
     pub decline_time: time_t,
     pub lease_time: u32,
     pub hwaddr: hwaddr_config,
-    pub next: *mut dhcp_config,
+    // pub next: *mut dhcp_config,
 }
 
 #[derive(Copy, Clone)]
@@ -625,7 +627,7 @@ pub struct dhcp_opt {
     pub u: C2RustUnnamed_7,
     pub val: Vec<u8>,
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_opt,
+    // pub next: *mut dhcp_opt,
 }
 
 #[derive(Copy, Clone)]
@@ -644,7 +646,7 @@ pub struct dhcp_boot {
     pub tftp_sname: String,
     pub next_server: in_addr,
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_boot,
+    // pub next: *mut dhcp_boot,
 }
 
 #[derive(Copy, Clone)]
@@ -653,7 +655,7 @@ pub struct dhcp_match_name {
     pub name: String,
     pub wildcard: i32,
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_match_name,
+    // pub next: *mut dhcp_match_name,
 }
 
 #[derive(Copy, Clone)]
@@ -666,7 +668,7 @@ pub struct pxe_service {
     pub sname: String,
     pub server: in_addr,
     pub netid: dhcp_netid,
-    pub next: *mut pxe_service,
+    // pub next: *mut pxe_service,
 }
 
 #[derive(Copy, Clone)]
@@ -677,14 +679,14 @@ pub struct dhcp_vendor {
     pub enterprise: u32,
     pub data: String,
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_vendor,
+    // pub next: *mut dhcp_vendor,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_pxe_vendor {
     pub data: String,
-    pub next: *mut dhcp_pxe_vendor,
+    // pub next: *mut dhcp_pxe_vendor,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -694,14 +696,14 @@ pub struct dhcp_mac {
     pub hwaddr_type: i32,
     pub hwaddr: [u8; 16],
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_mac,
+    // pub next: *mut dhcp_mac,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_bridge {
     pub iface: [i8; 16],
     pub alias: *mut dhcp_bridge,
-    pub next: *mut dhcp_bridge,
+    // pub next: *mut dhcp_bridge,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -714,7 +716,7 @@ pub struct cond_domain {
     pub end6: in6_addr,
     pub is6: i32,
     pub indexed: i32,
-    pub next: *mut cond_domain,
+    // pub next: *mut cond_domain,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -725,7 +727,7 @@ pub struct ra_interface {
     pub lifetime: i32,
     pub prio: i32,
     pub mtu: i32,
-    pub next: *mut ra_interface,
+    // pub next: *mut ra_interface,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -754,8 +756,8 @@ pub struct dhcp_context {
     pub flags: i32,
     pub netid: dhcp_netid,
     pub filter: hcp_netid,
-    pub next: dhcp_context,
-    pub current: dhcp_context,
+    // pub next: dhcp_context,
+    // pub current: dhcp_context,
 }
 
 #[derive(Copy, Clone)]
@@ -766,7 +768,7 @@ pub struct shared_network {
     pub shared_addr: in_addr,
     pub match_addr6: in6_addr,
     pub shared_addr6: in6_addr,
-    pub next: *mut shared_network,
+    // pub next: *mut shared_network,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -774,7 +776,7 @@ pub struct ping_result {
     pub addr: in_addr,
     pub time: time_t,
     pub hash: u32,
-    pub next: *mut ping_result,
+    // pub next: *mut ping_result,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -804,13 +806,13 @@ pub struct tftp_transfer {
     pub netascii: libc::c_char,
     pub carrylf: libc::c_char,
     pub file: *mut tftp_file,
-    pub next: *mut tftp_transfer,
+    // pub next: *mut tftp_transfer,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct addr_list {
     pub addr: in_addr,
-    pub next: *mut addr_list,
+    // pub next: *mut addr_list,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -818,7 +820,7 @@ pub struct tftp_prefix {
     pub interface: String,
     pub prefix: String,
     pub missing: i32,
-    pub next: *mut tftp_prefix,
+    // pub next: *mut tftp_prefix,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -829,15 +831,15 @@ pub struct dhcp_relay {
     pub interface: String,
     pub iface_index: i32,
     pub current: *mut dhcp_relay,
-    pub next: *mut dhcp_relay,
+    // pub next: *mut dhcp_relay,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct opttab_t {
     pub name: String,
-    pub val: u16_0,
-    pub size: u16_0,
+    pub val: u16,
+    pub size: u16,
 }
 
 #[derive(Clone, Default)]
@@ -963,7 +965,7 @@ pub struct dnsmasq_daemon {
     pub soa_refresh: libc::c_ulong,
     pub soa_retry: libc::c_ulong,
     pub soa_expiry: libc::c_ulong,
-    pub metrics: [u32_0; 20],
+    pub metrics: [u32; 20],
     pub packet: Vec<u8>,
     // pub packet_buff_sz: i32,
     pub namebuff: String,
@@ -1034,47 +1036,6 @@ pub const ADDRSTRLEN: i32 = 46 as i32;
 pub const ADDRLIST_REVONLY: i32 = 4 as i32;
 pub const F_REVERSE: u32 =
         (1 as u32) << 2 as i32;
-        
-#[derive(Copy, Clone)]
-#[repr(C)]
-
-pub struct stat {
-    pub st_dev: __dev_t,
-    pub st_ino: __ino_t,
-    pub st_nlink: __nlink_t,
-    pub st_mode: __mode_t,
-    pub st_uid: __uid_t,
-    pub st_gid: __gid_t,
-    pub __pad0: i32,
-    pub st_rdev: __dev_t,
-    pub st_size: __off_t,
-    pub st_blksize: __blksize_t,
-    pub st_blocks: __blkcnt_t,
-    pub st_atim: timespec,
-    pub st_mtim: timespec,
-    pub st_ctim: timespec,
-    pub __glibc_reserved: [__syscall_slong_t; 3],
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct stat64 {
-    pub st_dev: __dev_t,
-    pub st_ino: __ino64_t,
-    pub st_nlink: __nlink_t,
-    pub st_mode: __mode_t,
-    pub st_uid: __uid_t,
-    pub st_gid: __gid_t,
-    pub __pad0: i32,
-    pub st_rdev: __dev_t,
-    pub st_size: __off_t,
-    pub st_blksize: __blksize_t,
-    pub st_blocks: __blkcnt64_t,
-    pub st_atim: timespec,
-    pub st_mtim: timespec,
-    pub st_ctim: timespec,
-    pub __glibc_reserved: [__syscall_slong_t; 3],
-}
 
 pub const _STAT_VER_LINUX: i32 = 1 as i32;
 pub const _STAT_VER: i32 = _STAT_VER_LINUX;
@@ -1188,472 +1149,13 @@ pub struct _IO_wide_data
     pub _wide_vtable: *mut _IO_jump_t,
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _IO_FILE {
-    pub _flags: i32,
-    pub _IO_read_ptr: String,
-    pub _IO_read_end: String,
-    pub _IO_read_base: String,
-    pub _IO_write_base: String,
-    pub _IO_write_ptr: String,
-    pub _IO_write_end: String,
-    pub _IO_buf_base: String,
-    pub _IO_buf_end: String,
-    pub _IO_save_base: String,
-    pub _IO_backup_base: String,
-    pub _IO_save_end: String,
-    pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE,
-    pub _fileno: i32,
-    pub _flags2: i32,
-    pub _old_offset: __off_t,
-    pub _cur_column: u16,
-    pub _vtable_offset: libc::c_schar,
-    pub _shortbuf: [i8; 1],
-    pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
-    pub _freeres_list: *mut _IO_FILE,
-    pub _freeres_buf: *mut libc::c_void,
-    pub __pad5: size_t,
-    pub _mode: i32,
-    pub _unused2: [i8; 20],
-}
-
-// pub type _IO_lock_t = ();
-
-// pub const _IO_EOF_SEEN: i32 = 0x10 as i32;
-
-// pub const _IO_ERR_SEEN: i32 = 0x20 as i32;
-
-// pub type _IO_wide_data;
-
-// pub type _IO_codecvt;
-
-// pub type _IO_marker;
-
-// pub type FILE = _IO_FILE;
-
-pub type __compar_fn_t = Option<unsafe extern "C" fn(_: *const libc::c_void, _: *const libc::c_void) -> i32>;
-
-// #[inline]
-// pub unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char)
-// -> i32 {
-//     return strtol(__nptr,
-//                     NULL as *mut libc::c_void as *mut *mut libc::c_char,
-//                     10 as i32) as i32;
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn atol(mut __nptr: *const libc::c_char)
-//     -> libc::c_long {
-//     return strtol(__nptr,
-//                     NULL as *mut libc::c_void as *mut *mut libc::c_char,
-//                     10 as i32);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
-//     -> libc::c_longlong {
-//     return strtoll(__nptr,
-//                     NULL as *mut libc::c_void as *mut *mut libc::c_char,
-//                     10 as i32);
-// }
-
-// #[no_mangle]
-// pub fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
-//     -> libc::c_double;
-// #[no_mangle]
-// pub fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
-//                 _: i32) -> libc::c_long;
-// #[no_mangle]
-// pub fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
-//                 _: i32) -> libc::c_longlong;
-
-// #[inline]
-// pub unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
-//                                     mut endptr: *mut *mut libc::c_char,
-//                                     mut base: i32) -> intmax_t {
-//     return __strtol_internal(nptr, endptr, base, 0 as i32);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
-//                                     mut endptr: *mut *mut libc::c_char,
-//                                     mut base: i32) -> uintmax_t {
-//     return __strtoul_internal(nptr, endptr, base, 0 as i32);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
-//                                     mut endptr: *mut *mut __gwchar_t,
-//                                     mut base: i32) -> intmax_t {
-//     return __wcstol_internal(nptr, endptr, base, 0 as i32);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
-//                                     mut endptr: *mut *mut __gwchar_t,
-//                                     mut base: i32) -> uintmax_t {
-//     return __wcstoul_internal(nptr, endptr, base, 0 as i32);
-// }
 
 
-// #[no_mangle]
-// pub fn __strtol_internal(__nptr: *const libc::c_char,
-//                             __endptr: *mut *mut libc::c_char,
-//                             __base: i32, __group: i32)
-//     -> libc::c_long;
-
-// #[no_mangle]
-// pub fn __strtoul_internal(__nptr: *const libc::c_char,
-//                             __endptr: *mut *mut libc::c_char,
-//                             __base: i32, __group: i32)
-//     -> libc::c_ulong;
-
-// #[no_mangle]
-// pub fn __wcstol_internal(__nptr: *const __gwchar_t,
-//                             __endptr: *mut *mut __gwchar_t,
-//                             __base: i32, __group: i32)
-//     -> libc::c_long;
-
-// #[no_mangle]
-// pub fn __wcstoul_internal(__nptr: *const __gwchar_t,
-//                             __endptr: *mut *mut __gwchar_t,
-//                             __base: i32, __group: i32)
-//     -> libc::c_ulong;
-
-#[inline]    
-pub unsafe extern "C" fn __bswap_16(mut __bsx: u16) -> u16 {
-    return (__bsx as i32 >> 8 as i32 & 0xff as i32
-                |
-                (__bsx as i32 & 0xff as i32) <<
-                    8 as i32) as u16;
-}
-
-#[inline]
-pub unsafe extern "C" fn __bswap_32(mut __bsx: u32) -> u32 {
-    return (__bsx & 0xff000000 as u32) >> 24 as i32 |
-                (__bsx & 0xff0000 as u32) >> 8 as i32 |
-                (__bsx & 0xff00 as u32) << 8 as i32 |
-                (__bsx & 0xff as u32) << 24 as i32;
-}
-
-#[inline]
-pub unsafe extern "C" fn __bswap_64(mut __bsx: u64) -> u64 {
-    return ((__bsx as libc::c_ulonglong &
-                    0xff00000000000000 as libc::c_ulonglong) >>
-                56 as i32 |
-                (__bsx as libc::c_ulonglong &
-                        0xff000000000000 as libc::c_ulonglong) >>
-                    40 as i32 |
-                (__bsx as libc::c_ulonglong &
-                        0xff0000000000 as libc::c_ulonglong) >>
-                    24 as i32 |
-                (__bsx as libc::c_ulonglong &
-                        0xff00000000 as libc::c_ulonglong) >>
-                    8 as i32 |
-                (__bsx as libc::c_ulonglong &
-                        0xff000000 as libc::c_ulonglong) << 8 as i32
-                |
-                (__bsx as libc::c_ulonglong &
-                        0xff0000 as libc::c_ulonglong) << 24 as i32 |
-                (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong)
-                    << 40 as i32 |
-                (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong)
-                    << 56 as i32) as __uint64_t;
-}
-
-// #[inline]
-// pub unsafe extern "C" fn fstat(mut __fd: i32,
-//                                 mut __statbuf: *mut stat) -> i32 {
-//     return __fxstat(_STAT_VER, __fd, __statbuf);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
-//                                 mut __statbuf: *mut stat64)
-//     -> i32 {
-//     return __xstat64(_STAT_VER, __path, __statbuf);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn fstat64(mut __fd: i32,
-//                                     mut __statbuf: *mut stat64)
-//     -> i32 {
-//     return __fxstat64(_STAT_VER, __fd, __statbuf);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn fstatat(mut __fd: i32,
-//                                     mut __filename: *const libc::c_char,
-//                                     mut __statbuf: *mut stat,
-//                                     mut __flag: i32) -> i32 {
-//     return __fxstatat(_STAT_VER, __fd, __filename, __statbuf, __flag);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn fstatat64(mut __fd: i32,
-//                                     mut __filename: *const libc::c_char,
-//                                     mut __statbuf: *mut stat64,
-//                                     mut __flag: i32)
-//     -> i32 {
-//     return __fxstatat64(_STAT_VER, __fd, __filename, __statbuf, __flag);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
-//                                 mut __statbuf: *mut stat) -> i32 {
-//     return __lxstat(_STAT_VER, __path, __statbuf);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
-//                                     mut __statbuf: *mut stat64)
-//     -> i32 {
-//     return __lxstat64(_STAT_VER, __path, __statbuf);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
-//                                 mut __mode: __mode_t, mut __dev: __dev_t)
-//     -> i32 {
-//     return __xmknod(_MKNOD_VER, __path, __mode, &mut __dev);
-// }
 
 pub const _MKNOD_VER: i32 = 0 as i32;
 
-// #[inline]
-// pub unsafe extern "C" fn mknodat(mut __fd: i32,
-//                                     mut __path: *const libc::c_char,
-//                                     mut __mode: __mode_t, mut __dev: __dev_t)
-//     -> i32 {
-//     return __xmknodat(_MKNOD_VER, __fd, __path, __mode, &mut __dev);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn stat(mut __path: *const libc::c_char,
-//                                 mut __statbuf: *mut stat) -> i32 {
-//     return __xstat(_STAT_VER, __path, __statbuf);
-// }
-
-// #[no_mangle]    
-// pub fn __xstat(__ver: i32, __filename: *const libc::c_char,
-//                 __stat_buf: *mut stat) -> i32;
-
-// #[no_mangle]
-// pub fn __fxstat(__ver: i32, __fildes: i32,
-//                 __stat_buf: *mut stat) -> i32;
-
-// #[no_mangle]
-// pub fn __xstat64(__ver: i32, __filename: *const libc::c_char,
-//                     __stat_buf: *mut stat64) -> i32;
-
-// #[no_mangle]
-// pub fn __fxstat64(__ver: i32, __fildes: i32,
-//                     __stat_buf: *mut stat64) -> i32;
-
-// #[no_mangle]
-// pub fn __fxstatat(__ver: i32, __fildes: i32,
-//                     __filename: *const libc::c_char,
-//                     __stat_buf: *mut stat, __flag: i32)
-//     -> i32;
-
-// #[no_mangle]
-// pub fn __fxstatat64(__ver: i32, __fildes: i32,
-//                     __filename: *const libc::c_char,
-//                     __stat_buf: *mut stat64, __flag: i32)
-//     -> i32;
-
-// #[no_mangle]
-// pub fn __lxstat(__ver: i32, __filename: *const libc::c_char,
-//                 __stat_buf: *mut stat) -> i32;
-
-// #[no_mangle]
-// pub fn __lxstat64(__ver: i32, __filename: *const libc::c_char,
-//                     __stat_buf: *mut stat64) -> i32;
-
-// #[no_mangle]
-// pub fn __xmknod(__ver: i32, __path: *const libc::c_char,
-//                 __mode: __mode_t, __dev: *mut __dev_t) -> i32;
-
-// #[no_mangle]
-// pub fn __xmknodat(__ver: i32, __fd: i32,
-//                     __path: *const libc::c_char, __mode: __mode_t,
-//                     __dev: *mut __dev_t) -> i32;
-
-// #[no_mangle]   
-// pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void,
-//                 _: libc::c_ulong) -> *mut libc::c_void;
-
-// #[no_mangle]
-// pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
-//                 _: libc::c_ulong) -> i32;
 
 
-// #[inline]
-// pub unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
-//                                     mut __arg: ::std::ffi::VaList)
-//     -> i32 {
-//     return vfprintf(stdout, __fmt, __arg.as_va_list());
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn getchar() -> i32 { return getc(stdin); }
-
-// #[inline]
-// pub unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE)
-//     -> i32 {
-//     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as
-//                     i32 as libc::c_long != 0 {
-//                 __uflow(__fp)
-//             } else {
-//                 let fresh0 = (*__fp)._IO_read_ptr;
-//                 (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-//                 *(fresh0 as *mut u8) as i32
-//             };
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn getchar_unlocked() -> i32 {
-//     return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as
-//                     i32 as libc::c_long != 0 {
-//                 __uflow(stdin)
-//             } else {
-//                 let fresh1 = (*stdin)._IO_read_ptr;
-//                 (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
-//                 *(fresh1 as *mut u8) as i32
-//             };
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE)
-//     -> i32 {
-//     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as
-//                     i32 as libc::c_long != 0 {
-//                 __uflow(__fp)
-//             } else {
-//                 let fresh2 = (*__fp)._IO_read_ptr;
-//                 (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-//                 *(fresh2 as *mut u8) as i32
-//             };
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn putchar(mut __c: i32) -> i32 {
-//     return putc(__c, stdout);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn fputc_unlocked(mut __c: i32,
-//                                         mut __stream: *mut FILE)
-//     -> i32 {
-//     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-//                     i32 as libc::c_long != 0 {
-//                 __overflow(__stream, __c as u8 as i32)
-//             } else {
-//                 let fresh3 = (*__stream)._IO_write_ptr;
-//                 (*__stream)._IO_write_ptr =
-//                     (*__stream)._IO_write_ptr.offset(1);
-//                 *fresh3 = __c as libc::c_char;
-//                 *fresh3 as u8 as i32
-//             };
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn putc_unlocked(mut __c: i32,
-//                                         mut __stream: *mut FILE)
-//     -> i32 {
-//     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-//                     i32 as libc::c_long != 0 {
-//                 __overflow(__stream, __c as u8 as i32)
-//             } else {
-//                 let fresh4 = (*__stream)._IO_write_ptr;
-//                 (*__stream)._IO_write_ptr =
-//                     (*__stream)._IO_write_ptr.offset(1);
-//                 *fresh4 = __c as libc::c_char;
-//                 *fresh4 as u8 as i32
-//             };
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn putchar_unlocked(mut __c: i32)
-//     -> i32 {
-//     return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
-//                     i32 as libc::c_long != 0 {
-//                 __overflow(stdout, __c as u8 as i32)
-//             } else {
-//                 let fresh5 = (*stdout)._IO_write_ptr;
-//                 (*stdout)._IO_write_ptr =
-//                     (*stdout)._IO_write_ptr.offset(1);
-//                 *fresh5 = __c as libc::c_char;
-//                 *fresh5 as u8 as i32
-//             };
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
-//                                     mut __n: *mut size_t,
-//                                     mut __stream: *mut FILE) -> __ssize_t {
-//     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE)
-//     -> i32 {
-//     return ((*__stream)._flags & _IO_EOF_SEEN != 0 as i32) as
-//                 i32;
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE)
-//     -> i32 {
-//     return ((*__stream)._flags & _IO_ERR_SEEN != 0 as i32) as
-//                 i32;
-// }
-
-// #[inline]
-// pub unsafe extern "C" fn atof(mut __nptr: *const libc::c_char)
-//      -> libc::c_double {
-//         return strtod(__nptr,
-//                       NULL as *mut libc::c_void as *mut *mut libc::c_char);
-// }
-
-#[inline]
-pub unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
-                                    mut __base: *const libc::c_void,
-                                    mut __nmemb: size_t, mut __size: size_t,
-                                    mut __compar: __compar_fn_t)
-    -> *mut libc::c_void {
-    let mut __l: size_t = 0;
-    let mut __u: size_t = 0;
-    let mut __idx: size_t = 0;
-    let mut __p = 0 as *const libc::c_void;
-    let mut __comparison: i32 = 0;
-    __l = 0 as i32 as size_t;
-    __u = __nmemb;
-    while __l < __u {
-        __idx =
-            __l.wrapping_add(__u).wrapping_div(2 as i32 as
-                                                    libc::c_ulong);
-        __p =
-            (__base as
-                    *const libc::c_char).offset(__idx.wrapping_mul(__size) as
-                                                    isize) as
-                *mut libc::c_void;
-        __comparison =
-            Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
-                                                                                                    __p);
-        if __comparison < 0 as i32 {
-            __u = __idx
-        } else if __comparison > 0 as i32 {
-            __l = __idx.wrapping_add(1 as i32 as libc::c_ulong)
-        } else { return __p as *mut libc::c_void }
-    }
-    return NULL as *mut libc::c_void;
-}
 
 pub const DHCP_CHADDR_MAX: i32 = 16 as i32;
 
@@ -1690,13 +1192,13 @@ pub const KEYBLOCK_LEN: i32 = 40 as i32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dns_header {
-    pub id: u16_0,
-    pub hb3: u8_0,
-    pub hb4: u8_0,
-    pub qdcount: u16_0,
-    pub ancount: u16_0,
-    pub nscount: u16_0,
-    pub arcount: u16_0,
+    pub id: u16,
+    pub hb3: u8,
+    pub hb4: u8,
+    pub qdcount: u16,
+    pub ancount: u16,
+    pub nscount: u16,
+    pub arcount: u16,
 }
 
 pub const HB4_RCODE: i32 = 0xf as i32;
@@ -1944,15 +1446,6 @@ pub struct __va_list_tag {
     pub overflow_arg_area: *mut libc::c_void,
     pub reg_save_area: *mut libc::c_void,
 }
-
-
-
-
-pub type _IO_lock_t = ();
-pub type FILE = _IO_FILE;
-
-
-
 
 /* No MAC addr */
 #[derive(Copy, Clone, Default)]
@@ -2825,7 +2318,7 @@ pub type __gconv_end_fct = fn(*mut __gconv_step);
 pub type __gconv_trans_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut libc::c_void, *mut u8, *mut*mut u8, *mut u8, *mut*mut u8, *mut libc::size_t);
 pub type __gconv_trans_context_fct = fn(*mut libc::c_void, *mut u8, *mut u8, *mut u8, *mut u8) -> i32;
 pub type __gconv_trans_query_fct = fn(String, *mut*mutString, *mut libc::size_t);
-pub type __gconv_trans_init_fct = fn(*mut*mut libc::c_void, String) -> i32;
+pub type __gconv_trans_init_fct = fn(*mut *mut libc::c_void, String) -> i32;
 pub type __gconv_trans_end_fct = fn(*mut libc::c_void);
 
 
@@ -3066,17 +2559,17 @@ struct _IO_codecvt
 //                                              const wchar_t *,
 //                                              const wchar_t **, char *,
 //                                              char *, char **);
-    pub __codecvt_do_out: fn(*mut _IO_codecvt, *mut __mbstate_t, *mut libc::wchar_t, *mut libc::wchar_t, *mut*mut libc::wchar_t, String, String, *mutString) -> __codecvt_result,
+    pub __codecvt_do_out: fn(*mut _IO_codecvt, *mut __mbstate_t, *mut libc::wchar_t, *mut libc::wchar_t, *mut*mut libc::wchar_t, String, String, *mut String) -> __codecvt_result,
 //   enum __codecvt_result (*__codecvt_do_unshift) (struct _IO_codecvt *,
 //                                                  __mbstate_t *, char *,
 //                                                  char *, char **);
-    pub __codecvt_do_unshift: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mutString) -> __codecvt_result,
+    pub __codecvt_do_unshift: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String) -> __codecvt_result,
 //   enum __codecvt_result (*__codecvt_do_in) (struct _IO_codecvt *,
 //                                             __mbstate_t *,
 //                                             const char *, const char *,
 //                                             const char **, wchar_t *,
 //                                             wchar_t *, wchar_t **);
-    pub __codecvt_do_in: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mutString, *mut libc::wchar_t, *mut libc::wchar_t, *mut*mut libc::wchar_t) -> __codecvt_result,
+    pub __codecvt_do_in: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String, *mut libc::wchar_t, *mut libc::wchar_t, *mut *mut libc::wchar_t) -> __codecvt_result,
 //   int (*__codecvt_do_encoding) (struct _IO_codecvt *);
     pub __codecvt_do_encoding: fn(*mut _IO_codecvt) -> i32,
 //   int (*__codecvt_do_always_noconv) (struct _IO_codecvt *);
@@ -3101,35 +2594,20 @@ pub struct _code {
 
 pub type CODE = _code;
 
-#[inline]
-unsafe extern "C" fn __uint16_identity(mut __x: u16) -> u16 {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: u32) -> u32 {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
-    return __x;
-}
 
 pub type C2RustUnnamed_1 = u32;
-pub const _ISalnum: C2RustUnnamed_1 = 8;
-pub const _ISpunct: C2RustUnnamed_1 = 4;
-pub const _IScntrl: C2RustUnnamed_1 = 2;
-pub const _ISblank: C2RustUnnamed_1 = 1;
-pub const _ISgraph: C2RustUnnamed_1 = 32768;
-pub const _ISprint: C2RustUnnamed_1 = 16384;
-pub const _ISspace: C2RustUnnamed_1 = 8192;
-pub const _ISxdigit: C2RustUnnamed_1 = 4096;
-pub const _ISdigit: C2RustUnnamed_1 = 2048;
-pub const _ISalpha: C2RustUnnamed_1 = 1024;
-pub const _ISlower: C2RustUnnamed_1 = 512;
-pub const _ISupper: C2RustUnnamed_1 = 256;
-pub type intmax_t = libc::c_long;
-pub type uintmax_t = libc::c_ulong;
-pub type __gwchar_t = i32;
+pub const _ISalnum: u32 = 8;
+pub const _ISpunct: u32 = 4;
+pub const _IScntrl: u32 = 2;
+pub const _ISblank: u32 = 1;
+pub const _ISgraph: u32 = 32768;
+pub const _ISprint: u32 = 16384;
+pub const _ISspace: u32 = 8192;
+pub const _ISxdigit: u32 = 4096;
+pub const _ISdigit: u32 = 2048;
+pub const _ISalpha: u32 = 1024;
+pub const _ISlower: u32 = 512;
+pub const _ISupper: u32 = 256;
 
 pub const MSG_CMSG_CLOEXEC: u32 = 1073741824;
 pub const MSG_FASTOPEN: u32 = 536870912;
@@ -3332,21 +2810,21 @@ pub const MSG_OOB: u32 = 1;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_packet {
-    pub op: u8_0,
-    pub htype: u8_0,
-    pub hlen: u8_0,
-    pub hops: u8_0,
-    pub xid: u32_0,
-    pub secs: u16_0,
-    pub flags: u16_0,
+    pub op: u8,
+    pub htype: u8,
+    pub hlen: u8,
+    pub hops: u8,
+    pub xid: u32,
+    pub secs: u16,
+    pub flags: u16,
     pub ciaddr: in_addr,
     pub yiaddr: in_addr,
     pub siaddr: in_addr,
     pub giaddr: in_addr,
-    pub chaddr: [u8_0; 16],
-    pub sname: [u8_0; 64],
-    pub file: [u8_0; 128],
-    pub options: [u8_0; 312],
+    pub chaddr: [u8; 16],
+    pub sname: [u8; 64],
+    pub file: [u8; 128],
+    pub options: [u8; 312],
 }
 
 pub static PRIORITY_NAMES: [CODE; 13] =
@@ -3390,160 +2868,102 @@ pub static FACILITYNAMES: [CODE; 23] = [
     _code{c_name: String::from(""), c_val:-1},
 ];
 
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
-non_upper_case_globals, unused_assignments, unused_mut)]
-#![register_tool(c2rust)]
-#![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
-extern "C" {
-    pub type _IO_wide_data;
-    pub type _IO_codecvt;
-    pub type _IO_marker;
-    #[no_mangle]
-    fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
-               __stat_buf: *mut stat) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
-                __stat_buf: *mut stat) -> libc::c_int;
-    #[no_mangle]
-    fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
-                 __stat_buf: *mut stat64) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
-                  __stat_buf: *mut stat64) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
-                  __filename: *const libc::c_char, __stat_buf: *mut stat,
-                  __flag: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
-                    __filename: *const libc::c_char, __stat_buf: *mut stat64,
-                    __flag: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
-                __stat_buf: *mut stat) -> libc::c_int;
-    #[no_mangle]
-    fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
-                  __stat_buf: *mut stat64) -> libc::c_int;
-    #[no_mangle]
-    fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
-                __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
-    #[no_mangle]
-    fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
-                  __path: *const libc::c_char, __mode: __mode_t,
-                  __dev: *mut __dev_t) -> libc::c_int;
-    #[no_mangle]
-    static mut stdin: *mut FILE;
-    #[no_mangle]
-    static mut stdout: *mut FILE;
-    #[no_mangle]
-    fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
-                -> libc::c_int;
-    #[no_mangle]
-    fn getc(__stream: *mut FILE) -> libc::c_int;
-    #[no_mangle]
-    fn __uflow(_: *mut FILE) -> libc::c_int;
-    #[no_mangle]
-    fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
-    #[no_mangle]
-    fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
-                  __delimiter: libc::c_int, __stream: *mut FILE) -> __ssize_t;
-    #[no_mangle]
-    fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
-              -> libc::c_double;
-    #[no_mangle]
-    fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
-              _: libc::c_int) -> libc::c_long;
-    #[no_mangle]
-    fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
-               _: libc::c_int) -> libc::c_longlong;
-    #[no_mangle]
-    fn __ctype_tolower_loc() -> *mut *const __int32_t;
-    #[no_mangle]
-    fn __ctype_toupper_loc() -> *mut *const __int32_t;
-    #[no_mangle]
-    fn __strtol_internal(__nptr: *const libc::c_char,
-                         __endptr: *mut *mut libc::c_char,
-                         __base: libc::c_int, __group: libc::c_int)
-                         -> libc::c_long;
-    #[no_mangle]
-    fn __strtoul_internal(__nptr: *const libc::c_char,
-                          __endptr: *mut *mut libc::c_char,
-                          __base: libc::c_int, __group: libc::c_int)
-                          -> libc::c_ulong;
-    #[no_mangle]
-    fn __wcstol_internal(__nptr: *const __gwchar_t,
-                         __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
-                         __group: libc::c_int) -> libc::c_long;
-    #[no_mangle]
-    fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn __wcstoul_internal(__nptr: *const __gwchar_t,
-                          __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
-                          __group: libc::c_int) -> libc::c_ulong;
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __va_list_tag {
-    pub gp_offset: libc::c_uint,
-    pub fp_offset: libc::c_uint,
-    pub overflow_arg_area: *mut libc::c_void,
-    pub reg_save_area: *mut libc::c_void,
-}
+// extern "C" {
+//     pub type _IO_wide_data;
+//     pub type _IO_codecvt;
+//     pub type _IO_marker;
+//     #[no_mangle]
+//     fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
+//                __stat_buf: *mut stat) -> libc::c_int;
+//     #[no_mangle]
+//     fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
+//                 __stat_buf: *mut stat) -> libc::c_int;
+//     #[no_mangle]
+//     fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+//                  __stat_buf: *mut stat64) -> libc::c_int;
+//     #[no_mangle]
+//     fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
+//                   __stat_buf: *mut stat64) -> libc::c_int;
+//     #[no_mangle]
+//     fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
+//                   __filename: *const libc::c_char, __stat_buf: *mut stat,
+//                   __flag: libc::c_int) -> libc::c_int;
+//     #[no_mangle]
+//     fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
+//                     __filename: *const libc::c_char, __stat_buf: *mut stat64,
+//                     __flag: libc::c_int) -> libc::c_int;
+//     #[no_mangle]
+//     fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
+//                 __stat_buf: *mut stat) -> libc::c_int;
+//     #[no_mangle]
+//     fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
+//                   __stat_buf: *mut stat64) -> libc::c_int;
+//     #[no_mangle]
+//     fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
+//                 __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
+//     #[no_mangle]
+//     fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
+//                   __path: *const libc::c_char, __mode: __mode_t,
+//                   __dev: *mut __dev_t) -> libc::c_int;
+//     #[no_mangle]
+//     static mut stdin: *mut FILE;
+//     #[no_mangle]
+//     static mut stdout: *mut FILE;
+//     #[no_mangle]
+//     // fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
+//     //             -> libc::c_int;
+//     #[no_mangle]
+//     fn getc(__stream: *mut FILE) -> libc::c_int;
+//     #[no_mangle]
+//     fn __uflow(_: *mut FILE) -> libc::c_int;
+//     #[no_mangle]
+//     fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
+//     #[no_mangle]
+//     fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+//                   __delimiter: libc::c_int, __stream: *mut FILE) -> __ssize_t;
+//     #[no_mangle]
+//     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+//               -> libc::c_double;
+//     #[no_mangle]
+//     fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//               _: libc::c_int) -> libc::c_long;
+//     #[no_mangle]
+//     fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//                _: libc::c_int) -> libc::c_longlong;
+//     #[no_mangle]
+//     fn __ctype_tolower_loc() -> *mut *const __int32_t;
+//     #[no_mangle]
+//     fn __ctype_toupper_loc() -> *mut *const __int32_t;
+//     #[no_mangle]
+//     fn __strtol_internal(__nptr: *const libc::c_char,
+//                          __endptr: *mut *mut libc::c_char,
+//                          __base: libc::c_int, __group: libc::c_int)
+//                          -> libc::c_long;
+//     #[no_mangle]
+//     fn __strtoul_internal(__nptr: *const libc::c_char,
+//                           __endptr: *mut *mut libc::c_char,
+//                           __base: libc::c_int, __group: libc::c_int)
+//                           -> libc::c_ulong;
+//     #[no_mangle]
+//     fn __wcstol_internal(__nptr: *const __gwchar_t,
+//                          __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
+//                          __group: libc::c_int) -> libc::c_long;
+//     #[no_mangle]
+//     fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
+//     #[no_mangle]
+//     fn __wcstoul_internal(__nptr: *const __gwchar_t,
+//                           __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
+//                           __group: libc::c_int) -> libc::c_ulong;
+// }
 pub type __uint16_t = libc::c_ushort;
 pub type __int32_t = libc::c_int;
 pub type __uint32_t = libc::c_uint;
 pub type __uint64_t = libc::c_ulong;
 pub type __intmax_t = libc::c_long;
 pub type __uintmax_t = libc::c_ulong;
-pub type __dev_t = libc::c_ulong;
-pub type __uid_t = libc::c_uint;
-pub type __gid_t = libc::c_uint;
-pub type __ino_t = libc::c_ulong;
-pub type __ino64_t = libc::c_ulong;
-pub type __mode_t = libc::c_uint;
-pub type __nlink_t = libc::c_ulong;
-pub type __off_t = libc::c_long;
-pub type __off64_t = libc::c_long;
-pub type __time_t = libc::c_long;
-pub type __blksize_t = libc::c_long;
-pub type __blkcnt_t = libc::c_long;
-pub type __blkcnt64_t = libc::c_long;
-pub type __ssize_t = libc::c_long;
-pub type __syscall_slong_t = libc::c_long;
-pub type __socklen_t = libc::c_uint;
-pub type size_t = libc::c_ulong;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct timespec {
-    pub tv_sec: __time_t,
-    pub tv_nsec: __syscall_slong_t,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct iovec {
-    pub iov_base: *mut libc::c_void,
-    pub iov_len: size_t,
-}
-pub type socklen_t = __socklen_t;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct msghdr {
-    pub msg_name: *mut libc::c_void,
-    pub msg_namelen: socklen_t,
-    pub msg_iov: *mut iovec,
-    pub msg_iovlen: size_t,
-    pub msg_control: *mut libc::c_void,
-    pub msg_controllen: size_t,
-    pub msg_flags: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct cmsghdr {
-    pub cmsg_len: size_t,
-    pub cmsg_level: libc::c_int,
-    pub cmsg_type: libc::c_int,
-    pub __cmsg_data: [libc::c_uchar; 0],
-}
+
+
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct stat {
@@ -3624,67 +3044,67 @@ Option<unsafe extern "C" fn(_: *const libc::c_void,
 pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
 pub type __gwchar_t = libc::c_int;
-#[inline]
-unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
-                             mut __arg: ::std::ffi::VaList) -> libc::c_int {
-    return vfprintf(stdout, __fmt, __arg.as_va_list());
-}
-#[inline]
-unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
-#[inline]
-unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
-        libc::c_long != 0 {
-        __uflow(__fp)
-    } else {
-        let fresh0 = (*__fp)._IO_read_ptr;
-        (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-        *(fresh0 as *mut libc::c_uchar) as libc::c_int
-    };
-}
-#[inline]
-unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
-        libc::c_long != 0 {
-        __uflow(__fp)
-    } else {
-        let fresh1 = (*__fp)._IO_read_ptr;
-        (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-        *(fresh1 as *mut libc::c_uchar) as libc::c_int
-    };
-}
-#[inline]
-unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
-    return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as libc::c_int
-        as libc::c_long != 0 {
-        __uflow(stdin)
-    } else {
-        let fresh2 = (*stdin)._IO_read_ptr;
-        (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
-        *(fresh2 as *mut libc::c_uchar) as libc::c_int
-    };
-}
-#[inline]
-unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
-                               mut base: libc::c_int) -> uintmax_t {
-    return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+// #[inline]
+// unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
+//                              mut __arg: ::std::ffi::VaList) -> libc::c_int {
+//     return vfprintf(stdout, __fmt, __arg.as_va_list());
+// }
+// #[inline]
+// unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
+// #[inline]
+// unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
+//     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
+//         libc::c_long != 0 {
+//         __uflow(__fp)
+//     } else {
+//         let fresh0 = (*__fp)._IO_read_ptr;
+//         (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+//         *(fresh0 as *mut libc::c_uchar) as libc::c_int
+//     };
+// }
+// #[inline]
+// unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
+//     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
+//         libc::c_long != 0 {
+//         __uflow(__fp)
+//     } else {
+//         let fresh1 = (*__fp)._IO_read_ptr;
+//         (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+//         *(fresh1 as *mut libc::c_uchar) as libc::c_int
+//     };
+// }
+// #[inline]
+// unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
+//     return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as libc::c_int
+//         as libc::c_long != 0 {
+//         __uflow(stdin)
+//     } else {
+//         let fresh2 = (*stdin)._IO_read_ptr;
+//         (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+//         *(fresh2 as *mut libc::c_uchar) as libc::c_int
+//     };
+// }
+// #[inline]
+// unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
+//                                mut endptr: *mut *mut __gwchar_t,
+//                                mut base: libc::c_int) -> uintmax_t {
+//     return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
+// }
+
+pub fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
     return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
         (__bsx as libc::c_int & 0xff as libc::c_int) <<
             8 as libc::c_int) as __uint16_t;
 }
-#[inline]
-unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+
+pub fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
     return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
         (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
         (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
         (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
 }
-#[inline]
-unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+
+pub fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
     return ((__bsx as libc::c_ulonglong &
         0xff00000000000000 as libc::c_ulonglong) >> 56 as libc::c_int
         |
@@ -3705,268 +3125,289 @@ unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
         (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong) <<
             56 as libc::c_int) as __uint64_t;
 }
-#[inline]
-unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
-    {
-        return 0 as *mut cmsghdr
-    }
-    __cmsg =
-        (__cmsg as
-            *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-            as
-            libc::c_ulong).wrapping_sub(1
-            as
-            libc::c_int
-            as
-            libc::c_ulong)
-            &
-            !(::std::mem::size_of::<size_t>()
-                as
-                libc::c_ulong).wrapping_sub(1
-                as
-                libc::c_int
-                as
-                libc::c_ulong))
-            as isize) as *mut cmsghdr;
-    if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
-        ((*__mhdr).msg_control as
-            *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
-        ||
-        (__cmsg as
-            *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-            as
-            libc::c_ulong).wrapping_sub(1
-            as
-            libc::c_int
-            as
-            libc::c_ulong)
-            &
-            !(::std::mem::size_of::<size_t>()
-                as
-                libc::c_ulong).wrapping_sub(1
-                as
-                libc::c_int
-                as
-                libc::c_ulong))
-            as isize) >
-            ((*__mhdr).msg_control as
-                *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
-                isize) {
-        return 0 as *mut cmsghdr
-    }
-    return __cmsg;
-}
-#[inline]
-unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
-                                    mut __stream: *mut FILE) -> libc::c_int {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-        libc::c_int as libc::c_long != 0 {
-        __overflow(__stream, __c as libc::c_uchar as libc::c_int)
-    } else {
-        let fresh3 = (*__stream)._IO_write_ptr;
-        (*__stream)._IO_write_ptr =
-            (*__stream)._IO_write_ptr.offset(1);
-        *fresh3 = __c as libc::c_char;
-        *fresh3 as libc::c_uchar as libc::c_int
-    };
-}
-#[inline]
-unsafe extern "C" fn stat(mut __path: *const libc::c_char,
-                          mut __statbuf: *mut stat) -> libc::c_int {
-    return __xstat(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstat(mut __fd: libc::c_int, mut __statbuf: *mut stat)
-                           -> libc::c_int {
-    return __fxstat(1 as libc::c_int, __fd, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
-                            mut __statbuf: *mut stat64) -> libc::c_int {
-    return __xstat64(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
-                             mut __statbuf: *mut stat64) -> libc::c_int {
-    return __fxstat64(1 as libc::c_int, __fd, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
-                             mut __filename: *const libc::c_char,
-                             mut __statbuf: *mut stat,
-                             mut __flag: libc::c_int) -> libc::c_int {
-    return __fxstatat(1 as libc::c_int, __fd, __filename, __statbuf, __flag);
-}
-#[inline]
-unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
-                               mut __filename: *const libc::c_char,
-                               mut __statbuf: *mut stat64,
-                               mut __flag: libc::c_int) -> libc::c_int {
-    return __fxstatat64(1 as libc::c_int, __fd, __filename, __statbuf,
-                        __flag);
-}
-#[inline]
-unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
-                           mut __statbuf: *mut stat) -> libc::c_int {
-    return __lxstat(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
-                             mut __statbuf: *mut stat64) -> libc::c_int {
-    return __lxstat64(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
-                           mut __mode: __mode_t, mut __dev: __dev_t)
-                           -> libc::c_int {
-    return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
-}
-#[inline]
-unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
-                             mut __path: *const libc::c_char,
-                             mut __mode: __mode_t, mut __dev: __dev_t)
-                             -> libc::c_int {
-    return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
-}
-#[inline]
-unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
-    return putc(__c, stdout);
-}
-#[inline]
-unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
-                                   mut __stream: *mut FILE) -> libc::c_int {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-        libc::c_int as libc::c_long != 0 {
-        __overflow(__stream, __c as libc::c_uchar as libc::c_int)
-    } else {
-        let fresh4 = (*__stream)._IO_write_ptr;
-        (*__stream)._IO_write_ptr =
-            (*__stream)._IO_write_ptr.offset(1);
-        *fresh4 = __c as libc::c_char;
-        *fresh4 as libc::c_uchar as libc::c_int
-    };
-}
-#[inline]
-unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
-    return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
-        libc::c_int as libc::c_long != 0 {
-        __overflow(stdout, __c as libc::c_uchar as libc::c_int)
-    } else {
-        let fresh5 = (*stdout)._IO_write_ptr;
-        (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
-        *fresh5 = __c as libc::c_char;
-        *fresh5 as libc::c_uchar as libc::c_int
-    };
-}
-#[inline]
-unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
-                             mut __n: *mut size_t, mut __stream: *mut FILE)
-                             -> __ssize_t {
-    return __getdelim(__lineptr, __n, '\n' as i32, __stream);
-}
-#[inline]
-unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) -> libc::c_int {
-    return ((*__stream)._flags & 0x10 as libc::c_int != 0 as libc::c_int) as
-        libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) -> libc::c_int {
-    return ((*__stream)._flags & 0x20 as libc::c_int != 0 as libc::c_int) as
-        libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
-    return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
-}
-#[inline]
-unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) -> libc::c_int {
-    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                  10 as libc::c_int) as libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
-    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                  10 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
-                           -> libc::c_longlong {
-    return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                   10 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
-                             mut __base: *const libc::c_void,
-                             mut __nmemb: size_t, mut __size: size_t,
-                             mut __compar: __compar_fn_t)
-                             -> *mut libc::c_void {
-    let mut __l: size_t = 0;
-    let mut __u: size_t = 0;
-    let mut __idx: size_t = 0;
-    let mut __p: *const libc::c_void = 0 as *const libc::c_void;
-    let mut __comparison: libc::c_int = 0;
-    __l = 0 as libc::c_int as size_t;
-    __u = __nmemb;
-    while __l < __u {
-        __idx =
-            __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
-                libc::c_ulong);
-        __p =
-            (__base as
-                *const libc::c_char).offset(__idx.wrapping_mul(__size) as
-                isize) as *mut libc::c_void;
-        __comparison =
-            Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
-                                                                                                   __p);
-        if __comparison < 0 as libc::c_int {
-            __u = __idx
-        } else if __comparison > 0 as libc::c_int {
-            __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
-        } else { return __p as *mut libc::c_void }
-    }
-    return 0 as *mut libc::c_void;
-}
-#[inline]
-unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
-    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
-        *(*__ctype_tolower_loc()).offset(__c as isize)
-    } else { __c };
-}
-#[inline]
-unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
-    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
-        *(*__ctype_toupper_loc()).offset(__c as isize)
-    } else { __c };
-}
-#[inline]
-unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
-                               mut endptr: *mut *mut libc::c_char,
-                               mut base: libc::c_int) -> intmax_t {
-    return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
-                               mut endptr: *mut *mut libc::c_char,
-                               mut base: libc::c_int) -> uintmax_t {
-    return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
-                               mut base: libc::c_int) -> intmax_t {
-    return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
-}
+// #[inline]
+// unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
+//     return __x;
+// }
+// #[inline]
+// unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+//     return __x;
+// }
+// #[inline]
+// unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
+//     return __x;
+// }
+// #[inline]
+// unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut msghdr,
+//                                    mut __cmsg: &mut cmsghdr) -> Option<cmsghdr> {
+//     if __cmsg.cmsg_len < ::std::mem::size_of::<cmsghdr>()
+//     {
+//         return None;
+//     }
+//     __cmsg =
+//         (__cmsg as *mut libc::c_uchar).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>().wrapping_sub(1)
+//             &
+//             !(::std::mem::size_of::<size_t>()).wrapping_sub(1))) as *mut cmsghdr;
+//     if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
+//         ((*__mhdr).msg_control as
+//             *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
+//         ||
+//         (__cmsg as
+//             *mut libc::c_uchar).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+//             as
+//             libc::c_ulong).wrapping_sub(1
+//             as
+//             libc::c_int
+//             as
+//             libc::c_ulong)
+//             &
+//             !(::std::mem::size_of::<size_t>()
+//                 as
+//                 libc::c_ulong).wrapping_sub(1
+//                 as
+//                 libc::c_int
+//                 as
+//                 libc::c_ulong))
+//             as isize) >
+//             ((*__mhdr).msg_control as
+//                 *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+//                 isize) {
+//         return 0 as *mut cmsghdr
+//     }
+//     return __cmsg;
+// }
+// #[inline]
+// unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
+//                                     mut __stream: *mut FILE) -> libc::c_int {
+//     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+//         libc::c_int as libc::c_long != 0 {
+//         __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+//     } else {
+//         let fresh3 = (*__stream)._IO_write_ptr;
+//         (*__stream)._IO_write_ptr =
+//             (*__stream)._IO_write_ptr.offset(1);
+//         *fresh3 = __c as libc::c_char;
+//         *fresh3 as libc::c_uchar as libc::c_int
+//     };
+// }
+// a#[inline]
+// unsafe extern "C" fn stat(mut __path: *const libc::c_char,
+//                           mut __statbuf: *mut stat) -> libc::c_int {
+//     return __xstat(1 as libc::c_int, __path, __statbuf);
+// }
+// #[inline]
+// unsafe extern "C" fn fstat(mut __fd: libc::c_int, mut __statbuf: *mut stat)
+//                            -> libc::c_int {
+//     return __fxstat(1 as libc::c_int, __fd, __statbuf);
+// }
+// #[inline]
+// unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
+//                             mut __statbuf: *mut stat64) -> libc::c_int {
+//     return __xstat64(1 as libc::c_int, __path, __statbuf);
+// }
+// #[inline]
+// unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
+//                              mut __statbuf: *mut stat64) -> libc::c_int {
+//     return __fxstat64(1 as libc::c_int, __fd, __statbuf);
+// }
+// #[inline]
+// unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
+//                              mut __filename: *const libc::c_char,
+//                              mut __statbuf: *mut stat,
+//                              mut __flag: libc::c_int) -> libc::c_int {
+//     return __fxstatat(1 as libc::c_int, __fd, __filename, __statbuf, __flag);
+// }
+// #[inline]
+// unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
+//                                mut __filename: *const libc::c_char,
+//                                mut __statbuf: *mut stat64,
+//                                mut __flag: libc::c_int) -> libc::c_int {
+//     return __fxstatat64(1 as libc::c_int, __fd, __filename, __statbuf,
+//                         __flag);
+// }
+// #[inline]
+// unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
+//                            mut __statbuf: *mut stat) -> libc::c_int {
+//     return __lxstat(1 as libc::c_int, __path, __statbuf);
+// }
+// #[inline]
+// unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
+//                              mut __statbuf: *mut stat64) -> libc::c_int {
+//     return __lxstat64(1 as libc::c_int, __path, __statbuf);
+// }
+// #[inline]
+// unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
+//                            mut __mode: __mode_t, mut __dev: __dev_t)
+//                            -> libc::c_int {
+//     return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
+// }
+// #[inline]
+// unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
+//                              mut __path: *const libc::c_char,
+//                              mut __mode: __mode_t, mut __dev: __dev_t)
+//                              -> libc::c_int {
+//     return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
+// }
+// #[inline]
+// unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
+//     return putc(__c, stdout);
+// }
+// #[inline]
+// unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
+//                                    mut __stream: *mut FILE) -> libc::c_int {
+//     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+//         libc::c_int as libc::c_long != 0 {
+//         __overflow(__stream, __c as libc::c_uchar as libc::c_int)
+//     } else {
+//         let fresh4 = (*__stream)._IO_write_ptr;
+//         (*__stream)._IO_write_ptr =
+//             (*__stream)._IO_write_ptr.offset(1);
+//         *fresh4 = __c as libc::c_char;
+//         *fresh4 as libc::c_uchar as libc::c_int
+//     };
+// }
+// #[inline]
+// unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
+//     return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
+//         libc::c_int as libc::c_long != 0 {
+//         __overflow(stdout, __c as libc::c_uchar as libc::c_int)
+//     } else {
+//         let fresh5 = (*stdout)._IO_write_ptr;
+//         (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
+//         *fresh5 = __c as libc::c_char;
+//         *fresh5 as libc::c_uchar as libc::c_int
+//     };
+// }
+// #[inline]
+// unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
+//                              mut __n: *mut size_t, mut __stream: *mut FILE)
+//                              -> __ssize_t {
+//     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
+// }
+// #[inline]
+// unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) -> libc::c_int {
+//     return ((*__stream)._flags & 0x10 as libc::c_int != 0 as libc::c_int) as
+//         libc::c_int;
+// }
+// #[inline]
+// unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) -> libc::c_int {
+//     return ((*__stream)._flags & 0x20 as libc::c_int != 0 as libc::c_int) as
+//         libc::c_int;
+// }
+// #[inline]
+// unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
+//     return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
+// }
+// #[inline]
+// unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) -> libc::c_int {
+//     return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+//                   10 as libc::c_int) as libc::c_int;
+// }
+// #[inline]
+// unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
+//     return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+//                   10 as libc::c_int);
+// }
+// #[inline]
+// unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
+//                            -> libc::c_longlong {
+//     return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+//                    10 as libc::c_int);
+// }
+// #[inline]
+// unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
+//                              mut __base: *const libc::c_void,
+//                              mut __nmemb: size_t, mut __size: size_t,
+//                              mut __compar: __compar_fn_t)
+//                              -> *mut libc::c_void {
+//     let mut __l: size_t = 0;
+//     let mut __u: size_t = 0;
+//     let mut __idx: size_t = 0;
+//     let mut __p: *const libc::c_void = 0 as *const libc::c_void;
+//     let mut __comparison: libc::c_int = 0;
+//     __l = 0 as libc::c_int as size_t;
+//     __u = __nmemb;
+//     while __l < __u {
+//         __idx =
+//             __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
+//                 libc::c_ulong);
+//         __p =
+//             (__base as
+//                 *const libc::c_char).offset(__idx.wrapping_mul(__size) as
+//                 isize) as *mut libc::c_void;
+//         __comparison =
+//             Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
+//                                                                                                    __p);
+//         if __comparison < 0 as libc::c_int {
+//             __u = __idx
+//         } else if __comparison > 0 as libc::c_int {
+//             __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
+//         } else { return __p as *mut libc::c_void }
+//     }
+//     return 0 as *mut libc::c_void;
+// }
+// #[inline]
+// unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
+//     return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+//         *(*__ctype_tolower_loc()).offset(__c as isize)
+//     } else { __c };
+// }
+// #[inline]
+// unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
+//     return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
+//         *(*__ctype_toupper_loc()).offset(__c as isize)
+//     } else { __c };
+// }
+// #[inline]
+// unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
+//                                mut endptr: *mut *mut libc::c_char,
+//                                mut base: libc::c_int) -> intmax_t {
+//     return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
+// }
+// #[inline]
+// unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
+//                                mut endptr: *mut *mut libc::c_char,
+//                                mut base: libc::c_int) -> uintmax_t {
+//     return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
+// }
+// #[inline]
+// unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
+//                                mut endptr: *mut *mut __gwchar_t,
+//                                mut base: libc::c_int) -> intmax_t {
+//     return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
+// }
+
+
+pub const SIGHUP: libc::c_int = 1;
+pub const SIGINT: libc::c_int = 2;
+pub const SIGQUIT: libc::c_int = 3;
+pub const SIGILL: libc::c_int = 4;
+pub const SIGTRAP: libc::c_int = 5;
+pub const SIGABRT: libc::c_int = 6;
+pub const SIGIOT: libc::c_int = 6;
+pub const SIGBUS: libc::c_int = 7;
+pub const SIGFPE: libc::c_int = 8;
+pub const SIGKILL: libc::c_int = 9;
+pub const SIGUSR1: libc::c_int = 10;
+pub const SIGSEGV: libc::c_int = 11;
+pub const SIGUSR2: libc::c_int = 12;
+pub const SIGPIPE: libc::c_int = 13;
+pub const SIGALRM: libc::c_int = 14;
+pub const SIGTERM: libc::c_int = 15;
+pub const SIGSTKFLT: libc::c_int = 16;
+pub const SIGCHLD: libc::c_int = 17;
+pub const SIGCONT: libc::c_int = 18;
+pub const SIGSTOP: libc::c_int = 19;
+pub const SIGTSTP: libc::c_int = 20;
+pub const SIGTTIN: libc::c_int = 21;
+pub const SIGTTOU: libc::c_int = 22;
+pub const SIGURG: libc::c_int = 23;
+pub const SIGXCPU: libc::c_int = 24;
+pub const SIGXFSZ: libc::c_int = 25;
+pub const SIGVTALRM: libc::c_int = 26;
+pub const SIGPROF: libc::c_int = 27;
+pub const SIGWINCH: libc::c_int = 28;
+pub const SIGIO: libc::c_int = 29;
+pub const SIGPWR: libc::c_int = 30;
+pub const SIGSYS: libc::c_int = 31;
+pub const SIGUNUSED: libc::c_int = 31;
