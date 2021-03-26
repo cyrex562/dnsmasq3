@@ -1,4 +1,4 @@
-use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, C2RustUnnamed_9, TxtRecord, DnsmasqDaemon, C2RustUnnamed_10, MySockAddr, InAddr, sa_family_t, In6Addr, __bswap_16, in_addr_t, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISdigit, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISspace, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISxdigit, HostsFile, FILE, stat, timespec, DIR, Crec};
+use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, OptionUsage, TxtRecord, DnsmasqDaemon, C2RustUnnamed_10, MySockAddr, InAddr, sa_family_t, In6Addr, __bswap_16, in_addr_t, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISdigit, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISspace, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISxdigit, HostsFile, FILE, stat, timespec, DIR, Crec};
 use crate::util::{whine_malloc, safe_malloc, canonicalise, safe_strncpy, hostname_isequal, addr6part, setaddr6part, is_same_net, is_same_net6, parse_hex, legal_hostname, rand32};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{lookup_dhcp_opt, lookup_dhcp_len, strip_hostname, display_opts, display_opts6};
@@ -147,644 +147,81 @@ pub fn prepare_matches() -> ArgMatches {
         .arg(Arg::with_name("dhcp-optsfile").long("dhcp-optsfile").value_name("DHCP_OPTS_FILE"))
         .arg(Arg::with_name("dhcp-hostsdir").long("dhcp-hostsdir").value_name("DHCP_HOSTS_DIR"))
         .arg(Arg::with_name("dhcp-optsdir").long("dhcp-optsdir").value_name("DHCP_OPTS_DIR"))
+        .arg(Arg::with_name("dhcp-no-override").long("dhcp-no-override").takes_value(false))
+        .arg(Arg::with_name("tftp-port-range").long("tftp-port-range").value_name("TFTP_PORT_RANGE"))
+        .arg(Arg::with_name("stop-dns-rebind").long("stop-dns-rebind").takes_value(false))
+        .arg(Arg::with_name("rebind-domain-ok").long("rebind-domain-ok").takes_value(false))
+        .arg(Arg::with_name("all-servers").long("all-servers").takes_value(false))
+        .arg(Arg::with_name("dhcp-match").long("dhcp-match").value_name("DHCP_MATCH"))
+        .arg(Arg::with_name("dhcp-name-match").long("dhcp-name-match").value_name("DHCP_NAME_MATCH"))
+        .arg(Arg::with_name("dhcp-broadcast").long("dhcp-broadcast").value_name("DHCP_BROADCAST"))
+        .arg(Arg::with_name("neg-ttl").long("neg-ttl").value_name("NEG_TTL"))
+        .arg(Arg::with_name("max-ttl").long("max-ttl").value_name("MAX_TTL"))
+        .arg(Arg::with_name("min-cache-ttl").long("min-cache-ttl").value_name("MIN_CACHE_TTL"))
+        .arg(Arg::with_name("max-cache-ttl").long("max-cache-ttl").value_name("MAX_CACHE_TTL"))
+        .arg(Arg::with_name("dhcp-alternate-port").long("dhcp-alternate-port").value_name("DHCP_ALTERNATE_PORT"))
+        .arg(Arg::with_name("dhcp-scriptuser").long("dhcp-scriptuser").value_name("DHCP_SCRIPT_USER"))
+        .arg(Arg::with_name("min-port").long("min-port").value_name("MIN_PORT"))
+        .arg(Arg::with_name("max-port").long("max-port").value_name("MAX_PORT"))
+        .arg(Arg::with_name("dhcp-fqdn").long("dhcp-fqdn").value_name("DHCP_FQDN"))
+        .arg(Arg::with_name("cname").long("cname").value_name("CNAME"))
+        .arg(Arg::with_name("pxe-prompt").long("pxe-prompt").value_name("PXE_PROMPT"))
+        .arg(Arg::with_name("pxe-service").long("pxe-service").value_name("PXE_SERVICE"))
+        .arg(Arg::with_name("test").long("test").value_name("TEST"))
+        .arg(Arg::with_name("tag-if").long("tag-if").value_name("TAG_IF"))
+        .arg(Arg::with_name("dhcp-proxy").long("dhcp-proxy").value_name("DHCP_PROXY"))
+        .arg(Arg::with_name("dhcp-generate-names").long("dhcp-generate-names").takes_value(false))
+        .arg(Arg::with_name("rebind-localhost-ok").long("rebind-localhost-ok").takes_value(false))
+        .arg(Arg::with_name("add-mac").long("add-mac").value_name("MAC"))
+        .arg(Arg::with_name("add-sbunet").long("add-subnet").value_name("SUBNET"))
+        .arg(Arg::with_name("add-cpe-id").long("add-cpe-id").value_name("CPE_ID"))
+        .arg(Arg::with_name("proxy-dnssec").long("proxy-dnssec").takes_value(false))
+        .arg(Arg::with_name("dhcp-sequential-ip").long("dhcp-sequential-ip").takes_value(false))
+        .arg(Arg::with_name("conntrack").long("conntrack").takes_value(false))
+        .arg(Arg::with_name("dhcp-client-update").long("dhcp-client-update").takes_value(false))
+        .arg(Arg::with_name("dhcp-luascript").long("dhcp-luascript").value_name("SCRIPT_NAME"))
+        .arg(Arg::with_name("enable-ra").long("enable-ra").takes_value(false))
+        .arg(Arg::with_name("dhcp-duid").long("dhcp-duid").value_name("DUID"))
+        .arg(Arg::with_name("host-record").long("host-record").value("HOST_RECORD"))
+        .arg(Arg::with_name("bind-dynamic").long("bind-dynamic").takes_value(false))
+        .arg(Arg::with_name("auth-zone").long("auth-zone").value_name("AUTH_ZONE"))
+        .arg(Arg::with_name("auth-server").long("auth-server").value_name("AUTH_SERVER"))
+        .arg(Arg::with_name("auth-ttl").long("auth-ttl").value_name("TTL"))
+        .arg(Arg::with_name("auth-soa").long("auth-soa").value_name("SOA"))
+        .arg(Arg::with_name("auth-sec-servers").long("auth-sec-servers").value_name("SERVER"))
+        .arg(Arg::with_name("auth-peer").long("auth-peer").value_name("PEER"))
+        .arg(Arg::with_name("ipset").long("ipset").value_name("IPSET"))
+        .arg(Arg::with_name("synth-domain").long("synth-domain").value_name("SYNTH_DOMAIN"))
+        .arg(Arg::with_name("dnssec").long("dnssec").takes_value(false))
+        .arg(Arg::with_name("trust-anchor").long("trust-anchor").value_name("TRUST_ANCHOR"))
+        .arg(Arg::with_name("dnssec-debug").long("dnssec-debug").takes_value(false))
+        .arg(Arg::with_name("dnssec-check-unsigned").long("dnssec-check-unsigned").takes_value(false))
+        .arg(Arg::with_name("dnssec-no-timecheck").long("dnssec-no-timecheck").takes_value(false))
+        .arg(Arg::with_name("dnssec-timestamp").long("dnssec-timestamp").value_name("TIMESTAMP"))
+        .arg(Arg::with_name("dhcp-relay").long("dhcp-relay").value_name("DHCP_RELAY"))
+        .arg(Arg::with_name("ra-param").long("ra-param").value_name("RA_PARAM"))
+        .arg(Arg::with_name("quiet-dhcp").long("quiet-dhcp").takes_value(false))
+        .arg(Arg::with_name("quiet-dhcp6").long("quiet-dhcp6").takes_value(false))
+        .arg(Arg::with_name("quiet-ra").long("quiet-ra").takes_value(false))
+        .arg(Arg::with_name("dns-loop-detect").long("dns-loop-detect").takes_value(false))
+        .arg(Arg::with_name("script-arp").long("script-arp").takes_value(false))
+        .arg(Arg::with_name("dhcp-ttl").long("dhcp-ttl").value_name("TTL"))
+        .arg(Arg::with_name("dhcp-reply-delay").long("dhcp-relply-delay").value_name("DELAY"))
+        .arg(Arg::with_name("dhcp-rapid-commit").long("dhcp-rapid-commit").takes_value(false))
+        .arg(Arg::with_name("dumpfile").long("dumpfile").value_name("FILE"))
+        .arg(Arg::with_name("dumpmask").long("dumpmask").value_name("MASK"))
+        .arg(Arg::with_name("dhcp-ignore-clid").long("dhcp-ignore-clid").takes_value(false))
         .get_matches()
 }
 
-static mut opts: [option; 167] =
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-optsfile\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 280 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-hostsdir\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 340 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-optsdir\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 341 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-no-override\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 275 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-port-range\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 276 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"stop-dns-rebind\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 277 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"rebind-domain-ok\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 298 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"all-servers\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 278 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-match\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 281 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-name-match\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 355 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-broadcast\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 282 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"neg-ttl\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 283 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"max-ttl\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 297 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"min-cache-ttl\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 339 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"max-cache-ttl\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 312 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-alternate-port\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 284 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-scriptuser\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 285 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"min-port\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 288 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"max-port\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 345 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-fqdn\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 289 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"cname\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 290 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"pxe-prompt\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 291 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"pxe-service\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 292 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"test\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 293 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"tag-if\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 294 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-proxy\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 295 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-generate-names\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 296 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"rebind-localhost-ok\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 299 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"add-mac\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 300 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"add-subnet\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 325 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"add-cpe-id\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 346 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"proxy-dnssec\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 301 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-sequential-ip\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 302 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"conntrack\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 303 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-client-update\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 304 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-luascript\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 305 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"enable-ra\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 306 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-duid\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 307 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"host-record\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 308 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"bind-dynamic\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 311 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"auth-zone\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 313 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"auth-server\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 314 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"auth-ttl\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 315 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"auth-soa\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 316 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"auth-sec-servers\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 317 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"auth-peer\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 318 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"ipset\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 319 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"synth-domain\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 320 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"dnssec\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 329 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"trust-anchor\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 330 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dnssec-debug\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 331 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dnssec-check-unsigned\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 334 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dnssec-no-timecheck\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 336 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dnssec-timestamp\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 343 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-relay\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 323 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"ra-param\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 324 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"quiet-dhcp\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 326 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"quiet-dhcp6\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 327 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"quiet-ra\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 328 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dns-loop-detect\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 337 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"script-arp\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 347 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"dhcp-ttl\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 348 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-reply-delay\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 350 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-rapid-commit\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 351 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"dumpfile\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 352 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"dumpmask\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 353 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-ignore-clid\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 358 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: 0 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 0 as libc::c_int,};
-         init
-     }];
-static mut usage: [C2RustUnnamed_9; 165] =
+// TODO: record "values" for each option
+// TODO: move usage data to match arg
+// TODO: correct for N, flag type, etc.
+
+static mut usage: [OptionUsage; 165] =
     [{
          let mut init =
-             C2RustUnnamed_9{opt: 'a' as i32,
+             OptionUsage{opt: 'a' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<ipaddr>\x00" as *const u8 as
@@ -800,7 +237,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'A' as i32,
+             OptionUsage{opt: 'A' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"/<domain>/<ipaddr>\x00" as *const u8 as
@@ -816,7 +253,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'b' as i32,
+             OptionUsage{opt: 'b' as i32,
                              rept: 0 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -832,7 +269,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'B' as i32,
+             OptionUsage{opt: 'B' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<ipaddr>\x00" as *const u8 as
@@ -848,7 +285,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'c' as i32,
+             OptionUsage{opt: 'c' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -866,7 +303,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'C' as i32,
+             OptionUsage{opt: 'C' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -883,7 +320,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'd' as i32,
+             OptionUsage{opt: 'd' as i32,
                              rept: 6 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -899,7 +336,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'D' as i32,
+             OptionUsage{opt: 'D' as i32,
                              rept: 12 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -915,7 +352,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'e' as i32,
+             OptionUsage{opt: 'e' as i32,
                              rept: 3 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -931,7 +368,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'E' as i32,
+             OptionUsage{opt: 'E' as i32,
                              rept: 9 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -947,7 +384,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'f' as i32,
+             OptionUsage{opt: 'f' as i32,
                              rept: 1 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -963,7 +400,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'F' as i32,
+             OptionUsage{opt: 'F' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<ipaddr>,...\x00" as *const u8 as
@@ -979,7 +416,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'g' as i32,
+             OptionUsage{opt: 'g' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -998,7 +435,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'G' as i32,
+             OptionUsage{opt: 'G' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<hostspec>\x00" as *const u8 as
@@ -1014,7 +451,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 273 as libc::c_int,
+             OptionUsage{opt: 273 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1030,7 +467,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 280 as libc::c_int,
+             OptionUsage{opt: 280 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1046,7 +483,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 340 as libc::c_int,
+             OptionUsage{opt: 340 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1062,7 +499,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 341 as libc::c_int,
+             OptionUsage{opt: 341 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1078,7 +515,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 294 as libc::c_int,
+             OptionUsage{opt: 294 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"tag-expression\x00" as *const u8 as
@@ -1094,7 +531,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'h' as i32,
+             OptionUsage{opt: 'h' as i32,
                              rept: 4 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1110,7 +547,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'H' as i32,
+             OptionUsage{opt: 'H' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1127,7 +564,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 342 as libc::c_int,
+             OptionUsage{opt: 342 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1143,7 +580,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'i' as i32,
+             OptionUsage{opt: 'i' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<interface>\x00" as *const u8 as
@@ -1159,7 +596,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'I' as i32,
+             OptionUsage{opt: 'I' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<interface>\x00" as *const u8 as
@@ -1175,7 +612,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'j' as i32,
+             OptionUsage{opt: 'j' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<class>\x00" as *const u8 as
@@ -1191,7 +628,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 268 as libc::c_int,
+             OptionUsage{opt: 268 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<circuit>\x00" as *const u8 as
@@ -1207,7 +644,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 269 as libc::c_int,
+             OptionUsage{opt: 269 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<remote>\x00" as *const u8 as
@@ -1223,7 +660,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 270 as libc::c_int,
+             OptionUsage{opt: 270 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<remote>\x00" as *const u8 as
@@ -1239,7 +676,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 361 as libc::c_int,
+             OptionUsage{opt: 361 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<vendor>[,...]\x00" as *const u8 as
@@ -1255,7 +692,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'J' as i32,
+             OptionUsage{opt: 'J' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"tag:<tag>...\x00" as *const u8 as
@@ -1271,7 +708,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 282 as libc::c_int,
+             OptionUsage{opt: 282 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=tag:<tag>...]\x00" as *const u8 as
@@ -1287,7 +724,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'k' as i32,
+             OptionUsage{opt: 'k' as i32,
                              rept: 16 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1303,7 +740,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'K' as i32,
+             OptionUsage{opt: 'K' as i32,
                              rept: 17 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1319,7 +756,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'l' as i32,
+             OptionUsage{opt: 'l' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1338,7 +775,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'L' as i32,
+             OptionUsage{opt: 'L' as i32,
                              rept: 10 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1354,7 +791,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'm' as i32,
+             OptionUsage{opt: 'm' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<host_name>,<target>,<pref>\x00" as
@@ -1370,7 +807,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'M' as i32,
+             OptionUsage{opt: 'M' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<bootp opts>\x00" as *const u8 as
@@ -1386,7 +823,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'n' as i32,
+             OptionUsage{opt: 'n' as i32,
                              rept: 5 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1403,7 +840,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'N' as i32,
+             OptionUsage{opt: 'N' as i32,
                              rept: 11 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1419,7 +856,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'o' as i32,
+             OptionUsage{opt: 'o' as i32,
                              rept: 7 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1436,7 +873,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'O' as i32,
+             OptionUsage{opt: 'O' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<optspec>\x00" as *const u8 as
@@ -1452,7 +889,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 264 as libc::c_int,
+             OptionUsage{opt: 264 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<optspec>\x00" as *const u8 as
@@ -1468,7 +905,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'p' as i32,
+             OptionUsage{opt: 'p' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1486,7 +923,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'P' as i32,
+             OptionUsage{opt: 'P' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1504,7 +941,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'q' as i32,
+             OptionUsage{opt: 'q' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1519,7 +956,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'Q' as i32,
+             OptionUsage{opt: 'Q' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1537,7 +974,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'R' as i32,
+             OptionUsage{opt: 'R' as i32,
                              rept: 8 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1553,7 +990,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'r' as i32,
+             OptionUsage{opt: 'r' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -1570,7 +1007,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 333 as libc::c_int,
+             OptionUsage{opt: 333 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1588,7 +1025,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'S' as i32,
+             OptionUsage{opt: 'S' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"/<domain>/<ipaddr>\x00" as *const u8 as
@@ -1604,7 +1041,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 332 as libc::c_int,
+             OptionUsage{opt: 332 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<addr>/<prefix>,<ipaddr>\x00" as *const u8
@@ -1621,7 +1058,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 286 as libc::c_int,
+             OptionUsage{opt: 286 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"/<domain>/\x00" as *const u8 as
@@ -1637,7 +1074,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 's' as i32,
+             OptionUsage{opt: 's' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<domain>[,<range>]\x00" as *const u8 as
@@ -1653,7 +1090,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 't' as i32,
+             OptionUsage{opt: 't' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1671,7 +1108,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'T' as i32,
+             OptionUsage{opt: 'T' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1689,7 +1126,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 283 as libc::c_int,
+             OptionUsage{opt: 283 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1707,7 +1144,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 297 as libc::c_int,
+             OptionUsage{opt: 297 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1725,7 +1162,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 312 as libc::c_int,
+             OptionUsage{opt: 312 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1743,7 +1180,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 339 as libc::c_int,
+             OptionUsage{opt: 339 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1761,7 +1198,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'u' as i32,
+             OptionUsage{opt: 'u' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1780,7 +1217,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'U' as i32,
+             OptionUsage{opt: 'U' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<class>\x00" as *const u8 as
@@ -1796,7 +1233,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'v' as i32,
+             OptionUsage{opt: 'v' as i32,
                              rept: 0 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1812,7 +1249,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'V' as i32,
+             OptionUsage{opt: 'V' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<ipaddr>,<ipaddr>,<netmask>\x00" as
@@ -1829,7 +1266,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'W' as i32,
+             OptionUsage{opt: 'W' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<target>,...\x00" as *const u8 as
@@ -1844,7 +1281,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'w' as i32,
+             OptionUsage{opt: 'w' as i32,
                              rept: 0 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1860,7 +1297,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'x' as i32,
+             OptionUsage{opt: 'x' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1879,7 +1316,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'X' as i32,
+             OptionUsage{opt: 'X' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -1897,7 +1334,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'y' as i32,
+             OptionUsage{opt: 'y' as i32,
                              rept: 18 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1913,7 +1350,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'Y' as i32,
+             OptionUsage{opt: 'Y' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<txt>[,<txt]\x00" as *const u8 as
@@ -1929,7 +1366,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 261 as libc::c_int,
+             OptionUsage{opt: 261 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<target>\x00" as *const u8 as
@@ -1945,7 +1382,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 271 as libc::c_int,
+             OptionUsage{opt: 271 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<interface>\x00" as *const u8 as
@@ -1961,7 +1398,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'z' as i32,
+             OptionUsage{opt: 'z' as i32,
                              rept: 13 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1977,7 +1414,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 'Z' as i32,
+             OptionUsage{opt: 'Z' as i32,
                              rept: 14 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -1994,7 +1431,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '1' as i32,
+             OptionUsage{opt: '1' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2012,7 +1449,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 354 as libc::c_int,
+             OptionUsage{opt: 354 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2030,7 +1467,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '2' as i32,
+             OptionUsage{opt: '2' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<interface>\x00" as *const u8 as
@@ -2046,7 +1483,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '3' as i32,
+             OptionUsage{opt: '3' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=tag:<tag>]...\x00" as *const u8 as
@@ -2062,7 +1499,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '4' as i32,
+             OptionUsage{opt: '4' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<mac address>\x00" as *const u8
@@ -2079,7 +1516,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 262 as libc::c_int,
+             OptionUsage{opt: 262 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<iface>,<alias>..\x00" as *const u8 as
@@ -2095,7 +1532,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 357 as libc::c_int,
+             OptionUsage{opt: 357 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<iface>|<addr>,<addr>\x00" as *const u8 as
@@ -2111,7 +1548,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '5' as i32,
+             OptionUsage{opt: '5' as i32,
                              rept: 21 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2127,7 +1564,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '6' as i32,
+             OptionUsage{opt: '6' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2145,7 +1582,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 305 as libc::c_int,
+             OptionUsage{opt: 305 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"path\x00" as *const u8 as
@@ -2161,7 +1598,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 285 as libc::c_int,
+             OptionUsage{opt: 285 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2179,7 +1616,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 347 as libc::c_int,
+             OptionUsage{opt: 347 as libc::c_int,
                              rept: 53 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2195,7 +1632,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '7' as i32,
+             OptionUsage{opt: '7' as i32,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<path>\x00" as *const u8 as
@@ -2211,7 +1648,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '8' as i32,
+             OptionUsage{opt: '8' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2229,7 +1666,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '9' as i32,
+             OptionUsage{opt: '9' as i32,
                              rept: 22 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2244,7 +1681,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: '0' as i32,
+             OptionUsage{opt: '0' as i32,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2262,7 +1699,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 256 as libc::c_int,
+             OptionUsage{opt: 256 as libc::c_int,
                              rept: 24 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2279,7 +1716,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 257 as libc::c_int,
+             OptionUsage{opt: 257 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=tag:<tag>]...\x00" as *const u8 as
@@ -2295,7 +1732,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 275 as libc::c_int,
+             OptionUsage{opt: 275 as libc::c_int,
                              rept: 30 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2311,7 +1748,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 258 as libc::c_int,
+             OptionUsage{opt: 258 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=<intr>[,<intr>]]\x00" as *const u8 as
@@ -2327,7 +1764,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 260 as libc::c_int,
+             OptionUsage{opt: 260 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<dir>[,<iface>]\x00" as *const u8 as
@@ -2343,7 +1780,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 274 as libc::c_int,
+             OptionUsage{opt: 274 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=ip|mac]\x00" as *const u8 as
@@ -2359,7 +1796,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 259 as libc::c_int,
+             OptionUsage{opt: 259 as libc::c_int,
                              rept: 26 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2375,7 +1812,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 344 as libc::c_int,
+             OptionUsage{opt: 344 as libc::c_int,
                              rept: 52 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2391,7 +1828,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 263 as libc::c_int,
+             OptionUsage{opt: 263 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2409,7 +1846,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 349 as libc::c_int,
+             OptionUsage{opt: 349 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2427,7 +1864,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 265 as libc::c_int,
+             OptionUsage{opt: 265 as libc::c_int,
                              rept: 27 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2443,7 +1880,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 309 as libc::c_int,
+             OptionUsage{opt: 309 as libc::c_int,
                              rept: 38 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2459,7 +1896,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 276 as libc::c_int,
+             OptionUsage{opt: 276 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2477,7 +1914,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 359 as libc::c_int,
+             OptionUsage{opt: 359 as libc::c_int,
                              rept: 60 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2493,7 +1930,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 266 as libc::c_int,
+             OptionUsage{opt: 266 as libc::c_int,
                              rept: 28 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2509,7 +1946,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 267 as libc::c_int,
+             OptionUsage{opt: 267 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2527,7 +1964,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 277 as libc::c_int,
+             OptionUsage{opt: 277 as libc::c_int,
                              rept: 31 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2543,7 +1980,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 299 as libc::c_int,
+             OptionUsage{opt: 299 as libc::c_int,
                              rept: 25 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2559,7 +1996,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 298 as libc::c_int,
+             OptionUsage{opt: 298 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"/<domain>/\x00" as *const u8 as
@@ -2575,7 +2012,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 278 as libc::c_int,
+             OptionUsage{opt: 278 as libc::c_int,
                              rept: 23 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2591,7 +2028,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 281 as libc::c_int,
+             OptionUsage{opt: 281 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<optspec>\x00" as *const u8 as
@@ -2607,7 +2044,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 355 as libc::c_int,
+             OptionUsage{opt: 355 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"set:<tag>,<string>[*]\x00" as *const u8 as
@@ -2623,7 +2060,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 284 as libc::c_int,
+             OptionUsage{opt: 284 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2641,7 +2078,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 287 as libc::c_int,
+             OptionUsage{opt: 287 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<naptr>\x00" as *const u8 as
@@ -2657,7 +2094,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 288 as libc::c_int,
+             OptionUsage{opt: 288 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2675,7 +2112,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 345 as libc::c_int,
+             OptionUsage{opt: 345 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2693,7 +2130,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 289 as libc::c_int,
+             OptionUsage{opt: 289 as libc::c_int,
                              rept: 20 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2709,7 +2146,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 296 as libc::c_int,
+             OptionUsage{opt: 296 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=tag:<tag>]\x00" as *const u8 as
@@ -2725,7 +2162,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 295 as libc::c_int,
+             OptionUsage{opt: 295 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=<ipaddr>]...\x00" as *const u8 as
@@ -2741,7 +2178,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 323 as libc::c_int,
+             OptionUsage{opt: 323 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<local-addr>,<server>[,<iface>]\x00" as
@@ -2758,7 +2195,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 290 as libc::c_int,
+             OptionUsage{opt: 290 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<alias>,<target>[,<ttl>]\x00" as *const u8
@@ -2775,7 +2212,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 291 as libc::c_int,
+             OptionUsage{opt: 291 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<prompt>,[<timeout>]\x00" as *const u8 as
@@ -2791,7 +2228,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 292 as libc::c_int,
+             OptionUsage{opt: 292 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<service>\x00" as *const u8 as
@@ -2807,7 +2244,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 293 as libc::c_int,
+             OptionUsage{opt: 293 as libc::c_int,
                              rept: 0 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2823,7 +2260,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 300 as libc::c_int,
+             OptionUsage{opt: 300 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"[=base64|text]\x00" as *const u8 as
@@ -2839,7 +2276,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 325 as libc::c_int,
+             OptionUsage{opt: 325 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2857,7 +2294,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 346 as libc::c_int,
+             OptionUsage{opt: 346 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2875,7 +2312,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 301 as libc::c_int,
+             OptionUsage{opt: 301 as libc::c_int,
                              rept: 33 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2891,7 +2328,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 302 as libc::c_int,
+             OptionUsage{opt: 302 as libc::c_int,
                              rept: 34 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2907,7 +2344,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 358 as libc::c_int,
+             OptionUsage{opt: 358 as libc::c_int,
                              rept: 59 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2923,7 +2360,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 303 as libc::c_int,
+             OptionUsage{opt: 303 as libc::c_int,
                              rept: 35 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2939,7 +2376,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 304 as libc::c_int,
+             OptionUsage{opt: 304 as libc::c_int,
                              rept: 36 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2955,7 +2392,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 306 as libc::c_int,
+             OptionUsage{opt: 306 as libc::c_int,
                              rept: 37 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -2971,7 +2408,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 307 as libc::c_int,
+             OptionUsage{opt: 307 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -2989,7 +2426,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 308 as libc::c_int,
+             OptionUsage{opt: 308 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<address>[,<ttl>]\x00" as *const u8
@@ -3006,7 +2443,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 356 as libc::c_int,
+             OptionUsage{opt: 356 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<flags>,<tag>,<value>\x00" as
@@ -3023,7 +2460,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 310 as libc::c_int,
+             OptionUsage{opt: 310 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<name>,<RR-number>,[<data>]\x00" as
@@ -3040,7 +2477,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 311 as libc::c_int,
+             OptionUsage{opt: 311 as libc::c_int,
                              rept: 39 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3056,7 +2493,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 314 as libc::c_int,
+             OptionUsage{opt: 314 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3074,7 +2511,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 313 as libc::c_int,
+             OptionUsage{opt: 313 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<domain>,[<subnet>...]\x00" as *const u8 as
@@ -3090,7 +2527,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 315 as libc::c_int,
+             OptionUsage{opt: 315 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3108,7 +2545,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 316 as libc::c_int,
+             OptionUsage{opt: 316 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3126,7 +2563,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 317 as libc::c_int,
+             OptionUsage{opt: 317 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<NS>[,<NS>...]\x00" as *const u8 as
@@ -3142,7 +2579,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 318 as libc::c_int,
+             OptionUsage{opt: 318 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<ipaddr>[,<ipaddr>...]\x00" as *const u8 as
@@ -3158,7 +2595,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 319 as libc::c_int,
+             OptionUsage{opt: 319 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"/<domain>[/<domain>...]/<ipset>...\x00" as
@@ -3175,7 +2612,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 320 as libc::c_int,
+             OptionUsage{opt: 320 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<domain>,<range>,[<prefix>]\x00" as
@@ -3192,7 +2629,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 329 as libc::c_int,
+             OptionUsage{opt: 329 as libc::c_int,
                              rept: 45 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3208,7 +2645,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 330 as libc::c_int,
+             OptionUsage{opt: 330 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<domain>,[<class>],...\x00" as *const u8 as
@@ -3224,7 +2661,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 331 as libc::c_int,
+             OptionUsage{opt: 331 as libc::c_int,
                              rept: 47 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3240,7 +2677,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 334 as libc::c_int,
+             OptionUsage{opt: 334 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3256,7 +2693,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 336 as libc::c_int,
+             OptionUsage{opt: 336 as libc::c_int,
                              rept: 46 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3272,7 +2709,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 343 as libc::c_int,
+             OptionUsage{opt: 343 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3290,7 +2727,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 324 as libc::c_int,
+             OptionUsage{opt: 324 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<iface>,[mtu:<value>|<interface>|off,][<prio>,]<intval>[,<lifetime>]\x00"
@@ -3307,7 +2744,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 326 as libc::c_int,
+             OptionUsage{opt: 326 as libc::c_int,
                              rept: 42 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3323,7 +2760,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 327 as libc::c_int,
+             OptionUsage{opt: 327 as libc::c_int,
                              rept: 43 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3339,7 +2776,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 328 as libc::c_int,
+             OptionUsage{opt: 328 as libc::c_int,
                              rept: 44 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3354,7 +2791,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 335 as libc::c_int,
+             OptionUsage{opt: 335 as libc::c_int,
                              rept: 49 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3370,7 +2807,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 337 as libc::c_int,
+             OptionUsage{opt: 337 as libc::c_int,
                              rept: 50 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3386,7 +2823,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 338 as libc::c_int,
+             OptionUsage{opt: 338 as libc::c_int,
                              rept: 62 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  b"<ipaddr>\x00" as *const u8 as
@@ -3402,7 +2839,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 348 as libc::c_int,
+             OptionUsage{opt: 348 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3420,7 +2857,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 350 as libc::c_int,
+             OptionUsage{opt: 350 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3438,7 +2875,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 351 as libc::c_int,
+             OptionUsage{opt: 351 as libc::c_int,
                              rept: 57 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3454,7 +2891,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 352 as libc::c_int,
+             OptionUsage{opt: 352 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3472,7 +2909,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 353 as libc::c_int,
+             OptionUsage{opt: 353 as libc::c_int,
                              rept:
                                  (62 as libc::c_int + 1 as libc::c_int) as
                                      libc::c_uint,
@@ -3490,7 +2927,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 360 as libc::c_int,
+             OptionUsage{opt: 360 as libc::c_int,
                              rept: 61 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as
@@ -3506,7 +2943,7 @@ static mut usage: [C2RustUnnamed_9; 165] =
      },
      {
          let mut init =
-             C2RustUnnamed_9{opt: 0 as libc::c_int,
+             OptionUsage{opt: 0 as libc::c_int,
                              rept: 0 as libc::c_int as libc::c_uint,
                              flagdesc:
                                  0 as *const libc::c_char as

@@ -3472,3 +3472,13 @@ pub struct InPktInfo {
     pub ipi_spec_dst: slack::in_addr,
     pub ipi_addr: slack::in_addr,
 }
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct OptionUsage {
+    pub opt: char,
+    pub rept: u16,
+    pub flagdesc: String,
+    pub desc: String,
+    pub arg: u16
+}
