@@ -17,12 +17,12 @@
 /* Code to safely remove RRs from a DNS answer */
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
    we've chopped out of the packet, or check they don't point into an elided part.  */
-use crate::defines::{dns_header, __bswap_16};
+use crate::defines::{DnsHeader, __bswap_16};
 use crate::rfc1035::skip_name;
 use crate::util::whine_malloc;
 
 unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
-                                mut header: *mut dns_header, mut plen: usize,
+                                mut header: *mut DnsHeader, mut plen: usize,
                                 mut fixup: libc::c_int,
                                 mut rrs: *mut *mut libc::c_uchar,
                                 mut rr_count: libc::c_int) -> libc::c_int {
@@ -150,7 +150,7 @@ unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
 }
 /* Go through RRs and check or fixup the domain names contained within */
 unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
-                               mut header: *mut dns_header, mut plen: usize,
+                               mut header: *mut DnsHeader, mut plen: usize,
                                mut fixup: libc::c_int,
                                mut rrs: *mut *mut libc::c_uchar,
                                mut rr_count: libc::c_int) -> libc::c_int {
@@ -230,9 +230,9 @@ unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
 }
 /* mode is 0 to remove EDNS0, 1 to filter DNSSEC RRs */
 #[no_mangle]
-pub unsafe extern "C" fn rrfilter(mut header: *mut dns_header,
+pub unsafe extern "C" fn rrfilter(mut header: *mut DnsHeader,
                                   mut plen: usize, mut mode: libc::c_int)
- -> usize {
+                                  -> usize {
     static mut rrs: *mut *mut libc::c_uchar =
         0 as *const *mut libc::c_uchar as *mut *mut libc::c_uchar;
     static mut rr_sz: libc::c_int = 0 as libc::c_int;

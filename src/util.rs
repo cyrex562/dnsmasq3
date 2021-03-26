@@ -19,7 +19,7 @@
 /* The SURF random number generator was taken from djbdns-1.05, by 
    Daniel J Bernstein, which is public domain. */
 /* SURF random number generator */
-use crate::defines::{iovec, in_addr, in6_addr, _IScntrl, mysockaddr, sockaddr_in6, sockaddr_in, time_t, socklen_t, __bswap_16, _ISxdigit, timespec, __time_t, __syscall_slong_t, DIR};
+use crate::defines::{iovec, InAddr, In6Addr, _IScntrl, MySockAddr, SockAddrIn6, SockAddrIn, time_t, socklen_t, __bswap_16, _ISxdigit, timespec, __time_t, __syscall_slong_t, DIR};
 use std::fs::{File, read, write};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::network::fix_fd;
@@ -514,9 +514,9 @@ pub unsafe extern "C" fn whine_malloc(mut size: usize) -> *mut libc::c_void {
     return ret;
 }
 #[no_mangle]
-pub unsafe extern "C" fn sockaddr_isequal(mut s1: *mut mysockaddr,
-                                          mut s2: *mut mysockaddr)
- -> libc::c_int {
+pub unsafe extern "C" fn sockaddr_isequal(mut s1: *mut MySockAddr,
+                                          mut s2: *mut MySockAddr)
+                                          -> libc::c_int {
     if (*s1).sa.sa_family as libc::c_int == (*s2).sa.sa_family as libc::c_int
        {
         if (*s1).sa.sa_family as libc::c_int == 2 as libc::c_int &&
@@ -530,12 +530,12 @@ pub unsafe extern "C" fn sockaddr_isequal(mut s1: *mut mysockaddr,
                    (*s2).in6.sin6_port as libc::c_int &&
                (*s1).in6.sin6_scope_id == (*s2).in6.sin6_scope_id &&
                ({
-                    let mut __a: *const in6_addr =
-                        &mut (*s1).in6.sin6_addr as *mut in6_addr as
-                            *const in6_addr;
-                    let mut __b: *const in6_addr =
-                        &mut (*s2).in6.sin6_addr as *mut in6_addr as
-                            *const in6_addr;
+                    let mut __a: *const In6Addr =
+                        &mut (*s1).in6.sin6_addr as *mut In6Addr as
+                            *const In6Addr;
+                    let mut __b: *const In6Addr =
+                        &mut (*s2).in6.sin6_addr as *mut In6Addr as
+                            *const In6Addr;
                     ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize] ==
                          (*__b).__in6_u.__u6_addr32[0 as libc::c_int as usize]
                          &&
@@ -559,12 +559,12 @@ pub unsafe extern "C" fn sockaddr_isequal(mut s1: *mut mysockaddr,
     return 0 as libc::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn sa_len(mut addr: *mut mysockaddr) -> libc::c_int {
+pub unsafe extern "C" fn sa_len(mut addr: *mut MySockAddr) -> libc::c_int {
     if (*addr).sa.sa_family as libc::c_int == 10 as libc::c_int {
-        return ::std::mem::size_of::<sockaddr_in6>() as libc::c_ulong as
+        return ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong as
                    libc::c_int
     } else {
-        return ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as
+        return ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as
                    libc::c_int
     };
 }
@@ -640,7 +640,7 @@ pub unsafe extern "C" fn dnsmasq_time() -> time_t {
     return time(0 as *mut time_t);
 }
 #[no_mangle]
-pub unsafe extern "C" fn netmask_length(mut mask: in_addr) -> libc::c_int {
+pub unsafe extern "C" fn netmask_length(mut mask: InAddr) -> libc::c_int {
     let mut zero_count: libc::c_int = 0 as libc::c_int;
     while 0 as libc::c_int as libc::c_uint ==
               mask.s_addr & 0x1 as libc::c_int as libc::c_uint &&
@@ -650,14 +650,14 @@ pub unsafe extern "C" fn netmask_length(mut mask: in_addr) -> libc::c_int {
     }
     return 32 as libc::c_int - zero_count;
 }
-pub fn is_same_net(mut a: in_addr, mut b: in_addr, mut mask: in_addr) -> libc::c_int {
+pub fn is_same_net(mut a: InAddr, mut b: InAddr, mut mask: InAddr) -> libc::c_int {
     return (a.s_addr & mask.s_addr == b.s_addr & mask.s_addr) as libc::c_int;
 }
 
-pub fn is_same_net6(mut a: *mut in6_addr,
-                                      mut b: *mut in6_addr,
-                                      mut prefixlen: libc::c_int)
- -> libc::c_int {
+pub fn is_same_net6(mut a: *mut In6Addr,
+                    mut b: *mut In6Addr,
+                    mut prefixlen: libc::c_int)
+                    -> libc::c_int {
     let mut pfbytes: libc::c_int = prefixlen >> 3 as libc::c_int;
     let mut pfbits: libc::c_int = prefixlen & 7 as libc::c_int;
     if memcmp(&mut a.__in6_u.__u6_addr8 as *mut [u8; 16] as
@@ -679,7 +679,7 @@ pub fn is_same_net6(mut a: *mut in6_addr,
 
 /* return least significant 64 bits if IPv6 address */
 #[no_mangle]
-pub unsafe extern "C" fn addr6part(mut addr: *mut in6_addr) -> u64 {
+pub unsafe extern "C" fn addr6part(mut addr: *mut In6Addr) -> u64 {
     let mut i: libc::c_int = 0;
     let mut ret: u64 = 0 as libc::c_int as u64;
     i = 8 as libc::c_int;
@@ -695,7 +695,7 @@ pub unsafe extern "C" fn addr6part(mut addr: *mut in6_addr) -> u64 {
     return ret;
 }
 #[no_mangle]
-pub unsafe extern "C" fn setaddr6part(mut addr: *mut in6_addr,
+pub unsafe extern "C" fn setaddr6part(mut addr: *mut In6Addr,
                                       mut host: u64) {
     let mut i: libc::c_int = 0;
     i = 15 as libc::c_int;
@@ -707,20 +707,20 @@ pub unsafe extern "C" fn setaddr6part(mut addr: *mut in6_addr,
 }
 /* returns port number from address */
 #[no_mangle]
-pub unsafe extern "C" fn prettyprint_addr(mut addr: *mut mysockaddr,
+pub unsafe extern "C" fn prettyprint_addr(mut addr: *mut MySockAddr,
                                           mut buf: *mut libc::c_char)
- -> libc::c_int {
+                                          -> libc::c_int {
     let mut port: libc::c_int = 0 as libc::c_int;
     if (*addr).sa.sa_family as libc::c_int == 2 as libc::c_int {
         inet_ntop(2 as libc::c_int,
-                  &mut (*addr).in_0.sin_addr as *mut in_addr as
+                  &mut (*addr).in_0.sin_addr as *mut InAddr as
                       *const libc::c_void, buf,
                   46 as libc::c_int as socklen_t);
         port = __bswap_16((*addr).in_0.sin_port) as libc::c_int
     } else if (*addr).sa.sa_family as libc::c_int == 10 as libc::c_int {
         let mut name: [libc::c_char; 16] = [0; 16];
         inet_ntop(10 as libc::c_int,
-                  &mut (*addr).in6.sin6_addr as *mut in6_addr as
+                  &mut (*addr).in6.sin6_addr as *mut In6Addr as
                       *const libc::c_void, buf,
                   46 as libc::c_int as socklen_t);
         if (*addr).in6.sin6_scope_id != 0 as libc::c_int as libc::c_uint &&

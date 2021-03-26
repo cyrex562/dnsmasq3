@@ -14,17 +14,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{addrlist, all_addr, in_addr, __bswap_32, in_addr_t, auth_zone, dns_header, size_t, time_t, mysockaddr, dnsmasq_daemon, crec, mx_srv_record, txt_record, interface_name, naptr, cname, __bswap_16, in6_addr, iname, in_port_t, socklen_t, name_list};
+use crate::defines::{AddrList, AllAddr, InAddr, __bswap_32, in_addr_t, AuthZone, DnsHeader, size_t, time_t, MySockAddr, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, __bswap_16, In6Addr, Iname, in_port_t, socklen_t, NameList};
 use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdomain, sockaddr_isequal};
 use crate::rfc1035::{skip_questions, extract_name, in_arpa_name_2_addr, add_resource_record};
 use crate::cache::{log_query, cache_find_by_addr, cache_get_name, record_source, querystr, cache_find_by_name, cache_find_non_terminal, cache_enumerate};
 use crate::dnsmasq_log::my_syslog;
 
-pub fn find_addrlist(list: &mut Vec<addrlist>, flag: libc::c_int, addr_u: &mut all_addr) -> Option<addrlist> {
+pub fn find_addrlist(list: &mut Vec<AddrList>, flag: libc::c_int, addr_u: &mut AllAddr) -> Option<AddrList> {
     for list_addr in list {
         if list_addr.flags & 2 as libc::c_int == 0 {
-            let mut netmask: in_addr = in_addr{s_addr: 0,};
-            let mut addr: in_addr = addr_u.addr4;
+            let mut netmask: InAddr = InAddr {s_addr: 0,};
+            let mut addr: InAddr = addr_u.addr4;
             if !(flag as libc::c_uint &
                 (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as in_addr_t)) << 32 as libc::c_int - (*list).prefixlen);
                 if is_same_net(addr, (*list).addr.addr4, netmask) != 0 {
@@ -40,33 +40,33 @@ pub fn find_addrlist(list: &mut Vec<addrlist>, flag: libc::c_int, addr_u: &mut a
 }
 
 
-pub fn find_subnet(mut zone: &mut auth_zone,
-                                 mut flag: libc::c_int,
-                                 mut addr_u: &mut all_addr) -> Option<addrlist> {
+pub fn find_subnet(mut zone: &mut AuthZone,
+                   mut flag: libc::c_int,
+                   mut addr_u: &mut AllAddr) -> Option<AddrList> {
     if zone.subnet.is_null() { return None }
     return find_addrlist(zone.subnet, flag, addr_u);
 }
-pub fn find_exclude(mut zone: &mut auth_zone,
-                                  mut flag: libc::c_int,
-                                  mut addr_u:&mut all_addr)
- -> Option<addrlist> {
+pub fn find_exclude(mut zone: &mut AuthZone,
+                    mut flag: libc::c_int,
+                    mut addr_u:&mut AllAddr)
+                    -> Option<AddrList> {
     if zone.exclude.is_null() { return None }
     return find_addrlist(zone.exclude, flag, addr_u);
 }
-pub fn filter_zone(mut zone: *mut auth_zone,
-                                 mut flag: libc::c_int,
-                                 mut addr_u: *mut all_addr) -> libc::c_int {
+pub fn filter_zone(mut zone: *mut AuthZone,
+                   mut flag: libc::c_int,
+                   mut addr_u: *mut AllAddr) -> libc::c_int {
     if !find_exclude(zone, flag, addr_u).is_null() { return 0 as libc::c_int }
     /* No subnets specified, no filter */
     if zone.subnet.is_null() { return 1 as libc::c_int }
     return (find_subnet(zone, flag, addr_u) !=
-                0 as *mut libc::c_void as *mut addrlist) as libc::c_int;
+                0 as *mut libc::c_void as *mut AddrList) as libc::c_int;
 }
 
-pub pub fn in_zone(mut zone: &mut auth_zone,
-                                 mut name: &mut String,
-                                 mut cut: &String)
- -> libc::c_int {
+pub pub fn in_zone(mut zone: &mut AuthZone,
+                   mut name: &mut String,
+                   mut cut: &String)
+                   -> libc::c_int {
     let mut namelen: usize = strlen(name);
     let mut domainlen: usize = strlen(zone.domain);
     if !cut.is_null() { *cut = 0 as *mut libc::c_char }
@@ -95,14 +95,14 @@ pub pub fn in_zone(mut zone: &mut auth_zone,
     return 0 as libc::c_int;
 }
 
-pub pub fn answer_auth(mut header: *mut dns_header,
-                                     mut limit: *mut libc::c_char,
-                                     mut qlen: size_t, mut now: time_t,
-                                     mut peer_addr: *mut mysockaddr,
-                                     mut local_query: libc::c_int,
-                                     mut do_bit: libc::c_int,
-                                     mut have_pseudoheader: libc::c_int)
- -> size_t {
+pub pub fn answer_auth(mut header: *mut DnsHeader,
+                       mut limit: *mut libc::c_char,
+                       mut qlen: size_t, mut now: time_t,
+                       mut peer_addr: *mut MySockAddr,
+                       mut local_query: libc::c_int,
+                       mut do_bit: libc::c_int,
+                       mut have_pseudoheader: libc::c_int)
+                       -> size_t {
     let mut name: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
     let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut ansp: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
@@ -114,25 +114,25 @@ pub pub fn answer_auth(mut header: *mut dns_header,
     let mut q: libc::c_int = 0;
     let mut anscount: libc::c_int = 0 as libc::c_int;
     let mut authcount: libc::c_int = 0 as libc::c_int;
-    let mut crecp: *mut crec = 0 as *mut crec;
+    let mut crecp: *mut Crec = 0 as *mut Crec;
     let mut auth: libc::c_int = (local_query == 0) as libc::c_int;
     let mut trunc: libc::c_int = 0 as libc::c_int;
     let mut nxdomain: libc::c_int = 1 as libc::c_int;
     let mut soa: libc::c_int = 0 as libc::c_int;
     let mut ns: libc::c_int = 0 as libc::c_int;
     let mut axfr: libc::c_int = 0 as libc::c_int;
-    let mut zone: *mut auth_zone = 0 as *mut auth_zone;
-    let mut subnet: *mut addrlist = 0 as *mut addrlist;
+    let mut zone: *mut AuthZone = 0 as *mut AuthZone;
+    let mut subnet: *mut AddrList = 0 as *mut AddrList;
     let mut cut: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut rec: *mut mx_srv_record = 0 as *mut mx_srv_record;
-    let mut move_0: *mut mx_srv_record = 0 as *mut mx_srv_record;
-    let mut up: *mut *mut mx_srv_record = 0 as *mut *mut mx_srv_record;
-    let mut txt: *mut txt_record = 0 as *mut txt_record;
-    let mut intr: *mut interface_name = 0 as *mut interface_name;
-    let mut na: *mut naptr = 0 as *mut naptr;
-    let mut addr: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
-    let mut a: *mut cname = 0 as *mut cname;
-    let mut candidate: *mut cname = 0 as *mut cname;
+    let mut rec: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
+    let mut move_0: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
+    let mut up: *mut *mut MxSrvRecord = 0 as *mut *mut MxSrvRecord;
+    let mut txt: *mut TxtRecord = 0 as *mut TxtRecord;
+    let mut intr: *mut InterfaceName = 0 as *mut InterfaceName;
+    let mut na: *mut NaPtr = 0 as *mut NaPtr;
+    let mut addr: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
+    let mut a: *mut Cname = 0 as *mut Cname;
+    let mut candidate: *mut Cname = 0 as *mut Cname;
     let mut wclen: libc::c_uint = 0;
     if __bswap_16((*header).qdcount) as libc::c_int == 0 as libc::c_int ||
            ((*header).hb3 as libc::c_int & 0x78 as libc::c_int) >>
@@ -209,12 +209,12 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                 17860125682698302841 => { }
                 _ => {
                     if qtype == 12 as libc::c_int && flag != 0 {
-                        intr = 0 as *mut interface_name;
+                        intr = 0 as *mut InterfaceName;
                         if flag == (1 as libc::c_uint) << 7 as libc::c_int {
                             intr = (*dnsmasq_daemon).int_names;
                             while !intr.is_null() {
-                                let mut addrlist: *mut addrlist =
-                                    0 as *mut addrlist;
+                                let mut addrlist: *mut AddrList =
+                                    0 as *mut AddrList;
                                 addrlist = (*intr).addr;
                                 while !addrlist.is_null() {
                                     if (*addrlist).flags & 2 as libc::c_int ==
@@ -239,21 +239,21 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                          {
                             intr = (*dnsmasq_daemon).int_names;
                             while !intr.is_null() {
-                                let mut addrlist_0: *mut addrlist =
-                                    0 as *mut addrlist;
+                                let mut addrlist_0: *mut AddrList =
+                                    0 as *mut AddrList;
                                 addrlist_0 = (*intr).addr;
                                 while !addrlist_0.is_null() {
                                     if (*addrlist_0).flags & 2 as libc::c_int
                                            != 0 &&
                                            ({
-                                                let mut __a: *const in6_addr =
+                                                let mut __a: *const In6Addr =
                                                     &mut addr.addr6 as
-                                                        *mut in6_addr as
-                                                        *const in6_addr;
-                                                let mut __b: *const in6_addr =
+                                                        *mut In6Addr as
+                                                        *const In6Addr;
+                                                let mut __b: *const In6Addr =
                                                     &mut (*addrlist_0).addr.addr6
-                                                        as *mut in6_addr as
-                                                        *const in6_addr;
+                                                        as *mut In6Addr as
+                                                        *const In6Addr;
                                                 ((*__a).__in6_u.__u6_addr32[0
                                                                                 as
                                                                                 libc::c_int
@@ -352,7 +352,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                             }
                         }
                         crecp =
-                            cache_find_by_addr(0 as *mut crec, &mut addr, now,
+                            cache_find_by_addr(0 as *mut Crec, &mut addr, now,
                                                flag);
                         if !crecp.is_null() {
                             loop  {
@@ -525,7 +525,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                       13 as libc::c_int |
                                                       (1 as libc::c_uint) <<
                                                           17 as libc::c_int,
-                                                  name, 0 as *mut all_addr,
+                                                  name, 0 as *mut AllAddr,
                                                   b"<MX>\x00" as *const u8 as
                                                       *const libc::c_char as
                                                       *mut libc::c_char);
@@ -561,7 +561,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                 }
                                 rec = (*rec).next
                             }
-                            move_0 = 0 as *mut mx_srv_record;
+                            move_0 = 0 as *mut MxSrvRecord;
                             up = &mut (*dnsmasq_daemon).mxnames;
                             rec = (*dnsmasq_daemon).mxnames;
                             while !rec.is_null() {
@@ -580,7 +580,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                       13 as libc::c_int |
                                                       (1 as libc::c_uint) <<
                                                           17 as libc::c_int,
-                                                  name, 0 as *mut all_addr,
+                                                  name, 0 as *mut AllAddr,
                                                   b"<SRV>\x00" as *const u8 as
                                                       *const libc::c_char as
                                                       *mut libc::c_char);
@@ -626,7 +626,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                             /* put first SRV record back at the end. */
                             if !move_0.is_null() {
                                 *up = move_0; /* inhibits auth section */
-                                (*move_0).next = 0 as *mut mx_srv_record
+                                (*move_0).next = 0 as *mut MxSrvRecord
                             }
                             txt = (*dnsmasq_daemon).rr;
                             while !txt.is_null() {
@@ -641,7 +641,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                       13 as libc::c_int |
                                                       (1 as libc::c_uint) <<
                                                           17 as libc::c_int,
-                                                  name, 0 as *mut all_addr,
+                                                  name, 0 as *mut AllAddr,
                                                   querystr(0 as
                                                                *mut libc::c_char,
                                                            (*txt).class));
@@ -693,7 +693,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                       13 as libc::c_int |
                                                       (1 as libc::c_uint) <<
                                                           17 as libc::c_int,
-                                                  name, 0 as *mut all_addr,
+                                                  name, 0 as *mut AllAddr,
                                                   b"<TXT>\x00" as *const u8 as
                                                       *const libc::c_char as
                                                       *mut libc::c_char);
@@ -742,7 +742,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                       13 as libc::c_int |
                                                       (1 as libc::c_uint) <<
                                                           17 as libc::c_int,
-                                                  name, 0 as *mut all_addr,
+                                                  name, 0 as *mut AllAddr,
                                                   b"<NAPTR>\x00" as *const u8
                                                       as *const libc::c_char
                                                       as *mut libc::c_char);
@@ -793,8 +793,8 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                             while !intr.is_null() {
                                 rc = hostname_issubdomain(name, (*intr).name);
                                 if rc != 0 {
-                                    let mut addrlist_1: *mut addrlist =
-                                        0 as *mut addrlist;
+                                    let mut addrlist_1: *mut AddrList =
+                                        0 as *mut AddrList;
                                     nxdomain = 0 as libc::c_int;
                                     if rc == 2 as libc::c_int && flag != 0 {
                                         addrlist_1 = (*intr).addr;
@@ -873,7 +873,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                                                *mut libc::c_char,
                                                                            &mut (*addrlist_1).addr
                                                                                as
-                                                                               *mut all_addr)
+                                                                               *mut AllAddr)
                                                            != 0 {
                                                         anscount += 1
                                                     }
@@ -896,13 +896,13 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                   (1 as libc::c_uint) <<
                                                       21 as libc::c_int,
                                               zone.domain,
-                                              0 as *mut all_addr,
+                                              0 as *mut AllAddr,
                                               b"<SOA>\x00" as *const u8 as
                                                   *const libc::c_char as
                                                   *mut libc::c_char);
                                 } else if qtype == 252 as libc::c_int {
-                                    let mut peers: *mut iname =
-                                        0 as *mut iname;
+                                    let mut peers: *mut Iname =
+                                        0 as *mut Iname;
                                     if (*peer_addr).sa.sa_family as
                                            libc::c_int == 2 as libc::c_int {
                                         (*peer_addr).in_0.sin_port =
@@ -934,7 +934,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                            {
                                             inet_ntop(2 as libc::c_int,
                                                       &mut (*peer_addr).in_0.sin_addr
-                                                          as *mut in_addr as
+                                                          as *mut InAddr as
                                                           *const libc::c_void,
                                                       (*dnsmasq_daemon).addrbuff,
                                                       46 as libc::c_int as
@@ -942,7 +942,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                         } else {
                                             inet_ntop(10 as libc::c_int,
                                                       &mut (*peer_addr).in6.sin6_addr
-                                                          as *mut in6_addr as
+                                                          as *mut In6Addr as
                                                           *const libc::c_void,
                                                       (*dnsmasq_daemon).addrbuff,
                                                       46 as libc::c_int as
@@ -966,7 +966,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                   (1 as libc::c_uint) <<
                                                       21 as libc::c_int,
                                               zone.domain,
-                                              0 as *mut all_addr,
+                                              0 as *mut AllAddr,
                                               b"<AXFR>\x00" as *const u8 as
                                                   *const libc::c_char as
                                                   *mut libc::c_char);
@@ -979,7 +979,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                   (1 as libc::c_uint) <<
                                                       21 as libc::c_int,
                                               zone.domain,
-                                              0 as *mut all_addr,
+                                              0 as *mut AllAddr,
                                               b"<NS>\x00" as *const u8 as
                                                   *const libc::c_char as
                                                   *mut libc::c_char);
@@ -1009,7 +1009,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                        {
                                            crecp =
                                                cache_find_by_name(0 as
-                                                                      *mut crec,
+                                                                      *mut Crec,
                                                                   name, now,
                                                                   (1 as
                                                                        libc::c_uint)
@@ -1088,7 +1088,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                                            *mut libc::c_char,
                                                                        &mut (*crecp).addr
                                                                            as
-                                                                           *mut all_addr)
+                                                                           *mut AllAddr)
                                                        != 0 {
                                                     anscount += 1
                                                 }
@@ -1115,7 +1115,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                 *cut = '.' as i32 as libc::c_char
                             }
                             crecp =
-                                cache_find_by_name(0 as *mut crec, name, now,
+                                cache_find_by_name(0 as *mut Crec, name, now,
                                                    (1 as libc::c_uint) <<
                                                        7 as libc::c_int |
                                                        (1 as libc::c_uint) <<
@@ -1200,7 +1200,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                                        *mut libc::c_char,
                                                                    &mut (*crecp).addr
                                                                        as
-                                                                       *mut all_addr)
+                                                                       *mut AllAddr)
                                                    != 0 {
                                                 anscount += 1
                                             }
@@ -1232,7 +1232,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
 	     but return a longer (better) match to b.simon.
 	  */
                             wclen = 0 as libc::c_int as libc::c_uint;
-                            candidate = 0 as *mut cname;
+                            candidate = 0 as *mut Cname;
                             a = (*dnsmasq_daemon).cnames;
                             while !a.is_null() {
                                 if *(*a).alias.offset(0 as libc::c_int as
@@ -1281,7 +1281,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                               13 as libc::c_int |
                                               (1 as libc::c_uint) <<
                                                   11 as libc::c_int, name,
-                                          0 as *mut all_addr,
+                                          0 as *mut AllAddr,
                                           0 as *mut libc::c_char);
                                 strcpy(name, (*candidate).target);
                                 if strchr(name, '.' as i32).is_null() {
@@ -1330,7 +1330,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                   3 as libc::c_int |
                                               (1 as libc::c_uint) <<
                                                   21 as libc::c_int, name,
-                                          0 as *mut all_addr,
+                                          0 as *mut AllAddr,
                                           0 as *mut libc::c_char);
                                 break ;
                             }
@@ -1389,7 +1389,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                 i = (*subnet).prefixlen - 1 as libc::c_int;
                 while i >= 0 as libc::c_int {
                     let mut dig: libc::c_int =
-                        *(&mut (*subnet).addr.addr6 as *mut in6_addr as
+                        *(&mut (*subnet).addr.addr6 as *mut In6Addr as
                               *mut libc::c_uchar).offset((i >>
                                                               3 as
                                                                   libc::c_int)
@@ -1440,7 +1440,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
             if soa != 0 { anscount += 1 } else { authcount += 1 }
         }
         if anscount != 0 as libc::c_int || ns != 0 {
-            let mut secondary: *mut name_list = 0 as *mut name_list;
+            let mut secondary: *mut NameList = 0 as *mut NameList;
             /* Only include the machine running dnsmasq if it's acting as an auth server */
             if !(*dnsmasq_daemon).authinterface.is_null() {
                 newoffset =
@@ -1643,7 +1643,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
             intr = (*dnsmasq_daemon).int_names;
             while !intr.is_null() {
                 if in_zone(zone, (*intr).name, &mut cut) != 0 {
-                    let mut addrlist_2: *mut addrlist = 0 as *mut addrlist;
+                    let mut addrlist_2: *mut AddrList = 0 as *mut AddrList;
                     if !cut.is_null() {
                         *cut = 0 as libc::c_int as libc::c_char
                     }
@@ -1678,7 +1678,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                         0 as *mut libc::c_char
                                                     }),
                                                    &mut (*addrlist_2).addr as
-                                                       *mut all_addr) != 0 {
+                                                       *mut AllAddr) != 0 {
                             anscount += 1
                         }
                         addrlist_2 = (*addrlist_2).next
@@ -1714,7 +1714,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                         0 as *mut libc::c_char
                                                     }),
                                                    &mut (*addrlist_2).addr as
-                                                       *mut all_addr) != 0 {
+                                                       *mut AllAddr) != 0 {
                             anscount += 1
                         }
                         addrlist_2 = (*addrlist_2).next
@@ -1841,7 +1841,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                     }) as *mut libc::c_char,
                                                    cache_name,
                                                    &mut (*crecp).addr as
-                                                       *mut all_addr) != 0 {
+                                                       *mut AllAddr) != 0 {
                             anscount += 1
                         }
                     }
@@ -1921,7 +1921,7 @@ pub pub fn answer_auth(mut header: *mut dns_header,
                                                        0 as *mut libc::c_char
                                                    },
                                                    &mut (*crecp).addr as
-                                                       *mut all_addr) != 0 {
+                                                       *mut AllAddr) != 0 {
                                 anscount += 1
                             }
                         }

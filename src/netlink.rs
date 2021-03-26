@@ -1,4 +1,4 @@
-use crate::defines::{iovec, socklen_t, __kernel_sa_family_t, __u32, dnsmasq_daemon, SOCK_RAW, __CONST_SOCKADDR_ARG, sockaddr, __SOCKADDR_ARG, size_t, ssize_t, msghdr, MSG_PEEK, MSG_TRUNC, C2RustUnnamed_10, in_addr, __bswap_32, in_addr_t, in6_addr};
+use crate::defines::{iovec, socklen_t, __kernel_sa_family_t, __u32, DnsmasqDaemon, SOCK_RAW, __CONST_SOCKADDR_ARG, SockAddr, __SOCKADDR_ARG, size_t, ssize_t, MsgHdr, MSG_PEEK, MSG_TRUNC, C2RustUnnamed_10, InAddr, __bswap_32, in_addr_t, In6Addr};
 use crate::slack::{sockaddr_nl, nlmsghdr, rtgenmsg, RTM_GETNEIGH, RTM_GETLINK, RTM_GETADDR, RTM_NEWADDR, ifaddrmsg, rtattr, IFA_LOCAL, IFA_BROADCAST, IFA_LABEL, IFA_ADDRESS, IFA_CACHEINFO, ifa_cacheinfo, RTM_NEWNEIGH, ndmsg, NDA_DST, NDA_LLADDR, RTM_NEWLINK, ifinfomsg, IFLA_ADDRESS, IFF_LOOPBACK, IFF_POINTOPOINT, nlmsgerr, RTM_NEWROUTE, rtmsg, RTN_UNICAST, RT_SCOPE_LINK, RT_TABLE_MAIN, RT_TABLE_LOCAL, RTM_DELADDR};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::util::{safe_malloc, expand_buf, retry_send};
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
         if bind((*dnsmasq_daemon).netlinkfd,
                 __CONST_SOCKADDR_ARG{__sockaddr__:
                                          &mut addr as *mut sockaddr_nl as
-                                             *mut sockaddr,},
+                                             *mut SockAddr,},
                 ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong as
                     socklen_t) == -(1 as libc::c_int) {
             addr.nl_groups = 0 as libc::c_int as __u32;
@@ -81,7 +81,7 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
                    bind((*dnsmasq_daemon).netlinkfd,
                         __CONST_SOCKADDR_ARG{__sockaddr__:
                                                  &mut addr as *mut sockaddr_nl
-                                                     as *mut sockaddr,},
+                                                     as *mut SockAddr,},
                         ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong
                             as socklen_t) == -(1 as libc::c_int) {
                 (*dnsmasq_daemon).netlinkfd = -(1 as libc::c_int)
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
            getsockname((*dnsmasq_daemon).netlinkfd,
                        __SOCKADDR_ARG{__sockaddr__:
                                           &mut addr as *mut sockaddr_nl as
-                                              *mut sockaddr,}, &mut slen) ==
+                                              *mut SockAddr,}, &mut slen) ==
                -(1 as libc::c_int) {
         die(b"cannot create netlink socket: %s\x00" as *const u8 as
                 *const libc::c_char as *mut libc::c_char,
@@ -116,8 +116,8 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
     return 0 as *mut libc::c_char;
 }
 unsafe extern "C" fn netlink_recv() -> ssize_t {
-    let mut msg: msghdr =
-        msghdr{msg_name: 0 as *mut libc::c_void,
+    let mut msg: MsgHdr =
+        MsgHdr {msg_name: 0 as *mut libc::c_void,
                msg_namelen: 0,
                msg_iov: 0 as *mut iovec,
                msg_iovlen: 0,
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                                                          &mut addr as
                                                              *mut sockaddr_nl
                                                              as
-                                                             *mut sockaddr,},
+                                                             *mut SockAddr,},
                                 ::std::mem::size_of::<sockaddr_nl>() as
                                     libc::c_ulong as socklen_t)) != 0 {
         }
@@ -352,12 +352,12 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                             if (*ifa).ifa_family as libc::c_int == family {
                                 if (*ifa).ifa_family as libc::c_int ==
                                        2 as libc::c_int {
-                                    let mut netmask: in_addr =
-                                        in_addr{s_addr: 0,};
-                                    let mut addr_0: in_addr =
-                                        in_addr{s_addr: 0,};
-                                    let mut broadcast: in_addr =
-                                        in_addr{s_addr: 0,};
+                                    let mut netmask: InAddr =
+                                        InAddr {s_addr: 0,};
+                                    let mut addr_0: InAddr =
+                                        InAddr {s_addr: 0,};
+                                    let mut broadcast: InAddr =
+                                        InAddr {s_addr: 0,};
                                     let mut label: *mut libc::c_char =
                                         0 as *mut libc::c_char;
                                     netmask.s_addr =
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                                             addr_0 =
                                                 *(rta.offset(1 as libc::c_int
                                                                  as isize) as
-                                                      *mut in_addr)
+                                                      *mut InAddr)
                                         } else if (*rta).rta_type as
                                                       libc::c_int ==
                                                       IFA_BROADCAST as
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                                             broadcast =
                                                 *(rta.offset(1 as libc::c_int
                                                                  as isize) as
-                                                      *mut in_addr)
+                                                      *mut InAddr)
                                         } else if (*rta).rta_type as
                                                       libc::c_int ==
                                                       IFA_LABEL as libc::c_int
@@ -494,8 +494,8 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                                     }
                                 } else if (*ifa).ifa_family as libc::c_int ==
                                               10 as libc::c_int {
-                                    let mut addrp: *mut in6_addr =
-                                        0 as *mut in6_addr;
+                                    let mut addrp: *mut In6Addr =
+                                        0 as *mut In6Addr;
                                     let mut valid: u32 =
                                         0 as libc::c_int as u32;
                                     let mut preferred: u32 =
@@ -518,7 +518,7 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                                             addrp =
                                                 rta.offset(1 as libc::c_int as
                                                                isize) as
-                                                    *mut in6_addr
+                                                    *mut In6Addr
                                         } else if (*rta).rta_type as
                                                       libc::c_int ==
                                                       IFA_CACHEINFO as

@@ -1,11 +1,11 @@
-use crate::defines::{server, dnsmasq_daemon, randfd, __CONST_SOCKADDR_ARG, socklen_t, dns_header, __bswap_16, _ISxdigit};
+use crate::defines::{Server, DnsmasqDaemon, RandFd, __CONST_SOCKADDR_ARG, socklen_t, DnsHeader, __bswap_16, _ISxdigit};
 use crate::forward::{allocate_rfd, free_rfd};
 use crate::util::{retry_send, sa_len, rand16};
 use crate::network::check_servers;
 
 #[no_mangle]
 pub unsafe extern "C" fn loop_send_probes() {
-    let mut serv: *mut server = 0 as *mut server;
+    let mut serv: *mut Server = 0 as *mut Server;
     if (*dnsmasq_daemon).options[(50 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
@@ -38,7 +38,7 @@ pub unsafe extern "C" fn loop_send_probes() {
                     | 8192 as libc::c_int) == 0 {
             let mut len: isize = loop_make_probe((*serv).uid);
             let mut fd: libc::c_int = 0;
-            let mut rfd: *mut randfd = 0 as *mut randfd;
+            let mut rfd: *mut RandFd = 0 as *mut RandFd;
             if !(*serv).sfd.is_null() {
                 fd = (*(*serv).sfd).fd;
                 current_block_7 = 2868539653012386629;
@@ -86,12 +86,12 @@ pub unsafe extern "C" fn loop_send_probes() {
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
-    let mut header: *mut dns_header =
-        (*dnsmasq_daemon).packet as *mut dns_header;
+    let mut header: *mut DnsHeader =
+        (*dnsmasq_daemon).packet as *mut DnsHeader;
     let mut p: *mut libc::c_uchar =
         header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
     /* packet buffer overwritten */
-    (*dnsmasq_daemon).srv_save = 0 as *mut server; /* Add terminating zero */
+    (*dnsmasq_daemon).srv_save = 0 as *mut Server; /* Add terminating zero */
     (*header).id = rand16(); /* log new state */
     (*header).arcount = __bswap_16(0 as libc::c_int as u16);
     (*header).nscount = (*header).arcount;
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn detect_loop(mut query: *mut libc::c_char,
                                      mut type_0: libc::c_int) -> libc::c_int {
     let mut i: libc::c_int = 0;
     let mut uid: u32 = 0;
-    let mut serv: *mut server = 0 as *mut server;
+    let mut serv: *mut Server = 0 as *mut Server;
     if (*dnsmasq_daemon).options[(50 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as

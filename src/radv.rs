@@ -18,7 +18,7 @@
    It therefore cannot use any DHCP buffer resources except outpacket, which is
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
-use crate::defines::{time_t, dhcp_netid, in6_addr, dhcp_context, cmsghdr, dhcp_bridge, msghdr, size_t, __mode_t, __dev_t, __uint64_t, __u32, __uint16_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, dnsmasq_daemon, dhcp_packet, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, sockaddr_in6, C2RustUnnamed, iname, all_addr, dhcp_opt, ra_interface, sa_family_t, __CONST_SOCKADDR_ARG, sockaddr};
+use crate::defines::{time_t, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, __mode_t, __dev_t, __uint64_t, __u32, __uint16_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, SockAddrIn6, C2RustUnnamed, Iname, AllAddr, DhcpOpt, RaInterface, sa_family_t, __CONST_SOCKADDR_ARG, SockAddr};
 use crate::slack::{in6_pktinfo, icmp6_filter, IPPROTO_ICMPV6, ra_packet, prefix_opt};
 use std::io::{stdout, stdin};
 use crate::util::{expand_buf, rand16, wildcard_match, print_mac, wildcard_matchn, setaddr6part, addr6part, retry_send, is_same_net6, whine_malloc};
@@ -39,16 +39,16 @@ pub struct ra_param {
     pub first: libc::c_int,
     pub adv_router: libc::c_int,
     pub if_name: *mut libc::c_char,
-    pub tags: *mut dhcp_netid,
-    pub link_local: in6_addr,
-    pub link_global: in6_addr,
-    pub ula: in6_addr,
+    pub tags: *mut DhcpNetId,
+    pub link_local: In6Addr,
+    pub link_global: In6Addr,
+    pub ula: In6Addr,
     pub glob_pref_time: libc::c_uint,
     pub link_pref_time: libc::c_uint,
     pub ula_pref_time: libc::c_uint,
     pub adv_interval: libc::c_uint,
     pub prio: libc::c_uint,
-    pub found_context: *mut dhcp_context,
+    pub found_context: *mut DhcpContext,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -59,14 +59,14 @@ pub union C2RustUnnamed_10 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_11 {
-    pub align: cmsghdr,
+    pub align: CmsgHdr,
     pub control6: [libc::c_char; 40],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct alias_param {
     pub iface: libc::c_int,
-    pub bridge: *mut dhcp_bridge,
+    pub bridge: *mut DhcpBridge,
     pub num_alias_ifs: libc::c_int,
     pub max_alias_ifs: libc::c_int,
     pub alias_ifs: *mut libc::c_int,
@@ -79,11 +79,11 @@ pub struct search_param {
     pub name: [libc::c_char; 17],
 }
 #[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
+unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut MsgHdr,
+                                   mut __cmsg: *mut CmsgHdr) -> *mut CmsgHdr {
+    if (*__cmsg).cmsg_len < ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong
        {
-        return 0 as *mut cmsghdr
+        return 0 as *mut CmsgHdr
     } /* radvd uses this value */
     __cmsg =
         (__cmsg as
@@ -102,7 +102,7 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
                                                                                    libc::c_int
                                                                                    as
                                                                                    libc::c_ulong))
-                                            as isize) as *mut cmsghdr;
+                                            as isize) as *mut CmsgHdr;
     if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
            ((*__mhdr).msg_control as
                 *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
@@ -127,7 +127,7 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
                ((*__mhdr).msg_control as
                     *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
                                                    isize) {
-        return 0 as *mut cmsghdr
+        return 0 as *mut CmsgHdr
     }
     return __cmsg;
 }
@@ -433,10 +433,10 @@ pub unsafe extern "C" fn ra_init(mut now: time_t) {
     let mut val: libc::c_int = 255 as libc::c_int;
     let mut len: socklen_t =
         ::std::mem::size_of::<libc::c_int>() as libc::c_ulong as socklen_t;
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
     /* ensure this is around even if we're not doing DHCPv6 */
     expand_buf(&mut (*dnsmasq_daemon).outpacket,
-               ::std::mem::size_of::<dhcp_packet>() as libc::c_ulong);
+               ::std::mem::size_of::<DhcpPacket>() as libc::c_ulong);
     /* See if we're guessing SLAAC addresses, if so we need to receive ping replies */
     context = (*dnsmasq_daemon).dhcp6;
     while !context.is_null() {
@@ -493,13 +493,13 @@ pub unsafe extern "C" fn ra_init(mut now: time_t) {
     }
     (*dnsmasq_daemon).icmp6fd = fd;
     if (*dnsmasq_daemon).doing_ra != 0 {
-        ra_start_unsolicited(now, 0 as *mut dhcp_context);
+        ra_start_unsolicited(now, 0 as *mut DhcpContext);
     };
 }
 #[no_mangle]
 pub unsafe extern "C" fn ra_start_unsolicited(mut now: time_t,
                                               mut context:
-                                                  *mut dhcp_context) {
+                                                  *mut DhcpContext) {
     /* init timers so that we do ra's for some/all soon. some ra_times will end up zeroed
      if it's not appropriate to advertise those contexts.
      This gets re-called on a netlink route-change to re-do the advertisement
@@ -528,9 +528,9 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
     let mut interface: [libc::c_char; 17] = [0; 17];
     let mut sz: ssize_t = 0;
     let mut if_index: libc::c_int = 0 as libc::c_int;
-    let mut cmptr: *mut cmsghdr = 0 as *mut cmsghdr;
-    let mut msg: msghdr =
-        msghdr{msg_name: 0 as *mut libc::c_void,
+    let mut cmptr: *mut CmsgHdr = 0 as *mut CmsgHdr;
+    let mut msg: MsgHdr =
+        MsgHdr {msg_name: 0 as *mut libc::c_void,
                msg_namelen: 0,
                msg_iov: 0 as *mut iovec,
                msg_iovlen: 0,
@@ -539,28 +539,28 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
                msg_flags: 0,};
     let mut control_u: C2RustUnnamed_11 =
         C2RustUnnamed_11{align:
-                             cmsghdr{cmsg_len: 0,
+                             CmsgHdr {cmsg_len: 0,
                                      cmsg_level: 0,
                                      cmsg_type: 0,
                                      __cmsg_data: [],},};
-    let mut from: sockaddr_in6 =
-        sockaddr_in6{sin6_family: 0,
+    let mut from: SockAddrIn6 =
+        SockAddrIn6 {sin6_family: 0,
                      sin6_port: 0,
                      sin6_flowinfo: 0,
                      sin6_addr:
-                         in6_addr{__in6_u:
+                         In6Addr {__in6_u:
                                       C2RustUnnamed{__u6_addr8: [0; 16],},},
                      sin6_scope_id: 0,};
     let mut packet: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut tmp: *mut iname = 0 as *mut iname;
+    let mut tmp: *mut Iname = 0 as *mut Iname;
     /* Note: use outpacket for input buffer */
     msg.msg_control = control_u.control6.as_mut_ptr() as *mut libc::c_void;
     msg.msg_controllen =
         ::std::mem::size_of::<C2RustUnnamed_11>() as libc::c_ulong;
     msg.msg_flags = 0 as libc::c_int;
-    msg.msg_name = &mut from as *mut sockaddr_in6 as *mut libc::c_void;
+    msg.msg_name = &mut from as *mut SockAddrIn6 as *mut libc::c_void;
     msg.msg_namelen =
-        ::std::mem::size_of::<sockaddr_in6>() as libc::c_ulong as socklen_t;
+        ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong as socklen_t;
     msg.msg_iov = &mut (*dnsmasq_daemon).outpacket;
     msg.msg_iovlen = 1 as libc::c_int as size_t;
     sz = recv_dhcp_packet((*dnsmasq_daemon).icmp6fd, &mut msg);
@@ -571,9 +571,9 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
     packet = (*dnsmasq_daemon).outpacket.iov_base as *mut libc::c_uchar;
     cmptr =
         if msg.msg_controllen >=
-               ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
-            msg.msg_control as *mut cmsghdr
-        } else { 0 as *mut cmsghdr };
+               ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
+            msg.msg_control as *mut CmsgHdr
+        } else { 0 as *mut CmsgHdr };
     while !cmptr.is_null() {
         if (*cmptr).cmsg_level == IPPROTO_IPV6 as libc::c_int &&
                (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
@@ -588,7 +588,7 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
                    interface.as_mut_ptr()) == 0 {
         return
     }
-    if iface_check(1 as libc::c_int, 0 as *mut all_addr,
+    if iface_check(1 as libc::c_int, 0 as *mut AllAddr,
                    interface.as_mut_ptr(), 0 as *mut libc::c_int) == 0 {
         return
     }
@@ -611,8 +611,8 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
                   133 as libc::c_int {
         let mut mac: *mut libc::c_char =
             b"\x00" as *const u8 as *const libc::c_char as *mut libc::c_char;
-        let mut bridge: *mut dhcp_bridge = 0 as *mut dhcp_bridge;
-        let mut alias: *mut dhcp_bridge = 0 as *mut dhcp_bridge;
+        let mut bridge: *mut DhcpBridge = 0 as *mut DhcpBridge;
+        let mut alias: *mut DhcpBridge = 0 as *mut DhcpBridge;
         /* look for link-layer address option for logging */
         if sz >= 16 as libc::c_int as libc::c_long &&
                *packet.offset(8 as libc::c_int as isize) as libc::c_int ==
@@ -672,7 +672,7 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
 		       bridge_index. */
                         send_ra_alias(now, bridge_index,
                                       (*bridge).iface.as_mut_ptr(),
-                                      0 as *mut in6_addr, if_index);
+                                      0 as *mut In6Addr, if_index);
                         break ;
                     } else { alias = (*alias).next }
                 }
@@ -686,9 +686,9 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
             /* source address may not be valid in solicit request. */
             send_ra(now, if_index, interface.as_mut_ptr(),
                     if ({
-                            let mut __a: *const in6_addr =
-                                &mut from.sin6_addr as *mut in6_addr as
-                                    *const in6_addr;
+                            let mut __a: *const In6Addr =
+                                &mut from.sin6_addr as *mut In6Addr as
+                                    *const In6Addr;
                             ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as
                                                             usize] ==
                                  0 as libc::c_int as libc::c_uint &&
@@ -704,13 +704,13 @@ pub unsafe extern "C" fn icmp6_packet(mut now: time_t) {
                                 libc::c_int
                         }) == 0 {
                         &mut from.sin6_addr
-                    } else { 0 as *mut in6_addr });
+                    } else { 0 as *mut In6Addr });
         }
     };
 }
 unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                    mut iface_name: *mut libc::c_char,
-                                   mut dest: *mut in6_addr,
+                                   mut dest: *mut In6Addr,
                                    mut send_iface: libc::c_int) {
     let mut ra: *mut ra_packet = 0 as *mut ra_packet;
     let mut parm: ra_param =
@@ -721,33 +721,33 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                  first: 0,
                  adv_router: 0,
                  if_name: 0 as *mut libc::c_char,
-                 tags: 0 as *mut dhcp_netid,
+                 tags: 0 as *mut DhcpNetId,
                  link_local:
-                     in6_addr{__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
+                     In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
                  link_global:
-                     in6_addr{__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
-                 ula: in6_addr{__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
+                     In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
+                 ula: In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
                  glob_pref_time: 0,
                  link_pref_time: 0,
                  ula_pref_time: 0,
                  adv_interval: 0,
                  prio: 0,
-                 found_context: 0 as *mut dhcp_context,};
-    let mut addr: sockaddr_in6 =
-        sockaddr_in6{sin6_family: 0,
+                 found_context: 0 as *mut DhcpContext,};
+    let mut addr: SockAddrIn6 =
+        SockAddrIn6 {sin6_family: 0,
                      sin6_port: 0,
                      sin6_flowinfo: 0,
                      sin6_addr:
-                         in6_addr{__in6_u:
+                         In6Addr {__in6_u:
                                       C2RustUnnamed{__u6_addr8: [0; 16],},},
                      sin6_scope_id: 0,};
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut tmp: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut up: *mut *mut dhcp_context = 0 as *mut *mut dhcp_context;
-    let mut iface_id: dhcp_netid =
-        dhcp_netid{net: 0 as *mut libc::c_char, next: 0 as *mut dhcp_netid,};
-    let mut opt_cfg: *mut dhcp_opt = 0 as *mut dhcp_opt;
-    let mut ra_param: *mut ra_interface = find_iface_param(iface_name);
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut tmp: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut up: *mut *mut DhcpContext = 0 as *mut *mut DhcpContext;
+    let mut iface_id: DhcpNetId =
+        DhcpNetId {net: 0 as *mut libc::c_char, next: 0 as *mut DhcpNetId,};
+    let mut opt_cfg: *mut DhcpOpt = 0 as *mut DhcpOpt;
+    let mut ra_param: *mut RaInterface = find_iface_param(iface_name);
     let mut done_dns: libc::c_int = 0 as libc::c_int;
     let mut old_prefix: libc::c_int = 0 as libc::c_int;
     let mut mtu: libc::c_int = 0 as libc::c_int;
@@ -756,7 +756,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
     parm.ind = iface;
     parm.managed = 0 as libc::c_int;
     parm.other = 0 as libc::c_int;
-    parm.found_context = 0 as *mut dhcp_context;
+    parm.found_context = 0 as *mut DhcpContext;
     parm.adv_router = 0 as libc::c_int;
     parm.if_name = iface_name;
     parm.first = 1 as libc::c_int;
@@ -780,7 +780,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
     (*ra).retrans_time = 0 as libc::c_int as u32;
     /* set tag with name == interface */
     iface_id.net = iface_name;
-    iface_id.next = 0 as *mut dhcp_netid;
+    iface_id.next = 0 as *mut DhcpNetId;
     parm.tags = &mut iface_id;
     context = (*dnsmasq_daemon).dhcp6;
     while !context.is_null() {
@@ -795,7 +795,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
     if iface_enumerate(10 as libc::c_int,
                        &mut parm as *mut ra_param as *mut libc::c_void,
                        ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                               *mut in6_addr,
+                                                                               *mut In6Addr,
                                                                            _:
                                                                                libc::c_int,
                                                                            _:
@@ -810,13 +810,13 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                                                                libc::c_uint,
                                                                            _:
                                                                                *mut libc::c_void)
-                                                          -> libc::c_int>,
+                                                                           -> libc::c_int>,
                                                Option<unsafe extern "C" fn()
                                                           ->
                                                               libc::c_int>>(Some(add_prefixes
                                                                                      as
                                                                                      unsafe extern "C" fn(_:
-                                                                                                              *mut in6_addr,
+                                                                                                              *mut In6Addr,
                                                                                                           _:
                                                                                                               libc::c_int,
                                                                                                           _:
@@ -831,7 +831,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                                                                                               libc::c_uint,
                                                                                                           _:
                                                                                                               *mut libc::c_void)
-                                                                                         ->
+                                                                                                          ->
                                                                                              libc::c_int)))
            == 0 || parm.link_pref_time == 0 as libc::c_int as libc::c_uint {
         return
@@ -876,7 +876,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                 free(context as *mut libc::c_void);
             } else {
                 let mut opt: *mut prefix_opt = 0 as *mut prefix_opt;
-                let mut local: in6_addr = (*context).start6;
+                let mut local: In6Addr = (*context).start6;
                 let mut do_slaac: libc::c_int = 0 as libc::c_int;
                 old_prefix = 1 as libc::c_int;
                 /* zero net part of address */
@@ -950,7 +950,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                     (*opt).reserved = 0 as libc::c_int as u32;
                     (*opt).prefix = local;
                     inet_ntop(10 as libc::c_int,
-                              &mut local as *mut in6_addr as
+                              &mut local as *mut In6Addr as
                                   *const libc::c_void,
                               (*dnsmasq_daemon).addrbuff,
                               46 as libc::c_int as socklen_t);
@@ -1062,7 +1062,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                                                                       ->
                                                                                           libc::c_int)));
     /* RDNSS, RFC 6106, use relevant DHCP6 options */
-    option_filter(parm.tags, 0 as *mut dhcp_netid,
+    option_filter(parm.tags, 0 as *mut DhcpNetId,
                   (*dnsmasq_daemon).dhcp_opts6);
     let mut current_block_145: u64;
     opt_cfg = (*dnsmasq_daemon).dhcp_opts6;
@@ -1071,20 +1071,20 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
         /* netids match and not encapsulated? */
         if !((*opt_cfg).flags & 4096 as libc::c_int == 0) {
             if (*opt_cfg).opt == 23 as libc::c_int {
-                let mut a: *mut in6_addr = 0 as *mut in6_addr;
+                let mut a: *mut In6Addr = 0 as *mut In6Addr;
                 let mut len: libc::c_int = 0;
                 done_dns = 1 as libc::c_int;
                 if (*opt_cfg).len == 0 as libc::c_int {
                     current_block_145 = 5265702136860997526;
                 } else {
                     /* reduce len for any addresses we can't substitute */
-                    a = (*opt_cfg).val as *mut in6_addr;
+                    a = (*opt_cfg).val as *mut In6Addr;
                     len = (*opt_cfg).len;
                     i = 0 as libc::c_int;
                     while i < (*opt_cfg).len {
                         if ({
-                                let mut __a: *const in6_addr =
-                                    a as *const in6_addr;
+                                let mut __a: *const In6Addr =
+                                    a as *const In6Addr;
                                 ((*__a).__in6_u.__u6_addr32[0 as libc::c_int
                                                                 as usize] ==
                                      0 as libc::c_int as libc::c_uint &&
@@ -1159,12 +1159,12 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                            1 as libc::c_int) as libc::c_uint);
                         put_opt6_short(0 as libc::c_int as libc::c_uint);
                         put_opt6_long(min_pref_time);
-                        a = (*opt_cfg).val as *mut in6_addr;
+                        a = (*opt_cfg).val as *mut In6Addr;
                         i = 0 as libc::c_int;
                         while i < (*opt_cfg).len {
                             if ({
-                                    let mut __a: *const in6_addr =
-                                        a as *const in6_addr;
+                                    let mut __a: *const In6Addr =
+                                        a as *const In6Addr;
                                     ((*__a).__in6_u.__u6_addr32[0 as
                                                                     libc::c_int
                                                                     as usize]
@@ -1195,7 +1195,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                 if parm.glob_pref_time !=
                                        0 as libc::c_int as libc::c_uint {
                                     put_opt6(&mut parm.link_global as
-                                                 *mut in6_addr as
+                                                 *mut In6Addr as
                                                  *mut libc::c_void,
                                              16 as libc::c_int as size_t);
                                 }
@@ -1233,7 +1233,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                              {
                                 if parm.ula_pref_time !=
                                        0 as libc::c_int as libc::c_uint {
-                                    put_opt6(&mut parm.ula as *mut in6_addr as
+                                    put_opt6(&mut parm.ula as *mut In6Addr as
                                                  *mut libc::c_void,
                                              16 as libc::c_int as size_t);
                                 }
@@ -1272,7 +1272,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                 if parm.link_pref_time !=
                                        0 as libc::c_int as libc::c_uint {
                                     put_opt6(&mut parm.link_local as
-                                                 *mut in6_addr as
+                                                 *mut In6Addr as
                                                  *mut libc::c_void,
                                              16 as libc::c_int as size_t);
                                 }
@@ -1321,7 +1321,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
         put_opt6_char(3 as libc::c_int as libc::c_uint);
         put_opt6_short(0 as libc::c_int as libc::c_uint);
         put_opt6_long(min_pref_time);
-        put_opt6(&mut parm.link_local as *mut in6_addr as *mut libc::c_void,
+        put_opt6(&mut parm.link_local as *mut In6Addr as *mut libc::c_void,
                  16 as libc::c_int as size_t);
     }
     /* set managed bits unless we're providing only RA on this link */
@@ -1334,15 +1334,15 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
             ((*ra).flags as libc::c_int | 0x40 as libc::c_int) as u8
     } /* O flag, other */
     /* decide where we're sending */
-    memset(&mut addr as *mut sockaddr_in6 as *mut libc::c_void,
+    memset(&mut addr as *mut SockAddrIn6 as *mut libc::c_void,
            0 as libc::c_int,
-           ::std::mem::size_of::<sockaddr_in6>() as libc::c_ulong);
+           ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong);
     addr.sin6_family = 10 as libc::c_int as sa_family_t;
     addr.sin6_port = __bswap_16(IPPROTO_ICMPV6 as libc::c_int as __uint16_t);
     if !dest.is_null() {
         addr.sin6_addr = *dest;
         if ({
-                let mut __a: *const in6_addr = dest as *const in6_addr;
+                let mut __a: *const In6Addr = dest as *const In6Addr;
                 ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize] &
                      __bswap_32(0xffc00000 as libc::c_uint) ==
                      __bswap_32(0xfe800000 as libc::c_uint)) as libc::c_int
@@ -1357,7 +1357,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
     } else {
         inet_pton(10 as libc::c_int,
                   b"FF02::1\x00" as *const u8 as *const libc::c_char,
-                  &mut addr.sin6_addr as *mut in6_addr as *mut libc::c_void);
+                  &mut addr.sin6_addr as *mut In6Addr as *mut libc::c_void);
         setsockopt((*dnsmasq_daemon).icmp6fd, IPPROTO_IPV6 as libc::c_int,
                    17 as libc::c_int,
                    &mut send_iface as *mut libc::c_int as *const libc::c_void,
@@ -1370,20 +1370,20 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                             0 as libc::c_int,
                             __CONST_SOCKADDR_ARG{__sockaddr__:
                                                      &mut addr as
-                                                         *mut sockaddr_in6 as
-                                                         *mut sockaddr,},
-                            ::std::mem::size_of::<sockaddr_in6>() as
+                                                         *mut SockAddrIn6 as
+                                                         *mut SockAddr,},
+                            ::std::mem::size_of::<SockAddrIn6>() as
                                 libc::c_ulong as socklen_t)) != 0 {
     };
 }
 unsafe extern "C" fn send_ra(mut now: time_t, mut iface: libc::c_int,
                              mut iface_name: *mut libc::c_char,
-                             mut dest: *mut in6_addr) {
+                             mut dest: *mut In6Addr) {
     /* Send an RA on the same interface that the RA content is based
      on. */
     send_ra_alias(now, iface, iface_name, dest, iface);
 }
-unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
+unsafe extern "C" fn add_prefixes(mut local: *mut In6Addr,
                                   mut prefix: libc::c_int,
                                   mut scope: libc::c_int,
                                   mut if_index: libc::c_int,
@@ -1391,12 +1391,12 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
                                   mut preferred: libc::c_uint,
                                   mut valid: libc::c_uint,
                                   mut vparam: *mut libc::c_void)
- -> libc::c_int {
+                                  -> libc::c_int {
     let mut param: *mut ra_param = vparam as *mut ra_param;
     /* warning */
     if if_index == (*param).ind {
         if ({
-                let mut __a: *const in6_addr = local as *const in6_addr;
+                let mut __a: *const In6Addr = local as *const In6Addr;
                 ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize] &
                      __bswap_32(0xffc00000 as libc::c_uint) ==
                      __bswap_32(0xfe800000 as libc::c_uint)) as libc::c_int
@@ -1409,8 +1409,8 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
                 (*param).link_local = *local
             }
         } else if ({
-                       let mut __a: *const in6_addr =
-                           local as *const in6_addr;
+                       let mut __a: *const In6Addr =
+                           local as *const In6Addr;
                        ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize]
                             == 0 as libc::c_int as libc::c_uint &&
                             (*__a).__in6_u.__u6_addr32[1 as libc::c_int as
@@ -1435,7 +1435,7 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
             let mut adv_router: libc::c_int = 0 as libc::c_int;
             let mut off_link: libc::c_int = 0 as libc::c_int;
             let mut time: libc::c_uint = 0xffffffff as libc::c_uint;
-            let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
+            let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
             let mut current_block_43: u64;
             context = (*dnsmasq_daemon).dhcp6;
             while !context.is_null() {
@@ -1528,7 +1528,7 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
                             }
                             /* collect dhcp-range tags */
                             if (*context).netid.next ==
-                                   &mut (*context).netid as *mut dhcp_netid &&
+                                   &mut (*context).netid as *mut DhcpNetId &&
                                    !(*context).netid.net.is_null() {
                                 (*context).netid.next = (*param).tags;
                                 (*param).tags = &mut (*context).netid
@@ -1689,11 +1689,11 @@ unsafe extern "C" fn add_lla(mut index: libc::c_int, mut type_0: libc::c_uint,
 pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
     let mut param: search_param =
         search_param{now: 0, iface: 0, name: [0; 17],};
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
     let mut next_event: time_t = 0;
     let mut aparam: alias_param =
         alias_param{iface: 0,
-                    bridge: 0 as *mut dhcp_bridge,
+                    bridge: 0 as *mut DhcpBridge,
                     num_alias_ifs: 0,
                     max_alias_ifs: 0,
                     alias_ifs: 0 as *mut libc::c_int,};
@@ -1729,7 +1729,7 @@ pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
                                   &mut param as *mut search_param as
                                       *mut libc::c_void,
                                   ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                                          *mut in6_addr,
+                                                                                          *mut In6Addr,
                                                                                       _:
                                                                                           libc::c_int,
                                                                                       _:
@@ -1744,14 +1744,14 @@ pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
                                                                                           libc::c_int,
                                                                                       _:
                                                                                           *mut libc::c_void)
-                                                                     ->
+                                                                                      ->
                                                                          libc::c_int>,
                                                           Option<unsafe extern "C" fn()
                                                                      ->
                                                                          libc::c_int>>(Some(iface_search
                                                                                                 as
                                                                                                 unsafe extern "C" fn(_:
-                                                                                                                         *mut in6_addr,
+                                                                                                                         *mut In6Addr,
                                                                                                                      _:
                                                                                                                          libc::c_int,
                                                                                                                      _:
@@ -1766,7 +1766,7 @@ pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
                                                                                                                          libc::c_int,
                                                                                                                      _:
                                                                                                                          *mut libc::c_void)
-                                                                                                    ->
+                                                                                                                     ->
                                                                                                         libc::c_int)))
                       != 0 {
             /* There's a context overdue, but we can't find an interface
@@ -1777,10 +1777,10 @@ pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
             (*context).ra_time = 0 as libc::c_int as time_t
         }
         if param.iface != 0 as libc::c_int &&
-               iface_check(1 as libc::c_int, 0 as *mut all_addr,
+               iface_check(1 as libc::c_int, 0 as *mut AllAddr,
                            param.name.as_mut_ptr(), 0 as *mut libc::c_int) !=
                    0 {
-            let mut tmp: *mut iname = 0 as *mut iname;
+            let mut tmp: *mut Iname = 0 as *mut Iname;
             tmp = (*dnsmasq_daemon).dhcp_except;
             while !tmp.is_null() {
                 if !(*tmp).name.is_null() &&
@@ -1792,7 +1792,7 @@ pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
             }
             if tmp.is_null() {
                 send_ra(now, param.iface, param.name.as_mut_ptr(),
-                        0 as *mut in6_addr);
+                        0 as *mut In6Addr);
                 /* Also send on all interfaces that are aliases of this
                  one. */
                 aparam.bridge = (*dnsmasq_daemon).bridges;
@@ -1905,7 +1905,7 @@ pub unsafe extern "C" fn periodic_ra(mut now: time_t) -> time_t {
                                                                        isize));
                                 send_ra_alias(now, param.iface,
                                               param.name.as_mut_ptr(),
-                                              0 as *mut in6_addr,
+                                              0 as *mut In6Addr,
                                               *aparam.alias_ifs.offset((aparam.num_alias_ifs
                                                                             -
                                                                             1
@@ -1933,7 +1933,7 @@ unsafe extern "C" fn send_ra_to_aliases(mut index: libc::c_int,
  -> libc::c_int {
     let mut aparam: *mut alias_param = parm as *mut alias_param;
     let mut ifrn_name: [libc::c_char; 16] = [0; 16];
-    let mut alias: *mut dhcp_bridge = 0 as *mut dhcp_bridge;
+    let mut alias: *mut DhcpBridge = 0 as *mut DhcpBridge;
     if !if_indextoname(index as libc::c_uint,
                        ifrn_name.as_mut_ptr()).is_null() {
         alias = (*(*aparam).bridge).alias;
@@ -1953,7 +1953,7 @@ unsafe extern "C" fn send_ra_to_aliases(mut index: libc::c_int,
     }
     return 1 as libc::c_int;
 }
-unsafe extern "C" fn iface_search(mut local: *mut in6_addr,
+unsafe extern "C" fn iface_search(mut local: *mut In6Addr,
                                   mut prefix: libc::c_int,
                                   mut scope: libc::c_int,
                                   mut if_index: libc::c_int,
@@ -1961,14 +1961,14 @@ unsafe extern "C" fn iface_search(mut local: *mut in6_addr,
                                   mut preferred: libc::c_int,
                                   mut valid: libc::c_int,
                                   mut vparam: *mut libc::c_void)
- -> libc::c_int {
+                                  -> libc::c_int {
     let mut param: *mut search_param = vparam as *mut search_param;
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut tmp: *mut iname = 0 as *mut iname;
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut tmp: *mut Iname = 0 as *mut Iname;
     /* ignore interfaces we're not doing DHCP on. */
     if indextoname((*dnsmasq_daemon).icmp6fd, if_index,
                    (*param).name.as_mut_ptr()) == 0 ||
-           iface_check(1 as libc::c_int, 0 as *mut all_addr,
+           iface_check(1 as libc::c_int, 0 as *mut AllAddr,
                        (*param).name.as_mut_ptr(), 0 as *mut libc::c_int) == 0
        {
         return 1 as libc::c_int
@@ -2018,7 +2018,7 @@ unsafe extern "C" fn iface_search(mut local: *mut in6_addr,
 	   independently */
     /* keep searching */
 }
-unsafe extern "C" fn new_timeout(mut context: *mut dhcp_context,
+unsafe extern "C" fn new_timeout(mut context: *mut DhcpContext,
                                  mut iface_name: *mut libc::c_char,
                                  mut now: time_t) {
     if difftime(now, (*context).ra_short_period_start) < 60.0f64 {
@@ -2045,16 +2045,16 @@ unsafe extern "C" fn new_timeout(mut context: *mut dhcp_context,
     };
 }
 unsafe extern "C" fn find_iface_param(mut iface: *mut libc::c_char)
- -> *mut ra_interface {
-    let mut ra: *mut ra_interface = 0 as *mut ra_interface;
+ -> *mut RaInterface {
+    let mut ra: *mut RaInterface = 0 as *mut RaInterface;
     ra = (*dnsmasq_daemon).ra_interfaces;
     while !ra.is_null() {
         if wildcard_match((*ra).name, iface) != 0 { return ra }
         ra = (*ra).next
     }
-    return 0 as *mut ra_interface;
+    return 0 as *mut RaInterface;
 }
-unsafe extern "C" fn calc_interval(mut ra: *mut ra_interface)
+unsafe extern "C" fn calc_interval(mut ra: *mut RaInterface)
  -> libc::c_uint {
     let mut interval: libc::c_int = 600 as libc::c_int;
     if !ra.is_null() && (*ra).interval != 0 as libc::c_int {
@@ -2065,7 +2065,7 @@ unsafe extern "C" fn calc_interval(mut ra: *mut ra_interface)
     }
     return interval as libc::c_uint;
 }
-unsafe extern "C" fn calc_lifetime(mut ra: *mut ra_interface)
+unsafe extern "C" fn calc_lifetime(mut ra: *mut RaInterface)
  -> libc::c_uint {
     let mut lifetime: libc::c_int = 0;
     let mut interval: libc::c_int = calc_interval(ra) as libc::c_int;
@@ -2082,7 +2082,7 @@ unsafe extern "C" fn calc_lifetime(mut ra: *mut ra_interface)
     }
     return lifetime as libc::c_uint;
 }
-unsafe extern "C" fn calc_prio(mut ra: *mut ra_interface) -> libc::c_uint {
+unsafe extern "C" fn calc_prio(mut ra: *mut RaInterface) -> libc::c_uint {
     if !ra.is_null() { return (*ra).prio as libc::c_uint }
     return 0 as libc::c_int as libc::c_uint;
 }

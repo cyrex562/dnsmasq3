@@ -1,4 +1,4 @@
-use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, C2RustUnnamed_9, txt_record, dnsmasq_daemon, C2RustUnnamed_10, mysockaddr, in_addr, sa_family_t, in6_addr, __bswap_16, in_addr_t, server, dhcp_netid, dhcp_netid_list, dhcp_config, hwaddr_config, addrlist, dhcp_context, dhcp_opt, __bswap_32, mysubnet, resolvc, time_t, mx_srv_record, iname, name_list, auth_zone, auth_name_list, all_addr, cond_domain, in_port_t, C2RustUnnamed, ipsets, tftp_prefix, dhcp_bridge, shared_network, _ISdigit, tag_if, dhcp_match_name, dhcp_boot, delay_config, pxe_service, dhcp_mac, addr_list, dhcp_pxe_vendor, dhcp_relay, ra_interface, doctor, interface_name, cname, _ISspace, ptr_record, naptr, host_record, bogus_addr, dhcp_vendor, _ISxdigit, hostsfile, FILE, stat, timespec, DIR, crec};
+use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, C2RustUnnamed_9, TxtRecord, DnsmasqDaemon, C2RustUnnamed_10, MySockAddr, InAddr, sa_family_t, In6Addr, __bswap_16, in_addr_t, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISdigit, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISspace, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISxdigit, HostsFile, FILE, stat, timespec, DIR, Crec};
 use crate::util::{whine_malloc, safe_malloc, canonicalise, safe_strncpy, hostname_isequal, addr6part, setaddr6part, is_same_net, is_same_net6, parse_hex, legal_hostname, rand32};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{lookup_dhcp_opt, lookup_dhcp_len, strip_hostname, display_opts, display_opts6};
@@ -4456,9 +4456,9 @@ unsafe extern "C" fn atoi_check16(mut a: *mut libc::c_char,
 unsafe extern "C" fn add_txt(mut name: *mut libc::c_char,
                              mut txt: *mut libc::c_char,
                              mut stat_0: libc::c_int) {
-    let mut r: *mut txt_record =
-        opt_malloc(::std::mem::size_of::<txt_record>() as libc::c_ulong) as
-            *mut txt_record;
+    let mut r: *mut TxtRecord =
+        opt_malloc(::std::mem::size_of::<TxtRecord>() as libc::c_ulong) as
+            *mut TxtRecord;
     if !txt.is_null() {
         let mut len: usize = strlen(txt);
         (*r).txt =
@@ -4573,14 +4573,14 @@ unsafe extern "C" fn do_usage() {
     };
 }
 unsafe extern "C" fn parse_mysockaddr(mut arg: *mut libc::c_char,
-                                      mut addr: *mut mysockaddr)
+                                      mut addr: *mut MySockAddr)
  -> *mut libc::c_char {
     if inet_pton(2 as libc::c_int, arg,
-                 &mut (*addr).in_0.sin_addr as *mut in_addr as
+                 &mut (*addr).in_0.sin_addr as *mut InAddr as
                      *mut libc::c_void) > 0 as libc::c_int {
         (*addr).sa.sa_family = 2 as libc::c_int as sa_family_t
     } else if inet_pton(10 as libc::c_int, arg,
-                        &mut (*addr).in6.sin6_addr as *mut in6_addr as
+                        &mut (*addr).in6.sin6_addr as *mut In6Addr as
                             *mut libc::c_void) > 0 as libc::c_int {
         (*addr).sa.sa_family = 10 as libc::c_int as sa_family_t
     } else {
@@ -4591,11 +4591,11 @@ unsafe extern "C" fn parse_mysockaddr(mut arg: *mut libc::c_char,
 }
 #[no_mangle]
 pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
-                                      mut addr: *mut mysockaddr,
-                                      mut source_addr: *mut mysockaddr,
+                                      mut addr: *mut MySockAddr,
+                                      mut source_addr: *mut MySockAddr,
                                       mut interface: *mut libc::c_char,
                                       mut flags: *mut libc::c_int)
- -> *mut libc::c_char {
+                                      -> *mut libc::c_char {
     let mut source_port: libc::c_int = 0 as libc::c_int;
     let mut serv_port: libc::c_int = 53 as libc::c_int;
     let mut portno: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -4631,7 +4631,7 @@ pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
         }
     }
     if inet_pton(2 as libc::c_int, arg,
-                 &mut (*addr).in_0.sin_addr as *mut in_addr as
+                 &mut (*addr).in_0.sin_addr as *mut InAddr as
                      *mut libc::c_void) > 0 as libc::c_int {
         (*addr).in_0.sin_port = __bswap_16(serv_port as u16);
         (*source_addr).sa.sa_family = 2 as libc::c_int as sa_family_t;
@@ -4644,7 +4644,7 @@ pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
             (*source_addr).in_0.sin_port =
                 __bswap_16(source_port as u16);
             if !(inet_pton(2 as libc::c_int, source,
-                           &mut (*source_addr).in_0.sin_addr as *mut in_addr
+                           &mut (*source_addr).in_0.sin_addr as *mut InAddr
                                as *mut libc::c_void) > 0 as libc::c_int) {
                 if !interface_opt.is_null() {
                     return b"interface can only be specified once\x00" as
@@ -4657,7 +4657,7 @@ pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
             }
         }
     } else if inet_pton(10 as libc::c_int, arg,
-                        &mut (*addr).in6.sin6_addr as *mut in6_addr as
+                        &mut (*addr).in6.sin6_addr as *mut In6Addr as
                             *mut libc::c_void) > 0 as libc::c_int {
         if !scope_id.is_null() &&
                {
@@ -4682,7 +4682,7 @@ pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
             (*source_addr).in6.sin6_port =
                 __bswap_16(source_port as u16);
             if inet_pton(10 as libc::c_int, source,
-                         &mut (*source_addr).in6.sin6_addr as *mut in6_addr as
+                         &mut (*source_addr).in6.sin6_addr as *mut In6Addr as
                              *mut libc::c_void) == 0 as libc::c_int {
                 if !interface_opt.is_null() {
                     return b"interface can only be specified once\x00" as
@@ -4699,15 +4699,15 @@ pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
     }
     return 0 as *mut libc::c_char;
 }
-unsafe extern "C" fn add_rev4(mut addr: in_addr, mut msize: libc::c_int)
- -> *mut server {
-    let mut serv: *mut server =
-        opt_malloc(::std::mem::size_of::<server>() as libc::c_ulong) as
-            *mut server;
+unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
+                              -> *mut Server {
+    let mut serv: *mut Server =
+        opt_malloc(::std::mem::size_of::<Server>() as libc::c_ulong) as
+            *mut Server;
     let mut a: in_addr_t = __bswap_32(addr.s_addr);
     let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
     memset(serv as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<server>() as libc::c_ulong);
+           ::std::mem::size_of::<Server>() as libc::c_ulong);
     (*serv).domain =
         opt_malloc(29 as libc::c_int as usize) as *mut libc::c_char;
     p = (*serv).domain;
@@ -4728,7 +4728,7 @@ unsafe extern "C" fn add_rev4(mut addr: in_addr, mut msize: libc::c_int)
         _ => {
             free((*serv).domain as *mut libc::c_void);
             free(serv as *mut libc::c_void);
-            return 0 as *mut server
+            return 0 as *mut Server
         }
     }
     match current_block_8 {
@@ -4775,15 +4775,15 @@ unsafe extern "C" fn add_rev4(mut addr: in_addr, mut msize: libc::c_int)
     (*dnsmasq_daemon).servers = serv;
     return serv;
 }
-unsafe extern "C" fn add_rev6(mut addr: *mut in6_addr, mut msize: libc::c_int)
- -> *mut server {
-    let mut serv: *mut server =
-        opt_malloc(::std::mem::size_of::<server>() as libc::c_ulong) as
-            *mut server;
+unsafe extern "C" fn add_rev6(mut addr: *mut In6Addr, mut msize: libc::c_int)
+                              -> *mut Server {
+    let mut serv: *mut Server =
+        opt_malloc(::std::mem::size_of::<Server>() as libc::c_ulong) as
+            *mut Server;
     let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut i: libc::c_int = 0;
     memset(serv as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<server>() as libc::c_ulong);
+           ::std::mem::size_of::<Server>() as libc::c_ulong);
     (*serv).domain =
         opt_malloc(73 as libc::c_int as usize) as *mut libc::c_char;
     p = (*serv).domain;
@@ -4830,19 +4830,19 @@ unsafe extern "C" fn set_prefix(mut arg: *mut libc::c_char)
     return arg;
 }
 unsafe extern "C" fn dhcp_netid_create(mut net: *const libc::c_char,
-                                       mut next: *mut dhcp_netid)
- -> *mut dhcp_netid {
-    let mut tt: *mut dhcp_netid = 0 as *mut dhcp_netid;
+                                       mut next: *mut DhcpNetId)
+ -> *mut DhcpNetId {
+    let mut tt: *mut DhcpNetId = 0 as *mut DhcpNetId;
     tt =
-        opt_malloc(::std::mem::size_of::<dhcp_netid>() as libc::c_ulong) as
-            *mut dhcp_netid;
+        opt_malloc(::std::mem::size_of::<DhcpNetId>() as libc::c_ulong) as
+            *mut DhcpNetId;
     (*tt).net = opt_string_alloc(net);
     (*tt).next = next;
     return tt;
 }
-unsafe extern "C" fn dhcp_netid_free(mut nid: *mut dhcp_netid) {
+unsafe extern "C" fn dhcp_netid_free(mut nid: *mut DhcpNetId) {
     while !nid.is_null() {
-        let mut tmp: *mut dhcp_netid = nid;
+        let mut tmp: *mut DhcpNetId = nid;
         nid = (*nid).next;
         free((*tmp).net as *mut libc::c_void);
         free(tmp as *mut libc::c_void);
@@ -4851,29 +4851,29 @@ unsafe extern "C" fn dhcp_netid_free(mut nid: *mut dhcp_netid) {
 /* Parse one or more tag:s before parameters.
  * Moves arg to the end of tags. */
 unsafe extern "C" fn dhcp_tags(mut arg: *mut *mut libc::c_char)
- -> *mut dhcp_netid {
-    let mut id: *mut dhcp_netid = 0 as *mut dhcp_netid;
+ -> *mut DhcpNetId {
+    let mut id: *mut DhcpNetId = 0 as *mut DhcpNetId;
     while is_tag_prefix(*arg) != 0 {
         let mut comma: *mut libc::c_char = split(*arg);
         id = dhcp_netid_create((*arg).offset(4 as libc::c_int as isize), id);
         *arg = comma
     }
-    if (*arg).is_null() { dhcp_netid_free(id); id = 0 as *mut dhcp_netid }
+    if (*arg).is_null() { dhcp_netid_free(id); id = 0 as *mut DhcpNetId }
     return id;
 }
-unsafe extern "C" fn dhcp_netid_list_free(mut netid: *mut dhcp_netid_list) {
+unsafe extern "C" fn dhcp_netid_list_free(mut netid: *mut DhcpNetIdList) {
     while !netid.is_null() {
-        let mut tmplist: *mut dhcp_netid_list = netid;
+        let mut tmplist: *mut DhcpNetIdList = netid;
         netid = (*netid).next;
         dhcp_netid_free((*tmplist).list);
         free(tmplist as *mut libc::c_void);
     };
 }
-unsafe extern "C" fn dhcp_config_free(mut config: *mut dhcp_config) {
+unsafe extern "C" fn dhcp_config_free(mut config: *mut DhcpConfig) {
     if !config.is_null() {
-        let mut hwaddr: *mut hwaddr_config = (*config).hwaddr;
+        let mut hwaddr: *mut HwaddrConfig = (*config).hwaddr;
         while !hwaddr.is_null() {
-            let mut tmp: *mut hwaddr_config = hwaddr;
+            let mut tmp: *mut HwaddrConfig = hwaddr;
             hwaddr = (*hwaddr).next;
             free(tmp as *mut libc::c_void);
         }
@@ -4883,8 +4883,8 @@ unsafe extern "C" fn dhcp_config_free(mut config: *mut dhcp_config) {
             free((*config).clid as *mut libc::c_void);
         }
         if (*config).flags & 4096 as libc::c_int as libc::c_uint != 0 {
-            let mut addr: *mut addrlist = 0 as *mut addrlist;
-            let mut tmp_0: *mut addrlist = 0 as *mut addrlist;
+            let mut addr: *mut AddrList = 0 as *mut AddrList;
+            let mut tmp_0: *mut AddrList = 0 as *mut AddrList;
             addr = (*config).addr6;
             while !addr.is_null() {
                 tmp_0 = (*addr).next;
@@ -4895,7 +4895,7 @@ unsafe extern "C" fn dhcp_config_free(mut config: *mut dhcp_config) {
         free(config as *mut libc::c_void);
     };
 }
-unsafe extern "C" fn dhcp_context_free(mut ctx: *mut dhcp_context) {
+unsafe extern "C" fn dhcp_context_free(mut ctx: *mut DhcpContext) {
     if !ctx.is_null() {
         dhcp_netid_free((*ctx).filter);
         free((*ctx).netid.net as *mut libc::c_void);
@@ -4903,7 +4903,7 @@ unsafe extern "C" fn dhcp_context_free(mut ctx: *mut dhcp_context) {
         free(ctx as *mut libc::c_void);
     };
 }
-unsafe extern "C" fn dhcp_opt_free(mut opt: *mut dhcp_opt) {
+unsafe extern "C" fn dhcp_opt_free(mut opt: *mut DhcpOpt) {
     if (*opt).flags & 256 as libc::c_int != 0 {
         free((*opt).u.vendor_class as *mut libc::c_void);
     }
@@ -4916,9 +4916,9 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     mut arg: *mut libc::c_char,
                                     mut flags: libc::c_int) -> libc::c_int {
     let mut current_block: u64;
-    let mut new: *mut dhcp_opt =
-        opt_malloc(::std::mem::size_of::<dhcp_opt>() as libc::c_ulong) as
-            *mut dhcp_opt;
+    let mut new: *mut DhcpOpt =
+        opt_malloc(::std::mem::size_of::<DhcpOpt>() as libc::c_ulong) as
+            *mut DhcpOpt;
     let mut lenchar: libc::c_char = 0 as libc::c_int as libc::c_char;
     let mut cp: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut addrs: libc::c_int = 0;
@@ -4935,7 +4935,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
     let mut option_ok: libc::c_int = 0 as libc::c_int;
     (*new).len = 0 as libc::c_int;
     (*new).flags = flags;
-    (*new).netid = 0 as *mut dhcp_netid;
+    (*new).netid = 0 as *mut DhcpNetId;
     (*new).val = 0 as *mut libc::c_uchar;
     (*new).opt = 0 as libc::c_int;
     while !arg.is_null() {
@@ -5329,7 +5329,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                 }
                                 current_block = 15439134456549723682;
                             } else if is_addr != 0 && is6 == 0 {
-                                let mut in_0: in_addr = in_addr{s_addr: 0,};
+                                let mut in_0: InAddr = InAddr {s_addr: 0,};
                                 let mut op: *mut libc::c_uchar =
                                     0 as *mut libc::c_uchar;
                                 let mut slash: *mut libc::c_char =
@@ -5366,7 +5366,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         split_chr(cp,
                                                   '/' as i32 as libc::c_char);
                                     if inet_pton(2 as libc::c_int, cp,
-                                                 &mut in_0 as *mut in_addr as
+                                                 &mut in_0 as *mut InAddr as
                                                      *mut libc::c_void) == 0 {
                                         strcpy(errstr,
                                                b"bad IPv4 address\x00" as
@@ -5376,7 +5376,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         break ;
                                     } else if slash.is_null() {
                                         memcpy(op as *mut libc::c_void,
-                                               &mut in_0 as *mut in_addr as
+                                               &mut in_0 as *mut InAddr as
                                                    *const libc::c_void,
                                                4 as libc::c_int as
                                                    libc::c_ulong);
@@ -5385,7 +5385,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                                           isize)
                                     } else {
                                         let mut p: *mut libc::c_uchar =
-                                            &mut in_0 as *mut in_addr as
+                                            &mut in_0 as *mut InAddr as
                                                 *mut libc::c_uchar;
                                         let mut netsize: libc::c_int =
                                             atoi(slash);
@@ -6024,9 +6024,9 @@ pub unsafe extern "C" fn reset_option_bool(mut opt: libc::c_uint) {
                                                                                     as
                                                                                     libc::c_ulong)));
 }
-unsafe extern "C" fn server_list_free(mut list: *mut server) {
+unsafe extern "C" fn server_list_free(mut list: *mut Server) {
     while !list.is_null() {
-        let mut tmp: *mut server = list;
+        let mut tmp: *mut Server = list;
         list = (*list).next;
         free(tmp as *mut libc::c_void);
     };
@@ -6287,9 +6287,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 let mut err: *mut libc::c_char = 0 as *mut libc::c_char;
                 let mut end: *mut libc::c_char = 0 as *mut libc::c_char;
                 comma = split(arg);
-                let mut new_0: *mut mysubnet =
-                    opt_malloc(::std::mem::size_of::<mysubnet>() as
-                                   libc::c_ulong) as *mut mysubnet;
+                let mut new_0: *mut Mysubnet =
+                    opt_malloc(::std::mem::size_of::<Mysubnet>() as
+                                   libc::c_ulong) as *mut Mysubnet;
                 end = split_chr(arg, '/' as i32 as libc::c_char);
                 if !end.is_null() {
                     /* has subnet+len */
@@ -6313,8 +6313,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 (*dnsmasq_daemon).add_subnet4 = new_0;
                 if !comma.is_null() {
                     new_0 =
-                        opt_malloc(::std::mem::size_of::<mysubnet>() as
-                                       libc::c_ulong) as *mut mysubnet;
+                        opt_malloc(::std::mem::size_of::<Mysubnet>() as
+                                       libc::c_ulong) as *mut Mysubnet;
                     end = split_chr(comma, '/' as i32 as libc::c_char);
                     if !end.is_null() {
                         /* has subnet+len */
@@ -6400,18 +6400,18 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         114 => {
             /* --resolv-file */
             let mut name: *mut libc::c_char = opt_string_alloc(arg);
-            let mut new_1: *mut resolvc = 0 as *mut resolvc;
-            let mut list_0: *mut resolvc = (*dnsmasq_daemon).resolv_files;
+            let mut new_1: *mut Resolvc = 0 as *mut Resolvc;
+            let mut list_0: *mut Resolvc = (*dnsmasq_daemon).resolv_files;
             if !list_0.is_null() && (*list_0).is_default != 0 {
                 /* replace default resolv file - possibly with nothing */
                 if !name.is_null() {
                     (*list_0).is_default = 0 as libc::c_int;
                     (*list_0).name = name
-                } else { list_0 = 0 as *mut resolvc }
+                } else { list_0 = 0 as *mut Resolvc }
             } else if !name.is_null() {
                 new_1 =
-                    opt_malloc(::std::mem::size_of::<resolvc>() as
-                                   libc::c_ulong) as *mut resolvc;
+                    opt_malloc(::std::mem::size_of::<Resolvc>() as
+                                   libc::c_ulong) as *mut Resolvc;
                 (*new_1).next = list_0;
                 (*new_1).name = name;
                 (*new_1).is_default = 0 as libc::c_int;
@@ -6429,7 +6429,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         109 => {
             /* --mx-host */
             let mut pref: libc::c_int = 1 as libc::c_int; /* may be NULL */
-            let mut new_2: *mut mx_srv_record = 0 as *mut mx_srv_record;
+            let mut new_2: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
             let mut name_0: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut target: *mut libc::c_char = 0 as *mut libc::c_char;
             comma = split(arg);
@@ -6455,8 +6455,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             }
             new_2 =
-                opt_malloc(::std::mem::size_of::<mx_srv_record>() as
-                               libc::c_ulong) as *mut mx_srv_record;
+                opt_malloc(::std::mem::size_of::<MxSrvRecord>() as
+                               libc::c_ulong) as *mut MxSrvRecord;
             (*new_2).next = (*dnsmasq_daemon).mxnames;
             (*dnsmasq_daemon).mxnames = new_2;
             (*new_2).issrv = 0 as libc::c_int;
@@ -6522,20 +6522,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             loop  {
                 arg = comma;
                 if arg.is_null() { break ; }
-                let mut new_4: *mut iname =
-                    opt_malloc(::std::mem::size_of::<iname>() as
-                                   libc::c_ulong) as *mut iname;
+                let mut new_4: *mut Iname =
+                    opt_malloc(::std::mem::size_of::<Iname>() as
+                                   libc::c_ulong) as *mut Iname;
                 comma = split(arg);
                 (*new_4).name = 0 as *mut libc::c_char;
                 unhide_metas(arg);
                 if inet_pton(2 as libc::c_int, arg,
-                             &mut (*new_4).addr.in_0.sin_addr as *mut in_addr
+                             &mut (*new_4).addr.in_0.sin_addr as *mut InAddr
                                  as *mut libc::c_void) > 0 as libc::c_int {
                     (*new_4).addr.sa.sa_family =
                         2 as libc::c_int as sa_family_t
                 } else if inet_pton(10 as libc::c_int, arg,
                                     &mut (*new_4).addr.in6.sin6_addr as
-                                        *mut in6_addr as *mut libc::c_void) >
+                                        *mut In6Addr as *mut libc::c_void) >
                               0 as libc::c_int {
                     (*new_4).addr.sa.sa_family =
                         10 as libc::c_int as sa_family_t
@@ -6573,12 +6573,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         317 => {
             /* --auth-sec-servers */
-            let mut new_5: *mut name_list = 0 as *mut name_list;
+            let mut new_5: *mut NameList = 0 as *mut NameList;
             loop  {
                 comma = split(arg);
                 new_5 =
-                    opt_malloc(::std::mem::size_of::<name_list>() as
-                                   libc::c_ulong) as *mut name_list;
+                    opt_malloc(::std::mem::size_of::<NameList>() as
+                                   libc::c_ulong) as *mut NameList;
                 (*new_5).name = opt_string_alloc(arg);
                 (*new_5).next = (*dnsmasq_daemon).secondary_forward_server;
                 (*dnsmasq_daemon).secondary_forward_server = new_5;
@@ -6589,15 +6589,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         313 => {
             /* --auth-zone */
-            let mut new_6: *mut auth_zone = 0 as *mut auth_zone;
+            let mut new_6: *mut AuthZone = 0 as *mut AuthZone;
             comma = split(arg);
             new_6 =
-                opt_malloc(::std::mem::size_of::<auth_zone>() as
-                               libc::c_ulong) as *mut auth_zone;
+                opt_malloc(::std::mem::size_of::<AuthZone>() as
+                               libc::c_ulong) as *mut AuthZone;
             (*new_6).domain = opt_string_alloc(arg);
-            (*new_6).subnet = 0 as *mut addrlist;
-            (*new_6).exclude = 0 as *mut addrlist;
-            (*new_6).interface_names = 0 as *mut auth_name_list;
+            (*new_6).subnet = 0 as *mut AddrList;
+            (*new_6).exclude = 0 as *mut AddrList;
+            (*new_6).interface_names = 0 as *mut AuthNameList;
             (*new_6).next = (*dnsmasq_daemon).auth_zones;
             (*dnsmasq_daemon).auth_zones = new_6;
             loop  {
@@ -6606,9 +6606,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 let mut prefixlen: libc::c_int = 0 as libc::c_int;
                 let mut is_exclude: libc::c_int = 0 as libc::c_int;
                 let mut prefix: *mut libc::c_char = 0 as *mut libc::c_char;
-                let mut subnet: *mut addrlist = 0 as *mut addrlist;
-                let mut addr: all_addr =
-                    all_addr{addr4: in_addr{s_addr: 0,},};
+                let mut subnet: *mut AddrList = 0 as *mut AddrList;
+                let mut addr: AllAddr =
+                    AllAddr {addr4: InAddr {s_addr: 0,},};
                 comma = split(arg);
                 prefix = split_chr(arg, '/' as i32 as libc::c_char);
                 if !prefix.is_null() &&
@@ -6623,31 +6623,31 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     arg = arg.offset(8 as libc::c_int as isize)
                 }
                 if inet_pton(2 as libc::c_int, arg,
-                             &mut addr.addr4 as *mut in_addr as
+                             &mut addr.addr4 as *mut InAddr as
                                  *mut libc::c_void) != 0 {
                     subnet =
-                        opt_malloc(::std::mem::size_of::<addrlist>() as
-                                       libc::c_ulong) as *mut addrlist;
+                        opt_malloc(::std::mem::size_of::<AddrList>() as
+                                       libc::c_ulong) as *mut AddrList;
                     (*subnet).prefixlen =
                         if prefixlen == 0 as libc::c_int {
                             24 as libc::c_int
                         } else { prefixlen };
                     (*subnet).flags = 1 as libc::c_int
                 } else if inet_pton(10 as libc::c_int, arg,
-                                    &mut addr.addr6 as *mut in6_addr as
+                                    &mut addr.addr6 as *mut In6Addr as
                                         *mut libc::c_void) != 0 {
                     subnet =
-                        opt_malloc(::std::mem::size_of::<addrlist>() as
-                                       libc::c_ulong) as *mut addrlist;
+                        opt_malloc(::std::mem::size_of::<AddrList>() as
+                                       libc::c_ulong) as *mut AddrList;
                     (*subnet).prefixlen =
                         if prefixlen == 0 as libc::c_int {
                             64 as libc::c_int
                         } else { prefixlen };
                     (*subnet).flags = 1 as libc::c_int | 2 as libc::c_int
                 } else {
-                    let mut name_1: *mut auth_name_list =
-                        opt_malloc(::std::mem::size_of::<auth_name_list>() as
-                                       libc::c_ulong) as *mut auth_name_list;
+                    let mut name_1: *mut AuthNameList =
+                        opt_malloc(::std::mem::size_of::<AuthNameList>() as
+                                       libc::c_ulong) as *mut AuthNameList;
                     (*name_1).name = opt_string_alloc(arg);
                     (*name_1).flags = 2 as libc::c_int | 1 as libc::c_int;
                     (*name_1).next = (*new_6).interface_names;
@@ -6726,9 +6726,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     return 0 as libc::c_int
                 } else {
                     if !comma.is_null() {
-                        let mut new_7: *mut cond_domain =
-                            opt_malloc(::std::mem::size_of::<cond_domain>() as
-                                           libc::c_ulong) as *mut cond_domain;
+                        let mut new_7: *mut CondDomain =
+                            opt_malloc(::std::mem::size_of::<CondDomain>() as
+                                           libc::c_ulong) as *mut CondDomain;
                         let mut netpart: *mut libc::c_char =
                             0 as *mut libc::c_char;
                         (*new_7).prefix = 0 as *mut libc::c_char;
@@ -6746,7 +6746,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             } else {
                                 if inet_pton(2 as libc::c_int, comma,
                                              &mut (*new_7).start as
-                                                 *mut in_addr as
+                                                 *mut InAddr as
                                                  *mut libc::c_void) != 0 {
                                     let mut mask: libc::c_int =
                                         ((1 as libc::c_int) <<
@@ -6798,7 +6798,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                         } else {
                                             /* generate the equivalent of
 				      local=/xxx.yyy.zzz.in-addr.arpa/ */
-                                            let mut serv: *mut server =
+                                            let mut serv: *mut Server =
                                                 add_rev4((*new_7).start,
                                                          msize);
                                             if serv.is_null() {
@@ -6813,13 +6813,13 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                             (*serv).flags |= 2 as libc::c_int;
                                             /* local=/<domain>/ */
                                             serv =
-                                                opt_malloc(::std::mem::size_of::<server>()
+                                                opt_malloc(::std::mem::size_of::<Server>()
                                                                as
                                                                libc::c_ulong)
-                                                    as *mut server;
+                                                    as *mut Server;
                                             memset(serv as *mut libc::c_void,
                                                    0 as libc::c_int,
-                                                   ::std::mem::size_of::<server>()
+                                                   ::std::mem::size_of::<Server>()
                                                        as libc::c_ulong);
                                             (*serv).domain = d;
                                             (*serv).flags =
@@ -6832,7 +6832,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                     }
                                 } else if inet_pton(10 as libc::c_int, comma,
                                                     &mut (*new_7).start6 as
-                                                        *mut in6_addr as
+                                                        *mut In6Addr as
                                                         *mut libc::c_void) !=
                                               0 {
                                     let mut mask_0: u64 =
@@ -6898,21 +6898,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                             } else {
                                                 /* generate the equivalent of
 				     local=/xxx.yyy.zzz.ip6.arpa/ */
-                                                let mut serv_0: *mut server =
+                                                let mut serv_0: *mut Server =
                                                     add_rev6(&mut (*new_7).start6,
                                                              msize);
                                                 (*serv_0).flags |=
                                                     2 as libc::c_int;
                                                 /* local=/<domain>/ */
                                                 serv_0 =
-                                                    opt_malloc(::std::mem::size_of::<server>()
+                                                    opt_malloc(::std::mem::size_of::<Server>()
                                                                    as
                                                                    libc::c_ulong)
-                                                        as *mut server;
+                                                        as *mut Server;
                                                 memset(serv_0 as
                                                            *mut libc::c_void,
                                                        0 as libc::c_int,
-                                                       ::std::mem::size_of::<server>()
+                                                       ::std::mem::size_of::<Server>()
                                                            as libc::c_ulong);
                                                 (*serv_0).domain = d;
                                                 (*serv_0).flags =
@@ -6937,7 +6937,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             arg = split(comma);
                             prefstr_0 = split(arg);
                             if inet_pton(2 as libc::c_int, comma,
-                                         &mut (*new_7).start as *mut in_addr
+                                         &mut (*new_7).start as *mut InAddr
                                              as *mut libc::c_void) != 0 {
                                 (*new_7).is6 = 0 as libc::c_int;
                                 if arg.is_null() {
@@ -6945,7 +6945,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                         (*new_7).start.s_addr
                                 } else if inet_pton(2 as libc::c_int, arg,
                                                     &mut (*new_7).end as
-                                                        *mut in_addr as
+                                                        *mut InAddr as
                                                         *mut libc::c_void) ==
                                               0 {
                                     strcpy(errstr, gen_err);
@@ -6954,20 +6954,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                 }
                             } else if inet_pton(10 as libc::c_int, comma,
                                                 &mut (*new_7).start6 as
-                                                    *mut in6_addr as
+                                                    *mut In6Addr as
                                                     *mut libc::c_void) != 0 {
                                 (*new_7).is6 = 1 as libc::c_int;
                                 if arg.is_null() {
-                                    memcpy(&mut (*new_7).end6 as *mut in6_addr
+                                    memcpy(&mut (*new_7).end6 as *mut In6Addr
                                                as *mut libc::c_void,
                                            &mut (*new_7).start6 as
-                                               *mut in6_addr as
+                                               *mut In6Addr as
                                                *const libc::c_void,
                                            16 as libc::c_int as
                                                libc::c_ulong);
                                 } else if inet_pton(10 as libc::c_int, arg,
                                                     &mut (*new_7).end6 as
-                                                        *mut in6_addr as
+                                                        *mut In6Addr as
                                                         *mut libc::c_void) ==
                                               0 {
                                     strcpy(errstr, gen_err);
@@ -7072,9 +7072,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             loop 
                  /* --interface */
                  {
-                let mut new_8: *mut iname =
-                    opt_malloc(::std::mem::size_of::<iname>() as
-                                   libc::c_ulong) as *mut iname;
+                let mut new_8: *mut Iname =
+                    opt_malloc(::std::mem::size_of::<Iname>() as
+                                   libc::c_ulong) as *mut Iname;
                 comma = split(arg);
                 (*new_8).next = (*dnsmasq_daemon).if_names;
                 (*dnsmasq_daemon).if_names = new_8;
@@ -7108,15 +7108,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             loop 
                  /* --auth-peer */
                  {
-                let mut new_10: *mut iname =
-                    opt_malloc(::std::mem::size_of::<iname>() as
-                                   libc::c_ulong) as *mut iname;
+                let mut new_10: *mut Iname =
+                    opt_malloc(::std::mem::size_of::<Iname>() as
+                                   libc::c_ulong) as *mut Iname;
                 comma = split(arg);
                 unhide_metas(arg);
                 if !arg.is_null() &&
                        inet_pton(2 as libc::c_int, arg,
                                  &mut (*new_10).addr.in_0.sin_addr as
-                                     *mut in_addr as *mut libc::c_void) >
+                                     *mut InAddr as *mut libc::c_void) >
                            0 as libc::c_int {
                     (*new_10).addr.sa.sa_family =
                         2 as libc::c_int as sa_family_t;
@@ -7125,7 +7125,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 } else if !arg.is_null() &&
                               inet_pton(10 as libc::c_int, arg,
                                         &mut (*new_10).addr.in6.sin6_addr as
-                                            *mut in6_addr as
+                                            *mut In6Addr as
                                             *mut libc::c_void) >
                                   0 as libc::c_int {
                     (*new_10).addr.sa.sa_family =
@@ -7165,10 +7165,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* --rev-server */
             let mut string: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut size: libc::c_int = 0;
-            let mut serv_2: *mut server = 0 as *mut server;
-            let mut addr4: in_addr = in_addr{s_addr: 0,};
-            let mut addr6: in6_addr =
-                in6_addr{__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
+            let mut serv_2: *mut Server = 0 as *mut Server;
+            let mut addr4: InAddr = InAddr {s_addr: 0,};
+            let mut addr6: In6Addr =
+                In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
             unhide_metas(arg);
             if arg.is_null() {
                 strcpy(errstr, gen_err);
@@ -7181,7 +7181,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             }
             if inet_pton(2 as libc::c_int, arg,
-                         &mut addr4 as *mut in_addr as *mut libc::c_void) != 0
+                         &mut addr4 as *mut InAddr as *mut libc::c_void) != 0
                {
                 serv_2 = add_rev4(addr4, size);
                 if serv_2.is_null() {
@@ -7191,7 +7191,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     return 0 as libc::c_int
                 }
             } else if inet_pton(10 as libc::c_int, arg,
-                                &mut addr6 as *mut in6_addr as
+                                &mut addr6 as *mut In6Addr as
                                     *mut libc::c_void) != 0 {
                 serv_2 = add_rev6(&mut addr6, size)
             } else { strcpy(errstr, gen_err); return 0 as libc::c_int }
@@ -7209,11 +7209,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         319 => {
             /* --ipset */
-            let mut ipsets_head: ipsets =
-                ipsets{sets: 0 as *mut *mut libc::c_char,
+            let mut ipsets_head: IpSets =
+                IpSets {sets: 0 as *mut *mut libc::c_char,
                        domain: 0 as *mut libc::c_char,
-                       next: 0 as *mut ipsets,};
-            let mut ipsets: *mut ipsets = &mut ipsets_head;
+                       next: 0 as *mut IpSets,};
+            let mut ipsets: *mut IpSets = &mut ipsets_head;
             let mut size_0: libc::c_int = 0;
             let mut end_1: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut sets: *mut *mut libc::c_char =
@@ -7221,7 +7221,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut sets_pos: *mut *mut libc::c_char =
                 0 as *mut *mut libc::c_char;
             memset(ipsets as *mut libc::c_void, 0 as libc::c_int,
-                   ::std::mem::size_of::<ipsets>() as libc::c_ulong);
+                   ::std::mem::size_of::<IpSets>() as libc::c_ulong);
             unhide_metas(arg);
             if !arg.is_null() && *arg as libc::c_int == '/' as i32 {
                 arg = arg.offset(1);
@@ -7251,21 +7251,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         return 0 as libc::c_int
                     }
                     (*ipsets).next =
-                        opt_malloc(::std::mem::size_of::<ipsets>() as
-                                       libc::c_ulong) as *mut ipsets;
+                        opt_malloc(::std::mem::size_of::<IpSets>() as
+                                       libc::c_ulong) as *mut IpSets;
                     ipsets = (*ipsets).next;
                     memset(ipsets as *mut libc::c_void, 0 as libc::c_int,
-                           ::std::mem::size_of::<ipsets>() as libc::c_ulong);
+                           ::std::mem::size_of::<IpSets>() as libc::c_ulong);
                     (*ipsets).domain = domain_0;
                     arg = end_1
                 }
             } else {
                 (*ipsets).next =
-                    opt_malloc(::std::mem::size_of::<ipsets>() as
-                                   libc::c_ulong) as *mut ipsets;
+                    opt_malloc(::std::mem::size_of::<IpSets>() as
+                                   libc::c_ulong) as *mut IpSets;
                 ipsets = (*ipsets).next;
                 memset(ipsets as *mut libc::c_void, 0 as libc::c_int,
-                       ::std::mem::size_of::<ipsets>() as libc::c_ulong);
+                       ::std::mem::size_of::<IpSets>() as libc::c_ulong);
                 (*ipsets).domain =
                     b"\x00" as *const u8 as *const libc::c_char as
                         *mut libc::c_char
@@ -7443,9 +7443,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* --tftp-prefix */
             comma = split(arg);
             if !comma.is_null() {
-                let mut new_11: *mut tftp_prefix =
-                    opt_malloc(::std::mem::size_of::<tftp_prefix>() as
-                                   libc::c_ulong) as *mut tftp_prefix;
+                let mut new_11: *mut TftpPrefix =
+                    opt_malloc(::std::mem::size_of::<TftpPrefix>() as
+                                   libc::c_ulong) as *mut TftpPrefix;
                 (*new_11).interface = opt_string_alloc(comma);
                 (*new_11).prefix = opt_string_alloc(arg);
                 (*new_11).next = (*dnsmasq_daemon).if_prefix;
@@ -7492,7 +7492,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         262 => {
             /* --bridge-interface */
-            let mut new_12: *mut dhcp_bridge = 0 as *mut dhcp_bridge;
+            let mut new_12: *mut DhcpBridge = 0 as *mut DhcpBridge;
             comma = split(arg);
             if comma.is_null() ||
                    strlen(arg) >
@@ -7513,10 +7513,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             }
             if new_12.is_null() {
                 new_12 =
-                    opt_malloc(::std::mem::size_of::<dhcp_bridge>() as
-                                   libc::c_ulong) as *mut dhcp_bridge;
+                    opt_malloc(::std::mem::size_of::<DhcpBridge>() as
+                                   libc::c_ulong) as *mut DhcpBridge;
                 strcpy((*new_12).iface.as_mut_ptr(), arg);
-                (*new_12).alias = 0 as *mut dhcp_bridge;
+                (*new_12).alias = 0 as *mut DhcpBridge;
                 (*new_12).next = (*dnsmasq_daemon).bridges;
                 (*dnsmasq_daemon).bridges = new_12
             }
@@ -7527,9 +7527,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                        strlen(arg) <=
                            (16 as libc::c_int - 1 as libc::c_int) as
                                libc::c_ulong {
-                    let mut b: *mut dhcp_bridge =
-                        opt_malloc(::std::mem::size_of::<dhcp_bridge>() as
-                                       libc::c_ulong) as *mut dhcp_bridge;
+                    let mut b: *mut DhcpBridge =
+                        opt_malloc(::std::mem::size_of::<DhcpBridge>() as
+                                       libc::c_ulong) as *mut DhcpBridge;
                     (*b).next = (*new_12).alias;
                     (*new_12).alias = b;
                     strcpy((*b).iface.as_mut_ptr(), arg);
@@ -7540,9 +7540,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         357 => {
             /* --shared-network */
-            let mut new_13: *mut shared_network =
-                opt_malloc(::std::mem::size_of::<shared_network>() as
-                               libc::c_ulong) as *mut shared_network;
+            let mut new_13: *mut SharedNetwork =
+                opt_malloc(::std::mem::size_of::<SharedNetwork>() as
+                               libc::c_ulong) as *mut SharedNetwork;
             (*new_13).shared_addr.s_addr = 0 as libc::c_int as in_addr_t;
             (*new_13).if_index = 0 as libc::c_int;
             comma = split(arg);
@@ -7550,10 +7550,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 current_block = 3177757304694473968;
             } else {
                 if inet_pton(2 as libc::c_int, comma,
-                             &mut (*new_13).shared_addr as *mut in_addr as
+                             &mut (*new_13).shared_addr as *mut InAddr as
                                  *mut libc::c_void) != 0 {
                     if inet_pton(2 as libc::c_int, arg,
-                                 &mut (*new_13).match_addr as *mut in_addr as
+                                 &mut (*new_13).match_addr as *mut InAddr as
                                      *mut libc::c_void) == 0 &&
                            {
                                (*new_13).if_index =
@@ -7564,10 +7564,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     } else { current_block = 12609744167958600007; }
                 } else if inet_pton(10 as libc::c_int, comma,
                                     &mut (*new_13).shared_addr6 as
-                                        *mut in6_addr as *mut libc::c_void) !=
+                                        *mut In6Addr as *mut libc::c_void) !=
                               0 {
                     if inet_pton(10 as libc::c_int, arg,
-                                 &mut (*new_13).match_addr6 as *mut in6_addr
+                                 &mut (*new_13).match_addr6 as *mut In6Addr
                                      as *mut libc::c_void) == 0 &&
                            {
                                (*new_13).if_index =
@@ -7607,11 +7607,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                  0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char, 0 as *mut libc::c_char];
-            let mut new_14: *mut dhcp_context =
-                opt_malloc(::std::mem::size_of::<dhcp_context>() as
-                               libc::c_ulong) as *mut dhcp_context;
+            let mut new_14: *mut DhcpContext =
+                opt_malloc(::std::mem::size_of::<DhcpContext>() as
+                               libc::c_ulong) as *mut DhcpContext;
             memset(new_14 as *mut libc::c_void, 0 as libc::c_int,
-                   ::std::mem::size_of::<dhcp_context>() as libc::c_ulong);
+                   ::std::mem::size_of::<DhcpContext>() as libc::c_ulong);
             loop  {
                 cp_0 = arg;
                 while *cp_0 != 0 {
@@ -7665,7 +7665,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             }
             if inet_pton(2 as libc::c_int, a[0 as libc::c_int as usize],
-                         &mut (*new_14).start as *mut in_addr as
+                         &mut (*new_14).start as *mut InAddr as
                              *mut libc::c_void) != 0 {
                 (*new_14).next = (*dnsmasq_daemon).dhcp;
                 (*new_14).lease_time = 3600 as libc::c_int as libc::c_uint;
@@ -7688,7 +7688,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             libc::c_int
                 } else if inet_pton(2 as libc::c_int,
                                     a[1 as libc::c_int as usize],
-                                    &mut (*new_14).end as *mut in_addr as
+                                    &mut (*new_14).end as *mut InAddr as
                                         *mut libc::c_void) == 0 {
                     dhcp_context_free(new_14);
                     strcpy(errstr,
@@ -7698,7 +7698,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
                 if __bswap_32((*new_14).start.s_addr) >
                        __bswap_32((*new_14).end.s_addr) {
-                    let mut tmp_0: in_addr = (*new_14).start;
+                    let mut tmp_0: InAddr = (*new_14).start;
                     (*new_14).start = (*new_14).end;
                     (*new_14).end = tmp_0
                 }
@@ -7707,7 +7707,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                '.' as i32).is_null() &&
                        inet_pton(2 as libc::c_int,
                                  a[2 as libc::c_int as usize],
-                                 &mut (*new_14).netmask as *mut in_addr as
+                                 &mut (*new_14).netmask as *mut InAddr as
                                      *mut libc::c_void) > 0 as libc::c_int {
                     (*new_14).flags =
                         ((*new_14).flags as libc::c_uint |
@@ -7727,7 +7727,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    '.' as i32).is_null() &&
                            inet_pton(2 as libc::c_int,
                                      a[3 as libc::c_int as usize],
-                                     &mut (*new_14).broadcast as *mut in_addr
+                                     &mut (*new_14).broadcast as *mut InAddr
                                          as *mut libc::c_void) >
                                0 as libc::c_int {
                         (*new_14).flags =
@@ -7739,7 +7739,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
             } else if inet_pton(10 as libc::c_int,
                                 a[0 as libc::c_int as usize],
-                                &mut (*new_14).start6 as *mut in6_addr as
+                                &mut (*new_14).start6 as *mut In6Addr as
                                     *mut libc::c_void) != 0 {
                 let mut err_1: *const libc::c_char = 0 as *const libc::c_char;
                 (*new_14).flags =
@@ -7815,7 +7815,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                   inet_pton(10 as libc::c_int,
                                             a[leasepos as usize],
                                             &mut (*new_14).end6 as
-                                                *mut in6_addr as
+                                                *mut In6Addr as
                                                 *mut libc::c_void) != 0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
@@ -7894,9 +7894,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
                 /* dhcp-range=:: enables DHCP stateless on any interface */
                 if ({
-                        let mut __a: *const in6_addr =
-                            &mut (*new_14).start6 as *mut in6_addr as
-                                *const in6_addr;
+                        let mut __a: *const In6Addr =
+                            &mut (*new_14).start6 as *mut In6Addr as
+                                *const In6Addr;
                         ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize]
                              == 0 as libc::c_int as libc::c_uint &&
                              (*__a).__in6_u.__u6_addr32[1 as libc::c_int as
@@ -7916,12 +7916,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
                 if (*new_14).flags as libc::c_uint &
                        (1 as libc::c_uint) << 10 as libc::c_int != 0 {
-                    let mut zero: in6_addr =
-                        in6_addr{__in6_u:
+                    let mut zero: In6Addr =
+                        In6Addr {__in6_u:
                                      C2RustUnnamed{__u6_addr8: [0; 16],},};
-                    memset(&mut zero as *mut in6_addr as *mut libc::c_void,
+                    memset(&mut zero as *mut In6Addr as *mut libc::c_void,
                            0 as libc::c_int,
-                           ::std::mem::size_of::<in6_addr>() as
+                           ::std::mem::size_of::<In6Addr>() as
                                libc::c_ulong);
                     if is_same_net6(&mut zero, &mut (*new_14).start6,
                                     (*new_14).prefix) == 0 {
@@ -7934,7 +7934,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
                 if addr6part(&mut (*new_14).start6) >
                        addr6part(&mut (*new_14).end6) {
-                    let mut tmp_1: in6_addr = (*new_14).start6;
+                    let mut tmp_1: In6Addr = (*new_14).start6;
                     (*new_14).start6 = (*new_14).end6;
                     (*new_14).end6 = tmp_1
                 }
@@ -8081,21 +8081,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         272 | 71 => {
             /* --dhcp-host */
-            let mut new_15: *mut dhcp_config = 0 as *mut dhcp_config;
-            let mut in_0: in_addr = in_addr{s_addr: 0,};
+            let mut new_15: *mut DhcpConfig = 0 as *mut DhcpConfig;
+            let mut in_0: InAddr = InAddr {s_addr: 0,};
             new_15 =
-                opt_malloc(::std::mem::size_of::<dhcp_config>() as
-                               libc::c_ulong) as *mut dhcp_config;
+                opt_malloc(::std::mem::size_of::<DhcpConfig>() as
+                               libc::c_ulong) as *mut DhcpConfig;
             (*new_15).next = (*dnsmasq_daemon).dhcp_conf;
             (*new_15).flags =
                 if option == 272 as libc::c_int {
                     2048 as libc::c_int
                 } else { 0 as libc::c_int } as libc::c_uint;
-            (*new_15).hwaddr = 0 as *mut hwaddr_config;
-            (*new_15).netid = 0 as *mut dhcp_netid_list;
-            (*new_15).filter = 0 as *mut dhcp_netid;
+            (*new_15).hwaddr = 0 as *mut HwaddrConfig;
+            (*new_15).netid = 0 as *mut DhcpNetIdList;
+            (*new_15).filter = 0 as *mut DhcpNetId;
             (*new_15).clid = 0 as *mut libc::c_uchar;
-            (*new_15).addr6 = 0 as *mut addrlist;
+            (*new_15).addr6 = 0 as *mut AddrList;
             while !arg.is_null() {
                 comma = split(arg);
                 if !strchr(arg, ':' as i32).is_null() {
@@ -8154,16 +8154,16 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                   strstr(arg,
                                          b"set:\x00" as *const u8 as
                                              *const libc::c_char) == arg {
-                        let mut newlist_0: *mut dhcp_netid_list =
-                            opt_malloc(::std::mem::size_of::<dhcp_netid_list>()
+                        let mut newlist_0: *mut DhcpNetIdList =
+                            opt_malloc(::std::mem::size_of::<DhcpNetIdList>()
                                            as libc::c_ulong) as
-                                *mut dhcp_netid_list;
+                                *mut DhcpNetIdList;
                         (*newlist_0).next = (*new_15).netid;
                         (*new_15).netid = newlist_0;
                         (*newlist_0).list =
                             dhcp_netid_create(arg.offset(4 as libc::c_int as
                                                              isize),
-                                              0 as *mut dhcp_netid)
+                                              0 as *mut DhcpNetId)
                     } else if strstr(arg,
                                      b"tag:\x00" as *const u8 as
                                          *const libc::c_char) == arg {
@@ -8181,11 +8181,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                       ']' as i32 {
                         let mut pref_1: *mut libc::c_char =
                             0 as *mut libc::c_char;
-                        let mut in6: in6_addr =
-                            in6_addr{__in6_u:
+                        let mut in6: In6Addr =
+                            In6Addr {__in6_u:
                                          C2RustUnnamed{__u6_addr8:
                                                            [0; 16],},};
-                        let mut new_addr: *mut addrlist = 0 as *mut addrlist;
+                        let mut new_addr: *mut AddrList = 0 as *mut AddrList;
                         *arg.offset(strlen(arg).wrapping_sub(1 as libc::c_int
                                                                  as
                                                                  libc::c_ulong)
@@ -8194,7 +8194,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         arg = arg.offset(1);
                         pref_1 = split_chr(arg, '/' as i32 as libc::c_char);
                         if inet_pton(10 as libc::c_int, arg,
-                                     &mut in6 as *mut in6_addr as
+                                     &mut in6 as *mut In6Addr as
                                          *mut libc::c_void) == 0 {
                             dhcp_config_free(new_15);
                             strcpy(errstr,
@@ -8203,8 +8203,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             return 0 as libc::c_int
                         }
                         new_addr =
-                            opt_malloc(::std::mem::size_of::<addrlist>() as
-                                           libc::c_ulong) as *mut addrlist;
+                            opt_malloc(::std::mem::size_of::<AddrList>() as
+                                           libc::c_ulong) as *mut AddrList;
                         (*new_addr).next = (*new_15).addr6;
                         (*new_addr).flags = 0 as libc::c_int;
                         (*new_addr).addr.addr6 = in6;
@@ -8247,10 +8247,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         }
                         (*new_15).flags |= 4096 as libc::c_int as libc::c_uint
                     } else {
-                        let mut newhw: *mut hwaddr_config =
-                            opt_malloc(::std::mem::size_of::<hwaddr_config>()
+                        let mut newhw: *mut HwaddrConfig =
+                            opt_malloc(::std::mem::size_of::<HwaddrConfig>()
                                            as libc::c_ulong) as
-                                *mut hwaddr_config;
+                                *mut HwaddrConfig;
                         (*newhw).hwaddr_len =
                             parse_hex(arg, (*newhw).hwaddr.as_mut_ptr(),
                                       16 as libc::c_int,
@@ -8270,10 +8270,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     }
                 } else if !strchr(arg, '.' as i32).is_null() &&
                               inet_pton(2 as libc::c_int, arg,
-                                        &mut in_0 as *mut in_addr as
+                                        &mut in_0 as *mut InAddr as
                                             *mut libc::c_void) >
                                   0 as libc::c_int {
-                    let mut configs: *mut dhcp_config = 0 as *mut dhcp_config;
+                    let mut configs: *mut DhcpConfig = 0 as *mut DhcpConfig;
                     (*new_15).addr = in_0;
                     (*new_15).flags |= 32 as libc::c_int as libc::c_uint;
                     /* If the same IP appears in more than one host config, then DISCOVER
@@ -8427,17 +8427,17 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         294 => {
             /* --tag-if */
-            let mut new_16: *mut tag_if =
-                opt_malloc(::std::mem::size_of::<tag_if>() as libc::c_ulong)
-                    as *mut tag_if;
-            (*new_16).tag = 0 as *mut dhcp_netid;
-            (*new_16).set = 0 as *mut dhcp_netid_list;
-            (*new_16).next = 0 as *mut tag_if;
+            let mut new_16: *mut TagIf =
+                opt_malloc(::std::mem::size_of::<TagIf>() as libc::c_ulong)
+                    as *mut TagIf;
+            (*new_16).tag = 0 as *mut DhcpNetId;
+            (*new_16).set = 0 as *mut DhcpNetIdList;
+            (*new_16).next = 0 as *mut TagIf;
             /* preserve order */
             if (*dnsmasq_daemon).tag_if.is_null() {
                 (*dnsmasq_daemon).tag_if = new_16
             } else {
-                let mut tmp_2: *mut tag_if = 0 as *mut tag_if;
+                let mut tmp_2: *mut TagIf = 0 as *mut TagIf;
                 tmp_2 = (*dnsmasq_daemon).tag_if;
                 while !(*tmp_2).next.is_null() { tmp_2 = (*tmp_2).next }
                 (*tmp_2).next = new_16
@@ -8447,20 +8447,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 comma = split(arg);
                 len_1 = strlen(arg);
                 if len_1 < 5 as libc::c_int as libc::c_ulong {
-                    (*new_16).set = 0 as *mut dhcp_netid_list;
+                    (*new_16).set = 0 as *mut DhcpNetIdList;
                     break ;
                 } else {
-                    let mut newtag: *mut dhcp_netid =
+                    let mut newtag: *mut DhcpNetId =
                         dhcp_netid_create(arg.offset(4 as libc::c_int as
                                                          isize),
-                                          0 as *mut dhcp_netid);
+                                          0 as *mut DhcpNetId);
                     if strstr(arg,
                               b"set:\x00" as *const u8 as *const libc::c_char)
                            == arg {
-                        let mut newlist_1: *mut dhcp_netid_list =
-                            opt_malloc(::std::mem::size_of::<dhcp_netid_list>()
+                        let mut newlist_1: *mut DhcpNetIdList =
+                            opt_malloc(::std::mem::size_of::<DhcpNetIdList>()
                                            as libc::c_ulong) as
-                                *mut dhcp_netid_list;
+                                *mut DhcpNetIdList;
                         (*newlist_1).next = (*new_16).set;
                         (*new_16).set = newlist_1;
                         (*newlist_1).list = newtag
@@ -8470,7 +8470,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         (*newtag).next = (*new_16).tag;
                         (*new_16).tag = newtag
                     } else {
-                        (*new_16).set = 0 as *mut dhcp_netid_list;
+                        (*new_16).set = 0 as *mut DhcpNetIdList;
                         dhcp_netid_free(newtag);
                         break ;
                     }
@@ -8494,12 +8494,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         264 | 279 | 281 => { current_block = 18295461473828413614; }
         355 => {
             /* --dhcp-name-match */
-            let mut new_17: *mut dhcp_match_name =
-                opt_malloc(::std::mem::size_of::<dhcp_match_name>() as
-                               libc::c_ulong) as *mut dhcp_match_name;
-            let mut id: *mut dhcp_netid =
-                opt_malloc(::std::mem::size_of::<dhcp_netid>() as
-                               libc::c_ulong) as *mut dhcp_netid;
+            let mut new_17: *mut DhcpMatchName =
+                opt_malloc(::std::mem::size_of::<DhcpMatchName>() as
+                               libc::c_ulong) as *mut DhcpMatchName;
+            let mut id: *mut DhcpNetId =
+                opt_malloc(::std::mem::size_of::<DhcpNetId>() as
+                               libc::c_ulong) as *mut DhcpNetId;
             let mut len_2: susize = 0;
             comma = split(arg);
             if comma.is_null() ||
@@ -8526,7 +8526,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         77 => {
             /* --dhcp-boot */
-            let mut id_0: *mut dhcp_netid = dhcp_tags(&mut arg);
+            let mut id_0: *mut DhcpNetId = dhcp_tags(&mut arg);
             if arg.is_null() {
                 strcpy(errstr, gen_err);
                 return 0 as libc::c_int
@@ -8536,8 +8536,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     0 as *mut libc::c_char;
                 let mut tftp_sname: *mut libc::c_char =
                     0 as *mut libc::c_char;
-                let mut dhcp_next_server: in_addr = in_addr{s_addr: 0,};
-                let mut new_18: *mut dhcp_boot = 0 as *mut dhcp_boot;
+                let mut dhcp_next_server: InAddr = InAddr {s_addr: 0,};
+                let mut new_18: *mut DhcpBoot = 0 as *mut DhcpBoot;
                 comma = split(arg);
                 dhcp_file = opt_string_alloc(arg);
                 dhcp_next_server.s_addr = 0 as libc::c_int as in_addr_t;
@@ -8548,7 +8548,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     if !comma.is_null() {
                         unhide_metas(comma);
                         if !(inet_pton(2 as libc::c_int, comma,
-                                       &mut dhcp_next_server as *mut in_addr
+                                       &mut dhcp_next_server as *mut InAddr
                                            as *mut libc::c_void) >
                                  0 as libc::c_int) {
                             /*
@@ -8563,8 +8563,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     }
                 }
                 new_18 =
-                    opt_malloc(::std::mem::size_of::<dhcp_boot>() as
-                                   libc::c_ulong) as *mut dhcp_boot;
+                    opt_malloc(::std::mem::size_of::<DhcpBoot>() as
+                                   libc::c_ulong) as *mut DhcpBoot;
                 (*new_18).file = dhcp_file;
                 (*new_18).sname = dhcp_sname;
                 (*new_18).tftp_sname = tftp_sname;
@@ -8577,20 +8577,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         350 => {
             /* --dhcp-reply-delay */
-            let mut id_1: *mut dhcp_netid = dhcp_tags(&mut arg);
+            let mut id_1: *mut DhcpNetId = dhcp_tags(&mut arg);
             if arg.is_null() {
                 strcpy(errstr, gen_err);
                 return 0 as libc::c_int
             } else {
-                let mut new_19: *mut delay_config = 0 as *mut delay_config;
+                let mut new_19: *mut DelayConfig = 0 as *mut DelayConfig;
                 let mut delay: libc::c_int = 0;
                 if atoi_check(arg, &mut delay) == 0 {
                     strcpy(errstr, gen_err);
                     return 0 as libc::c_int
                 }
                 new_19 =
-                    opt_malloc(::std::mem::size_of::<delay_config>() as
-                                   libc::c_ulong) as *mut delay_config;
+                    opt_malloc(::std::mem::size_of::<DelayConfig>() as
+                                   libc::c_ulong) as *mut DelayConfig;
                 (*new_19).delay = delay;
                 (*new_19).netid = id_1;
                 (*new_19).next = (*dnsmasq_daemon).delay_conf;
@@ -8600,11 +8600,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         291 => {
             /* --pxe-prompt */
-            let mut new_20: *mut dhcp_opt =
-                opt_malloc(::std::mem::size_of::<dhcp_opt>() as libc::c_ulong)
-                    as *mut dhcp_opt; /* PXE_MENU_PROMPT */
+            let mut new_20: *mut DhcpOpt =
+                opt_malloc(::std::mem::size_of::<DhcpOpt>() as libc::c_ulong)
+                    as *mut DhcpOpt; /* PXE_MENU_PROMPT */
             let mut timeout: libc::c_int = 0;
-            (*new_20).netid = 0 as *mut dhcp_netid;
+            (*new_20).netid = 0 as *mut DhcpNetId;
             (*new_20).opt = 10 as libc::c_int;
             (*new_20).netid = dhcp_tags(&mut arg);
             if arg.is_null() {
@@ -8638,10 +8638,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         292 => {
             /* --pxe-service */
-            let mut new_21: *mut pxe_service =
-                opt_malloc(::std::mem::size_of::<pxe_service>() as
+            let mut new_21: *mut PxeService =
+                opt_malloc(::std::mem::size_of::<PxeService>() as
                                libc::c_ulong) as
-                    *mut pxe_service; /* local boot */
+                    *mut PxeService; /* local boot */
             let mut CSA: [*mut libc::c_char; 13] =
                 [b"x86PC\x00" as *const u8 as *const libc::c_char as
                      *mut libc::c_char,
@@ -8668,7 +8668,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                  b"ARM64_EFI\x00" as *const u8 as *const libc::c_char as
                      *mut libc::c_char, 0 as *mut libc::c_char];
             static mut boottype: libc::c_int = 32768 as libc::c_int;
-            (*new_21).netid = 0 as *mut dhcp_netid;
+            (*new_21).netid = 0 as *mut DhcpNetId;
             (*new_21).sname = 0 as *mut libc::c_char;
             (*new_21).server.s_addr = 0 as libc::c_int as in_addr_t;
             (*new_21).netid = dhcp_tags(&mut arg);
@@ -8703,7 +8703,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         }
                         if !comma.is_null() {
                             if inet_pton(2 as libc::c_int, comma,
-                                         &mut (*new_21).server as *mut in_addr
+                                         &mut (*new_21).server as *mut InAddr
                                              as *mut libc::c_void) == 0 {
                                 (*new_21).server.s_addr =
                                     0 as libc::c_int as in_addr_t;
@@ -8712,11 +8712,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         }
                     }
                     /* Order matters */
-                    (*new_21).next = 0 as *mut pxe_service;
+                    (*new_21).next = 0 as *mut PxeService;
                     if (*dnsmasq_daemon).pxe_services.is_null() {
                         (*dnsmasq_daemon).pxe_services = new_21
                     } else {
-                        let mut s: *mut pxe_service = 0 as *mut pxe_service;
+                        let mut s: *mut PxeService = 0 as *mut PxeService;
                         s = (*dnsmasq_daemon).pxe_services;
                         while !(*s).next.is_null() { s = (*s).next }
                         (*s).next = new_21
@@ -8737,9 +8737,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr, gen_err);
                 return 0 as libc::c_int
             } else {
-                let mut new_22: *mut dhcp_mac =
-                    opt_malloc(::std::mem::size_of::<dhcp_mac>() as
-                                   libc::c_ulong) as *mut dhcp_mac;
+                let mut new_22: *mut DhcpMac =
+                    opt_malloc(::std::mem::size_of::<DhcpMac>() as
+                                   libc::c_ulong) as *mut DhcpMac;
                 (*new_22).netid.net = opt_string_alloc(set_prefix(arg));
                 unhide_metas(comma);
                 (*new_22).hwaddr_len =
@@ -8803,12 +8803,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* --dhcp-proxy */
             (*dnsmasq_daemon).override_0 = 1 as libc::c_int;
             while !arg.is_null() {
-                let mut new_25: *mut addr_list =
-                    opt_malloc(::std::mem::size_of::<addr_list>() as
-                                   libc::c_ulong) as *mut addr_list;
+                let mut new_25: *mut AddrList2 =
+                    opt_malloc(::std::mem::size_of::<AddrList2>() as
+                                   libc::c_ulong) as *mut AddrList2;
                 comma = split(arg);
                 if !(inet_pton(2 as libc::c_int, arg,
-                               &mut (*new_25).addr as *mut in_addr as
+                               &mut (*new_25).addr as *mut InAddr as
                                    *mut libc::c_void) > 0 as libc::c_int) {
                     strcpy(errstr,
                            b"bad dhcp-proxy address\x00" as *const u8 as
@@ -8825,9 +8825,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         361 => {
             /* --dhcp-pxe-vendor */
             while !arg.is_null() {
-                let mut new_26: *mut dhcp_pxe_vendor =
-                    opt_malloc(::std::mem::size_of::<dhcp_pxe_vendor>() as
-                                   libc::c_ulong) as *mut dhcp_pxe_vendor;
+                let mut new_26: *mut DhcpPxeVendor =
+                    opt_malloc(::std::mem::size_of::<DhcpPxeVendor>() as
+                                   libc::c_ulong) as *mut DhcpPxeVendor;
                 comma = split(arg);
                 (*new_26).data = opt_string_alloc(arg);
                 (*new_26).next = (*dnsmasq_daemon).dhcp_pxe_vendors;
@@ -8838,25 +8838,25 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         323 => {
             /* --dhcp-relay */
-            let mut new_27: *mut dhcp_relay =
-                opt_malloc(::std::mem::size_of::<dhcp_relay>() as
-                               libc::c_ulong) as *mut dhcp_relay;
+            let mut new_27: *mut DhcpRelay =
+                opt_malloc(::std::mem::size_of::<DhcpRelay>() as
+                               libc::c_ulong) as *mut DhcpRelay;
             comma = split(arg);
             (*new_27).interface = opt_string_alloc(split(comma));
             (*new_27).iface_index = 0 as libc::c_int;
             if inet_pton(2 as libc::c_int, arg,
-                         &mut (*new_27).local as *mut all_addr as
+                         &mut (*new_27).local as *mut AllAddr as
                              *mut libc::c_void) != 0 &&
                    inet_pton(2 as libc::c_int, comma,
-                             &mut (*new_27).server as *mut all_addr as
+                             &mut (*new_27).server as *mut AllAddr as
                                  *mut libc::c_void) != 0 {
                 (*new_27).next = (*dnsmasq_daemon).relay4;
                 (*dnsmasq_daemon).relay4 = new_27
             } else if inet_pton(10 as libc::c_int, arg,
-                                &mut (*new_27).local as *mut all_addr as
+                                &mut (*new_27).local as *mut AllAddr as
                                     *mut libc::c_void) != 0 &&
                           inet_pton(10 as libc::c_int, comma,
-                                    &mut (*new_27).server as *mut all_addr as
+                                    &mut (*new_27).server as *mut AllAddr as
                                         *mut libc::c_void) != 0 {
                 (*new_27).next = (*dnsmasq_daemon).relay6;
                 (*dnsmasq_daemon).relay6 = new_27
@@ -8874,9 +8874,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* --ra-param */
             comma = split(arg);
             if !comma.is_null() {
-                let mut new_28: *mut ra_interface =
-                    opt_malloc(::std::mem::size_of::<ra_interface>() as
-                                   libc::c_ulong) as *mut ra_interface;
+                let mut new_28: *mut RaInterface =
+                    opt_malloc(::std::mem::size_of::<RaInterface>() as
+                                   libc::c_ulong) as *mut RaInterface;
                 (*new_28).lifetime = -(1 as libc::c_int);
                 (*new_28).prio = 0 as libc::c_int;
                 (*new_28).mtu = 0 as libc::c_int;
@@ -8975,9 +8975,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 [0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char];
             let mut k_0: libc::c_int = 0 as libc::c_int;
-            let mut new_29: *mut doctor =
-                opt_malloc(::std::mem::size_of::<doctor>() as libc::c_ulong)
-                    as *mut doctor;
+            let mut new_29: *mut Doctor =
+                opt_malloc(::std::mem::size_of::<Doctor>() as libc::c_ulong)
+                    as *mut Doctor;
             (*new_29).next = (*dnsmasq_daemon).doctors;
             (*dnsmasq_daemon).doctors = new_29;
             (*new_29).mask.s_addr = 0xffffffff as libc::c_uint;
@@ -8999,16 +8999,16 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             if k_0 < 2 as libc::c_int ||
                    !(inet_pton(2 as libc::c_int,
                                a_0[0 as libc::c_int as usize],
-                               &mut (*new_29).in_0 as *mut in_addr as
+                               &mut (*new_29).in_0 as *mut InAddr as
                                    *mut libc::c_void) > 0 as libc::c_int) ||
                    !(inet_pton(2 as libc::c_int,
                                a_0[1 as libc::c_int as usize],
-                               &mut (*new_29).out as *mut in_addr as
+                               &mut (*new_29).out as *mut InAddr as
                                    *mut libc::c_void) > 0 as libc::c_int) ||
                    k_0 == 3 as libc::c_int &&
                        inet_pton(2 as libc::c_int,
                                  a_0[2 as libc::c_int as usize],
-                                 &mut (*new_29).mask as *mut in_addr as
+                                 &mut (*new_29).mask as *mut InAddr as
                                      *mut libc::c_void) == 0 {
                 strcpy(errstr,
                        b"missing address in alias\x00" as *const u8 as
@@ -9017,7 +9017,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             }
             if !dash.is_null() &&
                    (!(inet_pton(2 as libc::c_int, dash,
-                                &mut (*new_29).end as *mut in_addr as
+                                &mut (*new_29).end as *mut InAddr as
                                     *mut libc::c_void) > 0 as libc::c_int) ||
                         is_same_net((*new_29).in_0, (*new_29).end,
                                     (*new_29).mask) == 0 ||
@@ -9033,9 +9033,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         271 => {
             /* --interface-name */
-            let mut new_30: *mut interface_name = 0 as *mut interface_name;
-            let mut up_0: *mut *mut interface_name =
-                0 as *mut *mut interface_name;
+            let mut new_30: *mut InterfaceName = 0 as *mut InterfaceName;
+            let mut up_0: *mut *mut InterfaceName =
+                0 as *mut *mut InterfaceName;
             let mut domain_1: *mut libc::c_char = 0 as *mut libc::c_char;
             comma = split(arg);
             if comma.is_null() ||
@@ -9046,10 +9046,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             }
             new_30 =
-                opt_malloc(::std::mem::size_of::<interface_name>() as
-                               libc::c_ulong) as *mut interface_name;
-            (*new_30).next = 0 as *mut interface_name;
-            (*new_30).addr = 0 as *mut addrlist;
+                opt_malloc(::std::mem::size_of::<InterfaceName>() as
+                               libc::c_ulong) as *mut InterfaceName;
+            (*new_30).next = 0 as *mut InterfaceName;
+            (*new_30).addr = 0 as *mut AddrList;
             /* Add to the end of the list, so that first name
 	   of an interface is used for PTR lookups. */
             up_0 = &mut (*dnsmasq_daemon).int_names;
@@ -9077,7 +9077,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         290 => {
             /* --cname */
-            let mut new_31: *mut cname = 0 as *mut cname;
+            let mut new_31: *mut Cname = 0 as *mut Cname;
             let mut alias: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut target_0: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut last_0: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -9124,8 +9124,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     new_31 = (*new_31).next
                 }
                 new_31 =
-                    opt_malloc(::std::mem::size_of::<cname>() as
-                                   libc::c_ulong) as *mut cname;
+                    opt_malloc(::std::mem::size_of::<Cname>() as
+                                   libc::c_ulong) as *mut Cname;
                 (*new_31).next = (*dnsmasq_daemon).cnames;
                 (*dnsmasq_daemon).cnames = new_31;
                 (*new_31).alias = alias;
@@ -9145,7 +9145,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         261 => {
             /* --ptr-record */
-            let mut new_32: *mut ptr_record = 0 as *mut ptr_record;
+            let mut new_32: *mut PtrRecord = 0 as *mut PtrRecord;
             let mut dom: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut target_1: *mut libc::c_char = 0 as *mut libc::c_char;
             comma = split(arg);
@@ -9164,8 +9164,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             } else {
                 new_32 =
-                    opt_malloc(::std::mem::size_of::<ptr_record>() as
-                                   libc::c_ulong) as *mut ptr_record;
+                    opt_malloc(::std::mem::size_of::<PtrRecord>() as
+                                   libc::c_ulong) as *mut PtrRecord;
                 (*new_32).next = (*dnsmasq_daemon).ptr;
                 (*dnsmasq_daemon).ptr = new_32;
                 (*new_32).name = dom;
@@ -9181,7 +9181,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                  0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char];
             let mut k_1: libc::c_int = 0 as libc::c_int;
-            let mut new_33: *mut naptr = 0 as *mut naptr;
+            let mut new_33: *mut NaPtr = 0 as *mut NaPtr;
             let mut order: libc::c_int = 0;
             let mut pref_2: libc::c_int = 0;
             let mut name_2: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -9221,8 +9221,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             } else {
                 new_33 =
-                    opt_malloc(::std::mem::size_of::<naptr>() as
-                                   libc::c_ulong) as *mut naptr;
+                    opt_malloc(::std::mem::size_of::<NaPtr>() as
+                                   libc::c_ulong) as *mut NaPtr;
                 (*new_33).next = (*dnsmasq_daemon).naptr;
                 (*dnsmasq_daemon).naptr = new_33;
                 (*new_33).name = name_2;
@@ -9240,15 +9240,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         310 => {
             /* dns-rr */
-            let mut new_34: *mut txt_record = 0 as *mut txt_record;
+            let mut new_34: *mut TxtRecord = 0 as *mut TxtRecord;
             let mut len_3: usize = 0 as libc::c_int as usize;
             let mut data: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut class: libc::c_int = 0;
             comma = split(arg);
             data = split(comma);
             new_34 =
-                opt_malloc(::std::mem::size_of::<txt_record>() as
-                               libc::c_ulong) as *mut txt_record;
+                opt_malloc(::std::mem::size_of::<TxtRecord>() as
+                               libc::c_ulong) as *mut TxtRecord;
             (*new_34).name = 0 as *mut libc::c_char;
             if atoi_check(comma, &mut class) == 0 ||
                    {
@@ -9287,7 +9287,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         356 => {
             /* --caa-record */
-            let mut new_35: *mut txt_record = 0 as *mut txt_record;
+            let mut new_35: *mut TxtRecord = 0 as *mut TxtRecord;
             let mut tag: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut value: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut flags: libc::c_int = 0;
@@ -9295,8 +9295,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             tag = split(comma);
             value = split(tag);
             new_35 =
-                opt_malloc(::std::mem::size_of::<txt_record>() as
-                               libc::c_ulong) as *mut txt_record;
+                opt_malloc(::std::mem::size_of::<TxtRecord>() as
+                               libc::c_ulong) as *mut TxtRecord;
             (*new_35).next = (*dnsmasq_daemon).rr;
             (*dnsmasq_daemon).rr = new_35;
             if atoi_check(comma, &mut flags) == 0 || tag.is_null() ||
@@ -9342,15 +9342,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         89 => {
             /* --txt-record */
-            let mut new_36: *mut txt_record =
-                0 as *mut txt_record; /* room for extra counts */
+            let mut new_36: *mut TxtRecord =
+                0 as *mut TxtRecord; /* room for extra counts */
             let mut p_0: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
             let mut cnt: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
             let mut len_4: usize = 0;
             comma = split(arg);
             new_36 =
-                opt_malloc(::std::mem::size_of::<txt_record>() as
-                               libc::c_ulong) as *mut txt_record;
+                opt_malloc(::std::mem::size_of::<TxtRecord>() as
+                               libc::c_ulong) as *mut TxtRecord;
             (*new_36).class = 1 as libc::c_int as libc::c_ushort;
             (*new_36).stat = 0 as libc::c_int;
             (*new_36).name = canonicalise_opt(arg);
@@ -9417,7 +9417,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut weight: libc::c_int = 0 as libc::c_int;
             let mut name_3: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut target_2: *mut libc::c_char = 0 as *mut libc::c_char;
-            let mut new_37: *mut mx_srv_record = 0 as *mut mx_srv_record;
+            let mut new_37: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
             comma = split(arg);
             name_3 = canonicalise_opt(arg);
             if name_3.is_null() {
@@ -9472,8 +9472,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
             }
             new_37 =
-                opt_malloc(::std::mem::size_of::<mx_srv_record>() as
-                               libc::c_ulong) as *mut mx_srv_record;
+                opt_malloc(::std::mem::size_of::<MxSrvRecord>() as
+                               libc::c_ulong) as *mut MxSrvRecord;
             (*new_37).next = (*dnsmasq_daemon).mxnames;
             (*dnsmasq_daemon).mxnames = new_37;
             (*new_37).issrv = 1 as libc::c_int;
@@ -9486,7 +9486,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         308 => {
             /* --host-record */
-            let mut new_38: *mut host_record = 0 as *mut host_record;
+            let mut new_38: *mut HostRecord = 0 as *mut HostRecord;
             if arg.is_null() || { comma = split(arg); comma.is_null() } {
                 strcpy(errstr,
                        b"Bad host-record\x00" as *const u8 as
@@ -9494,15 +9494,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 return 0 as libc::c_int
             }
             new_38 =
-                opt_malloc(::std::mem::size_of::<host_record>() as
-                               libc::c_ulong) as *mut host_record;
+                opt_malloc(::std::mem::size_of::<HostRecord>() as
+                               libc::c_ulong) as *mut HostRecord;
             memset(new_38 as *mut libc::c_void, 0 as libc::c_int,
-                   ::std::mem::size_of::<host_record>() as libc::c_ulong);
+                   ::std::mem::size_of::<HostRecord>() as libc::c_ulong);
             (*new_38).ttl = -(1 as libc::c_int);
             (*new_38).flags = 0 as libc::c_int;
             while !arg.is_null() {
-                let mut addr_1: all_addr =
-                    all_addr{addr4: in_addr{s_addr: 0,},};
+                let mut addr_1: AllAddr =
+                    AllAddr {addr4: InAddr {s_addr: 0,},};
                 let mut dig_0: *mut libc::c_char = 0 as *mut libc::c_char;
                 dig_0 = arg;
                 while *dig_0 as libc::c_int != 0 as libc::c_int {
@@ -9515,12 +9515,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 if *dig_0 as libc::c_int == 0 as libc::c_int {
                     (*new_38).ttl = atoi(arg)
                 } else if inet_pton(2 as libc::c_int, arg,
-                                    &mut addr_1.addr4 as *mut in_addr as
+                                    &mut addr_1.addr4 as *mut InAddr as
                                         *mut libc::c_void) != 0 {
                     (*new_38).addr = addr_1.addr4;
                     (*new_38).flags |= 2 as libc::c_int
                 } else if inet_pton(10 as libc::c_int, arg,
-                                    &mut addr_1.addr6 as *mut in6_addr as
+                                    &mut addr_1.addr6 as *mut In6Addr as
                                         *mut libc::c_void) != 0 {
                     (*new_38).addr6 = addr_1.addr6;
                     (*new_38).flags |= 1 as libc::c_int
@@ -9528,10 +9528,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     let mut nomem: libc::c_int = 0;
                     let mut canon: *mut libc::c_char =
                         canonicalise(arg, &mut nomem);
-                    let mut nl: *mut name_list = 0 as *mut name_list;
+                    let mut nl: *mut NameList = 0 as *mut NameList;
                     if canon.is_null() {
-                        let mut tmp_3: *mut name_list = (*new_38).names;
-                        let mut next: *mut name_list = 0 as *mut name_list;
+                        let mut tmp_3: *mut NameList = (*new_38).names;
+                        let mut next: *mut NameList = 0 as *mut NameList;
                         tmp_3 = (*new_38).names;
                         while !tmp_3.is_null() {
                             next = (*tmp_3).next;
@@ -9545,15 +9545,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         return 0 as libc::c_int
                     }
                     nl =
-                        opt_malloc(::std::mem::size_of::<name_list>() as
-                                       libc::c_ulong) as *mut name_list;
+                        opt_malloc(::std::mem::size_of::<NameList>() as
+                                       libc::c_ulong) as *mut NameList;
                     (*nl).name = canon;
                     /* keep order, so that PTR record goes to first name */
-                    (*nl).next = 0 as *mut name_list;
+                    (*nl).next = 0 as *mut NameList;
                     if (*new_38).names.is_null() {
                         (*new_38).names = nl
                     } else {
-                        let mut tmp_4: *mut name_list = 0 as *mut name_list;
+                        let mut tmp_4: *mut NameList = 0 as *mut NameList;
                         tmp_4 = (*new_38).names;
                         while !(*tmp_4).next.is_null() {
                             tmp_4 = (*tmp_4).next
@@ -9568,7 +9568,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             if (*dnsmasq_daemon).host_records_tail.is_null() {
                 (*dnsmasq_daemon).host_records = new_38
             } else { (*(*dnsmasq_daemon).host_records_tail).next = new_38 }
-            (*new_38).next = 0 as *mut host_record;
+            (*new_38).next = 0 as *mut HostRecord;
             (*dnsmasq_daemon).host_records_tail = new_38;
             current_block = 7879481898411272068;
         }
@@ -9583,15 +9583,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         2926860427235594157 =>
         /* --ignore-address */
         {
-            let mut addr_0: in_addr = in_addr{s_addr: 0,}; /* error */
+            let mut addr_0: InAddr = InAddr {s_addr: 0,}; /* error */
             unhide_metas(arg);
             if !arg.is_null() &&
                    inet_pton(2 as libc::c_int, arg,
-                             &mut addr_0 as *mut in_addr as *mut libc::c_void)
+                             &mut addr_0 as *mut InAddr as *mut libc::c_void)
                        > 0 as libc::c_int {
-                let mut baddr: *mut bogus_addr =
-                    opt_malloc(::std::mem::size_of::<bogus_addr>() as
-                                   libc::c_ulong) as *mut bogus_addr;
+                let mut baddr: *mut BogusAddr =
+                    opt_malloc(::std::mem::size_of::<BogusAddr>() as
+                                   libc::c_ulong) as *mut BogusAddr;
                 if option == 'B' as i32 {
                     (*baddr).next = (*dnsmasq_daemon).bogus_addr;
                     (*dnsmasq_daemon).bogus_addr = baddr
@@ -9614,9 +9614,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             loop 
                  /* --no-dhcp-interface */
                  {
-                let mut new_9: *mut iname =
-                    opt_malloc(::std::mem::size_of::<iname>() as
-                                   libc::c_ulong) as *mut iname;
+                let mut new_9: *mut Iname =
+                    opt_malloc(::std::mem::size_of::<Iname>() as
+                                   libc::c_ulong) as *mut Iname;
                 comma = split(arg);
                 (*new_9).name = opt_string_alloc(arg);
                 if option == 'I' as i32 {
@@ -9701,8 +9701,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         14399141444697241811 =>
         /*  --rebind-domain-ok */
         {
-            let mut serv_1: *mut server = 0 as *mut server;
-            let mut newlist: *mut server = 0 as *mut server;
+            let mut serv_1: *mut Server = 0 as *mut Server;
+            let mut newlist: *mut Server = 0 as *mut Server;
             unhide_metas(arg);
             if !arg.is_null() &&
                    (*arg as libc::c_int == '/' as i32 ||
@@ -9740,10 +9740,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         return 0 as libc::c_int
                     }
                     serv_1 =
-                        opt_malloc(::std::mem::size_of::<server>() as
-                                       libc::c_ulong) as *mut server;
+                        opt_malloc(::std::mem::size_of::<Server>() as
+                                       libc::c_ulong) as *mut Server;
                     memset(serv_1 as *mut libc::c_void, 0 as libc::c_int,
-                           ::std::mem::size_of::<server>() as libc::c_ulong);
+                           ::std::mem::size_of::<Server>() as libc::c_ulong);
                     (*serv_1).next = newlist;
                     newlist = serv_1;
                     (*serv_1).domain = domain;
@@ -9760,10 +9760,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 }
             } else {
                 newlist =
-                    opt_malloc(::std::mem::size_of::<server>() as
-                                   libc::c_ulong) as *mut server;
+                    opt_malloc(::std::mem::size_of::<Server>() as
+                                   libc::c_ulong) as *mut Server;
                 memset(newlist as *mut libc::c_void, 0 as libc::c_int,
-                       ::std::mem::size_of::<server>() as libc::c_ulong);
+                       ::std::mem::size_of::<Server>() as libc::c_ulong);
                 (*newlist).uid = rand32()
             }
             if servers_only != 0 && option == 'S' as i32 {
@@ -9841,10 +9841,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         8762260891357387630 =>
         /* --dhcp-generate-names */
         {
-            let mut new_24: *mut dhcp_netid_list =
-                opt_malloc(::std::mem::size_of::<dhcp_netid_list>() as
-                               libc::c_ulong) as *mut dhcp_netid_list;
-            let mut list_1: *mut dhcp_netid = 0 as *mut dhcp_netid;
+            let mut new_24: *mut DhcpNetIdList =
+                opt_malloc(::std::mem::size_of::<DhcpNetIdList>() as
+                               libc::c_ulong) as *mut DhcpNetIdList;
+            let mut list_1: *mut DhcpNetId = 0 as *mut DhcpNetId;
             if option == 'J' as i32 {
                 (*new_24).next = (*dnsmasq_daemon).dhcp_ignore;
                 (*dnsmasq_daemon).dhcp_ignore = new_24
@@ -9878,9 +9878,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         {
             let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
             let mut dig: libc::c_int = 0 as libc::c_int;
-            let mut new_23: *mut dhcp_vendor =
-                opt_malloc(::std::mem::size_of::<dhcp_vendor>() as
-                               libc::c_ulong) as *mut dhcp_vendor;
+            let mut new_23: *mut DhcpVendor =
+                opt_malloc(::std::mem::size_of::<DhcpVendor>() as
+                               libc::c_ulong) as *mut DhcpVendor;
             comma = split(arg);
             if comma.is_null() {
                 strcpy(errstr, gen_err);
@@ -9965,9 +9965,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         4533671380017093834 =>
         /* --addn-hosts */
         {
-            let mut new_3: *mut hostsfile =
-                opt_malloc(::std::mem::size_of::<hostsfile>() as
-                               libc::c_ulong) as *mut hostsfile;
+            let mut new_3: *mut HostsFile =
+                opt_malloc(::std::mem::size_of::<HostsFile>() as
+                               libc::c_ulong) as *mut HostsFile;
             static mut hosts_index: libc::c_uint =
                 3 as libc::c_int as libc::c_uint;
             (*new_3).fname = opt_string_alloc(arg);
@@ -10346,10 +10346,10 @@ unsafe extern "C" fn one_file(mut file: *mut libc::c_char,
 }
 /* expand any name which is a directory */
 #[no_mangle]
-pub unsafe extern "C" fn expand_filelist(mut list: *mut hostsfile)
- -> *mut hostsfile {
+pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
+ -> *mut HostsFile {
     let mut i: libc::c_uint = 0;
-    let mut ah: *mut hostsfile = 0 as *mut hostsfile;
+    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
     /* find largest used index */
     i = 3 as libc::c_int as libc::c_uint;
     ah = list;
@@ -10401,7 +10401,7 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut hostsfile)
                         let mut lendir: usize = strlen((*ah).fname);
                         let mut lenfile: usize =
                             strlen((*ent).d_name.as_mut_ptr());
-                        let mut ah1: *mut hostsfile = 0 as *mut hostsfile;
+                        let mut ah1: *mut HostsFile = 0 as *mut HostsFile;
                         let mut path: *mut libc::c_char =
                             0 as *mut libc::c_char;
                         /* ignore emacs backups and dotfiles */
@@ -10450,9 +10450,9 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut hostsfile)
                         /* make new record */
                         if ah1.is_null() {
                             ah1 =
-                                whine_malloc(::std::mem::size_of::<hostsfile>()
+                                whine_malloc(::std::mem::size_of::<HostsFile>()
                                                  as libc::c_ulong) as
-                                    *mut hostsfile;
+                                    *mut HostsFile;
                             if ah1.is_null() { continue ; }
                             path =
                                 whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2
@@ -10517,19 +10517,19 @@ pub unsafe extern "C" fn read_servers_file() {
     read_file((*dnsmasq_daemon).servers_file, f, 332 as libc::c_int);
 }
 unsafe extern "C" fn clear_dynamic_conf() {
-    let mut configs: *mut dhcp_config = 0 as *mut dhcp_config;
-    let mut cp: *mut dhcp_config = 0 as *mut dhcp_config;
-    let mut up: *mut *mut dhcp_config = 0 as *mut *mut dhcp_config;
+    let mut configs: *mut DhcpConfig = 0 as *mut DhcpConfig;
+    let mut cp: *mut DhcpConfig = 0 as *mut DhcpConfig;
+    let mut up: *mut *mut DhcpConfig = 0 as *mut *mut DhcpConfig;
     /* remove existing... */
     up = &mut (*dnsmasq_daemon).dhcp_conf;
     configs = (*dnsmasq_daemon).dhcp_conf;
     while !configs.is_null() {
         cp = (*configs).next;
         if (*configs).flags & 2048 as libc::c_int as libc::c_uint != 0 {
-            let mut mac: *mut hwaddr_config = 0 as *mut hwaddr_config;
-            let mut tmp: *mut hwaddr_config = 0 as *mut hwaddr_config;
-            let mut list: *mut dhcp_netid_list = 0 as *mut dhcp_netid_list;
-            let mut tmplist: *mut dhcp_netid_list = 0 as *mut dhcp_netid_list;
+            let mut mac: *mut HwaddrConfig = 0 as *mut HwaddrConfig;
+            let mut tmp: *mut HwaddrConfig = 0 as *mut HwaddrConfig;
+            let mut list: *mut DhcpNetIdList = 0 as *mut DhcpNetIdList;
+            let mut tmplist: *mut DhcpNetIdList = 0 as *mut DhcpNetIdList;
             mac = (*configs).hwaddr;
             while !mac.is_null() {
                 tmp = (*mac).next;
@@ -10556,11 +10556,11 @@ unsafe extern "C" fn clear_dynamic_conf() {
     };
 }
 unsafe extern "C" fn clear_dynamic_opt() {
-    let mut opts_0: *mut dhcp_opt = 0 as *mut dhcp_opt;
-    let mut cp: *mut dhcp_opt = 0 as *mut dhcp_opt;
-    let mut up: *mut *mut dhcp_opt = 0 as *mut *mut dhcp_opt;
-    let mut id: *mut dhcp_netid = 0 as *mut dhcp_netid;
-    let mut next: *mut dhcp_netid = 0 as *mut dhcp_netid;
+    let mut opts_0: *mut DhcpOpt = 0 as *mut DhcpOpt;
+    let mut cp: *mut DhcpOpt = 0 as *mut DhcpOpt;
+    let mut up: *mut *mut DhcpOpt = 0 as *mut *mut DhcpOpt;
+    let mut id: *mut DhcpNetId = 0 as *mut DhcpNetId;
+    let mut next: *mut DhcpNetId = 0 as *mut DhcpNetId;
     up = &mut (*dnsmasq_daemon).dhcp_opts;
     opts_0 = (*dnsmasq_daemon).dhcp_opts;
     while !opts_0.is_null() {
@@ -10585,7 +10585,7 @@ unsafe extern "C" fn clear_dynamic_opt() {
 }
 #[no_mangle]
 pub unsafe extern "C" fn reread_dhcp() {
-    let mut hf: *mut hostsfile = 0 as *mut hostsfile;
+    let mut hf: *mut HostsFile = 0 as *mut HostsFile;
     /* Do these even if there is no daemon->dhcp_hosts_file or
       daemon->dhcp_opts_file since entries may have been created by the
       inotify dynamic file reading system. */
@@ -10625,7 +10625,7 @@ pub unsafe extern "C" fn reread_dhcp() {
     }
     /* Setup notify and read pre-existing files. */
     set_dynamic_inotify(16 as libc::c_int | 32 as libc::c_int,
-                        0 as libc::c_int, 0 as *mut *mut crec,
+                        0 as libc::c_int, 0 as *mut *mut Crec,
                         0 as libc::c_int);
 }
 #[no_mangle]
@@ -10643,10 +10643,10 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
     let mut conffile: *mut libc::c_char = 0 as *mut libc::c_char;
     opterr = 0 as libc::c_int;
     dnsmasq_daemon =
-        opt_malloc(::std::mem::size_of::<dnsmasq_daemon>() as libc::c_ulong)
-            as *mut dnsmasq_daemon;
+        opt_malloc(::std::mem::size_of::<DnsmasqDaemon>() as libc::c_ulong)
+            as *mut DnsmasqDaemon;
     memset(dnsmasq_daemon as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<dnsmasq_daemon>() as libc::c_ulong);
+           ::std::mem::size_of::<DnsmasqDaemon>() as libc::c_ulong);
     (*dnsmasq_daemon).namebuff = buff;
     /* Set defaults - everything else is zero or NULL */
     (*dnsmasq_daemon).cachesize = 150 as libc::c_int;
@@ -10804,7 +10804,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
     }
     /* port might not be known when the address is parsed - fill in here */
     if !(*dnsmasq_daemon).servers.is_null() {
-        let mut tmp: *mut server = 0 as *mut server;
+        let mut tmp: *mut Server = 0 as *mut Server;
         tmp = (*dnsmasq_daemon).servers;
         while !tmp.is_null() {
             if (*tmp).flags & 16 as libc::c_int == 0 {
@@ -10822,7 +10822,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
         }
     }
     if !(*dnsmasq_daemon).host_records.is_null() {
-        let mut hr: *mut host_record = 0 as *mut host_record;
+        let mut hr: *mut HostRecord = 0 as *mut HostRecord;
         hr = (*dnsmasq_daemon).host_records;
         while !hr.is_null() {
             if (*hr).ttl == -(1 as libc::c_int) {
@@ -10832,9 +10832,9 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
         }
     }
     if !(*dnsmasq_daemon).cnames.is_null() {
-        let mut cn: *mut cname = 0 as *mut cname;
-        let mut cn2: *mut cname = 0 as *mut cname;
-        let mut cn3: *mut cname = 0 as *mut cname;
+        let mut cn: *mut Cname = 0 as *mut Cname;
+        let mut cn2: *mut Cname = 0 as *mut Cname;
+        let mut cn3: *mut Cname = 0 as *mut Cname;
         /* Fill in TTL for CNAMES now we have local_ttl.
 	 Also prepare to do loop detection. */
         cn = (*dnsmasq_daemon).cnames;
@@ -10843,7 +10843,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                 (*cn).ttl = (*dnsmasq_daemon).local_ttl as libc::c_int
             }
             (*cn).flag = 0 as libc::c_int;
-            (*cn).targetp = 0 as *mut cname;
+            (*cn).targetp = 0 as *mut Cname;
             cn2 = (*dnsmasq_daemon).cnames;
             while !cn2.is_null() {
                 if hostname_isequal((*cn).target, (*cn2).alias) != 0 {
@@ -10876,7 +10876,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
         }
     }
     if !(*dnsmasq_daemon).if_addrs.is_null() {
-        let mut tmp_0: *mut iname = 0 as *mut iname;
+        let mut tmp_0: *mut Iname = 0 as *mut Iname;
         tmp_0 = (*dnsmasq_daemon).if_addrs;
         while !tmp_0.is_null() {
             if (*tmp_0).addr.sa.sa_family as libc::c_int == 2 as libc::c_int {
@@ -10899,12 +10899,12 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
     }
     if (*dnsmasq_daemon).dhcp_pxe_vendors.is_null() {
         (*dnsmasq_daemon).dhcp_pxe_vendors =
-            opt_malloc(::std::mem::size_of::<dhcp_pxe_vendor>() as
-                           libc::c_ulong) as *mut dhcp_pxe_vendor;
+            opt_malloc(::std::mem::size_of::<DhcpPxeVendor>() as
+                           libc::c_ulong) as *mut DhcpPxeVendor;
         (*(*dnsmasq_daemon).dhcp_pxe_vendors).data =
             opt_string_alloc(b"PXEClient\x00" as *const u8 as
                                  *const libc::c_char);
-        (*(*dnsmasq_daemon).dhcp_pxe_vendors).next = 0 as *mut dhcp_pxe_vendor
+        (*(*dnsmasq_daemon).dhcp_pxe_vendors).next = 0 as *mut DhcpPxeVendor
     }
     /* only one of these need be specified: the other defaults to the host-name */
     if (*dnsmasq_daemon).options[(10 as libc::c_int as
@@ -10927,7 +10927,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                      libc::c_ulong))
            != 0 || !(*dnsmasq_daemon).mxnames.is_null() ||
            !(*dnsmasq_daemon).mxtarget.is_null() {
-        let mut mx: *mut mx_srv_record = 0 as *mut mx_srv_record;
+        let mut mx: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
         if gethostname(buff, 1025 as libc::c_int as usize) ==
                -(1 as libc::c_int) {
             die(b"cannot get host-name: %s\x00" as *const u8 as
@@ -10962,8 +10962,8 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                               libc::c_ulong))
                     != 0) && mx.is_null() {
             mx =
-                opt_malloc(::std::mem::size_of::<mx_srv_record>() as
-                               libc::c_ulong) as *mut mx_srv_record;
+                opt_malloc(::std::mem::size_of::<MxSrvRecord>() as
+                               libc::c_ulong) as *mut MxSrvRecord;
             (*mx).next = (*dnsmasq_daemon).mxnames;
             (*mx).issrv = 0 as libc::c_int;
             (*mx).target = 0 as *mut libc::c_char;
@@ -11110,7 +11110,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
     }
     if !(*dnsmasq_daemon).domain_suffix.is_null() {
         /* add domain for any srv record without one. */
-        let mut srv: *mut mx_srv_record = 0 as *mut mx_srv_record;
+        let mut srv: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
         srv = (*dnsmasq_daemon).mxnames;
         while !srv.is_null() {
             if (*srv).issrv != 0 && !strchr((*srv).name, '.' as i32).is_null()

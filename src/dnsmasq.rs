@@ -43,12 +43,12 @@ mod slack;
 mod edns0;
 
 
-use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, dhcp_context, dhcp_relay, dnsmasq_daemon, gid_t, group, iname, passwd, pid_t, server, time_t, uid_t};
+use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, DhcpContext, DhcpRelay, DnsmasqDaemon, gid_t, Group, Iname, Passwd, pid_t, Server, time_t, uid_t};
 
 use libc;
 use log;
 use crate::util::{dnsmasq_time, safe_malloc, safe_pipe, read_write, sockaddr_isequal, rand16, retry_send};
-use crate::defines::{__user_cap_header_struct, __user_cap_data_struct, SIGUSR1, SIGUSR2, SIGHUP, SIGTERM, SIGALRM, SIGCHLD, SIGINT, sigaction, SIGPIPE, event_desc, size_t, DIR, tftp_prefix, resolvc, mysockaddr, dhcp_packet, iovec, dhcp_lease, stat, timespec, serverfd, listener, tftp_transfer, irec, sockaddr, socklen_t, __SOCKADDR_ARG, all_addr, in_addr, SHUT_RDWR, in_addr_t, SOCK_RAW, IPPROTO_ICMP, sockaddr_in, C2RustUnnamed_27, ip, icmp, C2RustUnnamed_17, C2RustUnnamed_14, C2RustUnnamed_16, sa_family_t, in_port_t, __CONST_SOCKADDR_ARG, C2RustUnnamed_26};
+use crate::defines::{__user_cap_header_struct, __user_cap_data_struct, SIGUSR1, SIGUSR2, SIGHUP, SIGTERM, SIGALRM, SIGCHLD, SIGINT, sigaction, SIGPIPE, event_desc, size_t, DIR, TftpPrefix, Resolvc, MySockAddr, DhcpPacket, iovec, DhcpLease, stat, timespec, ServerFd, Listener, TftpTransfer, Irec, SockAddr, socklen_t, __SOCKADDR_ARG, AllAddr, InAddr, SHUT_RDWR, in_addr_t, SOCK_RAW, IPPROTO_ICMP, SockAddrIn, C2RustUnnamed_27, IpHdr, IcmpHdr, C2RustUnnamed_17, C2RustUnnamed_14, C2RustUnnamed_16, sa_family_t, in_port_t, __CONST_SOCKADDR_ARG, C2RustUnnamed_26};
 use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device, log_context, log_relay, dhcp_update_configs};
 use crate::dnsmasq_log::{die, log_start, my_syslog, set_log_writer, check_log_writer, log_reopen, flush_log};
 use crate::lease::{lease_init, lease_make_duid, lease_find_interfaces, do_script_run, lease_prune, lease_update_file, rerun_scripts, lease_update_from_configs, lease_update_dns};
@@ -102,14 +102,14 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                   sa_mask: libc::sigset_t{ __val: [0;16] },
                   sa_flags: 0,
                   sa_restorer: None,};
-    let mut if_tmp: iname = Default::default();
+    let mut if_tmp: Iname = Default::default();
     let mut piperead: libc::c_int = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     let mut err_pipe: [libc::c_int; 2] = [0; 2];
-    let mut ent_pw: *mut passwd = 0 as *mut passwd;
+    let mut ent_pw: *mut Passwd = 0 as *mut Passwd;
     let mut script_uid: uid_t = 0 as libc::c_int as uid_t;
     let mut script_gid: gid_t = 0 as libc::c_int as gid_t;
-    let mut gp: *mut group = 0 as *mut group;
+    let mut gp: *mut Group = 0 as *mut Group;
     let mut i: libc::c_long = 0;
     // if cfg!(target_os = "linux") {
     //     let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX as libc::c_int);
@@ -125,10 +125,10 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     let mut need_cap_net_bind_service: libc::c_int = 0;
     let mut bound_device: String = String::new();
     let mut did_bind: bool = false;
-    let mut serv: server = Default::default();
+    let mut serv: Server = Default::default();
     let mut netlink_warn: String = String::new();
-    let mut context: dhcp_context = Default::default();
-    let mut relay: dhcp_relay = Default::default();
+    let mut context: DhcpContext = Default::default();
+    let mut relay: DhcpRelay = Default::default();
     let mut tftp_prefix_missing: libc::c_int = 0;
     sigact.__sigaction_handler.sa_handler =
         Some(sig_handler as unsafe extern "C" fn(_: libc::c_int) -> ());
@@ -157,7 +157,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     util::rand_init();
     option::read_opts(argc, argv, compile_opts);
 
-    let mut daemon: dnsmasq_daemon = Default::default();
+    let mut daemon: DnsmasqDaemon = Default::default();
 
     if cfg!(target_os = "linux") {
         daemon.kernel_version = util::get_linux_kernel_version();
@@ -654,7 +654,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
            !daemon.scriptuser.is_null() &&
            (!daemon.lease_change_command.is_null() ||
                 !daemon.luascript.is_null()) {
-        let mut scr_pw: *mut passwd = 0 as *mut passwd;
+        let mut scr_pw: *mut Passwd = 0 as *mut Passwd;
         scr_pw = getpwnam(daemon.scriptuser);
         if !scr_pw.is_null() {
             script_uid = (*scr_pw).pw_uid;
@@ -1167,7 +1167,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                                                                                      libc::c_ulong))
            != 0 {
         let mut dir: *mut DIR = 0 as *mut DIR;
-        let mut p: *mut tftp_prefix = 0 as *mut tftp_prefix;
+        let mut p: *mut TftpPrefix = 0 as *mut TftpPrefix;
         if !daemon.tftp_prefix.is_null() {
             dir = opendir(daemon.tftp_prefix);
             if dir.is_null() {
@@ -1397,7 +1397,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                       b"warning: ignoring resolv-file flag because no-resolv is set\x00"
                           as *const u8 as *const libc::c_char);
         }
-        daemon.resolv_files = 0 as *mut resolvc;
+        daemon.resolv_files = 0 as *mut Resolvc;
         if daemon.servers.is_null() {
             my_syslog(4 as libc::c_int,
                       b"warning: no upstream servers configured\x00" as
@@ -1486,7 +1486,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                                                                                      as
                                                                                      libc::c_ulong))
            != 0 {
-        let mut p_0: *mut tftp_prefix = 0 as *mut tftp_prefix;
+        let mut p_0: *mut TftpPrefix = 0 as *mut TftpPrefix;
         my_syslog((1 as libc::c_int) << 3 as libc::c_int | 6 as libc::c_int,
                   b"TFTP %s%s %s %s\x00" as *const u8 as *const libc::c_char,
                   if !daemon.tftp_prefix.is_null() {
@@ -1699,7 +1699,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                                                                                          as
                                                                                          libc::c_ulong))
                != 0 {
-            find_mac(0 as *mut mysockaddr, 0 as *mut libc::c_uchar,
+            find_mac(0 as *mut MySockAddr, 0 as *mut libc::c_uchar,
                      0 as libc::c_int, now);
         }
         while helper_buf_empty() != 0 && do_arp_script_run() != 0 { }
@@ -2019,7 +2019,7 @@ unsafe extern "C" fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
             3 => {
                 if !daemon.dhcp.is_null() ||
                        daemon.doing_dhcp6 != 0 {
-                    lease_prune(0 as *mut dhcp_lease, now);
+                    lease_prune(0 as *mut DhcpLease, now);
                     lease_update_file(now);
                 } else if daemon.doing_ra != 0 {
                     /* Not doing DHCP, so no lease system, manage alarms for ra only */
@@ -2193,8 +2193,8 @@ unsafe extern "C" fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
 unsafe extern "C" fn poll_resolv(mut force: libc::c_int,
                                  mut do_reload: libc::c_int,
                                  mut now: time_t) {
-    let mut res: *mut resolvc = 0 as *mut resolvc;
-    let mut latest: *mut resolvc = 0 as *mut resolvc;
+    let mut res: *mut Resolvc = 0 as *mut Resolvc;
+    let mut latest: *mut Resolvc = 0 as *mut Resolvc;
     let mut statbuf: stat =
         stat{st_dev: 0,
              st_ino: 0,
@@ -2237,7 +2237,7 @@ unsafe extern "C" fn poll_resolv(mut force: libc::c_int,
                != 0 {
         return
     }
-    latest = 0 as *mut resolvc;
+    latest = 0 as *mut Resolvc;
     res = daemon.resolv_files;
     while !res.is_null() {
         if stat((*res).name, &mut statbuf) == -(1 as libc::c_int) {
@@ -2349,12 +2349,12 @@ pub unsafe extern "C" fn clear_cache_and_reload(mut now: time_t) {
     };
 }
 unsafe extern "C" fn set_dns_listeners(mut now: time_t) -> libc::c_int {
-    let mut serverfdp: *mut serverfd = 0 as *mut serverfd;
-    let mut listener: *mut listener = 0 as *mut listener;
+    let mut serverfdp: *mut ServerFd = 0 as *mut ServerFd;
+    let mut listener: *mut Listener = 0 as *mut Listener;
     let mut wait: libc::c_int = 0 as libc::c_int;
     let mut i: libc::c_int = 0;
     let mut tftp: libc::c_int = 0 as libc::c_int;
-    let mut transfer: *mut tftp_transfer = 0 as *mut tftp_transfer;
+    let mut transfer: *mut TftpTransfer = 0 as *mut TftpTransfer;
     if daemon.options[(60 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
@@ -2464,8 +2464,8 @@ unsafe extern "C" fn set_dns_listeners(mut now: time_t) -> libc::c_int {
     return wait;
 }
 unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
-    let mut serverfdp: *mut serverfd = 0 as *mut serverfd;
-    let mut listener: *mut listener = 0 as *mut listener;
+    let mut serverfdp: *mut ServerFd = 0 as *mut ServerFd;
+    let mut listener: *mut Listener = 0 as *mut Listener;
     let mut i: libc::c_int = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     serverfdp = daemon.sfds;
@@ -2552,19 +2552,19 @@ unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
                           0x1 as libc::c_int as libc::c_short) != 0 {
             let mut confd: libc::c_int = 0;
             let mut client_ok: libc::c_int = 1 as libc::c_int;
-            let mut iface: *mut irec = 0 as *mut irec;
+            let mut iface: *mut Irec = 0 as *mut Irec;
             let mut p: pid_t = 0;
-            let mut tcp_addr: mysockaddr =
-                mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+            let mut tcp_addr: MySockAddr =
+                MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
             let mut tcp_len: socklen_t =
-                ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as
+                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as
                     socklen_t;
             loop  {
                 confd =
                     accept((*listener).tcpfd,
                            __SOCKADDR_ARG{__sockaddr__:
                                               0 as *mut libc::c_void as
-                                                  *mut sockaddr,},
+                                                  *mut SockAddr,},
                            0 as *mut socklen_t);
                 if !(confd == -(1 as libc::c_int) &&
                          *__errno_location() == 4 as libc::c_int) {
@@ -2575,8 +2575,8 @@ unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
                 if getsockname(confd,
                                __SOCKADDR_ARG{__sockaddr__:
                                                   &mut tcp_addr as
-                                                      *mut mysockaddr as
-                                                      *mut sockaddr,},
+                                                      *mut MySockAddr as
+                                                      *mut SockAddr,},
                                &mut tcp_len) == -(1 as libc::c_int) {
                     close(confd);
                 } else {
@@ -2622,8 +2622,8 @@ unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
                         if if_index != 0 as libc::c_int &&
                                indextoname((*listener).tcpfd, if_index,
                                            intr_name.as_mut_ptr()) != 0 {
-                            let mut addr: all_addr =
-                                all_addr{addr4: in_addr{s_addr: 0,},};
+                            let mut addr: AllAddr =
+                                AllAddr {addr4: InAddr {s_addr: 0,},};
                             if tcp_addr.sa.sa_family as libc::c_int ==
                                    10 as libc::c_int {
                                 addr.addr6 = tcp_addr.in6.sin6_addr
@@ -2757,9 +2757,9 @@ unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
                     } else {
                         let mut buff: *mut libc::c_uchar =
                             0 as *mut libc::c_uchar;
-                        let mut s: *mut server = 0 as *mut server;
+                        let mut s: *mut Server = 0 as *mut Server;
                         let mut flags: libc::c_int = 0;
-                        let mut netmask: in_addr = in_addr{s_addr: 0,};
+                        let mut netmask: InAddr = InAddr {s_addr: 0,};
                         let mut auth_dns: libc::c_int = 0;
                         if !iface.is_null() {
                             netmask = (*iface).netmask;
@@ -2886,17 +2886,17 @@ pub unsafe extern "C" fn make_icmp_sock() -> libc::c_int {
     return fd;
 }
 #[no_mangle]
-pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
+pub unsafe extern "C" fn icmp_ping(mut addr: InAddr) -> libc::c_int {
     /* Try and get an ICMP echo from a machine. */
     let mut fd: libc::c_int = 0;
-    let mut saddr: sockaddr_in =
-        sockaddr_in{sin_family: 0,
+    let mut saddr: SockAddrIn =
+        SockAddrIn {sin_family: 0,
                     sin_port: 0,
-                    sin_addr: in_addr{s_addr: 0,},
+                    sin_addr: InAddr {s_addr: 0,},
                     sin_zero: [0; 8],};
     let mut packet: C2RustUnnamed_27 =
         C2RustUnnamed_27{ip:
-                             ip{ip_hl_ip_v: [0; 1],
+                             IpHdr {ip_hl_ip_v: [0; 1],
                                 ip_tos: 0,
                                 ip_len: 0,
                                 ip_id: 0,
@@ -2904,10 +2904,10 @@ pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
                                 ip_ttl: 0,
                                 ip_p: 0,
                                 ip_sum: 0,
-                                ip_src: in_addr{s_addr: 0,},
-                                ip_dst: in_addr{s_addr: 0,},},
+                                ip_src: InAddr {s_addr: 0,},
+                                ip_dst: InAddr {s_addr: 0,},},
                          icmp:
-                             icmp{icmp_type: 0,
+                             IcmpHdr {icmp_type: 0,
                                   icmp_code: 0,
                                   icmp_cksum: 0,
                                   icmp_hun: C2RustUnnamed_17{ih_pptr: 0,},
@@ -2928,18 +2928,18 @@ pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
     saddr.sin_family = 2 as libc::c_int as sa_family_t;
     saddr.sin_port = 0 as libc::c_int as in_port_t;
     saddr.sin_addr = addr;
-    memset(&mut packet.icmp as *mut icmp as *mut libc::c_void,
-           0 as libc::c_int, ::std::mem::size_of::<icmp>() as libc::c_ulong);
+    memset(&mut packet.icmp as *mut IcmpHdr as *mut libc::c_void,
+           0 as libc::c_int, ::std::mem::size_of::<IcmpHdr>() as libc::c_ulong);
     packet.icmp.icmp_type = 8 as libc::c_int as uint8_t;
     packet.icmp.icmp_hun.ih_idseq.icd_id = id;
     j = 0 as libc::c_int as libc::c_uint;
     i = 0 as libc::c_int as libc::c_uint;
     while (i as libc::c_ulong) <
-              (::std::mem::size_of::<icmp>() as
+              (::std::mem::size_of::<IcmpHdr>() as
                    libc::c_ulong).wrapping_div(2 as libc::c_int as
                                                    libc::c_ulong) {
         j =
-            j.wrapping_add(*(&mut packet.icmp as *mut icmp as
+            j.wrapping_add(*(&mut packet.icmp as *mut IcmpHdr as
                                  *mut u16).offset(i as isize) as
                                libc::c_uint);
         i = i.wrapping_add(1)
@@ -2954,15 +2954,15 @@ pub unsafe extern "C" fn icmp_ping(mut addr: in_addr) -> libc::c_int {
         if j == 0xffff as libc::c_int as libc::c_uint { j } else { !j } as
             u16;
     while retry_send(sendto(fd,
-                            &mut packet.icmp as *mut icmp as *mut libc::c_char
+                            &mut packet.icmp as *mut IcmpHdr as *mut libc::c_char
                                 as *const libc::c_void,
-                            ::std::mem::size_of::<icmp>() as libc::c_ulong,
+                            ::std::mem::size_of::<IcmpHdr>() as libc::c_ulong,
                             0 as libc::c_int,
                             __CONST_SOCKADDR_ARG{__sockaddr__:
                                                      &mut saddr as
-                                                         *mut sockaddr_in as
-                                                         *mut sockaddr,},
-                            ::std::mem::size_of::<sockaddr_in>() as
+                                                         *mut SockAddrIn as
+                                                         *mut SockAddr,},
+                            ::std::mem::size_of::<SockAddrIn>() as
                                 libc::c_ulong as socklen_t)) != 0 {
     }
     gotreply =
@@ -3020,7 +3020,7 @@ pub unsafe extern "C" fn delay_dhcp(mut start: time_t, mut sec: libc::c_int,
         if fd != -(1 as libc::c_int) {
             let mut packet: C2RustUnnamed_26 =
                 C2RustUnnamed_26{ip:
-                                     ip{ip_hl_ip_v: [0; 1],
+                                     IpHdr {ip_hl_ip_v: [0; 1],
                                         ip_tos: 0,
                                         ip_len: 0,
                                         ip_id: 0,
@@ -3028,10 +3028,10 @@ pub unsafe extern "C" fn delay_dhcp(mut start: time_t, mut sec: libc::c_int,
                                         ip_ttl: 0,
                                         ip_p: 0,
                                         ip_sum: 0,
-                                        ip_src: in_addr{s_addr: 0,},
-                                        ip_dst: in_addr{s_addr: 0,},},
+                                        ip_src: InAddr {s_addr: 0,},
+                                        ip_dst: InAddr {s_addr: 0,},},
                                  icmp:
-                                     icmp{icmp_type: 0,
+                                     IcmpHdr {icmp_type: 0,
                                           icmp_code: 0,
                                           icmp_cksum: 0,
                                           icmp_hun:
@@ -3044,13 +3044,13 @@ pub unsafe extern "C" fn delay_dhcp(mut start: time_t, mut sec: libc::c_int,
                                                                                         0,
                                                                                     its_ttime:
                                                                                         0,},},},};
-            let mut faddr: sockaddr_in =
-                sockaddr_in{sin_family: 0,
+            let mut faddr: SockAddrIn =
+                SockAddrIn {sin_family: 0,
                             sin_port: 0,
-                            sin_addr: in_addr{s_addr: 0,},
+                            sin_addr: InAddr {s_addr: 0,},
                             sin_zero: [0; 8],};
             let mut len: socklen_t =
-                ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as
+                ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as
                     socklen_t;
             if poll_check(fd, 0x1 as libc::c_int as libc::c_short) != 0 &&
                    recvfrom(fd,
@@ -3059,8 +3059,8 @@ pub unsafe extern "C" fn delay_dhcp(mut start: time_t, mut sec: libc::c_int,
                             ::std::mem::size_of::<C2RustUnnamed_26>() as
                                 libc::c_ulong, 0 as libc::c_int,
                             __SOCKADDR_ARG{__sockaddr__:
-                                               &mut faddr as *mut sockaddr_in
-                                                   as *mut sockaddr,},
+                                               &mut faddr as *mut SockAddrIn
+                                                   as *mut SockAddr,},
                             &mut len) as libc::c_ulong ==
                        ::std::mem::size_of::<C2RustUnnamed_26>() as
                            libc::c_ulong && addr == faddr.sin_addr.s_addr &&

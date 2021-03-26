@@ -1,4 +1,4 @@
-use crate::defines::{dnsmasq_daemon, uid_t, gid_t, pid_t, sigaction, C2RustUnnamed_10, __sigset_t, C2RustUnnamed_12, __sighandler_t, size_t, in_addr, in6_addr, C2RustUnnamed, socklen_t, FILE, dhcp_lease, time_t, off_t, mysockaddr, ssize_t};
+use crate::defines::{DnsmasqDaemon, uid_t, gid_t, pid_t, sigaction, C2RustUnnamed_10, __sigset_t, C2RustUnnamed_12, __sighandler_t, size_t, InAddr, In6Addr, C2RustUnnamed, socklen_t, FILE, DhcpLease, time_t, off_t, MySockAddr, ssize_t};
 use crate::network::{fix_fd, indextoname};
 use crate::send_event;
 use crate::util::{close_fds, read_write, legal_hostname, whine_malloc};
@@ -125,13 +125,13 @@ pub fn create_helper(mut event_fd: libc::c_int,
                         clid_len: 0,
                         hostname_len: 0,
                         ed_len: 0,
-                        addr: in_addr{s_addr: 0,},
-                        giaddr: in_addr{s_addr: 0,},
+                        addr: InAddr {s_addr: 0,},
+                        giaddr: InAddr {s_addr: 0,},
                         remaining_time: 0,
                         expires: 0,
                         file_len: 0,
                         addr6:
-                            in6_addr{__in6_u:
+                            In6Addr {__in6_u:
                                          C2RustUnnamed{__u6_addr8:
                                                            [0; 16],},},
                         vendorclass_count: 0,
@@ -305,12 +305,12 @@ pub fn create_helper(mut event_fd: libc::c_int,
         extradata = buf_0.offset(data.hostname_len as isize);
         if is6 == 0 {
             inet_ntop(2 as libc::c_int,
-                      &mut data.addr as *mut in_addr as *const libc::c_void,
+                      &mut data.addr as *mut InAddr as *const libc::c_void,
                       daemon.addrbuff,
                       46 as libc::c_int as socklen_t);
         } else {
             inet_ntop(10 as libc::c_int,
-                      &mut data.addr6 as *mut in6_addr as *const libc::c_void,
+                      &mut data.addr6 as *mut In6Addr as *const libc::c_void,
                       daemon.addrbuff,
                       46 as libc::c_int as socklen_t);
         }
@@ -780,7 +780,7 @@ unsafe extern "C" fn buff_alloc(mut size: size_t) {
 /* pack up lease data into a buffer */
 #[no_mangle]
 pub unsafe extern "C" fn queue_script(mut action: libc::c_int,
-                                      mut lease: *mut dhcp_lease,
+                                      mut lease: *mut DhcpLease,
                                       mut hostname: *mut libc::c_char,
                                       mut now: time_t) {
     let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
@@ -857,7 +857,7 @@ pub unsafe extern "C" fn queue_script(mut action: libc::c_int,
 #[no_mangle]
 pub unsafe extern "C" fn queue_tftp(mut file_len: off_t,
                                     mut filename: *mut libc::c_char,
-                                    mut peer: *mut mysockaddr) {
+                                    mut peer: *mut MySockAddr) {
     let mut filename_len: libc::c_uint = 0;
     /* no script */
     if daemon.helperfd == -(1 as libc::c_int) { return }
@@ -884,7 +884,7 @@ pub unsafe extern "C" fn queue_tftp(mut file_len: off_t,
              libc::c_ulong).wrapping_add(filename_len as libc::c_ulong);
 }
 
-pub fn queue_arp(daemon: &mut dnsmasq_daemon,
+pub fn queue_arp(daemon: &mut DnsmasqDaemon,
                  mut action: u32,
                  mut mac: &[u8;6],
                  mut family: u32,

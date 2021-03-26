@@ -25,7 +25,7 @@
    add a dependency on Nettle, and use a stand-alone implementaion. 
 */
 /* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
-use crate::defines::{msghdr, cmsghdr, size_t, __mode_t, __dev_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, dns_header};
+use crate::defines::{MsgHdr, CmsgHdr, size_t, __mode_t, __dev_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, DnsHeader};
 use std::io::{stdout, stdin};
 use crate::rfc1035::extract_name;
 
@@ -89,11 +89,11 @@ unsafe extern "C" fn __uint64_identity(mut __x: u64) -> u64 {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
+unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut MsgHdr,
+                                   mut __cmsg: *mut CmsgHdr) -> *mut CmsgHdr {
+    if (*__cmsg).cmsg_len < ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong
        {
-        return 0 as *mut cmsghdr
+        return 0 as *mut CmsgHdr
     }
     __cmsg =
         (__cmsg as
@@ -112,7 +112,7 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
                                                                                    libc::c_int
                                                                                    as
                                                                                    libc::c_ulong))
-                                            as isize) as *mut cmsghdr;
+                                            as isize) as *mut CmsgHdr;
     if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
            ((*__mhdr).msg_control as
                 *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
@@ -137,7 +137,7 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
                ((*__mhdr).msg_control as
                     *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
                                                    isize) {
-        return 0 as *mut cmsghdr
+        return 0 as *mut CmsgHdr
     }
     return __cmsg;
 }
@@ -390,10 +390,10 @@ unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
 #[no_mangle]
 pub unsafe extern "C" fn hash_questions_init() { }
 #[no_mangle]
-pub unsafe extern "C" fn hash_questions(mut header: *mut dns_header,
+pub unsafe extern "C" fn hash_questions(mut header: *mut DnsHeader,
                                         mut plen: size_t,
                                         mut name: *mut libc::c_char)
- -> *mut libc::c_uchar {
+                                        -> *mut libc::c_uchar {
     let mut q: libc::c_int = 0;
     let mut p: *mut libc::c_uchar =
         header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;

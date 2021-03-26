@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{size_t, dnsmasq_daemon};
+use crate::defines::{size_t, DnsmasqDaemon};
 
 static mut outpacket_counter: size_t = 0;
 #[no_mangle]

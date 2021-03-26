@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{dns_header, size_t, __bswap_16, mysockaddr, time_t, dnsmasq_daemon, in6_addr, in_addr};
+use crate::defines::{DnsHeader, size_t, __bswap_16, MySockAddr, time_t, DnsmasqDaemon, In6Addr, InAddr};
 use crate::rfc1035::{skip_name, skip_questions, skip_section};
 use crate::util::{whine_malloc, print_mac};
 use crate::rrfilter::rrfilter;
@@ -22,13 +22,13 @@ use crate::arp::find_mac;
 use crate::slack::subnet_opt;
 
 #[no_mangle]
-pub unsafe extern "C" fn find_pseudoheader(mut header: *mut dns_header,
+pub unsafe extern "C" fn find_pseudoheader(mut header: *mut DnsHeader,
                                            mut plen: size_t,
                                            mut len: *mut size_t,
                                            mut p: *mut *mut libc::c_uchar,
                                            mut is_sign: *mut libc::c_int,
                                            mut is_last: *mut libc::c_int)
- -> *mut libc::c_uchar {
+                                           -> *mut libc::c_uchar {
     /* See if packet has an RFC2671 pseudoheader, and if so return a pointer to it. 
      also return length of pseudoheader in *len and pointer to the UDP size in *p
      Finally, check to see if a packet is signed. If it is we cannot change a single bit before
@@ -142,7 +142,7 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: *mut dns_header,
 }
 /* replace == 2 ->delete existing option only. */
 #[no_mangle]
-pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
+pub unsafe extern "C" fn add_pseudoheader(mut header: *mut DnsHeader,
                                           mut plen: size_t,
                                           mut limit: *mut libc::c_uchar,
                                           mut udp_sz: libc::c_ushort,
@@ -151,7 +151,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
                                           mut optlen: size_t,
                                           mut set_do: libc::c_int,
                                           mut replace: libc::c_int)
- -> size_t {
+                                          -> size_t {
     let mut lenp: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut datap: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
                libc::c_long as size_t;
 }
 #[no_mangle]
-pub unsafe extern "C" fn add_do_bit(mut header: *mut dns_header,
+pub unsafe extern "C" fn add_do_bit(mut header: *mut DnsHeader,
                                     mut plen: size_t,
                                     mut limit: *mut libc::c_uchar) -> size_t {
     return add_pseudoheader(header, plen, limit,
@@ -466,12 +466,12 @@ unsafe extern "C" fn encoder(mut in_0: *mut libc::c_uchar,
     *out.offset(3 as libc::c_int as isize) =
         char64(*in_0.offset(2 as libc::c_int as isize)) as libc::c_char;
 }
-unsafe extern "C" fn add_dns_client(mut header: *mut dns_header,
+unsafe extern "C" fn add_dns_client(mut header: *mut DnsHeader,
                                     mut plen: size_t,
                                     mut limit: *mut libc::c_uchar,
-                                    mut l3: *mut mysockaddr, mut now: time_t,
+                                    mut l3: *mut MySockAddr, mut now: time_t,
                                     mut cacheablep: *mut libc::c_int)
- -> size_t {
+                                    -> size_t {
     let mut maclen: libc::c_int = 0;
     let mut replace: libc::c_int = 2 as libc::c_int;
     let mut mac: [libc::c_uchar; 16] = [0; 16];
@@ -515,9 +515,9 @@ unsafe extern "C" fn add_dns_client(mut header: *mut dns_header,
                             strlen(encode.as_mut_ptr()), 0 as libc::c_int,
                             replace);
 }
-unsafe extern "C" fn add_mac(mut header: *mut dns_header, mut plen: size_t,
+unsafe extern "C" fn add_mac(mut header: *mut DnsHeader, mut plen: size_t,
                              mut limit: *mut libc::c_uchar,
-                             mut l3: *mut mysockaddr, mut now: time_t,
+                             mut l3: *mut MySockAddr, mut now: time_t,
                              mut cacheablep: *mut libc::c_int) -> size_t {
     let mut maclen: libc::c_int = 0;
     let mut mac: [libc::c_uchar; 16] = [0; 16];
@@ -533,18 +533,18 @@ unsafe extern "C" fn add_mac(mut header: *mut dns_header, mut plen: size_t,
     }
     return plen;
 }
-unsafe extern "C" fn get_addrp(mut addr: *mut mysockaddr,
+unsafe extern "C" fn get_addrp(mut addr: *mut MySockAddr,
                                family: libc::c_short) -> *mut libc::c_void {
     if family as libc::c_int == 10 as libc::c_int {
-        return &mut (*addr).in6.sin6_addr as *mut in6_addr as
+        return &mut (*addr).in6.sin6_addr as *mut In6Addr as
                    *mut libc::c_void
     }
-    return &mut (*addr).in_0.sin_addr as *mut in_addr as *mut libc::c_void;
+    return &mut (*addr).in_0.sin_addr as *mut InAddr as *mut libc::c_void;
 }
 unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
-                                     mut source: *mut mysockaddr,
+                                     mut source: *mut MySockAddr,
                                      mut cacheablep: *mut libc::c_int)
- -> size_t {
+                                     -> size_t {
     /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
     let mut len: libc::c_int = 0;
     let mut addrp: *mut libc::c_void = 0 as *mut libc::c_void;
@@ -565,7 +565,7 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
             cacheable = 1 as libc::c_int
         } else {
             addrp =
-                &mut (*source).in6.sin6_addr as *mut in6_addr as
+                &mut (*source).in6.sin6_addr as *mut In6Addr as
                     *mut libc::c_void
         }
     }
@@ -583,7 +583,7 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
             /* Address is constant */
         } else {
             addrp =
-                &mut (*source).in_0.sin_addr as *mut in_addr as
+                &mut (*source).in_0.sin_addr as *mut InAddr as
                     *mut libc::c_void
         }
     } /* No address ever supplied. */
@@ -611,12 +611,12 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
     if !cacheablep.is_null() { *cacheablep = cacheable }
     return (len + 4 as libc::c_int) as size_t;
 }
-unsafe extern "C" fn add_source_addr(mut header: *mut dns_header,
+unsafe extern "C" fn add_source_addr(mut header: *mut DnsHeader,
                                      mut plen: size_t,
                                      mut limit: *mut libc::c_uchar,
-                                     mut source: *mut mysockaddr,
+                                     mut source: *mut MySockAddr,
                                      mut cacheable: *mut libc::c_int)
- -> size_t {
+                                     -> size_t {
     /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
     let mut len: libc::c_int = 0;
     let mut opt: subnet_opt =
@@ -633,11 +633,11 @@ unsafe extern "C" fn add_source_addr(mut header: *mut dns_header,
                             0 as libc::c_int);
 }
 #[no_mangle]
-pub unsafe extern "C" fn check_source(mut header: *mut dns_header,
+pub unsafe extern "C" fn check_source(mut header: *mut DnsHeader,
                                       mut plen: size_t,
                                       mut pseudoheader: *mut libc::c_uchar,
-                                      mut peer: *mut mysockaddr)
- -> libc::c_int {
+                                      mut peer: *mut MySockAddr)
+                                      -> libc::c_int {
     /* Section 9.2, Check that subnet option in reply matches. */
     let mut len: libc::c_int = 0; /* skip UDP length and RCODE */
     let mut calc_len: libc::c_int = 0; /* bad packet */
@@ -701,14 +701,14 @@ pub unsafe extern "C" fn check_source(mut header: *mut dns_header,
    in the reply. Set *cacheable to zero if we add an option which the answer
    may depend on. */
 #[no_mangle]
-pub unsafe extern "C" fn add_edns0_config(mut header: *mut dns_header,
+pub unsafe extern "C" fn add_edns0_config(mut header: *mut DnsHeader,
                                           mut plen: size_t,
                                           mut limit: *mut libc::c_uchar,
-                                          mut source: *mut mysockaddr,
+                                          mut source: *mut MySockAddr,
                                           mut now: time_t,
                                           mut check_subnet: *mut libc::c_int,
                                           mut cacheable: *mut libc::c_int)
- -> size_t {
+                                          -> size_t {
     *check_subnet = 0 as libc::c_int;
     *cacheable = 1 as libc::c_int;
     if (*dnsmasq_daemon).options[(32 as libc::c_int as

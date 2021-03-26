@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{crec, bigname, C2RustUnnamed_10, dnsmasq_daemon, time_t, all_addr, in6_addr, _ISspace, FILE, in_addr, hostsfile, host_record, name_list, cname, C2RustUnnamed_8, mx_srv_record, txt_record, interface_name, ptr_record, naptr, server, in_addr_t, socklen_t, _ISprint};
+use crate::defines::{Crec, BigName, C2RustUnnamed_10, DnsmasqDaemon, time_t, AllAddr, In6Addr, _ISspace, FILE, InAddr, HostsFile, HostRecord, NameList, Cname, C2RustUnnamed_8, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, Server, in_addr_t, socklen_t, _ISprint};
 use crate::util::{safe_malloc, whine_malloc, hostname_isequal, read_write, canonicalise, sockaddr_isequal, prettyprint_addr};
 use crate::blockdata::{blockdata_free, blockdata_write, blockdata_read, blockdata_report, blockdata_retrieve};
 use crate::dnsmasq_log::my_syslog;
@@ -23,14 +23,14 @@ use crate::domain::{get_domain, get_domain6};
 use crate::option::expand_filelist;
 use crate::inotify::set_dynamic_inotify;
 
-static mut cache_head: *mut crec = 0 as *const crec as *mut crec;
-static mut cache_tail: *mut crec = 0 as *const crec as *mut crec;
-static mut hash_table: *mut *mut crec =
-    0 as *const *mut crec as *mut *mut crec;
-static mut dhcp_spare: *mut crec = 0 as *const crec as *mut crec;
-static mut new_chain: *mut crec = 0 as *const crec as *mut crec;
+static mut cache_head: *mut Crec = 0 as *const Crec as *mut Crec;
+static mut cache_tail: *mut Crec = 0 as *const Crec as *mut Crec;
+static mut hash_table: *mut *mut Crec =
+    0 as *const *mut Crec as *mut *mut Crec;
+static mut dhcp_spare: *mut Crec = 0 as *const Crec as *mut Crec;
+static mut new_chain: *mut Crec = 0 as *const Crec as *mut Crec;
 static mut insert_error: libc::c_int = 0;
-static mut big_free: *mut bigname = 0 as *const bigname as *mut bigname;
+static mut big_free: *mut BigName = 0 as *const BigName as *mut BigName;
 static mut bignames_left: libc::c_int = 0;
 static mut hash_size: libc::c_int = 0;
 static mut typestr: [C2RustUnnamed_10; 40] =
@@ -355,7 +355,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
          init
      }];
 #[no_mangle]
-pub unsafe extern "C" fn next_uid(mut crecp: *mut crec) {
+pub unsafe extern "C" fn next_uid(mut crecp: *mut Crec) {
     static mut uid: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     if (*crecp).uid == 0 as libc::c_int as libc::c_uint {
         uid = uid.wrapping_add(1);
@@ -368,16 +368,16 @@ pub unsafe extern "C" fn next_uid(mut crecp: *mut crec) {
 }
 #[no_mangle]
 pub unsafe extern "C" fn cache_init() {
-    let mut crecp: *mut crec = 0 as *mut crec;
+    let mut crecp: *mut Crec = 0 as *mut Crec;
     let mut i: libc::c_int = 0;
     bignames_left = (*dnsmasq_daemon).cachesize / 10 as libc::c_int;
     if (*dnsmasq_daemon).cachesize > 0 as libc::c_int {
         crecp =
             safe_malloc(((*dnsmasq_daemon).cachesize as
-                             libc::c_ulong).wrapping_mul(::std::mem::size_of::<crec>()
+                             libc::c_ulong).wrapping_mul(::std::mem::size_of::<Crec>()
                                                              as
                                                              libc::c_ulong))
-                as *mut crec;
+                as *mut Crec;
         i = 0 as libc::c_int;
         while i < (*dnsmasq_daemon).cachesize {
             cache_link(crecp);
@@ -395,10 +395,10 @@ pub unsafe extern "C" fn cache_init() {
    will be much too small, so the hosts reading code calls rehash every 1000 addresses, to
    expand the table. */
 unsafe extern "C" fn rehash(mut size: libc::c_int) {
-    let mut new: *mut *mut crec = 0 as *mut *mut crec;
-    let mut old: *mut *mut crec = 0 as *mut *mut crec;
-    let mut p: *mut crec = 0 as *mut crec;
-    let mut tmp: *mut crec = 0 as *mut crec;
+    let mut new: *mut *mut Crec = 0 as *mut *mut Crec;
+    let mut old: *mut *mut Crec = 0 as *mut *mut Crec;
+    let mut p: *mut Crec = 0 as *mut Crec;
+    let mut tmp: *mut Crec = 0 as *mut Crec;
     let mut i: libc::c_int = 0;
     let mut new_size: libc::c_int = 0;
     let mut old_size: libc::c_int = 0;
@@ -411,19 +411,19 @@ unsafe extern "C" fn rehash(mut size: libc::c_int) {
     if hash_table.is_null() {
         new =
             safe_malloc((new_size as
-                             libc::c_ulong).wrapping_mul(::std::mem::size_of::<*mut crec>()
+                             libc::c_ulong).wrapping_mul(::std::mem::size_of::<*mut Crec>()
                                                              as
                                                              libc::c_ulong))
-                as *mut *mut crec
+                as *mut *mut Crec
     } else if new_size <= hash_size ||
                   {
                       new =
                           whine_malloc((new_size as
-                                            libc::c_ulong).wrapping_mul(::std::mem::size_of::<*mut crec>()
+                                            libc::c_ulong).wrapping_mul(::std::mem::size_of::<*mut Crec>()
                                                                             as
                                                                             libc::c_ulong))
                               as
-                              *mut *mut crec; /* Barker code - minimum self-correlation in cyclic shift */
+                              *mut *mut Crec; /* Barker code - minimum self-correlation in cyclic shift */
                       new.is_null()
                   } {
         return
@@ -431,7 +431,7 @@ unsafe extern "C" fn rehash(mut size: libc::c_int) {
     i = 0 as libc::c_int;
     while i < new_size {
         let ref mut fresh6 = *new.offset(i as isize);
-        *fresh6 = 0 as *mut crec;
+        *fresh6 = 0 as *mut Crec;
         i += 1
     }
     old = hash_table;
@@ -453,7 +453,7 @@ unsafe extern "C" fn rehash(mut size: libc::c_int) {
     };
 }
 unsafe extern "C" fn hash_bucket(mut name: *mut libc::c_char)
- -> *mut *mut crec {
+ -> *mut *mut Crec {
     let mut c: libc::c_uint = 0;
     let mut val: libc::c_uint = 0o17465 as libc::c_int as libc::c_uint;
     let mut mix_tab: *const libc::c_uchar =
@@ -490,12 +490,12 @@ unsafe extern "C" fn hash_bucket(mut name: *mut libc::c_char)
                                   (hash_size - 1 as libc::c_int) as
                                       libc::c_uint) as isize);
 }
-unsafe extern "C" fn cache_hash(mut crecp: *mut crec) {
+unsafe extern "C" fn cache_hash(mut crecp: *mut Crec) {
     /* maintain an invariant that all entries with F_REVERSE set
      are at the start of the hash-chain  and all non-reverse
      immortal entries are at the end of the hash-chain.
      This allows reverse searches and garbage collection to be optimised */
-    let mut up: *mut *mut crec =
+    let mut up: *mut *mut Crec =
         hash_bucket(cache_get_name(crecp)); /* invalidate CNAMES pointing to this. */
     if (*crecp).flags & (1 as libc::c_uint) << 2 as libc::c_int == 0 {
         while !(*up).is_null() &&
@@ -514,14 +514,14 @@ unsafe extern "C" fn cache_hash(mut crecp: *mut crec) {
     (*crecp).hash_next = *up;
     *up = crecp;
 }
-unsafe extern "C" fn cache_blockdata_free(mut crecp: *mut crec) {
+unsafe extern "C" fn cache_blockdata_free(mut crecp: *mut Crec) {
     if (*crecp).flags & (1 as libc::c_uint) << 5 as libc::c_int == 0 {
         if (*crecp).flags & (1 as libc::c_uint) << 30 as libc::c_int != 0 {
             blockdata_free((*crecp).addr.srv.target);
         }
     };
 }
-unsafe extern "C" fn cache_free(mut crecp: *mut crec) {
+unsafe extern "C" fn cache_free(mut crecp: *mut Crec) {
     (*crecp).flags &= !((1 as libc::c_uint) << 3 as libc::c_int);
     (*crecp).flags &= !((1 as libc::c_uint) << 2 as libc::c_int);
     (*crecp).uid = 0 as libc::c_int as libc::c_uint;
@@ -529,7 +529,7 @@ unsafe extern "C" fn cache_free(mut crecp: *mut crec) {
         (*cache_tail).next = crecp
     } else { cache_head = crecp }
     (*crecp).prev = cache_tail;
-    (*crecp).next = 0 as *mut crec;
+    (*crecp).next = 0 as *mut Crec;
     cache_tail = crecp;
     /* retrieve big name for further use. */
     if (*crecp).flags & (1 as libc::c_uint) << 9 as libc::c_int != 0 {
@@ -540,18 +540,18 @@ unsafe extern "C" fn cache_free(mut crecp: *mut crec) {
     cache_blockdata_free(crecp);
 }
 /* insert a new cache entry at the head of the list (youngest entry) */
-unsafe extern "C" fn cache_link(mut crecp: *mut crec) {
+unsafe extern "C" fn cache_link(mut crecp: *mut Crec) {
     if !cache_head.is_null() {
         /* check needed for init code */
         (*cache_head).prev = crecp
     }
     (*crecp).next = cache_head;
-    (*crecp).prev = 0 as *mut crec;
+    (*crecp).prev = 0 as *mut Crec;
     cache_head = crecp;
     if cache_tail.is_null() { cache_tail = crecp };
 }
 /* remove an arbitrary cache entry for promotion */
-unsafe extern "C" fn cache_unlink(mut crecp: *mut crec) {
+unsafe extern "C" fn cache_unlink(mut crecp: *mut Crec) {
     if !(*crecp).prev.is_null() {
         (*(*crecp).prev).next = (*crecp).next
     } else { cache_head = (*crecp).next }
@@ -560,7 +560,7 @@ unsafe extern "C" fn cache_unlink(mut crecp: *mut crec) {
     } else { cache_tail = (*crecp).prev };
 }
 #[no_mangle]
-pub unsafe extern "C" fn cache_get_name(mut crecp: *mut crec)
+pub unsafe extern "C" fn cache_get_name(mut crecp: *mut Crec)
  -> *mut libc::c_char {
     if (*crecp).flags & (1 as libc::c_uint) << 9 as libc::c_int != 0 {
         return (*(*crecp).name.bname).name.as_mut_ptr()
@@ -572,23 +572,23 @@ pub unsafe extern "C" fn cache_get_name(mut crecp: *mut crec)
     return (*crecp).name.sname.as_mut_ptr();
 }
 #[no_mangle]
-pub unsafe extern "C" fn cache_get_cname_target(mut crecp: *mut crec)
+pub unsafe extern "C" fn cache_get_cname_target(mut crecp: *mut Crec)
  -> *mut libc::c_char {
     if (*crecp).addr.cname.is_name_ptr != 0 {
         return (*crecp).addr.cname.target.name
     } else { return cache_get_name((*crecp).addr.cname.target.cache) };
 }
 #[no_mangle]
-pub unsafe extern "C" fn cache_enumerate(mut init: libc::c_int) -> *mut crec {
+pub unsafe extern "C" fn cache_enumerate(mut init: libc::c_int) -> *mut Crec {
     static mut bucket: libc::c_int = 0;
-    static mut cache: *mut crec = 0 as *const crec as *mut crec;
+    static mut cache: *mut Crec = 0 as *const Crec as *mut Crec;
     if init != 0 {
         bucket = 0 as libc::c_int;
-        cache = 0 as *mut crec
+        cache = 0 as *mut Crec
     } else if !cache.is_null() && !(*cache).hash_next.is_null() {
         cache = (*cache).hash_next
     } else {
-        cache = 0 as *mut crec;
+        cache = 0 as *mut Crec;
         while bucket < hash_size {
             let fresh8 = bucket;
             bucket = bucket + 1;
@@ -598,7 +598,7 @@ pub unsafe extern "C" fn cache_enumerate(mut init: libc::c_int) -> *mut crec {
     }
     return cache;
 }
-unsafe extern "C" fn is_outdated_cname_pointer(mut crecp: *mut crec)
+unsafe extern "C" fn is_outdated_cname_pointer(mut crecp: *mut Crec)
  -> libc::c_int {
     if (*crecp).flags & (1 as libc::c_uint) << 11 as libc::c_int == 0 ||
            (*crecp).addr.cname.is_name_ptr != 0 {
@@ -616,7 +616,7 @@ unsafe extern "C" fn is_outdated_cname_pointer(mut crecp: *mut crec)
     }
     return 1 as libc::c_int;
 }
-unsafe extern "C" fn is_expired(mut now: time_t, mut crecp: *mut crec)
+unsafe extern "C" fn is_expired(mut now: time_t, mut crecp: *mut Crec)
  -> libc::c_int {
     if (*crecp).flags & (1 as libc::c_uint) << 0 as libc::c_int != 0 {
         return 0 as libc::c_int
@@ -627,12 +627,12 @@ unsafe extern "C" fn is_expired(mut now: time_t, mut crecp: *mut crec)
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn cache_scan_free(mut name: *mut libc::c_char,
-                                     mut addr: *mut all_addr,
+                                     mut addr: *mut AllAddr,
                                      mut class: libc::c_ushort,
                                      mut now: time_t, mut flags: libc::c_uint,
-                                     mut target_crec: *mut *mut crec,
+                                     mut target_crec: *mut *mut Crec,
                                      mut target_uid: *mut libc::c_uint)
- -> *mut crec {
+                                     -> *mut Crec {
     /* Scan and remove old entries.
      If (flags & F_FORWARD) then remove any forward entries for name and any expired
      entries but only in the same hash bucket as name.
@@ -648,8 +648,8 @@ unsafe extern "C" fn cache_scan_free(mut name: *mut libc::c_char,
 
      If we free a crec which is a CNAME target, return the entry and uid in target_crec and target_uid.
      This entry will get re-used with the same name, to preserve CNAMEs. */
-    let mut crecp: *mut crec = 0 as *mut crec;
-    let mut up: *mut *mut crec = 0 as *mut *mut crec;
+    let mut crecp: *mut Crec = 0 as *mut Crec;
+    let mut up: *mut *mut Crec = 0 as *mut *mut Crec;
     if flags & (1 as libc::c_uint) << 3 as libc::c_int != 0 {
         let mut current_block_18: u64;
         up = hash_bucket(name);
@@ -718,7 +718,7 @@ unsafe extern "C" fn cache_scan_free(mut name: *mut libc::c_char,
         i = 0 as libc::c_int;
         while i < hash_size {
             crecp = *hash_table.offset(i as isize);
-            up = &mut *hash_table.offset(i as isize) as *mut *mut crec;
+            up = &mut *hash_table.offset(i as isize) as *mut *mut Crec;
             while !crecp.is_null() &&
                       ((*crecp).flags &
                            (1 as libc::c_uint) << 2 as libc::c_int != 0 ||
@@ -746,7 +746,7 @@ unsafe extern "C" fn cache_scan_free(mut name: *mut libc::c_char,
                                   ((1 as libc::c_uint) << 7 as libc::c_int |
                                        (1 as libc::c_uint) <<
                                            8 as libc::c_int) != 0 &&
-                              memcmp(&mut (*crecp).addr as *mut all_addr as
+                              memcmp(&mut (*crecp).addr as *mut AllAddr as
                                          *const libc::c_void,
                                      addr as *const libc::c_void,
                                      addrlen as libc::c_ulong) ==
@@ -760,7 +760,7 @@ unsafe extern "C" fn cache_scan_free(mut name: *mut libc::c_char,
             i += 1
         }
     }
-    return 0 as *mut crec;
+    return 0 as *mut Crec;
 }
 /* Note: The normal calling sequence is
    cache_start_insert
@@ -775,19 +775,19 @@ pub unsafe extern "C" fn cache_start_insert() {
      insert due to error.
   */
     while !new_chain.is_null() {
-        let mut tmp: *mut crec = (*new_chain).next;
+        let mut tmp: *mut Crec = (*new_chain).next;
         cache_free(new_chain);
         new_chain = tmp
     }
-    new_chain = 0 as *mut crec;
+    new_chain = 0 as *mut Crec;
     insert_error = 0 as libc::c_int;
 }
 #[no_mangle]
 pub unsafe extern "C" fn cache_insert(mut name: *mut libc::c_char,
-                                      mut addr: *mut all_addr,
+                                      mut addr: *mut AllAddr,
                                       mut class: libc::c_ushort,
                                       mut now: time_t, mut ttl: libc::c_ulong,
-                                      mut flags: libc::c_uint) -> *mut crec {
+                                      mut flags: libc::c_uint) -> *mut Crec {
     /* Don't log DNSSEC records here, done elsewhere */
     log_query(flags | (1 as libc::c_uint) << 16 as libc::c_int, name, addr,
               0 as *mut libc::c_char);
@@ -802,23 +802,23 @@ pub unsafe extern "C" fn cache_insert(mut name: *mut libc::c_char,
     return really_insert(name, addr, class, now, ttl, flags);
 }
 unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
-                                   mut addr: *mut all_addr,
+                                   mut addr: *mut AllAddr,
                                    mut class: libc::c_ushort, mut now: time_t,
                                    mut ttl: libc::c_ulong,
-                                   mut flags: libc::c_uint) -> *mut crec {
-    let mut new: *mut crec = 0 as *mut crec;
-    let mut target_crec: *mut crec = 0 as *mut crec;
-    let mut big_name: *mut bigname = 0 as *mut bigname;
+                                   mut flags: libc::c_uint) -> *mut Crec {
+    let mut new: *mut Crec = 0 as *mut Crec;
+    let mut target_crec: *mut Crec = 0 as *mut Crec;
+    let mut big_name: *mut BigName = 0 as *mut BigName;
     let mut freed_all: libc::c_int =
         (flags & (1 as libc::c_uint) << 2 as libc::c_int) as libc::c_int;
     let mut free_avail: libc::c_int = 0 as libc::c_int;
     let mut target_uid: libc::c_uint = 0;
     /* if previous insertion failed give up now. */
-    if insert_error != 0 { return 0 as *mut crec }
+    if insert_error != 0 { return 0 as *mut Crec }
     /* we don't cache zero-TTL records. */
     if ttl == 0 as libc::c_int as libc::c_ulong {
         insert_error = 1 as libc::c_int;
-        return 0 as *mut crec
+        return 0 as *mut Crec
     }
     /* First remove any expired entries and entries for the name/address we
      are currently inserting. */
@@ -845,12 +845,12 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
                        (*new).flags & (1 as libc::c_uint) << 8 as libc::c_int
                            != 0 &&
                        ({
-                            let mut __a: *const in6_addr =
-                                &mut (*new).addr.addr6 as *mut in6_addr as
-                                    *const in6_addr;
-                            let mut __b: *const in6_addr =
-                                &mut (*addr).addr6 as *mut in6_addr as
-                                    *const in6_addr;
+                            let mut __a: *const In6Addr =
+                                &mut (*new).addr.addr6 as *mut In6Addr as
+                                    *const In6Addr;
+                            let mut __b: *const In6Addr =
+                                &mut (*addr).addr6 as *mut In6Addr as
+                                    *const In6Addr;
                             ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as
                                                             usize] ==
                                  (*__b).__in6_u.__u6_addr32[0 as libc::c_int
@@ -879,7 +879,7 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
             }
         }
         insert_error = 1 as libc::c_int;
-        return 0 as *mut crec
+        return 0 as *mut Crec
     }
     /* Now get a cache entry from the end of the LRU list */
     if target_crec.is_null() {
@@ -888,7 +888,7 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
             if new.is_null() {
                 /* no entries left - cache is too small, bail */
                 insert_error = 1 as libc::c_int;
-                return 0 as *mut crec
+                return 0 as *mut Crec
             }
             /* Free entry at end of LRU list, use it. */
             if (*new).flags &
@@ -912,14 +912,14 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
                     warned = 1 as libc::c_int
                 }
                 insert_error = 1 as libc::c_int;
-                return 0 as *mut crec
+                return 0 as *mut Crec
             }
             if freed_all != 0 {
                 /* For DNSSEC records, uid holds class. */
                 free_avail = 1 as libc::c_int; /* Must be free space now. */
                 cache_scan_free(cache_get_name(new), &mut (*new).addr,
                                 (*new).uid as libc::c_ushort, now,
-                                (*new).flags, 0 as *mut *mut crec,
+                                (*new).flags, 0 as *mut *mut Crec,
                                 0 as *mut libc::c_uint);
                 (*dnsmasq_daemon).metrics[METRIC_DNS_CACHE_LIVE_FREED as
                                               libc::c_int as usize] =
@@ -927,9 +927,9 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
                                                   libc::c_int as
                                                   usize].wrapping_add(1)
             } else {
-                cache_scan_free(0 as *mut libc::c_char, 0 as *mut all_addr,
+                cache_scan_free(0 as *mut libc::c_char, 0 as *mut AllAddr,
                                 class, now, 0 as libc::c_int as libc::c_uint,
-                                0 as *mut *mut crec, 0 as *mut libc::c_uint);
+                                0 as *mut *mut Crec, 0 as *mut libc::c_uint);
                 freed_all = 1 as libc::c_int
             }
         }
@@ -949,12 +949,12 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
                       ||
                       {
                           big_name =
-                              whine_malloc(::std::mem::size_of::<bigname>() as
-                                               libc::c_ulong) as *mut bigname;
+                              whine_malloc(::std::mem::size_of::<BigName>() as
+                                               libc::c_ulong) as *mut BigName;
                           big_name.is_null()
                       } {
             insert_error = 1 as libc::c_int;
-            return 0 as *mut crec
+            return 0 as *mut Crec
         } else { if bignames_left != 0 as libc::c_int { bignames_left -= 1 } }
     }
     /* If we freed a cache entry for our name which was a CNAME target, use that.
@@ -981,7 +981,7 @@ unsafe extern "C" fn really_insert(mut name: *mut libc::c_char,
 pub unsafe extern "C" fn cache_end_insert() {
     if insert_error != 0 { return }
     while !new_chain.is_null() {
-        let mut tmp: *mut crec = (*new_chain).next;
+        let mut tmp: *mut Crec = (*new_chain).next;
         /* drop CNAMEs which didn't find a target. */
         if is_outdated_cname_pointer(new_chain) != 0 {
             cache_free(new_chain);
@@ -1024,9 +1024,9 @@ pub unsafe extern "C" fn cache_end_insert() {
                             (1 as libc::c_uint) << 14 as libc::c_int |
                             (1 as libc::c_uint) << 30 as libc::c_int) != 0 {
                     read_write((*dnsmasq_daemon).pipe_to_parent,
-                               &mut (*new_chain).addr as *mut all_addr as
+                               &mut (*new_chain).addr as *mut AllAddr as
                                    *mut libc::c_uchar,
-                               ::std::mem::size_of::<all_addr>() as
+                               ::std::mem::size_of::<AllAddr>() as
                                    libc::c_ulong as libc::c_int,
                                0 as libc::c_int);
                 }
@@ -1051,7 +1051,7 @@ pub unsafe extern "C" fn cache_end_insert() {
                    ::std::mem::size_of::<isize>() as libc::c_ulong as
                        libc::c_int, 0 as libc::c_int);
     }
-    new_chain = 0 as *mut crec;
+    new_chain = 0 as *mut Crec;
 }
 /* A marshalled cache entry arrives on fd, read, unmarshall and insert into cache of master process. */
 #[no_mangle]
@@ -1059,11 +1059,11 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
                                            mut fd: libc::c_int)
  -> libc::c_int {
     let mut m: isize = 0;
-    let mut addr: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+    let mut addr: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
     let mut ttl: libc::c_ulong = 0;
     let mut ttd: time_t = 0;
     let mut flags: libc::c_uint = 0;
-    let mut crecp: *mut crec = 0 as *mut crec;
+    let mut crecp: *mut Crec = 0 as *mut Crec;
     cache_start_insert();
     loop  {
         if read_write(fd, &mut m as *mut isize as *mut libc::c_uchar,
@@ -1100,8 +1100,8 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
             let mut class: libc::c_ushort =
                 1 as libc::c_int as libc::c_ushort;
             if read_write(fd,
-                          &mut addr as *mut all_addr as *mut libc::c_uchar,
-                          ::std::mem::size_of::<all_addr>() as libc::c_ulong
+                          &mut addr as *mut AllAddr as *mut libc::c_uchar,
+                          ::std::mem::size_of::<AllAddr>() as libc::c_ulong
                               as libc::c_int, 1 as libc::c_int) == 0 {
                 return 0 as libc::c_int
             }
@@ -1118,8 +1118,8 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
                 really_insert((*dnsmasq_daemon).namebuff, &mut addr, class,
                               now, ttl, flags)
         } else if flags & (1 as libc::c_uint) << 11 as libc::c_int != 0 {
-            let mut newc: *mut crec =
-                really_insert((*dnsmasq_daemon).namebuff, 0 as *mut all_addr,
+            let mut newc: *mut Crec =
+                really_insert((*dnsmasq_daemon).namebuff, 0 as *mut AllAddr,
                               1 as libc::c_int as libc::c_ushort, now, ttl,
                               flags);
             /* This relies on the fact that the target of a CNAME immediately precedes
@@ -1128,7 +1128,7 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
             if !newc.is_null() {
                 (*newc).addr.cname.is_name_ptr = 0 as libc::c_int;
                 if crecp.is_null() {
-                    (*newc).addr.cname.target.cache = 0 as *mut crec
+                    (*newc).addr.cname.target.cache = 0 as *mut Crec
                 } else {
                     next_uid(crecp);
                     (*newc).addr.cname.target.cache = crecp;
@@ -1142,7 +1142,7 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
 pub unsafe extern "C" fn cache_find_non_terminal(mut name: *mut libc::c_char,
                                                  mut now: time_t)
  -> libc::c_int {
-    let mut crecp: *mut crec = 0 as *mut crec;
+    let mut crecp: *mut Crec = 0 as *mut Crec;
     crecp = *hash_bucket(name);
     while !crecp.is_null() {
         if is_outdated_cname_pointer(crecp) == 0 &&
@@ -1158,12 +1158,12 @@ pub unsafe extern "C" fn cache_find_non_terminal(mut name: *mut libc::c_char,
     return 0 as libc::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn cache_find_by_name(mut crecp: *mut crec,
+pub unsafe extern "C" fn cache_find_by_name(mut crecp: *mut Crec,
                                             mut name: *mut libc::c_char,
                                             mut now: time_t,
                                             mut prot: libc::c_uint)
- -> *mut crec {
-    let mut ans: *mut crec = 0 as *mut crec;
+                                            -> *mut Crec {
+    let mut ans: *mut Crec = 0 as *mut Crec;
     let mut no_rr: libc::c_int =
         (prot & (1 as libc::c_uint) << 25 as libc::c_int) as libc::c_int;
     prot &= !((1 as libc::c_uint) << 25 as libc::c_int);
@@ -1173,10 +1173,10 @@ pub unsafe extern "C" fn cache_find_by_name(mut crecp: *mut crec,
     } else {
         /* first search, look for relevant entries and push to top of list
 	 also free anything which has expired */
-        let mut next: *mut crec = 0 as *mut crec;
-        let mut up: *mut *mut crec = 0 as *mut *mut crec;
-        let mut insert: *mut *mut crec = 0 as *mut *mut crec;
-        let mut chainp: *mut *mut crec = &mut ans;
+        let mut next: *mut Crec = 0 as *mut Crec;
+        let mut up: *mut *mut Crec = 0 as *mut *mut Crec;
+        let mut insert: *mut *mut Crec = 0 as *mut *mut Crec;
+        let mut chainp: *mut *mut Crec = &mut ans;
         let mut ins_flags: libc::c_uint = 0 as libc::c_int as libc::c_uint;
         up = hash_bucket(name);
         crecp = *up;
@@ -1245,15 +1245,15 @@ pub unsafe extern "C" fn cache_find_by_name(mut crecp: *mut crec,
            hostname_isequal(cache_get_name(ans), name) != 0 {
         return ans
     }
-    return 0 as *mut crec;
+    return 0 as *mut Crec;
 }
 #[no_mangle]
-pub unsafe extern "C" fn cache_find_by_addr(mut crecp: *mut crec,
-                                            mut addr: *mut all_addr,
+pub unsafe extern "C" fn cache_find_by_addr(mut crecp: *mut Crec,
+                                            mut addr: *mut AllAddr,
                                             mut now: time_t,
                                             mut prot: libc::c_uint)
- -> *mut crec {
-    let mut ans: *mut crec = 0 as *mut crec;
+                                            -> *mut Crec {
+    let mut ans: *mut Crec = 0 as *mut Crec;
     let mut addrlen: libc::c_int =
         if prot == (1 as libc::c_uint) << 8 as libc::c_int {
             16 as libc::c_int
@@ -1267,18 +1267,18 @@ pub unsafe extern "C" fn cache_find_by_addr(mut crecp: *mut crec,
 	 start of the hash chain, so we can give up when we find the first 
 	 non-REVERSE one.  */
         let mut i: libc::c_int = 0;
-        let mut up: *mut *mut crec = 0 as *mut *mut crec;
-        let mut chainp: *mut *mut crec = &mut ans;
+        let mut up: *mut *mut Crec = 0 as *mut *mut Crec;
+        let mut chainp: *mut *mut Crec = &mut ans;
         i = 0 as libc::c_int;
         while i < hash_size {
             crecp = *hash_table.offset(i as isize);
-            up = &mut *hash_table.offset(i as isize) as *mut *mut crec;
+            up = &mut *hash_table.offset(i as isize) as *mut *mut Crec;
             while !crecp.is_null() &&
                       (*crecp).flags & (1 as libc::c_uint) << 2 as libc::c_int
                           != 0 {
                 if is_expired(now, crecp) == 0 {
                     if (*crecp).flags & prot != 0 &&
-                           memcmp(&mut (*crecp).addr as *mut all_addr as
+                           memcmp(&mut (*crecp).addr as *mut AllAddr as
                                       *const libc::c_void,
                                   addr as *const libc::c_void,
                                   addrlen as libc::c_ulong) ==
@@ -1313,21 +1313,21 @@ pub unsafe extern "C" fn cache_find_by_addr(mut crecp: *mut crec,
     if !ans.is_null() &&
            (*ans).flags & (1 as libc::c_uint) << 2 as libc::c_int != 0 &&
            (*ans).flags & prot != 0 &&
-           memcmp(&mut (*ans).addr as *mut all_addr as *const libc::c_void,
+           memcmp(&mut (*ans).addr as *mut AllAddr as *const libc::c_void,
                   addr as *const libc::c_void, addrlen as libc::c_ulong) ==
                0 as libc::c_int {
         return ans
     }
-    return 0 as *mut crec;
+    return 0 as *mut Crec;
 }
-unsafe extern "C" fn add_hosts_entry(mut cache: *mut crec,
-                                     mut addr: *mut all_addr,
+unsafe extern "C" fn add_hosts_entry(mut cache: *mut Crec,
+                                     mut addr: *mut AllAddr,
                                      mut addrlen: libc::c_int,
                                      mut index: libc::c_uint,
-                                     mut rhash: *mut *mut crec,
+                                     mut rhash: *mut *mut Crec,
                                      mut hashsz: libc::c_int) {
-    let mut lookup: *mut crec =
-        cache_find_by_name(0 as *mut crec, cache_get_name(cache),
+    let mut lookup: *mut Crec =
+        cache_find_by_name(0 as *mut Crec, cache_get_name(cache),
                            0 as libc::c_int as time_t,
                            (*cache).flags &
                                ((1 as libc::c_uint) << 7 as libc::c_int |
@@ -1337,7 +1337,7 @@ unsafe extern "C" fn add_hosts_entry(mut cache: *mut crec,
     /* Remove duplicates in hosts files. */
     if !lookup.is_null() &&
            (*lookup).flags & (1 as libc::c_uint) << 6 as libc::c_int != 0 &&
-           memcmp(&mut (*lookup).addr as *mut all_addr as *const libc::c_void,
+           memcmp(&mut (*lookup).addr as *mut AllAddr as *const libc::c_void,
                   addr as *const libc::c_void, addrlen as libc::c_ulong) ==
                0 as libc::c_int {
         free(cache as *mut libc::c_void);
@@ -1381,7 +1381,7 @@ unsafe extern "C" fn add_hosts_entry(mut cache: *mut crec,
             if (*lookup).flags & (*cache).flags &
                    ((1 as libc::c_uint) << 7 as libc::c_int |
                         (1 as libc::c_uint) << 8 as libc::c_int) != 0 &&
-                   memcmp(&mut (*lookup).addr as *mut all_addr as
+                   memcmp(&mut (*lookup).addr as *mut AllAddr as
                               *const libc::c_void,
                           addr as *const libc::c_void,
                           addrlen as libc::c_ulong) == 0 as libc::c_int {
@@ -1398,7 +1398,7 @@ unsafe extern "C" fn add_hosts_entry(mut cache: *mut crec,
     } else {
         /* incremental read, lookup in cache */
         lookup =
-            cache_find_by_addr(0 as *mut crec, addr,
+            cache_find_by_addr(0 as *mut Crec, addr,
                                0 as libc::c_int as time_t,
                                (*cache).flags &
                                    ((1 as libc::c_uint) << 7 as libc::c_int |
@@ -1411,7 +1411,7 @@ unsafe extern "C" fn add_hosts_entry(mut cache: *mut crec,
         }
     }
     (*cache).uid = index;
-    memcpy(&mut (*cache).addr as *mut all_addr as *mut libc::c_void,
+    memcpy(&mut (*cache).addr as *mut AllAddr as *mut libc::c_void,
            addr as *const libc::c_void, addrlen as libc::c_ulong);
     cache_hash(cache);
     make_non_terminals(cache);
@@ -1462,9 +1462,9 @@ unsafe extern "C" fn gettok(mut f: *mut FILE, mut token: *mut libc::c_char)
 pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
                                         mut index: libc::c_uint,
                                         mut cache_size: libc::c_int,
-                                        mut rhash: *mut *mut crec,
+                                        mut rhash: *mut *mut Crec,
                                         mut hashsz: libc::c_int)
- -> libc::c_int {
+                                        -> libc::c_int {
     let mut f: *mut FILE =
         fopen(filename, b"r\x00" as *const u8 as *const libc::c_char);
     let mut token: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
@@ -1473,7 +1473,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
     let mut name_count: libc::c_int = cache_size;
     let mut lineno: libc::c_int = 1 as libc::c_int;
     let mut flags: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-    let mut addr: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+    let mut addr: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
     let mut atnl: libc::c_int = 0;
     let mut addrlen: libc::c_int = 0 as libc::c_int;
     if f.is_null() {
@@ -1488,7 +1488,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
         atnl = gettok(f, token);
         if !(atnl != -(1 as libc::c_int)) { break ; }
         if inet_pton(2 as libc::c_int, token,
-                     &mut addr as *mut all_addr as *mut libc::c_void) >
+                     &mut addr as *mut AllAddr as *mut libc::c_void) >
                0 as libc::c_int {
             flags =
                 (1 as libc::c_uint) << 6 as libc::c_int |
@@ -1499,7 +1499,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
             addrlen = 4 as libc::c_int;
             domain_suffix = get_domain(addr.addr4)
         } else if inet_pton(10 as libc::c_int, token,
-                            &mut addr as *mut all_addr as *mut libc::c_void) >
+                            &mut addr as *mut AllAddr as *mut libc::c_void) >
                       0 as libc::c_int {
             flags =
                 (1 as libc::c_uint) << 6 as libc::c_int |
@@ -1524,7 +1524,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
             cache_size = name_count
         }
         while atnl == 0 as libc::c_int {
-            let mut cache: *mut crec = 0 as *mut crec;
+            let mut cache: *mut Crec = 0 as *mut Crec;
             let mut fqdn: libc::c_int = 0;
             let mut nomem: libc::c_int = 0;
             let mut canon: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -1555,7 +1555,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
                        != 0 && !domain_suffix.is_null() && fqdn == 0 &&
                        {
                            cache =
-                               whine_malloc((::std::mem::size_of::<crec>() as
+                               whine_malloc((::std::mem::size_of::<Crec>() as
                                                  libc::c_ulong).wrapping_sub(50
                                                                                  as
                                                                                  libc::c_int
@@ -1565,7 +1565,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
                                                                                                                                              libc::c_int
                                                                                                                                              as
                                                                                                                                              libc::c_ulong).wrapping_add(strlen(domain_suffix)))
-                                   as *mut crec;
+                                   as *mut Crec;
                            !cache.is_null()
                        } {
                     strcpy((*cache).name.sname.as_mut_ptr(), canon);
@@ -1579,7 +1579,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
                     name_count += 1
                 }
                 cache =
-                    whine_malloc((::std::mem::size_of::<crec>() as
+                    whine_malloc((::std::mem::size_of::<Crec>() as
                                       libc::c_ulong).wrapping_sub(50 as
                                                                       libc::c_int
                                                                       as
@@ -1588,7 +1588,7 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
                                                                                                                                   libc::c_int
                                                                                                                                   as
                                                                                                                                   libc::c_ulong))
-                        as *mut crec;
+                        as *mut Crec;
                 if !cache.is_null() {
                     strcpy((*cache).name.sname.as_mut_ptr(), canon);
                     (*cache).flags = flags;
@@ -1615,30 +1615,30 @@ pub unsafe extern "C" fn read_hostsfile(mut filename: *mut libc::c_char,
 }
 #[no_mangle]
 pub unsafe extern "C" fn cache_reload() {
-    let mut cache: *mut crec = 0 as *mut crec;
-    let mut up: *mut *mut crec = 0 as *mut *mut crec;
-    let mut tmp: *mut crec = 0 as *mut crec;
+    let mut cache: *mut Crec = 0 as *mut Crec;
+    let mut up: *mut *mut Crec = 0 as *mut *mut Crec;
+    let mut tmp: *mut Crec = 0 as *mut Crec;
     let mut revhashsz: libc::c_int = 0;
     let mut i: libc::c_int = 0;
     let mut total_size: libc::c_int = (*dnsmasq_daemon).cachesize;
-    let mut ah: *mut hostsfile = 0 as *mut hostsfile;
-    let mut hr: *mut host_record = 0 as *mut host_record;
-    let mut nl: *mut name_list = 0 as *mut name_list;
-    let mut a: *mut cname = 0 as *mut cname;
-    let mut lrec: crec =
-        crec{next: 0 as *mut crec,
-             prev: 0 as *mut crec,
-             hash_next: 0 as *mut crec,
-             addr: all_addr{addr4: in_addr{s_addr: 0,},},
+    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
+    let mut hr: *mut HostRecord = 0 as *mut HostRecord;
+    let mut nl: *mut NameList = 0 as *mut NameList;
+    let mut a: *mut Cname = 0 as *mut Cname;
+    let mut lrec: Crec =
+        Crec {next: 0 as *mut Crec,
+             prev: 0 as *mut Crec,
+             hash_next: 0 as *mut Crec,
+             addr: AllAddr {addr4: InAddr {s_addr: 0,},},
              ttd: 0,
              uid: 0,
              flags: 0,
              name: C2RustUnnamed_8{sname: [0; 50],},};
-    let mut mx: *mut mx_srv_record = 0 as *mut mx_srv_record;
-    let mut txt: *mut txt_record = 0 as *mut txt_record;
-    let mut intr: *mut interface_name = 0 as *mut interface_name;
-    let mut ptr: *mut ptr_record = 0 as *mut ptr_record;
-    let mut naptr: *mut naptr = 0 as *mut naptr;
+    let mut mx: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
+    let mut txt: *mut TxtRecord = 0 as *mut TxtRecord;
+    let mut intr: *mut InterfaceName = 0 as *mut InterfaceName;
+    let mut ptr: *mut PtrRecord = 0 as *mut PtrRecord;
+    let mut naptr: *mut NaPtr = 0 as *mut NaPtr;
     (*dnsmasq_daemon).metrics[METRIC_DNS_CACHE_INSERTED as libc::c_int as
                                   usize] = 0 as libc::c_int as u32;
     (*dnsmasq_daemon).metrics[METRIC_DNS_CACHE_LIVE_FREED as libc::c_int as
@@ -1646,7 +1646,7 @@ pub unsafe extern "C" fn cache_reload() {
     i = 0 as libc::c_int;
     while i < hash_size {
         cache = *hash_table.offset(i as isize);
-        up = &mut *hash_table.offset(i as isize) as *mut *mut crec;
+        up = &mut *hash_table.offset(i as isize) as *mut *mut Crec;
         while !cache.is_null() {
             cache_blockdata_free(cache);
             tmp = (*cache).hash_next;
@@ -1676,7 +1676,7 @@ pub unsafe extern "C" fn cache_reload() {
                '*' as i32 &&
                {
                    cache =
-                       whine_malloc((::std::mem::size_of::<crec>() as
+                       whine_malloc((::std::mem::size_of::<Crec>() as
                                          libc::c_ulong).wrapping_add(::std::mem::size_of::<*mut libc::c_char>()
                                                                          as
                                                                          libc::c_ulong).wrapping_sub(50
@@ -1684,7 +1684,7 @@ pub unsafe extern "C" fn cache_reload() {
                                                                                                          libc::c_int
                                                                                                          as
                                                                                                          libc::c_ulong))
-                           as *mut crec;
+                           as *mut Crec;
                    !cache.is_null()
                } {
             (*cache).flags =
@@ -1708,10 +1708,10 @@ pub unsafe extern "C" fn cache_reload() {
            (*dnsmasq_daemon).packet_buff_sz as libc::c_ulong);
     revhashsz =
         ((*dnsmasq_daemon).packet_buff_sz as
-             libc::c_ulong).wrapping_div(::std::mem::size_of::<*mut crec>() as
+             libc::c_ulong).wrapping_div(::std::mem::size_of::<*mut Crec>() as
                                              libc::c_ulong) as libc::c_int;
     /* we overwrote the buffer... */
-    (*dnsmasq_daemon).srv_save = 0 as *mut server;
+    (*dnsmasq_daemon).srv_save = 0 as *mut Server;
     /* Do host_records in config. */
     hr = (*dnsmasq_daemon).host_records;
     while !hr.is_null() {
@@ -1720,7 +1720,7 @@ pub unsafe extern "C" fn cache_reload() {
             if (*hr).flags & 2 as libc::c_int != 0 &&
                    {
                        cache =
-                           whine_malloc((::std::mem::size_of::<crec>() as
+                           whine_malloc((::std::mem::size_of::<Crec>() as
                                              libc::c_ulong).wrapping_add(::std::mem::size_of::<*mut libc::c_char>()
                                                                              as
                                                                              libc::c_ulong).wrapping_sub(50
@@ -1728,7 +1728,7 @@ pub unsafe extern "C" fn cache_reload() {
                                                                                                              libc::c_int
                                                                                                              as
                                                                                                              libc::c_ulong))
-                               as *mut crec;
+                               as *mut Crec;
                        !cache.is_null()
                    } {
                 (*cache).name.namep = (*nl).name;
@@ -1742,16 +1742,16 @@ pub unsafe extern "C" fn cache_reload() {
                         (1 as libc::c_uint) << 1 as libc::c_int |
                         (1 as libc::c_uint) << 13 as libc::c_int;
                 add_hosts_entry(cache,
-                                &mut (*hr).addr as *mut in_addr as
-                                    *mut all_addr, 4 as libc::c_int,
+                                &mut (*hr).addr as *mut InAddr as
+                                    *mut AllAddr, 4 as libc::c_int,
                                 1 as libc::c_int as libc::c_uint,
-                                (*dnsmasq_daemon).packet as *mut *mut crec,
+                                (*dnsmasq_daemon).packet as *mut *mut Crec,
                                 revhashsz);
             }
             if (*hr).flags & 1 as libc::c_int != 0 &&
                    {
                        cache =
-                           whine_malloc((::std::mem::size_of::<crec>() as
+                           whine_malloc((::std::mem::size_of::<Crec>() as
                                              libc::c_ulong).wrapping_add(::std::mem::size_of::<*mut libc::c_char>()
                                                                              as
                                                                              libc::c_ulong).wrapping_sub(50
@@ -1759,7 +1759,7 @@ pub unsafe extern "C" fn cache_reload() {
                                                                                                              libc::c_int
                                                                                                              as
                                                                                                              libc::c_ulong))
-                               as *mut crec;
+                               as *mut Crec;
                        !cache.is_null()
                    } {
                 (*cache).name.namep = (*nl).name;
@@ -1773,10 +1773,10 @@ pub unsafe extern "C" fn cache_reload() {
                         (1 as libc::c_uint) << 1 as libc::c_int |
                         (1 as libc::c_uint) << 13 as libc::c_int;
                 add_hosts_entry(cache,
-                                &mut (*hr).addr6 as *mut in6_addr as
-                                    *mut all_addr, 16 as libc::c_int,
+                                &mut (*hr).addr6 as *mut In6Addr as
+                                    *mut AllAddr, 16 as libc::c_int,
                                 1 as libc::c_int as libc::c_uint,
-                                (*dnsmasq_daemon).packet as *mut *mut crec,
+                                (*dnsmasq_daemon).packet as *mut *mut Crec,
                                 revhashsz);
             }
             nl = (*nl).next
@@ -1831,7 +1831,7 @@ pub unsafe extern "C" fn cache_reload() {
                 read_hostsfile(b"/etc/hosts\x00" as *const u8 as
                                    *const libc::c_char as *mut libc::c_char,
                                2 as libc::c_int as libc::c_uint, total_size,
-                               (*dnsmasq_daemon).packet as *mut *mut crec,
+                               (*dnsmasq_daemon).packet as *mut *mut Crec,
                                revhashsz)
         }
         (*dnsmasq_daemon).addn_hosts =
@@ -1841,7 +1841,7 @@ pub unsafe extern "C" fn cache_reload() {
             if (*ah).flags & 2 as libc::c_int == 0 {
                 total_size =
                     read_hostsfile((*ah).fname, (*ah).index, total_size,
-                                   (*dnsmasq_daemon).packet as *mut *mut crec,
+                                   (*dnsmasq_daemon).packet as *mut *mut Crec,
                                    revhashsz)
             }
             ah = (*ah).next
@@ -1884,14 +1884,14 @@ pub unsafe extern "C" fn cache_reload() {
         ptr = (*ptr).next
     }
     set_dynamic_inotify(8 as libc::c_int, total_size,
-                        (*dnsmasq_daemon).packet as *mut *mut crec,
+                        (*dnsmasq_daemon).packet as *mut *mut Crec,
                         revhashsz);
 }
 #[no_mangle]
 pub unsafe extern "C" fn a_record_from_hosts(mut name: *mut libc::c_char,
-                                             mut now: time_t) -> in_addr {
-    let mut crecp: *mut crec = 0 as *mut crec;
-    let mut ret: in_addr = in_addr{s_addr: 0,};
+                                             mut now: time_t) -> InAddr {
+    let mut crecp: *mut Crec = 0 as *mut Crec;
+    let mut ret: InAddr = InAddr {s_addr: 0,};
     loop  {
         crecp =
             cache_find_by_name(crecp, name, now,
@@ -1909,13 +1909,13 @@ pub unsafe extern "C" fn a_record_from_hosts(mut name: *mut libc::c_char,
 }
 #[no_mangle]
 pub unsafe extern "C" fn cache_unhash_dhcp() {
-    let mut cache: *mut crec = 0 as *mut crec;
-    let mut up: *mut *mut crec = 0 as *mut *mut crec;
+    let mut cache: *mut Crec = 0 as *mut Crec;
+    let mut up: *mut *mut Crec = 0 as *mut *mut Crec;
     let mut i: libc::c_int = 0;
     i = 0 as libc::c_int;
     while i < hash_size {
         cache = *hash_table.offset(i as isize);
-        up = &mut *hash_table.offset(i as isize) as *mut *mut crec;
+        up = &mut *hash_table.offset(i as isize) as *mut *mut Crec;
         while !cache.is_null() {
             if (*cache).flags & (1 as libc::c_uint) << 4 as libc::c_int != 0 {
                 *up = (*cache).hash_next;
@@ -1931,17 +1931,17 @@ pub unsafe extern "C" fn cache_unhash_dhcp() {
 pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
                                                   *mut libc::c_char,
                                               mut prot: libc::c_int,
-                                              mut host_address: *mut all_addr,
+                                              mut host_address: *mut AllAddr,
                                               mut ttd: time_t) {
-    let mut crec: *mut crec = 0 as *mut crec;
-    let mut fail_crec: *mut crec = 0 as *mut crec;
+    let mut crec: *mut Crec = 0 as *mut Crec;
+    let mut fail_crec: *mut Crec = 0 as *mut Crec;
     let mut flags: libc::c_uint = (1 as libc::c_uint) << 7 as libc::c_int;
     let mut in_hosts: libc::c_int = 0 as libc::c_int;
     let mut addrlen: usize =
-        ::std::mem::size_of::<in_addr>() as libc::c_ulong;
+        ::std::mem::size_of::<InAddr>() as libc::c_ulong;
     if prot == 10 as libc::c_int {
         flags = (1 as libc::c_uint) << 8 as libc::c_int;
-        addrlen = ::std::mem::size_of::<in6_addr>() as libc::c_ulong
+        addrlen = ::std::mem::size_of::<In6Addr>() as libc::c_ulong
     }
     inet_ntop(prot, host_address as *const libc::c_void,
               (*dnsmasq_daemon).addrbuff, 46 as libc::c_int as socklen_t);
@@ -1961,7 +1961,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
                           b"%s is a CNAME, not giving it to the DHCP lease of %s\x00"
                               as *const u8 as *const libc::c_char, host_name,
                           (*dnsmasq_daemon).addrbuff);
-            } else if memcmp(&mut (*crec).addr as *mut all_addr as
+            } else if memcmp(&mut (*crec).addr as *mut AllAddr as
                                  *const libc::c_void,
                              host_address as *const libc::c_void, addrlen) ==
                           0 as libc::c_int {
@@ -1972,7 +1972,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
                {
                 continue ;
             }
-            cache_scan_free(host_name, 0 as *mut all_addr,
+            cache_scan_free(host_name, 0 as *mut AllAddr,
                             1 as libc::c_int as libc::c_ushort,
                             0 as libc::c_int as time_t,
                             (*crec).flags &
@@ -1980,7 +1980,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
                                      (1 as libc::c_uint) << 11 as libc::c_int
                                      |
                                      (1 as libc::c_uint) << 3 as libc::c_int),
-                            0 as *mut *mut crec, 0 as *mut libc::c_uint);
+                            0 as *mut *mut Crec, 0 as *mut libc::c_uint);
             break ;
         }
     }
@@ -1989,7 +1989,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
     /* Name in hosts, address doesn't match */
     if !fail_crec.is_null() {
         inet_ntop(prot,
-                  &mut (*fail_crec).addr as *mut all_addr as
+                  &mut (*fail_crec).addr as *mut AllAddr as
                       *const libc::c_void, (*dnsmasq_daemon).namebuff,
                   1025 as libc::c_int as socklen_t);
         my_syslog((3 as libc::c_int) << 3 as libc::c_int | 4 as libc::c_int,
@@ -2000,7 +2000,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
         return
     }
     crec =
-        cache_find_by_addr(0 as *mut crec, host_address,
+        cache_find_by_addr(0 as *mut Crec, host_address,
                            0 as libc::c_int as time_t, flags);
     if !crec.is_null() {
         if (*crec).flags & (1 as libc::c_uint) << 5 as libc::c_int != 0 {
@@ -2008,7 +2008,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
             cache_scan_free(0 as *mut libc::c_char, host_address,
                             1 as libc::c_int as libc::c_ushort,
                             0 as libc::c_int as time_t, flags,
-                            0 as *mut *mut crec, 0 as *mut libc::c_uint);
+                            0 as *mut *mut Crec, 0 as *mut libc::c_uint);
         }
     } else { flags |= (1 as libc::c_uint) << 2 as libc::c_int }
     crec = dhcp_spare;
@@ -2017,7 +2017,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
     } else {
         /* need new one */
         crec =
-            whine_malloc((::std::mem::size_of::<crec>() as
+            whine_malloc((::std::mem::size_of::<Crec>() as
                               libc::c_ulong).wrapping_add(::std::mem::size_of::<*mut libc::c_char>()
                                                               as
                                                               libc::c_ulong).wrapping_sub(50
@@ -2025,7 +2025,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
                                                                                               libc::c_int
                                                                                               as
                                                                                               libc::c_ulong))
-                as *mut crec
+                as *mut Crec
     }
     if !crec.is_null() {
         /* malloc may fail */
@@ -2048,11 +2048,11 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
    for three.two.one, for two.one and one), without
    F_IPV4 or F_IPV6 or F_CNAME set. These convert
    NXDOMAIN answers to NoData ones. */
-unsafe extern "C" fn make_non_terminals(mut source: *mut crec) {
+unsafe extern "C" fn make_non_terminals(mut source: *mut Crec) {
     let mut name: *mut libc::c_char = cache_get_name(source);
-    let mut crecp: *mut crec = 0 as *mut crec;
-    let mut tmp: *mut crec = 0 as *mut crec;
-    let mut up: *mut *mut crec = 0 as *mut *mut crec;
+    let mut crecp: *mut Crec = 0 as *mut Crec;
+    let mut tmp: *mut Crec = 0 as *mut Crec;
+    let mut up: *mut *mut Crec = 0 as *mut *mut Crec;
     let mut type_0: libc::c_int =
         ((1 as libc::c_uint) << 6 as libc::c_int |
              (1 as libc::c_uint) << 13 as libc::c_int) as libc::c_int;
@@ -2122,7 +2122,7 @@ unsafe extern "C" fn make_non_terminals(mut source: *mut crec) {
                 dhcp_spare = (*dhcp_spare).next
             } else {
                 crecp =
-                    whine_malloc((::std::mem::size_of::<crec>() as
+                    whine_malloc((::std::mem::size_of::<Crec>() as
                                       libc::c_ulong).wrapping_add(::std::mem::size_of::<*mut libc::c_char>()
                                                                       as
                                                                       libc::c_ulong).wrapping_sub(50
@@ -2130,7 +2130,7 @@ unsafe extern "C" fn make_non_terminals(mut source: *mut crec) {
                                                                                                       libc::c_int
                                                                                                       as
                                                                                                       libc::c_ulong))
-                        as *mut crec
+                        as *mut Crec
             }
             if !crecp.is_null() {
                 (*crecp).flags =
@@ -2151,14 +2151,14 @@ unsafe extern "C" fn make_non_terminals(mut source: *mut crec) {
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn cache_make_stat(mut t: *mut txt_record)
+pub unsafe extern "C" fn cache_make_stat(mut t: *mut TxtRecord)
  -> libc::c_int {
     static mut buff: *mut libc::c_char =
         0 as *const libc::c_char as *mut libc::c_char;
     static mut bufflen: libc::c_int = 60 as libc::c_int;
     let mut len: libc::c_int = 0;
-    let mut serv: *mut server = 0 as *mut server;
-    let mut serv1: *mut server = 0 as *mut server;
+    let mut serv: *mut Server = 0 as *mut Server;
+    let mut serv1: *mut Server = 0 as *mut Server;
     let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
     if buff.is_null() &&
            {
@@ -2331,8 +2331,8 @@ unsafe extern "C" fn sanitise(mut name: *mut libc::c_char)
 }
 #[no_mangle]
 pub unsafe extern "C" fn dump_cache(mut now: time_t) {
-    let mut serv: *mut server = 0 as *mut server;
-    let mut serv1: *mut server = 0 as *mut server;
+    let mut serv: *mut Server = 0 as *mut Server;
+    let mut serv1: *mut Server = 0 as *mut Server;
     my_syslog(6 as libc::c_int,
               b"time %lu\x00" as *const u8 as *const libc::c_char,
               now as libc::c_ulong);
@@ -2436,7 +2436,7 @@ pub unsafe extern "C" fn dump_cache(mut now: time_t) {
                                                                                          as
                                                                                          libc::c_ulong))
                != 0 {
-        let mut cache: *mut crec = 0 as *mut crec;
+        let mut cache: *mut Crec = 0 as *mut Crec;
         let mut i: libc::c_int = 0;
         my_syslog(6 as libc::c_int,
                   b"Host                                     Address                        Flags      Expires\x00"
@@ -2503,14 +2503,14 @@ pub unsafe extern "C" fn dump_cache(mut now: time_t) {
                     if (*cache).flags &
                            (1 as libc::c_uint) << 7 as libc::c_int != 0 {
                         inet_ntop(2 as libc::c_int,
-                                  &mut (*cache).addr as *mut all_addr as
+                                  &mut (*cache).addr as *mut AllAddr as
                                       *const libc::c_void, a,
                                   46 as libc::c_int as socklen_t);
                     } else if (*cache).flags &
                                   (1 as libc::c_uint) << 8 as libc::c_int != 0
                      {
                         inet_ntop(10 as libc::c_int,
-                                  &mut (*cache).addr as *mut all_addr as
+                                  &mut (*cache).addr as *mut AllAddr as
                                       *const libc::c_void, a,
                                   46 as libc::c_int as socklen_t);
                     }
@@ -2642,7 +2642,7 @@ pub unsafe extern "C" fn dump_cache(mut now: time_t) {
 #[no_mangle]
 pub unsafe extern "C" fn record_source(mut index: libc::c_uint)
  -> *mut libc::c_char {
-    let mut ah: *mut hostsfile = 0 as *mut hostsfile;
+    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
     if index == 1 as libc::c_int as libc::c_uint {
         return b"config\x00" as *const u8 as *const libc::c_char as
                    *mut libc::c_char
@@ -2727,7 +2727,7 @@ pub unsafe extern "C" fn querystr(mut desc: *mut libc::c_char,
 #[no_mangle]
 pub unsafe extern "C" fn log_query(mut flags: libc::c_uint,
                                    mut name: *mut libc::c_char,
-                                   mut addr: *mut all_addr,
+                                   mut addr: *mut AllAddr,
                                    mut arg: *mut libc::c_char) {
     let mut source: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut dest: *mut libc::c_char = (*dnsmasq_daemon).addrbuff;

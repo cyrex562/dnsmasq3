@@ -1,5 +1,5 @@
 use crate::slack::{sockaddr_nl, nlmsghdr, my_nlattr, my_nfgenmsg, ip_set_req_adt_get, ip_set_req_adt};
-use crate::defines::{__kernel_sa_family_t, dnsmasq_daemon, SOCK_RAW, IPPROTO_RAW, __CONST_SOCKADDR_ARG, sockaddr, socklen_t, all_addr, __bswap_16, C2RustUnnamed_9, __bswap_32};
+use crate::defines::{__kernel_sa_family_t, DnsmasqDaemon, SOCK_RAW, IPPROTO_RAW, __CONST_SOCKADDR_ARG, SockAddr, socklen_t, AllAddr, __bswap_16, C2RustUnnamed_9, __bswap_32};
 use crate::util::{safe_malloc, retry_send};
 use crate::dnsmasq_log::{die, my_syslog};
 
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn ipset_init() {
            bind(ipset_sock,
                 __CONST_SOCKADDR_ARG{__sockaddr__:
                                          &snl as *const sockaddr_nl as
-                                             *mut sockaddr,},
+                                             *mut SockAddr,},
                 ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong as
                     socklen_t) != -(1 as libc::c_int) {
         return
@@ -98,10 +98,10 @@ pub unsafe extern "C" fn ipset_init() {
         5 as libc::c_int);
 }
 unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
-                                      mut ipaddr: *const all_addr,
+                                      mut ipaddr: *const AllAddr,
                                       mut af: libc::c_int,
                                       mut remove: libc::c_int)
- -> libc::c_int {
+                                      -> libc::c_int {
     let mut nlh: *mut nlmsghdr = 0 as *mut nlmsghdr;
     let mut nfg: *mut my_nfgenmsg = 0 as *mut my_nfgenmsg;
     let mut nested: [*mut my_nlattr; 2] = [0 as *mut my_nlattr; 2];
@@ -231,7 +231,7 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
                             __CONST_SOCKADDR_ARG{__sockaddr__:
                                                      &snl as
                                                          *const sockaddr_nl as
-                                                         *mut sockaddr,},
+                                                         *mut SockAddr,},
                             ::std::mem::size_of::<sockaddr_nl>() as
                                 libc::c_ulong as socklen_t)) != 0 {
     }
@@ -240,9 +240,9 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
            } else { -(1 as libc::c_int) };
 }
 unsafe extern "C" fn old_add_to_ipset(mut setname: *const libc::c_char,
-                                      mut ipaddr: *const all_addr,
+                                      mut ipaddr: *const AllAddr,
                                       mut remove: libc::c_int)
- -> libc::c_int {
+                                      -> libc::c_int {
     let mut size: socklen_t = 0;
     let mut req_adt_get: ip_set_req_adt_get =
         ip_set_req_adt_get{op: 0,
@@ -281,10 +281,10 @@ unsafe extern "C" fn old_add_to_ipset(mut setname: *const libc::c_char,
 }
 #[no_mangle]
 pub unsafe extern "C" fn add_to_ipset(mut setname: *const libc::c_char,
-                                      mut ipaddr: *const all_addr,
+                                      mut ipaddr: *const AllAddr,
                                       mut flags: libc::c_int,
                                       mut remove: libc::c_int)
- -> libc::c_int {
+                                      -> libc::c_int {
     let mut ret: libc::c_int = 0 as libc::c_int;
     let mut af: libc::c_int = 2 as libc::c_int;
     if flags as libc::c_uint & (1 as libc::c_uint) << 8 as libc::c_int != 0 {

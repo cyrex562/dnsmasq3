@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{dhcp_lease, time_t, slaac_address, dhcp_context, dnsmasq_daemon, in6_addr, sockaddr_in6, C2RustUnnamed, sa_family_t, __bswap_16, __CONST_SOCKADDR_ARG, sockaddr, socklen_t};
+use crate::defines::{DhcpLease, time_t, SlaacAddress, DhcpContext, DnsmasqDaemon, In6Addr, SockAddrIn6, C2RustUnnamed, sa_family_t, __bswap_16, __CONST_SOCKADDR_ARG, SockAddr, socklen_t};
 use crate::util::{whine_malloc, rand16};
 use crate::radv::ra_start_unsolicited;
 use crate::lease::lease_update_dns;
@@ -24,13 +24,13 @@ use crate::dnsmasq_log::my_syslog;
 
 static mut ping_id: libc::c_int = 0 as libc::c_int;
 #[no_mangle]
-pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
+pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut DhcpLease,
                                          mut now: time_t,
                                          mut force: libc::c_int) {
-    let mut slaac: *mut slaac_address = 0 as *mut slaac_address;
-    let mut old: *mut slaac_address = 0 as *mut slaac_address;
-    let mut up: *mut *mut slaac_address = 0 as *mut *mut slaac_address;
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
+    let mut slaac: *mut SlaacAddress = 0 as *mut SlaacAddress;
+    let mut old: *mut SlaacAddress = 0 as *mut SlaacAddress;
+    let mut up: *mut *mut SlaacAddress = 0 as *mut *mut SlaacAddress;
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
     let mut dns_dirty: libc::c_int = 0 as libc::c_int;
     if (*lease).flags & 128 as libc::c_int == 0 ||
            (*lease).flags & (64 as libc::c_int | 32 as libc::c_int) != 0 ||
@@ -39,7 +39,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
         return
     }
     old = (*lease).slaac_address;
-    (*lease).slaac_address = 0 as *mut slaac_address;
+    (*lease).slaac_address = 0 as *mut SlaacAddress;
     let mut current_block_31: u64;
     context = (*dnsmasq_daemon).dhcp6;
     while !context.is_null() {
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                (*context).flags as libc::c_uint &
                    (1 as libc::c_uint) << 16 as libc::c_int == 0 &&
                (*lease).last_interface == (*context).if_index {
-            let mut addr: in6_addr = (*context).start6;
+            let mut addr: In6Addr = (*context).start6;
             if (*lease).hwaddr_len == 6 as libc::c_int &&
                    ((*lease).hwaddr_type == 1 as libc::c_int ||
                         (*lease).hwaddr_type == 6 as libc::c_int) {
@@ -111,12 +111,12 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                     slaac = old;
                     while !slaac.is_null() {
                         if ({
-                                let mut __a: *const in6_addr =
-                                    &mut addr as *mut in6_addr as
-                                        *const in6_addr;
-                                let mut __b: *const in6_addr =
-                                    &mut (*slaac).addr as *mut in6_addr as
-                                        *const in6_addr;
+                                let mut __a: *const In6Addr =
+                                    &mut addr as *mut In6Addr as
+                                        *const In6Addr;
+                                let mut __b: *const In6Addr =
+                                    &mut (*slaac).addr as *mut In6Addr as
+                                        *const In6Addr;
                                 ((*__a).__in6_u.__u6_addr32[0 as libc::c_int
                                                                 as usize] ==
                                      (*__b).__in6_u.__u6_addr32[0 as
@@ -168,9 +168,9 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                     if slaac.is_null() &&
                            {
                                slaac =
-                                   whine_malloc(::std::mem::size_of::<slaac_address>()
+                                   whine_malloc(::std::mem::size_of::<SlaacAddress>()
                                                     as libc::c_ulong) as
-                                       *mut slaac_address;
+                                       *mut SlaacAddress;
                                !slaac.is_null()
                            } {
                         (*slaac).ping_time = now;
@@ -200,11 +200,11 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
 }
 #[no_mangle]
 pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
-                                        mut leases: *mut dhcp_lease)
+                                        mut leases: *mut DhcpLease)
  -> time_t {
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut lease: *mut dhcp_lease = 0 as *mut dhcp_lease;
-    let mut slaac: *mut slaac_address = 0 as *mut slaac_address;
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut lease: *mut DhcpLease = 0 as *mut DhcpLease;
+    let mut slaac: *mut SlaacAddress = 0 as *mut SlaacAddress;
     let mut next_event: time_t = 0 as libc::c_int as time_t;
     context = (*dnsmasq_daemon).dhcp6;
     while !context.is_null() {
@@ -230,12 +230,12 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
                 if difftime((*slaac).ping_time, now) <= 0.0f64 {
                     let mut ping: *mut ping_packet =
                         0 as *mut ping_packet; /* Give up */
-                    let mut addr: sockaddr_in6 =
-                        sockaddr_in6{sin6_family: 0,
+                    let mut addr: SockAddrIn6 =
+                        SockAddrIn6 {sin6_family: 0,
                                      sin6_port: 0,
                                      sin6_flowinfo: 0,
                                      sin6_addr:
-                                         in6_addr{__in6_u:
+                                         In6Addr {__in6_u:
                                                       C2RustUnnamed{__u6_addr8:
                                                                         [0;
                                                                             16],},},
@@ -251,9 +251,9 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
                         (*ping).code = 0 as libc::c_int as u8;
                         (*ping).identifier = ping_id as u16;
                         (*ping).sequence_no = (*slaac).backoff as u16;
-                        memset(&mut addr as *mut sockaddr_in6 as
+                        memset(&mut addr as *mut SockAddrIn6 as
                                    *mut libc::c_void, 0 as libc::c_int,
-                               ::std::mem::size_of::<sockaddr_in6>() as
+                               ::std::mem::size_of::<SockAddrIn6>() as
                                    libc::c_ulong);
                         addr.sin6_family = 10 as libc::c_int as sa_family_t;
                         addr.sin6_port =
@@ -266,10 +266,10 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
                                   0 as libc::c_int,
                                   __CONST_SOCKADDR_ARG{__sockaddr__:
                                                            &mut addr as
-                                                               *mut sockaddr_in6
+                                                               *mut SockAddrIn6
                                                                as
-                                                               *mut sockaddr,},
-                                  ::std::mem::size_of::<sockaddr_in6>() as
+                                                               *mut SockAddr,},
+                                  ::std::mem::size_of::<SockAddrIn6>() as
                                       libc::c_ulong as socklen_t) ==
                                -(1 as libc::c_int) as libc::c_long &&
                                *__errno_location() == 113 as libc::c_int &&
@@ -315,12 +315,12 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
     return next_event;
 }
 #[no_mangle]
-pub unsafe extern "C" fn slaac_ping_reply(mut sender: *mut in6_addr,
+pub unsafe extern "C" fn slaac_ping_reply(mut sender: *mut In6Addr,
                                           mut packet: *mut libc::c_uchar,
                                           mut interface: *mut libc::c_char,
-                                          mut leases: *mut dhcp_lease) {
-    let mut lease: *mut dhcp_lease = 0 as *mut dhcp_lease;
-    let mut slaac: *mut slaac_address = 0 as *mut slaac_address;
+                                          mut leases: *mut DhcpLease) {
+    let mut lease: *mut DhcpLease = 0 as *mut DhcpLease;
+    let mut slaac: *mut SlaacAddress = 0 as *mut SlaacAddress;
     let mut ping: *mut ping_packet = packet as *mut ping_packet;
     let mut gotone: libc::c_int = 0 as libc::c_int;
     if (*ping).identifier as libc::c_int == ping_id {
@@ -330,11 +330,11 @@ pub unsafe extern "C" fn slaac_ping_reply(mut sender: *mut in6_addr,
             while !slaac.is_null() {
                 if (*slaac).backoff != 0 as libc::c_int &&
                        ({
-                            let mut __a: *const in6_addr =
-                                sender as *const in6_addr;
-                            let mut __b: *const in6_addr =
-                                &mut (*slaac).addr as *mut in6_addr as
-                                    *const in6_addr;
+                            let mut __a: *const In6Addr =
+                                sender as *const In6Addr;
+                            let mut __b: *const In6Addr =
+                                &mut (*slaac).addr as *mut In6Addr as
+                                    *const In6Addr;
                             ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as
                                                             usize] ==
                                  (*__b).__in6_u.__u6_addr32[0 as libc::c_int

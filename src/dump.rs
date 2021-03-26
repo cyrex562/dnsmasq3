@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{stat, timespec, dnsmasq_daemon, size_t, mysockaddr, ip, in_addr, C2RustUnnamed, in6_addr, __bswap_16, IPPROTO_UDP};
+use crate::defines::{stat, timespec, DnsmasqDaemon, size_t, MySockAddr, IpHdr, InAddr, C2RustUnnamed, In6Addr, __bswap_16, IPPROTO_UDP};
 use std::fs::File;
 use crate::util::read_write;
 use std::io::{Error, Seek};
@@ -24,7 +24,7 @@ use crate::dnsmasq_log::my_syslog;
 // static mut packet_count: u32 = 0;
 /* actual length of packet */
 #[no_mangle]
-pub fn dump_init(daemon: &mut dnsmasq_daemon) ->Result<(), &'static str> {
+pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
     let mut buf: stat =
         stat{st_dev: 0,
              st_ino: 0,
@@ -101,10 +101,10 @@ pub fn dump_init(daemon: &mut dnsmasq_daemon) ->Result<(), &'static str> {
 pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
                                      mut packet: *mut libc::c_void,
                                      mut len: size_t,
-                                     mut src: *mut mysockaddr,
-                                     mut dst: *mut mysockaddr) {
-    let mut ip: ip =
-        ip{ip_hl_ip_v: [0; 1],
+                                     mut src: *mut MySockAddr,
+                                     mut dst: *mut MySockAddr) {
+    let mut ip: IpHdr =
+        IpHdr {ip_hl_ip_v: [0; 1],
            ip_tos: 0,
            ip_len: 0,
            ip_id: 0,
@@ -112,8 +112,8 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
            ip_ttl: 0,
            ip_p: 0,
            ip_sum: 0,
-           ip_src: in_addr{s_addr: 0,},
-           ip_dst: in_addr{s_addr: 0,},};
+           ip_src: InAddr {s_addr: 0,},
+           ip_dst: InAddr {s_addr: 0,},};
     let mut ip6: ip6_hdr =
         ip6_hdr{ip6_ctlun:
                     C2RustUnnamed_1{ip6_un1:
@@ -122,9 +122,9 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
                                                    ip6_un1_nxt: 0,
                                                    ip6_un1_hlim: 0,},},
                 ip6_src:
-                    in6_addr{__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
+                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
                 ip6_dst:
-                    in6_addr{__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},};
+                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},};
     let mut family: libc::c_int = 0;
     let mut udp: udphdr =
         udphdr{uh_sport: 0, uh_dport: 0, uh_ulen: 0, uh_sum: 0,};
@@ -162,15 +162,15 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
             IPPROTO_UDP as libc::c_int as u8;
         ip6.ip6_ctlun.ip6_un1.ip6_un1_hlim = 64 as libc::c_int as u8;
         if !src.is_null() {
-            memcpy(&mut ip6.ip6_src as *mut in6_addr as *mut libc::c_void,
-                   &mut (*src).in6.sin6_addr as *mut in6_addr as
+            memcpy(&mut ip6.ip6_src as *mut In6Addr as *mut libc::c_void,
+                   &mut (*src).in6.sin6_addr as *mut In6Addr as
                        *const libc::c_void,
                    16 as libc::c_int as libc::c_ulong);
             udp.uh_sport = (*src).in6.sin6_port
         }
         if !dst.is_null() {
-            memcpy(&mut ip6.ip6_dst as *mut in6_addr as *mut libc::c_void,
-                   &mut (*dst).in6.sin6_addr as *mut in6_addr as
+            memcpy(&mut ip6.ip6_dst as *mut In6Addr as *mut libc::c_void,
+                   &mut (*dst).in6.sin6_addr as *mut In6Addr as
                        *const libc::c_void,
                    16 as libc::c_int as libc::c_ulong);
             udp.uh_dport = (*dst).in6.sin6_port
@@ -220,17 +220,17 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
                     u32
         }
     } else {
-        iphdr = &mut ip as *mut ip as *mut libc::c_void;
-        ipsz = ::std::mem::size_of::<ip>() as libc::c_ulong;
-        memset(&mut ip as *mut ip as *mut libc::c_void, 0 as libc::c_int,
-               ::std::mem::size_of::<ip>() as libc::c_ulong);
+        iphdr = &mut ip as *mut IpHdr as *mut libc::c_void;
+        ipsz = ::std::mem::size_of::<IpHdr>() as libc::c_ulong;
+        memset(&mut ip as *mut IpHdr as *mut libc::c_void, 0 as libc::c_int,
+               ::std::mem::size_of::<IpHdr>() as libc::c_ulong);
         ip.set_ip_v(4 as libc::c_int as libc::c_uint);
-        ip.set_ip_hl((::std::mem::size_of::<ip>() as
+        ip.set_ip_hl((::std::mem::size_of::<IpHdr>() as
                           libc::c_ulong).wrapping_div(4 as libc::c_int as
                                                           libc::c_ulong) as
                          libc::c_uint);
         ip.ip_len =
-            __bswap_16((::std::mem::size_of::<ip>() as
+            __bswap_16((::std::mem::size_of::<IpHdr>() as
                             libc::c_ulong).wrapping_add(::std::mem::size_of::<udphdr>()
                                                             as
                                                             libc::c_ulong).wrapping_add(len)
@@ -249,12 +249,12 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
         sum = 0 as libc::c_int as u32;
         i = 0 as libc::c_int as u32;
         while (i as libc::c_ulong) <
-                  (::std::mem::size_of::<ip>() as
+                  (::std::mem::size_of::<IpHdr>() as
                        libc::c_ulong).wrapping_div(2 as libc::c_int as
                                                        libc::c_ulong) {
             sum =
                 (sum as
-                     libc::c_uint).wrapping_add(*(&mut ip as *mut ip as
+                     libc::c_uint).wrapping_add(*(&mut ip as *mut IpHdr as
                                                       *mut u16).offset(i as
                                                                              isize)
                                                     as libc::c_uint) as u32

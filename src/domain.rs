@@ -14,11 +14,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{in_addr, cond_domain, __bswap_32, dnsmasq_daemon, in6_addr};
+use crate::defines::{InAddr, CondDomain, __bswap_32, DnsmasqDaemon, In6Addr};
 use crate::util::{addr6part, is_same_net6};
 
-unsafe extern "C" fn search_domain(mut addr: in_addr, mut c: *mut cond_domain)
-                                   -> *mut cond_domain {
+unsafe extern "C" fn search_domain(mut addr: InAddr, mut c: *mut CondDomain)
+                                   -> *mut CondDomain {
     while !c.is_null() {
         if (*c).is6 == 0 &&
                __bswap_32(addr.s_addr) >= __bswap_32((*c).start.s_addr) &&
@@ -27,18 +27,18 @@ unsafe extern "C" fn search_domain(mut addr: in_addr, mut c: *mut cond_domain)
         }
         c = (*c).next
     }
-    return 0 as *mut cond_domain;
+    return 0 as *mut CondDomain;
 }
 #[no_mangle]
-pub unsafe extern "C" fn get_domain(mut addr: in_addr) -> *mut libc::c_char {
-    let mut c: *mut cond_domain = 0 as *mut cond_domain;
+pub unsafe extern "C" fn get_domain(mut addr: InAddr) -> *mut libc::c_char {
+    let mut c: *mut CondDomain = 0 as *mut CondDomain;
     c = search_domain(addr, (*dnsmasq_daemon).cond_domain);
     if !c.is_null() { return (*c).domain }
     return (*dnsmasq_daemon).domain_suffix;
 }
-unsafe extern "C" fn search_domain6(mut addr: *mut in6_addr,
-                                    mut c: *mut cond_domain)
- -> *mut cond_domain {
+unsafe extern "C" fn search_domain6(mut addr: *mut In6Addr,
+                                    mut c: *mut CondDomain)
+                                    -> *mut CondDomain {
     let mut addrpart: u64 = addr6part(addr);
     while !c.is_null() {
         if (*c).is6 != 0 &&
@@ -49,12 +49,12 @@ unsafe extern "C" fn search_domain6(mut addr: *mut in6_addr,
         }
         c = (*c).next
     }
-    return 0 as *mut cond_domain;
+    return 0 as *mut CondDomain;
 }
 #[no_mangle]
-pub unsafe extern "C" fn get_domain6(mut addr: *mut in6_addr)
+pub unsafe extern "C" fn get_domain6(mut addr: *mut In6Addr)
  -> *mut libc::c_char {
-    let mut c: *mut cond_domain = 0 as *mut cond_domain;
+    let mut c: *mut CondDomain = 0 as *mut CondDomain;
     if !addr.is_null() &&
            {
                c = search_domain6(addr, (*dnsmasq_daemon).cond_domain);

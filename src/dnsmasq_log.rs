@@ -1,6 +1,6 @@
 
 /* defaults in case we die() before we log_start() */
-use crate::defines::{SOCK_DGRAM, passwd, dnsmasq_daemon, __gid_t, sockaddr_un, sa_family_t, __CONST_SOCKADDR_ARG, sockaddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, __time_t, __syscall_slong_t};
+use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, __gid_t, sockaddr_un, sa_family_t, __CONST_SOCKADDR_ARG, SockAddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, __time_t, __syscall_slong_t};
 use crate::slack::{log_entry, time};
 use crate::send_event;
 use crate::util::{safe_malloc, safe_strncpy};
@@ -22,7 +22,7 @@ static mut entries: *mut log_entry = 0 as *const log_entry as *mut log_entry;
 static mut free_entries: *mut log_entry =
     0 as *const log_entry as *mut log_entry;
 #[no_mangle]
-pub unsafe extern "C" fn log_start(mut ent_pw: *mut passwd,
+pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
                                    mut errfd: libc::c_int) -> libc::c_int {
     let mut ret: libc::c_int = 0 as libc::c_int;
     echo_stderr =
@@ -232,7 +232,7 @@ unsafe extern "C" fn log_write() {
                                                             &mut logaddr as
                                                                 *mut sockaddr_un
                                                                 as
-                                                                *mut sockaddr,},
+                                                                *mut SockAddr,},
                                    ::std::mem::size_of::<sockaddr_un>() as
                                        libc::c_ulong as socklen_t) !=
                                -(1 as libc::c_int) {

@@ -1,7 +1,9 @@
-use socket2::Socket;
-use crate::slack::{__caddr_t, ifmap};
 use std::fs::File;
 use std::path::PathBuf;
+
+use socket2::Socket;
+
+use crate::slack;
 
 pub type __dev_t = libc::c_ulong;
 pub type __uid_t = u32;
@@ -46,16 +48,17 @@ pub struct iovec {
 }
 
 pub type socklen_t = __socklen_t;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sockaddr {
+pub struct SockAddr {
     pub sa_family: sa_family_t,
     pub sa_data: [i8; 14],
 }
 
 #[derive(Clone)]
 #[repr(C)]
-pub struct msghdr {
+pub struct MsgHdr {
     pub msg_name: Vec<u8>,
     pub msg_namelen: socklen_t,
     pub msg_iov: iovec,
@@ -68,7 +71,7 @@ pub struct msghdr {
 
 #[derive(Clone)]
 #[repr(C)]
-pub struct cmsghdr {
+pub struct CmsgHdr {
     pub cmsg_len: usize,
     pub cmsg_level: i32,
     pub cmsg_type: i32,
@@ -119,17 +122,17 @@ pub type sa_family_t = u16;
 
 #[derive(Clone, Copy)]
 #[repr(C)]
-pub struct sockaddr_in6 {
+pub struct SockAddrIn6 {
     pub sin6_family: sa_family_t,
     pub sin6_port: in_port_t,
     pub sin6_flowinfo: u32,
-    pub sin6_addr: in6_addr,
+    pub sin6_addr: In6Addr,
     pub sin6_scope_id: u32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct in6_addr {
+pub struct In6Addr {
     pub __in6_u: C2RustUnnamed,
 }
 
@@ -144,10 +147,10 @@ pub union C2RustUnnamed {
 pub type in_port_t = u16;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sockaddr_in {
+pub struct SockAddrIn {
     pub sin_family: sa_family_t,
     pub sin_port: in_port_t,
-    pub sin_addr: in_addr,
+    pub sin_addr: InAddr,
     pub sin_zero: [u8; 8],
 }
 
@@ -155,15 +158,15 @@ pub const INET6_ADDRSTRLEN: i32 = 46 as i32;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct in_addr {
+pub struct InAddr {
     pub s_addr: in_addr_t,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union all_addr {
-    pub addr4: in_addr,
-    pub addr6: in6_addr,
+pub union AllAddr {
+    pub addr4: InAddr,
+    pub addr6: In6Addr,
     pub cname: String,
     pub key: Vec<u8>,
     pub ds: C2RustUnnamed_2,
@@ -174,7 +177,7 @@ pub union all_addr {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_29 {
-    pub target: blockdata,
+    pub target: BlockData,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -183,7 +186,7 @@ pub struct C2RustUnnamed_29 {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct blockdata {
+pub struct BlockData {
     // pub next: blockdata,
     pub key: [u8; 40],
 }
@@ -199,15 +202,15 @@ pub struct C2RustUnnamed_6 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_1A {
-    pub ifru_addr: sockaddr,
-    pub ifru_dstaddr: sockaddr,
-    pub ifru_broadaddr: sockaddr,
-    pub ifru_netmask: sockaddr,
-    pub ifru_hwaddr: sockaddr,
+    pub ifru_addr: SockAddr,
+    pub ifru_dstaddr: SockAddr,
+    pub ifru_broadaddr: SockAddr,
+    pub ifru_netmask: SockAddr,
+    pub ifru_hwaddr: SockAddr,
     pub ifru_flags: libc::c_short,
     pub ifru_ivalue: libc::c_int,
     pub ifru_mtu: libc::c_int,
-    pub ifru_map: ifmap,
+    pub ifru_map: Ifmap,
     pub ifru_slave: [libc::c_char; 16],
     pub ifru_newname: [libc::c_char; 16],
     pub ifru_data: __caddr_t,
@@ -215,7 +218,7 @@ pub union C2RustUnnamed_1A {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ifreq {
+pub struct IfReq {
     pub ifr_ifrn: C2RustUnnamed_2,
     pub ifr_ifru: C2RustUnnamed_1A,
 }
@@ -224,14 +227,14 @@ pub struct ifreq {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_7 {
-    pub cache: *mut crec,
-    pub name: *mut libc::c_char,
+    pub cache: Crec,
+    pub name: String,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_2 {
-    pub keydata: blockdata,
+    pub keydata: BlockData,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: u8,
@@ -249,17 +252,17 @@ pub struct C2RustUnnamed_4 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_5 {
-    pub cache: crec,
+    pub cache: Crec,
     pub name: String,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct crec {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
-    pub addr: all_addr,
+pub struct Crec {
+    // pub next: *mut Crec,
+    // pub prev: *mut Crec,
+    // pub hash_next: *mut Crec,
+    pub addr: AllAddr,
     pub ttd: time_t,
     pub uid: u32,
     pub flags: u32,
@@ -269,38 +272,38 @@ pub struct crec {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_32 {
-    pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub sname: String,
+    pub bname: BigName,
     pub namep: String,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union bigname {
-    pub name: [libc::c_char; 1025],
-    pub next: *mut bigname,
+pub union BigName {
+    pub name: String,
+    // pub next: *mut BigName,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct bogus_addr {
-    pub addr: in_addr,
-    pub next: *mut bogus_addr,
+pub struct BogusAddr {
+    pub addr: InAddr,
+    // pub next: *mut BogusAddr,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct doctor {
-    pub in_0: in_addr,
-    pub end: in_addr,
-    pub out: in_addr,
-    pub mask: in_addr,
-    pub next: *mut doctor,
+pub struct Doctor {
+    pub in_0: InAddr,
+    pub end: InAddr,
+    pub out: InAddr,
+    pub mask: InAddr,
+    // pub next: *mut Doctor,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct mx_srv_record {
+pub struct MxSrvRecord {
     pub name: String,
     pub target: String,
     pub issrv: i32,
@@ -308,12 +311,12 @@ pub struct mx_srv_record {
     pub priority: i32,
     pub weight: i32,
     pub offset: u32,
-    pub next: *mut mx_srv_record,
+    // pub next: *mut MxSrvRecord,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct naptr {
+pub struct NaPtr {
     pub name: String,
     pub replace: String,
     pub regexp: String,
@@ -321,43 +324,43 @@ pub struct naptr {
     pub flags: String,
     pub order: u32,
     pub pref: u32,
-    pub next: *mut naptr,
+    // pub next: *mut NaPtr,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct txt_record {
+pub struct TxtRecord {
     pub name: String,
-    pub txt: *mut u8,
+    pub txt: String,
     pub class: u16,
     pub len: u16,
     pub stat: i32,
-    pub next: *mut txt_record,
+    // pub next: *mut TxtRecord,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ptr_record {
+pub struct PtrRecord {
     pub name: String,
     pub ptr: String,
-    pub next: *mut ptr_record,
+    // pub next: *mut PtrRecord,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct cname {
+pub struct Cname {
     pub ttl: i32,
     pub flag: i32,
     pub alias: String,
     pub target: String,
-    pub next: *mut cname,
-    pub targetp: *mut cname,
+    // pub next: *mut Cname,
+    pub targetp: Cname,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct addrlist {
-    pub addr: all_addr,
+pub struct AddrList {
+    pub addr: AllAddr,
     pub flags: i32,
     pub prefixlen: i32,
     pub decline_time: time_t,
@@ -366,17 +369,17 @@ pub struct addrlist {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct auth_zone {
+pub struct AuthZone {
     pub domain: String,
-    pub interface_names: Vec<auth_name_list>,
-    pub subnet: Vec<addrlist>,
+    pub interface_names: Vec<AuthNameList>,
+    pub subnet: Vec<AddrList>,
     pub exclude: Vec<ddrlist>,
     // pub next: *mut auth_zone,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct auth_name_list {
+pub struct AuthNameList {
     pub name: String,
     pub flags: i32,
     // pub next: *mut auth_name_list,
@@ -384,45 +387,45 @@ pub struct auth_name_list {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct host_record {
+pub struct HostRecord {
     pub ttl: i32,
     pub flags: i32,
-    pub names: Vec<name_list>,
-    pub addr: in_addr,
-    pub addr6: in6_addr,
+    pub names: Vec<NameList>,
+    pub addr: InAddr,
+    pub addr6: In6Addr,
     // pub next: *mut host_record,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct name_list {
+pub struct NameList {
     pub name: String,
     // pub next: *mut name_list,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct interface_name {
+pub struct InterfaceName {
     pub name: String,
     pub intr: String,
     pub family: i32,
-    pub addr: addrlist,
+    pub addr: AddrList,
     // pub next: *mut interface_name,
 }
 
 #[derive(Clone, Copy)]
 #[repr(C)]
-pub union mysockaddr {
-    pub sa: sockaddr,
-    pub in_0: sockaddr_in,
-    pub in6: sockaddr_in6,
+pub union MySockAddr {
+    pub sa: SockAddr,
+    pub in_0: SockAddrIn,
+    pub in6: SockAddrIn6,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct serverfd {
+pub struct ServerFd {
     pub fd: i32,
-    pub source_addr: mysockaddr,
+    pub source_addr: MySockAddr,
     pub interface: [i8; 17],
     pub ifindex: u32,
     pub used: u32,
@@ -431,18 +434,18 @@ pub struct serverfd {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct randfd {
+pub struct RandFd {
     pub fd: i32,
     pub refcount: u16,
     pub family: u16,
 }
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct server {
-    pub addr: mysockaddr,
-    pub source_addr: mysockaddr,
+pub struct Server {
+    pub addr: MySockAddr,
+    pub source_addr: MySockAddr,
     pub interface: [i8; 17],
-    pub sfd: *mut serverfd,
+    pub sfd: ServerFd,
     pub domain: String,
     pub flags: i32,
     pub tcpfd: i32,
@@ -456,17 +459,17 @@ pub struct server {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ipsets {
-    pub sets: *mut String,
+pub struct IpSets {
+    pub sets: String,
     pub domain: String,
     // pub next: *mut ipsets,
 }
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct irec {
-    pub addr: mysockaddr,
-    pub netmask: in_addr,
+pub struct Irec {
+    pub addr: MySockAddr,
+    pub netmask: InAddr,
     pub tftp_ok: i32,
     pub dhcp_ok: i32,
     pub mtu: i32,
@@ -484,37 +487,37 @@ pub struct irec {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct listener {
+pub struct Listener {
     pub fd: i32,
     pub tcpfd: i32,
     pub tftpfd: i32,
     pub used: i32,
-    pub addr: mysockaddr,
-    pub iface: irec,
+    pub addr: MySockAddr,
+    pub iface: Irec,
     // pub next: *mut listener,
 }
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct iname {
+pub struct Iname {
     pub name: String,
-    pub addr: mysockaddr,
+    pub addr: MySockAddr,
     pub used: i32,
     // pub next: *mut iname,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct mysubnet {
-    pub addr: mysockaddr,
+pub struct Mysubnet {
+    pub addr: MySockAddr,
     pub addr_used: i32,
     // pub mask: i32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct resolvc {
-    pub next: *mut resolvc,
+pub struct Resolvc {
+    // pub next: *mut Resolvc,
     pub is_default: i32,
     pub logged: i32,
     pub mtime: time_t,
@@ -525,8 +528,8 @@ pub struct resolvc {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct hostsfile {
-    pub next: *mut hostsfile,
+pub struct HostsFile {
+    // pub next: *mut HostsFile,
     pub flags: i32,
     pub fname: String,
     pub wd: i32,
@@ -535,11 +538,11 @@ pub struct hostsfile {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct frec {
-    pub frec_src: frec_src,
-    pub sentto: server,
-    pub rfd4: randfd,
-    pub rfd6: randfd,
+pub struct Frec {
+    pub frec_src: FrecSrc,
+    pub sentto: Server,
+    pub rfd4: RandFd,
+    pub rfd6: RandFd,
     pub new_id: u16,
     pub forwardall: i32,
     pub flags: i32,
@@ -550,9 +553,9 @@ pub struct frec {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct frec_src {
-    pub source: mysockaddr,
-    pub dest: all_addr,
+pub struct FrecSrc {
+    pub source: MySockAddr,
+    pub dest: AllAddr,
     pub iface: u32,
     pub log_id: u32,
     pub fd: i32,
@@ -562,38 +565,38 @@ pub struct frec_src {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_netid {
+pub struct DhcpNetId {
     pub net: String,
     // pub next: *mut dhcp_netid,
-    pub next: *mut dhcp_netid
+    // pub next: *mut DhcpNetId
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_netid_list {
-    pub list: Vec<dhcp_netid>,
+pub struct DhcpNetIdList {
+    pub list: Vec<DhcpNetId>,
     // pub next: *mut dhcp_netid_list,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct tag_if {
-    pub set: dhcp_netid_list,
-    pub tag: dhcp_netid,
+pub struct TagIf {
+    pub set: DhcpNetIdList,
+    pub tag: DhcpNetId,
     // pub next: *mut tag_if,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct delay_config {
+pub struct DelayConfig {
     pub delay: i32,
-    pub netid: dhcp_netid,
+    pub netid: DhcpNetId,
     // pub next: *mut delay_config,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct hwaddr_config {
+pub struct HwaddrConfig {
     pub hwaddr_len: i32,
     pub hwaddr_type: i32,
     pub hwaddr: Vec<u8>,
@@ -603,33 +606,33 @@ pub struct hwaddr_config {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_config {
+pub struct DhcpConfig {
     pub flags: u32,
     pub clid_len: i32,
     pub clid: Vec<u8>,
     pub hostname: String,
     pub domain: String,
-    pub netid: dhcp_netid_list,
-    pub filter: dhcp_netid,
-    pub addr6: addrlist,
-    pub addr: in_addr,
+    pub netid: DhcpNetIdList,
+    pub filter: DhcpNetId,
+    pub addr6: AddrList,
+    pub addr: InAddr,
     pub decline_time: time_t,
     pub lease_time: u32,
-    pub hwaddr: hwaddr_config,
+    pub hwaddr: HwaddrConfig,
     // pub next: *mut dhcp_config,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_opt {
+pub struct DhcpOpt {
     pub opt: i32,
     pub len: i32,
     pub flags: i32,
     pub u: C2RustUnnamed_7,
     pub val: Vec<u8>,
-    pub netid: dhcp_netid,
+    pub netid: DhcpNetId,
     // pub next: *mut dhcp_opt,
-    pub next: *mut dhcp_opt
+    // pub next: *mut DhcpOpt
 }
 
 #[derive(Copy, Clone)]
@@ -642,87 +645,87 @@ pub union C2RustUnnamed_31 {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_boot {
+pub struct DhcpBoot {
     pub file: String,
     pub sname: String,
     pub tftp_sname: String,
-    pub next_server: in_addr,
-    pub netid: dhcp_netid,
+    pub next_server: InAddr,
+    pub netid: DhcpNetId,
     // pub next: *mut dhcp_boot,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_match_name {
+pub struct DhcpMatchName {
     pub name: String,
     pub wildcard: i32,
-    pub netid: dhcp_netid,
+    pub netid: DhcpNetId,
     // pub next: *mut dhcp_match_name,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct pxe_service {
+pub struct PxeService {
     pub CSA: u16,
     pub type_0: u16,
     pub menu: String,
     pub basename: String,
     pub sname: String,
-    pub server: in_addr,
-    pub netid: dhcp_netid,
+    pub server: InAddr,
+    pub netid: DhcpNetId,
     // pub next: *mut pxe_service,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_vendor {
+pub struct DhcpVendor {
     pub len: i32,
     pub match_type: i32,
     pub enterprise: u32,
     pub data: String,
-    pub netid: dhcp_netid,
+    pub netid: DhcpNetId,
     // pub next: *mut dhcp_vendor,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_pxe_vendor {
+pub struct DhcpPxeVendor {
     pub data: String,
     // pub next: *mut dhcp_pxe_vendor,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_mac {
+pub struct DhcpMac {
     pub mask: u32,
     pub hwaddr_len: i32,
     pub hwaddr_type: i32,
     pub hwaddr: [u8; 16],
-    pub netid: dhcp_netid,
+    pub netid: DhcpNetId,
     // pub next: *mut dhcp_mac,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_bridge {
+pub struct DhcpBridge {
     pub iface: [i8; 16],
-    pub alias: *mut dhcp_bridge,
+    pub alias: DhcpBridge,
     // pub next: *mut dhcp_bridge,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct cond_domain {
+pub struct CondDomain {
     pub domain: String,
     pub prefix: String,
-    pub start: in_addr,
-    pub end: in_addr,
-    pub start6: in6_addr,
-    pub end6: in6_addr,
+    pub start: InAddr,
+    pub end: InAddr,
+    pub start6: In6Addr,
+    pub end6: In6Addr,
     pub is6: i32,
     pub indexed: i32,
     // pub next: *mut cond_domain,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ra_interface {
+pub struct RaInterface {
     pub name: String,
     pub mtu_name: String,
     pub interval: i32,
@@ -734,18 +737,18 @@ pub struct ra_interface {
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct dhcp_context {
+pub struct DhcpContext {
     pub lease_time: u32,
     pub addr_epoch: u32,
-    pub netmask: in_addr,
-    pub broadcast: in_addr,
-    pub local: in_addr,
-    pub router: in_addr,
-    pub start: in_addr,
-    pub end: in_addr,
-    pub start6: in6_addr,
-    pub end6: in6_addr,
-    pub local6: in6_addr,
+    pub netmask: InAddr,
+    pub broadcast: InAddr,
+    pub local: InAddr,
+    pub router: InAddr,
+    pub start: InAddr,
+    pub end: InAddr,
+    pub start6: In6Addr,
+    pub end6: In6Addr,
+    pub local6: In6Addr,
     pub prefix: i32,
     pub if_index: i32,
     pub valid: u32,
@@ -756,7 +759,7 @@ pub struct dhcp_context {
     pub address_lost_time: time_t,
     pub template_interface: String,
     pub flags: i32,
-    pub netid: dhcp_netid,
+    pub netid: DhcpNetId,
     pub filter: hcp_netid,
     // pub next: dhcp_context,
     // pub current: dhcp_context,
@@ -764,25 +767,25 @@ pub struct dhcp_context {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct shared_network {
+pub struct SharedNetwork {
     pub if_index: i32,
-    pub match_addr: in_addr,
-    pub shared_addr: in_addr,
-    pub match_addr6: in6_addr,
-    pub shared_addr6: in6_addr,
+    pub match_addr: InAddr,
+    pub shared_addr: InAddr,
+    pub match_addr6: In6Addr,
+    pub shared_addr6: In6Addr,
     // pub next: *mut shared_network,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ping_result {
-    pub addr: in_addr,
+pub struct PingResult {
+    pub addr: InAddr,
     pub time: time_t,
     pub hash: u32,
     // pub next: *mut ping_result,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct tftp_file {
+pub struct TftpFile {
     pub refcount: i32,
     pub fd: i32,
     pub size: off_t,
@@ -792,7 +795,7 @@ pub struct tftp_file {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct tftp_transfer {
+pub struct TftpTransfer {
     pub sockfd: i32,
     pub timeout: time_t,
     pub backoff: i32,
@@ -800,25 +803,25 @@ pub struct tftp_transfer {
     pub blocksize: u32,
     pub expansion: u32,
     pub offset: off_t,
-    pub peer: mysockaddr,
-    pub source: all_addr,
+    pub peer: MySockAddr,
+    pub source: AllAddr,
     pub if_index: i32,
     pub opt_blocksize: libc::c_char,
     pub opt_transize: libc::c_char,
     pub netascii: libc::c_char,
     pub carrylf: libc::c_char,
-    pub file: *mut tftp_file,
+    pub file: TftpFile,
     // pub next: *mut tftp_transfer,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct addr_list {
-    pub addr: in_addr,
+pub struct AddrList2 {
+    pub addr: InAddr,
     // pub next: *mut addr_list,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct tftp_prefix {
+pub struct TftpPrefix {
     pub interface: String,
     pub prefix: String,
     pub missing: i32,
@@ -827,18 +830,18 @@ pub struct tftp_prefix {
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct dhcp_relay {
-    pub local: all_addr,
-    pub server: all_addr,
+pub struct DhcpRelay {
+    pub local: AllAddr,
+    pub server: AllAddr,
     pub interface: String,
     pub iface_index: i32,
-    pub current: *mut dhcp_relay,
+    pub current: DhcpRelay,
     // pub next: *mut dhcp_relay,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct opttab_t {
+pub struct OptTab {
     pub name: String,
     pub val: u16,
     pub size: u16,
@@ -846,25 +849,25 @@ pub struct opttab_t {
 
 #[derive(Clone, Default)]
 #[repr(C)]
-pub struct dnsmasq_daemon {
+pub struct DnsmasqDaemon {
     pub options: [u32; 2],
-    pub default_resolv: resolvc,
-    pub resolv_files: resolvc,
+    pub default_resolv: Resolvc,
+    pub resolv_files: Resolvc,
     pub last_resolv: time_t,
     pub servers_file: String,
-    pub mxnames: mx_srv_record,
-    pub naptr: naptr,
-    pub txt: txt_record,
-    pub rr: txt_record,
-    pub ptr: ptr_record,
-    pub host_records: host_record,
-    pub host_records_tail: host_record,
-    pub cnames: cname,
-    pub auth_zones: auth_zone,
-    pub int_names: interface_name,
+    pub mxnames: MxSrvRecord,
+    pub naptr: NaPtr,
+    pub txt: TxtRecord,
+    pub rr: TxtRecord,
+    pub ptr: PtrRecord,
+    pub host_records: HostRecord,
+    pub host_records_tail: HostRecord,
+    pub cnames: Cname,
+    pub auth_zones: AuthZone,
+    pub int_names: InterfaceName,
     pub mxtarget: String,
-    pub add_subnet4: mysubnet,
-    pub add_subnet6: mysubnet,
+    pub add_subnet4: Mysubnet,
+    pub add_subnet6: Mysubnet,
     pub lease_file: String,
     pub username: String,
     pub groupname: String,
@@ -872,25 +875,25 @@ pub struct dnsmasq_daemon {
     pub luascript: String,
     pub authserver: String,
     pub hostmaster: String,
-    pub authinterface: iname,
-    pub secondary_forward_server: name_list,
+    pub authinterface: Iname,
+    pub secondary_forward_server: NameList,
     pub group_set: i32,
     pub osport: i32,
     pub domain_suffix: String,
-    pub cond_domain: cond_domain,
-    pub synth_domains: cond_domain,
+    pub cond_domain: CondDomain,
+    pub synth_domains: CondDomain,
     pub runfile: String,
     pub lease_change_command: String,
-    pub if_names: iname,
-    pub if_addrs: iname,
-    pub if_except: iname,
-    pub dhcp_except: iname,
-    pub auth_peers: iname,
-    pub tftp_interfaces: iname,
-    pub bogus_addr: bogus_addr,
-    pub ignore_addr: bogus_addr,
-    pub servers: server,
-    pub ipsets: ipsets,
+    pub if_names: Iname,
+    pub if_addrs: Iname,
+    pub if_except: Iname,
+    pub dhcp_except: Iname,
+    pub auth_peers: Iname,
+    pub tftp_interfaces: Iname,
+    pub bogus_addr: BogusAddr,
+    pub ignore_addr: BogusAddr,
+    pub servers: Server,
+    pub ipsets: IpSets,
     pub log_fac: i32,
     pub log_file: String,
     pub max_logs: i32,
@@ -909,41 +912,41 @@ pub struct dnsmasq_daemon {
     pub dhcp_ttl: libc::c_ulong,
     pub use_dhcp_ttl: libc::c_ulong,
     pub dns_client_id: String,
-    pub addn_hosts: hostsfile,
-    pub dhcp: dhcp_context,
-    pub dhcp6: dhcp_context,
-    pub ra_interfaces: ra_interface,
-    pub dhcp_conf: dhcp_config,
-    pub dhcp_opts: dhcp_opt,
-    pub dhcp_match: dhcp_opt,
-    pub dhcp_opts6: dhcp_opt,
-    pub dhcp_match6: dhcp_opt,
-    pub dhcp_name_match: dhcp_match_name,
-    pub dhcp_pxe_vendors: dhcp_pxe_vendor,
-    pub dhcp_vendors: dhcp_vendor,
-    pub dhcp_macs: dhcp_mac,
-    pub boot_config: dhcp_boot,
-    pub pxe_services: pxe_service,
-    pub tag_if: tag_if,
-    pub override_relays: addr_list,
-    pub relay4: dhcp_relay,
+    pub addn_hosts: HostsFile,
+    pub dhcp: DhcpContext,
+    pub dhcp6: DhcpContext,
+    pub ra_interfaces: RaInterface,
+    pub dhcp_conf: DhcpConfig,
+    pub dhcp_opts: DhcpOpt,
+    pub dhcp_match: DhcpOpt,
+    pub dhcp_opts6: DhcpOpt,
+    pub dhcp_match6: DhcpOpt,
+    pub dhcp_name_match: DhcpMatchName,
+    pub dhcp_pxe_vendors: DhcpPxeVendor,
+    pub dhcp_vendors: DhcpVendor,
+    pub dhcp_macs: DhcpMac,
+    pub boot_config: DhcpBoot,
+    pub pxe_services: PxeService,
+    pub tag_if: TagIf,
+    pub override_relays: AddrList2,
+    pub relay4: DhcpRelay,
     pub doing_relay_6: bool,
-    pub relay6: dhcp_relay,
-    pub delay_conf: delay_config,
+    pub relay6: DhcpRelay,
+    pub delay_conf: DelayConfig,
     pub override_0: i32,
     pub enable_pxe: bool,
     pub doing_ra: bool,
     pub doing_dhcp: bool,
     pub doing_relay4: bool,
     pub doing_dhcp6: bool,
-    pub dhcp_ignore: dhcp_netid_list,
-    pub dhcp_ignore_names: dhcp_netid_list,
-    pub dhcp_gen_names: dhcp_netid_list,
-    pub force_broadcast: dhcp_netid_list,
-    pub bootp_dynamic: dhcp_netid_list,
-    pub dhcp_hosts_file: hostsfile,
-    pub dhcp_opts_file: hostsfile,
-    pub dynamic_dirs: hostsfile,
+    pub dhcp_ignore: DhcpNetIdList,
+    pub dhcp_ignore_names: DhcpNetIdList,
+    pub dhcp_gen_names: DhcpNetIdList,
+    pub force_broadcast: DhcpNetIdList,
+    pub bootp_dynamic: DhcpNetIdList,
+    pub dhcp_hosts_file: HostsFile,
+    pub dhcp_opts_file: HostsFile,
+    pub dynamic_dirs: HostsFile,
     pub dhcp_max: i32,
     pub tftp_max: i32,
     pub tftp_mtu: i32,
@@ -952,10 +955,10 @@ pub struct dnsmasq_daemon {
     pub start_tftp_port: i32,
     pub end_tftp_port: i32,
     pub min_leasetime: u32,
-    pub doctors: doctor,
+    pub doctors: Doctor,
     pub edns_pktsz: u16,
     pub tftp_prefix: String,
-    pub if_prefix: tftp_prefix,
+    pub if_prefix: TftpPrefix,
     pub duid_enterprise: u32,
     pub duid_config_len: u32,
     pub duid_config: String,
@@ -971,27 +974,27 @@ pub struct dnsmasq_daemon {
     pub packet: Vec<u8>,
     // pub packet_buff_sz: i32,
     pub namebuff: String,
-    pub frec_list: frec,
-    pub free_frec_src: frec_src,
+    pub frec_list: Frec,
+    pub free_frec_src: FrecSrc,
     pub frec_src_count: i32,
-    pub sfds: serverfd,
-    pub interfaces: irec,
-    pub listeners: listener,
-    pub last_server: server,
+    pub sfds: ServerFd,
+    pub interfaces: Irec,
+    pub listeners: Listener,
+    pub last_server: Server,
     pub forwardtime: time_t,
     pub forwardcount: i32,
-    pub srv_save: server,
+    pub srv_save: Server,
     pub packet_len: size_t,
-    pub rfd_save: randfd,
+    pub rfd_save: RandFd,
     pub tcp_pids: [pid_t; 20],
     pub tcp_pipes: [i32; 20],
     pub pipe_to_parent: i32,
-    pub randomsocks: [randfd; 64],
+    pub randomsocks: [RandFd; 64],
     pub v6pktinfo: i32,
-    pub interface_addrs: addrlist,
+    pub interface_addrs: AddrList,
     pub log_id: i32,
     pub log_display_id: i32,
-    pub log_source_addr: mysockaddr,
+    pub log_source_addr: MySockAddr,
     pub dhcpfd: Socket,
     pub helperfd: Socket,
     pub pxefd: Socket,
@@ -1002,18 +1005,18 @@ pub struct dnsmasq_daemon {
     pub dhcp_buff: Vec<u8>,
     pub dhcp_buff2: Vec<u8>,
     pub dhcp_buff3: Vec<u8>,
-    pub ping_results: ping_result,
+    pub ping_results: PingResult,
     pub lease_stream: FILE,
-    pub bridges: dhcp_bridge,
-    pub shared_networks: shared_network,
+    pub bridges: DhcpBridge,
+    pub shared_networks: SharedNetwork,
     pub duid_len: i32,
     pub duid: Vec<u8>,
     pub outpacket: Vec<u8>,
     pub dhcp6fd: Socket,
     pub icmp6fd: i32,
-    pub dbus: *mut libc::c_void,
-    pub tftp_trans: tftp_transfer,
-    pub tftp_done_trans: tftp_transfer,
+    pub dbus: libc::c_void,
+    pub tftp_trans: TftpTransfer,
+    pub tftp_done_trans: TftpTransfer,
     pub addrbuff: Vec<u8>,
     pub addrbuff2: Vec<u8>,
     pub dumpfd: File,
@@ -1193,7 +1196,7 @@ pub const KEYBLOCK_LEN: i32 = 40 as i32;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dns_header {
+pub struct DnsHeader {
     pub id: u16,
     pub hb3: u8,
     pub hb4: u8,
@@ -1440,24 +1443,24 @@ pub const LOG_DAEMON: i32 =
 //                  maclen: i32, family: i32,
 //                  addr: *mut all_addr);
 // }
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __va_list_tag {
-    pub gp_offset: u32,
-    pub fp_offset: u32,
-    pub overflow_arg_area: *mut libc::c_void,
-    pub reg_save_area: *mut libc::c_void,
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct __va_list_tag {
+//     pub gp_offset: u32,
+//     pub fp_offset: u32,
+//     pub overflow_arg_area: *mut libc::c_void,
+//     pub reg_save_area: *mut libc::c_void,
+// }
 
 /* No MAC addr */
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct arp_record {
+pub struct ArpRecord {
     pub hwlen: u16,
     pub status: u16,
     pub family: i32,
     pub hwaddr: [u8; 16],
-    pub addr: all_addr,
+    pub addr: AllAddr,
     // pub next: *mut arp_record,
 }
 
@@ -1472,7 +1475,7 @@ pub type __be16 = u16;
 //    29 };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct atalk_addr {
+pub struct AtalkAddr {
     pub s_net: __be16,
     pub s_node: __u8,
 }
@@ -1485,16 +1488,16 @@ pub struct atalk_addr {
 //    36 };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sockaddr_at {
+pub struct SockaddrAt {
     pub sat_family: __kernel_sa_family_t,
     pub sat_port: __u8,
-    pub sat_addr: atalk_addr,
+    pub sat_addr: AtalkAddr,
     pub sat_zer: [i8;8],
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ax25_address {
+pub struct Ax25Address {
     pub ax25_call: [i8;7],
 }
 
@@ -1506,9 +1509,9 @@ pub struct ax25_address {
 //    54 };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sockaddr_ax25 {
+pub struct SockaddrAx25 {
     pub sax25_family: __kernel_sa_family_t,
-    pub sax25_call: ax25_address,
+    pub sax25_call: Ax25Address,
     pub sax25_ndigis: i32,
 }
 
@@ -1525,7 +1528,7 @@ pub struct sockaddr_ax25 {
 // };
 #[derive(Copy,Clone)]
 #[repr(C)]
-pub struct sockaddr_dl {
+pub struct SockaddrDl {
     pub sdl_len: u8,
     pub sdl_family: u8,
     pub sdl_index: u16,
@@ -1562,7 +1565,7 @@ pub struct sockaddr_dl {
 // };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sockaddr_eon {
+pub struct SockaddrEon {
     pub seon_len: u8,
     pub seon_family: u8,
     pub seon_status: u8,
@@ -1598,8 +1601,8 @@ pub struct sockaddr_inarp {
     pub sin_len: u8,
     pub sin_family: u8,
     pub sin_port: u16,
-    pub sin_addr: in_addr,
-    pub sin_srcaddr: in_addr,
+    pub sin_addr: InAddr,
+    pub sin_srcaddr: InAddr,
     pub sin_tos: u16,
     pub sin_other: u16,
 }
@@ -1672,9 +1675,9 @@ pub struct sockaddr_iso {
 #[derive(Copy,Clone)]
 #[repr(C)]
 pub struct sockaddr_ns {
-    sa: sockaddr,
-    sin: sockaddr_in,
-    sin6: sockaddr_in6
+    sa: SockAddr,
+    sin: SockAddrIn,
+    sin6: SockAddrIn6
 }
 
 #[derive(Copy, Clone)]
@@ -1699,13 +1702,13 @@ pub struct sockaddr_x25 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union __SOCKADDR_ARG {
-    pub __sockaddr__: *mut sockaddr,
-    pub __sockaddr_at__: *mut sockaddr_at,
-    pub __sockaddr_ax25__: *mut sockaddr_ax25,
-    pub __sockaddr_dl__: *mut sockaddr_dl,
-    pub __sockaddr_eon__: *mut sockaddr_eon,
-    pub __sockaddr_in__: *mut sockaddr_in,
-    pub __sockaddr_in6__: *mut sockaddr_in6,
+    pub __sockaddr__: *mut SockAddr,
+    pub __sockaddr_at__: *mut SockaddrAt,
+    pub __sockaddr_ax25__: *mut SockaddrAx25,
+    pub __sockaddr_dl__: *mut SockaddrDl,
+    pub __sockaddr_eon__: *mut SockaddrEon,
+    pub __sockaddr_in__: *mut SockAddrIn,
+    pub __sockaddr_in6__: *mut SockAddrIn6,
     pub __sockaddr_inarp__: *mut sockaddr_inarp,
     pub __sockaddr_ipx__: *mut sockaddr_ipx,
     pub __sockaddr_iso__: *mut sockaddr_iso,
@@ -1749,13 +1752,13 @@ pub struct sockaddr_un {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union __CONST_SOCKADDR_ARG {
-    pub __sockaddr__: *const sockaddr,
-    pub __sockaddr_at__: *const sockaddr_at,
-    pub __sockaddr_ax25__: *const sockaddr_ax25,
-    pub __sockaddr_dl__: *const sockaddr_dl,
-    pub __sockaddr_eon__: *const sockaddr_eon,
-    pub __sockaddr_in__: *const sockaddr_in,
-    pub __sockaddr_in6__: *const sockaddr_in6,
+    pub __sockaddr__: *const SockAddr,
+    pub __sockaddr_at__: *const SockaddrAt,
+    pub __sockaddr_ax25__: *const SockaddrAx25,
+    pub __sockaddr_dl__: *const SockaddrDl,
+    pub __sockaddr_eon__: *const SockaddrEon,
+    pub __sockaddr_in__: *const SockAddrIn,
+    pub __sockaddr_in6__: *const SockAddrIn6,
     pub __sockaddr_inarp__: *const sockaddr_inarp,
     pub __sockaddr_ipx__: *const sockaddr_ipx,
     pub __sockaddr_iso__: *const sockaddr_iso,
@@ -2097,7 +2100,7 @@ pub const _SC_CHILD_MAX: C2RustUnnamed_13 = 1;
 pub const _SC_ARG_MAX: C2RustUnnamed_13 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct passwd {
+pub struct Passwd {
     pub pw_name: String,
     pub pw_passwd: String,
     pub pw_uid: __uid_t,
@@ -2108,15 +2111,15 @@ pub struct passwd {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct group {
+pub struct Group {
     pub gr_name: String,
     pub gr_passwd: String,
     pub gr_gid: __gid_t,
-    pub gr_mem: *mut String,
+    pub gr_mem: String,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ip {
+pub struct IpHdr {
     // #[bitfield(name = "ip_hl", ty = "u32", bits = "0..=3")]
     // #[bitfield(name = "ip_v", ty = "u32", bits = "4..=7")]
     pub ip_hl_ip_v: [u8; 1],
@@ -2127,18 +2130,18 @@ pub struct ip {
     pub ip_ttl: u8,
     pub ip_p: u8,
     pub ip_sum: u16,
-    pub ip_src: in_addr,
-    pub ip_dst: in_addr,
+    pub ip_src: InAddr,
+    pub ip_dst: InAddr,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct icmp_ra_addr {
+pub struct IcmpRaAddr {
     pub ira_addr: u32,
     pub ira_preference: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct icmp {
+pub struct IcmpHdr {
     pub icmp_type: u8,
     pub icmp_code: u8,
     pub icmp_cksum: u16,
@@ -2150,14 +2153,14 @@ pub struct icmp {
 pub union C2RustUnnamed_14 {
     pub id_ts: C2RustUnnamed_16,
     pub id_ip: C2RustUnnamed_15,
-    pub id_radv: icmp_ra_addr,
+    pub id_radv: IcmpRaAddr,
     pub id_mask: u32,
     pub id_data: [u8; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_15 {
-    pub idi_ip: ip,
+    pub idi_ip: IpHdr,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2170,28 +2173,28 @@ pub struct C2RustUnnamed_16 {
 #[repr(C)]
 pub union C2RustUnnamed_17 {
     pub ih_pptr: u8,
-    pub ih_gwaddr: in_addr,
-    pub ih_idseq: ih_idseq,
+    pub ih_gwaddr: InAddr,
+    pub ih_idseq: IhIdSeq,
     pub ih_void: u32,
-    pub ih_pmtu: ih_pmtu,
-    pub ih_rtradv: ih_rtradv,
+    pub ih_pmtu: IhPmtu,
+    pub ih_rtradv: IhRtrAdv,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ih_rtradv {
+pub struct IhRtrAdv {
     pub irt_num_addrs: u8,
     pub irt_wpa: u8,
     pub irt_lifetime: u16,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ih_pmtu {
+pub struct IhPmtu {
     pub ipm_void: u16,
     pub ipm_nextmtu: u16,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct ih_idseq {
+pub struct IhIdSeq {
     pub icd_id: u16,
     pub icd_seq: u16,
 }
@@ -2263,7 +2266,7 @@ pub struct C2RustUnnamed_18 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_19 {
-    pub target: blockdata,
+    pub target: BlockData,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -2273,7 +2276,7 @@ pub struct C2RustUnnamed_19 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_20 {
-    pub keydata: blockdata,
+    pub keydata: BlockData,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: u8,
@@ -2282,7 +2285,7 @@ pub struct C2RustUnnamed_20 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_21 {
-    pub keydata: blockdata,
+    pub keydata: BlockData,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -2298,7 +2301,7 @@ pub struct C2RustUnnamed_22 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_23 {
-    pub cache: crec,
+    pub cache: Crec,
     pub name: String,
 }
 
@@ -2306,7 +2309,7 @@ pub union C2RustUnnamed_23 {
 #[repr(C)]
 pub union C2RustUnnamed_24 {
     pub sname: [i8; 50],
-    pub bname: bigname,
+    pub bname: BigName,
     pub namep: String,
 }
 
@@ -2474,7 +2477,7 @@ pub union _IO_iconv_t {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_lease {
+pub struct DhcpLease {
     pub clid_len: i32,
     pub clid: Vec<u8>,
     pub hostname: String,
@@ -2485,25 +2488,25 @@ pub struct dhcp_lease {
     pub hwaddr_len: i32,
     pub hwaddr_type: i32,
     pub hwaddr: [u8; 16],
-    pub addr: in_addr,
-    pub override_0: in_addr,
-    pub giaddr: in_addr,
-    pub extradata: *mut u8,
+    pub addr: InAddr,
+    pub override_0: InAddr,
+    pub giaddr: InAddr,
+    pub extradata: Vec<u8>,
     pub extradata_len: u32,
     pub extradata_size: u32,
     pub last_interface: i32,
     pub new_interface: i32,
     pub new_prefixlen: i32,
-    pub addr6: in6_addr,
+    pub addr6: In6Addr,
     pub iaid: u32,
-    pub slaac_address: slaac_address,
+    pub slaac_address: SlaacAddress,
     pub vendorclass_count: i32,
     // pub next: *mut dhcp_lease,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct slaac_address {
-    pub addr: in6_addr,
+pub struct SlaacAddress {
+    pub addr: In6Addr,
     pub ping_time: time_t,
     pub backoff: i32,
     // pub next: *mut slaac_address,
@@ -2518,14 +2521,14 @@ pub union C2RustUnnamed_25 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_26 {
-    pub ip: ip,
-    pub icmp: icmp,
+    pub ip: IpHdr,
+    pub icmp: IcmpHdr,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_27 {
-    pub ip: ip,
-    pub icmp: icmp,
+    pub ip: IpHdr,
+    pub icmp: IcmpHdr,
 }
 
 #[derive(Copy,Clone)]
@@ -2811,7 +2814,7 @@ pub const MSG_OOB: u32 = 1;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct dhcp_packet {
+pub struct DhcpPacket {
     pub op: u8,
     pub htype: u8,
     pub hlen: u8,
@@ -2819,10 +2822,10 @@ pub struct dhcp_packet {
     pub xid: u32,
     pub secs: u16,
     pub flags: u16,
-    pub ciaddr: in_addr,
-    pub yiaddr: in_addr,
-    pub siaddr: in_addr,
-    pub giaddr: in_addr,
+    pub ciaddr: InAddr,
+    pub yiaddr: InAddr,
+    pub siaddr: InAddr,
+    pub giaddr: InAddr,
     pub chaddr: [u8; 16],
     pub sname: [u8; 64],
     pub file: [u8; 128],
@@ -3416,34 +3419,56 @@ pub const SIGUNUSED: libc::c_int = 31;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct iface_param {
-    pub current: *mut dhcp_context,
-    pub relay: *mut dhcp_relay,
-    pub relay_local: in_addr,
+pub struct IfaceParam {
+    pub current: *mut DhcpContext,
+    pub relay: *mut DhcpRelay,
+    pub relay_local: InAddr,
     pub ind: libc::c_int,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct match_param {
+pub struct MatchParam {
     pub ind: libc::c_int,
     pub matched: libc::c_int,
-    pub netmask: in_addr,
-    pub broadcast: in_addr,
-    pub addr: in_addr,
+    pub netmask: InAddr,
+    pub broadcast: InAddr,
+    pub addr: InAddr,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_14A {
-    pub c: *mut libc::c_uchar,
-    pub p: *mut in_pktinfo,
+    pub c: Vec<u8>,
+    pub p: InPktInfo,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct cparam {
+pub struct Cparam {
     pub now: time_t,
     pub newone: libc::c_int,
     pub newname: libc::c_int,
+}
+
+
+pub type __caddr_t = *mut libc::c_char;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Ifmap {
+    pub mem_start: libc::c_ulong,
+    pub mem_end: libc::c_ulong,
+    pub base_addr: libc::c_ushort,
+    pub irq: libc::c_uchar,
+    pub dma: libc::c_uchar,
+    pub port: libc::c_uchar,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct InPktInfo {
+    pub ipi_ifindex: libc::c_int,
+    pub ipi_spec_dst: slack::in_addr,
+    pub ipi_addr: slack::in_addr,
 }

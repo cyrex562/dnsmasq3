@@ -1,29 +1,29 @@
 
 /* Send a UDP packet with its source address set as "source" 
    unless nowild is true, when we just send it with the kernel default */
-use crate::defines::{mysockaddr, all_addr, msghdr, iovec, C2RustUnnamed_13, cmsghdr, socklen_t, in_addr, IPPROTO_IP, in6_addr, dnsmasq_daemon, IPPROTO_IPV6, time_t, server, dns_header, frec, __bswap_16, frec_src, __CONST_SOCKADDR_ARG, ipsets, sockaddr, __SOCKADDR_ARG, sa_family_t, listener, C2RustUnnamed_16, in_addr_t, MSG_TRUNC, addrlist, __bswap_32, ifreq, C2RustUnnamed_4, C2RustUnnamed_15, C2RustUnnamed_14, irec, auth_zone, SOCK_STREAM, MSG_FASTOPEN, randfd};
-use crate::util::{sa_len, retry_send, hostname_isequal, whine_malloc, prettyprint_addr, sockaddr_isequal, is_same_net6, is_same_net, read_write, rand16};
-use crate::slack::{in_pktinfo, in6_pktinfo, METRIC_DNS_AUTH_ANSWERED, METRIC_DNS_LOCAL_ANSWERED, METRIC_DNS_QUERIES_FORWARDED};
-use crate::dnsmasq_log::{my_syslog, check_log_writer};
-use crate::rfc1035::{check_for_local_domain, extract_request, setup_reply, resize_packet, check_for_bogus_wildcard, extract_addresses, check_for_ignored_address, answer_request};
+use crate::auth::{answer_auth, in_zone};
 use crate::cache::{log_query, querystr};
-use crate::hash_questions::hash_questions;
-use crate::edns0::{find_pseudoheader, add_edns0_config, add_pseudoheader, check_source, add_do_bit};
-use crate::dump::dump_packet;
-use crate::rrfilter::rrfilter;
-use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, local_bind, random_sock};
-use crate::auth::{in_zone, answer_auth};
+use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, __SOCKADDR_ARG, AddrList, AllAddr, AuthZone, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_15, C2RustUnnamed_16, C2RustUnnamed_4, CmsgHdr, DnsHeader, DnsmasqDaemon, Frec, FrecSrc, IfReq, In6Addr, InAddr, in_addr_t, InPktInfo, iovec, IPPROTO_IP, IPPROTO_IPV6, IpSets, Irec, Listener, MSG_FASTOPEN, MSG_TRUNC, MsgHdr, MySockAddr, RandFd, sa_family_t, Server, SOCK_STREAM, SockAddr, socklen_t, time_t};
+use crate::dnsmasq_log::{check_log_writer, my_syslog};
 use crate::dnsmasq_loop::detect_loop;
+use crate::dump::dump_packet;
+use crate::edns0::{add_do_bit, add_edns0_config, add_pseudoheader, check_source, find_pseudoheader};
+use crate::hash_questions::hash_questions;
+use crate::network::{enumerate_interfaces, iface_check, indextoname, label_exception, local_bind, loopback_exception, random_sock};
+use crate::rfc1035::{answer_request, check_for_bogus_wildcard, check_for_ignored_address, check_for_local_domain, extract_addresses, extract_request, resize_packet, setup_reply};
+use crate::rrfilter::rrfilter;
+use crate::slack::{in6_pktinfo, METRIC_DNS_AUTH_ANSWERED, METRIC_DNS_LOCAL_ANSWERED, METRIC_DNS_QUERIES_FORWARDED};
+use crate::util::{hostname_isequal, is_same_net, is_same_net6, prettyprint_addr, rand16, read_write, retry_send, sa_len, sockaddr_isequal, whine_malloc};
 
 #[no_mangle]
 pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                    mut nowild: libc::c_int,
                                    mut packet: *mut libc::c_char,
-                                   mut len: usize, mut to: *mut mysockaddr,
-                                   mut source: *mut all_addr,
+                                   mut len: usize, mut to: *mut MySockAddr,
+                                   mut source: *mut AllAddr,
                                    mut iface: libc::c_uint) -> libc::c_int {
-    let mut msg: msghdr =
-        msghdr{msg_name: 0 as *mut libc::c_void,
+    let mut msg: MsgHdr =
+        MsgHdr {msg_name: 0 as *mut libc::c_void,
                msg_namelen: 0,
                msg_iov: 0 as *mut iovec,
                msg_iovlen: 0,
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
         [iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,}; 1];
     let mut control_u: C2RustUnnamed_13 =
         C2RustUnnamed_13{align:
-                             cmsghdr{cmsg_len: 0,
+                             CmsgHdr {cmsg_len: 0,
                                      cmsg_level: 0,
                                      cmsg_type: 0,
                                      __cmsg_data: [],},};
@@ -49,25 +49,25 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
     msg.msg_iov = iov.as_mut_ptr();
     msg.msg_iovlen = 1 as libc::c_int as usize;
     if nowild == 0 {
-        let mut cmptr: *mut cmsghdr = 0 as *mut cmsghdr;
+        let mut cmptr: *mut CmsgHdr = 0 as *mut CmsgHdr;
         msg.msg_control =
             &mut control_u as *mut C2RustUnnamed_13 as *mut libc::c_void;
         msg.msg_controllen =
             ::std::mem::size_of::<C2RustUnnamed_13>() as libc::c_ulong;
         cmptr =
             if msg.msg_controllen >=
-                   ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
-                msg.msg_control as *mut cmsghdr
-            } else { 0 as *mut cmsghdr };
+                   ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
+                msg.msg_control as *mut CmsgHdr
+            } else { 0 as *mut CmsgHdr };
         if (*to).sa.sa_family as libc::c_int == 2 as libc::c_int {
-            let mut p: in_pktinfo =
-                in_pktinfo{ipi_ifindex: 0,
-                           ipi_spec_dst: in_addr{s_addr: 0,},
-                           ipi_addr: in_addr{s_addr: 0,},};
+            let mut p: InPktInfo =
+                InPktInfo {ipi_ifindex: 0,
+                           ipi_spec_dst: InAddr {s_addr: 0,},
+                           ipi_addr: InAddr {s_addr: 0,},};
             p.ipi_ifindex = 0 as libc::c_int;
             p.ipi_spec_dst = (*source).addr4;
             msg.msg_controllen =
-                ((::std::mem::size_of::<in_pktinfo>() as
+                ((::std::mem::size_of::<InPktInfo>() as
                       libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
@@ -78,7 +78,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                      &
                      !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
-                                                           libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
+                                                           libc::c_ulong)).wrapping_add((::std::mem::size_of::<CmsgHdr>()
                                                                                              as
                                                                                              libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                                                                                              as
@@ -96,10 +96,10 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                                                                   as
                                                                                                                                   libc::c_ulong));
             memcpy((*cmptr).__cmsg_data.as_mut_ptr() as *mut libc::c_void,
-                   &mut p as *mut in_pktinfo as *const libc::c_void,
-                   ::std::mem::size_of::<in_pktinfo>() as libc::c_ulong);
+                   &mut p as *mut InPktInfo as *const libc::c_void,
+                   ::std::mem::size_of::<InPktInfo>() as libc::c_ulong);
             (*cmptr).cmsg_len =
-                ((::std::mem::size_of::<cmsghdr>() as
+                ((::std::mem::size_of::<CmsgHdr>() as
                       libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                      &
                      !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
-                                                           libc::c_ulong)).wrapping_add(::std::mem::size_of::<in_pktinfo>()
+                                                           libc::c_ulong)).wrapping_add(::std::mem::size_of::<InPktInfo>()
                                                                                             as
                                                                                             libc::c_ulong);
             (*cmptr).cmsg_level = IPPROTO_IP as libc::c_int;
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
         } else {
             let mut p_0: in6_pktinfo =
                 in6_pktinfo{ipi6_addr:
-                                in6_addr{__in6_u:
+                                In6Addr {__in6_u:
                                              C2RustUnnamed_0{__u6_addr8:
                                                                  [0; 16],},},
                             ipi6_ifindex: 0,};
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                      &
                      !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
-                                                           libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
+                                                           libc::c_ulong)).wrapping_add((::std::mem::size_of::<CmsgHdr>()
                                                                                              as
                                                                                              libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                                                                                              as
@@ -157,7 +157,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                    &mut p_0 as *mut in6_pktinfo as *const libc::c_void,
                    ::std::mem::size_of::<in6_pktinfo>() as libc::c_ulong);
             (*cmptr).cmsg_len =
-                ((::std::mem::size_of::<cmsghdr>() as
+                ((::std::mem::size_of::<CmsgHdr>() as
                       libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
@@ -188,21 +188,21 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn search_servers(mut now: time_t,
-                                    mut addrpp: *mut *mut all_addr,
+                                    mut addrpp: *mut *mut AllAddr,
                                     mut qtype: libc::c_uint,
                                     mut qdomain: *mut libc::c_char,
                                     mut type_0: *mut libc::c_int,
                                     mut domain: *mut *mut libc::c_char,
                                     mut norebind: *mut libc::c_int)
- -> libc::c_uint {
+                                    -> libc::c_uint {
     /* If the query ends in the domain in one of our servers, set
      domain to point to that name. We find the largest match to allow both
      domain.org and sub.domain.org to exist. */
     let mut namelen: libc::c_uint = strlen(qdomain) as libc::c_uint;
     let mut matchlen: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-    let mut serv: *mut server = 0 as *mut server;
+    let mut serv: *mut Server = 0 as *mut Server;
     let mut flags: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-    static mut zero: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+    static mut zero: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
     let mut current_block_45: u64;
     serv = (*dnsmasq_daemon).servers;
     while !serv.is_null() {
@@ -231,9 +231,9 @@ unsafe extern "C" fn search_servers(mut now: time_t,
                                ((1 as libc::c_uint) << 8 as libc::c_int |
                                     (1 as libc::c_uint) << 7 as libc::c_int)
                                != 0 {
-                        memset(&mut zero as *mut all_addr as
+                        memset(&mut zero as *mut AllAddr as
                                    *mut libc::c_void, 0 as libc::c_int,
-                               ::std::mem::size_of::<all_addr>() as
+                               ::std::mem::size_of::<AllAddr>() as
                                    libc::c_ulong);
                         flags = qtype;
                         *addrpp = &mut zero
@@ -243,11 +243,11 @@ unsafe extern "C" fn search_servers(mut now: time_t,
                                2 as libc::c_int {
                             *addrpp =
                                 &mut (*serv).addr.in_0.sin_addr as
-                                    *mut in_addr as *mut all_addr
+                                    *mut InAddr as *mut AllAddr
                         } else {
                             *addrpp =
                                 &mut (*serv).addr.in6.sin6_addr as
-                                    *mut in6_addr as *mut all_addr
+                                    *mut In6Addr as *mut AllAddr
                         }
                     } else if flags == 0 ||
                                   flags &
@@ -327,10 +327,10 @@ unsafe extern "C" fn search_servers(mut now: time_t,
                                                         (1 as libc::c_uint) <<
                                                             7 as libc::c_int)
                                                    != 0 {
-                                            memset(&mut zero as *mut all_addr
+                                            memset(&mut zero as *mut AllAddr
                                                        as *mut libc::c_void,
                                                    0 as libc::c_int,
-                                                   ::std::mem::size_of::<all_addr>()
+                                                   ::std::mem::size_of::<AllAddr>()
                                                        as libc::c_ulong);
                                             flags = qtype;
                                             *addrpp = &mut zero
@@ -341,13 +341,13 @@ unsafe extern "C" fn search_servers(mut now: time_t,
                                                    2 as libc::c_int {
                                                 *addrpp =
                                                     &mut (*serv).addr.in_0.sin_addr
-                                                        as *mut in_addr as
-                                                        *mut all_addr
+                                                        as *mut InAddr as
+                                                        *mut AllAddr
                                             } else {
                                                 *addrpp =
                                                     &mut (*serv).addr.in6.sin6_addr
-                                                        as *mut in6_addr as
-                                                        *mut all_addr
+                                                        as *mut In6Addr as
+                                                        *mut AllAddr
                                             }
                                         } else if flags == 0 ||
                                                       flags &
@@ -410,7 +410,7 @@ unsafe extern "C" fn search_servers(mut now: time_t,
             log_query(flags | qtype | (1 as libc::c_uint) << 5 as libc::c_int
                           | (1 as libc::c_uint) << 13 as libc::c_int |
                           (1 as libc::c_uint) << 3 as libc::c_int, qdomain,
-                      0 as *mut all_addr, 0 as *mut libc::c_char);
+                      0 as *mut AllAddr, 0 as *mut libc::c_char);
         } else {
             /* handle F_IPV4 and F_IPV6 set on ANY query to 0.0.0.0/:: domain. */
             if flags & (1 as libc::c_uint) << 7 as libc::c_int != 0 {
@@ -435,21 +435,21 @@ unsafe extern "C" fn search_servers(mut now: time_t,
     return flags;
 }
 unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
-                                   mut udpaddr: *mut mysockaddr,
-                                   mut dst_addr: *mut all_addr,
+                                   mut udpaddr: *mut MySockAddr,
+                                   mut dst_addr: *mut AllAddr,
                                    mut dst_iface: libc::c_uint,
-                                   mut header: *mut dns_header,
+                                   mut header: *mut DnsHeader,
                                    mut plen: usize, mut now: time_t,
-                                   mut forward: *mut frec,
+                                   mut forward: *mut Frec,
                                    mut ad_reqd: libc::c_int,
                                    mut do_bit: libc::c_int) -> libc::c_int {
     let mut domain: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut type_0: libc::c_int = 16384 as libc::c_int;
     let mut norebind: libc::c_int = 0 as libc::c_int;
-    let mut addrp: *mut all_addr = 0 as *mut all_addr;
+    let mut addrp: *mut AllAddr = 0 as *mut AllAddr;
     let mut flags: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     let mut fwd_flags: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-    let mut start: *mut server = 0 as *mut server;
+    let mut start: *mut Server = 0 as *mut Server;
     let mut hash: *mut libc::c_void =
         hash_questions(header, plen, (*dnsmasq_daemon).namebuff) as
             *mut libc::c_void;
@@ -502,7 +502,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                                                                                          libc::c_ulong))
                == 0 {
             (*forward).forwardall = 1 as libc::c_int;
-            (*dnsmasq_daemon).last_server = 0 as *mut server
+            (*dnsmasq_daemon).last_server = 0 as *mut Server
         }
         type_0 =
             (*(*forward).sentto).flags &
@@ -562,16 +562,16 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                        (*dnsmasq_daemon).ftabsize &&
                    {
                        (*dnsmasq_daemon).free_frec_src =
-                           whine_malloc(::std::mem::size_of::<frec_src>() as
-                                            libc::c_ulong) as *mut frec_src;
+                           whine_malloc(::std::mem::size_of::<FrecSrc>() as
+                                            libc::c_ulong) as *mut FrecSrc;
                        !(*dnsmasq_daemon).free_frec_src.is_null()
                    } {
                 (*dnsmasq_daemon).frec_src_count += 1;
-                (*(*dnsmasq_daemon).free_frec_src).next = 0 as *mut frec_src
+                (*(*dnsmasq_daemon).free_frec_src).next = 0 as *mut FrecSrc
             }
             /* If we've been spammed with many duplicates, just drop the query. */
             if !(*dnsmasq_daemon).free_frec_src.is_null() {
-                let mut new: *mut frec_src = (*dnsmasq_daemon).free_frec_src;
+                let mut new: *mut FrecSrc = (*dnsmasq_daemon).free_frec_src;
                 (*dnsmasq_daemon).free_frec_src = (*new).next;
                 (*new).next = (*forward).frec_src.next;
                 (*forward).frec_src.next = new;
@@ -592,7 +592,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
         }
         type_0 &= !(16384 as libc::c_int);
         if !(*dnsmasq_daemon).servers.is_null() && flags == 0 {
-            forward = get_new_frec(now, 0 as *mut libc::c_int, 0 as *mut frec)
+            forward = get_new_frec(now, 0 as *mut libc::c_int, 0 as *mut Frec)
         }
         /* table full - flags == 0, return REFUSED */
         if !forward.is_null() {
@@ -600,7 +600,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
             (*forward).frec_src.orig_id = __bswap_16((*header).id);
             (*forward).frec_src.dest = *dst_addr;
             (*forward).frec_src.iface = dst_iface;
-            (*forward).frec_src.next = 0 as *mut frec_src;
+            (*forward).frec_src.next = 0 as *mut FrecSrc;
             (*forward).frec_src.fd = udpfd;
             (*forward).new_id = get_id();
             memcpy((*forward).hash.as_mut_ptr() as *mut libc::c_void, hash,
@@ -685,7 +685,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
      if we fail to send to all nameservers, send back an error
      packet straight away (helps modem users when offline)  */
     if flags == 0 && !forward.is_null() {
-        let mut firstsentto: *mut server = start;
+        let mut firstsentto: *mut Server = start;
         let mut subnet: libc::c_int = 0;
         let mut cacheable: libc::c_int = 0;
         let mut forwarded: libc::c_int = 0 as libc::c_int;
@@ -777,7 +777,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                 if *__errno_location() == 0 as libc::c_int {
                     dump_packet(0x4 as libc::c_int,
                                 header as *mut libc::c_void, plen,
-                                0 as *mut mysockaddr, &mut (*start).addr);
+                                0 as *mut MySockAddr, &mut (*start).addr);
                     /* Keep info in case we want to re-send this packet */
                     (*dnsmasq_daemon).srv_save = start;
                     (*dnsmasq_daemon).packet_len = plen;
@@ -794,7 +794,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                                       (1 as libc::c_uint) << 3 as libc::c_int,
                                   (*dnsmasq_daemon).namebuff,
                                   &mut (*start).addr.in_0.sin_addr as
-                                      *mut in_addr as *mut all_addr,
+                                      *mut InAddr as *mut AllAddr,
                                   0 as *mut libc::c_char);
                     } else {
                         log_query((1 as libc::c_uint) << 18 as libc::c_int |
@@ -803,7 +803,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                                       (1 as libc::c_uint) << 3 as libc::c_int,
                                   (*dnsmasq_daemon).namebuff,
                                   &mut (*start).addr.in6.sin6_addr as
-                                      *mut in6_addr as *mut all_addr,
+                                      *mut In6Addr as *mut AllAddr,
                                   0 as *mut libc::c_char);
                     }
                     (*start).queries = (*start).queries.wrapping_add(1);
@@ -883,8 +883,8 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
     }
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn process_reply(mut header: *mut dns_header,
-                                   mut now: time_t, mut server: *mut server,
+unsafe extern "C" fn process_reply(mut header: *mut DnsHeader,
+                                   mut now: time_t, mut server: *mut Server,
                                    mut n: usize,
                                    mut check_rebind: libc::c_int,
                                    mut no_cache: libc::c_int,
@@ -894,8 +894,8 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
                                    mut do_bit: libc::c_int,
                                    mut added_pheader: libc::c_int,
                                    mut check_subnet: libc::c_int,
-                                   mut query_source: *mut mysockaddr)
- -> usize {
+                                   mut query_source: *mut MySockAddr)
+                                   -> usize {
     let mut pheader: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut sizep: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut sets: *mut *mut libc::c_char = 0 as *mut *mut libc::c_char;
@@ -908,7 +908,7 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
            extract_request(header, n, (*dnsmasq_daemon).namebuff,
                            0 as *mut libc::c_ushort) != 0 {
         /* Similar algorithm to search_servers. */
-        let mut ipset_pos: *mut ipsets = 0 as *mut ipsets;
+        let mut ipset_pos: *mut IpSets = 0 as *mut IpSets;
         let mut namelen: libc::c_uint =
             strlen((*dnsmasq_daemon).namebuff) as libc::c_uint;
         let mut matchlen: libc::c_uint = 0 as libc::c_int as libc::c_uint;
@@ -1012,7 +1012,7 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
     }
     if rcode != 0 as libc::c_int as libc::c_uint &&
            rcode != 3 as libc::c_int as libc::c_uint {
-        let mut a: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+        let mut a: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
         a.log.rcode = rcode as libc::c_ushort;
         log_query((1 as libc::c_uint) << 16 as libc::c_int |
                       (1 as libc::c_uint) << 29 as libc::c_int,
@@ -1112,31 +1112,31 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                                      mut now: time_t) {
     /* packet from peer server, extract data for cache, and send to
      original requester */
-    let mut header: *mut dns_header = 0 as *mut dns_header;
-    let mut serveraddr: mysockaddr =
-        mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
-    let mut forward: *mut frec = 0 as *mut frec;
+    let mut header: *mut DnsHeader = 0 as *mut DnsHeader;
+    let mut serveraddr: MySockAddr =
+        MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
+    let mut forward: *mut Frec = 0 as *mut Frec;
     let mut addrlen: socklen_t =
-        ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
+        ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as socklen_t;
     let mut n: susize =
         recvfrom(fd, (*dnsmasq_daemon).packet as *mut libc::c_void,
                  (*dnsmasq_daemon).packet_buff_sz as usize, 0 as libc::c_int,
                  __SOCKADDR_ARG{__sockaddr__:
-                                    &mut serveraddr.sa as *mut sockaddr,},
+                                    &mut serveraddr.sa as *mut SockAddr,},
                  &mut addrlen);
     let mut nn: usize = 0;
-    let mut server: *mut server = 0 as *mut server;
+    let mut server: *mut Server = 0 as *mut Server;
     let mut hash: *mut libc::c_void = 0 as *mut libc::c_void;
     /* packet buffer overwritten */
-    (*dnsmasq_daemon).srv_save = 0 as *mut server;
+    (*dnsmasq_daemon).srv_save = 0 as *mut Server;
     /* Determine the address of the server replying  so that we can mark that as good */
     serveraddr.sa.sa_family = family as sa_family_t;
     if serveraddr.sa.sa_family as libc::c_int == 10 as libc::c_int {
         serveraddr.in6.sin6_flowinfo = 0 as libc::c_int as u32
     }
-    header = (*dnsmasq_daemon).packet as *mut dns_header;
+    header = (*dnsmasq_daemon).packet as *mut DnsHeader;
     if n <
-           ::std::mem::size_of::<dns_header>() as libc::c_ulong as libc::c_int
+           ::std::mem::size_of::<DnsHeader>() as libc::c_ulong as libc::c_int
                as libc::c_long ||
            (*header).hb3 as libc::c_int & 0x80 as libc::c_int == 0 {
         return
@@ -1165,7 +1165,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                        != 0 {
                     0x20 as libc::c_int
                 } else { 0x8 as libc::c_int }, header as *mut libc::c_void,
-                n as usize, &mut serveraddr, 0 as *mut mysockaddr);
+                n as usize, &mut serveraddr, 0 as *mut MySockAddr);
     /* log_query gets called indirectly all over the place, so 
      pass these in global variables - sorry. */
     (*dnsmasq_daemon).log_display_id =
@@ -1257,8 +1257,8 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                 if (*forward).flags & 64 as libc::c_int != 0 {
                     add_do_bit(header, nn, pheader.offset(plen as isize));
                 }
-                forward_query(-(1 as libc::c_int), 0 as *mut mysockaddr,
-                              0 as *mut all_addr,
+                forward_query(-(1 as libc::c_int), 0 as *mut MySockAddr,
+                              0 as *mut AllAddr,
                               0 as libc::c_int as libc::c_uint, header, nn,
                               now, forward,
                               (*forward).flags & 32 as libc::c_int,
@@ -1272,9 +1272,9 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
            0 as libc::c_int {
         if (*header).hb4 as libc::c_int & 0xf as libc::c_int ==
                5 as libc::c_int {
-            server = 0 as *mut server
+            server = 0 as *mut Server
         } else {
-            let mut last_server: *mut server = 0 as *mut server;
+            let mut last_server: *mut Server = 0 as *mut Server;
             /* find good server by address if possible, otherwise assume the last one we sent to */
             last_server = (*dnsmasq_daemon).servers;
             while !last_server.is_null() {
@@ -1388,7 +1388,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                           (*forward).flags & 4 as libc::c_int,
                           &mut (*forward).frec_src.source);
         if nn != 0 {
-            let mut src: *mut frec_src = 0 as *mut frec_src;
+            let mut src: *mut FrecSrc = 0 as *mut FrecSrc;
             (*header).id = __bswap_16((*forward).frec_src.orig_id);
             /*   Don't cache replies where DNSSEC validation was turned off, either
 	   the upstream server told us so, or the original query specified it.  */
@@ -1403,7 +1403,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                 (*header).id = __bswap_16((*src).orig_id);
                 dump_packet(0x2 as libc::c_int,
                             (*dnsmasq_daemon).packet as *mut libc::c_void, nn,
-                            0 as *mut mysockaddr, &mut (*src).source);
+                            0 as *mut MySockAddr, &mut (*src).source);
                 send_from((*src).fd,
                           ((*dnsmasq_daemon).options[(13 as libc::c_int as
                                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -1464,13 +1464,13 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                                                                                                  as
                                                                                                  libc::c_ulong))
                        != 0 &&
-                       src != &mut (*forward).frec_src as *mut frec_src {
+                       src != &mut (*forward).frec_src as *mut FrecSrc {
                     (*dnsmasq_daemon).log_display_id =
                         (*src).log_id as libc::c_int;
                     (*dnsmasq_daemon).log_source_addr = &mut (*src).source;
                     log_query((1 as libc::c_uint) << 16 as libc::c_int,
                               b"query\x00" as *const u8 as *const libc::c_char
-                                  as *mut libc::c_char, 0 as *mut all_addr,
+                                  as *mut libc::c_char, 0 as *mut AllAddr,
                               b"duplicate\x00" as *const u8 as
                                   *const libc::c_char as *mut libc::c_char);
                 }
@@ -1481,18 +1481,18 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
+pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
                                        mut now: time_t) {
-    let mut header: *mut dns_header =
-        (*dnsmasq_daemon).packet as *mut dns_header;
-    let mut source_addr: mysockaddr =
-        mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+    let mut header: *mut DnsHeader =
+        (*dnsmasq_daemon).packet as *mut DnsHeader;
+    let mut source_addr: MySockAddr =
+        MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
     let mut pheader: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut type_0: libc::c_ushort = 0;
     let mut udp_size: libc::c_ushort = 512 as libc::c_int as libc::c_ushort;
-    let mut dst_addr: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
-    let mut netmask: in_addr = in_addr{s_addr: 0,};
-    let mut dst_addr_4: in_addr = in_addr{s_addr: 0,};
+    let mut dst_addr: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
+    let mut netmask: InAddr = InAddr {s_addr: 0,};
+    let mut dst_addr_4: InAddr = InAddr {s_addr: 0,};
     let mut m: usize = 0;
     let mut n: susize = 0;
     let mut if_index: libc::c_int = 0 as libc::c_int;
@@ -1502,18 +1502,18 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     let mut local_auth: libc::c_int = 0 as libc::c_int;
     let mut iov: [iovec; 1] =
         [iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,}; 1];
-    let mut msg: msghdr =
-        msghdr{msg_name: 0 as *mut libc::c_void,
+    let mut msg: MsgHdr =
+        MsgHdr {msg_name: 0 as *mut libc::c_void,
                msg_namelen: 0,
                msg_iov: 0 as *mut iovec,
                msg_iovlen: 0,
                msg_control: 0 as *mut libc::c_void,
                msg_controllen: 0,
                msg_flags: 0,};
-    let mut cmptr: *mut cmsghdr = 0 as *mut cmsghdr;
+    let mut cmptr: *mut CmsgHdr = 0 as *mut CmsgHdr;
     let mut control_u: C2RustUnnamed_16 =
         C2RustUnnamed_16{align:
-                             cmsghdr{cmsg_len: 0,
+                             CmsgHdr {cmsg_len: 0,
                                      cmsg_level: 0,
                                      cmsg_type: 0,
                                      __cmsg_data: [],},};
@@ -1540,7 +1540,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                                                                                        libc::c_ulong))
              == 0 || family == 10 as libc::c_int) as libc::c_int;
     /* packet buffer overwritten */
-    (*dnsmasq_daemon).srv_save = 0 as *mut server;
+    (*dnsmasq_daemon).srv_save = 0 as *mut Server;
     dst_addr.addr4.s_addr = 0 as libc::c_int as in_addr_t;
     dst_addr_4.s_addr = dst_addr.addr4.s_addr;
     netmask.s_addr = 0 as libc::c_int as in_addr_t;
@@ -1578,15 +1578,15 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     msg.msg_controllen =
         ::std::mem::size_of::<C2RustUnnamed_16>() as libc::c_ulong;
     msg.msg_flags = 0 as libc::c_int;
-    msg.msg_name = &mut source_addr as *mut mysockaddr as *mut libc::c_void;
+    msg.msg_name = &mut source_addr as *mut MySockAddr as *mut libc::c_void;
     msg.msg_namelen =
-        ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
+        ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as socklen_t;
     msg.msg_iov = iov.as_mut_ptr();
     msg.msg_iovlen = 1 as libc::c_int as usize;
     n = recvmsg((*listen).fd, &mut msg, 0 as libc::c_int);
     if n == -(1 as libc::c_int) as libc::c_long { return }
     if n <
-           ::std::mem::size_of::<dns_header>() as libc::c_ulong as libc::c_int
+           ::std::mem::size_of::<DnsHeader>() as libc::c_ulong as libc::c_int
                as libc::c_long ||
            msg.msg_flags & MSG_TRUNC as libc::c_int != 0 ||
            (*header).hb3 as libc::c_int & 0x80 as libc::c_int != 0 {
@@ -1632,7 +1632,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                                                                                      as
                                                                                      libc::c_ulong))
            != 0 {
-        let mut addr: *mut addrlist = 0 as *mut addrlist;
+        let mut addr: *mut AddrList = 0 as *mut AddrList;
         if family == 10 as libc::c_int {
             addr = (*dnsmasq_daemon).interface_addrs;
             while !addr.is_null() {
@@ -1645,7 +1645,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                 addr = (*addr).next
             }
         } else {
-            let mut netmask_0: in_addr = in_addr{s_addr: 0,};
+            let mut netmask_0: InAddr = InAddr {s_addr: 0,};
             addr = (*dnsmasq_daemon).interface_addrs;
             while !addr.is_null() {
                 netmask_0.s_addr =
@@ -1672,22 +1672,22 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
         }
     }
     if check_dst != 0 {
-        let mut ifr: ifreq =
-            ifreq{ifr_ifrn: C2RustUnnamed_4{ifrn_name: [0; 16],},
+        let mut ifr: IfReq =
+            IfReq {ifr_ifrn: C2RustUnnamed_4{ifrn_name: [0; 16],},
                   ifr_ifru:
                       C2RustUnnamed_3{ifru_addr:
-                                          sockaddr{sa_family: 0,
+                                          SockAddr {sa_family: 0,
                                                    sa_data: [0; 14],},},};
         if msg.msg_controllen <
-               ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+               ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
             return
         }
         if family == 2 as libc::c_int {
             cmptr =
                 if msg.msg_controllen >=
-                       ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
-                    msg.msg_control as *mut cmsghdr
-                } else { 0 as *mut cmsghdr };
+                       ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
+                    msg.msg_control as *mut CmsgHdr
+                } else { 0 as *mut CmsgHdr };
             while !cmptr.is_null() {
                 if (*cmptr).cmsg_level == IPPROTO_IP as libc::c_int &&
                        (*cmptr).cmsg_type == 8 as libc::c_int {
@@ -1704,9 +1704,9 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
         if family == 10 as libc::c_int {
             cmptr =
                 if msg.msg_controllen >=
-                       ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
-                    msg.msg_control as *mut cmsghdr
-                } else { 0 as *mut cmsghdr };
+                       ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
+                    msg.msg_control as *mut CmsgHdr
+                } else { 0 as *mut CmsgHdr };
             while !cmptr.is_null() {
                 if (*cmptr).cmsg_level == IPPROTO_IPV6 as libc::c_int &&
                        (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
@@ -1774,7 +1774,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                                                                                              as
                                                                                              libc::c_ulong))
                    != 0 {
-            let mut iface: *mut irec = 0 as *mut irec;
+            let mut iface: *mut Irec = 0 as *mut Irec;
             /* get the netmask of the interface which has the address we were sent to.
 	     This is no necessarily the interface we arrived on. */
             iface = (*dnsmasq_daemon).interfaces;
@@ -1833,10 +1833,10 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     (*dnsmasq_daemon).log_source_addr = &mut source_addr;
     dump_packet(0x1 as libc::c_int,
                 (*dnsmasq_daemon).packet as *mut libc::c_void, n as usize,
-                &mut source_addr, 0 as *mut mysockaddr);
+                &mut source_addr, 0 as *mut MySockAddr);
     if extract_request(header, n as usize, (*dnsmasq_daemon).namebuff,
                        &mut type_0) != 0 {
-        let mut zone: *mut auth_zone = 0 as *mut auth_zone;
+        let mut zone: *mut AuthZone = 0 as *mut AuthZone;
         let mut types: *mut libc::c_char =
             querystr(if auth_dns != 0 {
                          b"auth\x00" as *const u8 as *const libc::c_char
@@ -1848,15 +1848,15 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                           (1 as libc::c_uint) << 7 as libc::c_int |
                           (1 as libc::c_uint) << 3 as libc::c_int,
                       (*dnsmasq_daemon).namebuff,
-                      &mut source_addr.in_0.sin_addr as *mut in_addr as
-                          *mut all_addr, types);
+                      &mut source_addr.in_0.sin_addr as *mut InAddr as
+                          *mut AllAddr, types);
         } else {
             log_query((1 as libc::c_uint) << 19 as libc::c_int |
                           (1 as libc::c_uint) << 8 as libc::c_int |
                           (1 as libc::c_uint) << 3 as libc::c_int,
                       (*dnsmasq_daemon).namebuff,
-                      &mut source_addr.in6.sin6_addr as *mut in6_addr as
-                          *mut all_addr, types);
+                      &mut source_addr.in6.sin6_addr as *mut In6Addr as
+                          *mut AllAddr, types);
         }
         /* find queries for zones we're authoritative for, and answer them directly */
         if auth_dns == 0 &&
@@ -2048,7 +2048,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                                               usize].wrapping_add(1)
         } else if forward_query((*listen).fd, &mut source_addr, &mut dst_addr,
                                 if_index as libc::c_uint, header, n as usize,
-                                now, 0 as *mut frec, ad_reqd, do_bit) != 0 {
+                                now, 0 as *mut Frec, ad_reqd, do_bit) != 0 {
             (*dnsmasq_daemon).metrics[METRIC_DNS_QUERIES_FORWARDED as
                                           libc::c_int as usize] =
                 (*dnsmasq_daemon).metrics[METRIC_DNS_QUERIES_FORWARDED as
@@ -2069,10 +2069,10 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
    done by the caller. */
 #[no_mangle]
 pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
-                                     mut local_addr: *mut mysockaddr,
-                                     mut netmask: in_addr,
+                                     mut local_addr: *mut MySockAddr,
+                                     mut netmask: InAddr,
                                      mut auth_dns: libc::c_int)
- -> *mut libc::c_uchar {
+                                     -> *mut libc::c_uchar {
     let mut size: usize = 0 as libc::c_int as usize;
     let mut norebind: libc::c_int = 0 as libc::c_int;
     let mut local_auth: libc::c_int = 0 as libc::c_int;
@@ -2100,22 +2100,22 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
     let mut payload: *mut libc::c_uchar =
         &mut *packet.offset(2 as libc::c_int as isize) as *mut libc::c_uchar;
     /* largest field in header is 16-bits, so this is still sufficiently aligned */
-    let mut header: *mut dns_header = payload as *mut dns_header;
+    let mut header: *mut DnsHeader = payload as *mut DnsHeader;
     let mut length: *mut u16 = packet as *mut u16;
-    let mut last_server: *mut server = 0 as *mut server;
-    let mut dst_addr_4: in_addr = in_addr{s_addr: 0,};
-    let mut peer_addr: mysockaddr =
-        mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+    let mut last_server: *mut Server = 0 as *mut Server;
+    let mut dst_addr_4: InAddr = InAddr {s_addr: 0,};
+    let mut peer_addr: MySockAddr =
+        MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
     let mut peer_len: socklen_t =
-        ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
+        ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as socklen_t;
     let mut query_count: libc::c_int = 0 as libc::c_int;
     let mut pheader: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut mark: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     let mut have_mark: libc::c_int = 0 as libc::c_int;
     if getpeername(confd,
                    __SOCKADDR_ARG{__sockaddr__:
-                                      &mut peer_addr as *mut mysockaddr as
-                                          *mut sockaddr,}, &mut peer_len) ==
+                                      &mut peer_addr as *mut MySockAddr as
+                                          *mut SockAddr,}, &mut peer_len) ==
            -(1 as libc::c_int) {
         return packet
     }
@@ -2139,7 +2139,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                                                                      as
                                                                                      libc::c_ulong))
            != 0 {
-        let mut addr: *mut addrlist = 0 as *mut addrlist;
+        let mut addr: *mut AddrList = 0 as *mut AddrList;
         if peer_addr.sa.sa_family as libc::c_int == 10 as libc::c_int {
             addr = (*dnsmasq_daemon).interface_addrs;
             while !addr.is_null() {
@@ -2152,7 +2152,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                 addr = (*addr).next
             }
         } else {
-            let mut netmask_0: in_addr = in_addr{s_addr: 0,};
+            let mut netmask_0: InAddr = InAddr {s_addr: 0,};
             addr = (*dnsmasq_daemon).interface_addrs;
             while !addr.is_null() {
                 netmask_0.s_addr =
@@ -2190,7 +2190,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
             return packet
         }
         if size <
-               ::std::mem::size_of::<dns_header>() as libc::c_ulong as
+               ::std::mem::size_of::<DnsHeader>() as libc::c_ulong as
                    libc::c_int as libc::c_ulong {
             continue ;
         }
@@ -2213,7 +2213,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
             extract_request(header, size as libc::c_uint as usize,
                             (*dnsmasq_daemon).namebuff, &mut qtype);
         if gotname != 0 {
-            let mut zone: *mut auth_zone = 0 as *mut auth_zone;
+            let mut zone: *mut AuthZone = 0 as *mut AuthZone;
             let mut types: *mut libc::c_char =
                 querystr(if auth_dns != 0 {
                              b"auth\x00" as *const u8 as *const libc::c_char
@@ -2225,15 +2225,15 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                               (1 as libc::c_uint) << 7 as libc::c_int |
                               (1 as libc::c_uint) << 3 as libc::c_int,
                           (*dnsmasq_daemon).namebuff,
-                          &mut peer_addr.in_0.sin_addr as *mut in_addr as
-                              *mut all_addr, types);
+                          &mut peer_addr.in_0.sin_addr as *mut InAddr as
+                              *mut AllAddr, types);
             } else {
                 log_query((1 as libc::c_uint) << 19 as libc::c_int |
                               (1 as libc::c_uint) << 8 as libc::c_int |
                               (1 as libc::c_uint) << 3 as libc::c_int,
                           (*dnsmasq_daemon).namebuff,
-                          &mut peer_addr.in6.sin6_addr as *mut in6_addr as
-                              *mut all_addr, types);
+                          &mut peer_addr.in6.sin6_addr as *mut In6Addr as
+                              *mut AllAddr, types);
             }
             /* find queries for zones we're authoritative for, and answer them directly */
             if auth_dns == 0 &&
@@ -2320,7 +2320,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
             if m == 0 as libc::c_int as libc::c_ulong {
                 let mut flags_0: libc::c_uint =
                     0 as libc::c_int as libc::c_uint;
-                let mut addrp: *mut all_addr = 0 as *mut all_addr;
+                let mut addrp: *mut AllAddr = 0 as *mut AllAddr;
                 let mut type_0: libc::c_int = 16384 as libc::c_int;
                 let mut domain: *mut libc::c_char = 0 as *mut libc::c_char;
                 let mut oph: *mut libc::c_uchar =
@@ -2377,7 +2377,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                     last_server = (*dnsmasq_daemon).servers
                 } else { last_server = (*dnsmasq_daemon).last_server }
                 if flags_0 == 0 && !last_server.is_null() {
-                    let mut firstsendto: *mut server = 0 as *mut server;
+                    let mut firstsendto: *mut Server = 0 as *mut Server;
                     let mut hash: [libc::c_uchar; 32] = [0; 32];
                     memcpy(hash.as_mut_ptr() as *mut libc::c_void,
                            hash_questions(header,
@@ -2536,8 +2536,8 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                                           3 as libc::c_int,
                                                   (*dnsmasq_daemon).namebuff,
                                                   &mut (*last_server).addr.in_0.sin_addr
-                                                      as *mut in_addr as
-                                                      *mut all_addr,
+                                                      as *mut InAddr as
+                                                      *mut AllAddr,
                                                   0 as *mut libc::c_char);
                                     } else {
                                         log_query((1 as libc::c_uint) <<
@@ -2548,8 +2548,8 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                                           3 as libc::c_int,
                                                   (*dnsmasq_daemon).namebuff,
                                                   &mut (*last_server).addr.in6.sin6_addr
-                                                      as *mut in6_addr as
-                                                      *mut all_addr,
+                                                      as *mut In6Addr as
+                                                      *mut AllAddr,
                                                   0 as *mut libc::c_char);
                                     }
                                     /* restore CD bit to the value in the query */
@@ -2680,25 +2680,25 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
         }
     };
 }
-unsafe extern "C" fn allocate_frec(mut now: time_t) -> *mut frec {
-    let mut f: *mut frec = 0 as *mut frec;
+unsafe extern "C" fn allocate_frec(mut now: time_t) -> *mut Frec {
+    let mut f: *mut Frec = 0 as *mut Frec;
     f =
-        whine_malloc(::std::mem::size_of::<frec>() as libc::c_ulong) as
-            *mut frec;
+        whine_malloc(::std::mem::size_of::<Frec>() as libc::c_ulong) as
+            *mut Frec;
     if !f.is_null() {
         (*f).next = (*dnsmasq_daemon).frec_list;
         (*f).time = now;
-        (*f).sentto = 0 as *mut server;
-        (*f).rfd4 = 0 as *mut randfd;
+        (*f).sentto = 0 as *mut Server;
+        (*f).rfd4 = 0 as *mut RandFd;
         (*f).flags = 0 as libc::c_int;
-        (*f).rfd6 = 0 as *mut randfd;
+        (*f).rfd6 = 0 as *mut RandFd;
         (*dnsmasq_daemon).frec_list = f
     }
     return f;
 }
 #[no_mangle]
 pub unsafe extern "C" fn allocate_rfd(mut family: libc::c_int)
- -> *mut randfd {
+ -> *mut RandFd {
     static mut finger: libc::c_int = 0 as libc::c_int;
     let mut i: libc::c_int = 0;
     /* limit the number of sockets we have open to avoid starvation of 
@@ -2720,7 +2720,7 @@ pub unsafe extern "C" fn allocate_rfd(mut family: libc::c_int)
             return &mut *(*dnsmasq_daemon).randomsocks.as_mut_ptr().offset(i
                                                                                as
                                                                                isize)
-                       as *mut randfd
+                       as *mut RandFd
         } else { i += 1 }
     }
     /* No free ones or cannot get new socket, grab an existing one */
@@ -2740,15 +2740,15 @@ pub unsafe extern "C" fn allocate_rfd(mut family: libc::c_int)
             return &mut *(*dnsmasq_daemon).randomsocks.as_mut_ptr().offset(j
                                                                                as
                                                                                isize)
-                       as *mut randfd
+                       as *mut RandFd
         }
         i += 1
     }
-    return 0 as *mut randfd;
+    return 0 as *mut RandFd;
     /* doom */
 }
 #[no_mangle]
-pub unsafe extern "C" fn free_rfd(mut rfd: *mut randfd) {
+pub unsafe extern "C" fn free_rfd(mut rfd: *mut RandFd) {
     if !rfd.is_null() &&
            {
                (*rfd).refcount = (*rfd).refcount.wrapping_sub(1);
@@ -2757,8 +2757,8 @@ pub unsafe extern "C" fn free_rfd(mut rfd: *mut randfd) {
         close((*rfd).fd);
     };
 }
-unsafe extern "C" fn free_frec(mut f: *mut frec) {
-    let mut last: *mut frec_src = 0 as *mut frec_src;
+unsafe extern "C" fn free_frec(mut f: *mut Frec) {
+    let mut last: *mut FrecSrc = 0 as *mut FrecSrc;
     /* add back to freelist if not the record builtin to every frec. */
     last = (*f).frec_src.next;
     while !last.is_null() && !(*last).next.is_null() { last = (*last).next }
@@ -2766,13 +2766,13 @@ unsafe extern "C" fn free_frec(mut f: *mut frec) {
         (*last).next = (*dnsmasq_daemon).free_frec_src;
         (*dnsmasq_daemon).free_frec_src = (*f).frec_src.next
     }
-    (*f).frec_src.next = 0 as *mut frec_src;
+    (*f).frec_src.next = 0 as *mut FrecSrc;
     free_rfd((*f).rfd4);
-    (*f).rfd4 = 0 as *mut randfd;
-    (*f).sentto = 0 as *mut server;
+    (*f).rfd4 = 0 as *mut RandFd;
+    (*f).sentto = 0 as *mut Server;
     (*f).flags = 0 as libc::c_int;
     free_rfd((*f).rfd6);
-    (*f).rfd6 = 0 as *mut randfd;
+    (*f).rfd6 = 0 as *mut RandFd;
 }
 /* if wait==NULL return a free or older than TIMEOUT record.
    else return *wait zero if one available, or *wait is delay to
@@ -2784,15 +2784,15 @@ unsafe extern "C" fn free_frec(mut f: *mut frec) {
 #[no_mangle]
 pub unsafe extern "C" fn get_new_frec(mut now: time_t,
                                       mut wait: *mut libc::c_int,
-                                      mut force: *mut frec) -> *mut frec {
-    let mut f: *mut frec = 0 as *mut frec;
-    let mut oldest: *mut frec = 0 as *mut frec;
-    let mut target: *mut frec = 0 as *mut frec;
+                                      mut force: *mut Frec) -> *mut Frec {
+    let mut f: *mut Frec = 0 as *mut Frec;
+    let mut oldest: *mut Frec = 0 as *mut Frec;
+    let mut target: *mut Frec = 0 as *mut Frec;
     let mut count: libc::c_int = 0;
     if !wait.is_null() { *wait = 0 as libc::c_int }
     f = (*dnsmasq_daemon).frec_list;
-    oldest = 0 as *mut frec;
-    target = 0 as *mut frec;
+    oldest = 0 as *mut Frec;
+    target = 0 as *mut Frec;
     count = 0 as libc::c_int;
     while !f.is_null() {
         if (*f).sentto.is_null() {
@@ -2843,7 +2843,7 @@ pub unsafe extern "C" fn get_new_frec(mut now: time_t,
                           as *const u8 as *const libc::c_char,
                       (*dnsmasq_daemon).ftabsize);
         }
-        return 0 as *mut frec
+        return 0 as *mut Frec
     }
     f = allocate_frec(now);
     if f.is_null() && !wait.is_null() {
@@ -2870,8 +2870,8 @@ pub unsafe extern "C" fn get_new_frec(mut now: time_t,
 */
 unsafe extern "C" fn lookup_frec(mut id: libc::c_ushort, mut fd: libc::c_int,
                                  mut family: libc::c_int,
-                                 mut hash: *mut libc::c_void) -> *mut frec {
-    let mut f: *mut frec = 0 as *mut frec;
+                                 mut hash: *mut libc::c_void) -> *mut Frec {
+    let mut f: *mut Frec = 0 as *mut Frec;
     f = (*dnsmasq_daemon).frec_list;
     while !f.is_null() {
         if !(*f).sentto.is_null() &&
@@ -2896,14 +2896,14 @@ unsafe extern "C" fn lookup_frec(mut id: libc::c_ushort, mut fd: libc::c_int,
         }
         f = (*f).next
     }
-    return 0 as *mut frec;
+    return 0 as *mut Frec;
 }
 unsafe extern "C" fn lookup_frec_by_sender(mut id: libc::c_ushort,
-                                           mut addr: *mut mysockaddr,
+                                           mut addr: *mut MySockAddr,
                                            mut hash: *mut libc::c_void)
- -> *mut frec {
-    let mut f: *mut frec = 0 as *mut frec;
-    let mut src: *mut frec_src = 0 as *mut frec_src;
+                                           -> *mut Frec {
+    let mut f: *mut Frec = 0 as *mut Frec;
+    let mut src: *mut FrecSrc = 0 as *mut FrecSrc;
     f = (*dnsmasq_daemon).frec_list;
     while !f.is_null() {
         if !(*f).sentto.is_null() &&
@@ -2922,12 +2922,12 @@ unsafe extern "C" fn lookup_frec_by_sender(mut id: libc::c_ushort,
         }
         f = (*f).next
     }
-    return 0 as *mut frec;
+    return 0 as *mut Frec;
 }
 unsafe extern "C" fn lookup_frec_by_query(mut hash: *mut libc::c_void,
                                           mut flags: libc::c_uint)
- -> *mut frec {
-    let mut f: *mut frec = 0 as *mut frec;
+ -> *mut Frec {
+    let mut f: *mut Frec = 0 as *mut Frec;
     /* FREC_DNSKEY and FREC_DS_QUERY are never set in flags, so the test below 
      ensures that no frec created for internal DNSSEC query can be returned here.
      
@@ -2948,7 +2948,7 @@ unsafe extern "C" fn lookup_frec_by_query(mut hash: *mut libc::c_void,
         }
         f = (*f).next
     }
-    return 0 as *mut frec;
+    return 0 as *mut Frec;
 }
 /* Send query packet again, if we can. */
 #[no_mangle]
@@ -2976,24 +2976,24 @@ pub unsafe extern "C" fn resend_query() {
 }
 /* A server record is going away, remove references to it */
 #[no_mangle]
-pub unsafe extern "C" fn server_gone(mut server: *mut server) {
-    let mut f: *mut frec = 0 as *mut frec;
+pub unsafe extern "C" fn server_gone(mut server: *mut Server) {
+    let mut f: *mut Frec = 0 as *mut Frec;
     f = (*dnsmasq_daemon).frec_list;
     while !f.is_null() {
         if !(*f).sentto.is_null() && (*f).sentto == server { free_frec(f); }
         f = (*f).next
     }
     if (*dnsmasq_daemon).last_server == server {
-        (*dnsmasq_daemon).last_server = 0 as *mut server
+        (*dnsmasq_daemon).last_server = 0 as *mut Server
     }
     if (*dnsmasq_daemon).srv_save == server {
-        (*dnsmasq_daemon).srv_save = 0 as *mut server
+        (*dnsmasq_daemon).srv_save = 0 as *mut Server
     };
 }
 /* return unique random ids. */
 unsafe extern "C" fn get_id() -> libc::c_ushort {
     let mut ret: libc::c_ushort = 0 as libc::c_int as libc::c_ushort;
-    let mut f: *mut frec = 0 as *mut frec;
+    let mut f: *mut Frec = 0 as *mut Frec;
     loop  {
         ret = rand16();
         /* ensure id is unique. */

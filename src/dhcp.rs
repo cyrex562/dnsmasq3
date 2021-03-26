@@ -14,30 +14,30 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{dhcp_context, dhcp_relay, in_addr, msghdr, cmsghdr, usize, __mode_t, __dev_t, SOCK_DGRAM, IPPROTO_UDP, sockaddr_in, IPPROTO_IP, socklen_t, dnsmasq_daemon, sa_family_t, in_addr_t, __bswap_16, __CONST_SOCKADDR_ARG, sockaddr, time_t, iname, ifreq, C2RustUnnamed_2, iovec, iface_param, C2RustUnnamed_13, dhcp_bridge, C2RustUnnamed_14, all_addr, match_param, dhcp_lease, shared_network, dhcp_netid, __bswap_32, dhcp_config, ping_result, _ISspace, hwaddr_config, dhcp_netid_list, crec, mysockaddr};
-use crate::slack::{in_pktinfo, arpreq, timeval, IFF_LOOPBACK};
 use std::io::stdout;
-use crate::dnsmasq_log::{die, my_syslog};
-use crate::network::{fix_fd, indextoname, iface_check};
-use crate::dhcp_common::{recv_dhcp_packet, match_netid, strip_hostname};
-use crate::util::{safe_strncpy, wildcard_matchn, wildcard_match, retry_send, is_same_net, whine_malloc, parse_hex, canonicalise, legal_hostname, hostname_isequal};
-use crate::netlink::iface_enumerate;
-use crate::lease::{lease_prune, lease_update_file, lease_update_dns, lease_find_max_addr, lease_find_by_addr};
-use crate::rfc2131::dhcp_reply;
-use crate::icmp_ping;
+
 use crate::cache::{cache_find_by_addr, cache_get_name};
+use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, __dev_t, __mode_t, _ISspace, AllAddr, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_2, CmsgHdr, Crec, DhcpBridge, DhcpConfig, DhcpContext, DhcpLease, DhcpNetId, DhcpNetIdList, DhcpRelay, DnsmasqDaemon, HwaddrConfig, IfaceParam, IfReq, InAddr, in_addr_t, InPktInfo, Iname, iovec, IPPROTO_IP, IPPROTO_UDP, MatchParam, MsgHdr, MySockAddr, PingResult, sa_family_t, SharedNetwork, SOCK_DGRAM, SockAddr, SockAddrIn, socklen_t, time_t, usize};
+use crate::dhcp_common::{match_netid, recv_dhcp_packet, strip_hostname};
+use crate::dnsmasq_log::{die, my_syslog};
 use crate::domain::get_domain;
 use crate::forward::send_from;
-
+use crate::icmp_ping;
+use crate::lease::{lease_find_by_addr, lease_find_max_addr, lease_prune, lease_update_dns, lease_update_file};
+use crate::netlink::iface_enumerate;
+use crate::network::{fix_fd, iface_check, indextoname};
+use crate::rfc2131::dhcp_reply;
+use crate::slack::{arpreq, IFF_LOOPBACK, timeval};
+use crate::util::{canonicalise, hostname_isequal, is_same_net, legal_hostname, parse_hex, retry_send, safe_strncpy, whine_malloc, wildcard_match, wildcard_matchn};
 
 unsafe extern "C" fn make_fd(mut port: libc::c_int) -> libc::c_int {
     let mut fd: libc::c_int =
         socket(2 as libc::c_int, SOCK_DGRAM as libc::c_int,
                IPPROTO_UDP as libc::c_int);
-    let mut saddr: sockaddr_in =
-        sockaddr_in{sin_family: 0,
+    let mut saddr: SockAddrIn =
+        SockAddrIn {sin_family: 0,
                     sin_port: 0,
-                    sin_addr: in_addr{s_addr: 0,},
+                    sin_addr: InAddr {s_addr: 0,},
                     sin_zero: [0; 8],};
     let mut oneopt: libc::c_int = 1 as libc::c_int;
     let mut mtu: libc::c_int = 0 as libc::c_int;
@@ -135,17 +135,17 @@ unsafe extern "C" fn make_fd(mut port: libc::c_int) -> libc::c_int {
                 0 as *mut libc::c_char, 2 as libc::c_int);
         }
     }
-    memset(&mut saddr as *mut sockaddr_in as *mut libc::c_void,
+    memset(&mut saddr as *mut SockAddrIn as *mut libc::c_void,
            0 as libc::c_int,
-           ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong);
+           ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong);
     saddr.sin_family = 2 as libc::c_int as sa_family_t;
     saddr.sin_port = __bswap_16(port as u16);
     saddr.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
     if bind(fd,
             __CONST_SOCKADDR_ARG{__sockaddr__:
-                                     &mut saddr as *mut sockaddr_in as
-                                         *mut sockaddr,},
-            ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as
+                                     &mut saddr as *mut SockAddrIn as
+                                         *mut SockAddr,},
+            ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as
                 socklen_t) != 0 {
         die(b"failed to bind DHCP server socket: %s\x00" as *const u8 as
                 *const libc::c_char as *mut libc::c_char,
@@ -168,30 +168,30 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             (*dnsmasq_daemon).pxefd
         } else { (*dnsmasq_daemon).dhcpfd };
     let mut mess: *mut dhcp_packet = 0 as *mut dhcp_packet;
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut relay: *mut dhcp_relay = 0 as *mut dhcp_relay;
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut relay: *mut DhcpRelay = 0 as *mut DhcpRelay;
     let mut is_relay_reply: libc::c_int = 0 as libc::c_int;
-    let mut tmp: *mut iname = 0 as *mut iname;
-    let mut ifr: ifreq =
-        ifreq{ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
+    let mut tmp: *mut Iname = 0 as *mut Iname;
+    let mut ifr: IfReq =
+        IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
                   C2RustUnnamed_2{ifru_addr:
-                                      sockaddr{sa_family: 0,
+                                      SockAddr {sa_family: 0,
                                                sa_data: [0; 14],},},};
-    let mut msg: msghdr =
-        msghdr{msg_name: 0 as *mut libc::c_void,
+    let mut msg: MsgHdr =
+        MsgHdr {msg_name: 0 as *mut libc::c_void,
                msg_namelen: 0,
                msg_iov: 0 as *mut iovec,
                msg_iovlen: 0,
                msg_control: 0 as *mut libc::c_void,
                msg_controllen: 0,
                msg_flags: 0,};
-    let mut dest: sockaddr_in =
-        sockaddr_in{sin_family: 0,
+    let mut dest: SockAddrIn =
+        SockAddrIn {sin_family: 0,
                     sin_port: 0,
-                    sin_addr: in_addr{s_addr: 0,},
+                    sin_addr: InAddr {s_addr: 0,},
                     sin_zero: [0; 8],};
-    let mut cmptr: *mut cmsghdr = 0 as *mut cmsghdr;
+    let mut cmptr: *mut CmsgHdr = 0 as *mut CmsgHdr;
     let mut iov: iovec = iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,};
     let mut sz: isize = 0;
     let mut iface_index: libc::c_int = 0 as libc::c_int;
@@ -199,34 +199,34 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
     let mut is_inform: libc::c_int = 0 as libc::c_int;
     let mut loopback: libc::c_int = 0 as libc::c_int;
     let mut rcvd_iface_index: libc::c_int = 0;
-    let mut iface_addr: in_addr = in_addr{s_addr: 0,};
-    let mut parm: iface_param =
-        iface_param{current: 0 as *mut dhcp_context,
-                    relay: 0 as *mut dhcp_relay,
-                    relay_local: in_addr{s_addr: 0,},
+    let mut iface_addr: InAddr = InAddr {s_addr: 0,};
+    let mut parm: IfaceParam =
+        IfaceParam {current: 0 as *mut DhcpContext,
+                    relay: 0 as *mut DhcpRelay,
+                    relay_local: InAddr {s_addr: 0,},
                     ind: 0,};
     let mut recvtime: time_t = now;
     let mut arp_req: arpreq =
-        arpreq{arp_pa: sockaddr{sa_family: 0, sa_data: [0; 14],},
-               arp_ha: sockaddr{sa_family: 0, sa_data: [0; 14],},
+        arpreq{arp_pa: SockAddr {sa_family: 0, sa_data: [0; 14],},
+               arp_ha: SockAddr {sa_family: 0, sa_data: [0; 14],},
                arp_flags: 0,
-               arp_netmask: sockaddr{sa_family: 0, sa_data: [0; 14],},
+               arp_netmask: SockAddr {sa_family: 0, sa_data: [0; 14],},
                arp_dev: [0; 16],};
     let mut tv: timeval = timeval{tv_sec: 0, tv_usec: 0,};
     let mut control_u: C2RustUnnamed_13 =
         C2RustUnnamed_13{align:
-                             cmsghdr{cmsg_len: 0,
+                             CmsgHdr {cmsg_len: 0,
                                      cmsg_level: 0,
                                      cmsg_type: 0,
                                      __cmsg_data: [],},};
-    let mut bridge: *mut dhcp_bridge = 0 as *mut dhcp_bridge;
-    let mut alias: *mut dhcp_bridge = 0 as *mut dhcp_bridge;
+    let mut bridge: *mut DhcpBridge = 0 as *mut DhcpBridge;
+    let mut alias: *mut DhcpBridge = 0 as *mut DhcpBridge;
     msg.msg_controllen =
         ::std::mem::size_of::<C2RustUnnamed_13>() as libc::c_ulong;
     msg.msg_control = control_u.control.as_mut_ptr() as *mut libc::c_void;
-    msg.msg_name = &mut dest as *mut sockaddr_in as *mut libc::c_void;
+    msg.msg_name = &mut dest as *mut SockAddrIn as *mut libc::c_void;
     msg.msg_namelen =
-        ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as socklen_t;
+        ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as socklen_t;
     msg.msg_iov = &mut (*dnsmasq_daemon).dhcp_packet;
     msg.msg_iovlen = 1 as libc::c_int as usize;
     sz = recv_dhcp_packet(fd, &mut msg);
@@ -242,13 +242,13 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
              &mut tv as *mut timeval) == 0 as libc::c_int {
         recvtime = tv.tv_sec
     }
-    if msg.msg_controllen >= ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
+    if msg.msg_controllen >= ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong
        {
         cmptr =
             if msg.msg_controllen >=
-                   ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
-                msg.msg_control as *mut cmsghdr
-            } else { 0 as *mut cmsghdr };
+                   ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
+                msg.msg_control as *mut CmsgHdr
+            } else { 0 as *mut CmsgHdr };
         while !cmptr.is_null() {
             if (*cmptr).cmsg_level == IPPROTO_IP as libc::c_int &&
                    (*cmptr).cmsg_type == 8 as libc::c_int {
@@ -267,7 +267,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                    ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) == 0 ||
            ioctl((*dnsmasq_daemon).dhcpfd,
                  0x8913 as libc::c_int as libc::c_ulong,
-                 &mut ifr as *mut ifreq) != 0 as libc::c_int {
+                 &mut ifr as *mut IfReq) != 0 as libc::c_int {
         return
     }
     mess = (*dnsmasq_daemon).dhcp_packet.iov_base as *mut dhcp_packet;
@@ -336,12 +336,12 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         ifr.ifr_ifru.ifru_addr.sa_family = 2 as libc::c_int as sa_family_t;
         if ioctl((*dnsmasq_daemon).dhcpfd,
                  0x8915 as libc::c_int as libc::c_ulong,
-                 &mut ifr as *mut ifreq) != -(1 as libc::c_int) {
+                 &mut ifr as *mut IfReq) != -(1 as libc::c_int) {
             iface_addr =
-                (*(&mut ifr.ifr_ifru.ifru_addr as *mut sockaddr as
-                       *mut sockaddr_in)).sin_addr
+                (*(&mut ifr.ifr_ifru.ifru_addr as *mut SockAddr as
+                       *mut SockAddrIn)).sin_addr
         } else {
-            if iface_check(2 as libc::c_int, 0 as *mut all_addr,
+            if iface_check(2 as libc::c_int, 0 as *mut AllAddr,
                            ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                            0 as *mut libc::c_int) != 0 {
                 my_syslog((3 as libc::c_int) << 3 as libc::c_int |
@@ -372,59 +372,59 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             (*relay).current = relay;
             relay = (*relay).next
         }
-        parm.current = 0 as *mut dhcp_context;
-        parm.relay = 0 as *mut dhcp_relay;
+        parm.current = 0 as *mut DhcpContext;
+        parm.relay = 0 as *mut DhcpRelay;
         parm.relay_local.s_addr = 0 as libc::c_int as in_addr_t;
         parm.ind = iface_index;
         if iface_check(2 as libc::c_int,
-                       &mut iface_addr as *mut in_addr as *mut all_addr,
+                       &mut iface_addr as *mut InAddr as *mut AllAddr,
                        ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                        0 as *mut libc::c_int) == 0 {
             /* If we failed to match the primary address of the interface, see if we've got a --listen-address
 	     for a secondary */
-            let mut match_0: match_param =
-                match_param{ind: 0,
+            let mut match_0: MatchParam =
+                MatchParam {ind: 0,
                             matched: 0,
-                            netmask: in_addr{s_addr: 0,},
-                            broadcast: in_addr{s_addr: 0,},
-                            addr: in_addr{s_addr: 0,},};
+                            netmask: InAddr {s_addr: 0,},
+                            broadcast: InAddr {s_addr: 0,},
+                            addr: InAddr {s_addr: 0,},};
             match_0.matched = 0 as libc::c_int;
             match_0.ind = iface_index;
             if (*dnsmasq_daemon).if_addrs.is_null() ||
                    iface_enumerate(2 as libc::c_int,
-                                   &mut match_0 as *mut match_param as
+                                   &mut match_0 as *mut MatchParam as
                                        *mut libc::c_void,
                                    ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                                           in_addr,
+                                                                                       InAddr,
                                                                                        _:
                                                                                            libc::c_int,
                                                                                        _:
                                                                                            *mut libc::c_char,
                                                                                        _:
-                                                                                           in_addr,
+                                                                                       InAddr,
                                                                                        _:
-                                                                                           in_addr,
+                                                                                       InAddr,
                                                                                        _:
                                                                                            *mut libc::c_void)
-                                                                      ->
+                                                                                       ->
                                                                           libc::c_int>,
                                                            Option<unsafe extern "C" fn()
                                                                       ->
                                                                           libc::c_int>>(Some(check_listen_addrs
                                                                                                  as
                                                                                                  unsafe extern "C" fn(_:
-                                                                                                                          in_addr,
+                                                                                                                      InAddr,
                                                                                                                       _:
                                                                                                                           libc::c_int,
                                                                                                                       _:
                                                                                                                           *mut libc::c_char,
                                                                                                                       _:
-                                                                                                                          in_addr,
+                                                                                                                      InAddr,
                                                                                                                       _:
-                                                                                                                          in_addr,
+                                                                                                                      InAddr,
                                                                                                                       _:
                                                                                                                           *mut libc::c_void)
-                                                                                                     ->
+                                                                                                                      ->
                                                                                                          libc::c_int)))
                        == 0 || match_0.matched == 0 {
                 return
@@ -435,41 +435,41 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             complete_context(match_0.addr, iface_index,
                              0 as *mut libc::c_char, match_0.netmask,
                              match_0.broadcast,
-                             &mut parm as *mut iface_param as
+                             &mut parm as *mut IfaceParam as
                                  *mut libc::c_void);
         }
         if iface_enumerate(2 as libc::c_int,
-                           &mut parm as *mut iface_param as *mut libc::c_void,
+                           &mut parm as *mut IfaceParam as *mut libc::c_void,
                            ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                                   in_addr,
+                                                                               InAddr,
                                                                                _:
                                                                                    libc::c_int,
                                                                                _:
                                                                                    *mut libc::c_char,
                                                                                _:
-                                                                                   in_addr,
+                                                                               InAddr,
                                                                                _:
-                                                                                   in_addr,
+                                                                               InAddr,
                                                                                _:
                                                                                    *mut libc::c_void)
-                                                              -> libc::c_int>,
+                                                                               -> libc::c_int>,
                                                    Option<unsafe extern "C" fn()
                                                               ->
                                                                   libc::c_int>>(Some(complete_context
                                                                                          as
                                                                                          unsafe extern "C" fn(_:
-                                                                                                                  in_addr,
+                                                                                                              InAddr,
                                                                                                               _:
                                                                                                                   libc::c_int,
                                                                                                               _:
                                                                                                                   *mut libc::c_char,
                                                                                                               _:
-                                                                                                                  in_addr,
+                                                                                                              InAddr,
                                                                                                               _:
-                                                                                                                  in_addr,
+                                                                                                              InAddr,
                                                                                                               _:
                                                                                                                   *mut libc::c_void)
-                                                                                             ->
+                                                                                                              ->
                                                                                                  libc::c_int)))
                == 0 {
             return
@@ -484,7 +484,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         if (*dnsmasq_daemon).dhcp.is_null() {
             return
         } /* lose any expired leases */
-        lease_prune(0 as *mut dhcp_lease, now);
+        lease_prune(0 as *mut DhcpLease, now);
         iov.iov_len =
             dhcp_reply(parm.current, ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                        iface_index, sz as usize, now, unicast_dest, loopback,
@@ -493,9 +493,9 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         lease_update_dns(0 as libc::c_int);
         if iov.iov_len == 0 as libc::c_int as libc::c_ulong { return }
     }
-    msg.msg_name = &mut dest as *mut sockaddr_in as *mut libc::c_void;
+    msg.msg_name = &mut dest as *mut SockAddrIn as *mut libc::c_void;
     msg.msg_namelen =
-        ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as socklen_t;
+        ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as socklen_t;
     msg.msg_control = 0 as *mut libc::c_void;
     msg.msg_controllen = 0 as libc::c_int as usize;
     msg.msg_iov = &mut iov;
@@ -526,20 +526,20 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         }
     } else {
         /* fill cmsg for outbound interface (both broadcast & unicast) */
-        let mut pkt: *mut in_pktinfo = 0 as *mut in_pktinfo;
+        let mut pkt: *mut InPktInfo = 0 as *mut InPktInfo;
         msg.msg_control = control_u.control.as_mut_ptr() as *mut libc::c_void;
         msg.msg_controllen =
             ::std::mem::size_of::<C2RustUnnamed_13>() as libc::c_ulong;
         cmptr =
             if msg.msg_controllen >=
-                   ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
-                msg.msg_control as *mut cmsghdr
-            } else { 0 as *mut cmsghdr };
-        pkt = (*cmptr).__cmsg_data.as_mut_ptr() as *mut in_pktinfo;
+                   ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
+                msg.msg_control as *mut CmsgHdr
+            } else { 0 as *mut CmsgHdr };
+        pkt = (*cmptr).__cmsg_data.as_mut_ptr() as *mut InPktInfo;
         (*pkt).ipi_ifindex = rcvd_iface_index;
         (*pkt).ipi_spec_dst.s_addr = 0 as libc::c_int as in_addr_t;
         msg.msg_controllen =
-            ((::std::mem::size_of::<in_pktinfo>() as
+            ((::std::mem::size_of::<InPktInfo>() as
                   libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                   as
                                                   libc::c_ulong).wrapping_sub(1
@@ -550,7 +550,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                  &
                  !(::std::mem::size_of::<usize>() as
                        libc::c_ulong).wrapping_sub(1 as libc::c_int as
-                                                       libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
+                                                       libc::c_ulong)).wrapping_add((::std::mem::size_of::<CmsgHdr>()
                                                                                          as
                                                                                          libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                                                                                          as
@@ -568,7 +568,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                                                                                                                               as
                                                                                                                               libc::c_ulong));
         (*cmptr).cmsg_len =
-            ((::std::mem::size_of::<cmsghdr>() as
+            ((::std::mem::size_of::<CmsgHdr>() as
                   libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                   as
                                                   libc::c_ulong).wrapping_sub(1
@@ -579,7 +579,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                  &
                  !(::std::mem::size_of::<usize>() as
                        libc::c_ulong).wrapping_sub(1 as libc::c_int as
-                                                       libc::c_ulong)).wrapping_add(::std::mem::size_of::<in_pktinfo>()
+                                                       libc::c_ulong)).wrapping_add(::std::mem::size_of::<InPktInfo>()
                                                                                         as
                                                                                         libc::c_ulong);
         (*cmptr).cmsg_level = IPPROTO_IP as libc::c_int;
@@ -600,9 +600,9 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             dest.sin_addr = (*mess).yiaddr;
             dest.sin_port =
                 __bswap_16((*dnsmasq_daemon).dhcp_client_port as u16);
-            memcpy(&mut arp_req.arp_pa as *mut sockaddr as *mut libc::c_void,
-                   &mut dest as *mut sockaddr_in as *const libc::c_void,
-                   ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong);
+            memcpy(&mut arp_req.arp_pa as *mut SockAddr as *mut libc::c_void,
+                   &mut dest as *mut SockAddrIn as *const libc::c_void,
+                   ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong);
             arp_req.arp_ha.sa_family = (*mess).htype as sa_family_t;
             memcpy(arp_req.arp_ha.sa_data.as_mut_ptr() as *mut libc::c_void,
                    (*mess).chaddr.as_mut_ptr() as *const libc::c_void,
@@ -630,15 +630,15 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
     };
 }
 /* check against secondary interface addresses */
-unsafe extern "C" fn check_listen_addrs(mut local: in_addr,
+unsafe extern "C" fn check_listen_addrs(mut local: InAddr,
                                         mut if_index: libc::c_int,
                                         mut label: *mut libc::c_char,
-                                        mut netmask: in_addr,
-                                        mut broadcast: in_addr,
+                                        mut netmask: InAddr,
+                                        mut broadcast: InAddr,
                                         mut vparam: *mut libc::c_void)
- -> libc::c_int {
-    let mut param: *mut match_param = vparam as *mut match_param;
-    let mut tmp: *mut iname = 0 as *mut iname;
+                                        -> libc::c_int {
+    let mut param: *mut MatchParam = vparam as *mut MatchParam;
+    let mut tmp: *mut Iname = 0 as *mut Iname;
     if if_index == (*param).ind {
         tmp = (*dnsmasq_daemon).if_addrs;
         while !tmp.is_null() {
@@ -663,9 +663,9 @@ unsafe extern "C" fn check_listen_addrs(mut local: in_addr,
    4) Links contexts which are valid for hosts directly connected to the arrival interface on ->current.
 
    Note that the current chain may be superseded later for configured hosts or those coming via gateways. */
-unsafe extern "C" fn guess_range_netmask(mut addr: in_addr,
-                                         mut netmask: in_addr) {
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
+unsafe extern "C" fn guess_range_netmask(mut addr: InAddr,
+                                         mut netmask: InAddr) {
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
     context = (*dnsmasq_daemon).dhcp;
     while !context.is_null() {
         if (*context).flags as libc::c_uint &
@@ -691,17 +691,17 @@ unsafe extern "C" fn guess_range_netmask(mut addr: in_addr,
         context = (*context).next
     };
 }
-unsafe extern "C" fn complete_context(mut local: in_addr,
+unsafe extern "C" fn complete_context(mut local: InAddr,
                                       mut if_index: libc::c_int,
                                       mut label: *mut libc::c_char,
-                                      mut netmask: in_addr,
-                                      mut broadcast: in_addr,
+                                      mut netmask: InAddr,
+                                      mut broadcast: InAddr,
                                       mut vparam: *mut libc::c_void)
- -> libc::c_int {
-    let mut context: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut relay: *mut dhcp_relay = 0 as *mut dhcp_relay;
-    let mut param: *mut iface_param = vparam as *mut iface_param;
-    let mut share: *mut shared_network = 0 as *mut shared_network;
+                                      -> libc::c_int {
+    let mut context: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut relay: *mut DhcpRelay = 0 as *mut DhcpRelay;
+    let mut param: *mut IfaceParam = vparam as *mut IfaceParam;
+    let mut share: *mut SharedNetwork = 0 as *mut SharedNetwork;
     let mut current_block_14: u64;
     share = (*dnsmasq_daemon).shared_networks;
     while !share.is_null() {
@@ -796,21 +796,21 @@ unsafe extern "C" fn complete_context(mut local: in_addr,
     return 1 as libc::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn address_available(mut context: *mut dhcp_context,
-                                           mut taddr: in_addr,
-                                           mut netids: *mut dhcp_netid)
- -> *mut dhcp_context {
+pub unsafe extern "C" fn address_available(mut context: *mut DhcpContext,
+                                           mut taddr: InAddr,
+                                           mut netids: *mut DhcpNetId)
+                                           -> *mut DhcpContext {
     /* Check is an address is OK for this network, check all
      possible ranges. Make sure that the address isn't in use
      by the server itself. */
     let mut start: libc::c_uint = 0;
     let mut end: libc::c_uint = 0;
     let mut addr: libc::c_uint = __bswap_32(taddr.s_addr);
-    let mut tmp: *mut dhcp_context = 0 as *mut dhcp_context;
+    let mut tmp: *mut DhcpContext = 0 as *mut DhcpContext;
     tmp = context;
     while !tmp.is_null() {
         if taddr.s_addr == (*context).router.s_addr {
-            return 0 as *mut dhcp_context
+            return 0 as *mut DhcpContext
         }
         tmp = (*tmp).current
     }
@@ -827,13 +827,13 @@ pub unsafe extern "C" fn address_available(mut context: *mut dhcp_context,
         }
         tmp = (*tmp).current
     }
-    return 0 as *mut dhcp_context;
+    return 0 as *mut DhcpContext;
 }
 #[no_mangle]
-pub unsafe extern "C" fn narrow_context(mut context: *mut dhcp_context,
-                                        mut taddr: in_addr,
-                                        mut netids: *mut dhcp_netid)
- -> *mut dhcp_context {
+pub unsafe extern "C" fn narrow_context(mut context: *mut DhcpContext,
+                                        mut taddr: InAddr,
+                                        mut netids: *mut DhcpNetId)
+                                        -> *mut DhcpContext {
     /* We start of with a set of possible contexts, all on the current physical interface.
      These are chained on ->current.
      Here we have an address, and return the actual context corresponding to that
@@ -841,7 +841,7 @@ pub unsafe extern "C" fn narrow_context(mut context: *mut dhcp_context,
      any dhcp-range. In that case we return a static range if possible, or failing that,
      any context on the correct subnet. (If there's more than one, this is a dodgy 
      configuration: maybe there should be a warning.) */
-    let mut tmp: *mut dhcp_context = 0 as *mut dhcp_context;
+    let mut tmp: *mut DhcpContext = 0 as *mut DhcpContext;
     tmp = address_available(context, taddr, netids);
     if tmp.is_null() {
         tmp = context;
@@ -870,14 +870,14 @@ pub unsafe extern "C" fn narrow_context(mut context: *mut dhcp_context,
         }
     }
     /* Only one context allowed now */
-    if !tmp.is_null() { (*tmp).current = 0 as *mut dhcp_context }
+    if !tmp.is_null() { (*tmp).current = 0 as *mut DhcpContext }
     return tmp;
 }
 #[no_mangle]
-pub unsafe extern "C" fn config_find_by_address(mut configs: *mut dhcp_config,
-                                                mut addr: in_addr)
- -> *mut dhcp_config {
-    let mut config: *mut dhcp_config = 0 as *mut dhcp_config;
+pub unsafe extern "C" fn config_find_by_address(mut configs: *mut DhcpConfig,
+                                                mut addr: InAddr)
+                                                -> *mut DhcpConfig {
+    let mut config: *mut DhcpConfig = 0 as *mut DhcpConfig;
     config = configs;
     while !config.is_null() {
         if (*config).flags & 32 as libc::c_int as libc::c_uint != 0 &&
@@ -886,24 +886,24 @@ pub unsafe extern "C" fn config_find_by_address(mut configs: *mut dhcp_config,
         }
         config = (*config).next
     }
-    return 0 as *mut dhcp_config;
+    return 0 as *mut DhcpConfig;
 }
 /* Check if and address is in use by sending ICMP ping.
    This wrapper handles a cache and load-limiting.
    Return is NULL is address in use, or a pointer to a cache entry
    recording that it isn't. */
 #[no_mangle]
-pub unsafe extern "C" fn do_icmp_ping(mut now: time_t, mut addr: in_addr,
+pub unsafe extern "C" fn do_icmp_ping(mut now: time_t, mut addr: InAddr,
                                       mut hash: libc::c_uint,
                                       mut loopback: libc::c_int)
- -> *mut ping_result {
-    static mut dummy: ping_result =
-        ping_result{addr: in_addr{s_addr: 0,},
+                                      -> *mut PingResult {
+    static mut dummy: PingResult =
+        PingResult {addr: InAddr {s_addr: 0,},
                     time: 0,
                     hash: 0,
-                    next: 0 as *const ping_result as *mut ping_result,};
-    let mut r: *mut ping_result = 0 as *mut ping_result;
-    let mut victim: *mut ping_result = 0 as *mut ping_result;
+                    next: 0 as *const PingResult as *mut PingResult,};
+    let mut r: *mut PingResult = 0 as *mut PingResult;
+    let mut victim: *mut PingResult = 0 as *mut PingResult;
     let mut count: libc::c_int = 0;
     let mut max: libc::c_int =
         (0.6f64 *
@@ -950,13 +950,13 @@ pub unsafe extern "C" fn do_icmp_ping(mut now: time_t, mut addr: in_addr,
         dummy.hash = hash; /* address in use. */
         return &mut dummy
     } else if icmp_ping(addr) != 0 {
-        return 0 as *mut ping_result
+        return 0 as *mut PingResult
     } else {
         /* at this point victim may hold an expired record */
         if victim.is_null() {
             victim =
-                whine_malloc(::std::mem::size_of::<ping_result>() as
-                                 libc::c_ulong) as *mut ping_result;
+                whine_malloc(::std::mem::size_of::<PingResult>() as
+                                 libc::c_ulong) as *mut PingResult;
             if !victim.is_null() {
                 (*victim).next = (*dnsmasq_daemon).ping_results;
                 (*dnsmasq_daemon).ping_results = victim
@@ -973,21 +973,21 @@ pub unsafe extern "C" fn do_icmp_ping(mut now: time_t, mut addr: in_addr,
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn address_allocate(mut context: *mut dhcp_context,
-                                          mut addrp: *mut in_addr,
+pub unsafe extern "C" fn address_allocate(mut context: *mut DhcpContext,
+                                          mut addrp: *mut InAddr,
                                           mut hwaddr: *mut libc::c_uchar,
                                           mut hw_len: libc::c_int,
-                                          mut netids: *mut dhcp_netid,
+                                          mut netids: *mut DhcpNetId,
                                           mut now: time_t,
                                           mut loopback: libc::c_int)
- -> libc::c_int {
+                                          -> libc::c_int {
     /* Find a free address: exclude anything in use and anything allocated to
      a particular hwaddr/clientid/hostname in our configuration.
      Try to return from contexts which match netids first. */
-    let mut start: in_addr = in_addr{s_addr: 0,};
-    let mut addr: in_addr = in_addr{s_addr: 0,};
-    let mut c: *mut dhcp_context = 0 as *mut dhcp_context;
-    let mut d: *mut dhcp_context = 0 as *mut dhcp_context;
+    let mut start: InAddr = InAddr {s_addr: 0,};
+    let mut addr: InAddr = InAddr {s_addr: 0,};
+    let mut c: *mut DhcpContext = 0 as *mut DhcpContext;
+    let mut d: *mut DhcpContext = 0 as *mut DhcpContext;
     let mut i: libc::c_int = 0;
     let mut pass: libc::c_int = 0;
     let mut j: libc::c_uint = 0;
@@ -1104,8 +1104,8 @@ pub unsafe extern "C" fn address_allocate(mut context: *mut dhcp_context,
                                 (*c).addr_epoch =
                                     (*c).addr_epoch.wrapping_sub(1)
                             } else {
-                                let mut r: *mut ping_result =
-                                    0 as *mut ping_result;
+                                let mut r: *mut PingResult =
+                                    0 as *mut PingResult;
                                 r = do_icmp_ping(now, addr, j, loopback);
                                 if !r.is_null() {
                                     /* consec-ip mode: we offered this address for another client
@@ -1197,11 +1197,11 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
     let mut buff: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
     let mut ip: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut cp: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut addr: in_addr = in_addr{s_addr: 0,};
+    let mut addr: InAddr = InAddr {s_addr: 0,};
     let mut hwaddr: [libc::c_uchar; 6] = [0; 6];
-    let mut up: *mut *mut dhcp_config = 0 as *mut *mut dhcp_config;
-    let mut tmp: *mut dhcp_config = 0 as *mut dhcp_config;
-    let mut config: *mut dhcp_config = 0 as *mut dhcp_config;
+    let mut up: *mut *mut DhcpConfig = 0 as *mut *mut DhcpConfig;
+    let mut tmp: *mut DhcpConfig = 0 as *mut DhcpConfig;
+    let mut config: *mut DhcpConfig = 0 as *mut DhcpConfig;
     let mut count: libc::c_int = 0 as libc::c_int;
     let mut lineno: libc::c_int = 0 as libc::c_int;
     /* address in use: perturb address selection so that we are
@@ -1352,7 +1352,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                 if config.is_null() {
                     config = (*dnsmasq_daemon).dhcp_conf;
                     while !config.is_null() {
-                        let mut conf_addr: *mut hwaddr_config =
+                        let mut conf_addr: *mut HwaddrConfig =
                             (*config).hwaddr;
                         if !conf_addr.is_null() && (*conf_addr).next.is_null()
                                &&
@@ -1375,14 +1375,14 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                     }
                     if config.is_null() {
                         config =
-                            whine_malloc(::std::mem::size_of::<dhcp_config>()
+                            whine_malloc(::std::mem::size_of::<DhcpConfig>()
                                              as libc::c_ulong) as
-                                *mut dhcp_config;
+                                *mut DhcpConfig;
                         if config.is_null() { continue ; }
                         (*config).flags = 256 as libc::c_int as libc::c_uint;
-                        (*config).hwaddr = 0 as *mut hwaddr_config;
+                        (*config).hwaddr = 0 as *mut HwaddrConfig;
                         (*config).domain = 0 as *mut libc::c_char;
-                        (*config).netid = 0 as *mut dhcp_netid_list;
+                        (*config).netid = 0 as *mut DhcpNetIdList;
                         (*config).next = (*dnsmasq_daemon).dhcp_conf;
                         (*dnsmasq_daemon).dhcp_conf = config
                     }
@@ -1398,8 +1398,8 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                 (*config).flags |= 128 as libc::c_int as libc::c_uint;
                 if (*config).hwaddr.is_null() {
                     (*config).hwaddr =
-                        whine_malloc(::std::mem::size_of::<hwaddr_config>() as
-                                         libc::c_ulong) as *mut hwaddr_config
+                        whine_malloc(::std::mem::size_of::<HwaddrConfig>() as
+                                         libc::c_ulong) as *mut HwaddrConfig
                 }
                 if !(*config).hwaddr.is_null() {
                     memcpy((*(*config).hwaddr).hwaddr.as_mut_ptr() as
@@ -1410,7 +1410,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                     (*(*config).hwaddr).hwaddr_type = 1 as libc::c_int;
                     (*(*config).hwaddr).wildcard_mask =
                         0 as libc::c_int as libc::c_uint;
-                    (*(*config).hwaddr).next = 0 as *mut hwaddr_config
+                    (*(*config).hwaddr).next = 0 as *mut HwaddrConfig
                 }
                 count += 1;
                 free(host as *mut libc::c_void);
@@ -1429,15 +1429,15 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
    so check here that the domain name is legal as a hostname. 
    NOTE: we're only allowed to overwrite daemon->dhcp_buff if we succeed. */
 #[no_mangle]
-pub unsafe extern "C" fn host_from_dns(mut addr: in_addr)
+pub unsafe extern "C" fn host_from_dns(mut addr: InAddr)
  -> *mut libc::c_char {
-    let mut lookup: *mut crec = 0 as *mut crec; /* DNS disabled. */
+    let mut lookup: *mut Crec = 0 as *mut Crec; /* DNS disabled. */
     if (*dnsmasq_daemon).port == 0 as libc::c_int {
         return 0 as *mut libc::c_char
     }
     lookup =
-        cache_find_by_addr(0 as *mut crec,
-                           &mut addr as *mut in_addr as *mut all_addr,
+        cache_find_by_addr(0 as *mut Crec,
+                           &mut addr as *mut InAddr as *mut AllAddr,
                            0 as libc::c_int as time_t,
                            (1 as libc::c_uint) << 7 as libc::c_int);
     if !lookup.is_null() &&
@@ -1464,13 +1464,13 @@ pub unsafe extern "C" fn host_from_dns(mut addr: in_addr)
     }
     return 0 as *mut libc::c_char;
 }
-unsafe extern "C" fn relay_upstream4(mut relay: *mut dhcp_relay,
+unsafe extern "C" fn relay_upstream4(mut relay: *mut DhcpRelay,
                                      mut mess: *mut dhcp_packet,
                                      mut sz: usize,
                                      mut iface_index: libc::c_int)
- -> libc::c_int {
+                                     -> libc::c_int {
     /* ->local is same value for all relays on ->current chain */
-    let mut from: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
+    let mut from: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
     if (*mess).op as libc::c_int != 1 as libc::c_int {
         return 0 as libc::c_int
     }
@@ -1490,8 +1490,8 @@ unsafe extern "C" fn relay_upstream4(mut relay: *mut dhcp_relay,
     (*mess).hops = (*mess).hops.wrapping_add(1);
     if fresh6 as libc::c_int > 20 as libc::c_int { return 1 as libc::c_int }
     while !relay.is_null() {
-        let mut to: mysockaddr =
-            mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
+        let mut to: MySockAddr =
+            MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
         to.sa.sa_family = 2 as libc::c_int as sa_family_t;
         to.in_0.sin_addr = (*relay).server.addr4;
         to.in_0.sin_port =
@@ -1519,7 +1519,7 @@ unsafe extern "C" fn relay_upstream4(mut relay: *mut dhcp_relay,
                                                                                          libc::c_ulong))
                != 0 {
             inet_ntop(2 as libc::c_int,
-                      &mut (*relay).local as *mut all_addr as
+                      &mut (*relay).local as *mut AllAddr as
                           *const libc::c_void, (*dnsmasq_daemon).addrbuff,
                       46 as libc::c_int as socklen_t);
             my_syslog((3 as libc::c_int) << 3 as libc::c_int |
@@ -1536,11 +1536,11 @@ unsafe extern "C" fn relay_upstream4(mut relay: *mut dhcp_relay,
 }
 unsafe extern "C" fn relay_reply4(mut mess: *mut dhcp_packet,
                                   mut arrival_interface: *mut libc::c_char)
- -> *mut dhcp_relay {
-    let mut relay: *mut dhcp_relay = 0 as *mut dhcp_relay;
+ -> *mut DhcpRelay {
+    let mut relay: *mut DhcpRelay = 0 as *mut DhcpRelay;
     if (*mess).giaddr.s_addr == 0 as libc::c_int as libc::c_uint ||
            (*mess).op as libc::c_int != 2 as libc::c_int {
-        return 0 as *mut dhcp_relay
+        return 0 as *mut DhcpRelay
     }
     relay = (*dnsmasq_daemon).relay4;
     while !relay.is_null() {
@@ -1550,10 +1550,10 @@ unsafe extern "C" fn relay_reply4(mut mess: *mut dhcp_packet,
                {
                 return if (*relay).iface_index != 0 as libc::c_int {
                            relay
-                       } else { 0 as *mut dhcp_relay }
+                       } else { 0 as *mut DhcpRelay }
             }
         }
         relay = (*relay).next
     }
-    return 0 as *mut dhcp_relay;
+    return 0 as *mut DhcpRelay;
 }

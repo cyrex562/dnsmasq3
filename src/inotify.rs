@@ -29,7 +29,7 @@
 */
 use crate::util::{safe_malloc, whine_malloc};
 use crate::dnsmasq_log::{die, my_syslog};
-use crate::defines::{resolvc, dnsmasq_daemon, crec, hostsfile, DIR, stat, timespec, time_t};
+use crate::defines::{Resolvc, DnsmasqDaemon, Crec, HostsFile, DIR, stat, timespec, time_t};
 use crate::slack::{inotify_event, IN_NONBLOCK, IN_CLOEXEC, dirent};
 use crate::cache::read_hostsfile;
 use crate::option::option_read_dynfile;
@@ -96,7 +96,7 @@ unsafe extern "C" fn my_readlink(mut path: *mut libc::c_char)
 }
 #[no_mangle]
 pub unsafe extern "C" fn inotify_dnsmasq_init() {
-    let mut res: *mut resolvc = 0 as *mut resolvc;
+    let mut res: *mut Resolvc = 0 as *mut Resolvc;
     inotify_buffer =
         safe_malloc((::std::mem::size_of::<inotify_event>() as
                          libc::c_ulong).wrapping_add(255 as libc::c_int as
@@ -190,9 +190,9 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
 #[no_mangle]
 pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
                                              mut total_size: libc::c_int,
-                                             mut rhash: *mut *mut crec,
+                                             mut rhash: *mut *mut Crec,
                                              mut revhashsz: libc::c_int) {
-    let mut ah: *mut hostsfile = 0 as *mut hostsfile;
+    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
     ah = (*dnsmasq_daemon).dynamic_dirs;
     while !ah.is_null() {
         let mut dir_stream: *mut DIR = 0 as *mut DIR;
@@ -315,11 +315,11 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
 #[no_mangle]
 pub unsafe extern "C" fn inotify_check(mut now: time_t) -> libc::c_int {
     let mut hit: libc::c_int = 0 as libc::c_int;
-    let mut ah: *mut hostsfile = 0 as *mut hostsfile;
+    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
     loop  {
         let mut rc: libc::c_int = 0;
         let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-        let mut res: *mut resolvc = 0 as *mut resolvc;
+        let mut res: *mut Resolvc = 0 as *mut Resolvc;
         let mut in_0: *mut inotify_event = 0 as *mut inotify_event;
         loop  {
             rc =
@@ -408,7 +408,7 @@ pub unsafe extern "C" fn inotify_check(mut now: time_t) -> libc::c_int {
                             if (*ah).flags & 8 as libc::c_int != 0 {
                                 read_hostsfile(path, (*ah).index,
                                                0 as libc::c_int,
-                                               0 as *mut *mut crec,
+                                               0 as *mut *mut Crec,
                                                0 as libc::c_int);
                                 if !(*dnsmasq_daemon).dhcp.is_null() ||
                                        (*dnsmasq_daemon).doing_dhcp6 != 0 {

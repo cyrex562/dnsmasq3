@@ -66,6 +66,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\src\slack.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\src\util.rs">
           <value>
             <Attribute>

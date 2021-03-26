@@ -1,4 +1,4 @@
-use crate::defines::C2RustUnnamed_1A;
+use crate::defines::{__caddr_t, C2RustUnnamed_1A, Ifmap, InPktInfo};
 
 extern "C" {
     #[no_mangle]
@@ -2607,7 +2607,7 @@ pub union C2RustUnnamed_31 {
     pub ifru_flags: libc::c_short,
     pub ifru_ivalue: libc::c_int,
     pub ifru_mtu: libc::c_int,
-    pub ifru_map: ifmap,
+    pub ifru_map: Ifmap,
     pub ifru_slave: [libc::c_char; 16],
     pub ifru_newname: [libc::c_char; 16],
     pub ifru_data: __caddr_t,
@@ -2793,7 +2793,7 @@ pub union C2RustUnnamed_141 {
 #[repr(C)]
 pub union C2RustUnnamed_151 {
     pub c: *mut libc::c_uchar,
-    pub p: *mut in_pktinfo,
+    pub p: *mut InPktInfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -5373,7 +5373,7 @@ pub union C2RustUnnamed_297 {
     pub ifru_flags: libc::c_short,
     pub ifru_ivalue: libc::c_int,
     pub ifru_mtu: libc::c_int,
-    pub ifru_map: ifmap,
+    pub ifru_map: Ifmap,
     pub ifru_slave: [libc::c_char; 16],
     pub ifru_newname: [libc::c_char; 16],
     pub ifru_data: __caddr_t,
@@ -5506,7 +5506,7 @@ pub union C2RustUnnamed_128 {
 #[repr(C)]
 pub union C2RustUnnamed_134 {
     pub c: *mut libc::c_uchar,
-    pub p: *mut in_pktinfo,
+    pub p: *mut InPktInfo,
 }
 
 
@@ -7814,9 +7814,6 @@ pub type __gid_t = libc::c_uint;
 pub type __blksize_t = libc::c_long;
 
 
-pub type __caddr_t = *mut libc::c_char;
-
-
 pub type uid_t = __uid_t;
 
 pub type ssize_t = __ssize_t;
@@ -7950,13 +7947,7 @@ pub union __CONST_SOCKADDR_ARG {
     pub __sockaddr_un__: *const sockaddr_un,
     pub __sockaddr_x25__: *const sockaddr_x25,
 }
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct in_pktinfo {
-    pub ipi_ifindex: libc::c_int,
-    pub ipi_spec_dst: in_addr,
-    pub ipi_addr: in_addr,
-}
+
 pub type C2RustUnnamed_0 = libc::c_uint;
 pub const IPPROTO_MAX: C2RustUnnamed_0 = 256;
 pub const IPPROTO_RAW: C2RustUnnamed_0 = 255;
@@ -8028,16 +8019,6 @@ pub struct stat64 {
     pub st_mtim: timespec,
     pub st_ctim: timespec,
     pub __glibc_reserved: [__syscall_slong_t; 3],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct ifmap {
-    pub mem_start: libc::c_ulong,
-    pub mem_end: libc::c_ulong,
-    pub base_addr: libc::c_ushort,
-    pub irq: libc::c_uchar,
-    pub dma: libc::c_uchar,
-    pub port: libc::c_uchar,
 }
 
 
@@ -8315,7 +8296,7 @@ pub union C2RustUnnamed_12 {
 #[repr(C)]
 pub union C2RustUnnamed_135 {
     pub c: *mut libc::c_uchar,
-    pub p: *mut in_pktinfo,
+    pub p: *mut InPktInfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
