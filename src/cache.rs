@@ -14,6 +14,15 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{crec, bigname, C2RustUnnamed_10, dnsmasq_daemon, time_t, all_addr, in6_addr, _ISspace, FILE, in_addr, hostsfile, host_record, name_list, cname, C2RustUnnamed_8, mx_srv_record, txt_record, interface_name, ptr_record, naptr, server, in_addr_t, socklen_t, _ISprint};
+use crate::util::{safe_malloc, whine_malloc, hostname_isequal, read_write, canonicalise, sockaddr_isequal, prettyprint_addr};
+use crate::blockdata::{blockdata_free, blockdata_write, blockdata_read, blockdata_report, blockdata_retrieve};
+use crate::dnsmasq_log::my_syslog;
+use crate::slack::{METRIC_DNS_CACHE_LIVE_FREED, METRIC_DNS_CACHE_INSERTED, METRIC_DNS_QUERIES_FORWARDED, METRIC_DNS_LOCAL_ANSWERED, METRIC_DNS_AUTH_ANSWERED};
+use crate::domain::{get_domain, get_domain6};
+use crate::option::expand_filelist;
+use crate::inotify::set_dynamic_inotify;
+
 static mut cache_head: *mut crec = 0 as *const crec as *mut crec;
 static mut cache_tail: *mut crec = 0 as *const crec as *mut crec;
 static mut hash_table: *mut *mut crec =
@@ -988,11 +997,11 @@ pub unsafe extern "C" fn cache_end_insert() {
 	     The marshalling process is rather nasty. */
             if (*dnsmasq_daemon).pipe_to_parent != -(1 as libc::c_int) {
                 let mut name: *mut libc::c_char = cache_get_name(new_chain);
-                let mut m: ssize_t = strlen(name) as ssize_t;
+                let mut m: isize = strlen(name) as isize;
                 let mut flags: libc::c_uint = (*new_chain).flags;
                 read_write((*dnsmasq_daemon).pipe_to_parent,
-                           &mut m as *mut ssize_t as *mut libc::c_uchar,
-                           ::std::mem::size_of::<ssize_t>() as libc::c_ulong
+                           &mut m as *mut isize as *mut libc::c_uchar,
+                           ::std::mem::size_of::<isize>() as libc::c_ulong
                                as libc::c_int, 0 as libc::c_int);
                 read_write((*dnsmasq_daemon).pipe_to_parent,
                            name as *mut libc::c_uchar, m as libc::c_int,
@@ -1026,7 +1035,7 @@ pub unsafe extern "C" fn cache_end_insert() {
                     if flags & (1 as libc::c_uint) << 5 as libc::c_int == 0 {
                         blockdata_write((*new_chain).addr.srv.target,
                                         (*new_chain).addr.srv.targetlen as
-                                            size_t,
+                                            usize,
                                         (*dnsmasq_daemon).pipe_to_parent);
                     }
                 }
@@ -1036,10 +1045,10 @@ pub unsafe extern "C" fn cache_end_insert() {
     }
     /* signal end of cache insert in master process */
     if (*dnsmasq_daemon).pipe_to_parent != -(1 as libc::c_int) {
-        let mut m_0: ssize_t = -(1 as libc::c_int) as ssize_t;
+        let mut m_0: isize = -(1 as libc::c_int) as isize;
         read_write((*dnsmasq_daemon).pipe_to_parent,
-                   &mut m_0 as *mut ssize_t as *mut libc::c_uchar,
-                   ::std::mem::size_of::<ssize_t>() as libc::c_ulong as
+                   &mut m_0 as *mut isize as *mut libc::c_uchar,
+                   ::std::mem::size_of::<isize>() as libc::c_ulong as
                        libc::c_int, 0 as libc::c_int);
     }
     new_chain = 0 as *mut crec;
@@ -1049,7 +1058,7 @@ pub unsafe extern "C" fn cache_end_insert() {
 pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
                                            mut fd: libc::c_int)
  -> libc::c_int {
-    let mut m: ssize_t = 0;
+    let mut m: isize = 0;
     let mut addr: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
     let mut ttl: libc::c_ulong = 0;
     let mut ttd: time_t = 0;
@@ -1057,8 +1066,8 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
     let mut crecp: *mut crec = 0 as *mut crec;
     cache_start_insert();
     loop  {
-        if read_write(fd, &mut m as *mut ssize_t as *mut libc::c_uchar,
-                      ::std::mem::size_of::<ssize_t>() as libc::c_ulong as
+        if read_write(fd, &mut m as *mut isize as *mut libc::c_uchar,
+                      ::std::mem::size_of::<isize>() as libc::c_ulong as
                           libc::c_int, 1 as libc::c_int) == 0 {
             return 0 as libc::c_int
         }
@@ -1100,7 +1109,7 @@ pub unsafe extern "C" fn cache_recv_insert(mut now: time_t,
                    flags & (1 as libc::c_uint) << 5 as libc::c_int == 0 &&
                    {
                        addr.srv.target =
-                           blockdata_read(fd, addr.srv.targetlen as size_t);
+                           blockdata_read(fd, addr.srv.targetlen as usize);
                        addr.srv.target.is_null()
                    } {
                 return 0 as libc::c_int
@@ -1631,9 +1640,9 @@ pub unsafe extern "C" fn cache_reload() {
     let mut ptr: *mut ptr_record = 0 as *mut ptr_record;
     let mut naptr: *mut naptr = 0 as *mut naptr;
     (*dnsmasq_daemon).metrics[METRIC_DNS_CACHE_INSERTED as libc::c_int as
-                                  usize] = 0 as libc::c_int as u32_0;
+                                  usize] = 0 as libc::c_int as u32;
     (*dnsmasq_daemon).metrics[METRIC_DNS_CACHE_LIVE_FREED as libc::c_int as
-                                  usize] = 0 as libc::c_int as u32_0;
+                                  usize] = 0 as libc::c_int as u32;
     i = 0 as libc::c_int;
     while i < hash_size {
         cache = *hash_table.offset(i as isize);
@@ -1928,7 +1937,7 @@ pub unsafe extern "C" fn cache_add_dhcp_entry(mut host_name:
     let mut fail_crec: *mut crec = 0 as *mut crec;
     let mut flags: libc::c_uint = (1 as libc::c_uint) << 7 as libc::c_int;
     let mut in_hosts: libc::c_int = 0 as libc::c_int;
-    let mut addrlen: size_t =
+    let mut addrlen: usize =
         ::std::mem::size_of::<in_addr>() as libc::c_ulong;
     if prot == 10 as libc::c_int {
         flags = (1 as libc::c_uint) << 8 as libc::c_int;
@@ -2154,7 +2163,7 @@ pub unsafe extern "C" fn cache_make_stat(mut t: *mut txt_record)
     if buff.is_null() &&
            {
                buff =
-                   whine_malloc(60 as libc::c_int as size_t) as
+                   whine_malloc(60 as libc::c_int as usize) as
                        *mut libc::c_char;
                buff.is_null()
            } {
@@ -2257,7 +2266,7 @@ pub unsafe extern "C" fn cache_make_stat(mut t: *mut txt_record)
                             bytes_needed + 1 as libc::c_int + bufflen -
                                 bytes_avail;
                         new =
-                            whine_malloc(newlen as size_t) as
+                            whine_malloc(newlen as usize) as
                                 *mut libc::c_char;
                         if new.is_null() { return 0 as libc::c_int }
                         memcpy(new as *mut libc::c_void,
@@ -2465,14 +2474,14 @@ pub unsafe extern "C" fn dump_cache(mut now: time_t) {
                  {
                     let mut targetlen: libc::c_int =
                         (*cache).addr.srv.targetlen as libc::c_int;
-                    let mut len: ssize_t =
+                    let mut len: isize =
                         sprintf(a,
                                 b"%u %u %u \x00" as *const u8 as
                                     *const libc::c_char,
                                 (*cache).addr.srv.priority as libc::c_int,
                                 (*cache).addr.srv.weight as libc::c_int,
                                 (*cache).addr.srv.srvport as libc::c_int) as
-                            ssize_t;
+                            isize;
                     if targetlen as libc::c_long >
                            40 as libc::c_int as libc::c_long - len {
                         targetlen =
@@ -2480,7 +2489,7 @@ pub unsafe extern "C" fn dump_cache(mut now: time_t) {
                                 libc::c_int
                     }
                     blockdata_retrieve((*cache).addr.srv.target,
-                                       targetlen as size_t,
+                                       targetlen as usize,
                                        a.offset(len as isize) as
                                            *mut libc::c_void);
                     *a.offset((len + targetlen as libc::c_long) as isize) =
@@ -2688,7 +2697,7 @@ pub unsafe extern "C" fn querystr(mut desc: *mut libc::c_char,
         if !buff.is_null() {
             free(buff as *mut libc::c_void);
         } else if len < 20 as libc::c_int { len = 20 as libc::c_int }
-        buff = whine_malloc(len as size_t) as *mut libc::c_char;
+        buff = whine_malloc(len as usize) as *mut libc::c_char;
         bufflen = len
     }
     if !buff.is_null() {

@@ -1,11 +1,25 @@
 
 /* Send a UDP packet with its source address set as "source" 
    unless nowild is true, when we just send it with the kernel default */
+use crate::defines::{mysockaddr, all_addr, msghdr, iovec, C2RustUnnamed_13, cmsghdr, socklen_t, in_addr, IPPROTO_IP, in6_addr, dnsmasq_daemon, IPPROTO_IPV6, time_t, server, dns_header, frec, __bswap_16, frec_src, __CONST_SOCKADDR_ARG, ipsets, sockaddr, __SOCKADDR_ARG, sa_family_t, listener, C2RustUnnamed_16, in_addr_t, MSG_TRUNC, addrlist, __bswap_32, ifreq, C2RustUnnamed_4, C2RustUnnamed_15, C2RustUnnamed_14, irec, auth_zone, SOCK_STREAM, MSG_FASTOPEN, randfd};
+use crate::util::{sa_len, retry_send, hostname_isequal, whine_malloc, prettyprint_addr, sockaddr_isequal, is_same_net6, is_same_net, read_write, rand16};
+use crate::slack::{in_pktinfo, in6_pktinfo, METRIC_DNS_AUTH_ANSWERED, METRIC_DNS_LOCAL_ANSWERED, METRIC_DNS_QUERIES_FORWARDED};
+use crate::dnsmasq_log::{my_syslog, check_log_writer};
+use crate::rfc1035::{check_for_local_domain, extract_request, setup_reply, resize_packet, check_for_bogus_wildcard, extract_addresses, check_for_ignored_address, answer_request};
+use crate::cache::{log_query, querystr};
+use crate::hash_questions::hash_questions;
+use crate::edns0::{find_pseudoheader, add_edns0_config, add_pseudoheader, check_source, add_do_bit};
+use crate::dump::dump_packet;
+use crate::rrfilter::rrfilter;
+use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, local_bind, random_sock};
+use crate::auth::{in_zone, answer_auth};
+use crate::dnsmasq_loop::detect_loop;
+
 #[no_mangle]
 pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                    mut nowild: libc::c_int,
                                    mut packet: *mut libc::c_char,
-                                   mut len: size_t, mut to: *mut mysockaddr,
+                                   mut len: usize, mut to: *mut mysockaddr,
                                    mut source: *mut all_addr,
                                    mut iface: libc::c_uint) -> libc::c_int {
     let mut msg: msghdr =
@@ -28,12 +42,12 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
     iov[0 as libc::c_int as usize].iov_base = packet as *mut libc::c_void;
     iov[0 as libc::c_int as usize].iov_len = len;
     msg.msg_control = 0 as *mut libc::c_void;
-    msg.msg_controllen = 0 as libc::c_int as size_t;
+    msg.msg_controllen = 0 as libc::c_int as usize;
     msg.msg_flags = 0 as libc::c_int;
     msg.msg_name = to as *mut libc::c_void;
     msg.msg_namelen = sa_len(to) as socklen_t;
     msg.msg_iov = iov.as_mut_ptr();
-    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    msg.msg_iovlen = 1 as libc::c_int as usize;
     if nowild == 0 {
         let mut cmptr: *mut cmsghdr = 0 as *mut cmsghdr;
         msg.msg_control =
@@ -54,7 +68,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
             p.ipi_spec_dst = (*source).addr4;
             msg.msg_controllen =
                 ((::std::mem::size_of::<in_pktinfo>() as
-                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
                                                                                       as
@@ -62,11 +76,11 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                       as
                                                                                       libc::c_ulong)
                      &
-                     !(::std::mem::size_of::<size_t>() as
+                     !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
                                                            libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
                                                                                              as
-                                                                                             libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                             libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                                                                                              as
                                                                                                                              libc::c_ulong).wrapping_sub(1
                                                                                                                                                              as
@@ -74,7 +88,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                                                                                              as
                                                                                                                                                              libc::c_ulong)
                                                                                             &
-                                                                                            !(::std::mem::size_of::<size_t>()
+                                                                                            !(::std::mem::size_of::<usize>()
                                                                                                   as
                                                                                                   libc::c_ulong).wrapping_sub(1
                                                                                                                                   as
@@ -86,7 +100,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                    ::std::mem::size_of::<in_pktinfo>() as libc::c_ulong);
             (*cmptr).cmsg_len =
                 ((::std::mem::size_of::<cmsghdr>() as
-                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
                                                                                       as
@@ -94,7 +108,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                       as
                                                                                       libc::c_ulong)
                      &
-                     !(::std::mem::size_of::<size_t>() as
+                     !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
                                                            libc::c_ulong)).wrapping_add(::std::mem::size_of::<in_pktinfo>()
                                                                                             as
@@ -112,7 +126,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
             p_0.ipi6_addr = (*source).addr6;
             msg.msg_controllen =
                 ((::std::mem::size_of::<in6_pktinfo>() as
-                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
                                                                                       as
@@ -120,11 +134,11 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                       as
                                                                                       libc::c_ulong)
                      &
-                     !(::std::mem::size_of::<size_t>() as
+                     !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
                                                            libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
                                                                                              as
-                                                                                             libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                             libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                                                                                              as
                                                                                                                              libc::c_ulong).wrapping_sub(1
                                                                                                                                                              as
@@ -132,7 +146,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                                                                                              as
                                                                                                                                                              libc::c_ulong)
                                                                                             &
-                                                                                            !(::std::mem::size_of::<size_t>()
+                                                                                            !(::std::mem::size_of::<usize>()
                                                                                                   as
                                                                                                   libc::c_ulong).wrapping_sub(1
                                                                                                                                   as
@@ -144,7 +158,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                    ::std::mem::size_of::<in6_pktinfo>() as libc::c_ulong);
             (*cmptr).cmsg_len =
                 ((::std::mem::size_of::<cmsghdr>() as
-                      libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                      libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                       as
                                                       libc::c_ulong).wrapping_sub(1
                                                                                       as
@@ -152,7 +166,7 @@ pub unsafe extern "C" fn send_from(mut fd: libc::c_int,
                                                                                       as
                                                                                       libc::c_ulong)
                      &
-                     !(::std::mem::size_of::<size_t>() as
+                     !(::std::mem::size_of::<usize>() as
                            libc::c_ulong).wrapping_sub(1 as libc::c_int as
                                                            libc::c_ulong)).wrapping_add(::std::mem::size_of::<in6_pktinfo>()
                                                                                             as
@@ -425,7 +439,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                                    mut dst_addr: *mut all_addr,
                                    mut dst_iface: libc::c_uint,
                                    mut header: *mut dns_header,
-                                   mut plen: size_t, mut now: time_t,
+                                   mut plen: usize, mut now: time_t,
                                    mut forward: *mut frec,
                                    mut ad_reqd: libc::c_int,
                                    mut do_bit: libc::c_int) -> libc::c_int {
@@ -443,7 +457,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
         extract_request(header, plen, (*dnsmasq_daemon).namebuff,
                         0 as *mut libc::c_ushort);
     let mut oph: *mut libc::c_uchar =
-        find_pseudoheader(header, plen, 0 as *mut size_t,
+        find_pseudoheader(header, plen, 0 as *mut usize,
                           0 as *mut *mut libc::c_uchar, 0 as *mut libc::c_int,
                           0 as *mut libc::c_int);
     if (*header).hb4 as libc::c_int & 0x10 as libc::c_int != 0 {
@@ -675,7 +689,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
         let mut subnet: libc::c_int = 0;
         let mut cacheable: libc::c_int = 0;
         let mut forwarded: libc::c_int = 0 as libc::c_int;
-        let mut edns0_len: size_t = 0;
+        let mut edns0_len: usize = 0;
         let mut pheader: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
         /* cancel */
         (*forward).frec_src.log_id = (*dnsmasq_daemon).log_id as libc::c_uint;
@@ -701,7 +715,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
             }
             /* Reduce udp size on retransmits. */
             if (*forward).flags & 256 as libc::c_int != 0 {
-                let mut t_s: u16_0 = 1280 as libc::c_int as u16_0;
+                let mut t_s: u16 = 1280 as libc::c_int as u16;
                 let mut t_cp: *mut libc::c_uchar = pheader;
                 let fresh7 = t_cp;
                 t_cp = t_cp.offset(1);
@@ -823,7 +837,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                                                                      isize),
                                  (*dnsmasq_daemon).edns_pktsz,
                                  0 as libc::c_int, 0 as *mut libc::c_uchar,
-                                 0 as libc::c_int as size_t, do_bit,
+                                 0 as libc::c_int as usize, do_bit,
                                  0 as libc::c_int)
         }
         send_from(udpfd,
@@ -871,7 +885,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
 }
 unsafe extern "C" fn process_reply(mut header: *mut dns_header,
                                    mut now: time_t, mut server: *mut server,
-                                   mut n: size_t,
+                                   mut n: usize,
                                    mut check_rebind: libc::c_int,
                                    mut no_cache: libc::c_int,
                                    mut cache_secure: libc::c_int,
@@ -881,7 +895,7 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
                                    mut added_pheader: libc::c_int,
                                    mut check_subnet: libc::c_int,
                                    mut query_source: *mut mysockaddr)
- -> size_t {
+ -> usize {
     let mut pheader: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut sizep: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut sets: *mut *mut libc::c_char = 0 as *mut *mut libc::c_char;
@@ -889,7 +903,7 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
     let mut is_sign: libc::c_int = 0;
     let mut rcode: libc::c_uint =
         ((*header).hb4 as libc::c_int & 0xf as libc::c_int) as libc::c_uint;
-    let mut plen: size_t = 0;
+    let mut plen: usize = 0;
     if !(*dnsmasq_daemon).ipsets.is_null() &&
            extract_request(header, n, (*dnsmasq_daemon).namebuff,
                            0 as *mut libc::c_ushort) != 0 {
@@ -933,7 +947,7 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
             my_syslog(4 as libc::c_int,
                       b"discarding DNS reply: subnet option mismatch\x00" as
                           *const u8 as *const libc::c_char);
-            return 0 as libc::c_int as size_t
+            return 0 as libc::c_int as usize
         }
         if is_sign == 0 {
             if added_pheader != 0 {
@@ -947,15 +961,15 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
 		 requests for the client. We can't do this for signed packets. */
                 let mut t_cp: *mut libc::c_uchar = sizep;
                 udpsz =
-                    ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as
+                    ((*t_cp.offset(0 as libc::c_int as isize) as u16 as
                           libc::c_int) << 8 as libc::c_int |
-                         *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                         *t_cp.offset(1 as libc::c_int as isize) as u16 as
                              libc::c_int) as libc::c_ushort;
                 sizep = sizep.offset(2 as libc::c_int as isize);
                 if udpsz as libc::c_int >
                        (*dnsmasq_daemon).edns_pktsz as libc::c_int {
                     sizep = sizep.offset(-(2 as libc::c_int as isize));
-                    let mut t_s: u16_0 = (*dnsmasq_daemon).edns_pktsz;
+                    let mut t_s: u16 = (*dnsmasq_daemon).edns_pktsz;
                     let mut t_cp_0: *mut libc::c_uchar = sizep;
                     let fresh8 = t_cp_0;
                     t_cp_0 = t_cp_0.offset(1);
@@ -990,7 +1004,7 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
                                                                                          libc::c_ulong))
                == 0 {
         (*header).hb4 =
-            ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8_0
+            ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8
     }
     if ((*header).hb3 as libc::c_int & 0x78 as libc::c_int) >>
            3 as libc::c_int != 0 as libc::c_int {
@@ -1044,9 +1058,9 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
         munged = 1 as libc::c_int;
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 3 as libc::c_int) as u8_0;
+                 3 as libc::c_int) as u8;
         (*header).hb3 =
-            ((*header).hb3 as libc::c_int & !(0x4 as libc::c_int)) as u8_0;
+            ((*header).hb3 as libc::c_int & !(0x4 as libc::c_int)) as u8;
         cache_secure = 0 as libc::c_int
     } else {
         let mut doctored: libc::c_int = 0 as libc::c_int;
@@ -1059,10 +1073,10 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
 	     since we know that the domain exists, even if upstream doesn't */
             munged = 1 as libc::c_int;
             (*header).hb3 =
-                ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8_0;
+                ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8;
             (*header).hb4 =
                 ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                     0 as libc::c_int) as u8_0;
+                     0 as libc::c_int) as u8;
             cache_secure = 0 as libc::c_int
         }
         if extract_addresses(header, n, (*dnsmasq_daemon).namebuff, now, sets,
@@ -1080,11 +1094,11 @@ unsafe extern "C" fn process_reply(mut header: *mut dns_header,
     /* do this after extract_addresses. Ensure NODATA reply and remove
      nameserver info. */
     if munged != 0 {
-        (*header).ancount = __bswap_16(0 as libc::c_int as __uint16_t);
-        (*header).nscount = __bswap_16(0 as libc::c_int as __uint16_t);
-        (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
+        (*header).ancount = __bswap_16(0 as libc::c_int as u16);
+        (*header).nscount = __bswap_16(0 as libc::c_int as u16);
+        (*header).arcount = __bswap_16(0 as libc::c_int as u16);
         (*header).hb3 =
-            ((*header).hb3 as libc::c_int & !(0x2 as libc::c_int)) as u8_0
+            ((*header).hb3 as libc::c_int & !(0x2 as libc::c_int)) as u8
     }
     /* the bogus-nxdomain stuff, doctor and NXDOMAIN->NODATA munging can all elide
      sections of the packet. Find the new length here and put back pseudoheader
@@ -1104,13 +1118,13 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
     let mut forward: *mut frec = 0 as *mut frec;
     let mut addrlen: socklen_t =
         ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
-    let mut n: ssize_t =
+    let mut n: susize =
         recvfrom(fd, (*dnsmasq_daemon).packet as *mut libc::c_void,
-                 (*dnsmasq_daemon).packet_buff_sz as size_t, 0 as libc::c_int,
+                 (*dnsmasq_daemon).packet_buff_sz as usize, 0 as libc::c_int,
                  __SOCKADDR_ARG{__sockaddr__:
                                     &mut serveraddr.sa as *mut sockaddr,},
                  &mut addrlen);
-    let mut nn: size_t = 0;
+    let mut nn: usize = 0;
     let mut server: *mut server = 0 as *mut server;
     let mut hash: *mut libc::c_void = 0 as *mut libc::c_void;
     /* packet buffer overwritten */
@@ -1118,7 +1132,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
     /* Determine the address of the server replying  so that we can mark that as good */
     serveraddr.sa.sa_family = family as sa_family_t;
     if serveraddr.sa.sa_family as libc::c_int == 10 as libc::c_int {
-        serveraddr.in6.sin6_flowinfo = 0 as libc::c_int as uint32_t
+        serveraddr.in6.sin6_flowinfo = 0 as libc::c_int as u32
     }
     header = (*dnsmasq_daemon).packet as *mut dns_header;
     if n <
@@ -1143,7 +1157,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
         (*server).edns_pktsz = (*dnsmasq_daemon).edns_pktsz as libc::c_int
     }
     hash =
-        hash_questions(header, n as size_t, (*dnsmasq_daemon).namebuff) as
+        hash_questions(header, n as usize, (*dnsmasq_daemon).namebuff) as
             *mut libc::c_void;
     forward = lookup_frec(__bswap_16((*header).id), fd, family, hash);
     if forward.is_null() { return }
@@ -1151,7 +1165,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
                        != 0 {
                     0x20 as libc::c_int
                 } else { 0x8 as libc::c_int }, header as *mut libc::c_void,
-                n as size_t, &mut serveraddr, 0 as *mut mysockaddr);
+                n as usize, &mut serveraddr, 0 as *mut mysockaddr);
     /* log_query gets called indirectly all over the place, so 
      pass these in global variables - sorry. */
     (*dnsmasq_daemon).log_display_id =
@@ -1160,7 +1174,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
     if !(*dnsmasq_daemon).ignore_addr.is_null() &&
            (*header).hb4 as libc::c_int & 0xf as libc::c_int ==
                0 as libc::c_int &&
-           check_for_ignored_address(header, n as size_t,
+           check_for_ignored_address(header, n as usize,
                                      (*dnsmasq_daemon).ignore_addr) != 0 {
         return
     }
@@ -1173,7 +1187,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
            && (*forward).flags & 512 as libc::c_int == 0 {
         /* for broken servers, attempt to send to another one. */
         let mut pheader: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-        let mut plen: size_t = 0;
+        let mut plen: usize = 0;
         let mut is_sign: libc::c_int = 0;
         /* In strict order mode, there must be a server later in the chain
 	 left to send to, otherwise without the forwardall mechanism,
@@ -1212,33 +1226,33 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
         }
         /* recreate query from reply */
         pheader =
-            find_pseudoheader(header, n as size_t, &mut plen,
+            find_pseudoheader(header, n as usize, &mut plen,
                               0 as *mut *mut libc::c_uchar, &mut is_sign,
                               0 as *mut libc::c_int);
         if is_sign == 0 && !server.is_null() {
-            (*header).ancount = __bswap_16(0 as libc::c_int as __uint16_t);
-            (*header).nscount = __bswap_16(0 as libc::c_int as __uint16_t);
-            (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
-            nn = resize_packet(header, n as size_t, pheader, plen);
+            (*header).ancount = __bswap_16(0 as libc::c_int as u16);
+            (*header).nscount = __bswap_16(0 as libc::c_int as u16);
+            (*header).arcount = __bswap_16(0 as libc::c_int as u16);
+            nn = resize_packet(header, n as usize, pheader, plen);
             if nn != 0 {
                 (*header).hb3 =
                     ((*header).hb3 as libc::c_int &
                          !(0x80 as libc::c_int | 0x4 as libc::c_int |
-                               0x2 as libc::c_int)) as u8_0;
+                               0x2 as libc::c_int)) as u8;
                 (*header).hb4 =
                     ((*header).hb4 as libc::c_int &
                          !(0x80 as libc::c_int | 0xf as libc::c_int |
                                0x10 as libc::c_int | 0x20 as libc::c_int)) as
-                        u8_0;
+                        u8;
                 if (*forward).flags & 2 as libc::c_int != 0 {
                     (*header).hb4 =
                         ((*header).hb4 as libc::c_int | 0x10 as libc::c_int)
-                            as u8_0
+                            as u8
                 }
                 if (*forward).flags & 32 as libc::c_int != 0 {
                     (*header).hb4 =
                         ((*header).hb4 as libc::c_int | 0x20 as libc::c_int)
-                            as u8_0
+                            as u8
                 }
                 if (*forward).flags & 64 as libc::c_int != 0 {
                     add_do_bit(header, nn, pheader.offset(plen as isize));
@@ -1356,17 +1370,17 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
         }
         if (*forward).flags & 2 as libc::c_int != 0 {
             (*header).hb4 =
-                ((*header).hb4 as libc::c_int | 0x10 as libc::c_int) as u8_0
+                ((*header).hb4 as libc::c_int | 0x10 as libc::c_int) as u8
         } else {
             (*header).hb4 =
                 ((*header).hb4 as libc::c_int & !(0x10 as libc::c_int)) as
-                    u8_0
+                    u8
         }
         if (*forward).flags & 2048 as libc::c_int != 0 {
             no_cache_dnssec = 1 as libc::c_int
         }
         nn =
-            process_reply(header, now, (*forward).sentto, n as size_t,
+            process_reply(header, now, (*forward).sentto, n as usize,
                           check_rebind, no_cache_dnssec, cache_secure,
                           bogusanswer, (*forward).flags & 32 as libc::c_int,
                           (*forward).flags & 64 as libc::c_int,
@@ -1383,7 +1397,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
 	 since the cache is ignorant of such things. */
             (*header).hb4 =
                 ((*header).hb4 as libc::c_int | 0x80 as libc::c_int) as
-                    u8_0; /* recursion if available */
+                    u8; /* recursion if available */
             src = &mut (*forward).frec_src; /* default if no EDNS0 */
             while !src.is_null() {
                 (*header).id = __bswap_16((*src).orig_id);
@@ -1479,8 +1493,8 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     let mut dst_addr: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
     let mut netmask: in_addr = in_addr{s_addr: 0,};
     let mut dst_addr_4: in_addr = in_addr{s_addr: 0,};
-    let mut m: size_t = 0;
-    let mut n: ssize_t = 0;
+    let mut m: usize = 0;
+    let mut n: susize = 0;
     let mut if_index: libc::c_int = 0 as libc::c_int;
     let mut auth_dns: libc::c_int = 0 as libc::c_int;
     let mut do_bit: libc::c_int = 0 as libc::c_int;
@@ -1559,7 +1573,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     iov[0 as libc::c_int as usize].iov_base =
         (*dnsmasq_daemon).packet as *mut libc::c_void;
     iov[0 as libc::c_int as usize].iov_len =
-        (*dnsmasq_daemon).edns_pktsz as size_t;
+        (*dnsmasq_daemon).edns_pktsz as usize;
     msg.msg_control = control_u.control.as_mut_ptr() as *mut libc::c_void;
     msg.msg_controllen =
         ::std::mem::size_of::<C2RustUnnamed_16>() as libc::c_ulong;
@@ -1568,7 +1582,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     msg.msg_namelen =
         ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
     msg.msg_iov = iov.as_mut_ptr();
-    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    msg.msg_iovlen = 1 as libc::c_int as usize;
     n = recvmsg((*listen).fd, &mut msg, 0 as libc::c_int);
     if n == -(1 as libc::c_int) as libc::c_long { return }
     if n <
@@ -1596,7 +1610,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
         if source_addr.in6.sin6_port as libc::c_int == 0 as libc::c_int {
             return
         }
-        source_addr.in6.sin6_flowinfo = 0 as libc::c_int as uint32_t
+        source_addr.in6.sin6_flowinfo = 0 as libc::c_int as u32
     }
     /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
     if (*dnsmasq_daemon).options[(49 as libc::c_int as
@@ -1818,9 +1832,9 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
     (*dnsmasq_daemon).log_display_id = (*dnsmasq_daemon).log_id;
     (*dnsmasq_daemon).log_source_addr = &mut source_addr;
     dump_packet(0x1 as libc::c_int,
-                (*dnsmasq_daemon).packet as *mut libc::c_void, n as size_t,
+                (*dnsmasq_daemon).packet as *mut libc::c_void, n as usize,
                 &mut source_addr, 0 as *mut mysockaddr);
-    if extract_request(header, n as size_t, (*dnsmasq_daemon).namebuff,
+    if extract_request(header, n as usize, (*dnsmasq_daemon).namebuff,
                        &mut type_0) != 0 {
         let mut zone: *mut auth_zone = 0 as *mut auth_zone;
         let mut types: *mut libc::c_char =
@@ -1881,25 +1895,25 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
             return
         }
     }
-    if !find_pseudoheader(header, n as size_t, 0 as *mut size_t, &mut pheader,
+    if !find_pseudoheader(header, n as usize, 0 as *mut usize, &mut pheader,
                           0 as *mut libc::c_int,
                           0 as *mut libc::c_int).is_null() {
         let mut flags: libc::c_ushort = 0;
         have_pseudoheader = 1 as libc::c_int;
         let mut t_cp: *mut libc::c_uchar = pheader;
         udp_size =
-            ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            ((*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                  << 8 as libc::c_int |
-                 *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         pheader = pheader.offset(2 as libc::c_int as isize);
         /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
         pheader = pheader.offset(2 as libc::c_int as isize); /* ext_rcode */
         let mut t_cp_0: *mut libc::c_uchar = pheader; /* do bit */
         flags =
-            ((*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            ((*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                   libc::c_int) << 8 as libc::c_int |
-                 *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         pheader = pheader.offset(2 as libc::c_int as isize);
         if flags as libc::c_int & 0x8000 as libc::c_int != 0 {
@@ -1918,7 +1932,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                         (header as
                              *mut libc::c_char).offset(udp_size as libc::c_int
                                                            as isize),
-                        n as size_t, now, &mut source_addr, local_auth,
+                        n as usize, now, &mut source_addr, local_auth,
                         do_bit, have_pseudoheader);
         if m >= 1 as libc::c_int as libc::c_ulong {
             send_from((*listen).fd,
@@ -1983,7 +1997,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                                 *mut libc::c_char).offset(udp_size as
                                                               libc::c_int as
                                                               isize),
-                           n as size_t, dst_addr_4, netmask, now, ad_reqd,
+                           n as usize, dst_addr_4, netmask, now, ad_reqd,
                            do_bit, have_pseudoheader);
         if m >= 1 as libc::c_int as libc::c_ulong {
             send_from((*listen).fd,
@@ -2033,7 +2047,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut listener,
                                               libc::c_int as
                                               usize].wrapping_add(1)
         } else if forward_query((*listen).fd, &mut source_addr, &mut dst_addr,
-                                if_index as libc::c_uint, header, n as size_t,
+                                if_index as libc::c_uint, header, n as usize,
                                 now, 0 as *mut frec, ad_reqd, do_bit) != 0 {
             (*dnsmasq_daemon).metrics[METRIC_DNS_QUERIES_FORWARDED as
                                           libc::c_int as usize] =
@@ -2059,7 +2073,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                      mut netmask: in_addr,
                                      mut auth_dns: libc::c_int)
  -> *mut libc::c_uchar {
-    let mut size: size_t = 0 as libc::c_int as size_t;
+    let mut size: usize = 0 as libc::c_int as usize;
     let mut norebind: libc::c_int = 0 as libc::c_int;
     let mut local_auth: libc::c_int = 0 as libc::c_int;
     let mut checking_disabled: libc::c_int = 0;
@@ -2071,7 +2085,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
     let mut no_cache_dnssec: libc::c_int = 0 as libc::c_int;
     let mut cache_secure: libc::c_int = 0 as libc::c_int;
     let mut bogusanswer: libc::c_int = 0 as libc::c_int;
-    let mut m: size_t = 0;
+    let mut m: usize = 0;
     let mut qtype: libc::c_ushort = 0;
     let mut gotname: libc::c_uint = 0;
     let mut c1: libc::c_uchar = 0;
@@ -2080,14 +2094,14 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
     let mut packet: *mut libc::c_uchar =
         whine_malloc(((65536 as libc::c_int + 1025 as libc::c_int +
                            10 as libc::c_int) as
-                          libc::c_ulong).wrapping_add(::std::mem::size_of::<u16_0>()
+                          libc::c_ulong).wrapping_add(::std::mem::size_of::<u16>()
                                                           as libc::c_ulong))
             as *mut libc::c_uchar;
     let mut payload: *mut libc::c_uchar =
         &mut *packet.offset(2 as libc::c_int as isize) as *mut libc::c_uchar;
     /* largest field in header is 16-bits, so this is still sufficiently aligned */
     let mut header: *mut dns_header = payload as *mut dns_header;
-    let mut length: *mut u16_0 = packet as *mut u16_0;
+    let mut length: *mut u16 = packet as *mut u16;
     let mut last_server: *mut server = 0 as *mut server;
     let mut dst_addr_4: in_addr = in_addr{s_addr: 0,};
     let mut peer_addr: mysockaddr =
@@ -2168,7 +2182,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                {
                    size =
                        ((c1 as libc::c_int) << 8 as libc::c_int |
-                            c2 as libc::c_int) as size_t;
+                            c2 as libc::c_int) as usize;
                    (size) == 0
                } ||
                read_write(confd, payload, size as libc::c_int,
@@ -2196,7 +2210,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
             (*header).hb4 as libc::c_int & 0x10 as libc::c_int;
         if checking_disabled != 0 { no_cache_dnssec = 1 as libc::c_int }
         gotname =
-            extract_request(header, size as libc::c_uint as size_t,
+            extract_request(header, size as libc::c_uint as usize,
                             (*dnsmasq_daemon).namebuff, &mut qtype);
         if gotname != 0 {
             let mut zone: *mut auth_zone = 0 as *mut auth_zone;
@@ -2257,7 +2271,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
             dst_addr_4 = (*local_addr).in_0.sin_addr
         } else { dst_addr_4.s_addr = 0 as libc::c_int as in_addr_t }
         do_bit = 0 as libc::c_int;
-        if !find_pseudoheader(header, size, 0 as *mut size_t, &mut pheader,
+        if !find_pseudoheader(header, size, 0 as *mut usize, &mut pheader,
                               0 as *mut libc::c_int,
                               0 as *mut libc::c_int).is_null() {
             let mut flags: libc::c_ushort = 0;
@@ -2268,9 +2282,9 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                    isize); /* udp_size, ext_rcode */
             let mut t_cp: *mut libc::c_uchar = pheader;
             flags =
-                ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as
+                ((*t_cp.offset(0 as libc::c_int as isize) as u16 as
                       libc::c_int) << 8 as libc::c_int |
-                     *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                     *t_cp.offset(1 as libc::c_int as isize) as u16 as
                          libc::c_int) as libc::c_ushort;
             pheader = pheader.offset(2 as libc::c_int as isize);
             if flags as libc::c_int & 0x8000 as libc::c_int != 0 {
@@ -2310,7 +2324,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                 let mut type_0: libc::c_int = 16384 as libc::c_int;
                 let mut domain: *mut libc::c_char = 0 as *mut libc::c_char;
                 let mut oph: *mut libc::c_uchar =
-                    find_pseudoheader(header, size, 0 as *mut size_t,
+                    find_pseudoheader(header, size, 0 as *mut usize,
                                       0 as *mut *mut libc::c_uchar,
                                       0 as *mut libc::c_int,
                                       0 as *mut libc::c_int);
@@ -2333,7 +2347,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                 /* Check if we added a pheader on forwarding - may need to
 		 strip it from the reply. */
                 if oph.is_null() &&
-                       !find_pseudoheader(header, size, 0 as *mut size_t,
+                       !find_pseudoheader(header, size, 0 as *mut usize,
                                           0 as *mut *mut libc::c_uchar,
                                           0 as *mut libc::c_int,
                                           0 as *mut libc::c_int).is_null() {
@@ -2367,7 +2381,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                     let mut hash: [libc::c_uchar; 32] = [0; 32];
                     memcpy(hash.as_mut_ptr() as *mut libc::c_void,
                            hash_questions(header,
-                                          size as libc::c_uint as size_t,
+                                          size as libc::c_uint as usize,
                                           (*dnsmasq_daemon).namebuff) as
                                *const libc::c_void,
                            32 as libc::c_int as libc::c_ulong);
@@ -2403,7 +2417,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                 continue ;
                             }
                             loop  {
-                                *length = __bswap_16(size as __uint16_t);
+                                *length = __bswap_16(size as u16);
                                 if (*last_server).tcpfd == -(1 as libc::c_int)
                                    {
                                     (*last_server).tcpfd =
@@ -2429,7 +2443,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                         while retry_send(sendto((*last_server).tcpfd,
                                                                 packet as
                                                                     *const libc::c_void,
-                                                                size.wrapping_add(::std::mem::size_of::<u16_0>()
+                                                                size.wrapping_add(::std::mem::size_of::<u16>()
                                                                                       as
                                                                                       libc::c_ulong),
                                                                 MSG_FASTOPEN
@@ -2467,7 +2481,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                 gotname =
                                     extract_request(header,
                                                     size as libc::c_uint as
-                                                        size_t,
+                                                        usize,
                                                     (*dnsmasq_daemon).namebuff,
                                                     &mut qtype);
                                 if gotname == 0 {
@@ -2478,7 +2492,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                 if data_sent == 0 &&
                                        read_write((*last_server).tcpfd,
                                                   packet,
-                                                  size.wrapping_add(::std::mem::size_of::<u16_0>()
+                                                  size.wrapping_add(::std::mem::size_of::<u16>()
                                                                         as
                                                                         libc::c_ulong)
                                                       as libc::c_int,
@@ -2511,7 +2525,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                     m =
                                         ((c1 as libc::c_int) <<
                                              8 as libc::c_int |
-                                             c2 as libc::c_int) as size_t;
+                                             c2 as libc::c_int) as usize;
                                     if (*last_server).addr.sa.sa_family as
                                            libc::c_int == 2 as libc::c_int {
                                         log_query((1 as libc::c_uint) <<
@@ -2542,12 +2556,12 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                     if checking_disabled != 0 {
                                         (*header).hb4 =
                                             ((*header).hb4 as libc::c_int |
-                                                 0x10 as libc::c_int) as u8_0
+                                                 0x10 as libc::c_int) as u8
                                     } else {
                                         (*header).hb4 =
                                             ((*header).hb4 as libc::c_int &
                                                  !(0x10 as libc::c_int)) as
-                                                u8_0
+                                                u8
                                     }
                                     /* There's no point in updating the cache, since this process will exit and
 			 lose the information after a few queries. We make this call for the alias and 
@@ -2559,7 +2573,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                                   *const libc::c_void,
                                               hash_questions(header,
                                                              m as libc::c_uint
-                                                                 as size_t,
+                                                                 as usize,
                                                              (*dnsmasq_daemon).namebuff)
                                                   as *const libc::c_void,
                                               32 as libc::c_int as
@@ -2577,7 +2591,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                             }
                             match current_block_93 {
                                 9430418855388998878 => {
-                                    m = 0 as libc::c_int as size_t;
+                                    m = 0 as libc::c_int as usize;
                                     break ;
                                 }
                                 _ => {
@@ -2590,7 +2604,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                         process_reply(header, now,
                                                       last_server,
                                                       m as libc::c_uint as
-                                                          size_t,
+                                                          usize,
                                                       ((*dnsmasq_daemon).options[(31
                                                                                       as
                                                                                       libc::c_int
@@ -2634,7 +2648,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                 /* In case of local answer or no connections made. */
                 if m == 0 as libc::c_int as libc::c_ulong {
                     m =
-                        setup_reply(header, size as libc::c_uint as size_t,
+                        setup_reply(header, size as libc::c_uint as usize,
                                     addrp, flags_0,
                                     (*dnsmasq_daemon).local_ttl);
                     if have_pseudoheader != 0 {
@@ -2649,17 +2663,17 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                              (*dnsmasq_daemon).edns_pktsz,
                                              0 as libc::c_int,
                                              0 as *mut libc::c_uchar,
-                                             0 as libc::c_int as size_t,
+                                             0 as libc::c_int as usize,
                                              do_bit, 0 as libc::c_int)
                     }
                 }
             }
         }
         check_log_writer(1 as libc::c_int);
-        *length = __bswap_16(m as __uint16_t);
+        *length = __bswap_16(m as u16);
         if m == 0 as libc::c_int as libc::c_ulong ||
                read_write(confd, packet,
-                          m.wrapping_add(::std::mem::size_of::<u16_0>() as
+                          m.wrapping_add(::std::mem::size_of::<u16>() as
                                              libc::c_ulong) as libc::c_int,
                           0 as libc::c_int) == 0 {
             return packet

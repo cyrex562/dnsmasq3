@@ -35,6 +35,9 @@
 
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
+use crate::slack::{pollfd, nfds_t};
+use crate::util::whine_malloc;
+
 static mut pollfds: *mut pollfd = 0 as *const pollfd as *mut pollfd;
 static mut nfds: nfds_t = 0;
 static mut arrsize: nfds_t = 0 as libc::c_int as nfds_t;

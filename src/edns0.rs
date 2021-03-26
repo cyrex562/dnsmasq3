@@ -14,6 +14,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{dns_header, size_t, __bswap_16, mysockaddr, time_t, dnsmasq_daemon, in6_addr, in_addr};
+use crate::rfc1035::{skip_name, skip_questions, skip_section};
+use crate::util::{whine_malloc, print_mac};
+use crate::rrfilter::rrfilter;
+use crate::arp::find_mac;
+use crate::slack::subnet_opt;
+
 #[no_mangle]
 pub unsafe extern "C" fn find_pseudoheader(mut header: *mut dns_header,
                                            mut plen: size_t,
@@ -45,16 +52,16 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: *mut dns_header,
                 if ansp.is_null() { return 0 as *mut libc::c_uchar }
                 let mut t_cp: *mut libc::c_uchar = ansp;
                 type_0 =
-                    ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as
+                    ((*t_cp.offset(0 as libc::c_int as isize) as u16 as
                           libc::c_int) << 8 as libc::c_int |
-                         *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                         *t_cp.offset(1 as libc::c_int as isize) as u16 as
                              libc::c_int) as libc::c_ushort;
                 ansp = ansp.offset(2 as libc::c_int as isize);
                 let mut t_cp_0: *mut libc::c_uchar = ansp;
                 class =
-                    ((*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+                    ((*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                           libc::c_int) << 8 as libc::c_int |
-                         *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                         *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                              libc::c_int) as libc::c_ushort;
                 ansp = ansp.offset(2 as libc::c_int as isize);
                 if class as libc::c_int == 1 as libc::c_int &&
@@ -83,25 +90,25 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: *mut dns_header,
         if ansp.is_null() { return 0 as *mut libc::c_uchar }
         let mut t_cp_1: *mut libc::c_uchar = ansp;
         type_0 =
-            ((*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            ((*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                   libc::c_int) << 8 as libc::c_int |
-                 *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         ansp = ansp.offset(2 as libc::c_int as isize);
         save = ansp;
         let mut t_cp_2: *mut libc::c_uchar = ansp;
         class =
-            ((*t_cp_2.offset(0 as libc::c_int as isize) as u16_0 as
+            ((*t_cp_2.offset(0 as libc::c_int as isize) as u16 as
                   libc::c_int) << 8 as libc::c_int |
-                 *t_cp_2.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp_2.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         ansp = ansp.offset(2 as libc::c_int as isize);
         ansp = ansp.offset(4 as libc::c_int as isize);
         let mut t_cp_3: *mut libc::c_uchar = ansp;
         rdlen =
-            ((*t_cp_3.offset(0 as libc::c_int as isize) as u16_0 as
+            ((*t_cp_3.offset(0 as libc::c_int as isize) as u16 as
                   libc::c_int) << 8 as libc::c_int |
-                 *t_cp_3.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp_3.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         ansp = ansp.offset(2 as libc::c_int as isize);
         if if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
@@ -169,23 +176,23 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         p = udp_len;
         let mut t_cp: *mut libc::c_uchar = p;
         udp_sz =
-            ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            ((*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                  << 8 as libc::c_int |
-                 *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         rcode =
-            ((*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            ((*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                   libc::c_int) << 8 as libc::c_int |
-                 *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_1: *mut libc::c_uchar = p;
         flags =
-            ((*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            ((*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                   libc::c_int) << 8 as libc::c_int |
-                 *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                 *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                      libc::c_int) as libc::c_ushort;
         p = p.offset(2 as libc::c_int as isize);
         if set_do != 0 {
@@ -193,7 +200,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
             flags =
                 (flags as libc::c_int | 0x8000 as libc::c_int) as
                     libc::c_ushort;
-            let mut t_s: u16_0 = flags;
+            let mut t_s: u16 = flags;
             let mut t_cp_2: *mut libc::c_uchar = p;
             let fresh6 = t_cp_2;
             t_cp_2 = t_cp_2.offset(1);
@@ -205,9 +212,9 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         lenp = p;
         let mut t_cp_3: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_3.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_3.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_3.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_3.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as
@@ -222,16 +229,16 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         while (i + 4 as libc::c_int) < rdlen {
             let mut t_cp_4: *mut libc::c_uchar = p;
             code =
-                ((*t_cp_4.offset(0 as libc::c_int as isize) as u16_0 as
+                ((*t_cp_4.offset(0 as libc::c_int as isize) as u16 as
                       libc::c_int) << 8 as libc::c_int |
-                     *t_cp_4.offset(1 as libc::c_int as isize) as u16_0 as
+                     *t_cp_4.offset(1 as libc::c_int as isize) as u16 as
                          libc::c_int) as libc::c_ushort;
             p = p.offset(2 as libc::c_int as isize);
             let mut t_cp_5: *mut libc::c_uchar = p;
             len =
-                ((*t_cp_5.offset(0 as libc::c_int as isize) as u16_0 as
+                ((*t_cp_5.offset(0 as libc::c_int as isize) as u16 as
                       libc::c_int) << 8 as libc::c_int |
-                     *t_cp_5.offset(1 as libc::c_int as isize) as u16_0 as
+                     *t_cp_5.offset(1 as libc::c_int as isize) as u16 as
                          libc::c_int) as libc::c_ushort;
             p = p.offset(2 as libc::c_int as isize);
             /* malformed option, delete the whole OPT RR and start again. */
@@ -249,7 +256,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
                                      isize).offset(4 as libc::c_int as isize)
                             as *const libc::c_void,
                         (rdlen - i) as libc::c_ulong);
-                let mut t_s_0: u16_0 = rdlen as u16_0;
+                let mut t_s_0: u16 = rdlen as u16;
                 let mut t_cp_6: *mut libc::c_uchar = lenp;
                 let fresh7 = t_cp_6;
                 t_cp_6 = t_cp_6.offset(1);
@@ -309,14 +316,14 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         let fresh8 = p;
         p = p.offset(1);
         *fresh8 = 0 as libc::c_int as libc::c_uchar;
-        let mut t_s_1: u16_0 = 41 as libc::c_int as u16_0;
+        let mut t_s_1: u16 = 41 as libc::c_int as u16;
         let mut t_cp_7: *mut libc::c_uchar = p;
         let fresh9 = t_cp_7;
         t_cp_7 = t_cp_7.offset(1);
         *fresh9 = (t_s_1 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
         *t_cp_7 = t_s_1 as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
-        let mut t_s_2: u16_0 = udp_sz;
+        let mut t_s_2: u16 = udp_sz;
         let mut t_cp_8: *mut libc::c_uchar = p;
         let fresh10 = t_cp_8;
         t_cp_8 = t_cp_8.offset(1);
@@ -325,7 +332,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         *t_cp_8 = t_s_2 as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
         /* max packet length, 512 if not given in EDNS0 header */
-        let mut t_s_3: u16_0 = rcode;
+        let mut t_s_3: u16 = rcode;
         let mut t_cp_9: *mut libc::c_uchar = p;
         let fresh11 = t_cp_9;
         t_cp_9 = t_cp_9.offset(1);
@@ -334,7 +341,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         *t_cp_9 = t_s_3 as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
         /* extended RCODE and version */
-        let mut t_s_4: u16_0 = flags;
+        let mut t_s_4: u16 = flags;
         let mut t_cp_10: *mut libc::c_uchar = p;
         let fresh12 = t_cp_10;
         t_cp_10 = t_cp_10.offset(1);
@@ -344,7 +351,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         p = p.offset(2 as libc::c_int as isize);
         /* DO flag */
         lenp = p;
-        let mut t_s_5: u16_0 = rdlen as u16_0;
+        let mut t_s_5: u16 = rdlen as u16;
         let mut t_cp_11: *mut libc::c_uchar = p;
         let fresh13 = t_cp_11;
         t_cp_11 = t_cp_11.offset(1);
@@ -367,15 +374,15 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
             p = p.offset(rdlen as isize)
         }
         /* Only bump arcount if RR is going to fit */
-        if optlen as ssize_t <=
+        if optlen as isize <=
                limit.wrapping_offset_from(p.offset(4 as libc::c_int as isize))
                    as libc::c_long {
             (*header).arcount =
                 __bswap_16((__bswap_16((*header).arcount) as libc::c_int +
-                                1 as libc::c_int) as __uint16_t)
+                                1 as libc::c_int) as u16)
         }
     } /* Too big */
-    if optlen as ssize_t >
+    if optlen as isize >
            limit.wrapping_offset_from(p.offset(4 as libc::c_int as isize)) as
                libc::c_long {
         return plen
@@ -385,7 +392,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         if p.offset(4 as libc::c_int as isize) > limit {
             return plen
         } /* Too big */
-        let mut t_s_6: u16_0 = optno as u16_0; /* Too big */
+        let mut t_s_6: u16 = optno as u16; /* Too big */
         let mut t_cp_12: *mut libc::c_uchar =
             p; /* can't get mac address, just delete any incoming. */
         let fresh14 = t_cp_12; /* handle 6 byte MACs */
@@ -394,7 +401,7 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
             (t_s_6 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
         *t_cp_12 = t_s_6 as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
-        let mut t_s_7: u16_0 = optlen as u16_0;
+        let mut t_s_7: u16 = optlen as u16;
         let mut t_cp_13: *mut libc::c_uchar = p;
         let fresh15 = t_cp_13;
         t_cp_13 = t_cp_13.offset(1);
@@ -405,8 +412,8 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut dns_header,
         if p.offset(optlen as isize) > limit { return plen }
         memcpy(p as *mut libc::c_void, opt as *const libc::c_void, optlen);
         p = p.offset(optlen as isize);
-        let mut t_s_8: u16_0 =
-            p.wrapping_offset_from(datap) as libc::c_long as u16_0;
+        let mut t_s_8: u16 =
+            p.wrapping_offset_from(datap) as libc::c_long as u16;
         let mut t_cp_14: *mut libc::c_uchar = lenp;
         let fresh16 = t_cp_14;
         t_cp_14 = t_cp_14.offset(1);
@@ -543,11 +550,11 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
     let mut addrp: *mut libc::c_void = 0 as *mut libc::c_void;
     let mut sa_family: libc::c_int = (*source).sa.sa_family as libc::c_int;
     let mut cacheable: libc::c_int = 0 as libc::c_int;
-    (*opt).source_netmask = 0 as libc::c_int as u8_0;
-    (*opt).scope_netmask = 0 as libc::c_int as u8_0;
+    (*opt).source_netmask = 0 as libc::c_int as u8;
+    (*opt).scope_netmask = 0 as libc::c_int as u8;
     if (*source).sa.sa_family as libc::c_int == 10 as libc::c_int &&
            !(*dnsmasq_daemon).add_subnet6.is_null() {
-        (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet6).mask as u8_0;
+        (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet6).mask as u8;
         if (*(*dnsmasq_daemon).add_subnet6).addr_used != 0 {
             sa_family =
                 (*(*dnsmasq_daemon).add_subnet6).addr.sa.sa_family as
@@ -564,7 +571,7 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
     }
     if (*source).sa.sa_family as libc::c_int == 2 as libc::c_int &&
            !(*dnsmasq_daemon).add_subnet4.is_null() {
-        (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet4).mask as u8_0;
+        (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet4).mask as u8;
         if (*(*dnsmasq_daemon).add_subnet4).addr_used != 0 {
             sa_family =
                 (*(*dnsmasq_daemon).add_subnet4).addr.sa.sa_family as
@@ -583,7 +590,7 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
     (*opt).family =
         __bswap_16(if sa_family == 10 as libc::c_int {
                        2 as libc::c_int
-                   } else { 1 as libc::c_int } as __uint16_t);
+                   } else { 1 as libc::c_int } as u16);
     if !addrp.is_null() &&
            (*opt).source_netmask as libc::c_int != 0 as libc::c_int {
         len =
@@ -598,7 +605,7 @@ unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
                      (0xff as libc::c_int) <<
                          8 as libc::c_int -
                              ((*opt).source_netmask as libc::c_int &
-                                  7 as libc::c_int)) as u8_0
+                                  7 as libc::c_int)) as u8
         }
     } else { cacheable = 1 as libc::c_int; len = 0 as libc::c_int }
     if !cacheablep.is_null() { *cacheablep = cacheable }
@@ -650,9 +657,9 @@ pub unsafe extern "C" fn check_source(mut header: *mut dns_header,
     p = p.offset(8 as libc::c_int as isize);
     let mut t_cp: *mut libc::c_uchar = p;
     rdlen =
-        (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int) <<
+        (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int) <<
             8 as libc::c_int |
-            *t_cp.offset(1 as libc::c_int as isize) as u16_0 as libc::c_int;
+            *t_cp.offset(1 as libc::c_int as isize) as u16 as libc::c_int;
     p = p.offset(2 as libc::c_int as isize);
     if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as libc::c_long
               + rdlen as libc::c_long) as size_t <= plen) {
@@ -663,16 +670,16 @@ pub unsafe extern "C" fn check_source(mut header: *mut dns_header,
     while (i + 4 as libc::c_int) < rdlen {
         let mut t_cp_0: *mut libc::c_uchar = p;
         code =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_1: *mut libc::c_uchar = p;
         len =
-            (*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if code == 8 as libc::c_int {

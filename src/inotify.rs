@@ -27,6 +27,16 @@
    all specified resolv-files must exist at start-up, even if the actual
    files don't. 
 */
+use crate::util::{safe_malloc, whine_malloc};
+use crate::dnsmasq_log::{die, my_syslog};
+use crate::defines::{resolvc, dnsmasq_daemon, crec, hostsfile, DIR, stat, timespec, time_t};
+use crate::slack::{inotify_event, IN_NONBLOCK, IN_CLOEXEC, dirent};
+use crate::cache::read_hostsfile;
+use crate::option::option_read_dynfile;
+use std::fs::read;
+use crate::dhcp_common::dhcp_update_configs;
+use crate::lease::{lease_update_from_configs, lease_update_file, lease_update_dns};
+
 static mut inotify_buffer: *mut libc::c_char =
     0 as *const libc::c_char as *mut libc::c_char;
 /* If path is a symbolic link, return the path it
@@ -35,12 +45,12 @@ static mut inotify_buffer: *mut libc::c_char =
    Return value is malloc'ed */
 unsafe extern "C" fn my_readlink(mut path: *mut libc::c_char)
  -> *mut libc::c_char {
-    let mut rc: ssize_t = 0;
-    let mut size: ssize_t = 64 as libc::c_int as ssize_t;
+    let mut rc: isize = 0;
+    let mut size: isize = 64 as libc::c_int as isize;
     let mut buf: *mut libc::c_char = 0 as *mut libc::c_char;
     loop  {
-        buf = safe_malloc(size as size_t) as *mut libc::c_char;
-        rc = readlink(path, buf, size as size_t);
+        buf = safe_malloc(size as usize) as *mut libc::c_char;
+        rc = readlink(path, buf, size as usize);
         if rc == -(1 as libc::c_int) as libc::c_long {
             /* Not link or doesn't exist. */
             if *__errno_location() == 22 as libc::c_int ||
@@ -158,7 +168,7 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
             (*res).wd =
                 inotify_add_watch((*dnsmasq_daemon).inotifyfd, path,
                                   (0x8 as libc::c_int | 0x80 as libc::c_int)
-                                      as uint32_t);
+                                      as u32);
             (*res).file = d.offset(1 as libc::c_int as isize);
             *d = '/' as i32 as libc::c_char;
             if (*res).wd == -(1 as libc::c_int) &&
@@ -218,7 +228,7 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
                                           (*ah).fname,
                                           (0x8 as libc::c_int |
                                                0x80 as libc::c_int) as
-                                              uint32_t);
+                                              u32);
                     (*ah).flags |= 4 as libc::c_int
                 }
                 /* Read contents of dir _after_ calling add_watch, in the hope of avoiding
@@ -236,8 +246,8 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
                     loop  {
                         ent = readdir(dir_stream);
                         if ent.is_null() { break ; }
-                        let mut lendir: size_t = strlen((*ah).fname);
-                        let mut lenfile: size_t =
+                        let mut lendir: usize = strlen((*ah).fname);
+                        let mut lenfile: usize =
                             strlen((*ent).d_name.as_mut_ptr());
                         let mut path: *mut libc::c_char =
                             0 as *mut libc::c_char;
@@ -334,7 +344,7 @@ pub unsafe extern "C" fn inotify_check(mut now: time_t) -> libc::c_int {
                   p.wrapping_offset_from(inotify_buffer) as libc::c_long >=
                   ::std::mem::size_of::<inotify_event>() as libc::c_ulong as
                       libc::c_int as libc::c_long {
-            let mut namelen: size_t = 0;
+            let mut namelen: usize = 0;
             in_0 = p as *mut inotify_event;
             /* ignore emacs backups and dotfiles */
             if !((*in_0).len == 0 as libc::c_int as libc::c_uint ||
@@ -374,7 +384,7 @@ pub unsafe extern "C" fn inotify_check(mut now: time_t) -> libc::c_int {
                 ah = (*dnsmasq_daemon).dynamic_dirs;
                 while !ah.is_null() {
                     if (*ah).wd == (*in_0).wd {
-                        let mut lendir: size_t = strlen((*ah).fname);
+                        let mut lendir: usize = strlen((*ah).fname);
                         let mut path: *mut libc::c_char =
                             0 as *mut libc::c_char;
                         path =

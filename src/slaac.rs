@@ -14,6 +14,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{dhcp_lease, time_t, slaac_address, dhcp_context, dnsmasq_daemon, in6_addr, sockaddr_in6, C2RustUnnamed, sa_family_t, __bswap_16, __CONST_SOCKADDR_ARG, sockaddr, socklen_t};
+use crate::util::{whine_malloc, rand16};
+use crate::radv::ra_start_unsolicited;
+use crate::lease::lease_update_dns;
+use crate::slack::{ping_packet, IPPROTO_ICMPV6};
+use crate::outpacket::{reset_counter, expand, save_counter};
+use crate::dnsmasq_log::my_syslog;
+
 static mut ping_id: libc::c_int = 0 as libc::c_int;
 #[no_mangle]
 pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
@@ -49,23 +57,23 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                           as *mut uint8_t as *mut libc::c_void,
+                           as *mut u8 as *mut libc::c_void,
                        (*lease).hwaddr.as_mut_ptr() as *const libc::c_void,
                        3 as libc::c_int as libc::c_ulong);
                 memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(13 as
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                           as *mut uint8_t as *mut libc::c_void,
+                           as *mut u8 as *mut libc::c_void,
                        &mut *(*lease).hwaddr.as_mut_ptr().offset(3 as
                                                                      libc::c_int
                                                                      as isize)
                            as *mut libc::c_uchar as *const libc::c_void,
                        3 as libc::c_int as libc::c_ulong);
                 addr.__in6_u.__u6_addr8[11 as libc::c_int as usize] =
-                    0xff as libc::c_int as uint8_t;
+                    0xff as libc::c_int as u8;
                 addr.__in6_u.__u6_addr8[12 as libc::c_int as usize] =
-                    0xfe as libc::c_int as uint8_t;
+                    0xfe as libc::c_int as u8;
                 current_block_31 = 12039483399334584727;
             } else if (*lease).hwaddr_len == 8 as libc::c_int &&
                           (*lease).hwaddr_type == 27 as libc::c_int {
@@ -73,7 +81,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                           as *mut uint8_t as *mut libc::c_void,
+                           as *mut u8 as *mut libc::c_void,
                        (*lease).hwaddr.as_mut_ptr() as *const libc::c_void,
                        8 as libc::c_int as libc::c_ulong);
                 current_block_31 = 12039483399334584727;
@@ -86,7 +94,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                           as *mut uint8_t as *mut libc::c_void,
+                           as *mut u8 as *mut libc::c_void,
                        &mut *(*lease).clid.offset(1 as libc::c_int as isize)
                            as *mut libc::c_uchar as *const libc::c_void,
                        8 as libc::c_int as libc::c_ulong);
@@ -97,7 +105,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: *mut dhcp_lease,
                 _ => {
                     addr.__in6_u.__u6_addr8[8 as libc::c_int as usize] =
                         (addr.__in6_u.__u6_addr8[8 as libc::c_int as usize] as
-                             libc::c_int ^ 0x2 as libc::c_int) as uint8_t;
+                             libc::c_int ^ 0x2 as libc::c_int) as u8;
                     /* check if we already have this one */
                     up = &mut old;
                     slaac = old;
@@ -239,10 +247,10 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
                     if ping.is_null() {
                         current_block_26 = 12209867499936983673;
                     } else {
-                        (*ping).type_0 = 128 as libc::c_int as u8_0;
-                        (*ping).code = 0 as libc::c_int as u8_0;
-                        (*ping).identifier = ping_id as u16_0;
-                        (*ping).sequence_no = (*slaac).backoff as u16_0;
+                        (*ping).type_0 = 128 as libc::c_int as u8;
+                        (*ping).code = 0 as libc::c_int as u8;
+                        (*ping).identifier = ping_id as u16;
+                        (*ping).sequence_no = (*slaac).backoff as u16;
                         memset(&mut addr as *mut sockaddr_in6 as
                                    *mut libc::c_void, 0 as libc::c_int,
                                ::std::mem::size_of::<sockaddr_in6>() as
@@ -250,11 +258,11 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
                         addr.sin6_family = 10 as libc::c_int as sa_family_t;
                         addr.sin6_port =
                             __bswap_16(IPPROTO_ICMPV6 as libc::c_int as
-                                           __uint16_t);
+                                           u16);
                         addr.sin6_addr = (*slaac).addr;
                         if sendto((*dnsmasq_daemon).icmp6fd,
                                   (*dnsmasq_daemon).outpacket.iov_base,
-                                  save_counter(-(1 as libc::c_int)) as size_t,
+                                  save_counter(-(1 as libc::c_int)) as usize,
                                   0 as libc::c_int,
                                   __CONST_SOCKADDR_ARG{__sockaddr__:
                                                            &mut addr as

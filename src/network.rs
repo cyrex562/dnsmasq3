@@ -14,8 +14,16 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::slack::ifreq;
-use crate::defines::{C2RustUnnamed_2, sockaddr, C2RustUnnamed_1A};
+use crate::slack::{ifreq, IFF_LOOPBACK, uint32_t, ipv6_mreq};
+use crate::defines::{C2RustUnnamed_2, sockaddr, C2RustUnnamed_1A, ifreq, all_addr, iname, dnsmasq_daemon, in6_addr, irec, iface_param, mysockaddr, in_addr, addrlist, __bswap_32, interface_name, auth_zone, auth_name_list, in_addr_t, sa_family_t, __bswap_16, __uint16_t, listener, SOCK_DGRAM, socklen_t, IPPROTO_IPV6, __CONST_SOCKADDR_ARG, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, cmsghdr, msghdr, iovec, server, C2RustUnnamed_13, C2RustUnnamed_12, in_port_t, C2RustUnnamed, serverfd, time_t};
+use crate::util::{safe_strncpy, wildcard_match, whine_malloc, sockaddr_isequal, prettyprint_addr, sa_len, safe_malloc, rand16, hostname_isequal, rand32};
+use crate::dnsmasq_log::{my_syslog, die};
+use crate::netlink::iface_enumerate;
+use crate::rfc1035::private_net;
+use crate::forward::server_gone;
+use crate::dnsmasq_loop::loop_send_probes;
+use crate::dhcp6::dhcp_construct_contexts;
+use crate::lease::lease_find_interfaces;
 
 #[no_mangle]
 pub unsafe extern "C" fn indextoname(mut fd: libc::c_int,
@@ -35,7 +43,7 @@ pub unsafe extern "C" fn indextoname(mut fd: libc::c_int,
         return 0 as libc::c_int
     }
     safe_strncpy(name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
-                 16 as libc::c_int as size_t);
+                 16 as libc::c_int as usize);
     return 1 as libc::c_int;
 }
 #[no_mangle]
@@ -215,12 +223,19 @@ pub unsafe extern "C" fn loopback_exception(mut fd: libc::c_int,
     let mut ifr: ifreq =
         ifreq{ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_2{ifru_addr:
+                  C2RustUnnamed_2{
+                      keydata: blockdata {},
+                      keylen: 0,
+                      keytag: 0,
+                      algo: 0,
+                      ifru_addr:
                                       sockaddr{sa_family: 0,
-                                               sa_data: [0; 14],},},};
+                                               sa_data: [0; 14],},
+                      digest: 0
+                  },};
     let mut iface: *mut irec = 0 as *mut irec;
     safe_strncpy(ifr.ifr_ifrn.ifrn_name.as_mut_ptr(), name,
-                 16 as libc::c_int as size_t);
+                 16 as libc::c_int as usize);
     if ioctl(fd, 0x8913 as libc::c_int as libc::c_ulong,
              &mut ifr as *mut ifreq) != -(1 as libc::c_int) &&
            ifr.ifr_ifru.ifru_flags as libc::c_int &
@@ -1180,7 +1195,7 @@ pub unsafe extern "C" fn tcp_interface(mut fd: libc::c_int,
     /* use mshdr so that the CMSDG_* macros are available */
     msg.msg_control = (*dnsmasq_daemon).packet as *mut libc::c_void;
     len = (*dnsmasq_daemon).packet_buff_sz as socklen_t;
-    msg.msg_controllen = len as size_t;
+    msg.msg_controllen = len as usize;
     /* we overwrote the buffer... */
     (*dnsmasq_daemon).srv_save = 0 as *mut server;
     if af == 2 as libc::c_int {
@@ -1190,7 +1205,7 @@ pub unsafe extern "C" fn tcp_interface(mut fd: libc::c_int,
                           socklen_t) != -(1 as libc::c_int) &&
                getsockopt(fd, IPPROTO_IP as libc::c_int, 9 as libc::c_int,
                           msg.msg_control, &mut len) != -(1 as libc::c_int) {
-            msg.msg_controllen = len as size_t;
+            msg.msg_controllen = len as usize;
             cmptr =
                 if msg.msg_controllen >=
                        ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
@@ -1211,7 +1226,7 @@ pub unsafe extern "C" fn tcp_interface(mut fd: libc::c_int,
                   getsockopt(fd, IPPROTO_IPV6 as libc::c_int,
                              6 as libc::c_int, msg.msg_control, &mut len) !=
                       -(1 as libc::c_int) {
-        msg.msg_controllen = len as size_t;
+        msg.msg_controllen = len as usize;
         cmptr =
             if msg.msg_controllen >=
                    ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {

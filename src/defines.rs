@@ -565,6 +565,7 @@ pub struct frec_src {
 pub struct dhcp_netid {
     pub net: String,
     // pub next: *mut dhcp_netid,
+    pub next: *mut dhcp_netid
 }
 
 #[derive(Copy, Clone)]
@@ -628,6 +629,7 @@ pub struct dhcp_opt {
     pub val: Vec<u8>,
     pub netid: dhcp_netid,
     // pub next: *mut dhcp_opt,
+    pub next: *mut dhcp_opt
 }
 
 #[derive(Copy, Clone)]
@@ -3411,3 +3413,37 @@ pub const SIGIO: libc::c_int = 29;
 pub const SIGPWR: libc::c_int = 30;
 pub const SIGSYS: libc::c_int = 31;
 pub const SIGUNUSED: libc::c_int = 31;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct iface_param {
+    pub current: *mut dhcp_context,
+    pub relay: *mut dhcp_relay,
+    pub relay_local: in_addr,
+    pub ind: libc::c_int,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct match_param {
+    pub ind: libc::c_int,
+    pub matched: libc::c_int,
+    pub netmask: in_addr,
+    pub broadcast: in_addr,
+    pub addr: in_addr,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_14A {
+    pub c: *mut libc::c_uchar,
+    pub p: *mut in_pktinfo,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct cparam {
+    pub now: time_t,
+    pub newone: libc::c_int,
+    pub newname: libc::c_int,
+}

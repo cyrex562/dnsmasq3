@@ -17,8 +17,12 @@
 /* Code to safely remove RRs from a DNS answer */
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
    we've chopped out of the packet, or check they don't point into an elided part.  */
+use crate::defines::{dns_header, __bswap_16};
+use crate::rfc1035::skip_name;
+use crate::util::whine_malloc;
+
 unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
-                                mut header: *mut dns_header, mut plen: size_t,
+                                mut header: *mut dns_header, mut plen: usize,
                                 mut fixup: libc::c_int,
                                 mut rrs: *mut *mut libc::c_uchar,
                                 mut rr_count: libc::c_int) -> libc::c_int {
@@ -26,7 +30,7 @@ unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
     loop  {
         let mut label_type: libc::c_uint = 0;
         if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                  libc::c_long + 1 as libc::c_int as libc::c_long) as size_t
+                  libc::c_long + 1 as libc::c_int as libc::c_long) as usize
                  <= plen) {
             return 0 as libc::c_int
         }
@@ -39,7 +43,7 @@ unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
             let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
             if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
                       libc::c_long + 2 as libc::c_int as libc::c_long) as
-                     size_t <= plen) {
+                     usize <= plen) {
                 return 0 as libc::c_int
             }
             let fresh6 = ansp;
@@ -96,7 +100,7 @@ unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
                 0; /* we only understand bitstrings */
             if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
                       libc::c_long + 2 as libc::c_int as libc::c_long) as
-                     size_t <= plen) {
+                     usize <= plen) {
                 return 0 as libc::c_int
             } /* Bits in bitstring */
             let fresh10 = ansp;
@@ -130,7 +134,7 @@ unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
                 (*fresh12 as libc::c_int & 0x3f as libc::c_int) as
                     libc::c_uint;
             if if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar)
-                         as libc::c_long + len as libc::c_long) as size_t <=
+                         as libc::c_long + len as libc::c_long) as usize <=
                         plen) {
                    0 as libc::c_int
                } else { ansp = ansp.offset(len as isize); 1 as libc::c_int }
@@ -146,7 +150,7 @@ unsafe extern "C" fn check_name(mut namep: *mut *mut libc::c_uchar,
 }
 /* Go through RRs and check or fixup the domain names contained within */
 unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
-                               mut header: *mut dns_header, mut plen: size_t,
+                               mut header: *mut dns_header, mut plen: usize,
                                mut fixup: libc::c_int,
                                mut rrs: *mut *mut libc::c_uchar,
                                mut rr_count: libc::c_int) -> libc::c_int {
@@ -166,24 +170,24 @@ unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
         if p.is_null() { return 0 as libc::c_int }
         let mut t_cp: *mut libc::c_uchar = p;
         type_0 =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         class =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         p = p.offset(4 as libc::c_int as isize);
         let mut t_cp_1: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         /* If this RR is to be elided, don't fix up its contents */
@@ -198,11 +202,11 @@ unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
                 return 0 as libc::c_int
             }
             if class == 1 as libc::c_int {
-                let mut d: *mut u16_0 = 0 as *mut u16_0;
+                let mut d: *mut u16 = 0 as *mut u16;
                 pp = p;
                 d = rrfilter_desc(type_0);
                 while *d as libc::c_int !=
-                          -(1 as libc::c_int) as u16_0 as libc::c_int {
+                          -(1 as libc::c_int) as u16 as libc::c_int {
                     if *d as libc::c_int != 0 as libc::c_int {
                         pp = pp.offset(*d as libc::c_int as isize)
                     } else if check_name(&mut pp, header, plen, fixup, rrs,
@@ -214,7 +218,7 @@ unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
             }
         }
         if if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as
-                     libc::c_long + rdlen as libc::c_long) as size_t <= plen)
+                     libc::c_long + rdlen as libc::c_long) as usize <= plen)
               {
                0 as libc::c_int
            } else { p = p.offset(rdlen as isize); 1 as libc::c_int } == 0 {
@@ -227,8 +231,8 @@ unsafe extern "C" fn check_rrs(mut p: *mut libc::c_uchar,
 /* mode is 0 to remove EDNS0, 1 to filter DNSSEC RRs */
 #[no_mangle]
 pub unsafe extern "C" fn rrfilter(mut header: *mut dns_header,
-                                  mut plen: size_t, mut mode: libc::c_int)
- -> size_t {
+                                  mut plen: usize, mut mode: libc::c_int)
+ -> usize {
     static mut rrs: *mut *mut libc::c_uchar =
         0 as *const *mut libc::c_uchar as *mut *mut libc::c_uchar;
     static mut rr_sz: libc::c_int = 0 as libc::c_int;
@@ -248,15 +252,15 @@ pub unsafe extern "C" fn rrfilter(mut header: *mut dns_header,
     }
     let mut t_cp: *mut libc::c_uchar = p;
     qtype =
-        (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int) <<
+        (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int) <<
             8 as libc::c_int |
-            *t_cp.offset(1 as libc::c_int as isize) as u16_0 as libc::c_int;
+            *t_cp.offset(1 as libc::c_int as isize) as u16 as libc::c_int;
     p = p.offset(2 as libc::c_int as isize);
     let mut t_cp_0: *mut libc::c_uchar = p;
     qclass =
-        (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int) <<
+        (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as libc::c_int) <<
             8 as libc::c_int |
-            *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as libc::c_int;
+            *t_cp_0.offset(1 as libc::c_int as isize) as u16 as libc::c_int;
     p = p.offset(2 as libc::c_int as isize);
     let mut current_block_36: u64;
     /* First pass, find pointers to start and end of all the records we wish to elide:
@@ -277,28 +281,28 @@ pub unsafe extern "C" fn rrfilter(mut header: *mut dns_header,
         if p.is_null() { return plen }
         let mut t_cp_1: *mut libc::c_uchar = p;
         type_0 =
-            (*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_2: *mut libc::c_uchar = p;
         class =
-            (*t_cp_2.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_2.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_2.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_2.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         p = p.offset(4 as libc::c_int as isize);
         let mut t_cp_3: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_3.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_3.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_3.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_3.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as
-                     libc::c_long + rdlen as libc::c_long) as size_t <= plen)
+                     libc::c_long + rdlen as libc::c_long) as usize <= plen)
               {
                0 as libc::c_int
            } else { p = p.offset(rdlen as isize); 1 as libc::c_int } == 0 {
@@ -393,22 +397,22 @@ pub unsafe extern "C" fn rrfilter(mut header: *mut dns_header,
     }
     plen =
         p.wrapping_offset_from(header as *mut libc::c_uchar) as libc::c_long
-            as size_t;
+            as usize;
     (*header).ancount =
         __bswap_16((__bswap_16((*header).ancount) as libc::c_int - chop_an) as
-                       __uint16_t);
+                       u16);
     (*header).nscount =
         __bswap_16((__bswap_16((*header).nscount) as libc::c_int - chop_ns) as
-                       __uint16_t);
+                       u16);
     (*header).arcount =
         __bswap_16((__bswap_16((*header).arcount) as libc::c_int - chop_ar) as
-                       __uint16_t);
+                       u16);
     return plen;
 }
 /* This is used in the DNSSEC code too, hence it's exported */
 #[no_mangle]
 pub unsafe extern "C" fn rrfilter_desc(mut type_0: libc::c_int)
- -> *mut u16_0 {
+ -> *mut u16 {
     /* List of RRtypes which include domains in the data.
      0 -> domain
      integer -> no. of plain bytes
@@ -417,52 +421,52 @@ pub unsafe extern "C" fn rrfilter_desc(mut type_0: libc::c_int)
      zero is not a valid RRtype, so the final entry is returned for
      anything which needs no mangling.
   */
-    static mut rr_desc: [u16_0; 73] =
-        [2 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0, 3 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         4 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0, 5 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         6 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         7 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0, 8 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         9 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0, 12 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         14 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         15 as libc::c_int as u16_0, 2 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         17 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         18 as libc::c_int as u16_0, 2 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         21 as libc::c_int as u16_0, 2 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         24 as libc::c_int as u16_0, 18 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         26 as libc::c_int as u16_0, 2 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0, 30 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         36 as libc::c_int as u16_0, 2 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         33 as libc::c_int as u16_0, 6 as libc::c_int as u16_0,
-         0 as libc::c_int as u16_0, -(1 as libc::c_int) as u16_0,
-         39 as libc::c_int as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0, 0 as libc::c_int as u16_0,
-         -(1 as libc::c_int) as u16_0];
-    let mut p: *mut u16_0 = rr_desc.as_mut_ptr();
+    static mut rr_desc: [u16; 73] =
+        [2 as libc::c_int as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16, 3 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         4 as libc::c_int as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16, 5 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         6 as libc::c_int as u16, 0 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         7 as libc::c_int as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16, 8 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         9 as libc::c_int as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16, 12 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         14 as libc::c_int as u16, 0 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         15 as libc::c_int as u16, 2 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         17 as libc::c_int as u16, 0 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         18 as libc::c_int as u16, 2 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         21 as libc::c_int as u16, 2 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         24 as libc::c_int as u16, 18 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         26 as libc::c_int as u16, 2 as libc::c_int as u16,
+         0 as libc::c_int as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16, 30 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         36 as libc::c_int as u16, 2 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         33 as libc::c_int as u16, 6 as libc::c_int as u16,
+         0 as libc::c_int as u16, -(1 as libc::c_int) as u16,
+         39 as libc::c_int as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16, 0 as libc::c_int as u16,
+         -(1 as libc::c_int) as u16];
+    let mut p: *mut u16 = rr_desc.as_mut_ptr();
     while *p as libc::c_int != type_0 && *p as libc::c_int != 0 as libc::c_int
           {
         loop  {
             let fresh17 = p;
             p = p.offset(1);
             if !(*fresh17 as libc::c_int !=
-                     -(1 as libc::c_int) as u16_0 as libc::c_int) {
+                     -(1 as libc::c_int) as u16 as libc::c_int) {
                 break ;
             }
         }

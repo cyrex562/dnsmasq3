@@ -1,139 +1,25 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
-         non_upper_case_globals, unused_assignments, unused_mut)]
-#![register_tool(c2rust)]
-#![feature(const_raw_ptr_to_usize_cast, extern_types, label_break_value,
-           ptr_wrapping_offset_from, register_tool)]
-extern "C" {
-    pub type _IO_wide_data;
-    pub type _IO_codecvt;
-    pub type _IO_marker;
-    #[no_mangle]
-    fn inet_ntoa(__in: in_addr) -> *mut libc::c_char;
-    #[no_mangle]
-    fn inet_ntop(__af: libc::c_int, __cp: *const libc::c_void,
-                 __buf: *mut libc::c_char, __len: socklen_t)
-     -> *const libc::c_char;
-    #[no_mangle]
-    fn __xstat(__ver: libc::c_int, __filename: *const libc::c_char,
-               __stat_buf: *mut stat) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstat(__ver: libc::c_int, __fildes: libc::c_int,
-                __stat_buf: *mut stat) -> libc::c_int;
-    #[no_mangle]
-    fn __xstat64(__ver: libc::c_int, __filename: *const libc::c_char,
-                 __stat_buf: *mut stat64) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstat64(__ver: libc::c_int, __fildes: libc::c_int,
-                  __stat_buf: *mut stat64) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstatat(__ver: libc::c_int, __fildes: libc::c_int,
-                  __filename: *const libc::c_char, __stat_buf: *mut stat,
-                  __flag: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn __fxstatat64(__ver: libc::c_int, __fildes: libc::c_int,
-                    __filename: *const libc::c_char, __stat_buf: *mut stat64,
-                    __flag: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn __lxstat(__ver: libc::c_int, __filename: *const libc::c_char,
-                __stat_buf: *mut stat) -> libc::c_int;
-    #[no_mangle]
-    fn __lxstat64(__ver: libc::c_int, __filename: *const libc::c_char,
-                  __stat_buf: *mut stat64) -> libc::c_int;
-    #[no_mangle]
-    fn __xmknod(__ver: libc::c_int, __path: *const libc::c_char,
-                __mode: __mode_t, __dev: *mut __dev_t) -> libc::c_int;
-    #[no_mangle]
-    fn __xmknodat(__ver: libc::c_int, __fd: libc::c_int,
-                  __path: *const libc::c_char, __mode: __mode_t,
-                  __dev: *mut __dev_t) -> libc::c_int;
-    #[no_mangle]
-    fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
-     -> *mut libc::c_void;
-    #[no_mangle]
-    fn memmove(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
-     -> *mut libc::c_void;
-    #[no_mangle]
-    fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong)
-     -> *mut libc::c_void;
-    #[no_mangle]
-    fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
-              _: libc::c_ulong) -> libc::c_int;
-    #[no_mangle]
-    fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
-     -> *mut libc::c_char;
-    #[no_mangle]
-    static mut stdin: *mut FILE;
-    #[no_mangle]
-    static mut stdout: *mut FILE;
-    #[no_mangle]
-    fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...)
-     -> libc::c_int;
-    #[no_mangle]
-    fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
-     -> libc::c_int;
-    #[no_mangle]
-    fn snprintf(_: *mut libc::c_char, _: libc::c_ulong,
-                _: *const libc::c_char, _: ...) -> libc::c_int;
-    #[no_mangle]
-    fn getc(__stream: *mut FILE) -> libc::c_int;
-    #[no_mangle]
-    fn __uflow(_: *mut FILE) -> libc::c_int;
-    #[no_mangle]
-    fn putc(__c: libc::c_int, __stream: *mut FILE) -> libc::c_int;
-    #[no_mangle]
-    fn __overflow(_: *mut FILE, _: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
-                  __delimiter: libc::c_int, __stream: *mut FILE) -> __ssize_t;
-    #[no_mangle]
-    fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
-              _: libc::c_int) -> libc::c_long;
-    #[no_mangle]
-    fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
-               _: libc::c_int) -> libc::c_longlong;
-    #[no_mangle]
-    fn free(__ptr: *mut libc::c_void);
-    #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const libc::c_ushort;
-    #[no_mangle]
-    fn __ctype_tolower_loc() -> *mut *const __int32_t;
-    #[no_mangle]
-    fn __ctype_toupper_loc() -> *mut *const __int32_t;
-    #[no_mangle]
-    fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
-    #[no_mangle]
-    fn __strtol_internal(__nptr: *const libc::c_char,
-                         __endptr: *mut *mut libc::c_char,
-                         __base: libc::c_int, __group: libc::c_int)
-     -> libc::c_long;
-    #[no_mangle]
-    fn __strtoul_internal(__nptr: *const libc::c_char,
-                          __endptr: *mut *mut libc::c_char,
-                          __base: libc::c_int, __group: libc::c_int)
-     -> libc::c_ulong;
-    #[no_mangle]
-    fn __wcstol_internal(__nptr: *const __gwchar_t,
-                         __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
-                         __group: libc::c_int) -> libc::c_long;
-    #[no_mangle]
-    fn __wcstoul_internal(__nptr: *const __gwchar_t,
-                          __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
-                          __group: libc::c_int) -> libc::c_ulong;
-    #[no_mangle]
-    static mut dnsmasq_daemon: *mut dnsmasq_daemon;
-    #[no_mangle]
+use crate::defines::{in_addr, dhcp_context, time_t, dhcp_lease, dhcp_vendor, dhcp_mac, dhcp_netid_list, dhcp_packet, dnsmasq_daemon, dhcp_config, dhcp_netid, dhcp_opt, __bswap_32, in_addr_t, shared_network, dhcp_match_name, addr_list, pxe_service, C2RustUnnamed_9, dhcp_boot, __bswap_16, irec, _ISprint, dhcp_pxe_vendor, socklen_t, delay_config};
+use crate::util::{expand_buf, memcmp_masked, is_same_net, legal_hostname, hostname_isequal, safe_strncpy, prettyprint_time, print_mac, rand16, whine_malloc, do_rfc1035_name};
+use crate::lease::{lease_find_by_client, lease_find_by_addr, lease_prune, lease4_allocate, lease_set_hwaddr, lease_set_hostname, lease_set_expires, lease_set_interface, lease_add_extradata};
+use crate::dnsmasq_log::my_syslog;
+use crate::dhcp_common::{match_bytes, find_config, run_tag_if, match_netid, log_tags, strip_hostname, config_has_mac, option_string, option_filter};
+use crate::dhcp::{address_available, address_allocate, narrow_context, config_find_by_address, do_icmp_ping, host_from_dns};
+use crate::domain::get_domain;
+use crate::slack::{METRIC_BOOTP, METRIC_PXE, METRIC_DHCPDECLINE, METRIC_DHCPRELEASE, METRIC_DHCPDISCOVER, METRIC_DHCPOFFER, METRIC_DHCPREQUEST, METRIC_DHCPINFORM, METRIC_DHCPACK, METRIC_NOANSWER, METRIC_DHCPNAK};
+use crate::cache::a_record_from_hosts;
+use crate::network::enumerate_interfaces;
+use crate::delay_dhcp;
 
-#[no_mangle]
 pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                     mut iface_name: *mut libc::c_char,
                                     mut int_index: libc::c_int,
-                                    mut sz: size_t, mut now: time_t,
+                                    mut sz: usize, mut now: time_t,
                                     mut unicast_dest: libc::c_int,
                                     mut loopback: libc::c_int,
                                     mut is_inform: *mut libc::c_int,
                                     mut pxe: libc::c_int,
                                     mut fallback: in_addr,
-                                    mut recvtime: time_t) -> size_t {
+                                    mut recvtime: time_t) -> usize {
     let mut opt: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut clid: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut ltmp: *mut dhcp_lease = 0 as *mut dhcp_lease;
@@ -195,23 +81,23 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
     netid = &mut iface_id;
     if (*mess).op as libc::c_int != 1 as libc::c_int ||
            (*mess).hlen as libc::c_int > 16 as libc::c_int {
-        return 0 as libc::c_int as size_t
+        return 0 as libc::c_int as usize
     }
     if (*mess).htype as libc::c_int == 0 as libc::c_int &&
            (*mess).hlen as libc::c_int != 0 as libc::c_int {
-        return 0 as libc::c_int as size_t
+        return 0 as libc::c_int as usize
     }
     /* check for DHCP rather than BOOTP */
     opt = option_find(mess, sz, 53 as libc::c_int, 1 as libc::c_int);
     if !opt.is_null() {
-        let mut cookie: u32_0 =
-            __bswap_32(0x63825363 as libc::c_int as __uint32_t);
+        let mut cookie: u32 =
+            __bswap_32(0x63825363 as libc::c_int as u32);
         /* only insist on a cookie for DHCP. */
         if memcmp((*mess).options.as_mut_ptr() as *const libc::c_void,
-                  &mut cookie as *mut u32_0 as *const libc::c_void,
-                  ::std::mem::size_of::<u32_0>() as libc::c_ulong) !=
+                  &mut cookie as *mut u32 as *const libc::c_void,
+                  ::std::mem::size_of::<u32>() as libc::c_ulong) !=
                0 as libc::c_int {
-            return 0 as libc::c_int as size_t
+            return 0 as libc::c_int as usize
         }
         mess_type = option_uint(opt, 0 as libc::c_int, 1 as libc::c_int);
         /* two things to note here: expand_buf may move the packet,
@@ -219,11 +105,11 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
 	 sent includes the IP and UDP headers, hence the magic "-28" */
         opt = option_find(mess, sz, 57 as libc::c_int, 2 as libc::c_int);
         if !opt.is_null() {
-            let mut size: size_t =
+            let mut size: usize =
                 (option_uint(opt, 0 as libc::c_int, 2 as libc::c_int) as
-                     size_t).wrapping_sub(28 as libc::c_int as libc::c_ulong);
+                     usize).wrapping_sub(28 as libc::c_int as libc::c_ulong);
             if size > 16384 as libc::c_int as libc::c_ulong {
-                size = 16384 as libc::c_int as size_t
+                size = 16384 as libc::c_int as usize
             } else if size <
                           ::std::mem::size_of::<dhcp_packet>() as
                               libc::c_ulong {
@@ -328,7 +214,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                                             as
                                                                             isize)
                                   as
-                                  *mut u8_0).offset(::std::mem::size_of::<u32_0>()
+                                  *mut u8).offset(::std::mem::size_of::<u32>()
                                                         as libc::c_ulong as
                                                         isize),
                              (mess as *mut libc::c_uchar).offset(sz as isize),
@@ -683,7 +569,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                   } else if (*mess).giaddr.s_addr != 0 {
                       inet_ntoa((*mess).giaddr)
                   } else { iface_name });
-        return 0 as libc::c_int as size_t
+        return 0 as libc::c_int as usize
     }
     if (*dnsmasq_daemon).options[(28 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -739,14 +625,14 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
         let mut len_0: libc::c_uint = 0;
         let mut elen_0: libc::c_uint = 0;
         let mut match_0: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-        let mut offset_0: size_t = 0;
-        let mut o2: size_t = 0;
+        let mut offset_0: usize = 0;
+        let mut o2: usize = 0;
         if (*o).flags & 2048 as libc::c_int != 0 {
             opt = option_find(mess, sz, 124 as libc::c_int, 5 as libc::c_int);
             if opt.is_null() {
                 current_block_146 = 18316056106135622027;
             } else {
-                offset_0 = 0 as libc::c_int as size_t;
+                offset_0 = 0 as libc::c_int as usize;
                 while offset_0 <
                           (*opt.offset(1 as libc::c_int as isize) as
                                libc::c_int as
@@ -828,7 +714,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                                                          libc::c_uint)
                                                                      as
                                                                      libc::c_ulong)
-                                    as size_t as size_t
+                                    as usize as usize
                         }
                     }
                     if match_0 != 0 { break ; }
@@ -840,7 +726,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                                                 as
                                                                                 libc::c_uint)
                                                              as libc::c_ulong)
-                            as size_t as size_t
+                            as usize as usize
                 }
                 current_block_146 = 10720305954121010852;
             }
@@ -1006,7 +892,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                       (*dnsmasq_daemon).namebuff);
         }
     }
-    (*mess).op = 2 as libc::c_int as u8_0;
+    (*mess).op = 2 as libc::c_int as u8;
     config =
         find_config((*dnsmasq_daemon).dhcp_conf, context, clid, clid_len,
                     (*mess).chaddr.as_mut_ptr(), (*mess).hlen as libc::c_int,
@@ -1046,7 +932,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                (*mess).hlen as libc::c_int == 0 as libc::c_int ||
                (*context).flags as libc::c_uint &
                    (1 as libc::c_uint) << 3 as libc::c_int != 0 {
-            return 0 as libc::c_int as size_t
+            return 0 as libc::c_int as usize
         } /* BOOTP vend area is only 64 bytes */
         if !config.is_null() &&
                (*config).flags & 1 as libc::c_int as libc::c_uint != 0 {
@@ -1073,9 +959,9 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
         if (*mess).file[0 as libc::c_int as usize] != 0 {
             memcpy((*dnsmasq_daemon).dhcp_buff2 as *mut libc::c_void,
                    (*mess).file.as_mut_ptr() as *const libc::c_void,
-                   ::std::mem::size_of::<[u8_0; 128]>() as
+                   ::std::mem::size_of::<[u8; 128]>() as
                        libc::c_ulong); /* ensure zero term. */
-            *(*dnsmasq_daemon).dhcp_buff2.offset((::std::mem::size_of::<[u8_0; 128]>()
+            *(*dnsmasq_daemon).dhcp_buff2.offset((::std::mem::size_of::<[u8; 128]>()
                                                       as
                                                       libc::c_ulong).wrapping_add(1
                                                                                       as
@@ -1361,7 +1247,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
     }
     if !client_hostname.is_null() {
         let mut m: *mut dhcp_match_name = 0 as *mut dhcp_match_name;
-        let mut nl: size_t = strlen(client_hostname);
+        let mut nl: usize = strlen(client_hostname);
         if (*dnsmasq_daemon).options[(28 as libc::c_int as
                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                            as
@@ -1389,7 +1275,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
         }
         m = (*dnsmasq_daemon).dhcp_name_match;
         while !m.is_null() {
-            let mut ml: size_t = strlen((*m).name);
+            let mut ml: usize = strlen((*m).name);
             let mut save: libc::c_char = 0 as libc::c_int as libc::c_char;
             if !(nl < ml) {
                 if nl > ml {
@@ -1561,13 +1447,13 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                          val: 0 as *mut libc::c_uchar,
                          netid: 0 as *mut dhcp_netid,
                          next: 0 as *mut dhcp_opt,};
-            if ignore != 0 { return 0 as libc::c_int as size_t }
+            if ignore != 0 { return 0 as libc::c_int as usize }
             if layer & 0x8000 as libc::c_int != 0 {
                 my_syslog((3 as libc::c_int) << 3 as libc::c_int |
                               3 as libc::c_int,
                           b"PXE BIS not supported\x00" as *const u8 as
                               *const libc::c_char);
-                return 0 as libc::c_int as size_t
+                return 0 as libc::c_int as usize
             }
             memcpy(save71.as_mut_ptr() as *mut libc::c_void,
                    &mut *opt.offset((2 as
@@ -1593,7 +1479,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
             }
             if service.is_null() || (*service).basename.is_null() ||
                    context.is_null() {
-                return 0 as libc::c_int as size_t
+                return 0 as libc::c_int as usize
             }
             clear_packet(mess, end);
             (*mess).yiaddr = (*mess).ciaddr;
@@ -1606,13 +1492,13 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
             } else { (*mess).siaddr = (*context).local }
             if !strchr((*service).basename, '.' as i32).is_null() {
                 snprintf((*mess).file.as_mut_ptr() as *mut libc::c_char,
-                         ::std::mem::size_of::<[u8_0; 128]>() as
+                         ::std::mem::size_of::<[u8; 128]>() as
                              libc::c_ulong,
                          b"%s\x00" as *const u8 as *const libc::c_char,
                          (*service).basename);
             } else {
                 snprintf((*mess).file.as_mut_ptr() as *mut libc::c_char,
-                         ::std::mem::size_of::<[u8_0; 128]>() as
+                         ::std::mem::size_of::<[u8; 128]>() as
                              libc::c_ulong,
                          b"%s.%d\x00" as *const u8 as *const libc::c_char,
                          (*service).basename, layer);
@@ -1676,8 +1562,8 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                         (*mess).flags =
                             ((*mess).flags as libc::c_int |
                                  __bswap_16(0x8000 as libc::c_int as
-                                                __uint16_t) as libc::c_int) as
-                                u16_0
+                                                u16) as libc::c_int) as
+                                u16
                         /* broadcast */
                     }
                     clear_packet(mess, end);
@@ -1703,7 +1589,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                         if !(*boot).file.is_null() {
                             safe_strncpy((*mess).file.as_mut_ptr() as
                                              *mut libc::c_char, (*boot).file,
-                                         ::std::mem::size_of::<[u8_0; 128]>()
+                                         ::std::mem::size_of::<[u8; 128]>()
                                              as libc::c_ulong);
                         }
                     }
@@ -1754,7 +1640,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
     /* if we're just a proxy server, go no further */
     if (*context).flags as libc::c_uint &
            (1 as libc::c_uint) << 3 as libc::c_int != 0 || pxe != 0 {
-        return 0 as libc::c_int as size_t
+        return 0 as libc::c_int as usize
     }
     opt = option_find(mess, sz, 55 as libc::c_int, 0 as libc::c_int);
     if !opt.is_null() {
@@ -1784,7 +1670,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                            option_addr(opt).s_addr !=
                                server_id(context, override_0, fallback).s_addr
                        {
-                        return 0 as libc::c_int as size_t
+                        return 0 as libc::c_int as usize
                     }
                     /* sanitise any message. Paranoid? Moi? */
                     sanitise(option_find(mess, sz, 56 as libc::c_int,
@@ -1793,7 +1679,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                     opt =
                         option_find(mess, sz, 50 as libc::c_int,
                                     4 as libc::c_int);
-                    if opt.is_null() { return 0 as libc::c_int as size_t }
+                    if opt.is_null() { return 0 as libc::c_int as usize }
                     (*dnsmasq_daemon).metrics[METRIC_DHCPDECLINE as
                                                   libc::c_int as usize] =
                         (*dnsmasq_daemon).metrics[METRIC_DHCPDECLINE as
@@ -1839,7 +1725,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                             context = (*context).current
                         }
                     }
-                    return 0 as libc::c_int as size_t
+                    return 0 as libc::c_int as usize
                 }
                 7 => {
                     context =
@@ -1854,7 +1740,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                            option_addr(opt).s_addr !=
                                server_id(context, override_0, fallback).s_addr
                        {
-                        return 0 as libc::c_int as size_t
+                        return 0 as libc::c_int as usize
                     }
                     if !lease.is_null() &&
                            (*lease).addr.s_addr == (*mess).ciaddr.s_addr {
@@ -1875,7 +1761,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                    *mut libc::c_void, emac, emac_len,
                                iface_name, 0 as *mut libc::c_char, message,
                                (*mess).xid);
-                    return 0 as libc::c_int as size_t
+                    return 0 as libc::c_int as usize
                 }
                 1 => {
                     if ignore != 0 ||
@@ -1901,7 +1787,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                                                                          as
                                                                                                          libc::c_ulong))
                                != 0 {
-                            return 0 as libc::c_int as size_t
+                            return 0 as libc::c_int as usize
                         }
                         message =
                             b"ignored\x00" as *const u8 as *const libc::c_char
@@ -2042,7 +1928,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                   tagif_netid);
                                context.is_null()
                            } {
-                        return 0 as libc::c_int as size_t
+                        return 0 as libc::c_int as usize
                     }
                     if !(*context).netid.net.is_null() {
                         (*context).netid.next = netid;
@@ -2113,7 +1999,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                            !config.is_null() &&
                                (*config).flags &
                                    1 as libc::c_int as libc::c_uint != 0 {
-                        return 0 as libc::c_int as size_t
+                        return 0 as libc::c_int as usize
                     }
                     opt =
                         option_find(mess, sz, 50 as libc::c_int,
@@ -2133,7 +2019,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                    0 as libc::c_int as libc::c_uint {
                                 if option_addr(opt).s_addr !=
                                        override_0.s_addr {
-                                    return 0 as libc::c_int as size_t
+                                    return 0 as libc::c_int as usize
                                 }
                             } else {
                                 while !context.is_null() {
@@ -2191,7 +2077,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                                                                                          as
                                                                                                                          libc::c_ulong))
                                                == 0 {
-                                            return 0 as libc::c_int as size_t
+                                            return 0 as libc::c_int as usize
                                         }
                                         message =
                                             b"wrong server-ID\x00" as
@@ -2232,7 +2118,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                                                                                                  as
                                                                                                                  libc::c_ulong))
                                        == 0 {
-                                return 0 as libc::c_int as size_t
+                                return 0 as libc::c_int as usize
                             }
                             if !lease.is_null() &&
                                    (*lease).addr.s_addr !=
@@ -2278,7 +2164,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
 		 if the lease is held by another server. Just ignore it in that case. 
 		 If the request is unicast to us, then somethings wrong, NAK */
                             if unicast_dest == 0 {
-                                return 0 as libc::c_int as size_t
+                                return 0 as libc::c_int as usize
                             }
                             message =
                                 b"lease not found\x00" as *const u8 as
@@ -2325,7 +2211,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                     if !message.is_null() ||
                            (*mess).ciaddr.s_addr ==
                                0 as libc::c_int as libc::c_uint {
-                        return 0 as libc::c_int as size_t
+                        return 0 as libc::c_int as usize
                     }
                     /* For DHCPINFORM only, cope without a valid context */
                     context =
@@ -2538,7 +2424,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                *mut libc::c_void, emac, emac_len, iface_name,
                            0 as *mut libc::c_char, message, (*mess).xid);
                 /* rapid commit case: lease allocate failed but don't send DHCPNAK */
-                if rapid_commit != 0 { return 0 as libc::c_int as size_t }
+                if rapid_commit != 0 { return 0 as libc::c_int as usize }
                 (*mess).yiaddr.s_addr = 0 as libc::c_int as in_addr_t;
                 clear_packet(mess, end);
                 option_put(mess, end, 53 as libc::c_int, 1 as libc::c_int,
@@ -2559,8 +2445,8 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
                                    (*context).netmask) != 0 {
                     (*mess).flags =
                         ((*mess).flags as libc::c_int |
-                             __bswap_16(0x8000 as libc::c_int as __uint16_t)
-                                 as libc::c_int) as u16_0; /* broadcast */
+                             __bswap_16(0x8000 as libc::c_int as u16)
+                                 as libc::c_int) as u16; /* broadcast */
                     (*mess).ciaddr.s_addr = 0 as libc::c_int as in_addr_t
                 }
             } else {
@@ -2948,7 +2834,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut dhcp_context,
             }
             return dhcp_packet_size(mess, agent_id, real_end)
         }
-    return 0 as libc::c_int as size_t;
+    return 0 as libc::c_int as usize;
 }
 /* find a good value to use as MAC address for logging and address-allocation hashing.
    This is normally just the chaddr field from the DHCP packet,
@@ -3072,7 +2958,7 @@ unsafe extern "C" fn log_packet(mut type_0: *mut libc::c_char,
                                 mut mac_len: libc::c_int,
                                 mut interface: *mut libc::c_char,
                                 mut string: *mut libc::c_char,
-                                mut err: *mut libc::c_char, mut xid: u32_0) {
+                                mut err: *mut libc::c_char, mut xid: u32) {
     let mut a: in_addr = in_addr{s_addr: 0,};
     if err.is_null() &&
            (*dnsmasq_daemon).options[(28 as libc::c_int as
@@ -3177,7 +3063,7 @@ unsafe extern "C" fn log_packet(mut type_0: *mut libc::c_char,
     };
 }
 unsafe extern "C" fn log_options(mut start: *mut libc::c_uchar,
-                                 mut xid: u32_0) {
+                                 mut xid: u32) {
     while *start as libc::c_int != 255 as libc::c_int {
         let mut optname: *mut libc::c_char =
             option_string(2 as libc::c_int,
@@ -3243,7 +3129,7 @@ unsafe extern "C" fn option_find1(mut p: *mut libc::c_uchar,
         }
     };
 }
-unsafe extern "C" fn option_find(mut mess: *mut dhcp_packet, mut size: size_t,
+unsafe extern "C" fn option_find(mut mess: *mut dhcp_packet, mut size: usize,
                                  mut opt_type: libc::c_int,
                                  mut minsize: libc::c_int)
  -> *mut libc::c_uchar {
@@ -3255,7 +3141,7 @@ unsafe extern "C" fn option_find(mut mess: *mut dhcp_packet, mut size: size_t,
                                                                     libc::c_int
                                                                     as isize)
                           as
-                          *mut u8_0).offset(::std::mem::size_of::<u32_0>() as
+                          *mut u8).offset(::std::mem::size_of::<u32>() as
                                                 libc::c_ulong as isize),
                      (mess as *mut libc::c_uchar).offset(size as isize),
                      opt_type, minsize);
@@ -3266,7 +3152,7 @@ unsafe extern "C" fn option_find(mut mess: *mut dhcp_packet, mut size: size_t,
                                                                     libc::c_int
                                                                     as isize)
                           as
-                          *mut u8_0).offset(::std::mem::size_of::<u32_0>() as
+                          *mut u8).offset(::std::mem::size_of::<u32>() as
                                                 libc::c_ulong as isize),
                      (mess as *mut libc::c_uchar).offset(size as isize),
                      52 as libc::c_int, 1 as libc::c_int);
@@ -3358,7 +3244,7 @@ unsafe extern "C" fn find_overload(mut mess: *mut dhcp_packet)
     let mut p: *mut libc::c_uchar =
         (&mut *(*mess).options.as_mut_ptr().offset(0 as libc::c_int as isize)
              as
-             *mut u8_0).offset(::std::mem::size_of::<u32_0>() as libc::c_ulong
+             *mut u8).offset(::std::mem::size_of::<u32>() as libc::c_ulong
                                    as isize);
     while *p as libc::c_int != 0 as libc::c_int {
         if *p as libc::c_int == 52 as libc::c_int { return p }
@@ -3371,17 +3257,17 @@ unsafe extern "C" fn find_overload(mut mess: *mut dhcp_packet)
 unsafe extern "C" fn dhcp_packet_size(mut mess: *mut dhcp_packet,
                                       mut agent_id: *mut libc::c_uchar,
                                       mut real_end: *mut libc::c_uchar)
- -> size_t {
+ -> usize {
     let mut p: *mut libc::c_uchar =
         dhcp_skip_opts((&mut *(*mess).options.as_mut_ptr().offset(0 as
                                                                       libc::c_int
                                                                       as
                                                                       isize)
                             as
-                            *mut u8_0).offset(::std::mem::size_of::<u32_0>()
+                            *mut u8).offset(::std::mem::size_of::<u32>()
                                                   as libc::c_ulong as isize));
     let mut overload: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut ret: size_t = 0;
+    let mut ret: usize = 0;
     /* move agent_id back down to the end of the packet */
     if !agent_id.is_null() {
         memmove(p as *mut libc::c_void, agent_id as *const libc::c_void,
@@ -3531,7 +3417,7 @@ unsafe extern "C" fn dhcp_packet_size(mut mess: *mut dhcp_packet,
                       inet_ntoa((*mess).siaddr));
         }
         if (*mess).flags as libc::c_int &
-               __bswap_16(0x8000 as libc::c_int as __uint16_t) as libc::c_int
+               __bswap_16(0x8000 as libc::c_int as u16) as libc::c_int
                != 0 &&
                (*mess).ciaddr.s_addr == 0 as libc::c_int as libc::c_uint {
             my_syslog((3 as libc::c_int) << 3 as libc::c_int |
@@ -3543,15 +3429,15 @@ unsafe extern "C" fn dhcp_packet_size(mut mess: *mut dhcp_packet,
                                                                    libc::c_int
                                                                    as isize)
                          as
-                         *mut u8_0).offset(::std::mem::size_of::<u32_0>() as
+                         *mut u8).offset(::std::mem::size_of::<u32>() as
                                                libc::c_ulong as isize),
                     (*mess).xid);
     }
     ret =
         p.wrapping_offset_from(mess as *mut libc::c_uchar) as libc::c_long as
-            size_t;
+            usize;
     if ret < 300 as libc::c_int as libc::c_ulong {
-        ret = 300 as libc::c_int as size_t
+        ret = 300 as libc::c_int as usize
     }
     return ret;
 }
@@ -3565,7 +3451,7 @@ unsafe extern "C" fn free_space(mut mess: *mut dhcp_packet,
                                                                       as
                                                                       isize)
                             as
-                            *mut u8_0).offset(::std::mem::size_of::<u32_0>()
+                            *mut u8).offset(::std::mem::size_of::<u32>()
                                                   as libc::c_ulong as isize));
     if p.offset(len as isize).offset(3 as libc::c_int as isize) >= end {
         /* not enough space in options area, try and use overload, if poss */
@@ -3601,7 +3487,7 @@ unsafe extern "C" fn free_space(mut mess: *mut dhcp_packet,
                    1 as libc::c_int != 0 {
                 p = dhcp_skip_opts((*mess).file.as_mut_ptr());
                 if p.offset(len as isize).offset(3 as libc::c_int as isize) >=
-                       (*mess).file.as_mut_ptr().offset(::std::mem::size_of::<[u8_0; 128]>()
+                       (*mess).file.as_mut_ptr().offset(::std::mem::size_of::<[u8; 128]>()
                                                             as libc::c_ulong
                                                             as isize) {
                     p = 0 as *mut libc::c_uchar
@@ -3623,7 +3509,7 @@ unsafe extern "C" fn free_space(mut mess: *mut dhcp_packet,
                     if p.offset(len as
                                     isize).offset(3 as libc::c_int as isize)
                            >=
-                           (*mess).sname.as_mut_ptr().offset(::std::mem::size_of::<[u8_0; 64]>()
+                           (*mess).sname.as_mut_ptr().offset(::std::mem::size_of::<[u8; 64]>()
                                                                  as
                                                                  libc::c_ulong
                                                                  as isize) {
@@ -3673,7 +3559,7 @@ unsafe extern "C" fn option_put_string(mut mess: *mut dhcp_packet,
                                        mut string: *const libc::c_char,
                                        mut null_term: libc::c_int) {
     let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut len: size_t = strlen(string);
+    let mut len: usize = strlen(string);
     if null_term != 0 && len != 255 as libc::c_int as libc::c_ulong {
         len = len.wrapping_add(1)
     }
@@ -3944,7 +3830,7 @@ unsafe extern "C" fn pxe_uefi_workaround(mut pxe_arch: libc::c_int,
     if !(*found).sname.is_null() {
         (*mess).siaddr = a_record_from_hosts((*found).sname, now);
         snprintf((*mess).sname.as_mut_ptr() as *mut libc::c_char,
-                 ::std::mem::size_of::<[u8_0; 64]>() as libc::c_ulong,
+                 ::std::mem::size_of::<[u8; 64]>() as libc::c_ulong,
                  b"%s\x00" as *const u8 as *const libc::c_char,
                  (*found).sname);
     } else {
@@ -3957,7 +3843,7 @@ unsafe extern "C" fn pxe_uefi_workaround(mut pxe_arch: libc::c_int,
                   16 as libc::c_int as socklen_t);
     }
     snprintf((*mess).file.as_mut_ptr() as *mut libc::c_char,
-             ::std::mem::size_of::<[u8_0; 128]>() as libc::c_ulong,
+             ::std::mem::size_of::<[u8; 128]>() as libc::c_ulong,
              if !strchr((*found).basename, '.' as i32).is_null() {
                  b"%s\x00" as *const u8 as *const libc::c_char
              } else { b"%s.0\x00" as *const u8 as *const libc::c_char },
@@ -4024,7 +3910,7 @@ unsafe extern "C" fn pxe_opts(mut pxe_arch: libc::c_int,
             's_185:
                 {
                     let mut current_block_29: u64;
-                    let mut len: size_t = strlen((*service).menu);
+                    let mut len: usize = strlen((*service).menu);
                     /* opt 43 max size is 255. encapsulated option has type and length
 	   bytes, so its max size is 253. */
                     if (p.wrapping_offset_from((*dnsmasq_daemon).dhcp_buff as
@@ -4173,12 +4059,12 @@ unsafe extern "C" fn pxe_opts(mut pxe_arch: libc::c_int,
 unsafe extern "C" fn clear_packet(mut mess: *mut dhcp_packet,
                                   mut end: *mut libc::c_uchar) {
     memset((*mess).sname.as_mut_ptr() as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<[u8_0; 64]>() as libc::c_ulong);
+           ::std::mem::size_of::<[u8; 64]>() as libc::c_ulong);
     memset((*mess).file.as_mut_ptr() as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<[u8_0; 128]>() as libc::c_ulong);
+           ::std::mem::size_of::<[u8; 128]>() as libc::c_ulong);
     memset((&mut *(*mess).options.as_mut_ptr().offset(0 as libc::c_int as
                                                           isize) as
-                *mut u8_0).offset(::std::mem::size_of::<u32_0>() as
+                *mut u8).offset(::std::mem::size_of::<u32>() as
                                       libc::c_ulong as isize) as
                *mut libc::c_void, 0 as libc::c_int,
            end.wrapping_offset_from((&mut *(*mess).options.as_mut_ptr().offset(0
@@ -4187,7 +4073,7 @@ unsafe extern "C" fn clear_packet(mut mess: *mut dhcp_packet,
                                                                                    as
                                                                                    isize)
                                          as
-                                         *mut u8_0).offset(::std::mem::size_of::<u32_0>()
+                                         *mut u8).offset(::std::mem::size_of::<u32>()
                                                                as
                                                                libc::c_ulong
                                                                as isize)) as
@@ -4218,16 +4104,16 @@ pub unsafe extern "C" fn find_boot(mut netid: *mut dhcp_netid)
     }
     return boot;
 }
-unsafe extern "C" fn is_pxe_client(mut mess: *mut dhcp_packet, mut sz: size_t,
+unsafe extern "C" fn is_pxe_client(mut mess: *mut dhcp_packet, mut sz: usize,
                                    mut pxe_vendor: *mut *const libc::c_char)
  -> libc::c_int {
     let mut opt: *const libc::c_uchar = 0 as *const libc::c_uchar;
-    let mut conf_len: ssize_t = 0 as libc::c_int as ssize_t;
+    let mut conf_len: susize = 0 as libc::c_int as susize;
     let mut conf: *const dhcp_pxe_vendor = (*dnsmasq_daemon).dhcp_pxe_vendors;
     opt = option_find(mess, sz, 60 as libc::c_int, 0 as libc::c_int);
     if opt.is_null() { return 0 as libc::c_int }
     while !conf.is_null() {
-        conf_len = strlen((*conf).data) as ssize_t;
+        conf_len = strlen((*conf).data) as susize;
         if !((*(opt as *mut libc::c_uchar).offset(1 as libc::c_int as isize)
                   as libc::c_int as libc::c_long) < conf_len) {
             if strncmp(&mut *(opt as
@@ -4370,8 +4256,8 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
     if !id_list.is_null() {
         (*mess).flags =
             ((*mess).flags as libc::c_int |
-                 __bswap_16(0x8000 as libc::c_int as __uint16_t) as
-                     libc::c_int) as u16_0
+                 __bswap_16(0x8000 as libc::c_int as u16) as
+                     libc::c_int) as u16
     }
     if !context.is_null() { (*mess).siaddr = (*context).local }
     /* See if we can send the boot stuff as options.
@@ -4408,7 +4294,7 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
             } else {
                 safe_strncpy((*mess).sname.as_mut_ptr() as *mut libc::c_char,
                              (*boot).sname,
-                             ::std::mem::size_of::<[u8_0; 64]>() as
+                             ::std::mem::size_of::<[u8; 64]>() as
                                  libc::c_ulong);
             }
         }
@@ -4438,7 +4324,7 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
             } else {
                 safe_strncpy((*mess).file.as_mut_ptr() as *mut libc::c_char,
                              (*boot).file,
-                             ::std::mem::size_of::<[u8_0; 128]>() as
+                             ::std::mem::size_of::<[u8; 128]>() as
                                  libc::c_ulong);
             }
         }
@@ -4458,7 +4344,7 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
                (*opt).flags & 16 as libc::c_int == 0 {
             safe_strncpy((*mess).file.as_mut_ptr() as *mut libc::c_char,
                          (*opt).val as *mut libc::c_char,
-                         ::std::mem::size_of::<[u8_0; 128]>() as
+                         ::std::mem::size_of::<[u8; 128]>() as
                              libc::c_ulong);
             done_file = 1 as libc::c_int
         }
@@ -4468,7 +4354,7 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
                (*opt).flags & 16 as libc::c_int == 0 {
             safe_strncpy((*mess).sname.as_mut_ptr() as *mut libc::c_char,
                          (*opt).val as *mut libc::c_char,
-                         ::std::mem::size_of::<[u8_0; 64]>() as
+                         ::std::mem::size_of::<[u8; 64]>() as
                              libc::c_ulong);
             done_server = 1 as libc::c_int
         }
@@ -4501,9 +4387,9 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
                                                                                          libc::c_ulong))
                != 0 {
         f0 = (*mess).file[0 as libc::c_int as usize];
-        (*mess).file[0 as libc::c_int as usize] = 1 as libc::c_int as u8_0;
+        (*mess).file[0 as libc::c_int as usize] = 1 as libc::c_int as u8;
         s0 = (*mess).sname[0 as libc::c_int as usize];
-        (*mess).sname[0 as libc::c_int as usize] = 1 as libc::c_int as u8_0
+        (*mess).sname[0 as libc::c_int as usize] = 1 as libc::c_int as u8
     }
     /* At this point, if mess->sname or mess->file are zeroed, they are available
      for option overload, reserve space for the overload option. */
@@ -4789,7 +4675,7 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
                                        len + 5 as libc::c_int);
                         if !p.is_null() {
                             let mut swap_ent: libc::c_int =
-                                __bswap_32((*opt).u.encap as __uint32_t) as
+                                __bswap_32((*opt).u.encap as u32) as
                                     libc::c_int;
                             memcpy(p as *mut libc::c_void,
                                    &mut swap_ent as *mut libc::c_int as
@@ -4873,7 +4759,7 @@ unsafe extern "C" fn do_options(mut context: *mut dhcp_context,
         (*mess).sname[0 as libc::c_int as usize] = s0
     };
 }
-unsafe extern "C" fn apply_delay(mut xid: u32_0, mut recvtime: time_t,
+unsafe extern "C" fn apply_delay(mut xid: u32, mut recvtime: time_t,
                                  mut netid: *mut dhcp_netid) {
     let mut delay_conf: *mut delay_config = 0 as *mut delay_config;
     /* Decide which delay_config option we're using */
@@ -4922,7 +4808,7 @@ unsafe extern "C" fn apply_delay(mut xid: u32_0, mut recvtime: time_t,
                       (*delay_conf).delay);
         }
         delay_dhcp(recvtime, (*delay_conf).delay, -(1 as libc::c_int),
-                   0 as libc::c_int as uint32_t,
+                   0 as libc::c_int as u32,
                    0 as libc::c_int as libc::c_ushort);
     };
 }

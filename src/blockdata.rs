@@ -14,6 +14,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{blockdata, dnsmasq_daemon};
+use crate::util::{whine_malloc, read_write};
+
 static mut keyblock_free: *mut blockdata =
     0 as *const blockdata as *mut blockdata;
 static mut blockdata_count: libc::c_uint = 0;
@@ -89,11 +92,11 @@ pub unsafe extern "C" fn blockdata_report() {
 }
 unsafe extern "C" fn blockdata_alloc_real(mut fd: libc::c_int,
                                           mut data: *mut libc::c_char,
-                                          mut len: size_t) -> *mut blockdata {
+                                          mut len: usize) -> *mut blockdata {
     let mut block: *mut blockdata = 0 as *mut blockdata;
     let mut ret: *mut blockdata = 0 as *mut blockdata;
     let mut prev: *mut *mut blockdata = &mut ret;
-    let mut blen: size_t = 0;
+    let mut blen: usize = 0;
     while len > 0 as libc::c_int as libc::c_ulong {
         if keyblock_free.is_null() { blockdata_expand(50 as libc::c_int); }
         if !keyblock_free.is_null() {
@@ -107,8 +110,8 @@ unsafe extern "C" fn blockdata_alloc_real(mut fd: libc::c_int,
         }
         if blockdata_hwm < blockdata_count { blockdata_hwm = blockdata_count }
         blen =
-            if len > 40 as libc::c_int as libc::c_ulong {
-                40 as libc::c_int as libc::c_ulong
+            if len > 40 {
+                40
             } else { len };
         if !data.is_null() {
             memcpy((*block).key.as_mut_ptr() as *mut libc::c_void,
@@ -120,7 +123,7 @@ unsafe extern "C" fn blockdata_alloc_real(mut fd: libc::c_int,
             blockdata_free(ret);
             return 0 as *mut blockdata
         }
-        len = (len as libc::c_ulong).wrapping_sub(blen) as size_t as size_t;
+        len = (len as libc::c_ulong).wrapping_sub(blen) as usize as usize;
         *prev = block;
         prev = &mut (*block).next;
         (*block).next = 0 as *mut blockdata
@@ -129,7 +132,7 @@ unsafe extern "C" fn blockdata_alloc_real(mut fd: libc::c_int,
 }
 #[no_mangle]
 pub unsafe extern "C" fn blockdata_alloc(mut data: *mut libc::c_char,
-                                         mut len: size_t) -> *mut blockdata {
+                                         mut len: usize) -> *mut blockdata {
     return blockdata_alloc_real(0 as libc::c_int, data, len);
 }
 #[no_mangle]
@@ -149,10 +152,10 @@ pub unsafe extern "C" fn blockdata_free(mut blocks: *mut blockdata) {
 /* if data == NULL, return pointer to static block of sufficient size */
 #[no_mangle]
 pub unsafe extern "C" fn blockdata_retrieve(mut block: *mut blockdata,
-                                            mut len: size_t,
+                                            mut len: usize,
                                             mut data: *mut libc::c_void)
  -> *mut libc::c_void {
-    let mut blen: size_t = 0;
+    let mut blen: usize = 0;
     let mut b: *mut blockdata = 0 as *mut blockdata;
     let mut new: *mut libc::c_void = 0 as *mut libc::c_void;
     let mut d: *mut libc::c_void = 0 as *mut libc::c_void;
@@ -177,28 +180,28 @@ pub unsafe extern "C" fn blockdata_retrieve(mut block: *mut blockdata,
             } else { len };
         memcpy(d, (*b).key.as_mut_ptr() as *const libc::c_void, blen);
         d = d.offset(blen as isize);
-        len = (len as libc::c_ulong).wrapping_sub(blen) as size_t as size_t;
+        len = (len as libc::c_ulong).wrapping_sub(blen) as usize as usize;
         b = (*b).next
     }
     return data;
 }
 #[no_mangle]
 pub unsafe extern "C" fn blockdata_write(mut block: *mut blockdata,
-                                         mut len: size_t,
+                                         mut len: usize,
                                          mut fd: libc::c_int) {
     while len > 0 as libc::c_int as libc::c_ulong && !block.is_null() {
-        let mut blen: size_t =
+        let mut blen: usize =
             if len > 40 as libc::c_int as libc::c_ulong {
                 40 as libc::c_int as libc::c_ulong
             } else { len };
         read_write(fd, (*block).key.as_mut_ptr(), blen as libc::c_int,
                    0 as libc::c_int);
-        len = (len as libc::c_ulong).wrapping_sub(blen) as size_t as size_t;
+        len = (len as libc::c_ulong).wrapping_sub(blen) as usize as usize;
         block = (*block).next
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn blockdata_read(mut fd: libc::c_int, mut len: size_t)
+pub unsafe extern "C" fn blockdata_read(mut fd: libc::c_int, mut len: usize)
  -> *mut blockdata {
     return blockdata_alloc_real(fd, 0 as *mut libc::c_char, len);
 }

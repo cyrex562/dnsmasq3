@@ -1,5 +1,13 @@
 
 /* defaults in case we die() before we log_start() */
+use crate::defines::{SOCK_DGRAM, passwd, dnsmasq_daemon, __gid_t, sockaddr_un, sa_family_t, __CONST_SOCKADDR_ARG, sockaddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, __time_t, __syscall_slong_t};
+use crate::slack::{log_entry, time};
+use crate::send_event;
+use crate::util::{safe_malloc, safe_strncpy};
+use std::io::stderr;
+use std::env::args;
+use crate::poll::{poll_listen, poll_check};
+
 static mut log_fac: libc::c_int = (3 as libc::c_int) << 3 as libc::c_int;
 static mut log_stderr: libc::c_int = 0 as libc::c_int;
 static mut echo_stderr: libc::c_int = 0 as libc::c_int;
@@ -139,7 +147,7 @@ unsafe extern "C" fn free_entry() {
     free_entries = tmp;
 }
 unsafe extern "C" fn log_write() {
-    let mut rc: ssize_t = 0;
+    let mut rc: isize = 0;
     while !entries.is_null() {
         /* The data in the payload is written with a terminating zero character 
 	 and the length reflects this. For a stream connection we need to 
@@ -167,7 +175,7 @@ unsafe extern "C" fn log_write() {
                       (*entries).payload.as_mut_ptr().offset((*entries).offset
                                                                  as isize) as
                           *const libc::c_void,
-                      ((*entries).length - len_adjust) as size_t);
+                      ((*entries).length - len_adjust) as usize);
             if rc != -(1 as libc::c_int) as libc::c_long {
                 (*entries).length =
                     ((*entries).length as libc::c_long - rc) as libc::c_int;
@@ -279,7 +287,7 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
     let mut entry: *mut log_entry = 0 as *mut log_entry;
     let mut time_now: time_t = 0;
     let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut len: size_t = 0;
+    let mut len: usize = 0;
     let mut pid: pid_t = getpid();
     let mut func: *mut libc::c_char =
         b"\x00" as *const u8 as *const libc::c_char as *mut libc::c_char;
@@ -389,7 +397,7 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
                                  *const libc::c_char, func, pid) as isize);
         len =
             p.wrapping_offset_from((*entry).payload.as_mut_ptr()) as
-                libc::c_long as size_t;
+                libc::c_long as usize;
         ap = args.clone();
         len =
             (len as
@@ -400,8 +408,8 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
                                                         format,
                                                         ap.as_va_list()) +
                                                   1 as libc::c_int) as
-                                                 libc::c_ulong) as size_t as
-                size_t;
+                                                 libc::c_ulong) as usize as
+                usize;
         (*entry).length =
             if len > 1024 as libc::c_int as libc::c_ulong {
                 1024 as libc::c_int as libc::c_ulong

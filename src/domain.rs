@@ -14,8 +14,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{in_addr, cond_domain, __bswap_32, dnsmasq_daemon, in6_addr};
+use crate::util::{addr6part, is_same_net6};
+
 unsafe extern "C" fn search_domain(mut addr: in_addr, mut c: *mut cond_domain)
- -> *mut cond_domain {
+                                   -> *mut cond_domain {
     while !c.is_null() {
         if (*c).is6 == 0 &&
                __bswap_32(addr.s_addr) >= __bswap_32((*c).start.s_addr) &&
@@ -36,7 +39,7 @@ pub unsafe extern "C" fn get_domain(mut addr: in_addr) -> *mut libc::c_char {
 unsafe extern "C" fn search_domain6(mut addr: *mut in6_addr,
                                     mut c: *mut cond_domain)
  -> *mut cond_domain {
-    let mut addrpart: u64_0 = addr6part(addr);
+    let mut addrpart: u64 = addr6part(addr);
     while !c.is_null() {
         if (*c).is6 != 0 &&
                is_same_net6(addr, &mut (*c).start6, 64 as libc::c_int) != 0 &&

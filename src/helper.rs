@@ -1,7 +1,9 @@
-use crate::defines::{dnsmasq_daemon, uid_t, gid_t, pid_t, sigaction, C2RustUnnamed_10, __sigset_t, C2RustUnnamed_12};
-use crate::network::fix_fd;
+use crate::defines::{dnsmasq_daemon, uid_t, gid_t, pid_t, sigaction, C2RustUnnamed_10, __sigset_t, C2RustUnnamed_12, __sighandler_t, size_t, in_addr, in6_addr, C2RustUnnamed, socklen_t, FILE, dhcp_lease, time_t, off_t, mysockaddr, ssize_t};
+use crate::network::{fix_fd, indextoname};
 use crate::send_event;
-use crate::util::{close_fds, read_write};
+use crate::util::{close_fds, read_write, legal_hostname, whine_malloc};
+use crate::slack::script_data;
+use std::fmt::write;
 
 // static mut buf: script_data;
 // static mut bytes_in_buf: size_t = 0;

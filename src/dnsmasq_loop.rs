@@ -1,3 +1,7 @@
+use crate::defines::{server, dnsmasq_daemon, randfd, __CONST_SOCKADDR_ARG, socklen_t, dns_header, __bswap_16, _ISxdigit};
+use crate::forward::{allocate_rfd, free_rfd};
+use crate::util::{retry_send, sa_len, rand16};
+use crate::network::check_servers;
 
 #[no_mangle]
 pub unsafe extern "C" fn loop_send_probes() {
@@ -32,7 +36,7 @@ pub unsafe extern "C" fn loop_send_probes() {
                (4 as libc::c_int | 2 as libc::c_int | 1024 as libc::c_int |
                     2048 as libc::c_int | 8 as libc::c_int | 32 as libc::c_int
                     | 8192 as libc::c_int) == 0 {
-            let mut len: ssize_t = loop_make_probe((*serv).uid);
+            let mut len: isize = loop_make_probe((*serv).uid);
             let mut fd: libc::c_int = 0;
             let mut rfd: *mut randfd = 0 as *mut randfd;
             if !(*serv).sfd.is_null() {
@@ -53,7 +57,7 @@ pub unsafe extern "C" fn loop_send_probes() {
                     while retry_send(sendto(fd,
                                             (*dnsmasq_daemon).packet as
                                                 *const libc::c_void,
-                                            len as size_t, 0 as libc::c_int,
+                                            len as usize, 0 as libc::c_int,
                                             __CONST_SOCKADDR_ARG{__sockaddr__:
                                                                      &mut (*serv).addr.sa,},
                                             sa_len(&mut (*serv).addr) as
@@ -81,7 +85,7 @@ pub unsafe extern "C" fn loop_send_probes() {
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-unsafe extern "C" fn loop_make_probe(mut uid: u32_0) -> ssize_t {
+unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
     let mut header: *mut dns_header =
         (*dnsmasq_daemon).packet as *mut dns_header;
     let mut p: *mut libc::c_uchar =
@@ -89,15 +93,15 @@ unsafe extern "C" fn loop_make_probe(mut uid: u32_0) -> ssize_t {
     /* packet buffer overwritten */
     (*dnsmasq_daemon).srv_save = 0 as *mut server; /* Add terminating zero */
     (*header).id = rand16(); /* log new state */
-    (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
+    (*header).arcount = __bswap_16(0 as libc::c_int as u16);
     (*header).nscount = (*header).arcount;
     (*header).ancount = (*header).nscount;
-    (*header).qdcount = __bswap_16(1 as libc::c_int as __uint16_t);
-    (*header).hb3 = 0x1 as libc::c_int as u8_0;
-    (*header).hb4 = 0 as libc::c_int as u8_0;
+    (*header).qdcount = __bswap_16(1 as libc::c_int as u16);
+    (*header).hb3 = 0x1 as libc::c_int as u8;
+    (*header).hb4 = 0 as libc::c_int as u8;
     (*header).hb3 =
         ((*header).hb3 as libc::c_int & !(0x78 as libc::c_int) |
-             0 as libc::c_int) as u8_0;
+             0 as libc::c_int) as u8;
     let fresh6 = p;
     p = p.offset(1);
     *fresh6 = 8 as libc::c_int as libc::c_uchar;
@@ -117,14 +121,14 @@ unsafe extern "C" fn loop_make_probe(mut uid: u32_0) -> ssize_t {
                                                                   as
                                                                   libc::c_ulong)
                      as isize);
-    let mut t_s: u16_0 = 16 as libc::c_int as u16_0;
+    let mut t_s: u16 = 16 as libc::c_int as u16;
     let mut t_cp: *mut libc::c_uchar = p;
     let fresh8 = t_cp;
     t_cp = t_cp.offset(1);
     *fresh8 = (t_s as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
     *t_cp = t_s as libc::c_uchar;
     p = p.offset(2 as libc::c_int as isize);
-    let mut t_s_0: u16_0 = 1 as libc::c_int as u16_0;
+    let mut t_s_0: u16 = 1 as libc::c_int as u16;
     let mut t_cp_0: *mut libc::c_uchar = p;
     let fresh9 = t_cp_0;
     t_cp_0 = t_cp_0.offset(1);
@@ -138,7 +142,7 @@ unsafe extern "C" fn loop_make_probe(mut uid: u32_0) -> ssize_t {
 pub unsafe extern "C" fn detect_loop(mut query: *mut libc::c_char,
                                      mut type_0: libc::c_int) -> libc::c_int {
     let mut i: libc::c_int = 0;
-    let mut uid: u32_0 = 0;
+    let mut uid: u32 = 0;
     let mut serv: *mut server = 0 as *mut server;
     if (*dnsmasq_daemon).options[(50 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -182,7 +186,7 @@ pub unsafe extern "C" fn detect_loop(mut query: *mut libc::c_char,
     }
     uid =
         strtol(query, 0 as *mut *mut libc::c_char, 16 as libc::c_int) as
-            u32_0;
+            u32;
     serv = (*dnsmasq_daemon).servers;
     while !serv.is_null() {
         if (*serv).flags &

@@ -14,383 +14,21 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct iface_param {
-    pub current: *mut dhcp_context,
-    pub relay: *mut dhcp_relay,
-    pub fallback: in6_addr,
-    pub relay_local: in6_addr,
-    pub ll_addr: in6_addr,
-    pub ula_addr: in6_addr,
-    pub ind: libc::c_int,
-    pub addr_match: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_12 {
-    pub c: *mut libc::c_uchar,
-    pub p: *mut in6_pktinfo,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_13 {
-    pub align: cmsghdr,
-    pub control6: [libc::c_char; 40],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct cparam {
-    pub now: time_t,
-    pub newone: libc::c_int,
-    pub newname: libc::c_int,
-}
-#[inline]
-unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
-    return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
-                (__bsx as libc::c_int & 0xff as libc::c_int) <<
-                    8 as libc::c_int) as __uint16_t;
-}
-#[inline]
-unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
-    return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
-               (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
-               (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
-               (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
-    return ((__bsx as libc::c_ulonglong &
-                 0xff00000000000000 as libc::c_ulonglong) >> 56 as libc::c_int
-                |
-                (__bsx as libc::c_ulonglong &
-                     0xff000000000000 as libc::c_ulonglong) >>
-                    40 as libc::c_int |
-                (__bsx as libc::c_ulonglong &
-                     0xff0000000000 as libc::c_ulonglong) >> 24 as libc::c_int
-                |
-                (__bsx as libc::c_ulonglong &
-                     0xff00000000 as libc::c_ulonglong) >> 8 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff000000 as libc::c_ulonglong)
-                    << 8 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff0000 as libc::c_ulonglong)
-                    << 24 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong) <<
-                    40 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong) <<
-                    56 as libc::c_int) as __uint64_t;
-}
-#[inline]
-unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
-       {
-        return 0 as *mut cmsghdr
-    }
-    __cmsg =
-        (__cmsg as
-             *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-                                                                             as
-                                                                             libc::c_ulong).wrapping_sub(1
-                                                                                                             as
-                                                                                                             libc::c_int
-                                                                                                             as
-                                                                                                             libc::c_ulong)
-                                             &
-                                             !(::std::mem::size_of::<size_t>()
-                                                   as
-                                                   libc::c_ulong).wrapping_sub(1
-                                                                                   as
-                                                                                   libc::c_int
-                                                                                   as
-                                                                                   libc::c_ulong))
-                                            as isize) as *mut cmsghdr;
-    if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
-           ((*__mhdr).msg_control as
-                *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
-           ||
-           (__cmsg as
-                *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-                                                                                as
-                                                                                libc::c_ulong).wrapping_sub(1
-                                                                                                                as
-                                                                                                                libc::c_int
-                                                                                                                as
-                                                                                                                libc::c_ulong)
-                                                &
-                                                !(::std::mem::size_of::<size_t>()
-                                                      as
-                                                      libc::c_ulong).wrapping_sub(1
-                                                                                      as
-                                                                                      libc::c_int
-                                                                                      as
-                                                                                      libc::c_ulong))
-                                               as isize) >
-               ((*__mhdr).msg_control as
-                    *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
-                                                   isize) {
-        return 0 as *mut cmsghdr
-    }
-    return __cmsg;
-}
-#[inline]
-unsafe extern "C" fn stat(mut __path: *const libc::c_char,
-                          mut __statbuf: *mut stat) -> libc::c_int {
-    return __xstat(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstat(mut __fd: libc::c_int, mut __statbuf: *mut stat)
- -> libc::c_int {
-    return __fxstat(1 as libc::c_int, __fd, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
-                            mut __statbuf: *mut stat64) -> libc::c_int {
-    return __xstat64(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
-                             mut __statbuf: *mut stat64) -> libc::c_int {
-    return __fxstat64(1 as libc::c_int, __fd, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
-                             mut __filename: *const libc::c_char,
-                             mut __statbuf: *mut stat,
-                             mut __flag: libc::c_int) -> libc::c_int {
-    return __fxstatat(1 as libc::c_int, __fd, __filename, __statbuf, __flag);
-}
-#[inline]
-unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
-                               mut __filename: *const libc::c_char,
-                               mut __statbuf: *mut stat64,
-                               mut __flag: libc::c_int) -> libc::c_int {
-    return __fxstatat64(1 as libc::c_int, __fd, __filename, __statbuf,
-                        __flag);
-}
-#[inline]
-unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
-                           mut __statbuf: *mut stat) -> libc::c_int {
-    return __lxstat(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
-                             mut __statbuf: *mut stat64) -> libc::c_int {
-    return __lxstat64(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
-                           mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
-    return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
-}
-#[inline]
-unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
-                             mut __path: *const libc::c_char,
-                             mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
-    return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
-}
-#[inline]
-unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
-                             mut __arg: ::std::ffi::VaList) -> libc::c_int {
-    return vfprintf(stdout, __fmt, __arg.as_va_list());
-}
-#[inline]
-unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
-#[inline]
-unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
-                  libc::c_long != 0 {
-               __uflow(__fp)
-           } else {
-               let fresh0 = (*__fp)._IO_read_ptr;
-               (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-               *(fresh0 as *mut libc::c_uchar) as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
-    return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as libc::c_int
-                  as libc::c_long != 0 {
-               __uflow(stdin)
-           } else {
-               let fresh1 = (*stdin)._IO_read_ptr;
-               (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
-               *(fresh1 as *mut libc::c_uchar) as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
-                  libc::c_long != 0 {
-               __uflow(__fp)
-           } else {
-               let fresh2 = (*__fp)._IO_read_ptr;
-               (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-               *(fresh2 as *mut libc::c_uchar) as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
-    return putc(__c, stdout);
-}
-#[inline]
-unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
-                                    mut __stream: *mut FILE) -> libc::c_int {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-                  libc::c_int as libc::c_long != 0 {
-               __overflow(__stream, __c as libc::c_uchar as libc::c_int)
-           } else {
-               let fresh3 = (*__stream)._IO_write_ptr;
-               (*__stream)._IO_write_ptr =
-                   (*__stream)._IO_write_ptr.offset(1);
-               *fresh3 = __c as libc::c_char;
-               *fresh3 as libc::c_uchar as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
-                                   mut __stream: *mut FILE) -> libc::c_int {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-                  libc::c_int as libc::c_long != 0 {
-               __overflow(__stream, __c as libc::c_uchar as libc::c_int)
-           } else {
-               let fresh4 = (*__stream)._IO_write_ptr;
-               (*__stream)._IO_write_ptr =
-                   (*__stream)._IO_write_ptr.offset(1);
-               *fresh4 = __c as libc::c_char;
-               *fresh4 as libc::c_uchar as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
-    return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
-                  libc::c_int as libc::c_long != 0 {
-               __overflow(stdout, __c as libc::c_uchar as libc::c_int)
-           } else {
-               let fresh5 = (*stdout)._IO_write_ptr;
-               (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
-               *fresh5 = __c as libc::c_char;
-               *fresh5 as libc::c_uchar as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
-                             mut __n: *mut size_t, mut __stream: *mut FILE)
- -> __ssize_t {
-    return __getdelim(__lineptr, __n, '\n' as i32, __stream);
-}
-#[inline]
-unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) -> libc::c_int {
-    return ((*__stream)._flags & 0x10 as libc::c_int != 0 as libc::c_int) as
-               libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) -> libc::c_int {
-    return ((*__stream)._flags & 0x20 as libc::c_int != 0 as libc::c_int) as
-               libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
-    return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
-}
-#[inline]
-unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) -> libc::c_int {
-    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                  10 as libc::c_int) as libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
-    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                  10 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
- -> libc::c_longlong {
-    return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                   10 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
-                             mut __base: *const libc::c_void,
-                             mut __nmemb: size_t, mut __size: size_t,
-                             mut __compar: __compar_fn_t)
- -> *mut libc::c_void {
-    let mut __l: size_t = 0;
-    let mut __u: size_t = 0;
-    let mut __idx: size_t = 0;
-    let mut __p: *const libc::c_void = 0 as *const libc::c_void;
-    let mut __comparison: libc::c_int = 0;
-    __l = 0 as libc::c_int as size_t;
-    __u = __nmemb;
-    while __l < __u {
-        __idx =
-            __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
-                                                   libc::c_ulong);
-        __p =
-            (__base as
-                 *const libc::c_char).offset(__idx.wrapping_mul(__size) as
-                                                 isize) as *mut libc::c_void;
-        __comparison =
-            Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
-                                                                                                   __p);
-        if __comparison < 0 as libc::c_int {
-            __u = __idx
-        } else if __comparison > 0 as libc::c_int {
-            __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
-        } else { return __p as *mut libc::c_void }
-    }
-    return 0 as *mut libc::c_void;
-}
-#[inline]
-unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
-    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
-               *(*__ctype_tolower_loc()).offset(__c as isize)
-           } else { __c };
-}
-#[inline]
-unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
-    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
-               *(*__ctype_toupper_loc()).offset(__c as isize)
-           } else { __c };
-}
-#[inline]
-unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
-                               mut endptr: *mut *mut libc::c_char,
-                               mut base: libc::c_int) -> intmax_t {
-    return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
-                               mut endptr: *mut *mut libc::c_char,
-                               mut base: libc::c_int) -> uintmax_t {
-    return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
-                               mut base: libc::c_int) -> intmax_t {
-    return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
-                               mut base: libc::c_int) -> uintmax_t {
-    return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
-}
+
+use crate::defines::{sockaddr_in6, in6_addr, C2RustUnnamed, SOCK_DGRAM, IPPROTO_UDP, IPPROTO_IPV6, socklen_t, dnsmasq_daemon, sa_family_t, __bswap_16, __CONST_SOCKADDR_ARG, sockaddr, time_t, dhcp_context, dhcp_relay, iface_param, cmsghdr, msghdr, iovec, C2RustUnnamed_13, ifreq, C2RustUnnamed_2, iname, C2RustUnnamed_12, dhcp_bridge, dhcp_lease, mysockaddr, timespec, __time_t, __syscall_slong_t, shared_network, __bswap_32, dhcp_config, addrlist, dhcp_netid, cparam, all_addr};
+use crate::network::{fix_fd, set_ipv6pktinfo, indextoname, iface_check};
+use crate::dnsmasq_log::{die, my_syslog};
+use crate::dhcp_common::{recv_dhcp_packet, match_netid, log_context};
+use crate::rfc3315::{relay_reply6, relay_upstream6, dhcp6_reply};
+use crate::util::{retry_send, wildcard_match, wildcard_matchn, is_same_net6, rand64, addr6part, setaddr6part, safe_malloc, whine_malloc};
+use crate::outpacket::save_counter;
+use crate::netlink::iface_enumerate;
+use crate::lease::{lease_prune, lease_update_file, lease_update_dns, lease_find_max_addr6, lease6_find_by_addr, lease_update_slaac};
+use crate::slack::{neigh_packet, IPPROTO_ICMPV6};
+use crate::arp::find_mac;
+use crate::radv::{ra_start_unsolicited, periodic_ra};
+use crate::send_alarm;
+
 #[no_mangle]
 pub unsafe extern "C" fn dhcp6_init() {
     let mut fd: libc::c_int = 0;
@@ -493,7 +131,7 @@ pub unsafe extern "C" fn dhcp6_init() {
            ::std::mem::size_of::<sockaddr_in6>() as libc::c_ulong);
     saddr.sin6_family = 10 as libc::c_int as sa_family_t;
     saddr.sin6_addr = in6addr_any;
-    saddr.sin6_port = __bswap_16(547 as libc::c_int as __uint16_t);
+    saddr.sin6_port = __bswap_16(547 as libc::c_int as u16);
     if bind(fd,
             __CONST_SOCKADDR_ARG{__sockaddr__:
                                      &mut saddr as *mut sockaddr_in6 as
@@ -551,7 +189,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
                          in6_addr{__in6_u:
                                       C2RustUnnamed{__u6_addr8: [0; 16],},},
                      sin6_scope_id: 0,};
-    let mut sz: ssize_t = 0;
+    let mut sz: isize = 0;
     let mut ifr: ifreq =
         ifreq{ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
@@ -573,7 +211,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
     msg.msg_namelen =
         ::std::mem::size_of::<sockaddr_in6>() as libc::c_ulong as socklen_t;
     msg.msg_iov = &mut (*dnsmasq_daemon).dhcp_packet;
-    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    msg.msg_iovlen = 1 as libc::c_int as usize;
     sz = recv_dhcp_packet((*dnsmasq_daemon).dhcp6fd, &mut msg);
     if sz == -(1 as libc::c_int) as libc::c_long { return }
     cmptr =
@@ -601,7 +239,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
         from.sin6_port = __bswap_16(port);
         while retry_send(sendto((*dnsmasq_daemon).dhcp6fd,
                                 (*dnsmasq_daemon).outpacket.iov_base,
-                                save_counter(-(1 as libc::c_int)) as size_t,
+                                save_counter(-(1 as libc::c_int)) as usize,
                                 0 as libc::c_int,
                                 __CONST_SOCKADDR_ARG{__sockaddr__:
                                                          &mut from as
@@ -808,7 +446,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
             dhcp6_reply(parm.current, if_index,
                         ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                         &mut parm.fallback, &mut parm.ll_addr,
-                        &mut parm.ula_addr, sz as size_t, &mut from.sin6_addr,
+                        &mut parm.ula_addr, sz as usize, &mut from.sin6_addr,
                         now);
         /* The port in the source address of the original request should
 	 be correct, but at least once client sends from the server port,
@@ -819,7 +457,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
             while retry_send(sendto((*dnsmasq_daemon).dhcp6fd,
                                     (*dnsmasq_daemon).outpacket.iov_base,
                                     save_counter(-(1 as libc::c_int)) as
-                                        size_t, 0 as libc::c_int,
+                                        usize, 0 as libc::c_int,
                                     __CONST_SOCKADDR_ARG{__sockaddr__:
                                                              &mut from as
                                                                  *mut sockaddr_in6
@@ -857,20 +495,20 @@ pub unsafe extern "C" fn get_client_mac(mut client: *mut in6_addr,
         mysockaddr{sa: sockaddr{sa_family: 0, sa_data: [0; 14],},};
     let mut i: libc::c_int = 0;
     let mut maclen: libc::c_int = 0;
-    neigh.type_0 = 135 as libc::c_int as u8_0;
-    neigh.code = 0 as libc::c_int as u8_0;
-    neigh.reserved = 0 as libc::c_int as u16_0;
+    neigh.type_0 = 135 as libc::c_int as u8;
+    neigh.code = 0 as libc::c_int as u8;
+    neigh.reserved = 0 as libc::c_int as u16;
     neigh.target = *client;
     /* RFC4443 section-2.3: checksum has to be zero to be calculated */
-    neigh.checksum = 0 as libc::c_int as u16_0; /* 100ms */
+    neigh.checksum = 0 as libc::c_int as u16; /* 100ms */
     memset(&mut addr as *mut mysockaddr as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<mysockaddr>() as libc::c_ulong);
     addr.in6.sin6_family = 10 as libc::c_int as sa_family_t;
     addr.in6.sin6_port =
-        __bswap_16(IPPROTO_ICMPV6 as libc::c_int as __uint16_t);
+        __bswap_16(IPPROTO_ICMPV6 as libc::c_int as u16);
     addr.in6.sin6_addr = *client;
-    addr.in6.sin6_scope_id = iface as uint32_t;
+    addr.in6.sin6_scope_id = iface as u32;
     i = 0 as libc::c_int;
     while i < 5 as libc::c_int {
         let mut ts: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
@@ -914,7 +552,7 @@ unsafe extern "C" fn complete_context6(mut local: *mut in6_addr,
                  __bswap_32(0xfe800000 as libc::c_uint)) as libc::c_int
         }) != 0 {
         (*param).ll_addr = *local
-    } else if *(local as *const uint32_t).offset(0 as libc::c_int as isize) &
+    } else if *(local as *const u32).offset(0 as libc::c_int as isize) &
                   __bswap_32(0xff000000 as libc::c_uint) ==
                   __bswap_32(0xfd000000 as libc::c_uint) {
         (*param).ula_addr = *local
@@ -928,7 +566,7 @@ unsafe extern "C" fn complete_context6(mut local: *mut in6_addr,
                  (*__a).__in6_u.__u6_addr32[2 as libc::c_int as usize] ==
                      0 as libc::c_int as libc::c_uint &&
                  (*__a).__in6_u.__u6_addr32[3 as libc::c_int as usize] ==
-                     __bswap_32(1 as libc::c_int as __uint32_t)) as
+                     __bswap_32(1 as libc::c_int as u32)) as
                 libc::c_int
         }) != 0 ||
            ({
@@ -937,7 +575,7 @@ unsafe extern "C" fn complete_context6(mut local: *mut in6_addr,
                      __bswap_32(0xffc00000 as libc::c_uint) ==
                      __bswap_32(0xfe800000 as libc::c_uint)) as libc::c_int
             }) != 0 ||
-           *(local as *const uint8_t).offset(0 as libc::c_int as isize) as
+           *(local as *const u8).offset(0 as libc::c_int as isize) as
                libc::c_int == 0xff as libc::c_int {
         return 1 as libc::c_int
     }
@@ -1231,20 +869,20 @@ pub unsafe extern "C" fn address6_allocate(mut context: *mut dhcp_context,
      Note that we assume the address prefix lengths are 64 or greater, so we can
      get by with 64 bit arithmetic.
 */
-    let mut start: u64_0 = 0;
-    let mut addr: u64_0 = 0;
+    let mut start: u64 = 0;
+    let mut addr: u64 = 0;
     let mut c: *mut dhcp_context = 0 as *mut dhcp_context;
     let mut d: *mut dhcp_context = 0 as *mut dhcp_context;
     let mut i: libc::c_int = 0;
     let mut pass: libc::c_int = 0;
-    let mut j: u64_0 = 0;
+    let mut j: u64 = 0;
     /* hash hwaddr: use the SDBM hashing algorithm.  This works
      for MAC addresses, let's see how it manages with client-ids! 
      For temporary addresses, we generate a new random one each time. */
     if temp_addr != 0 {
         j = rand64()
     } else {
-        j = iaid as u64_0;
+        j = iaid as u64;
         i = 0 as libc::c_int;
         while i < clid_len {
             j =
@@ -1308,10 +946,10 @@ pub unsafe extern "C" fn address6_allocate(mut context: *mut dhcp_context,
                             (*c).addr_epoch = (*c).addr_epoch.wrapping_sub(1)
                         }
                     } else {
-                        let mut range: u64_0 =
+                        let mut range: u64 =
                             (1 as libc::c_int as
                                  libc::c_ulonglong).wrapping_add(addr6part(&mut (*c).end6)).wrapping_sub(addr6part(&mut (*c).start6));
-                        let mut offset: u64_0 =
+                        let mut offset: u64 =
                             j.wrapping_add((*c).addr_epoch as
                                                libc::c_ulonglong);
                         /* don't divide by zero if range is whole 2^64 */
@@ -1368,9 +1006,9 @@ pub unsafe extern "C" fn address6_available(mut context: *mut dhcp_context,
                                             mut netids: *mut dhcp_netid,
                                             mut plain_range: libc::c_int)
  -> *mut dhcp_context {
-    let mut start: u64_0 = 0;
-    let mut end: u64_0 = 0;
-    let mut addr: u64_0 = addr6part(taddr);
+    let mut start: u64 = 0;
+    let mut end: u64 = 0;
+    let mut addr: u64 = addr6part(taddr);
     let mut tmp: *mut dhcp_context = 0 as *mut dhcp_context;
     tmp = context;
     while !tmp.is_null() {
@@ -1416,13 +1054,13 @@ pub unsafe extern "C" fn make_duid(mut now: time_t) {
                                                                            libc::c_int
                                                                            as
                                                                            libc::c_uint)
-                            as size_t) as *mut libc::c_uchar;
+                            as usize) as *mut libc::c_uchar;
         (*dnsmasq_daemon).duid = p;
         (*dnsmasq_daemon).duid_len =
             (*dnsmasq_daemon).duid_config_len.wrapping_add(6 as libc::c_int as
                                                                libc::c_uint)
                 as libc::c_int;
-        let mut t_s: u16_0 = 2 as libc::c_int as u16_0;
+        let mut t_s: u16 = 2 as libc::c_int as u16;
         let mut t_cp: *mut libc::c_uchar = p;
         let fresh6 = t_cp;
         t_cp = t_cp.offset(1);
@@ -1430,7 +1068,7 @@ pub unsafe extern "C" fn make_duid(mut now: time_t) {
         *t_cp = t_s as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
         /* DUID_EN */
-        let mut t_l: u32_0 = (*dnsmasq_daemon).duid_enterprise;
+        let mut t_l: u32 = (*dnsmasq_daemon).duid_enterprise;
         let mut t_cp_0: *mut libc::c_uchar = p;
         let fresh7 = t_cp_0;
         t_cp_0 = t_cp_0.offset(1);
@@ -1480,7 +1118,7 @@ pub unsafe extern "C" fn make_duid(mut now: time_t) {
                                                                             _:
                                                                                 *mut libc::c_char,
                                                                             _:
-                                                                                size_t,
+                                                                                usize,
                                                                             _:
                                                                                 *mut libc::c_void)
                                                            -> libc::c_int>,
@@ -1495,7 +1133,7 @@ pub unsafe extern "C" fn make_duid(mut now: time_t) {
                                                                                                            _:
                                                                                                                *mut libc::c_char,
                                                                                                            _:
-                                                                                                               size_t,
+                                                                                                               usize,
                                                                                                            _:
                                                                                                                *mut libc::c_void)
                                                                                           ->
@@ -1510,7 +1148,7 @@ pub unsafe extern "C" fn make_duid(mut now: time_t) {
 unsafe extern "C" fn make_duid1(mut index: libc::c_int,
                                 mut type_0: libc::c_uint,
                                 mut mac: *mut libc::c_char,
-                                mut maclen: size_t,
+                                mut maclen: usize,
                                 mut parm: *mut libc::c_void) -> libc::c_int {
     /* create DUID as specified in RFC3315. We use the MAC of the
      first interface we find that isn't loopback or P-to-P and
@@ -1530,7 +1168,7 @@ unsafe extern "C" fn make_duid1(mut index: libc::c_int,
         (*dnsmasq_daemon).duid_len =
             maclen.wrapping_add(4 as libc::c_int as libc::c_ulong) as
                 libc::c_int;
-        let mut t_s: u16_0 = 3 as libc::c_int as u16_0;
+        let mut t_s: u16 = 3 as libc::c_int as u16;
         let mut t_cp: *mut libc::c_uchar = p;
         let fresh10 = t_cp;
         t_cp = t_cp.offset(1);
@@ -1538,7 +1176,7 @@ unsafe extern "C" fn make_duid1(mut index: libc::c_int,
         *t_cp = t_s as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
         /* address type */
-        let mut t_s_0: u16_0 = type_0 as u16_0;
+        let mut t_s_0: u16 = type_0 as u16;
         let mut t_cp_0: *mut libc::c_uchar = p;
         let fresh11 = t_cp_0;
         t_cp_0 = t_cp_0.offset(1);
@@ -1555,7 +1193,7 @@ unsafe extern "C" fn make_duid1(mut index: libc::c_int,
         (*dnsmasq_daemon).duid_len =
             maclen.wrapping_add(8 as libc::c_int as libc::c_ulong) as
                 libc::c_int;
-        let mut t_s_1: u16_0 = 1 as libc::c_int as u16_0;
+        let mut t_s_1: u16 = 1 as libc::c_int as u16;
         let mut t_cp_1: *mut libc::c_uchar = p;
         let fresh12 = t_cp_1;
         t_cp_1 = t_cp_1.offset(1);
@@ -1565,7 +1203,7 @@ unsafe extern "C" fn make_duid1(mut index: libc::c_int,
         p = p.offset(2 as libc::c_int as isize);
         /* DUID_LL */
         /* time */
-        let mut t_s_2: u16_0 = type_0 as u16_0;
+        let mut t_s_2: u16 = type_0 as u16;
         let mut t_cp_2: *mut libc::c_uchar = p;
         let fresh13 = t_cp_2;
         t_cp_2 = t_cp_2.offset(1);
@@ -1573,7 +1211,7 @@ unsafe extern "C" fn make_duid1(mut index: libc::c_int,
             (t_s_2 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
         *t_cp_2 = t_s_2 as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
-        let mut t_l: u32_0 = *(parm as *mut time_t) as u32_0;
+        let mut t_l: u32 = *(parm as *mut time_t) as u32;
         let mut t_cp_3: *mut libc::c_uchar = p;
         let fresh14 = t_cp_3;
         t_cp_3 = t_cp_3.offset(1);
@@ -1617,7 +1255,7 @@ unsafe extern "C" fn construct_worker(mut local: *mut in6_addr,
                  (*__a).__in6_u.__u6_addr32[2 as libc::c_int as usize] ==
                      0 as libc::c_int as libc::c_uint &&
                  (*__a).__in6_u.__u6_addr32[3 as libc::c_int as usize] ==
-                     __bswap_32(1 as libc::c_int as __uint32_t)) as
+                     __bswap_32(1 as libc::c_int as u32)) as
                 libc::c_int
         }) != 0 ||
            ({
@@ -1626,7 +1264,7 @@ unsafe extern "C" fn construct_worker(mut local: *mut in6_addr,
                      __bswap_32(0xffc00000 as libc::c_uint) ==
                      __bswap_32(0xfe800000 as libc::c_uint)) as libc::c_int
             }) != 0 ||
-           *(local as *const uint8_t).offset(0 as libc::c_int as isize) as
+           *(local as *const u8).offset(0 as libc::c_int as isize) as
                libc::c_int == 0xff as libc::c_int {
         return 1 as libc::c_int
     }

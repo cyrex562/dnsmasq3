@@ -14,6 +14,22 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{dhcp_lease, time_t, FILE, all_addr, in_addr, dnsmasq_daemon, in6_addr, dhcp_config, dhcp_context, dhcp_netid, __off64_t, socklen_t, slaac_address, __bswap_32};
+use crate::util::{parse_hex, safe_malloc, netmask_length, is_same_net, is_same_net6, addr6part, whine_malloc, hostname_isequal};
+use crate::dnsmasq_log::{my_syslog, die};
+use crate::domain::{get_domain, get_domain6};
+use crate::dhcp_common::find_config;
+use crate::dhcp::host_from_dns;
+use std::env::args;
+use crate::slaac::{periodic_slaac, slaac_ping_reply, slaac_add_addrs};
+use crate::radv::periodic_ra;
+use crate::send_alarm;
+use crate::netlink::iface_enumerate;
+use crate::dhcp6::make_duid;
+use crate::cache::{cache_unhash_dhcp, cache_add_dhcp_entry};
+use crate::slack::{METRIC_LEASES_PRUNED_4, METRIC_LEASES_PRUNED_6, METRIC_LEASES_ALLOCATED_4, METRIC_LEASES_ALLOCATED_6};
+use crate::helper::queue_script;
+
 static mut leases: *mut dhcp_lease =
     0 as *const dhcp_lease as *mut dhcp_lease;
 static mut old_leases: *mut dhcp_lease =
@@ -63,7 +79,7 @@ unsafe extern "C" fn read_leases(mut now: time_t, mut leasestream: *mut FILE)
                 return 0 as libc::c_int
             }
             (*dnsmasq_daemon).duid =
-                safe_malloc((*dnsmasq_daemon).duid_len as size_t) as
+                safe_malloc((*dnsmasq_daemon).duid_len as usize) as
                     *mut libc::c_uchar;
             memcpy((*dnsmasq_daemon).duid as *mut libc::c_void,
                    (*dnsmasq_daemon).dhcp_buff2 as *const libc::c_void,
@@ -974,7 +990,7 @@ pub unsafe extern "C" fn lease6_find_by_client(mut first: *mut dhcp_lease,
 #[no_mangle]
 pub unsafe extern "C" fn lease6_find_by_addr(mut net: *mut in6_addr,
                                              mut prefix: libc::c_int,
-                                             mut addr: u64_0)
+                                             mut addr: u64)
  -> *mut dhcp_lease {
     let mut lease: *mut dhcp_lease = 0 as *mut dhcp_lease;
     lease = leases;
@@ -993,9 +1009,9 @@ pub unsafe extern "C" fn lease6_find_by_addr(mut net: *mut in6_addr,
 /* Find largest assigned address in context */
 #[no_mangle]
 pub unsafe extern "C" fn lease_find_max_addr6(mut context: *mut dhcp_context)
- -> u64_0 {
+ -> u64 {
     let mut lease: *mut dhcp_lease = 0 as *mut dhcp_lease;
-    let mut addr: u64_0 = addr6part(&mut (*context).start6);
+    let mut addr: u64 = addr6part(&mut (*context).start6);
     if (*context).flags as libc::c_uint &
            ((1 as libc::c_uint) << 0 as libc::c_int |
                 (1 as libc::c_uint) << 3 as libc::c_int) == 0 {
@@ -1162,7 +1178,7 @@ pub unsafe extern "C" fn lease_set_hwaddr(mut lease: *mut dhcp_lease,
             file_dirty = 1 as libc::c_int;
             free((*lease).clid as *mut libc::c_void);
             (*lease).clid =
-                whine_malloc(clid_len as size_t) as *mut libc::c_uchar;
+                whine_malloc(clid_len as usize) as *mut libc::c_uchar;
             if (*lease).clid.is_null() { return }
             change = 1 as libc::c_int
         } else if memcmp((*lease).clid as *const libc::c_void,
@@ -1478,12 +1494,12 @@ pub unsafe extern "C" fn lease_add_extradata(mut lease: *mut dhcp_lease,
     }
     if (*lease).extradata_size.wrapping_sub((*lease).extradata_len) <
            len.wrapping_add(1 as libc::c_int as libc::c_uint) {
-        let mut newsz: size_t =
+        let mut newsz: usize =
             (*lease).extradata_len.wrapping_add(len).wrapping_add(100 as
                                                                       libc::c_int
                                                                       as
                                                                       libc::c_uint)
-                as size_t;
+                as usize;
         let mut new: *mut libc::c_uchar =
             whine_malloc(newsz) as *mut libc::c_uchar;
         if new.is_null() { return }

@@ -14,6 +14,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{size_t, dnsmasq_daemon};
+
 static mut outpacket_counter: size_t = 0;
 #[no_mangle]
 pub unsafe extern "C" fn end_opt6(mut container: libc::c_int) {
@@ -23,14 +25,14 @@ pub unsafe extern "C" fn end_opt6(mut container: libc::c_int) {
                                                                           libc::c_int
                                                                           as
                                                                           isize);
-    let mut len: u16_0 =
+    let mut len: u16 =
         outpacket_counter.wrapping_sub(container as
                                            libc::c_ulong).wrapping_sub(4 as
                                                                            libc::c_int
                                                                            as
                                                                            libc::c_ulong)
-            as u16_0;
-    let mut t_s: u16_0 = len;
+            as u16;
+    let mut t_s: u16 = len;
     let mut t_cp: *mut libc::c_uchar = p as *mut libc::c_uchar;
     let fresh6 = t_cp;
     t_cp = t_cp.offset(1);
@@ -75,14 +77,14 @@ pub unsafe extern "C" fn new_opt6(mut opt: libc::c_int) -> libc::c_int {
     let mut p: *mut libc::c_void = 0 as *mut libc::c_void;
     p = expand(4 as libc::c_int as size_t);
     if !p.is_null() {
-        let mut t_s: u16_0 = opt as u16_0;
+        let mut t_s: u16 = opt as u16;
         let mut t_cp: *mut libc::c_uchar = p as *mut libc::c_uchar;
         let fresh7 = t_cp;
         t_cp = t_cp.offset(1);
         *fresh7 = (t_s as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
         *t_cp = t_s as libc::c_uchar;
         p = p.offset(2 as libc::c_int as isize);
-        let mut t_s_0: u16_0 = 0 as libc::c_int as u16_0;
+        let mut t_s_0: u16 = 0 as libc::c_int as u16;
         let mut t_cp_0: *mut libc::c_uchar = p as *mut libc::c_uchar;
         let fresh8 = t_cp_0;
         t_cp_0 = t_cp_0.offset(1);
@@ -105,7 +107,7 @@ pub unsafe extern "C" fn put_opt6_long(mut val: libc::c_uint) {
     let mut p: *mut libc::c_void = 0 as *mut libc::c_void;
     p = expand(4 as libc::c_int as size_t);
     if !p.is_null() {
-        let mut t_l: u32_0 = val;
+        let mut t_l: u32 = val;
         let mut t_cp: *mut libc::c_uchar = p as *mut libc::c_uchar;
         let fresh9 = t_cp;
         t_cp = t_cp.offset(1);
@@ -125,7 +127,7 @@ pub unsafe extern "C" fn put_opt6_short(mut val: libc::c_uint) {
     let mut p: *mut libc::c_void = 0 as *mut libc::c_void;
     p = expand(2 as libc::c_int as size_t);
     if !p.is_null() {
-        let mut t_s: u16_0 = val as u16_0;
+        let mut t_s: u16 = val as u16;
         let mut t_cp: *mut libc::c_uchar = p as *mut libc::c_uchar;
         let fresh12 = t_cp;
         t_cp = t_cp.offset(1);

@@ -1,8 +1,14 @@
+use crate::defines::{iovec, socklen_t, __kernel_sa_family_t, __u32, dnsmasq_daemon, SOCK_RAW, __CONST_SOCKADDR_ARG, sockaddr, __SOCKADDR_ARG, size_t, ssize_t, msghdr, MSG_PEEK, MSG_TRUNC, C2RustUnnamed_10, in_addr, __bswap_32, in_addr_t, in6_addr};
+use crate::slack::{sockaddr_nl, nlmsghdr, rtgenmsg, RTM_GETNEIGH, RTM_GETLINK, RTM_GETADDR, RTM_NEWADDR, ifaddrmsg, rtattr, IFA_LOCAL, IFA_BROADCAST, IFA_LABEL, IFA_ADDRESS, IFA_CACHEINFO, ifa_cacheinfo, RTM_NEWNEIGH, ndmsg, NDA_DST, NDA_LLADDR, RTM_NEWLINK, ifinfomsg, IFLA_ADDRESS, IFF_LOOPBACK, IFF_POINTOPOINT, nlmsgerr, RTM_NEWROUTE, rtmsg, RTN_UNICAST, RT_SCOPE_LINK, RT_TABLE_MAIN, RT_TABLE_LOCAL, RTM_DELADDR};
+use crate::dnsmasq_log::{die, my_syslog};
+use crate::util::{safe_malloc, expand_buf, retry_send};
+use std::thread::sleep;
+use crate::queue_event;
 
 static mut iov: iovec =
     iovec{iov_base: 0 as *const libc::c_void as *mut libc::c_void,
           iov_len: 0,};
-static mut netlink_pid: u32_0 = 0;
+static mut netlink_pid: u32 = 0;
 #[no_mangle]
 pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
     let mut addr: sockaddr_nl =
@@ -208,16 +214,16 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
     addr.nl_family = 16 as libc::c_int as __kernel_sa_family_t;
     loop  {
         if family == 0 as libc::c_int {
-            req.nlh.nlmsg_type = RTM_GETNEIGH as libc::c_int as __u16
+            req.nlh.nlmsg_type = RTM_GETNEIGH as libc::c_int as u16
         } else if family == 1 as libc::c_int {
-            req.nlh.nlmsg_type = RTM_GETLINK as libc::c_int as __u16
-        } else { req.nlh.nlmsg_type = RTM_GETADDR as libc::c_int as __u16 }
+            req.nlh.nlmsg_type = RTM_GETLINK as libc::c_int as u16
+        } else { req.nlh.nlmsg_type = RTM_GETADDR as libc::c_int as u16 }
         req.nlh.nlmsg_len =
             ::std::mem::size_of::<C2RustUnnamed_10>() as libc::c_ulong as
                 __u32;
         req.nlh.nlmsg_flags =
             (0x100 as libc::c_int | 0x200 as libc::c_int | 0x1 as libc::c_int
-                 | 0x4 as libc::c_int) as __u16;
+                 | 0x4 as libc::c_int) as u16;
         req.nlh.nlmsg_pid = 0 as libc::c_int as __u32;
         seq = seq.wrapping_add(1);
         req.nlh.nlmsg_seq = seq;
@@ -490,10 +496,10 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
                                               10 as libc::c_int {
                                     let mut addrp: *mut in6_addr =
                                         0 as *mut in6_addr;
-                                    let mut valid: u32_0 =
-                                        0 as libc::c_int as u32_0;
-                                    let mut preferred: u32_0 =
-                                        0 as libc::c_int as u32_0;
+                                    let mut valid: u32 =
+                                        0 as libc::c_int as u32;
+                                    let mut preferred: u32 =
+                                        0 as libc::c_int as u32;
                                     let mut flags: libc::c_int =
                                         0 as libc::c_int;
                                     while len1 >=

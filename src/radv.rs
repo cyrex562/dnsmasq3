@@ -18,6 +18,17 @@
    It therefore cannot use any DHCP buffer resources except outpacket, which is
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
+use crate::defines::{time_t, dhcp_netid, in6_addr, dhcp_context, cmsghdr, dhcp_bridge, msghdr, size_t, __mode_t, __dev_t, __uint64_t, __u32, __uint16_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, dnsmasq_daemon, dhcp_packet, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, sockaddr_in6, C2RustUnnamed, iname, all_addr, dhcp_opt, ra_interface, sa_family_t, __CONST_SOCKADDR_ARG, sockaddr};
+use crate::slack::{in6_pktinfo, icmp6_filter, IPPROTO_ICMPV6, ra_packet, prefix_opt};
+use std::io::{stdout, stdin};
+use crate::util::{expand_buf, rand16, wildcard_match, print_mac, wildcard_matchn, setaddr6part, addr6part, retry_send, is_same_net6, whine_malloc};
+use crate::network::{set_ipv6pktinfo, fix_fd, indextoname, iface_check};
+use crate::dnsmasq_log::{die, my_syslog};
+use crate::dhcp_common::{recv_dhcp_packet, option_filter};
+use crate::lease::lease_ping_reply;
+use crate::outpacket::{reset_counter, expand, put_opt6_char, put_opt6_short, put_opt6_long, put_opt6, save_counter};
+use crate::netlink::iface_enumerate;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ra_param {
@@ -183,7 +194,7 @@ unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+unsafe extern "C" fn __uint32_identity(mut __x: __u32) -> __u32 {
     return __x;
 }
 #[inline]
@@ -213,7 +224,7 @@ unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
                     56 as libc::c_int) as __uint64_t;
 }
 #[inline]
-unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+unsafe extern "C" fn __bswap_32(mut __bsx: __u32) -> __u32 {
     return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
                (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
                (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
@@ -760,13 +771,13 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
         expand(::std::mem::size_of::<ra_packet>() as libc::c_ulong) as
             *mut ra_packet;
     if ra.is_null() { return }
-    (*ra).type_0 = 134 as libc::c_int as u8_0;
-    (*ra).code = 0 as libc::c_int as u8_0;
-    (*ra).hop_limit = hop_limit as u8_0;
-    (*ra).flags = parm.prio as u8_0;
+    (*ra).type_0 = 134 as libc::c_int as u8;
+    (*ra).code = 0 as libc::c_int as u8;
+    (*ra).hop_limit = hop_limit as u8;
+    (*ra).flags = parm.prio as u8;
     (*ra).lifetime = __bswap_16(calc_lifetime(ra_param) as __uint16_t);
-    (*ra).reachable_time = 0 as libc::c_int as u32_0;
-    (*ra).retrans_time = 0 as libc::c_int as u32_0;
+    (*ra).reachable_time = 0 as libc::c_int as u32;
+    (*ra).retrans_time = 0 as libc::c_int as u32;
     /* set tag with name == interface */
     iface_id.net = iface_name;
     iface_id.next = 0 as *mut dhcp_netid;
@@ -872,7 +883,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                 setaddr6part(&mut local,
                              addr6part(&mut local) &
                                  !(if (*context).prefix == 64 as libc::c_int {
-                                       -(1 as libc::c_longlong) as u64_0
+                                       -(1 as libc::c_longlong) as u64
                                    } else {
                                        ((1 as libc::c_ulonglong) <<
                                             128 as libc::c_int -
@@ -917,9 +928,9 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                     expand(::std::mem::size_of::<prefix_opt>() as
                                libc::c_ulong) as *mut prefix_opt;
                 if !opt.is_null() {
-                    (*opt).type_0 = 3 as libc::c_int as u8_0;
-                    (*opt).len = 4 as libc::c_int as u8_0;
-                    (*opt).prefix_len = (*context).prefix as u8_0;
+                    (*opt).type_0 = 3 as libc::c_int as u8;
+                    (*opt).len = 4 as libc::c_int as u8;
+                    (*opt).prefix_len = (*context).prefix as u8;
                     /* don't do RA for non-ra-only unless --enable-ra is set */
                     /* autonomous only if we're not doing dhcp, set
                      "on-link" unless "off-link" was specified */
@@ -931,12 +942,12 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                      (1 as libc::c_uint) << 18 as libc::c_int
                                      != 0 {
                                   0 as libc::c_int
-                              } else { 0x80 as libc::c_int })) as u8_0;
+                              } else { 0x80 as libc::c_int })) as u8;
                     (*opt).valid_lifetime =
                         __bswap_32((*context).saved_valid.wrapping_sub(old));
                     (*opt).preferred_lifetime =
-                        __bswap_32(0 as libc::c_int as __uint32_t);
-                    (*opt).reserved = 0 as libc::c_int as u32_0;
+                        __bswap_32(0 as libc::c_int as __u32);
+                    (*opt).reserved = 0 as libc::c_int as u32;
                     (*opt).prefix = local;
                     inet_ntop(10 as libc::c_int,
                               &mut local as *mut in6_addr as
@@ -1096,42 +1107,42 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                parm.glob_pref_time ==
                                    0 as libc::c_int as libc::c_uint ||
                                *(a as
-                                     *const uint32_t).offset(0 as libc::c_int
+                                     *const u32).offset(0 as libc::c_int
                                                                  as isize) ==
                                    __bswap_32(0xfd000000 as libc::c_uint) &&
                                    *(a as
-                                         *const uint32_t).offset(1 as
+                                         *const u32).offset(1 as
                                                                      libc::c_int
                                                                      as isize)
                                        == 0 as libc::c_int as libc::c_uint &&
                                    *(a as
-                                         *const uint32_t).offset(2 as
+                                         *const u32).offset(2 as
                                                                      libc::c_int
                                                                      as isize)
                                        == 0 as libc::c_int as libc::c_uint &&
                                    *(a as
-                                         *const uint32_t).offset(3 as
+                                         *const u32).offset(3 as
                                                                      libc::c_int
                                                                      as isize)
                                        == 0 as libc::c_int as libc::c_uint &&
                                    parm.ula_pref_time ==
                                        0 as libc::c_int as libc::c_uint ||
                                *(a as
-                                     *const uint32_t).offset(0 as libc::c_int
+                                     *const u32).offset(0 as libc::c_int
                                                                  as isize) ==
                                    __bswap_32(0xfe800000 as libc::c_uint) &&
                                    *(a as
-                                         *const uint32_t).offset(1 as
+                                         *const u32).offset(1 as
                                                                      libc::c_int
                                                                      as isize)
                                        == 0 as libc::c_int as libc::c_uint &&
                                    *(a as
-                                         *const uint32_t).offset(2 as
+                                         *const u32).offset(2 as
                                                                      libc::c_int
                                                                      as isize)
                                        == 0 as libc::c_int as libc::c_uint &&
                                    *(a as
-                                         *const uint32_t).offset(3 as
+                                         *const u32).offset(3 as
                                                                      libc::c_int
                                                                      as isize)
                                        == 0 as libc::c_int as libc::c_uint &&
@@ -1189,7 +1200,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                              16 as libc::c_int as size_t);
                                 }
                             } else if *(a as
-                                            *const uint32_t).offset(0 as
+                                            *const u32).offset(0 as
                                                                         libc::c_int
                                                                         as
                                                                         isize)
@@ -1197,7 +1208,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                           __bswap_32(0xfd000000 as
                                                          libc::c_uint) &&
                                           *(a as
-                                                *const uint32_t).offset(1 as
+                                                *const u32).offset(1 as
                                                                             libc::c_int
                                                                             as
                                                                             isize)
@@ -1205,7 +1216,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                               0 as libc::c_int as libc::c_uint
                                           &&
                                           *(a as
-                                                *const uint32_t).offset(2 as
+                                                *const u32).offset(2 as
                                                                             libc::c_int
                                                                             as
                                                                             isize)
@@ -1213,7 +1224,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                               0 as libc::c_int as libc::c_uint
                                           &&
                                           *(a as
-                                                *const uint32_t).offset(3 as
+                                                *const u32).offset(3 as
                                                                             libc::c_int
                                                                             as
                                                                             isize)
@@ -1227,7 +1238,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                              16 as libc::c_int as size_t);
                                 }
                             } else if *(a as
-                                            *const uint32_t).offset(0 as
+                                            *const u32).offset(0 as
                                                                         libc::c_int
                                                                         as
                                                                         isize)
@@ -1235,7 +1246,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                           __bswap_32(0xfe800000 as
                                                          libc::c_uint) &&
                                           *(a as
-                                                *const uint32_t).offset(1 as
+                                                *const u32).offset(1 as
                                                                             libc::c_int
                                                                             as
                                                                             isize)
@@ -1243,7 +1254,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                               0 as libc::c_int as libc::c_uint
                                           &&
                                           *(a as
-                                                *const uint32_t).offset(2 as
+                                                *const u32).offset(2 as
                                                                             libc::c_int
                                                                             as
                                                                             isize)
@@ -1251,7 +1262,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                                               0 as libc::c_int as libc::c_uint
                                           &&
                                           *(a as
-                                                *const uint32_t).offset(3 as
+                                                *const u32).offset(3 as
                                                                             libc::c_int
                                                                             as
                                                                             isize)
@@ -1316,11 +1327,11 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
     /* set managed bits unless we're providing only RA on this link */
     if parm.managed != 0 {
         (*ra).flags =
-            ((*ra).flags as libc::c_int | 0x80 as libc::c_int) as u8_0
+            ((*ra).flags as libc::c_int | 0x80 as libc::c_int) as u8
     } /* M flag, managed, */
     if parm.other != 0 {
         (*ra).flags =
-            ((*ra).flags as libc::c_int | 0x40 as libc::c_int) as u8_0
+            ((*ra).flags as libc::c_int | 0x40 as libc::c_int) as u8
     } /* O flag, other */
     /* decide where we're sending */
     memset(&mut addr as *mut sockaddr_in6 as *mut libc::c_void,
@@ -1336,12 +1347,12 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                      __bswap_32(0xffc00000 as libc::c_uint) ==
                      __bswap_32(0xfe800000 as libc::c_uint)) as libc::c_int
             }) != 0 ||
-               *(dest as *const uint8_t).offset(0 as libc::c_int as isize) as
+               *(dest as *const u8).offset(0 as libc::c_int as isize) as
                    libc::c_int == 0xff as libc::c_int &&
-                   *(dest as *const uint8_t).offset(1 as libc::c_int as isize)
+                   *(dest as *const u8).offset(1 as libc::c_int as isize)
                        as libc::c_int & 0xf as libc::c_int ==
                        0x2 as libc::c_int {
-            addr.sin6_scope_id = iface as uint32_t
+            addr.sin6_scope_id = iface as u32
         }
     } else {
         inet_pton(10 as libc::c_int,
@@ -1410,11 +1421,11 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
                                 0 as libc::c_int as libc::c_uint &&
                             (*__a).__in6_u.__u6_addr32[3 as libc::c_int as
                                                            usize] ==
-                                __bswap_32(1 as libc::c_int as __uint32_t)) as
+                                __bswap_32(1 as libc::c_int as __u32)) as
                            libc::c_int
                    }) == 0 &&
                       !(*(local as
-                              *const uint8_t).offset(0 as libc::c_int as
+                              *const u8).offset(0 as libc::c_int as
                                                          isize) as libc::c_int
                             == 0xff as libc::c_int) {
             let mut real_prefix: libc::c_int = 0 as libc::c_int;
@@ -1560,7 +1571,7 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
             if deprecate != 0 { time = 0 as libc::c_int as libc::c_uint }
             /* configured time is ceiling */
             if constructed == 0 || preferred > time { preferred = time }
-            if *(local as *const uint32_t).offset(0 as libc::c_int as isize) &
+            if *(local as *const u32).offset(0 as libc::c_int as isize) &
                    __bswap_32(0xff000000 as libc::c_uint) ==
                    __bswap_32(0xfd000000 as libc::c_uint) {
                 if preferred > (*param).ula_pref_time {
@@ -1584,7 +1595,7 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
                                          !(if real_prefix == 64 as libc::c_int
                                               {
                                                -(1 as libc::c_longlong) as
-                                                   u64_0
+                                                   u64
                                            } else {
                                                ((1 as libc::c_ulonglong) <<
                                                     128 as libc::c_int -
@@ -1593,28 +1604,28 @@ unsafe extern "C" fn add_prefixes(mut local: *mut in6_addr,
                                                                                       libc::c_ulonglong)
                                            }));
                     }
-                    (*opt).type_0 = 3 as libc::c_int as u8_0;
-                    (*opt).len = 4 as libc::c_int as u8_0;
-                    (*opt).prefix_len = real_prefix as u8_0;
+                    (*opt).type_0 = 3 as libc::c_int as u8;
+                    (*opt).len = 4 as libc::c_int as u8;
+                    (*opt).prefix_len = real_prefix as u8;
                     /* autonomous only if we're not doing dhcp, set
                      "on-link" unless "off-link" was specified */
                     (*opt).flags =
                         if off_link != 0 {
                             0 as libc::c_int
-                        } else { 0x80 as libc::c_int } as u8_0;
+                        } else { 0x80 as libc::c_int } as u8;
                     if do_slaac != 0 {
                         (*opt).flags =
                             ((*opt).flags as libc::c_int |
-                                 0x40 as libc::c_int) as u8_0
+                                 0x40 as libc::c_int) as u8
                     }
                     if adv_router != 0 {
                         (*opt).flags =
                             ((*opt).flags as libc::c_int |
-                                 0x20 as libc::c_int) as u8_0
+                                 0x20 as libc::c_int) as u8
                     }
                     (*opt).valid_lifetime = __bswap_32(valid);
                     (*opt).preferred_lifetime = __bswap_32(preferred);
-                    (*opt).reserved = 0 as libc::c_int as u32_0;
+                    (*opt).reserved = 0 as libc::c_int as u32;
                     (*opt).prefix = *local;
                     inet_ntop(10 as libc::c_int, local as *const libc::c_void,
                               (*dnsmasq_daemon).addrbuff,

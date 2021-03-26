@@ -1,3 +1,7 @@
+use crate::slack::{sockaddr_nl, nlmsghdr, my_nlattr, my_nfgenmsg, ip_set_req_adt_get, ip_set_req_adt};
+use crate::defines::{__kernel_sa_family_t, dnsmasq_daemon, SOCK_RAW, IPPROTO_RAW, __CONST_SOCKADDR_ARG, sockaddr, socklen_t, all_addr, __bswap_16, C2RustUnnamed_9, __bswap_32};
+use crate::util::{safe_malloc, retry_send};
+use crate::dnsmasq_log::{die, my_syslog};
 
 static mut snl: sockaddr_nl =
     {
@@ -13,8 +17,8 @@ static mut old_kernel: libc::c_int = 0;
 static mut buffer: *mut libc::c_char =
     0 as *const libc::c_char as *mut libc::c_char;
 #[inline]
-unsafe extern "C" fn add_attr(mut nlh: *mut nlmsghdr, mut type_0: uint16_t,
-                              mut len: size_t,
+unsafe extern "C" fn add_attr(mut nlh: *mut nlmsghdr, mut type_0: u16,
+                              mut len: usize,
                               mut data: *const libc::c_void) {
     let mut attr: *mut my_nlattr =
         (nlh as
@@ -26,11 +30,11 @@ unsafe extern "C" fn add_attr(mut nlh: *mut nlmsghdr, mut type_0: uint16_t,
                                             !(3 as libc::c_int) as
                                                 libc::c_uint) as isize) as
             *mut my_nlattr;
-    let mut payload_len: uint16_t =
+    let mut payload_len: u16 =
         ((::std::mem::size_of::<my_nlattr>() as
               libc::c_ulong).wrapping_add(3 as libc::c_int as libc::c_ulong) &
              !(3 as libc::c_int) as libc::c_ulong).wrapping_add(len) as
-            uint16_t;
+            u16;
     (*attr).nla_type = type_0;
     (*attr).nla_len = payload_len;
     memcpy((attr as
@@ -50,7 +54,7 @@ unsafe extern "C" fn add_attr(mut nlh: *mut nlmsghdr, mut type_0: uint16_t,
              libc::c_uint).wrapping_add((payload_len as libc::c_int +
                                              3 as libc::c_int &
                                              !(3 as libc::c_int)) as
-                                            libc::c_uint) as __u32 as __u32;
+                                            libc::c_uint) as u32 as u32;
 }
 #[no_mangle]
 pub unsafe extern "C" fn ipset_init() {
@@ -71,7 +75,7 @@ pub unsafe extern "C" fn ipset_init() {
     if old_kernel == 0 &&
            {
                buffer =
-                   safe_malloc(256 as libc::c_int as size_t) as
+                   safe_malloc(256 as libc::c_int as usize) as
                        *mut libc::c_char;
                !buffer.is_null()
            } &&
@@ -101,7 +105,7 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
     let mut nlh: *mut nlmsghdr = 0 as *mut nlmsghdr;
     let mut nfg: *mut my_nfgenmsg = 0 as *mut my_nfgenmsg;
     let mut nested: [*mut my_nlattr; 2] = [0 as *mut my_nlattr; 2];
-    let mut proto: uint8_t = 0;
+    let mut proto: u8 = 0;
     let mut addrsz: libc::c_int =
         if af == 10 as libc::c_int {
             16 as libc::c_int
@@ -116,11 +120,11 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
     (*nlh).nlmsg_len =
         ((::std::mem::size_of::<nlmsghdr>() as
               libc::c_ulong).wrapping_add(3 as libc::c_int as libc::c_ulong) &
-             !(3 as libc::c_int) as libc::c_ulong) as __u32;
+             !(3 as libc::c_int) as libc::c_ulong) as u32;
     (*nlh).nlmsg_type =
         ((if remove != 0 { 10 as libc::c_int } else { 9 as libc::c_int }) |
-             (6 as libc::c_int) << 8 as libc::c_int) as __u16;
-    (*nlh).nlmsg_flags = 0x1 as libc::c_int as __u16;
+             (6 as libc::c_int) << 8 as libc::c_int) as u16;
+    (*nlh).nlmsg_flags = 0x1 as libc::c_int as u16;
     nfg = buffer.offset((*nlh).nlmsg_len as isize) as *mut my_nfgenmsg;
     (*nlh).nlmsg_len =
         ((*nlh).nlmsg_len as
@@ -132,16 +136,16 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
                                                                               libc::c_ulong)
                                              &
                                              !(3 as libc::c_int) as
-                                                 libc::c_ulong) as __u32 as
-            __u32;
-    (*nfg).nfgen_family = af as __u8;
-    (*nfg).version = 0 as libc::c_int as __u8;
-    (*nfg).res_id = __bswap_16(0 as libc::c_int as __uint16_t);
-    proto = 6 as libc::c_int as uint8_t;
-    add_attr(nlh, 1 as libc::c_int as uint16_t,
-             ::std::mem::size_of::<uint8_t>() as libc::c_ulong,
-             &mut proto as *mut uint8_t as *const libc::c_void);
-    add_attr(nlh, 2 as libc::c_int as uint16_t,
+                                                 libc::c_ulong) as u32 as
+            u32;
+    (*nfg).nfgen_family = af as u8;
+    (*nfg).version = 0 as libc::c_int as u8;
+    (*nfg).res_id = __bswap_16(0 as libc::c_int as u16);
+    proto = 6 as libc::c_int as u8;
+    add_attr(nlh, 1 as libc::c_int as u16,
+             ::std::mem::size_of::<u8>() as libc::c_ulong,
+             &mut proto as *mut u8 as *const libc::c_void);
+    add_attr(nlh, 2 as libc::c_int as u16,
              strlen(setname).wrapping_add(1 as libc::c_int as libc::c_ulong),
              setname as *const libc::c_void);
     nested[0 as libc::c_int as usize] =
@@ -159,10 +163,10 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
                                                                               libc::c_ulong)
                                              &
                                              !(3 as libc::c_int) as
-                                                 libc::c_ulong) as __u32 as
-            __u32;
+                                                 libc::c_ulong) as u32 as
+            u32;
     (*nested[0 as libc::c_int as usize]).nla_type =
-        ((1 as libc::c_int) << 15 as libc::c_int | 7 as libc::c_int) as __u16;
+        ((1 as libc::c_int) << 15 as libc::c_int | 7 as libc::c_int) as u16;
     nested[1 as libc::c_int as usize] =
         buffer.offset(((*nlh).nlmsg_len.wrapping_add(3 as libc::c_int as
                                                          libc::c_uint) &
@@ -178,16 +182,16 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
                                                                               libc::c_ulong)
                                              &
                                              !(3 as libc::c_int) as
-                                                 libc::c_ulong) as __u32 as
-            __u32;
+                                                 libc::c_ulong) as u32 as
+            u32;
     (*nested[1 as libc::c_int as usize]).nla_type =
-        ((1 as libc::c_int) << 15 as libc::c_int | 1 as libc::c_int) as __u16;
+        ((1 as libc::c_int) << 15 as libc::c_int | 1 as libc::c_int) as u16;
     add_attr(nlh,
              ((if af == 2 as libc::c_int {
                    1 as libc::c_int
                } else { 2 as libc::c_int }) |
-                  (1 as libc::c_int) << 14 as libc::c_int) as uint16_t,
-             addrsz as size_t, ipaddr as *const libc::c_void);
+                  (1 as libc::c_int) << 14 as libc::c_int) as u16,
+             addrsz as usize, ipaddr as *const libc::c_void);
     (*nested[1 as libc::c_int as usize]).nla_len =
         (buffer as
              *mut libc::c_void).offset(((*nlh).nlmsg_len.wrapping_add(3 as
@@ -204,7 +208,7 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
                                                                                   usize]
                                                                            as
                                                                            *mut libc::c_void)
-            as libc::c_long as __u16;
+            as libc::c_long as u16;
     (*nested[0 as libc::c_int as usize]).nla_len =
         (buffer as
              *mut libc::c_void).offset(((*nlh).nlmsg_len.wrapping_add(3 as
@@ -221,9 +225,9 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
                                                                                   usize]
                                                                            as
                                                                            *mut libc::c_void)
-            as libc::c_long as __u16;
+            as libc::c_long as u16;
     while retry_send(sendto(ipset_sock, buffer as *const libc::c_void,
-                            (*nlh).nlmsg_len as size_t, 0 as libc::c_int,
+                            (*nlh).nlmsg_len as usize, 0 as libc::c_int,
                             __CONST_SOCKADDR_ARG{__sockaddr__:
                                                      &snl as
                                                          *const sockaddr_nl as

@@ -14,6 +14,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+use crate::defines::{dns_header, size_t, all_addr, _ISdigit, _ISxdigit, in6_addr, __bswap_16, in_addr, __bswap_32, in_addr_t, dnsmasq_daemon, doctor, _ISprint, time_t, crec, mx_srv_record, txt_record, interface_name, ptr_record, naptr, bogus_addr, addrlist, server};
+use crate::util::{hostname_isequal, is_same_net, hostname_issubdomain, do_rfc1035_name};
+use crate::slack::{u32_0, is_rev_synth, is_name_synthetic};
+use crate::dnsmasq_log::my_syslog;
+use crate::cache::{cache_start_insert, cache_insert, next_uid, log_query, cache_end_insert, cache_find_non_terminal, cache_find_by_name, cache_get_cname_target, record_source, cache_make_stat, querystr, cache_find_by_addr, cache_get_name};
+use crate::blockdata::{blockdata_alloc, blockdata_retrieve};
+use crate::ipset::add_to_ipset;
+use std::env::args;
+use crate::network::enumerate_interfaces;
+use crate::edns0::add_pseudoheader;
+
 #[no_mangle]
 pub unsafe extern "C" fn extract_name(mut header: *mut dns_header,
                                       mut plen: size_t,
@@ -445,9 +456,9 @@ pub unsafe extern "C" fn skip_section(mut ansp: *mut libc::c_uchar,
         ansp = ansp.offset(8 as libc::c_int as isize);
         let mut t_cp: *mut libc::c_uchar = ansp;
         rdlen =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         ansp = ansp.offset(2 as libc::c_int as isize);
         if if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
@@ -483,7 +494,7 @@ pub unsafe extern "C" fn resize_packet(mut header: *mut dns_header,
         /* must use memmove, may overlap */
         memmove(ansp as *mut libc::c_void, pheader as *const libc::c_void,
                 hlen);
-        (*header).arcount = __bswap_16(1 as libc::c_int as __uint16_t);
+        (*header).arcount = __bswap_16(1 as libc::c_int as u16);
         ansp = ansp.offset(hlen as isize)
     }
     return ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
@@ -542,7 +553,7 @@ unsafe extern "C" fn private_net6(mut a: *mut in6_addr) -> libc::c_int {
                               0 as libc::c_int as libc::c_uint &&
                           (*__a).__in6_u.__u6_addr32[3 as libc::c_int as
                                                          usize] ==
-                              __bswap_32(1 as libc::c_int as __uint32_t)) as
+                              __bswap_32(1 as libc::c_int as u32)) as
                          libc::c_int
                  }) != 0 ||
                 ({
@@ -555,7 +566,7 @@ unsafe extern "C" fn private_net6(mut a: *mut in6_addr) -> libc::c_int {
                 *(a as *mut libc::c_uchar).offset(0 as libc::c_int as isize)
                     as libc::c_int == 0xfd as libc::c_int ||
                 *(a as *mut u32_0).offset(0 as libc::c_int as isize) ==
-                    __bswap_32(0x20010db8 as libc::c_int as __uint32_t)) as
+                    __bswap_32(0x20010db8 as libc::c_int as u32)) as
                libc::c_int;
     /* RFC 6303 4.6 */
 }
@@ -601,25 +612,25 @@ unsafe extern "C" fn do_doctor(mut p: *mut libc::c_uchar,
         }
         let mut t_cp: *mut libc::c_uchar = p;
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         /* bad packet */
         p = p.offset(4 as libc::c_int as isize); /* ttl */
         let mut t_cp_1: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if qclass == 1 as libc::c_int && qtype == 1 as libc::c_int {
@@ -658,7 +669,7 @@ unsafe extern "C" fn do_doctor(mut p: *mut libc::c_uchar,
                         (*header).hb3 =
                             ((*header).hb3 as libc::c_int &
                                  !(0x4 as libc::c_int)) as
-                                u8_0; /* bad packet */
+                                u8; /* bad packet */
                         *doctored = 1 as libc::c_int;
                         memcpy(p as *mut libc::c_void,
                                &mut addr as *mut in_addr as
@@ -775,16 +786,16 @@ unsafe extern "C" fn find_soa(mut header: *mut dns_header, mut qlen: size_t,
         if p.is_null() { return 0 as libc::c_int }
         let mut t_cp: *mut libc::c_uchar = p;
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_1: *mut libc::c_uchar = p;
@@ -800,9 +811,9 @@ unsafe extern "C" fn find_soa(mut header: *mut dns_header, mut qlen: size_t,
         p = p.offset(4 as libc::c_int as isize);
         let mut t_cp_2: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_2.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_2.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_2.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_2.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if qclass == 1 as libc::c_int && qtype == 6 as libc::c_int {
@@ -956,16 +967,16 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
         }
         let mut t_cp: *mut libc::c_uchar = p;
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if !(qclass != 1 as libc::c_int) {
@@ -1011,21 +1022,21 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                     let mut t_cp_1: *mut libc::c_uchar = p1;
                                     aqtype =
                                         (*t_cp_1.offset(0 as libc::c_int as
-                                                            isize) as u16_0 as
+                                                            isize) as u16 as
                                              libc::c_int) << 8 as libc::c_int
                                             |
                                             *t_cp_1.offset(1 as libc::c_int as
-                                                               isize) as u16_0
+                                                               isize) as u16
                                                 as libc::c_int;
                                     p1 = p1.offset(2 as libc::c_int as isize);
                                     let mut t_cp_2: *mut libc::c_uchar = p1;
                                     aqclass =
                                         (*t_cp_2.offset(0 as libc::c_int as
-                                                            isize) as u16_0 as
+                                                            isize) as u16 as
                                              libc::c_int) << 8 as libc::c_int
                                             |
                                             *t_cp_2.offset(1 as libc::c_int as
-                                                               isize) as u16_0
+                                                               isize) as u16
                                                 as libc::c_int;
                                     p1 = p1.offset(2 as libc::c_int as isize);
                                     let mut t_cp_3: *mut libc::c_uchar = p1;
@@ -1079,11 +1090,11 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                     let mut t_cp_5: *mut libc::c_uchar = p1;
                                     ardlen =
                                         (*t_cp_5.offset(0 as libc::c_int as
-                                                            isize) as u16_0 as
+                                                            isize) as u16 as
                                              libc::c_int) << 8 as libc::c_int
                                             |
                                             *t_cp_5.offset(1 as libc::c_int as
-                                                               isize) as u16_0
+                                                               isize) as u16
                                                 as libc::c_int;
                                     p1 = p1.offset(2 as libc::c_int as isize);
                                     endrr = p1.offset(ardlen as isize);
@@ -1238,22 +1249,22 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                         p1; /* bad packet */
                                     aqtype =
                                         (*t_cp_6.offset(0 as libc::c_int as
-                                                            isize) as u16_0 as
+                                                            isize) as u16 as
                                              libc::c_int) << 8 as libc::c_int
                                             |
                                             *t_cp_6.offset(1 as libc::c_int as
-                                                               isize) as u16_0
+                                                               isize) as u16
                                                 as
                                                 libc::c_int; /* include terminating zero */
                                     p1 = p1.offset(2 as libc::c_int as isize);
                                     let mut t_cp_7: *mut libc::c_uchar = p1;
                                     aqclass =
                                         (*t_cp_7.offset(0 as libc::c_int as
-                                                            isize) as u16_0 as
+                                                            isize) as u16 as
                                              libc::c_int) << 8 as libc::c_int
                                             |
                                             *t_cp_7.offset(1 as libc::c_int as
-                                                               isize) as u16_0
+                                                               isize) as u16
                                                 as libc::c_int;
                                     p1 = p1.offset(2 as libc::c_int as isize);
                                     let mut t_cp_8: *mut libc::c_uchar = p1;
@@ -1307,12 +1318,12 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                     let mut t_cp_10: *mut libc::c_uchar = p1;
                                     ardlen =
                                         (*t_cp_10.offset(0 as libc::c_int as
-                                                             isize) as u16_0
+                                                             isize) as u16
                                              as libc::c_int) <<
                                             8 as libc::c_int |
                                             *t_cp_10.offset(1 as libc::c_int
                                                                 as isize) as
-                                                u16_0 as libc::c_int;
+                                                u16 as libc::c_int;
                                     p1 = p1.offset(2 as libc::c_int as isize);
                                     endrr = p1.offset(ardlen as isize);
                                     if aqclass == 1 as libc::c_int &&
@@ -1400,14 +1411,14 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                                                           libc::c_int
                                                                           as
                                                                           isize)
-                                                          as u16_0 as
+                                                          as u16 as
                                                           libc::c_int) <<
                                                          8 as libc::c_int |
                                                          *t_cp_11.offset(1 as
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                                                             as u16_0 as
+                                                             as u16 as
                                                              libc::c_int) as
                                                         libc::c_ushort;
                                                 p1 =
@@ -1421,14 +1432,14 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                                                           libc::c_int
                                                                           as
                                                                           isize)
-                                                          as u16_0 as
+                                                          as u16 as
                                                           libc::c_int) <<
                                                          8 as libc::c_int |
                                                          *t_cp_12.offset(1 as
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                                                             as u16_0 as
+                                                             as u16 as
                                                              libc::c_int) as
                                                         libc::c_ushort;
                                                 p1 =
@@ -1442,14 +1453,14 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                                                           libc::c_int
                                                                           as
                                                                           isize)
-                                                          as u16_0 as
+                                                          as u16 as
                                                           libc::c_int) <<
                                                          8 as libc::c_int |
                                                          *t_cp_13.offset(1 as
                                                                              libc::c_int
                                                                              as
                                                                              isize)
-                                                             as u16_0 as
+                                                             as u16 as
                                                              libc::c_int) as
                                                         libc::c_ushort;
                                                 p1 =
@@ -1601,7 +1612,7 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                                                                         as
                                                                                         libc::c_int
                                                                                         as
-                                                                                        __uint32_t))
+                                                                                        u32))
                                                                     as
                                                                     libc::c_int
                                                             }) != 0 {
@@ -1614,7 +1625,7 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                                                       as
                                                                       *mut in6_addr
                                                                       as
-                                                                      *const uint32_t).offset(3
+                                                                      *const u32).offset(3
                                                                                                   as
                                                                                                   libc::c_int
                                                                                                   as
@@ -1793,7 +1804,7 @@ pub unsafe extern "C" fn extract_addresses(mut header: *mut dns_header,
                                                                                             as
                                                                                             libc::c_int
                                                                                             as
-                                                                                            __uint32_t))
+                                                                                            u32))
                                                                         as
                                                                         libc::c_int
                                                                 }) != 0 {
@@ -2000,15 +2011,15 @@ pub unsafe extern "C" fn extract_request(mut header: *mut dns_header,
     }
     let mut t_cp: *mut libc::c_uchar = p;
     qtype =
-        (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int) <<
+        (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int) <<
             8 as libc::c_int |
-            *t_cp.offset(1 as libc::c_int as isize) as u16_0 as libc::c_int;
+            *t_cp.offset(1 as libc::c_int as isize) as u16 as libc::c_int;
     p = p.offset(2 as libc::c_int as isize);
     let mut t_cp_0: *mut libc::c_uchar = p;
     qclass =
-        (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int) <<
+        (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as libc::c_int) <<
             8 as libc::c_int |
-            *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as libc::c_int;
+            *t_cp_0.offset(1 as libc::c_int as isize) as u16 as libc::c_int;
     p = p.offset(2 as libc::c_int as isize);
     if !typep.is_null() { *typep = qtype as libc::c_ushort }
     if qclass == 1 as libc::c_int {
@@ -2045,24 +2056,24 @@ pub unsafe extern "C" fn setup_reply(mut header: *mut dns_header,
     (*header).hb3 =
         ((*header).hb3 as libc::c_int &
              !(0x4 as libc::c_int | 0x2 as libc::c_int) | 0x80 as libc::c_int)
-            as u8_0;
+            as u8;
     /* clear AD flag, set RA flag */
     (*header).hb4 =
         ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int) |
              0x80 as libc::c_int) as
-            u8_0; /* no answers unless changed below */
+            u8; /* no answers unless changed below */
     (*header).nscount =
-        __bswap_16(0 as libc::c_int as __uint16_t); /* empty domain */
-    (*header).arcount = __bswap_16(0 as libc::c_int as __uint16_t);
-    (*header).ancount = __bswap_16(0 as libc::c_int as __uint16_t);
+        __bswap_16(0 as libc::c_int as u16); /* empty domain */
+    (*header).arcount = __bswap_16(0 as libc::c_int as u16);
+    (*header).ancount = __bswap_16(0 as libc::c_int as u16);
     if flags == (1 as libc::c_uint) << 20 as libc::c_int {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 0 as libc::c_int) as u8_0
+                 0 as libc::c_int) as u8
     } else if flags == (1 as libc::c_uint) << 10 as libc::c_int {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 3 as libc::c_int) as u8_0
+                 3 as libc::c_int) as u8
     } else if flags == (1 as libc::c_uint) << 28 as libc::c_int {
         let mut a: all_addr = all_addr{addr4: in_addr{s_addr: 0,},};
         a.log.rcode = 2 as libc::c_int as libc::c_ushort;
@@ -2072,7 +2083,7 @@ pub unsafe extern "C" fn setup_reply(mut header: *mut dns_header,
                       *mut libc::c_char, &mut a, 0 as *mut libc::c_char);
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 2 as libc::c_int) as u8_0
+                 2 as libc::c_int) as u8
     } else if flags &
                   ((1 as libc::c_uint) << 7 as libc::c_int |
                        (1 as libc::c_uint) << 8 as libc::c_int) != 0 {
@@ -2080,10 +2091,10 @@ pub unsafe extern "C" fn setup_reply(mut header: *mut dns_header,
             /* we know the address */
             (*header).hb4 =
                 ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                     0 as libc::c_int) as u8_0;
-            (*header).ancount = __bswap_16(1 as libc::c_int as __uint16_t);
+                     0 as libc::c_int) as u8;
+            (*header).ancount = __bswap_16(1 as libc::c_int as u16);
             (*header).hb3 =
-                ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8_0;
+                ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8;
             add_resource_record(header, 0 as *mut libc::c_char,
                                 0 as *mut libc::c_int,
                                 ::std::mem::size_of::<dns_header>() as
@@ -2098,12 +2109,12 @@ pub unsafe extern "C" fn setup_reply(mut header: *mut dns_header,
         if flags & (1 as libc::c_uint) << 8 as libc::c_int != 0 {
             (*header).hb4 =
                 ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                     0 as libc::c_int) as u8_0;
+                     0 as libc::c_int) as u8;
             (*header).ancount =
                 __bswap_16((__bswap_16((*header).ancount) as libc::c_int +
-                                1 as libc::c_int) as __uint16_t);
+                                1 as libc::c_int) as u16);
             (*header).hb3 =
-                ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8_0;
+                ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8;
             add_resource_record(header, 0 as *mut libc::c_char,
                                 0 as *mut libc::c_int,
                                 ::std::mem::size_of::<dns_header>() as
@@ -2125,7 +2136,7 @@ pub unsafe extern "C" fn setup_reply(mut header: *mut dns_header,
                       *mut libc::c_char, &mut a_0, 0 as *mut libc::c_char);
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 5 as libc::c_int) as u8_0
+                 5 as libc::c_int) as u8
     }
     return p.wrapping_offset_from(header as *mut libc::c_uchar) as
                libc::c_long as size_t;
@@ -2206,16 +2217,16 @@ pub unsafe extern "C" fn check_for_bogus_wildcard(mut header: *mut dns_header,
         }
         let mut t_cp: *mut libc::c_uchar = p;
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_1: *mut libc::c_uchar = p;
@@ -2231,9 +2242,9 @@ pub unsafe extern "C" fn check_for_bogus_wildcard(mut header: *mut dns_header,
         p = p.offset(4 as libc::c_int as isize);
         let mut t_cp_2: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_2.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_2.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_2.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_2.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if qclass == 1 as libc::c_int && qtype == 1 as libc::c_int {
@@ -2299,24 +2310,24 @@ pub unsafe extern "C" fn check_for_ignored_address(mut header:
         if p.is_null() { return 0 as libc::c_int }
         let mut t_cp: *mut libc::c_uchar = p;
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16_0 as libc::c_int)
+            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
                 << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         let mut t_cp_0: *mut libc::c_uchar = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         p = p.offset(4 as libc::c_int as isize);
         let mut t_cp_1: *mut libc::c_uchar = p;
         rdlen =
-            (*t_cp_1.offset(0 as libc::c_int as isize) as u16_0 as
+            (*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
                  libc::c_int) << 8 as libc::c_int |
-                *t_cp_1.offset(1 as libc::c_int as isize) as u16_0 as
+                *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
                     libc::c_int;
         p = p.offset(2 as libc::c_int as isize);
         if qclass == 1 as libc::c_int && qtype == 1 as libc::c_int {
@@ -2375,8 +2386,8 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                        limit as *mut libc::c_uchar {
                 current_block = 16696653877814833746;
             } else {
-                let mut t_s: u16_0 =
-                    (nameoffset | 0xc000 as libc::c_int) as u16_0;
+                let mut t_s: u16 =
+                    (nameoffset | 0xc000 as libc::c_int) as u16;
                 let mut t_cp: *mut libc::c_uchar = p;
                 let fresh24 = t_cp;
                 t_cp = t_cp.offset(1);
@@ -2397,8 +2408,8 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                            limit as *mut libc::c_uchar {
                     current_block = 16696653877814833746;
                 } else {
-                    let mut t_s_0: u16_0 =
-                        (-nameoffset | 0xc000 as libc::c_int) as u16_0;
+                    let mut t_s_0: u16 =
+                        (-nameoffset | 0xc000 as libc::c_int) as u16;
                     let mut t_cp_0: *mut libc::c_uchar = p;
                     let fresh25 = t_cp_0;
                     t_cp_0 = t_cp_0.offset(1);
@@ -2428,7 +2439,7 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                 if !(!limit.is_null() &&
                          p.offset(10 as libc::c_int as isize) >
                              limit as *mut libc::c_uchar) {
-                    let mut t_s_1: u16_0 = type_0;
+                    let mut t_s_1: u16 = type_0;
                     let mut t_cp_1: *mut libc::c_uchar = p;
                     let fresh27 = t_cp_1;
                     t_cp_1 = t_cp_1.offset(1);
@@ -2437,7 +2448,7 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                             libc::c_uchar;
                     *t_cp_1 = t_s_1 as libc::c_uchar;
                     p = p.offset(2 as libc::c_int as isize);
-                    let mut t_s_2: u16_0 = class;
+                    let mut t_s_2: u16 = class;
                     let mut t_cp_2: *mut libc::c_uchar = p;
                     let fresh28 = t_cp_2;
                     t_cp_2 = t_cp_2.offset(1);
@@ -2461,7 +2472,7 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                     p = p.offset(4 as libc::c_int as isize);
                     /* TTL */
                     sav = p; /* Save pointer to RDLength field */
-                    let mut t_s_3: u16_0 = 0 as libc::c_int as u16_0;
+                    let mut t_s_3: u16 = 0 as libc::c_int as u16;
                     let mut t_cp_4: *mut libc::c_uchar = p;
                     let fresh32 = t_cp_4;
                     t_cp_4 = t_cp_4.offset(1);
@@ -2526,7 +2537,7 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                                 }
                                 usval =
                                     ap.arg::<libc::c_int>() as libc::c_ushort;
-                                let mut t_s_4: u16_0 = usval;
+                                let mut t_s_4: u16 = usval;
                                 let mut t_cp_5: *mut libc::c_uchar = p;
                                 let fresh34 = t_cp_5;
                                 t_cp_5 = t_cp_5.offset(1);
@@ -2649,7 +2660,7 @@ pub unsafe extern "C" fn add_resource_record(mut header: *mut dns_header,
                                 (p.wrapping_offset_from(sav) as libc::c_long -
                                      2 as libc::c_int as libc::c_long) as
                                     libc::c_int;
-                            let mut t_s_5: u16_0 = j as u16_0;
+                            let mut t_s_5: u16 = j as u16;
                             let mut t_cp_7: *mut libc::c_uchar = sav;
                             let fresh40 = t_cp_7;
                             t_cp_7 = t_cp_7.offset(1);
@@ -2801,16 +2812,16 @@ pub unsafe extern "C" fn answer_request(mut header: *mut dns_header,
             let mut t_cp: *mut libc::c_uchar =
                 p; /* have we answered this question */
             qtype =
-                ((*t_cp.offset(0 as libc::c_int as isize) as u16_0 as
+                ((*t_cp.offset(0 as libc::c_int as isize) as u16 as
                       libc::c_int) << 8 as libc::c_int |
-                     *t_cp.offset(1 as libc::c_int as isize) as u16_0 as
+                     *t_cp.offset(1 as libc::c_int as isize) as u16 as
                          libc::c_int) as libc::c_uint;
             p = p.offset(2 as libc::c_int as isize);
             let mut t_cp_0: *mut libc::c_uchar = p;
             qclass =
-                ((*t_cp_0.offset(0 as libc::c_int as isize) as u16_0 as
+                ((*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
                       libc::c_int) << 8 as libc::c_int |
-                     *t_cp_0.offset(1 as libc::c_int as isize) as u16_0 as
+                     *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
                          libc::c_int) as libc::c_uint;
             p = p.offset(2 as libc::c_int as isize);
             ans = 0 as libc::c_int;
@@ -4395,36 +4406,36 @@ pub unsafe extern "C" fn answer_request(mut header: *mut dns_header,
     (*header).hb3 =
         ((*header).hb3 as libc::c_int &
              !(0x4 as libc::c_int | 0x2 as libc::c_int) | 0x80 as libc::c_int)
-            as u8_0;
+            as u8;
     /* set RA flag */
     (*header).hb4 =
-        ((*header).hb4 as libc::c_int | 0x80 as libc::c_int) as u8_0;
+        ((*header).hb4 as libc::c_int | 0x80 as libc::c_int) as u8;
     /* authoritative - only hosts and DHCP derived names. */
     if auth != 0 {
         (*header).hb3 =
-            ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8_0
+            ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8
     }
     /* truncation */
     if trunc != 0 {
         (*header).hb3 =
-            ((*header).hb3 as libc::c_int | 0x2 as libc::c_int) as u8_0
+            ((*header).hb3 as libc::c_int | 0x2 as libc::c_int) as u8
     } /* no error */
     if nxdomain != 0 {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 3 as libc::c_int) as u8_0
+                 3 as libc::c_int) as u8
     } else if notimp != 0 {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 4 as libc::c_int) as u8_0
+                 4 as libc::c_int) as u8
     } else {
         (*header).hb4 =
             ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 0 as libc::c_int) as u8_0
+                 0 as libc::c_int) as u8
     }
-    (*header).ancount = __bswap_16(anscount as __uint16_t);
-    (*header).nscount = __bswap_16(0 as libc::c_int as __uint16_t);
-    (*header).arcount = __bswap_16(addncount as __uint16_t);
+    (*header).ancount = __bswap_16(anscount as u16);
+    (*header).nscount = __bswap_16(0 as libc::c_int as u16);
+    (*header).arcount = __bswap_16(addncount as u16);
     len =
         ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
             libc::c_long as size_t;
@@ -4439,10 +4450,10 @@ pub unsafe extern "C" fn answer_request(mut header: *mut dns_header,
     }
     if ad_reqd != 0 && sec_data != 0 {
         (*header).hb4 =
-            ((*header).hb4 as libc::c_int | 0x20 as libc::c_int) as u8_0
+            ((*header).hb4 as libc::c_int | 0x20 as libc::c_int) as u8
     } else {
         (*header).hb4 =
-            ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8_0
+            ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8
     }
     return len;
 }

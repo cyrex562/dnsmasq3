@@ -14,375 +14,22 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct iface_param {
-    pub current: *mut dhcp_context,
-    pub relay: *mut dhcp_relay,
-    pub relay_local: in_addr,
-    pub ind: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct match_param {
-    pub ind: libc::c_int,
-    pub matched: libc::c_int,
-    pub netmask: in_addr,
-    pub broadcast: in_addr,
-    pub addr: in_addr,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_14 {
-    pub c: *mut libc::c_uchar,
-    pub p: *mut in_pktinfo,
-}
-#[inline]
-unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
-    return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
-                (__bsx as libc::c_int & 0xff as libc::c_int) <<
-                    8 as libc::c_int) as __uint16_t;
-}
-#[inline]
-unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
-    return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
-               (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
-               (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
-               (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
-    return ((__bsx as libc::c_ulonglong &
-                 0xff00000000000000 as libc::c_ulonglong) >> 56 as libc::c_int
-                |
-                (__bsx as libc::c_ulonglong &
-                     0xff000000000000 as libc::c_ulonglong) >>
-                    40 as libc::c_int |
-                (__bsx as libc::c_ulonglong &
-                     0xff0000000000 as libc::c_ulonglong) >> 24 as libc::c_int
-                |
-                (__bsx as libc::c_ulonglong &
-                     0xff00000000 as libc::c_ulonglong) >> 8 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff000000 as libc::c_ulonglong)
-                    << 8 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff0000 as libc::c_ulonglong)
-                    << 24 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong) <<
-                    40 as libc::c_int |
-                (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong) <<
-                    56 as libc::c_int) as __uint64_t;
-}
-#[inline]
-unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
-    return __x;
-}
-#[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong
-       {
-        return 0 as *mut cmsghdr
-    }
-    __cmsg =
-        (__cmsg as
-             *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-                                                                             as
-                                                                             libc::c_ulong).wrapping_sub(1
-                                                                                                             as
-                                                                                                             libc::c_int
-                                                                                                             as
-                                                                                                             libc::c_ulong)
-                                             &
-                                             !(::std::mem::size_of::<size_t>()
-                                                   as
-                                                   libc::c_ulong).wrapping_sub(1
-                                                                                   as
-                                                                                   libc::c_int
-                                                                                   as
-                                                                                   libc::c_ulong))
-                                            as isize) as *mut cmsghdr;
-    if __cmsg.offset(1 as libc::c_int as isize) as *mut libc::c_uchar >
-           ((*__mhdr).msg_control as
-                *mut libc::c_uchar).offset((*__mhdr).msg_controllen as isize)
-           ||
-           (__cmsg as
-                *mut libc::c_uchar).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-                                                                                as
-                                                                                libc::c_ulong).wrapping_sub(1
-                                                                                                                as
-                                                                                                                libc::c_int
-                                                                                                                as
-                                                                                                                libc::c_ulong)
-                                                &
-                                                !(::std::mem::size_of::<size_t>()
-                                                      as
-                                                      libc::c_ulong).wrapping_sub(1
-                                                                                      as
-                                                                                      libc::c_int
-                                                                                      as
-                                                                                      libc::c_ulong))
-                                               as isize) >
-               ((*__mhdr).msg_control as
-                    *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
-                                                   isize) {
-        return 0 as *mut cmsghdr
-    }
-    return __cmsg;
-}
-#[inline]
-unsafe extern "C" fn stat(mut __path: *const libc::c_char,
-                          mut __statbuf: *mut stat) -> libc::c_int {
-    return __xstat(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstat(mut __fd: libc::c_int, mut __statbuf: *mut stat)
- -> libc::c_int {
-    return __fxstat(1 as libc::c_int, __fd, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
-                            mut __statbuf: *mut stat64) -> libc::c_int {
-    return __xstat64(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstat64(mut __fd: libc::c_int,
-                             mut __statbuf: *mut stat64) -> libc::c_int {
-    return __fxstat64(1 as libc::c_int, __fd, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn fstatat(mut __fd: libc::c_int,
-                             mut __filename: *const libc::c_char,
-                             mut __statbuf: *mut stat,
-                             mut __flag: libc::c_int) -> libc::c_int {
-    return __fxstatat(1 as libc::c_int, __fd, __filename, __statbuf, __flag);
-}
-#[inline]
-unsafe extern "C" fn fstatat64(mut __fd: libc::c_int,
-                               mut __filename: *const libc::c_char,
-                               mut __statbuf: *mut stat64,
-                               mut __flag: libc::c_int) -> libc::c_int {
-    return __fxstatat64(1 as libc::c_int, __fd, __filename, __statbuf,
-                        __flag);
-}
-#[inline]
-unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
-                           mut __statbuf: *mut stat) -> libc::c_int {
-    return __lxstat(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
-                             mut __statbuf: *mut stat64) -> libc::c_int {
-    return __lxstat64(1 as libc::c_int, __path, __statbuf);
-}
-#[inline]
-unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
-                           mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
-    return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
-}
-#[inline]
-unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
-                             mut __path: *const libc::c_char,
-                             mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
-    return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
-}
-#[inline]
-unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
-                             mut __arg: ::std::ffi::VaList) -> libc::c_int {
-    return vfprintf(stdout, __fmt, __arg.as_va_list());
-}
-#[inline]
-unsafe extern "C" fn getchar() -> libc::c_int { return getc(stdin); }
-#[inline]
-unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
-                  libc::c_long != 0 {
-               __uflow(__fp)
-           } else {
-               let fresh0 = (*__fp)._IO_read_ptr;
-               (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-               *(fresh0 as *mut libc::c_uchar) as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn getchar_unlocked() -> libc::c_int {
-    return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as libc::c_int
-                  as libc::c_long != 0 {
-               __uflow(stdin)
-           } else {
-               let fresh1 = (*stdin)._IO_read_ptr;
-               (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
-               *(fresh1 as *mut libc::c_uchar) as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as libc::c_int as
-                  libc::c_long != 0 {
-               __uflow(__fp)
-           } else {
-               let fresh2 = (*__fp)._IO_read_ptr;
-               (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-               *(fresh2 as *mut libc::c_uchar) as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn putchar(mut __c: libc::c_int) -> libc::c_int {
-    return putc(__c, stdout);
-}
-#[inline]
-unsafe extern "C" fn fputc_unlocked(mut __c: libc::c_int,
-                                    mut __stream: *mut FILE) -> libc::c_int {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-                  libc::c_int as libc::c_long != 0 {
-               __overflow(__stream, __c as libc::c_uchar as libc::c_int)
-           } else {
-               let fresh3 = (*__stream)._IO_write_ptr;
-               (*__stream)._IO_write_ptr =
-                   (*__stream)._IO_write_ptr.offset(1);
-               *fresh3 = __c as libc::c_char;
-               *fresh3 as libc::c_uchar as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn putc_unlocked(mut __c: libc::c_int,
-                                   mut __stream: *mut FILE) -> libc::c_int {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
-                  libc::c_int as libc::c_long != 0 {
-               __overflow(__stream, __c as libc::c_uchar as libc::c_int)
-           } else {
-               let fresh4 = (*__stream)._IO_write_ptr;
-               (*__stream)._IO_write_ptr =
-                   (*__stream)._IO_write_ptr.offset(1);
-               *fresh4 = __c as libc::c_char;
-               *fresh4 as libc::c_uchar as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
-    return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
-                  libc::c_int as libc::c_long != 0 {
-               __overflow(stdout, __c as libc::c_uchar as libc::c_int)
-           } else {
-               let fresh5 = (*stdout)._IO_write_ptr;
-               (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
-               *fresh5 = __c as libc::c_char;
-               *fresh5 as libc::c_uchar as libc::c_int
-           };
-}
-#[inline]
-unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
-                             mut __n: *mut size_t, mut __stream: *mut FILE)
- -> __ssize_t {
-    return __getdelim(__lineptr, __n, '\n' as i32, __stream);
-}
-#[inline]
-unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) -> libc::c_int {
-    return ((*__stream)._flags & 0x10 as libc::c_int != 0 as libc::c_int) as
-               libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) -> libc::c_int {
-    return ((*__stream)._flags & 0x20 as libc::c_int != 0 as libc::c_int) as
-               libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
-    return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
-}
-#[inline]
-unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) -> libc::c_int {
-    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                  10 as libc::c_int) as libc::c_int;
-}
-#[inline]
-unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
-    return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                  10 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
- -> libc::c_longlong {
-    return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
-                   10 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
-                             mut __base: *const libc::c_void,
-                             mut __nmemb: size_t, mut __size: size_t,
-                             mut __compar: __compar_fn_t)
- -> *mut libc::c_void {
-    let mut __l: size_t = 0;
-    let mut __u: size_t = 0;
-    let mut __idx: size_t = 0;
-    let mut __p: *const libc::c_void = 0 as *const libc::c_void;
-    let mut __comparison: libc::c_int = 0;
-    __l = 0 as libc::c_int as size_t;
-    __u = __nmemb;
-    while __l < __u {
-        __idx =
-            __l.wrapping_add(__u).wrapping_div(2 as libc::c_int as
-                                                   libc::c_ulong);
-        __p =
-            (__base as
-                 *const libc::c_char).offset(__idx.wrapping_mul(__size) as
-                                                 isize) as *mut libc::c_void;
-        __comparison =
-            Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
-                                                                                                   __p);
-        if __comparison < 0 as libc::c_int {
-            __u = __idx
-        } else if __comparison > 0 as libc::c_int {
-            __l = __idx.wrapping_add(1 as libc::c_int as libc::c_ulong)
-        } else { return __p as *mut libc::c_void }
-    }
-    return 0 as *mut libc::c_void;
-}
-#[inline]
-unsafe extern "C" fn tolower(mut __c: libc::c_int) -> libc::c_int {
-    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
-               *(*__ctype_tolower_loc()).offset(__c as isize)
-           } else { __c };
-}
-#[inline]
-unsafe extern "C" fn toupper(mut __c: libc::c_int) -> libc::c_int {
-    return if __c >= -(128 as libc::c_int) && __c < 256 as libc::c_int {
-               *(*__ctype_toupper_loc()).offset(__c as isize)
-           } else { __c };
-}
-#[inline]
-unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
-                               mut endptr: *mut *mut libc::c_char,
-                               mut base: libc::c_int) -> intmax_t {
-    return __strtol_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
-                               mut endptr: *mut *mut libc::c_char,
-                               mut base: libc::c_int) -> uintmax_t {
-    return __strtoul_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
-                               mut base: libc::c_int) -> intmax_t {
-    return __wcstol_internal(nptr, endptr, base, 0 as libc::c_int);
-}
-#[inline]
-unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
-                               mut base: libc::c_int) -> uintmax_t {
-    return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
-}
+use crate::defines::{dhcp_context, dhcp_relay, in_addr, msghdr, cmsghdr, usize, __mode_t, __dev_t, SOCK_DGRAM, IPPROTO_UDP, sockaddr_in, IPPROTO_IP, socklen_t, dnsmasq_daemon, sa_family_t, in_addr_t, __bswap_16, __CONST_SOCKADDR_ARG, sockaddr, time_t, iname, ifreq, C2RustUnnamed_2, iovec, iface_param, C2RustUnnamed_13, dhcp_bridge, C2RustUnnamed_14, all_addr, match_param, dhcp_lease, shared_network, dhcp_netid, __bswap_32, dhcp_config, ping_result, _ISspace, hwaddr_config, dhcp_netid_list, crec, mysockaddr};
+use crate::slack::{in_pktinfo, arpreq, timeval, IFF_LOOPBACK};
+use std::io::stdout;
+use crate::dnsmasq_log::{die, my_syslog};
+use crate::network::{fix_fd, indextoname, iface_check};
+use crate::dhcp_common::{recv_dhcp_packet, match_netid, strip_hostname};
+use crate::util::{safe_strncpy, wildcard_matchn, wildcard_match, retry_send, is_same_net, whine_malloc, parse_hex, canonicalise, legal_hostname, hostname_isequal};
+use crate::netlink::iface_enumerate;
+use crate::lease::{lease_prune, lease_update_file, lease_update_dns, lease_find_max_addr, lease_find_by_addr};
+use crate::rfc2131::dhcp_reply;
+use crate::icmp_ping;
+use crate::cache::{cache_find_by_addr, cache_get_name};
+use crate::domain::get_domain;
+use crate::forward::send_from;
+
+
 unsafe extern "C" fn make_fd(mut port: libc::c_int) -> libc::c_int {
     let mut fd: libc::c_int =
         socket(2 as libc::c_int, SOCK_DGRAM as libc::c_int,
@@ -492,7 +139,7 @@ unsafe extern "C" fn make_fd(mut port: libc::c_int) -> libc::c_int {
            0 as libc::c_int,
            ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong);
     saddr.sin_family = 2 as libc::c_int as sa_family_t;
-    saddr.sin_port = __bswap_16(port as __uint16_t);
+    saddr.sin_port = __bswap_16(port as u16);
     saddr.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
     if bind(fd,
             __CONST_SOCKADDR_ARG{__sockaddr__:
@@ -546,7 +193,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                     sin_zero: [0; 8],};
     let mut cmptr: *mut cmsghdr = 0 as *mut cmsghdr;
     let mut iov: iovec = iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,};
-    let mut sz: ssize_t = 0;
+    let mut sz: isize = 0;
     let mut iface_index: libc::c_int = 0 as libc::c_int;
     let mut unicast_dest: libc::c_int = 0 as libc::c_int;
     let mut is_inform: libc::c_int = 0 as libc::c_int;
@@ -581,14 +228,14 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
     msg.msg_namelen =
         ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as socklen_t;
     msg.msg_iov = &mut (*dnsmasq_daemon).dhcp_packet;
-    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    msg.msg_iovlen = 1 as libc::c_int as usize;
     sz = recv_dhcp_packet(fd, &mut msg);
     if sz == -(1 as libc::c_int) as libc::c_long ||
            sz <
                (::std::mem::size_of::<dhcp_packet>() as
                     libc::c_ulong).wrapping_sub(::std::mem::size_of::<[u8_0; 312]>()
                                                     as libc::c_ulong) as
-                   ssize_t {
+                   isize {
         return
     }
     if ioctl(fd, 0x8906 as libc::c_int as libc::c_ulong,
@@ -680,7 +327,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             return
         }
         is_relay_reply = 1 as libc::c_int;
-        iov.iov_len = sz as size_t;
+        iov.iov_len = sz as usize;
         safe_strncpy(arp_req.arp_dev.as_mut_ptr(),
                      ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                      ::std::mem::size_of::<[libc::c_char; 16]>() as
@@ -829,7 +476,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         }
         /* We're relaying this request */
         if parm.relay_local.s_addr != 0 as libc::c_int as libc::c_uint &&
-               relay_upstream4(parm.relay, mess, sz as size_t, iface_index) !=
+               relay_upstream4(parm.relay, mess, sz as usize, iface_index) !=
                    0 {
             return
         }
@@ -840,7 +487,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         lease_prune(0 as *mut dhcp_lease, now);
         iov.iov_len =
             dhcp_reply(parm.current, ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
-                       iface_index, sz as size_t, now, unicast_dest, loopback,
+                       iface_index, sz as usize, now, unicast_dest, loopback,
                        &mut is_inform, pxe_fd, iface_addr, recvtime);
         lease_update_file(now);
         lease_update_dns(0 as libc::c_int);
@@ -850,7 +497,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
     msg.msg_namelen =
         ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong as socklen_t;
     msg.msg_control = 0 as *mut libc::c_void;
-    msg.msg_controllen = 0 as libc::c_int as size_t;
+    msg.msg_controllen = 0 as libc::c_int as usize;
     msg.msg_iov = &mut iov;
     iov.iov_base = (*dnsmasq_daemon).dhcp_packet.iov_base;
     /* packet buffer may have moved */
@@ -862,7 +509,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
     } else if (*mess).giaddr.s_addr != 0 && is_relay_reply == 0 {
         /* Send to BOOTP relay  */
         dest.sin_port =
-            __bswap_16((*dnsmasq_daemon).dhcp_server_port as __uint16_t);
+            __bswap_16((*dnsmasq_daemon).dhcp_server_port as u16);
         dest.sin_addr = (*mess).giaddr
     } else if (*mess).ciaddr.s_addr != 0 {
         /* If the client's idea of its own address tallys with
@@ -874,7 +521,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                dest.sin_addr.s_addr == 0 as libc::c_int as libc::c_uint ||
                is_relay_reply != 0 {
             dest.sin_port =
-                __bswap_16((*dnsmasq_daemon).dhcp_client_port as __uint16_t);
+                __bswap_16((*dnsmasq_daemon).dhcp_client_port as u16);
             dest.sin_addr = (*mess).ciaddr
         }
     } else {
@@ -893,7 +540,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         (*pkt).ipi_spec_dst.s_addr = 0 as libc::c_int as in_addr_t;
         msg.msg_controllen =
             ((::std::mem::size_of::<in_pktinfo>() as
-                  libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                  libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                   as
                                                   libc::c_ulong).wrapping_sub(1
                                                                                   as
@@ -901,11 +548,11 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                                                                                   as
                                                                                   libc::c_ulong)
                  &
-                 !(::std::mem::size_of::<size_t>() as
+                 !(::std::mem::size_of::<usize>() as
                        libc::c_ulong).wrapping_sub(1 as libc::c_int as
                                                        libc::c_ulong)).wrapping_add((::std::mem::size_of::<cmsghdr>()
                                                                                          as
-                                                                                         libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                                                                                         libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                                                                                          as
                                                                                                                          libc::c_ulong).wrapping_sub(1
                                                                                                                                                          as
@@ -913,7 +560,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                                                                                                                                                          as
                                                                                                                                                          libc::c_ulong)
                                                                                         &
-                                                                                        !(::std::mem::size_of::<size_t>()
+                                                                                        !(::std::mem::size_of::<usize>()
                                                                                               as
                                                                                               libc::c_ulong).wrapping_sub(1
                                                                                                                               as
@@ -922,7 +569,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                                                                                                                               libc::c_ulong));
         (*cmptr).cmsg_len =
             ((::std::mem::size_of::<cmsghdr>() as
-                  libc::c_ulong).wrapping_add(::std::mem::size_of::<size_t>()
+                  libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
                                                   as
                                                   libc::c_ulong).wrapping_sub(1
                                                                                   as
@@ -930,7 +577,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                                                                                   as
                                                                                   libc::c_ulong)
                  &
-                 !(::std::mem::size_of::<size_t>() as
+                 !(::std::mem::size_of::<usize>() as
                        libc::c_ulong).wrapping_sub(1 as libc::c_int as
                                                        libc::c_ulong)).wrapping_add(::std::mem::size_of::<in_pktinfo>()
                                                                                         as
@@ -946,13 +593,13 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             /* broadcast to 255.255.255.255 (or mac address invalid) */
             dest.sin_addr.s_addr = 0xffffffff as libc::c_uint;
             dest.sin_port =
-                __bswap_16((*dnsmasq_daemon).dhcp_client_port as __uint16_t)
+                __bswap_16((*dnsmasq_daemon).dhcp_client_port as u16)
         } else {
             /* unicast to unconfigured client. Inject mac address direct into ARP cache.
           struct sockaddr limits size to 14 bytes. */
             dest.sin_addr = (*mess).yiaddr;
             dest.sin_port =
-                __bswap_16((*dnsmasq_daemon).dhcp_client_port as __uint16_t);
+                __bswap_16((*dnsmasq_daemon).dhcp_client_port as u16);
             memcpy(&mut arp_req.arp_pa as *mut sockaddr as *mut libc::c_void,
                    &mut dest as *mut sockaddr_in as *const libc::c_void,
                    ::std::mem::size_of::<sockaddr_in>() as libc::c_ulong);
@@ -1811,7 +1458,7 @@ pub unsafe extern "C" fn host_from_dns(mut addr: in_addr)
         }
         if legal_hostname(hostname) == 0 { return 0 as *mut libc::c_char }
         safe_strncpy((*dnsmasq_daemon).dhcp_buff, hostname,
-                     256 as libc::c_int as size_t);
+                     256 as libc::c_int as usize);
         strip_hostname((*dnsmasq_daemon).dhcp_buff);
         return (*dnsmasq_daemon).dhcp_buff
     }
@@ -1819,7 +1466,7 @@ pub unsafe extern "C" fn host_from_dns(mut addr: in_addr)
 }
 unsafe extern "C" fn relay_upstream4(mut relay: *mut dhcp_relay,
                                      mut mess: *mut dhcp_packet,
-                                     mut sz: size_t,
+                                     mut sz: usize,
                                      mut iface_index: libc::c_int)
  -> libc::c_int {
     /* ->local is same value for all relays on ->current chain */
@@ -1848,7 +1495,7 @@ unsafe extern "C" fn relay_upstream4(mut relay: *mut dhcp_relay,
         to.sa.sa_family = 2 as libc::c_int as sa_family_t;
         to.in_0.sin_addr = (*relay).server.addr4;
         to.in_0.sin_port =
-            __bswap_16((*dnsmasq_daemon).dhcp_server_port as __uint16_t);
+            __bswap_16((*dnsmasq_daemon).dhcp_server_port as u16);
         send_from((*dnsmasq_daemon).dhcpfd, 0 as libc::c_int,
                   mess as *mut libc::c_char, sz, &mut to, &mut from,
                   0 as libc::c_int as libc::c_uint);

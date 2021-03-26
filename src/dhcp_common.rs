@@ -14,10 +14,15 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{dnsmasq_daemon, irec, iname, msghdr};
-use crate::util::expand_buf;
+use crate::defines::{dnsmasq_daemon, irec, iname, msghdr, MSG_PEEK, MSG_TRUNC, dhcp_netid, tag_if, dhcp_netid_list, dhcp_opt, dhcp_config, hwaddr_config, dhcp_context, addrlist, crec, time_t, all_addr, socklen_t, in6_addr, opttab_t, in_addr, _ISprint, dhcp_relay};
+use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net, hostname_isequal, whine_malloc, prettyprint_time, print_mac, setaddr6part};
 use socket2::Socket;
 use std::io;
+use crate::dnsmasq_log::my_syslog;
+use crate::cache::cache_find_by_name;
+use crate::dhcp::config_find_by_address;
+use crate::dhcp6::config_find_by_address6;
+use crate::network::indextoname;
 
 pub fn dhcp_common_init(daemon: &mut dnsmasq_daemon) {
     /* These each hold a DHCP option max size 255
@@ -39,9 +44,9 @@ pub fn dhcp_common_init(daemon: &mut dnsmasq_daemon) {
 
 #[no_mangle]
 pub unsafe extern "C" fn recv_dhcp_packet(mut fd: libc::c_int,
-                                          mut msg: &mut msghdr) -> ssize_t {
-    let mut sz: ssize_t = 0;
-    let mut new_sz: ssize_t = 0;
+                                          mut msg: &mut msghdr) -> isize {
+    let mut sz: isize = 0;
+    let mut new_sz: isize = 0;
     loop  {
         (*msg).msg_flags = 0 as libc::c_int;
         loop  {
@@ -54,18 +59,18 @@ pub unsafe extern "C" fn recv_dhcp_packet(mut fd: libc::c_int,
             }
         }
         if sz == -(1 as libc::c_int) as libc::c_long {
-            return -(1 as libc::c_int) as ssize_t
+            return -(1 as libc::c_int) as isize
         }
         if (*msg).msg_flags & MSG_TRUNC as libc::c_int == 0 { break ; }
         /* Very new Linux kernels return the actual size needed, 
 	 older ones always return truncated size */
-        if sz as size_t == (*(*msg).msg_iov).iov_len {
+        if sz as usize == (*(*msg).msg_iov).iov_len {
             if expand_buf((*msg).msg_iov,
-                          (sz + 100 as libc::c_int as libc::c_long) as size_t)
+                          (sz + 100 as libc::c_int as libc::c_long) as usize)
                    == 0 {
-                return -(1 as libc::c_int) as ssize_t
+                return -(1 as libc::c_int) as isize
             }
-        } else { expand_buf((*msg).msg_iov, sz as size_t); break ; }
+        } else { expand_buf((*msg).msg_iov, sz as usize); break ; }
     }
     loop  {
         new_sz = recvmsg(fd, msg, 0 as libc::c_int);
@@ -261,7 +266,7 @@ pub unsafe extern "C" fn strip_hostname(mut hostname: *mut libc::c_char)
 }
 #[no_mangle]
 pub unsafe extern "C" fn log_tags(mut netid: *mut dhcp_netid,
-                                  mut xid: u32_0) {
+                                  mut xid: u32) {
     if !netid.is_null() &&
            (*dnsmasq_daemon).options[(28 as libc::c_int as
                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -645,7 +650,8 @@ pub unsafe extern "C" fn dhcp_update_configs(mut configs: *mut dhcp_config) {
                                 if (*config).addr6.is_null() &&
                                        {
                                            (*config).addr6 =
-                                               whine_malloc(::std::mem::size_of::<addrlist>()
+                                               whine_m
+                                           alloc(::std::mem::size_of::<addrlist>()
                                                                 as
                                                                 libc::c_ulong)
                                                    as *mut addrlist;
@@ -752,8 +758,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"netmask\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 1 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 1 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -761,8 +767,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"time-offset\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 2 as libc::c_int as u16_0,
-                      size: 4 as libc::c_int as u16_0,};
+                      val: 2 as libc::c_int as u16,
+                      size: 4 as libc::c_int as u16,};
          init
      },
      {
@@ -770,8 +776,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"router\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 3 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 3 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -779,8 +785,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"dns-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 6 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 6 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -788,8 +794,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"log-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 7 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 7 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -797,8 +803,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"lpr-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 9 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 9 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -806,10 +812,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"hostname\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 12 as libc::c_int as u16_0,
+                      val: 12 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x1000 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -817,10 +823,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"boot-file-size\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 13 as libc::c_int as u16_0,
+                      val: 13 as libc::c_int as u16,
                       size:
                           (2 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -828,8 +834,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"domain-name\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 15 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 15 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -837,8 +843,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"swap-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 16 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 16 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -846,8 +852,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"root-path\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 17 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 17 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -855,8 +861,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"extension-path\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 18 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 18 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -864,8 +870,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"ip-forward-enable\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 19 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 19 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -873,8 +879,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"non-local-source-routing\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 20 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 20 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -882,8 +888,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"policy-filter\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 21 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 21 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -891,10 +897,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"max-datagram-reassembly\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 22 as libc::c_int as u16_0,
+                      val: 22 as libc::c_int as u16,
                       size:
                           (2 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -902,10 +908,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"default-ttl\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 23 as libc::c_int as u16_0,
+                      val: 23 as libc::c_int as u16,
                       size:
                           (1 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -913,10 +919,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"mtu\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 26 as libc::c_int as u16_0,
+                      val: 26 as libc::c_int as u16,
                       size:
                           (2 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -924,8 +930,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"all-subnets-local\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 27 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 27 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -933,10 +939,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"broadcast\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 28 as libc::c_int as u16_0,
+                      val: 28 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x8000 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -944,8 +950,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"router-discovery\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 31 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 31 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -953,8 +959,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"router-solicitation\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 32 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 32 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -962,8 +968,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"static-route\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 33 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 33 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -971,8 +977,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"trailer-encapsulation\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 34 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 34 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -980,10 +986,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"arp-timeout\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 35 as libc::c_int as u16_0,
+                      val: 35 as libc::c_int as u16,
                       size:
                           (4 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -991,8 +997,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"ethernet-encap\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 36 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 36 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -1000,8 +1006,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"tcp-ttl\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 37 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 37 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -1009,10 +1015,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"tcp-keepalive\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 38 as libc::c_int as u16_0,
+                      val: 38 as libc::c_int as u16,
                       size:
                           (4 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1020,8 +1026,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"nis-domain\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 40 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 40 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -1029,8 +1035,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"nis-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 41 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 41 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1038,8 +1044,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"ntp-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 42 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 42 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1047,8 +1053,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"vendor-encap\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 43 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 43 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1056,8 +1062,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"netbios-ns\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 44 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 44 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1065,8 +1071,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"netbios-dd\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 45 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 45 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1074,8 +1080,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"netbios-nodetype\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 46 as libc::c_int as u16_0,
-                      size: 1 as libc::c_int as u16_0,};
+                      val: 46 as libc::c_int as u16,
+                      size: 1 as libc::c_int as u16,};
          init
      },
      {
@@ -1083,8 +1089,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"netbios-scope\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 47 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 47 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1092,8 +1098,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"x-windows-fs\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 48 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 48 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1101,8 +1107,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"x-windows-dm\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 49 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 49 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1110,10 +1116,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"requested-address\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 50 as libc::c_int as u16_0,
+                      val: 50 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x8000 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1121,10 +1127,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"lease-time\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 51 as libc::c_int as u16_0,
+                      val: 51 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x200 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1132,8 +1138,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"option-overload\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 52 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 52 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1141,10 +1147,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"message-type\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 53 as libc::c_int as u16_0,
+                      val: 53 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1152,10 +1158,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"server-identifier\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 54 as libc::c_int as u16_0,
+                      val: 54 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x8000 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1163,8 +1169,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"parameter-request\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 55 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 55 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1172,8 +1178,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"message\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 56 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 56 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1181,8 +1187,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"max-message-size\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 57 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 57 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1190,8 +1196,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"T1\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 58 as libc::c_int as u16_0,
-                      size: 0x200 as libc::c_int as u16_0,};
+                      val: 58 as libc::c_int as u16,
+                      size: 0x200 as libc::c_int as u16,};
          init
      },
      {
@@ -1199,8 +1205,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"T2\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 59 as libc::c_int as u16_0,
-                      size: 0x200 as libc::c_int as u16_0,};
+                      val: 59 as libc::c_int as u16,
+                      size: 0x200 as libc::c_int as u16,};
          init
      },
      {
@@ -1208,8 +1214,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"vendor-class\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 60 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 60 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1217,8 +1223,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"client-id\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 61 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 61 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1226,8 +1232,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"nis+-domain\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 64 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 64 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -1235,8 +1241,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"nis+-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 65 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 65 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1244,8 +1250,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"tftp-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 66 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 66 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -1253,8 +1259,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"bootfile-name\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 67 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 67 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -1262,8 +1268,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"mobile-ip-home\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 68 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 68 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1271,8 +1277,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"smtp-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 69 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 69 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1280,8 +1286,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"pop3-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 70 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 70 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1289,8 +1295,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"nntp-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 71 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 71 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1298,8 +1304,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"irc-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 74 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 74 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1307,8 +1313,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"user-class\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 77 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 77 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1316,8 +1322,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"rapid-commit\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 80 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 80 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1325,8 +1331,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"FQDN\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 81 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 81 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1334,8 +1340,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"agent-id\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 82 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 82 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1343,10 +1349,10 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"client-arch\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 93 as libc::c_int as u16_0,
+                      val: 93 as libc::c_int as u16,
                       size:
                           (2 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1354,8 +1360,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"client-interface-id\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 94 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 94 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1363,8 +1369,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"client-machine-id\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 97 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 97 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1372,8 +1378,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"subnet-select\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 118 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 118 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1381,8 +1387,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"domain-search\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 119 as libc::c_int as u16_0,
-                      size: 0x4000 as libc::c_int as u16_0,};
+                      val: 119 as libc::c_int as u16,
+                      size: 0x4000 as libc::c_int as u16,};
          init
      },
      {
@@ -1390,8 +1396,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"sip-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 120 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 120 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1399,8 +1405,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"classless-static-route\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 121 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 121 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1408,8 +1414,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"vendor-id-encap\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 125 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 125 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1417,8 +1423,8 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"tftp-server-address\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 150 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 150 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1426,15 +1432,15 @@ static mut opttab: [opttab_t; 74] =
              opttab_t{name:
                           b"server-ip-address\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 255 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 255 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
          let mut init =
              opttab_t{name: 0 as *const libc::c_char as *mut libc::c_char,
-                      val: 0 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 0 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      }];
 static mut opttab6: [opttab_t; 28] =
@@ -1443,8 +1449,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"client-id\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 1 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 1 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1452,8 +1458,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"server-id\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 2 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 2 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1461,8 +1467,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"ia-na\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 3 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 3 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1470,8 +1476,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"ia-ta\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 4 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 4 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1479,8 +1485,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"iaaddr\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 5 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 5 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1488,8 +1494,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"oro\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 6 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 6 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1497,10 +1503,10 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"preference\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 7 as libc::c_int as u16_0,
+                      val: 7 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x400 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1508,8 +1514,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"unicast\x00" as *const u8 as *const libc::c_char
                               as *mut libc::c_char,
-                      val: 12 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 12 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1517,8 +1523,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"status\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 13 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 13 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1526,8 +1532,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"rapid-commit\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 14 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 14 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1535,10 +1541,10 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"user-class\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 15 as libc::c_int as u16_0,
+                      val: 15 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x800 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1546,10 +1552,10 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"vendor-class\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 16 as libc::c_int as u16_0,
+                      val: 16 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x800 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1557,8 +1563,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"vendor-opts\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 17 as libc::c_int as u16_0,
-                      size: 0x2000 as libc::c_int as u16_0,};
+                      val: 17 as libc::c_int as u16,
+                      size: 0x2000 as libc::c_int as u16,};
          init
      },
      {
@@ -1566,8 +1572,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"sip-server-domain\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 21 as libc::c_int as u16_0,
-                      size: 0x4000 as libc::c_int as u16_0,};
+                      val: 21 as libc::c_int as u16,
+                      size: 0x4000 as libc::c_int as u16,};
          init
      },
      {
@@ -1575,8 +1581,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"sip-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 22 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 22 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1584,8 +1590,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"dns-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 23 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 23 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1593,8 +1599,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"domain-search\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 24 as libc::c_int as u16_0,
-                      size: 0x4000 as libc::c_int as u16_0,};
+                      val: 24 as libc::c_int as u16,
+                      size: 0x4000 as libc::c_int as u16,};
          init
      },
      {
@@ -1602,8 +1608,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"nis-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 27 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 27 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1611,8 +1617,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"nis+-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 28 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 28 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1620,8 +1626,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"nis-domain\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 29 as libc::c_int as u16_0,
-                      size: 0x4000 as libc::c_int as u16_0,};
+                      val: 29 as libc::c_int as u16,
+                      size: 0x4000 as libc::c_int as u16,};
          init
      },
      {
@@ -1629,8 +1635,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"nis+-domain\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 30 as libc::c_int as u16_0,
-                      size: 0x4000 as libc::c_int as u16_0,};
+                      val: 30 as libc::c_int as u16,
+                      size: 0x4000 as libc::c_int as u16,};
          init
      },
      {
@@ -1638,8 +1644,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"sntp-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 31 as libc::c_int as u16_0,
-                      size: 0x8000 as libc::c_int as u16_0,};
+                      val: 31 as libc::c_int as u16,
+                      size: 0x8000 as libc::c_int as u16,};
          init
      },
      {
@@ -1647,8 +1653,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"information-refresh-time\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 32 as libc::c_int as u16_0,
-                      size: 0x200 as libc::c_int as u16_0,};
+                      val: 32 as libc::c_int as u16,
+                      size: 0x200 as libc::c_int as u16,};
          init
      },
      {
@@ -1656,10 +1662,10 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"FQDN\x00" as *const u8 as *const libc::c_char as
                               *mut libc::c_char,
-                      val: 39 as libc::c_int as u16_0,
+                      val: 39 as libc::c_int as u16,
                       size:
                           (0x2000 as libc::c_int | 0x4000 as libc::c_int) as
-                              u16_0,};
+                              u16,};
          init
      },
      {
@@ -1667,8 +1673,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"ntp-server\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 56 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 56 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      },
      {
@@ -1676,8 +1682,8 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"bootfile-url\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 59 as libc::c_int as u16_0,
-                      size: 0x1000 as libc::c_int as u16_0,};
+                      val: 59 as libc::c_int as u16,
+                      size: 0x1000 as libc::c_int as u16,};
          init
      },
      {
@@ -1685,15 +1691,15 @@ static mut opttab6: [opttab_t; 28] =
              opttab_t{name:
                           b"bootfile-param\x00" as *const u8 as
                               *const libc::c_char as *mut libc::c_char,
-                      val: 60 as libc::c_int as u16_0,
-                      size: 0x800 as libc::c_int as u16_0,};
+                      val: 60 as libc::c_int as u16,
+                      size: 0x800 as libc::c_int as u16,};
          init
      },
      {
          let mut init =
              opttab_t{name: 0 as *const libc::c_char as *mut libc::c_char,
-                      val: 0 as libc::c_int as u16_0,
-                      size: 0 as libc::c_int as u16_0,};
+                      val: 0 as libc::c_int as u16,
+                      size: 0 as libc::c_int as u16,};
          init
      }];
 #[no_mangle]
@@ -1888,10 +1894,10 @@ pub unsafe extern "C" fn option_string(mut prot: libc::c_int,
                                 *mut libc::c_uchar;
                         let mut t_cp: *mut libc::c_uchar = p;
                         len =
-                            (*t_cp.offset(0 as libc::c_int as isize) as u16_0
+                            (*t_cp.offset(0 as libc::c_int as isize) as u16
                                  as libc::c_int) << 8 as libc::c_int |
                                 *t_cp.offset(1 as libc::c_int as isize) as
-                                    u16_0 as libc::c_int;
+                                    u16 as libc::c_int;
                         p = p.offset(2 as libc::c_int as isize);
                         k_0 = 0 as libc::c_int;
                         while k_0 < len && j < buf_len {
@@ -1979,7 +1985,7 @@ pub unsafe extern "C" fn log_context(mut family: libc::c_int,
         let mut subnet: in6_addr = (*context).start6;
         if (*context).flags as libc::c_uint &
                (1 as libc::c_uint) << 10 as libc::c_int == 0 {
-            setaddr6part(&mut subnet, 0 as libc::c_int as u64_0);
+            setaddr6part(&mut subnet, 0 as libc::c_int as u64);
         }
         inet_ntop(10 as libc::c_int,
                   &mut subnet as *mut in6_addr as *const libc::c_void,

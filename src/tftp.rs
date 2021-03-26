@@ -1,8 +1,18 @@
+use crate::defines::{listener, time_t, dnsmasq_daemon, mysockaddr, sockaddr, msghdr, iovec, ifreq, C2RustUnnamed_2, iname, tftp_transfer, tftp_prefix, all_addr, in_addr, C2RustUnnamed_14, cmsghdr, socklen_t, server, __SOCKADDR_ARG, sa_family_t, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2RustUnnamed_12, __bswap_16, SOCK_DGRAM, off_t, tftp_file, __CONST_SOCKADDR_ARG, stat, timespec, dhcp_lease, uid_t, _ISprint};
+use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, fix_fd};
+use crate::util::{wildcard_match, safe_strncpy, sockaddr_isequal, whine_malloc, prettyprint_addr, sa_len, read_write};
+use crate::dnsmasq_log::my_syslog;
+use crate::lease::lease_find_by_addr;
+use crate::arp::find_mac;
+use crate::forward::send_from;
+use crate::poll::poll_check;
+use crate::slack::{ack, errmess, oackmess, datamess};
+use crate::helper::queue_tftp;
 
 #[no_mangle]
 pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
                                       mut now: time_t) {
-    let mut len: ssize_t = 0;
+    let mut len: isize = 0;
     let mut packet: *mut libc::c_char = (*dnsmasq_daemon).packet;
     let mut filename: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut mode: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -77,9 +87,9 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
     msg.msg_namelen =
         ::std::mem::size_of::<mysockaddr>() as libc::c_ulong as socklen_t;
     msg.msg_iov = &mut iov;
-    msg.msg_iovlen = 1 as libc::c_int as size_t;
+    msg.msg_iovlen = 1 as libc::c_int as usize;
     iov.iov_base = packet as *mut libc::c_void;
-    iov.iov_len = (*dnsmasq_daemon).packet_buff_sz as size_t;
+    iov.iov_len = (*dnsmasq_daemon).packet_buff_sz as usize;
     /* we overwrote the buffer... */
     (*dnsmasq_daemon).srv_save = 0 as *mut server;
     len = recvmsg((*listen).tftpfd, &mut msg, 0 as libc::c_int);
@@ -211,7 +221,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
             }
         }
         safe_strncpy(ifr.ifr_ifrn.ifrn_name.as_mut_ptr(), name,
-                     16 as libc::c_int as size_t);
+                     16 as libc::c_int as usize);
         if ioctl((*listen).tftpfd, 0x8921 as libc::c_int as libc::c_ulong,
                  &mut ifr as *mut ifreq) != -(1 as libc::c_int) {
             mtu = ifr.ifr_ifru.ifru_mtu;
@@ -277,11 +287,11 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
         }
     }
     if family == 2 as libc::c_int {
-        addr.in_0.sin_port = __bswap_16(port as __uint16_t)
+        addr.in_0.sin_port = __bswap_16(port as u16)
     } else {
-        addr.in6.sin6_port = __bswap_16(port as __uint16_t);
-        addr.in6.sin6_flowinfo = 0 as libc::c_int as uint32_t;
-        addr.in6.sin6_scope_id = 0 as libc::c_int as uint32_t
+        addr.in6.sin6_port = __bswap_16(port as u16);
+        addr.in6.sin6_flowinfo = 0 as libc::c_int as u32;
+        addr.in6.sin6_scope_id = 0 as libc::c_int as u32
     }
     /* May reuse struct transfer from abandoned transfer in single port mode. */
     if transfer.is_null() &&
@@ -372,8 +382,8 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
             port += 1;
             if port <= (*dnsmasq_daemon).end_tftp_port {
                 if family == 2 as libc::c_int {
-                    addr.in_0.sin_port = __bswap_16(port as __uint16_t)
-                } else { addr.in6.sin6_port = __bswap_16(port as __uint16_t) }
+                    addr.in_0.sin_port = __bswap_16(port as u16)
+                } else { addr.in6.sin6_port = __bswap_16(port as u16) }
                 continue ;
             } else {
                 my_syslog((1 as libc::c_int) << 3 as libc::c_int |
@@ -572,7 +582,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
                                                                                              as
                                                                                              libc::c_ulong))
                    != 0 {
-                let mut oldlen: size_t = strlen((*dnsmasq_daemon).namebuff);
+                let mut oldlen: usize = strlen((*dnsmasq_daemon).namebuff);
                 let mut statbuf: stat =
                     stat{st_dev: 0,
                          st_ino: 0,
@@ -646,7 +656,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
                     macaddr = macbuf.as_mut_ptr()
                 }
                 if !macaddr.is_null() {
-                    let mut oldlen_0: size_t =
+                    let mut oldlen_0: usize =
                         strlen((*dnsmasq_daemon).namebuff);
                     let mut statbuf_0: stat =
                         stat{st_dev: 0,
@@ -738,7 +748,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
                                                                                              libc::c_int
                                                                                              as
                                                                                              libc::c_ulong))
-                   == 0) as libc::c_int, packet, len as size_t, &mut peer,
+                   == 0) as libc::c_int, packet, len as usize, &mut peer,
               &mut addra, if_index as libc::c_uint);
     if is_err != 0 {
         free_transfer(transfer);
@@ -747,7 +757,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut listener,
         (*dnsmasq_daemon).tftp_trans = transfer
     };
 }
-unsafe extern "C" fn check_tftp_fileperm(mut len: *mut ssize_t,
+unsafe extern "C" fn check_tftp_fileperm(mut len: *mut isize,
                                          mut prefix: *mut libc::c_char)
  -> *mut tftp_file {
     let mut current_block: u64;
@@ -918,7 +928,7 @@ pub unsafe extern "C" fn check_tftp_listeners(mut now: time_t) {
                             recv((*transfer).sockfd,
                                  (*dnsmasq_daemon).packet as
                                      *mut libc::c_void,
-                                 (*dnsmasq_daemon).packet_buff_sz as size_t,
+                                 (*dnsmasq_daemon).packet_buff_sz as usize,
                                  0 as libc::c_int));
             }
             transfer = (*transfer).next
@@ -931,7 +941,7 @@ pub unsafe extern "C" fn check_tftp_listeners(mut now: time_t) {
         tmp = (*transfer).next;
         if difftime(now, (*transfer).timeout) >= 0.0f64 {
             let mut endcon: libc::c_int = 0 as libc::c_int;
-            let mut len: ssize_t = 0;
+            let mut len: isize = 0;
             /* timeout, retransmit */
             (*transfer).timeout +=
                 (1 as libc::c_int +
@@ -958,7 +968,7 @@ pub unsafe extern "C" fn check_tftp_listeners(mut now: time_t) {
                        {
                         endcon = 1 as libc::c_int
                     }
-                    len = 0 as libc::c_int as ssize_t
+                    len = 0 as libc::c_int as isize
                 }
             }
             if len != 0 as libc::c_int as libc::c_long {
@@ -982,7 +992,7 @@ pub unsafe extern "C" fn check_tftp_listeners(mut now: time_t) {
                                                                                                          as
                                                                                                          libc::c_ulong))
                                == 0) as libc::c_int, (*dnsmasq_daemon).packet,
-                          len as size_t, &mut (*transfer).peer,
+                          len as usize, &mut (*transfer).peer,
                           &mut (*transfer).source,
                           (*transfer).if_index as libc::c_uint);
             }
@@ -1039,9 +1049,9 @@ pub unsafe extern "C" fn check_tftp_listeners(mut now: time_t) {
 /* packet in daemon->packet as this is called. */
 unsafe extern "C" fn handle_tftp(mut now: time_t,
                                  mut transfer: *mut tftp_transfer,
-                                 mut len: ssize_t) {
+                                 mut len: isize) {
     let mut mess: *mut ack = (*dnsmasq_daemon).packet as *mut ack;
-    if len >= ::std::mem::size_of::<ack>() as libc::c_ulong as ssize_t {
+    if len >= ::std::mem::size_of::<ack>() as libc::c_ulong as isize {
         if __bswap_16((*mess).op) as libc::c_int == 4 as libc::c_int &&
                __bswap_16((*mess).block) as libc::c_int ==
                    (*transfer).block as libc::c_ushort as libc::c_int {
@@ -1118,7 +1128,7 @@ unsafe extern "C" fn free_transfer(mut transfer: *mut tftp_transfer) {
 unsafe extern "C" fn next(mut p: *mut *mut libc::c_char,
                           mut end: *mut libc::c_char) -> *mut libc::c_char {
     let mut ret: *mut libc::c_char = *p;
-    let mut len: size_t = 0;
+    let mut len: usize = 0;
     if *end.offset(-(1 as libc::c_int as isize)) as libc::c_int !=
            0 as libc::c_int || *p == end ||
            { len = strlen(ret); (len) == 0 as libc::c_int as libc::c_ulong } {
@@ -1150,21 +1160,21 @@ unsafe extern "C" fn sanitise(mut buf: *mut libc::c_char) {
 unsafe extern "C" fn tftp_err(mut err: libc::c_int,
                               mut packet: *mut libc::c_char,
                               mut message: *mut libc::c_char,
-                              mut file: *mut libc::c_char) -> ssize_t {
+                              mut file: *mut libc::c_char) -> isize {
     let mut mess: *mut errmess =
         packet as *mut errmess; /* include terminating zero */
-    let mut len: ssize_t = 0;
-    let mut ret: ssize_t = 4 as libc::c_int as ssize_t;
+    let mut len: isize = 0;
+    let mut ret: isize = 4 as libc::c_int as isize;
     let mut errstr: *mut libc::c_char = strerror(*__errno_location());
     memset(packet as *mut libc::c_void, 0 as libc::c_int,
            (*dnsmasq_daemon).packet_buff_sz as libc::c_ulong);
     sanitise(file);
-    (*mess).op = __bswap_16(5 as libc::c_int as __uint16_t);
-    (*mess).err = __bswap_16(err as __uint16_t);
+    (*mess).op = __bswap_16(5 as libc::c_int as u16);
+    (*mess).err = __bswap_16(err as u16);
     len =
         snprintf((*mess).message.as_mut_ptr(),
                  500 as libc::c_int as libc::c_ulong, message, file, errstr)
-            as ssize_t;
+            as isize;
     ret +=
         if len < 500 as libc::c_int as libc::c_long {
             (len) + 1 as libc::c_int as libc::c_long
@@ -1175,7 +1185,7 @@ unsafe extern "C" fn tftp_err(mut err: libc::c_int,
     return ret;
 }
 unsafe extern "C" fn tftp_err_oops(mut packet: *mut libc::c_char,
-                                   mut file: *mut libc::c_char) -> ssize_t {
+                                   mut file: *mut libc::c_char) -> isize {
     /* May have >1 refs to file, so potentially mangle a copy of the name */
     strcpy((*dnsmasq_daemon).namebuff, file);
     return tftp_err(0 as libc::c_int, packet,
@@ -1185,7 +1195,7 @@ unsafe extern "C" fn tftp_err_oops(mut packet: *mut libc::c_char,
 }
 /* return -1 for error, zero for done. */
 unsafe extern "C" fn get_block(mut packet: *mut libc::c_char,
-                               mut transfer: *mut tftp_transfer) -> ssize_t {
+                               mut transfer: *mut tftp_transfer) -> isize {
     memset(packet as *mut libc::c_void, 0 as libc::c_int,
            (*dnsmasq_daemon).packet_buff_sz as libc::c_ulong);
     if (*transfer).block == 0 as libc::c_int as libc::c_uint {
@@ -1193,7 +1203,7 @@ unsafe extern "C" fn get_block(mut packet: *mut libc::c_char,
         let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut mess: *mut oackmess = packet as *mut oackmess;
         p = (*mess).data.as_mut_ptr();
-        (*mess).op = __bswap_16(6 as libc::c_int as __uint16_t);
+        (*mess).op = __bswap_16(6 as libc::c_int as u16);
         if (*transfer).opt_blocksize != 0 {
             p =
                 p.offset((sprintf(p,
@@ -1225,29 +1235,29 @@ unsafe extern "C" fn get_block(mut packet: *mut libc::c_char,
         /* send data packet */
         let mut mess_0: *mut datamess =
             packet as *mut datamess; /* finished */
-        let mut size: size_t =
-            ((*(*transfer).file).size - (*transfer).offset) as size_t;
+        let mut size: usize =
+            ((*(*transfer).file).size - (*transfer).offset) as usize;
         if (*transfer).offset > (*(*transfer).file).size {
-            return 0 as libc::c_int as ssize_t
+            return 0 as libc::c_int as isize
         }
         if size > (*transfer).blocksize as libc::c_ulong {
-            size = (*transfer).blocksize as size_t
+            size = (*transfer).blocksize as usize
         }
-        (*mess_0).op = __bswap_16(3 as libc::c_int as __uint16_t);
+        (*mess_0).op = __bswap_16(3 as libc::c_int as u16);
         (*mess_0).block = __bswap_16((*transfer).block as libc::c_ushort);
         if lseek((*(*transfer).file).fd, (*transfer).offset, 0 as libc::c_int)
                == -(1 as libc::c_int) as off_t ||
                read_write((*(*transfer).file).fd, (*mess_0).data.as_mut_ptr(),
                           size as libc::c_int, 1 as libc::c_int) == 0 {
-            return -(1 as libc::c_int) as ssize_t
+            return -(1 as libc::c_int) as isize
         }
         (*transfer).expansion = 0 as libc::c_int as libc::c_uint;
         /* Map '\n' to CR-LF in netascii mode */
         if (*transfer).netascii != 0 {
-            let mut i: size_t =
+            let mut i: usize =
                 0; /* don't expand LF again if it moves to the next block */
             let mut newcarrylf: libc::c_int = 0; /* room in this block */
-            i = 0 as libc::c_int as size_t;
+            i = 0 as libc::c_int as usize;
             newcarrylf = 0 as libc::c_int;
             while i < size {
                 if *(*mess_0).data.as_mut_ptr().offset(i as isize) as
@@ -1286,7 +1296,7 @@ unsafe extern "C" fn get_block(mut packet: *mut libc::c_char,
             }
             (*transfer).carrylf = newcarrylf as libc::c_char
         }
-        return size.wrapping_add(4 as libc::c_int as libc::c_ulong) as ssize_t
+        return size.wrapping_add(4 as libc::c_int as libc::c_ulong) as isize
     };
 }
 #[no_mangle]

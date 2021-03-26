@@ -25,6 +25,10 @@
    add a dependency on Nettle, and use a stand-alone implementaion. 
 */
 /* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
+use crate::defines::{msghdr, cmsghdr, size_t, __mode_t, __dev_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, dns_header};
+use std::io::{stdout, stdin};
+use crate::rfc1035::extract_name;
+
 // SHA256 outputs a 32 byte digest
 pub type BYTE = libc::c_uchar;
 #[derive(Copy, Clone)]
@@ -38,20 +42,20 @@ pub struct SHA256_CTX {
 // 8-bit byte
 pub type WORD = libc::c_uint;
 #[inline]
-unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+unsafe extern "C" fn __bswap_16(mut __bsx: u16) -> u16 {
     return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
                 (__bsx as libc::c_int & 0xff as libc::c_int) <<
-                    8 as libc::c_int) as __uint16_t;
+                    8 as libc::c_int) as u16;
 }
 #[inline]
-unsafe extern "C" fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+unsafe extern "C" fn __bswap_32(mut __bsx: u32) -> u32 {
     return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
                (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
                (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
                (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
 }
 #[inline]
-unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+unsafe extern "C" fn __bswap_64(mut __bsx: u64) -> u64 {
     return ((__bsx as libc::c_ulonglong &
                  0xff00000000000000 as libc::c_ulonglong) >> 56 as libc::c_int
                 |
@@ -70,18 +74,18 @@ unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
                 (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong) <<
                     40 as libc::c_int |
                 (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong) <<
-                    56 as libc::c_int) as __uint64_t;
+                    56 as libc::c_int) as u64;
 }
 #[inline]
-unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
+unsafe extern "C" fn __uint16_identity(mut __x: u16) -> u16 {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+unsafe extern "C" fn __uint32_identity(mut __x: u32) -> u32 {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
+unsafe extern "C" fn __uint64_identity(mut __x: u64) -> u64 {
     return __x;
 }
 #[inline]
