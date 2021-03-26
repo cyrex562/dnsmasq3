@@ -7,6 +7,7 @@ use crate::slack::dirent;
 use crate::network::{mark_servers, cleanup_servers};
 use crate::inotify::set_dynamic_inotify;
 use std::process::exit;
+use clap::{Arg, App};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -24,932 +25,132 @@ use std::process::exit;
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /* define this to get FACILITYNAMES */
-static mut mem_recover: libc::c_int = 0 as libc::c_int;
-static mut mem_jmp: jmp_buf =
-    [__jmp_buf_tag{__jmpbuf: [0; 8],
-                   __mask_was_saved: 0,
-                   __saved_mask: __sigset_t{__val: [0; 16],},}; 1];
+// static mut mem_recover: libc::c_int = 0 as libc::c_int;
+// static mut mem_jmp: jmp_buf =
+//     [__jmp_buf_tag{__jmpbuf: [0; 8],
+//                    __mask_was_saved: 0,
+//                    __saved_mask: __sigset_t{__val: [0; 16],},}; 1];
+
+pub fn prepare_matches() -> ArgMatches {
+    App::new("dnsmasq-rs")
+        .version("0.1")
+        .author("Josh M.")
+        .about("Rust port of dnsmasq with enhanced functionality")
+        .arg(Arg::with_name("version")
+            .short("v")
+            .long("config")
+            .takes_value(false))
+        .arg(Arg::with_name("no-hosts")
+            .short("h")
+            .long("no-hosts")
+            .takes_value(false))
+        .arg(Arg::with_name("no-poll")
+            .short("n")
+            .long("no-poll")
+            .takes_value(false))
+        .arg(Arg::with_name("no-daemon").short("d").long("no-daemon").takes_value(false))
+        .arg(Arg::with_name("log-queries").short("q").long("log-queries").takes_value(false))
+        .arg(Arg::with_name("user").short("u").long("user").value_name("USER"))
+        .arg(Arg::with_name("group").short("g").long("group").value_name("GROUP"))
+        .arg(Arg::with_name("resolv-file").short("r").long("resolv-file").value_name("RESOLV_FILE"))
+        .arg(Arg::with_name("servers-file").long("servers-files").value_name("SERVERS_FILE"))
+        .arg(Arg::with_name("mx-host").long("mx-host").short("m").value_name("MX_HOST"))
+        .arg(Arg::with_name("mx-target").long("mx-target").short("t").value_name("MX_TARGET"))
+        .arg(Arg::with_name("cache-size").long("cache-size").short("c").value_name("CACHE_SIZE"))
+        .arg(Arg::with_name("port").long("port").short("p").value_name("PORT"))
+                 .arg(Arg::with_name("dhcp-leasefile").long("dhcp-leasefile").short("l").value_name("DHCP_LEASE_FILE"))
+        .arg(Arg::with_name("dhcp-lease").long("dhcp-lease").short("l").value_name("DHCP_LEASE"))
+        .arg(Arg::with_name("dhcp-host").long("dhcp-host").short("G").value_name("DHCP_HOST"))
+        .arg(Arg::with_name("dhcp-range").long("dhcp-range").short("F").value_name("DHCP_RANGE"))
+        .arg(Arg::with_name("dhcp-option").long("dhcp-option").short("O").value_name("DHCP_OPTION"))
+        .arg(Arg::with_Name("dhcp-boot").long("dhcp-boot").short("M").value_name("DHCP_BOOT"))
+
+        .arg(Arg::with_name("domain").long("domain").short("s").value_name("DOMAIN"))
+        .arg(Arg::with_name("domain-suffix").long("domain-suffix").short("s").value_name("DOMAIN_SUFFIX"))
+        .arg(Arg::with_name("interface").long("interface").short("i").value_name("INTERFACE"))
+        .arg(Arg::with_name("listen-address").long("listen-address").short(a).value_name("LISTEN_ADDRESS"))
+        .arg(Arg::with_name("local-service").long("local-service").takes_value(false))
+        .arg(Arg::with_name("bogus-priv").long("bogus-priv").short("b").takes_value(false))
+        .arg(Arg::with_name("bogus-nxdomain").long("bogus-nxdomain").short("B").value_name("BOGUS_NXDOMAIN"))
+        .arg(Arg::with_name("ignore-address").long("ignore-address").value_name("IGNORE_ADDRESS"))
+        .arg(Arg::with_name("selfmx").long("selfmx").short("e").takes_value(false))
+        .arg(Arg::with_name("filterwin2k").long("filterwin2k").short("f").takes_value(false))
+        .arg(Arg::with_name("pid-file").long("pid-file").short("x").value_name("PID_FILE"))
+        .arg(Arg::with_name("strict-order").long("strict-order").short("o").takes_value(false))
+        .arg(Arg::with_name("server").long("server").short("S").value_name("SERVER"))
+        .arg(Arg::with_name("rev-server").long("rev-server").value_name("REV_SERVER"))
+        .arg(Arg::with_name("local").long("local").value_name("LOCAL"))
+        .arg(Arg::with_name("address").long("address").short("A").value_name("ADDRESS"))
+        .arg(Arg::with_name("conf-file").long("conf-file").short("C").value_name("CONF_FILE"))
+        .arg(Arg::with_name("no-resolv").long("no-resolv").short("R").takes_value(false))
+        .arg(Arg::with_name("expand-hosts").long("expand-hosts").short("E").takes_value(false))
+        .arg(Arg::with_name("localmx").long("localmx").short("L").takes_value(false))
+        .arg(Arg::with_name("local-ttl").long("local-ttl").short("T").value_name("LOCAL_TTL"))
+        .arg(Arg::with_name("no-negcache").long("no-negcache").short("N").takes_value(false))
+        .arg(Arg::with_name("addn-hosts").long("addn-hosts").short("H").takes_value(false))
+        .arg(Arg::with_name("hostsdir").long("hostsdir").value_name("HOSTS_DIR"))
+        .arg(Arg::with_name("query-port").long("query-port").value_name("QUERY_PORT"))
+        .arg(Arg::with_name("except-interface").long("except-interface").value_name("EXCEPT_INTERFACE"))
+        .arg(Arg::with_name("no-dhcp-interface").long("no-dhcp-interface").value_name("NO_DHCP_INTERFACE"))
+        .arg(Arg::with_name("domain-needed").long("domain-needed").short("D").takes_value(false))
+        .arg(Arg::with_name("dhcp-lease-max").long("dhcp-lease-max").short("X").value_name("DHCP_LEASE_MAX"))
+        .arg(Arg::with_name("bind-interfaces").long("bind-interfaces").short("z").takes_value(false))
+        .arg(Arg::with_name("read-ethers").long("read-ethers").short("Z").takes_value(false))
+        .arg(Arg::with_name("alias").long("alias").short("V").value_name("ALIAS"))
+        .arg(Arg::with_name("dhcp-vendorclass").long("dhcp-vendorclass").short("U").value_name("DHCP_VENDOR_CLASS"))
+        .arg(Arg::with_name("dhcp-userclass").long("dhcp-userclass").short("j").value_name("DHCP_USER_CLASS"))
+        .arg(Arg::with_name("dhcp-ignore").long("dhcp-ignore").short("J").value_name("DHCP_IGNORE"))
+        .arg(Arg::with_name("edns-packet-max").long("edns-packet-max").short("P").value_name("EDNS_PACKET_MAX"))
+        .arg(Arg::with_name("keep-in-foreground").long("keep-in-foreground").short("k").takes_value(false))
+        .arg(Arg::with_name("dhcp-authoritative").long("dhcp-authoritative").short("K").takes_value(false))
+        .arg(Arg::with_name("srv-host").long("srv-host").short("W").value_name("SRV_HOST"))
+        .arg(Arg::with_name("localise-queries").long("localise-queries").short("y").takes_value(false))
+        .arg(Arg::with_name("txt-record").long("txt-record").short("Y").value_name("TXT_RECORD"))
+        .arg(Arg::with_name("caa-record").long("caa-record").value_name("CAA_RECORD"))
+        .arg(Arg::with_name("dns-rr").long("dns-rr").value_name("DNS_RR"))
+        .arg(Arg::with_name("enable-dbus").long("enable-dbus").short("1").takes_value(false))
+        .arg(Arg::with_name("enable-ubus").long("enable-ubus").takes_value(false))
+        .arg(Arg::with_name("bootp-dynamic").long("bootp-dynamic").short("3").value_name("BOOTP_DYNAMIC"))
+        .arg(Arg::with_name("dhcp-mac").long("dhcp-mac").short("4").value_name("DHCP_MAC"))
+        .arg(Arg::with_name("no-ping").long("no-ping").short("5").takes_value(false))
+        .arg(Arg::with_name("dhcp-script").long("dhcp-script").short("6").value_name("DHCP_SCRIPT"))
+        .arg(Arg::with_name("conf-dir").long("conf-dir").short("7").value_name("CONF_DIR"))
+        .arg(Arg::with_name("log-facility").long("log-facility").short("8").value_name("LOG_FACILITY"))
+        .arg(Arg::with_name("leasefile-ro").long("leasefile-ro").short("9").takes_value(false))
+        .arg(Arg::with_name("script-on-renewal").long("script-on-renewal").takes_value(false))
+        .arg(Arg::with_name("dns-forward-max").long("dns-forward-max").short("0").value_name("DNS_FORWARD_MAX"))
+        .arg(Arg::with_name("clear-on-reload").long("clear-on-reload").takes_value(false))
+        .arg(Arg::with_name("dhcp-ignore-names").long("dhcp-ignore-names").value_name("DHCP_IGNORE_NAMES"))
+        .arg(Arg::with_name("enable-tftp").long("enable-tftp").takes_value(false))
+        .arg(Arg::with_name("tftp-secure").long("tftp-secure").takes_value(false))
+        .arg(Arg::with_name("tftp-no-fail").long("tftp-no-fail").takes_value(false))
+        .arg(Arg::with_name("tftp-unique-root").long("tftp-unique-root").value_name("TFTP_UNIQUE_ROOT"))
+        .arg(Arg::with_name("tftp-root").long("tftp-root").value_name("TFTP_ROOT"))
+        .arg(Arg::with_name("tftp-max").long("tftp-max").value_name("TFTP_MAX"))
+        .arg(Arg::with_name("tftp-mtu").long("tftp-mtu").value_name("TFTP_MTU"))
+        .arg(Arg::with_name("tftp-lowercase").long("tftp-lowercase").takes_value(false))
+        .arg(Arg::with_name("tftp-single-port").long("tftp-single-port").takes_value(false))
+        .arg(Arg::with_name("ptr-record").long("ptr-record").value_name("PTR_RECORD"))
+        .arg(Arg::with_name("naptr-record").long("naptr-record").value_name("NAPTR_RECORD"))
+        .arg(Arg::with_name("bridge-interface").long("bridge-interface").value_name("BRIDGE_INTERFACE"))
+        .arg(Arg::with_name("shared-network").long("shared-network").value_name("SHARED_NETWORK"))
+        .arg(Arg::with_name("dhcp-option-force").long("dhcp-option-force").value_name("DHCP_OPTION_FORCE"))
+        .arg(Arg::with_name("tftp-no-blocksize").long("tftp-no-blocksize").takes_value(false))
+        .arg(Arg::with_name("log-dhcp").long("log-dhcp").takes_value(false))
+        .arg(Arg::with_name("log-async").long("log-async").takes_value(false))
+        .arg(Arg::with_name("dhcp-circuitid").long("dhcp-circuitid").value_name("DHCP_CIRCUIT_ID"))
+        .arg(Arg::with_name("dhcp-remoteid").long("dhcp-remoteid").value_name("DHCP_REMOTE_ID"))
+        .arg(Arg::with_name("dhcp-subscrid").long("dhcp-subscrid").value_name("DHCP_SUBSCR_ID"))
+        .arg(Arg::with_name("dhcp-pxe-vendor").long("dhcp-pxe-vendor").value_name("DHCP_PXE_VENDOR"))
+        .arg(Arg::with_name("interface-name").long("interface-name").value_name("INTERFACE_NAME"))
+        .arg(Arg::with_name("dhcp-hostsfile").long("dhcp-hostsfiles").value_name("DHCP_HOSTS_FILE"))
+        .arg(Arg::with_name("dhcp-optsfile").long("dhcp-optsfile").value_name("DHCP_OPTS_FILE"))
+        .arg(Arg::with_name("dhcp-hostsdir").long("dhcp-hostsdir").value_name("DHCP_HOSTS_DIR"))
+        .arg(Arg::with_name("dhcp-optsdir").long("dhcp-optsdir").value_name("DHCP_OPTS_DIR"))
+        .get_matches()
+}
+
 static mut opts: [option; 167] =
-    [{
-         let mut init =
-             option{name: b"version\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'v' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"no-hosts\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'h' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"no-poll\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'n' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"help\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'w' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"no-daemon\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'd' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"log-queries\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'q' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"user\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'u' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"group\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'g' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"resolv-file\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'r' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"servers-file\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 333 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"mx-host\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'm' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"mx-target\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 't' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"cache-size\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'c' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"port\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'p' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-leasefile\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'l' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-lease\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'l' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-host\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'G' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-range\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'F' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-option\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'O' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-boot\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'M' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"domain\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 's' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"domain-suffix\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 's' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"interface\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'i' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"listen-address\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'a' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"local-service\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 335 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"bogus-priv\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'b' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"bogus-nxdomain\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'B' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"ignore-address\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 338 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"selfmx\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'e' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"filterwin2k\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'f' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"pid-file\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'x' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"strict-order\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'o' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"server\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'S' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"rev-server\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 332 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"local\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 286 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"address\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'A' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"conf-file\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'C' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"no-resolv\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'R' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"expand-hosts\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'E' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"localmx\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'L' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"local-ttl\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'T' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"no-negcache\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'N' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"addn-hosts\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'H' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"hostsdir\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 342 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"query-port\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'Q' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"except-interface\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'I' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"no-dhcp-interface\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '2' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"domain-needed\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'D' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-lease-max\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'X' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"bind-interfaces\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'z' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"read-ethers\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'Z' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"alias\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'V' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-vendorclass\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'U' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-userclass\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'j' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-ignore\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'J' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"edns-packet-max\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'P' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"keep-in-foreground\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'k' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-authoritative\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'K' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"srv-host\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'W' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"localise-queries\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'y' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"txt-record\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 'Y' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"caa-record\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 356 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"dns-rr\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 310 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"enable-dbus\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '1' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"enable-ubus\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 354 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"bootp-dynamic\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '3' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"dhcp-mac\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '4' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"no-ping\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '5' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-script\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '6' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"conf-dir\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '7' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"log-facility\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '8' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"leasefile-ro\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '9' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"script-on-renewal\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 360 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dns-forward-max\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: '0' as i32,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"clear-on-reload\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 256 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-ignore-names\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 257 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"enable-tftp\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 258 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-secure\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 259 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-no-fail\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 344 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-unique-root\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 274 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-root\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 260 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"tftp-max\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 263 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"tftp-mtu\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 349 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-lowercase\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 309 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-single-port\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 359 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"ptr-record\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 261 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"naptr-record\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 287 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"bridge-interface\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 262 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"shared-network\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 357 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-option-force\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 264 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"tftp-no-blocksize\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 265 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name: b"log-dhcp\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 0 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 266 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"log-async\x00" as *const u8 as *const libc::c_char,
-                    has_arg: 2 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 267 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-circuitid\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 268 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-remoteid\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 269 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-subscrid\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 270 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-pxe-vendor\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 361 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"interface-name\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 271 as libc::c_int,};
-         init
-     },
-     {
-         let mut init =
-             option{name:
-                        b"dhcp-hostsfile\x00" as *const u8 as
-                            *const libc::c_char,
-                    has_arg: 1 as libc::c_int,
-                    flag: 0 as *const libc::c_int as *mut libc::c_int,
-                    val: 273 as libc::c_int,};
-         init
-     },
      {
          let mut init =
              option{name:

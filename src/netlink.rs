@@ -9,26 +9,13 @@ static mut iov: iovec =
     iovec{iov_base: 0 as *const libc::c_void as *mut libc::c_void,
           iov_len: 0,};
 static mut netlink_pid: u32 = 0;
-#[no_mangle]
-pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
+
+pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
     let mut addr: sockaddr_nl =
-        sockaddr_nl{nl_family: 0, nl_pad: 0, nl_pid: 0, nl_groups: 0,};
-    let mut slen: socklen_t =
-        ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong as socklen_t;
+        sockaddr_nl{nl_family: 16, nl_pad: 0, nl_pid: 0, nl_groups: 0x40,};
+    let mut slen: socklen_t = ::std::mem::size_of::<sockaddr_nl>() as socklen_t;
     let mut opt: libc::c_int = 1 as libc::c_int;
-    addr.nl_family = 16 as libc::c_int as __kernel_sa_family_t;
-    addr.nl_pad = 0 as libc::c_int as libc::c_ushort;
-    addr.nl_pid = 0 as libc::c_int as __u32;
-    addr.nl_groups = 0x40 as libc::c_int as __u32;
-    if (*dnsmasq_daemon).options[(39 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
+    if daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) as usize] &
            (1 as libc::c_uint) <<
                (39 as libc::c_int as
                     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
@@ -42,7 +29,7 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
         addr.nl_groups |= 0x10 as libc::c_int as libc::c_uint
     }
     addr.nl_groups |= 0x400 as libc::c_int as libc::c_uint;
-    if (*dnsmasq_daemon).options[(39 as libc::c_int as
+    if daemon.options[(39 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
                                                                        libc::c_ulong).wrapping_mul(8
@@ -63,14 +50,14 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
            != 0 {
         addr.nl_groups |= 0x100 as libc::c_int as libc::c_uint
     }
-    if (*dnsmasq_daemon).doing_ra != 0 || (*dnsmasq_daemon).doing_dhcp6 != 0 {
+    if daemon.doing_ra != 0 || daemon.doing_dhcp6 != 0 {
         addr.nl_groups |= 0x100 as libc::c_int as libc::c_uint
     }
     /* May not be able to have permission to set multicast groups don't die in that case */
-    (*dnsmasq_daemon).netlinkfd =
+    daemon.netlinkfd =
         socket(16 as libc::c_int, SOCK_RAW as libc::c_int, 0 as libc::c_int);
-    if (*dnsmasq_daemon).netlinkfd != -(1 as libc::c_int) {
-        if bind((*dnsmasq_daemon).netlinkfd,
+    if daemon.netlinkfd != -(1 as libc::c_int) {
+        if bind(daemon.netlinkfd,
                 __CONST_SOCKADDR_ARG{__sockaddr__:
                                          &mut addr as *mut sockaddr_nl as
                                              *mut SockAddr,},
@@ -78,18 +65,18 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
                     socklen_t) == -(1 as libc::c_int) {
             addr.nl_groups = 0 as libc::c_int as __u32;
             if *__errno_location() != 1 as libc::c_int ||
-                   bind((*dnsmasq_daemon).netlinkfd,
+                   bind(daemon.netlinkfd,
                         __CONST_SOCKADDR_ARG{__sockaddr__:
                                                  &mut addr as *mut sockaddr_nl
                                                      as *mut SockAddr,},
                         ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong
                             as socklen_t) == -(1 as libc::c_int) {
-                (*dnsmasq_daemon).netlinkfd = -(1 as libc::c_int)
+                daemon.netlinkfd = -(1 as libc::c_int)
             }
         }
     }
-    if (*dnsmasq_daemon).netlinkfd == -(1 as libc::c_int) ||
-           getsockname((*dnsmasq_daemon).netlinkfd,
+    if daemon.netlinkfd == -(1 as libc::c_int) ||
+           getsockname(daemon.netlinkfd,
                        __SOCKADDR_ARG{__sockaddr__:
                                           &mut addr as *mut sockaddr_nl as
                                               *mut SockAddr,}, &mut slen) ==
@@ -102,10 +89,10 @@ pub unsafe extern "C" fn netlink_init() -> *mut libc::c_char {
     netlink_pid = addr.nl_pid;
     iov.iov_len = 100 as libc::c_int as size_t;
     iov.iov_base = safe_malloc(iov.iov_len);
-    if (*dnsmasq_daemon).kernel_version >=
+    if daemon.kernel_version >=
            ((2 as libc::c_int) << 16 as libc::c_int) +
                ((6 as libc::c_int) << 8 as libc::c_int) + 30 as libc::c_int &&
-           setsockopt((*dnsmasq_daemon).netlinkfd, 270 as libc::c_int,
+           setsockopt(daemon.netlinkfd, 270 as libc::c_int,
                       5 as libc::c_int,
                       &mut opt as *mut libc::c_int as *const libc::c_void,
                       ::std::mem::size_of::<libc::c_int>() as libc::c_ulong as
@@ -139,7 +126,7 @@ unsafe extern "C" fn netlink_recv() -> ssize_t {
         msg.msg_flags = 0 as libc::c_int;
         loop  {
             rc =
-                recvmsg((*dnsmasq_daemon).netlinkfd, &mut msg,
+                recvmsg(daemon.netlinkfd, &mut msg,
                         MSG_PEEK as libc::c_int | MSG_TRUNC as libc::c_int);
             if !(rc == -(1 as libc::c_int) as libc::c_long &&
                      *__errno_location() == 4 as libc::c_int) {
@@ -162,7 +149,7 @@ unsafe extern "C" fn netlink_recv() -> ssize_t {
         msg.msg_flags = 0 as libc::c_int;
         loop  {
             rc =
-                recvmsg((*dnsmasq_daemon).netlinkfd, &mut msg,
+                recvmsg(daemon.netlinkfd, &mut msg,
                         0 as libc::c_int);
             if !(rc == -(1 as libc::c_int) as libc::c_long &&
                      *__errno_location() == 4 as libc::c_int) {
@@ -185,7 +172,7 @@ unsafe extern "C" fn netlink_recv() -> ssize_t {
 /* family = AF_UNSPEC finds ARP table entries.
    family = AF_LOCAL finds MAC addresses. */
 #[no_mangle]
-pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
+pub fn iface_enumerate(mut family: libc::c_int,
                                          mut parm: *mut libc::c_void,
                                          mut callback:
                                              Option<unsafe extern "C" fn()
@@ -229,7 +216,7 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
         req.nlh.nlmsg_seq = seq;
         req.g.rtgen_family = family as libc::c_uchar;
         /* Don't block in recvfrom if send fails */
-        while retry_send(sendto((*dnsmasq_daemon).netlinkfd,
+        while retry_send(sendto(daemon.netlinkfd,
                                 &mut req as *mut C2RustUnnamed_10 as
                                     *mut libc::c_void,
                                 ::std::mem::size_of::<C2RustUnnamed_10>() as
@@ -1009,14 +996,14 @@ pub unsafe extern "C" fn iface_enumerate(mut family: libc::c_int,
     return 0 as libc::c_int;
 }
 #[no_mangle]
-pub unsafe extern "C" fn netlink_multicast() {
+pub fn netlink_multicast() {
     let mut len: ssize_t = 0;
     let mut h: *mut nlmsghdr = 0 as *mut nlmsghdr;
     let mut flags: libc::c_int = 0;
     /* don't risk blocking reading netlink messages here. */
-    flags = fcntl((*dnsmasq_daemon).netlinkfd, 3 as libc::c_int);
+    flags = fcntl(daemon.netlinkfd, 3 as libc::c_int);
     if flags == -(1 as libc::c_int) ||
-           fcntl((*dnsmasq_daemon).netlinkfd, 4 as libc::c_int,
+           fcntl(daemon.netlinkfd, 4 as libc::c_int,
                  flags | 0o4000 as libc::c_int) == -(1 as libc::c_int) {
         return
     }
@@ -1062,7 +1049,7 @@ pub unsafe extern "C" fn netlink_multicast() {
         }
     }
     /* restore non-blocking status */
-    fcntl((*dnsmasq_daemon).netlinkfd, 4 as libc::c_int, flags);
+    fcntl(daemon.netlinkfd, 4 as libc::c_int, flags);
 }
 unsafe extern "C" fn nl_async(mut h: *mut nlmsghdr) {
     if (*h).nlmsg_type as libc::c_int == 0x2 as libc::c_int {
