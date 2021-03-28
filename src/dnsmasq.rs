@@ -39,8 +39,9 @@ mod rrfilter;
 mod tables;
 mod tftp;
 mod ubus;
-mod slack;
 mod edns0;
+mod in_addr;
+mod in6_addr;
 
 
 use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_user_data_t, cap_user_header_t, DhcpContext, DhcpRelay, DnsmasqDaemon, gid_t, Group, Iname, Passwd, pid_t, Server, time_t, uid_t};
@@ -48,7 +49,7 @@ use defines::{C2RustUnnamed_12, _SC_OPEN_MAX, __sighandler_t, __sigset_t, cap_us
 use libc;
 use log;
 use crate::util::{dnsmasq_time, safe_malloc, safe_pipe, read_write, sockaddr_isequal, rand16, retry_send};
-use crate::defines::{__user_cap_header_struct, __user_cap_data_struct, SIGUSR1, SIGUSR2, SIGHUP, SIGTERM, SIGALRM, SIGCHLD, SIGINT, sigaction, SIGPIPE, event_desc, size_t, DIR, TftpPrefix, Resolvc, MySockAddr, DhcpPacket, iovec, DhcpLease, stat, timespec, ServerFd, Listener, TftpTransfer, Irec, SockAddr, socklen_t, __SOCKADDR_ARG, AllAddr, InAddr, SHUT_RDWR, in_addr_t, SOCK_RAW, IPPROTO_ICMP, SockAddrIn, C2RustUnnamed_27, IpHdr, IcmpHdr, C2RustUnnamed_17, C2RustUnnamed_14, C2RustUnnamed_16, sa_family_t, in_port_t, __CONST_SOCKADDR_ARG, C2RustUnnamed_26};
+use crate::defines::{__user_cap_header_struct, __user_cap_data_struct, SIGUSR1, SIGUSR2, SIGHUP, SIGTERM, SIGALRM, SIGCHLD, SIGINT, sigaction, SIGPIPE, event_desc, size_t, DIR, TftpPrefix, Resolvc, MySockAddr, DhcpPacket, iovec, DhcpLease, stat, timespec, ServerFd, Listener, TftpTransfer, Irec, SockAddr, socklen_t, __SOCKADDR_ARG, AllAddr, InAddr, SHUT_RDWR, InAddrT, SOCK_RAW, IPPROTO_ICMP, SockAddrIn, C2RustUnnamed_27, IpHdr, IcmpHdr, C2RustUnnamed_17, C2RustUnnamed_14, C2RustUnnamed_16, SaFamily, in_port_t, __CONST_SOCKADDR_ARG, C2RustUnnamed_26};
 use crate::dhcp_common::{dhcp_common_init, whichdevice, bind_to_device, log_context, log_relay, dhcp_update_configs};
 use crate::dnsmasq_log::{die, log_start, my_syslog, set_log_writer, check_log_writer, log_reopen, flush_log};
 use crate::lease::{lease_init, lease_make_duid, lease_find_interfaces, do_script_run, lease_prune, lease_update_file, rerun_scripts, lease_update_from_configs, lease_update_dns};
@@ -148,7 +149,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                 libc::intptr_t); /* known umask, create leases and pid files as 0644 */
         libc::sigaction(SIGPIPE as libc::c_int, &mut sigact,
                         0 as *mut libc::sigaction); /* Must precede read_opts() */
-        libc::umask(0o22 as libc::c_int as defines::__mode_t);
+        libc::umask(0o22 as libc::c_int as defines::ModeT);
     }
 
 
@@ -2765,7 +2766,7 @@ unsafe extern "C" fn check_dns_listeners(mut now: time_t) {
                             netmask = (*iface).netmask;
                             auth_dns = (*iface).dns_auth
                         } else {
-                            netmask.s_addr = 0 as libc::c_int as in_addr_t;
+                            netmask.s_addr = 0 as libc::c_int as InAddrT;
                             auth_dns = 0 as libc::c_int
                         }
                         /* Arrange for SIGALRM after CHILD_LIFETIME seconds to
@@ -2925,7 +2926,7 @@ pub unsafe extern "C" fn icmp_ping(mut addr: InAddr) -> libc::c_int {
     let mut gotreply: libc::c_int = 0 as libc::c_int;
     fd = make_icmp_sock();
     if fd == -(1 as libc::c_int) { return 0 as libc::c_int }
-    saddr.sin_family = 2 as libc::c_int as sa_family_t;
+    saddr.sin_family = 2 as libc::c_int as SaFamily;
     saddr.sin_port = 0 as libc::c_int as in_port_t;
     saddr.sin_addr = addr;
     memset(&mut packet.icmp as *mut IcmpHdr as *mut libc::c_void,

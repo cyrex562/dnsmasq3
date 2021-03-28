@@ -1,4 +1,4 @@
-use crate::defines::{iovec, socklen_t, __kernel_sa_family_t, __u32, DnsmasqDaemon, SOCK_RAW, __CONST_SOCKADDR_ARG, SockAddr, __SOCKADDR_ARG, size_t, ssize_t, MsgHdr, MSG_PEEK, MSG_TRUNC, C2RustUnnamed_10, InAddr, __bswap_32, in_addr_t, In6Addr};
+use crate::defines::{iovec, socklen_t, __kernel_sa_family_t, __u32, DnsmasqDaemon, SOCK_RAW, __CONST_SOCKADDR_ARG, SockAddr, __SOCKADDR_ARG, size_t, ssize_t, MsgHdr, MSG_PEEK, MSG_TRUNC, C2RustUnnamed_10, InAddr, __bswap_32, InAddrT, In6Addr};
 use crate::slack::{sockaddr_nl, nlmsghdr, rtgenmsg, RTM_GETNEIGH, RTM_GETLINK, RTM_GETADDR, RTM_NEWADDR, ifaddrmsg, rtattr, IFA_LOCAL, IFA_BROADCAST, IFA_LABEL, IFA_ADDRESS, IFA_CACHEINFO, ifa_cacheinfo, RTM_NEWNEIGH, ndmsg, NDA_DST, NDA_LLADDR, RTM_NEWLINK, ifinfomsg, IFLA_ADDRESS, IFF_LOOPBACK, IFF_POINTOPOINT, nlmsgerr, RTM_NEWROUTE, rtmsg, RTN_UNICAST, RT_SCOPE_LINK, RT_TABLE_MAIN, RT_TABLE_LOCAL, RTM_DELADDR};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::util::{safe_malloc, expand_buf, retry_send};
@@ -349,15 +349,15 @@ pub fn iface_enumerate(mut family: libc::c_int,
                                         0 as *mut libc::c_char;
                                     netmask.s_addr =
                                         __bswap_32((!(0 as libc::c_int as
-                                                          in_addr_t)) <<
+                                            InAddrT)) <<
                                                        32 as libc::c_int -
                                                            (*ifa).ifa_prefixlen
                                                                as
                                                                libc::c_int);
                                     addr_0.s_addr =
-                                        0 as libc::c_int as in_addr_t;
+                                        0 as libc::c_int as InAddrT;
                                     broadcast.s_addr =
-                                        0 as libc::c_int as in_addr_t;
+                                        0 as libc::c_int as InAddrT;
                                     while len1 >=
                                               ::std::mem::size_of::<rtattr>()
                                                   as libc::c_ulong as

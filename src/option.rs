@@ -1,5 +1,5 @@
-use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, OptionUsage, TxtRecord, DnsmasqDaemon, C2RustUnnamed_10, MySockAddr, InAddr, sa_family_t, In6Addr, __bswap_16, in_addr_t, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISdigit, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISspace, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISxdigit, HostsFile, FILE, stat, timespec, DIR, Crec};
-use crate::util::{whine_malloc, safe_malloc, canonicalise, safe_strncpy, hostname_isequal, addr6part, setaddr6part, is_same_net, is_same_net6, parse_hex, legal_hostname, rand32};
+use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, OptionUsage, TxtRecord, DnsmasqDaemon, C2RustUnnamed_10, MySockAddr, InAddr, SaFamily, In6Addr, __bswap_16, InAddrT, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISdigit, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISspace, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISxdigit, HostsFile, FILE, stat, timespec, DIR, Crec, OptionValue, TabEntryA};
+use crate::util::{whine_malloc, safe_malloc, canonicalise, safe_strncpy, hostname_isequal, addr6part, setaddr6part, is_same_net, is_same_net6, parse_hex, legal_hostname, rand32, string_from_offset};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{lookup_dhcp_opt, lookup_dhcp_len, strip_hostname, display_opts, display_opts6};
 use std::io::{stdin, stderr};
@@ -7,7 +7,8 @@ use crate::slack::dirent;
 use crate::network::{mark_servers, cleanup_servers};
 use crate::inotify::set_dynamic_inotify;
 use std::process::exit;
-use clap::{Arg, App};
+use clap::{Arg, App, ArgMatches};
+use winapi::um::ws2tcpip::inet_pton;
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -31,6 +32,8 @@ use clap::{Arg, App};
 //                    __mask_was_saved: 0,
 //                    __saved_mask: __sigset_t{__val: [0; 16],},}; 1];
 
+
+
 pub fn prepare_matches() -> ArgMatches {
     App::new("dnsmasq-rs")
         .version("0.1")
@@ -39,21 +42,24 @@ pub fn prepare_matches() -> ArgMatches {
         .arg(Arg::with_name("version")
             .short("v")
             .long("config")
-            .takes_value(false))
+            .takes_value(false)
+            .help("show the version and exit"))
         .arg(Arg::with_name("no-hosts")
             .short("h")
             .long("no-hosts")
-            .takes_value(false))
+            .takes_value(false)
+            .help("do not load the hosts file"))
         .arg(Arg::with_name("no-poll")
             .short("n")
             .long("no-poll")
-            .takes_value(false))
-        .arg(Arg::with_name("no-daemon").short("d").long("no-daemon").takes_value(false))
-        .arg(Arg::with_name("log-queries").short("q").long("log-queries").takes_value(false))
-        .arg(Arg::with_name("user").short("u").long("user").value_name("USER"))
-        .arg(Arg::with_name("group").short("g").long("group").value_name("GROUP"))
-        .arg(Arg::with_name("resolv-file").short("r").long("resolv-file").value_name("RESOLV_FILE"))
-        .arg(Arg::with_name("servers-file").long("servers-files").value_name("SERVERS_FILE"))
+            .takes_value(false)
+            .help("do not poll the conf file, reload only on SIGHUP"))
+        .arg(Arg::with_name("no-daemon").short("d").long("no-daemon").takes_value(false).help("do not run in the background"))
+        .arg(Arg::with_name("log-queries").short("q").long("log-queries").takes_value(false).help("log DNS queries"))
+        .arg(Arg::with_name("user").short("u").long("user").value_name("USER").help("user to run as"))
+        .arg(Arg::with_name("group").short("g").long("group").value_name("GROUP").help("group to run as"))
+        .arg(Arg::with_name("resolv-file").short("r").long("resolv-file").value_name("RESOLV_FILE").help("path to resolv.conf file"))
+        .arg(Arg::with_name("servers-file").long("servers-files").value_name("SERVERS_FILE").hel("path to server options file"))
         .arg(Arg::with_name("mx-host").long("mx-host").short("m").value_name("MX_HOST"))
         .arg(Arg::with_name("mx-target").long("mx-target").short("t").value_name("MX_TARGET"))
         .arg(Arg::with_name("cache-size").long("cache-size").short("c").value_name("CACHE_SIZE"))
@@ -214,3141 +220,679 @@ pub fn prepare_matches() -> ArgMatches {
         .get_matches()
 }
 
-// TODO: record "values" for each option
 // TODO: move usage data to match arg
 // TODO: correct for N, flag type, etc.
 
-static mut usage: [OptionUsage; 165] =
-    [{
-         let mut init =
-             OptionUsage{opt: 'a' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<ipaddr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify local address(es) to listen on.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'A' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"/<domain>/<ipaddr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Return ipaddr for all hosts in specified domains.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'b' as i32,
-                             rept: 0 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Fake reverse lookups for RFC1918 private address ranges.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'B' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<ipaddr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Treat ipaddr as NXDOMAIN (defeats Verisign wildcard).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'c' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify the size of the cache in entries (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"$\x00" as *const u8 as *const libc::c_char
-                                     as *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'C' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify configuration file (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/dnsmasq.conf\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'd' as i32,
-                             rept: 6 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT fork into the background: run in debug mode.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'D' as i32,
-                             rept: 12 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT forward queries with no domain part.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'e' as i32,
-                             rept: 3 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Return self-pointing MX records for local hosts.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'E' as i32,
-                             rept: 9 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Expand simple names in /etc/hosts with domain-suffix.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'f' as i32,
-                             rept: 1 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Don\'t forward spurious DNS requests from Windows hosts.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'F' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<ipaddr>,...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Enable DHCP in the range given with lease duration.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'g' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<groupname>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Change to this group after startup (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"dip\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'G' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<hostspec>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Set address or hostname for a specified machine.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 273 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Read DHCP host specs from file.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 280 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Read DHCP option specs from file.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 340 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Read DHCP host specs from a directory.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 341 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Read DHCP options from a directory.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 294 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"tag-expression\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Evaluate conditional tag expression.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'h' as i32,
-                             rept: 4 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT load %s file.\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             arg:
-                                 b"/etc/hosts\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'H' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify a hosts file to be read in addition to %s.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/hosts\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 342 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Read hosts files from a directory.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'i' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<interface>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify interface(s) to listen on.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'I' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<interface>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify interface(s) NOT to listen on.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'j' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<class>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Map DHCP user class to tag.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 268 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<circuit>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Map RFC3046 circuit-id to tag.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 269 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<remote>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Map RFC3046 remote-id to tag.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 270 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<remote>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Map RFC3993 subscriber-id to tag.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 361 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<vendor>[,...]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify vendor class to match for PXE requests.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'J' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"tag:<tag>...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Don\'t do DHCP for hosts with tag set.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 282 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=tag:<tag>...]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Force broadcast replies for hosts with tag set.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'k' as i32,
-                             rept: 16 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT fork into the background, do NOT run in debug mode.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'K' as i32,
-                             rept: 17 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Assume we are the only DHCP server on the local network.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'l' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify where to store DHCP leases (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/var/lib/misc/dnsmasq.leases\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'L' as i32,
-                             rept: 10 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Return MX records for local hosts.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'm' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<host_name>,<target>,<pref>\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify an MX record.\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'M' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<bootp opts>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify BOOTP options to DHCP server.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'n' as i32,
-                             rept: 5 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT poll %s file, reload only on SIGHUP.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/resolv.conf\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'N' as i32,
-                             rept: 11 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT cache failed search results.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'o' as i32,
-                             rept: 7 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Use nameservers strictly in the order given in %s.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/resolv.conf\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'O' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<optspec>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify options to be sent to DHCP clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 264 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<optspec>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"DHCP option sent even if the client does not request it.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'p' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify port to listen for DNS requests on (defaults to 53).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'P' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Maximum supported UDP packet size for EDNS.0 (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"*\x00" as *const u8 as *const libc::c_char
-                                     as *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'q' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Log DNS queries.\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'Q' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Force the originating port for upstream DNS queries.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'R' as i32,
-                             rept: 8 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT read resolv.conf.\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'r' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify path to resolv.conf (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/resolv.conf\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 333 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify path to file with server= options\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'S' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"/<domain>/<ipaddr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify address(es) of upstream servers with optional domains.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 332 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<addr>/<prefix>,<ipaddr>\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify address of upstream servers for reverse address queries\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 286 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"/<domain>/\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Never forward queries to specified domains.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 's' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<domain>[,<range>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify the domain to be assigned in DHCP leases.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 't' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<host_name>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify default target in an MX record.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'T' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify time-to-live in seconds for replies from /etc/hosts.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 283 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify time-to-live in seconds for negative caching.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 297 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify time-to-live in seconds for maximum TTL to send to clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 312 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify time-to-live ceiling for cache.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 339 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify time-to-live floor for cache.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'u' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<username>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Change to this user after startup. (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"nobody\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'U' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<class>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Map DHCP vendor class to tag.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'v' as i32,
-                             rept: 0 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Display dnsmasq version and copyright information.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'V' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<ipaddr>,<ipaddr>,<netmask>\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Translate IPv4 addresses from upstream servers.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'W' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<target>,...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify a SRV record.\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'w' as i32,
-                             rept: 0 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Display this message. Use --help dhcp or --help dhcp6 for known DHCP options.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'x' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify path of PID file (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/var/run/dnsmasq.pid\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'X' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify maximum number of DHCP leases (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"&\x00" as *const u8 as *const libc::c_char
-                                     as *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'y' as i32,
-                             rept: 18 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Answer DNS queries based on the interface a query was sent to.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'Y' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<txt>[,<txt]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify TXT DNS record.\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 261 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<target>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify PTR DNS record.\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 271 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<interface>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Give DNS name to IPv4 address of interface.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'z' as i32,
-                             rept: 13 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Bind only to interfaces in use.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 'Z' as i32,
-                             rept: 14 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Read DHCP static host information from %s.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/ethers\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '1' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"[=<busname>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Enable the DBus interface for setting upstream servers, etc.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 354 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"[=<busname>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Enable the UBus interface.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '2' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<interface>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Do not provide DHCP on this interface, only provide DNS.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '3' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=tag:<tag>]...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Enable dynamic address allocation for bootp.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '4' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<mac address>\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Map MAC address (with wildcards) to option set.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 262 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<iface>,<alias>..\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Treat DHCP requests on aliases as arriving from interface.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 357 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<iface>|<addr>,<addr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify extra networks sharing a broadcast domain for DHCP\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '5' as i32,
-                             rept: 21 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Disable ICMP echo address checking in the DHCP server.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '6' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Shell script to run on DHCP lease creation and destruction.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 305 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"path\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Lua script to run on DHCP lease creation and destruction.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 285 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<username>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Run lease-change scripts as this user.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 347 as libc::c_int,
-                             rept: 53 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Call dhcp-script with changes to local ARP table.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '7' as i32,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Read configuration from all the files in this directory.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '8' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<facility>|<file>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Log to this syslog facility or file. (defaults to DAEMON)\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '9' as i32,
-                             rept: 22 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do not use leasefile.\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: '0' as i32,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Maximum number of concurrent DNS queries. (defaults to %s)\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"!\x00" as *const u8 as *const libc::c_char
-                                     as *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 256 as libc::c_int,
-                             rept: 24 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Clear DNS cache when reloading %s.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"/etc/resolv.conf\x00" as *const u8 as
-                                     *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 257 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=tag:<tag>]...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Ignore hostnames provided by DHCP clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 275 as libc::c_int,
-                             rept: 30 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do NOT reuse filename and server fields for extra DHCP options.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 258 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=<intr>[,<intr>]]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Enable integrated read-only TFTP server.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 260 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<dir>[,<iface>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Export files by TFTP only from the specified subtree.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 274 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=ip|mac]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Add client IP or hardware address to tftp-root.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 259 as libc::c_int,
-                             rept: 26 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Allow access only to files owned by the user running dnsmasq.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 344 as libc::c_int,
-                             rept: 52 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do not terminate the service if TFTP directories are inaccessible.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 263 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Maximum number of concurrent TFTP transfers (defaults to %s).\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 b"#\x00" as *const u8 as *const libc::c_char
-                                     as *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 349 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Maximum MTU to use for TFTP transfers.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 265 as libc::c_int,
-                             rept: 27 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Disable the TFTP blocksize extension.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 309 as libc::c_int,
-                             rept: 38 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Convert TFTP filenames to lowercase\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 276 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<start>,<end>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Ephemeral port range for use by TFTP transfers.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 359 as libc::c_int,
-                             rept: 60 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Use only one port for TFTP server.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 266 as libc::c_int,
-                             rept: 28 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Extra logging for DHCP.\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 267 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"[=<integer>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Enable async. logging; optionally set queue length.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 277 as libc::c_int,
-                             rept: 31 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Stop DNS rebinding. Filter private IP ranges when resolving.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 299 as libc::c_int,
-                             rept: 25 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Allow rebinding of 127.0.0.0/8, for RBL servers.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 298 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"/<domain>/\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Inhibit DNS-rebind protection on this domain.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 278 as libc::c_int,
-                             rept: 23 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Always perform DNS queries to all servers.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 281 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<optspec>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Set tag if client includes matching option in request.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 355 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"set:<tag>,<string>[*]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Set tag if client provides given name.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 284 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"[=<ports>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Use alternative ports for DHCP.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 287 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<naptr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify NAPTR DNS record.\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 288 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<port>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify lowest port available for DNS query transmission.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 345 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<port>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify highest port available for DNS query transmission.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 289 as libc::c_int,
-                             rept: 20 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Use only fully qualified domain names for DHCP clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 296 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=tag:<tag>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Generate hostnames based on MAC address for nameless clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 295 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=<ipaddr>]...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Use these DHCP relays as full proxies.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 323 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<local-addr>,<server>[,<iface>]\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Relay DHCP requests to a remote server\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 290 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<alias>,<target>[,<ttl>]\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify alias name for LOCAL DNS name.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 291 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<prompt>,[<timeout>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Prompt to send to PXE clients.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 292 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<service>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Boot service for PXE menu.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 293 as libc::c_int,
-                             rept: 0 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Check configuration syntax.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 300 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"[=base64|text]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Add requestor\'s MAC address to forwarded DNS queries.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 325 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<v4 pref>[,<v6 pref>]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Add specified IP subnet to forwarded DNS queries.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 346 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<text>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Add client identification to forwarded DNS queries.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 301 as libc::c_int,
-                             rept: 33 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Proxy DNSSEC validation results from upstream nameservers.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 302 as libc::c_int,
-                             rept: 34 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Attempt to allocate sequential IP addresses to DHCP clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 358 as libc::c_int,
-                             rept: 59 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Ignore client identifier option sent by DHCP clients.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 303 as libc::c_int,
-                             rept: 35 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Copy connection-track mark from queries to upstream connections.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 304 as libc::c_int,
-                             rept: 36 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Allow DHCP clients to do their own DDNS updates.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 306 as libc::c_int,
-                             rept: 37 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Send router-advertisements for interfaces doing DHCPv6\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 307 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<enterprise>,<duid>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify DUID_EN-type DHCPv6 server DUID\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 308 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<address>[,<ttl>]\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify host (A/AAAA and PTR) records\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 356 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<flags>,<tag>,<value>\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify certification authority authorization record\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 310 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<name>,<RR-number>,[<data>]\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify arbitrary DNS resource record\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 311 as libc::c_int,
-                             rept: 39 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Bind to interfaces in use - check for new interfaces\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 314 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<NS>,<interface>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Export local names to global DNS\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 313 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<domain>,[<subnet>...]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Domain to export to global DNS\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 315 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Set TTL for authoritative replies\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 316 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<serial>[,...]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Set authoritative zone information\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 317 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<NS>[,<NS>...]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Secondary authoritative nameservers for forward domains\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 318 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<ipaddr>[,<ipaddr>...]\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Peers which are allowed to do zone transfer\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 319 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"/<domain>[/<domain>...]/<ipset>...\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify ipsets to which matching domains should be added\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 320 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<domain>,<range>,[<prefix>]\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Specify a domain and address range for synthesised names\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 329 as libc::c_int,
-                             rept: 45 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Activate DNSSEC validation\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 330 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<domain>,[<class>],...\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Specify trust anchor key digest.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 331 as libc::c_int,
-                             rept: 47 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Disable upstream checking for DNSSEC debugging.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 334 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Ensure answers without DNSSEC are in unsigned zones.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 336 as libc::c_int,
-                             rept: 46 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Don\'t check DNSSEC signature timestamps until first cache-reload\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 343 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Timestamp file to verify system clock for DNSSEC\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 324 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<iface>,[mtu:<value>|<interface>|off,][<prio>,]<intval>[,<lifetime>]\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Set MTU, priority, resend-interval and router-lifetime\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 326 as libc::c_int,
-                             rept: 42 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do not log routine DHCP.\x00" as *const u8
-                                     as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 327 as libc::c_int,
-                             rept: 43 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do not log routine DHCPv6.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 328 as libc::c_int,
-                             rept: 44 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Do not log RA.\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 335 as libc::c_int,
-                             rept: 49 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Accept queries only from directly-connected networks.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 337 as libc::c_int,
-                             rept: 50 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Detect and remove DNS forwarding loops.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 338 as libc::c_int,
-                             rept: 62 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 b"<ipaddr>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Ignore DNS responses containing ipaddr.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 348 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<ttl>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Set TTL in DNS responses with DHCP-derived addresses.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 350 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<integer>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Delay DHCP replies for at least number of seconds.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 351 as libc::c_int,
-                             rept: 57 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Enables DHCPv4 Rapid Commit option.\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 352 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<path>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Path to debug packet dump file\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 353 as libc::c_int,
-                             rept:
-                                 (62 as libc::c_int + 1 as libc::c_int) as
-                                     libc::c_uint,
-                             flagdesc:
-                                 b"<hex>\x00" as *const u8 as
-                                     *const libc::c_char as *mut libc::c_char,
-                             desc:
-                                 b"Mask which packets to dump\x00" as
-                                     *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 360 as libc::c_int,
-                             rept: 61 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 b"Call dhcp-script when lease expiry changes.\x00"
-                                     as *const u8 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     },
-     {
-         let mut init =
-             OptionUsage{opt: 0 as libc::c_int,
-                             rept: 0 as libc::c_int as libc::c_uint,
-                             flagdesc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             desc:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,
-                             arg:
-                                 0 as *const libc::c_char as
-                                     *mut libc::c_char,};
-         init
-     }];
+pub static option_values: [OptionValue; 166] =
+    [OptionValue{ name: String::from("version"), val: 'v' as i32,},
+        OptionValue{ name: String::from("no-hosts"), val: 'h' as i32,},
+        OptionValue{ name: String::from("no-poll"), val: 'n' as i32,},
+        OptionValue{ name: String::from("help"), val: 'w' as i32,},
+        OptionValue{ name: String::from("no-daemon"), val: 'd' as i32,},
+        OptionValue{ name: String::from("log-queries"), val: 'q' as i32,},
+        OptionValue{ name: String::from("user"), val: 'u' as i32,},
+        OptionValue{ name: String::from("group"), val: 'g' as i32,},
+        OptionValue{ name: String::from("resolv-file"), val: 'r' as i32,},
+        OptionValue{ name: String::from("servers-file"), val: 333,},
+        OptionValue{ name: String::from("mx-host"), val: 'm' as i32,},
+        OptionValue{ name: String::from("mx-target"), val: 't' as i32,},
+        OptionValue{ name: String::from("cache-size"), val: 'c' as i32,},
+        OptionValue{ name: String::from("port"), val: 'p' as i32,},
+        OptionValue{ name: String::from("dhcp-leasefile"), val: 'l' as i32,},
+        OptionValue{ name: String::from("dhcp-lease"), val: 'l' as i32,},
+        OptionValue{ name: String::from("dhcp-host"), val: 'G' as i32,},
+        OptionValue{ name: String::from("dhcp-range"), val: 'F' as i32,},
+        OptionValue{ name: String::from("dhcp-option"), val: 'O' as i32,},
+        OptionValue{ name: String::from("dhcp-boot"), val: 'M' as i32,},
+        OptionValue{ name: String::from("domain"), val: 's' as i32,},
+        OptionValue{ name: String::from("domain-suffix"), val: 's' as i32,},
+        OptionValue{ name: String::from("interface"), val: 'i' as i32,},
+        OptionValue{ name: String::from("listen-address"), val: 'a' as i32,},
+        OptionValue{ name: String::from("local-service"), val: 335,},
+        OptionValue{ name: String::from("bogus-priv"), val: 'b' as i32,},
+        OptionValue{ name: String::from("bogus-nxdomain"), val: 'B' as i32,},
+        OptionValue{ name: String::from("ignore-address"), val: 338,},
+        OptionValue{ name: String::from("selfmx"), val: 'e' as i32,},
+        OptionValue{ name: String::from("filterwin2k"), val: 'f' as i32,},
+        OptionValue{ name: String::from("pid-file"), val: 'x' as i32,},
+        OptionValue{ name: String::from("strict-order"), val: 'o' as i32,},
+        OptionValue{ name: String::from("server"), val: 'S' as i32,},
+        OptionValue{ name: String::from("rev-server"), val: 332,},
+        OptionValue{ name: String::from("local"), val: 286,},
+        OptionValue{ name: String::from("address"), val: 'A' as i32,},
+        OptionValue{ name: String::from("conf-file"), val: 'C' as i32,},
+        OptionValue{ name: String::from("no-resolv"), val: 'R' as i32,},
+        OptionValue{ name: String::from("expand-hosts"), val: 'E' as i32,},
+        OptionValue{ name: String::from("localmx"), val: 'L' as i32,},
+        OptionValue{ name: String::from("local-ttl"), val: 'T' as i32,},
+        OptionValue{ name: String::from("no-negcache"), val: 'N' as i32,},
+        OptionValue{ name: String::from("addn-hosts"), val: 'H' as i32,},
+        OptionValue{ name: String::from("hostsdir"), val: 342,},
+        OptionValue{ name: String::from("query-port"), val: 'Q' as i32,},
+        OptionValue{ name: String::from("except-interface"), val: 'I' as i32,},
+        OptionValue{ name: String::from("no-dhcp-interface"), val: '2' as i32,},
+        OptionValue{ name: String::from("domain-needed"), val: 'D' as i32,},
+        OptionValue{ name: String::from("dhcp-lease-max"), val: 'X' as i32,},
+        OptionValue{ name: String::from("bind-interfaces"), val: 'z' as i32,},
+        OptionValue{ name: String::from("read-ethers"), val: 'Z' as i32,},
+        OptionValue{ name: String::from("alias"), val: 'V' as i32,},
+        OptionValue{ name: String::from("dhcp-vendorclass"), val: 'U' as i32,},
+        OptionValue{ name: String::from("dhcp-userclass"), val: 'j' as i32,},
+        OptionValue{ name: String::from("dhcp-ignore"), val: 'J' as i32,},
+        OptionValue{ name: String::from("edns-packet-max"), val: 'P' as i32,},
+        OptionValue{ name: String::from("keep-in-foreground"), val: 'k' as i32,},
+        OptionValue{ name: String::from("dhcp-authoritative"), val: 'K' as i32,},
+        OptionValue{ name: String::from("srv-host"), val: 'W' as i32,},
+        OptionValue{ name: String::from("localise-queries"), val: 'y' as i32,},
+        OptionValue{ name: String::from("txt-record"), val: 'Y' as i32,},
+        OptionValue{ name: String::from("caa-record"), val: 356,},
+        OptionValue{ name: String::from("dns-rr"), val: 310,},
+        OptionValue{ name: String::from("enable-dbus"), val: '1' as i32,},
+        OptionValue{ name: String::from("enable-ubus"), val: 354,},
+        OptionValue{ name: String::from("bootp-dynamic"), val: '3' as i32,},
+        OptionValue{ name: String::from("dhcp-mac"), val: '4' as i32,},
+        OptionValue{ name: String::from("no-ping"), val: '5' as i32,},
+        OptionValue{ name: String::from("dhcp-script"), val: '6' as i32,},
+        OptionValue{ name: String::from("conf-dir"), val: '7' as i32,},
+        OptionValue{ name: String::from("log-facility"), val: '8' as i32,},
+        OptionValue{ name: String::from("leasefile-ro"), val: '9' as i32,},
+        OptionValue{ name: String::from("script-on-renewal"), val: 360,},
+        OptionValue{ name: String::from("dns-forward-max"), val: '0' as i32,},
+        OptionValue{ name: String::from("clear-on-reload"), val: 256,},
+        OptionValue{ name: String::from("dhcp-ignore-names"), val: 257,},
+        OptionValue{ name: String::from("enable-tftp"), val: 258,},
+        OptionValue{ name: String::from("tftp-secure"), val: 259,},
+        OptionValue{ name: String::from("tftp-no-fail"), val: 344,},
+        OptionValue{ name: String::from("tftp-unique-root"), val: 274,},
+        OptionValue{ name: String::from("tftp-root"), val: 260,},
+        OptionValue{ name: String::from("tftp-max"), val: 263,},
+        OptionValue{ name: String::from("tftp-mtu"), val: 349,},
+        OptionValue{ name: String::from("tftp-lowercase"), val: 309,},
+        OptionValue{ name: String::from("tftp-single-port"), val: 359,},
+        OptionValue{ name: String::from("ptr-record"), val: 261,},
+        OptionValue{ name: String::from("naptr-record"), val: 287,},
+        OptionValue{ name: String::from("bridge-interface"), val: 262,},
+        OptionValue{ name: String::from("shared-network"), val: 357,},
+        OptionValue{ name: String::from("dhcp-option-force"), val: 264,},
+        OptionValue{ name: String::from("tftp-no-blocksize"), val: 265,},
+        OptionValue{ name: String::from("log-dhcp"), val: 266,},
+        OptionValue{ name: String::from("log-async"), val: 267,},
+        OptionValue{ name: String::from("dhcp-circuitid"), val: 268,},
+        OptionValue{ name: String::from("dhcp-remoteid"), val: 269,},
+        OptionValue{ name: String::from("dhcp-subscrid"), val: 270,},
+        OptionValue{ name: String::from("dhcp-pxe-vendor"), val: 361,},
+        OptionValue{ name: String::from("interface-name"), val: 271,},
+        OptionValue{ name: String::from("dhcp-hostsfile"), val: 273,},
+        OptionValue{ name: String::from("dhcp-optsfile"), val: 280,},
+        OptionValue{ name: String::from("dhcp-hostsdir"), val: 340,},
+        OptionValue{ name: String::from("dhcp-optsdir"), val: 341,},
+        OptionValue{ name: String::from("dhcp-no-override"), val: 275,},
+        OptionValue{ name: String::from("tftp-port-range"), val: 276,},
+        OptionValue{ name: String::from("stop-dns-rebind"), val: 277,},
+        OptionValue{ name: String::from("rebind-domain-ok"), val: 298,},
+        OptionValue{ name: String::from("all-servers"), val: 278,},
+        OptionValue{ name: String::from("dhcp-match"), val: 281,},
+        OptionValue{ name: String::from("dhcp-name-match"), val: 355,},
+        OptionValue{ name: String::from("dhcp-broadcast"), val: 282,},
+        OptionValue{ name: String::from("neg-ttl"), val: 283,},
+        OptionValue{ name: String::from("max-ttl"), val: 297,},
+        OptionValue{ name: String::from("min-cache-ttl"), val: 339,},
+        OptionValue{ name: String::from("max-cache-ttl"), val: 312,},
+        OptionValue{ name: String::from("dhcp-alternate-port"), val: 284,},
+        OptionValue{ name: String::from("dhcp-scriptuser"), val: 285,},
+        OptionValue{ name: String::from("min-port"), val: 288,},
+        OptionValue{ name: String::from("max-port"), val: 345,},
+        OptionValue{ name: String::from("dhcp-fqdn"), val: 289,},
+        OptionValue{ name: String::from("cname"), val: 290,},
+        OptionValue{ name: String::from("pxe-prompt"), val: 291,},
+        OptionValue{ name: String::from("pxe-service"), val: 292,},
+        OptionValue{ name: String::from("test"), val: 293,},
+        OptionValue{ name: String::from("tag-if"), val: 294,},
+        OptionValue{ name: String::from("dhcp-proxy"), val: 295,},
+        OptionValue{ name: String::from("dhcp-generate-names"), val: 296,},
+        OptionValue{ name: String::from("rebind-localhost-ok"), val: 299,},
+        OptionValue{ name: String::from("add-mac"), val: 300,},
+        OptionValue{ name: String::from("add-subnet"), val: 325,},
+        OptionValue{ name: String::from("add-cpe-id"), val: 346,},
+        OptionValue{ name: String::from("proxy-dnssec"), val: 301,},
+        OptionValue{ name: String::from("dhcp-sequential-ip"), val: 302,},
+        OptionValue{ name: String::from("conntrack"), val: 303,},
+        OptionValue{ name: String::from("dhcp-client-update"), val: 304,},
+        OptionValue{ name: String::from("dhcp-luascript"), val: 305,},
+        OptionValue{ name: String::from("enable-ra"), val: 306,},
+        OptionValue{ name: String::from("dhcp-duid"), val: 307,},
+        OptionValue{ name: String::from("host-record"), val: 308,},
+        OptionValue{ name: String::from("bind-dynamic"), val: 311,},
+        OptionValue{ name: String::from("auth-zone"), val: 313,},
+        OptionValue{ name: String::from("auth-server"), val: 314,},
+        OptionValue{ name: String::from("auth-ttl"), val: 315,},
+        OptionValue{ name: String::from("auth-soa"), val: 316,},
+        OptionValue{ name: String::from("auth-sec-servers"), val: 317,},
+        OptionValue{ name: String::from("auth-peer"), val: 318,},
+        OptionValue{ name: String::from("ipset"), val: 319,},
+        OptionValue{ name: String::from("synth-domain"), val: 320,},
+        OptionValue{ name: String::from("dnssec"), val: 329,},
+        OptionValue{ name: String::from("trust-anchor"), val: 330,},
+        OptionValue{ name: String::from("dnssec-debug"), val: 331,},
+        OptionValue{ name: String::from("dnssec-check-unsigned"), val: 334,},
+        OptionValue{ name: String::from("dnssec-no-timecheck"), val: 336,},
+        OptionValue{ name: String::from("dnssec-timestamp"), val: 343,},
+        OptionValue{ name: String::from("dhcp-relay"), val: 323,},
+        OptionValue{ name: String::from("ra-param"), val: 324,},
+        OptionValue{ name: String::from("quiet-dhcp"), val: 326,},
+        OptionValue{ name: String::from("quiet-dhcp6"), val: 327,},
+        OptionValue{ name: String::from("quiet-ra"), val: 328,},
+        OptionValue{ name: String::from("dns-loop-detect"), val: 337,},
+        OptionValue{ name: String::from("script-arp"), val: 347,},
+        OptionValue{ name: String::from("dhcp-ttl"), val: 348,},
+        OptionValue{ name: String::from("dhcp-reply-delay"), val: 350,},
+        OptionValue{ name: String::from("dhcp-rapid-commit"), val: 351,},
+        OptionValue{ name: String::from("dumpfile"), val: 352,},
+        OptionValue{ name: String::from("dumpmask"), val: 353,},
+        OptionValue{ name: String::from("dhcp-ignore-clid"), val: 358,}];
+
+static mut usage: [OptionUsage; 164] =
+    [
+        OptionUsage{opt: 97, rept: 62 , flagdesc: String::from("<ipaddr>"), desc:  String::from("Specify local address(es) to listen on."), arg: String::from("") },
+        OptionUsage{ opt: 65, rept: 62 , flagdesc: String::from("/<domain>/<ipaddr>"), desc:  String::from("Return ipaddr for all hosts in specified domains."), arg: String::from("") },
+        OptionUsage{ opt: 98, rept: 0 ,flagdesc: String::from(""), desc:  String::from("Fake reverse lookups for RFC1918 private address ranges."), arg: String::from("") },
+        OptionUsage{ opt: 66, rept: 62 , flagdesc: String::from("<ipaddr>"), desc:  String::from("Treat ipaddr NXDOMAIN (defeats Verisign wildcard)."), arg: String::from("") },
+        OptionUsage{ opt: 99, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify the size of the cache in entries (defaults to %s)."), arg: String::from("")},
+OptionUsage{ opt: 67, rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Specify configuration file (defaults to %s)."), arg: String::from("/etc/dnsmasq.conf")},
+OptionUsage{ opt: 100, rept: 6 ,flagdesc: String::from(""), desc:  String::from("Do NOT fork into the background: run in debug mode."), arg: String::from("") },
+OptionUsage{ opt: 68, rept: 12 ,flagdesc: String::from(""), desc:  String::from("Do NOT forward queries with no domain part."), arg: String::from("") },
+OptionUsage{ opt: 101, rept: 3 ,flagdesc: String::from(""), desc:  String::from("Return self-pointing MX records for local hosts."), arg: String::from("") },
+OptionUsage{ opt: 69, rept: 9 ,flagdesc: String::from(""), desc:  String::from("Expand simple names in /etc/hosts with domain-suffix."), arg: String::from("") },
+OptionUsage{ opt: 102, rept: 1 ,flagdesc: String::from(""), desc:  String::from("Don\'t forward spurious DNS requests from Windows hosts."), arg: String::from("") },
+OptionUsage{ opt: 70, rept: 62 , flagdesc:  String::from("<ipaddr>"), desc:  String::from("Enable DHCP in the range given with lease duration."), arg: String::from("") },
+OptionUsage{ opt: 103, rept: (62  + 1 ), flagdesc: String::from("<groupname>"), desc:  String::from("Change to this group after startup (defaults to %s)."), arg: String::from("dip")},
+OptionUsage{ opt: 71, rept: 62 , flagdesc: String::from("<hostspec>"), desc:  String::from("Set address or hostname for a specified machine."), arg: String::from("") },
+OptionUsage{ opt: 273 , rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Read DHCP host specs from file."), arg: String::from("") },
+OptionUsage{ opt: 280 , rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Read DHCP option specs from file."), arg: String::from("") },
+OptionUsage{ opt: 340 , rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Read DHCP host specs from a directory."), arg: String::from("") },
+OptionUsage{ opt: 341 , rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Read DHCP options from a directory."), arg: String::from("") },
+OptionUsage{ opt: 294 , rept: 62 , flagdesc: String::from("tag-expression"), desc:  String::from("Evaluate conditional tag expression."), arg: String::from("") },
+OptionUsage{ opt: 104, rept: 4 ,flagdesc: String::from(""), desc:  String::from("Do NOT load %s file."), arg: String::from("/etc/hosts")},
+OptionUsage{ opt: 72, rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Specify a hosts file to be read in addition to %s."), arg: String::from("/etc/hosts")},
+OptionUsage{ opt: 342 , rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Read hosts files from a directory."), arg: String::from("") },
+OptionUsage{ opt: 105, rept: 62 , flagdesc: String::from("<interface>"), desc:  String::from("Specify interface(s) to listen on."), arg: String::from("") },
+OptionUsage{ opt: 73, rept: 62 , flagdesc: String::from("<interface>"), desc:  String::from("Specify interface(s) NOT to listen on."), arg: String::from("") },
+OptionUsage{ opt: 106, rept: 62 , flagdesc:  String::from("set:<tag>, class>"), desc:  String::from("Map DHCP user class to tag."), arg: String::from("") },
+OptionUsage{ opt: 268 , rept: 62 , flagdesc:  String::from("set:<tag>, circuit>"), desc:  String::from("Map RFC3046 circuit-id to tag."), arg: String::from("") },
+OptionUsage{ opt: 269 , rept: 62 , flagdesc:  String::from("set:<tag>, remote>"), desc:  String::from("Map RFC3046 remote-id to tag."), arg: String::from("") },
+OptionUsage{ opt: 270 , rept: 62 , flagdesc:  String::from("set:<tag>, remote>"), desc:  String::from("Map RFC3993 subscriber-id to tag."), arg: String::from("") },
+OptionUsage{ opt: 361 , rept: 62 , flagdesc:  String::from("<vendor>["), desc:  String::from("Specify vendor class to match for PXE requests."), arg: String::from("") },
+        OptionUsage{ opt: 74, rept: 62 , flagdesc: String::from("tag:<tag>..."), desc:  String::from("Don\'t do DHCP for hosts with tag set."), arg: String::from("") },
+        OptionUsage{ opt: 282 , rept: 62 , flagdesc: String::from("[=tag:<tag>...]"), desc:  String::from("Force broadcast replies for hosts with tag set."), arg: String::from("") },
+        OptionUsage{ opt: 107, rept: 16 , flagdesc: String::from(""), desc:  String::from("Do NOT fork into the background, do NOT run in debug mode."), arg: String::from("") },
+        OptionUsage{ opt: 75, rept: 17 , flagdesc: String::from(""), desc:  String::from("Assume we are the only DHCP server on the local network."), arg: String::from("") },
+        OptionUsage{ opt: 108, rept: (62  + 1 ), flagdesc: String::from("<path>"), desc:  String::from("Specify where to store DHCP leases (defaults to %s)."), arg: String::from("/var/lib/misc/dnsmasq.leases")},
+        OptionUsage{ opt: 76, rept: 10 , flagdesc: String::from(""), desc:  String::from("Return MX records for local hosts."), arg: String::from("") },
+        OptionUsage{ opt: 109, rept: 62 , flagdesc:  String::from("<host_name>, target>, pref>"), desc:  String::from("Specify an MX record."), arg: String::from("") },
+        OptionUsage{ opt: 77, rept: 62 , flagdesc:  String::from("<bootp opts>"), desc:  String::from("Specify BOOTP options to DHCP server."), arg: String::from("") },
+        OptionUsage{ opt: 110, rept: 5 , flagdesc: String::from(""), desc:  String::from("Do NOT poll %s file, reload only on SIGHUP."), arg: String::from("/etc/resolv.conf")},
+        OptionUsage{ opt: 78, rept: 11 , flagdesc: String::from(""), desc:  String::from("Do NOT cache failed search results."), arg: String::from("") },
+        OptionUsage{ opt: 111, rept: 7 , flagdesc: String::from(""), desc:  String::from("Use nameservers strictly in the order given in %s."), arg: String::from("/etc/resolv.conf")},
+        OptionUsage{ opt: 79, rept: 62 , flagdesc: String::from("<optspec>"), desc:  String::from("Specify options to be sent to DHCP clients."), arg: String::from("") },
+        OptionUsage{ opt: 264 , rept: 62 , flagdesc: String::from("<optspec>"), desc:  String::from("DHCP option sent even if the client does not request it."), arg: String::from("") },
+        OptionUsage{ opt: 112, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify port to listen for DNS requests on (defaults to 53)."), arg: String::from("") },
+        OptionUsage{ opt: 80, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Maximum supported UDP packet size for EDNS.0 (defaults to %s)."), arg: String::from("")},
+OptionUsage{ opt: 113, rept: 62 ,flagdesc: String::from(""), desc:  String::from("Log DNS queries."), arg: String::from("") },
+OptionUsage{ opt: 81, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Force the originating port for upstream DNS queries."), arg: String::from("") },
+OptionUsage{ opt: 82, rept: 8 ,flagdesc: String::from(""), desc:  String::from("Do NOT read resolv.conf."), arg: String::from("") },
+OptionUsage{ opt: 114, rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Specify path to resolv.conf (defaults to %s)."), arg: String::from("/etc/resolv.conf")},
+OptionUsage{ opt: 333 , rept: (62  + 1 ), flagdesc: String::from("<path>"), desc:  String::from("Specify path to file with server= options"), arg: String::from("") },
+OptionUsage{ opt: 83, rept: 62 , flagdesc: String::from("/<domain>/<ipaddr>"), desc:  String::from("Specify address(es) of upstream servers with optional domains."), arg: String::from("") },
+OptionUsage{ opt: 332 , rept: 62 , flagdesc:  String::from("<addr>/<prefix>, ipaddr>"), desc:  String::from("Specify address of upstream servers for reverse address queries"), arg: String::from("") },
+OptionUsage{ opt: 286 , rept: 62 , flagdesc: String::from("/<domain>/"), desc:  String::from("Never forward queries to specified domains."), arg: String::from("") },
+OptionUsage{ opt: 115, rept: 62 , flagdesc:  String::from("<domain>[, range>]"), desc:  String::from("Specify the domain to besigned in DHCP leases."), arg: String::from("") },
+OptionUsage{ opt: 116, rept: (62  + 1 ), flagdesc: String::from("<host_name>"), desc:  String::from("Specify default target in an MX record."), arg: String::from("") },
+OptionUsage{ opt: 84, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify time-to-live in seconds for replies from /etc/hosts."), arg: String::from("") },
+OptionUsage{ opt: 283 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify time-to-live in seconds for negative caching."), arg: String::from("") },
+OptionUsage{ opt: 297 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify time-to-live in seconds for maximum TTL to send to clients."), arg: String::from("") },
+OptionUsage{ opt: 312 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify time-to-live ceiling for cache."), arg: String::from("") },
+OptionUsage{ opt: 339 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify time-to-live floor for cache."), arg: String::from("") },
+OptionUsage{ opt: 117, rept: (62  + 1 ), flagdesc: String::from("<username>"), desc:  String::from("Change to this user after startup. (defaults to %s)."), arg: String::from("nobody")},
+OptionUsage{ opt: 85, rept: 62 , flagdesc:  String::from("set:<tag>, class>"), desc:  String::from("Map DHCP vendor class to tag."), arg: String::from("") },
+OptionUsage{ opt: 118, rept: 0 ,flagdesc: String::from(""), desc:  String::from("Display dnsmasq version and copyright information."), arg: String::from("") },
+OptionUsage{ opt: 86, rept: 62 , flagdesc:  String::from("<ipaddr>, ipaddr>, netmask>"), desc:  String::from("Translate IPv4 addresses from upstream servers."), arg: String::from("") },
+OptionUsage{ opt: 87, rept: 62 , flagdesc:  String::from("<name>, target>"), desc:  String::from("Specify a SRV record."), arg: String::from("") },
+        OptionUsage{ opt: 119, rept: 0 , flagdesc: String::from(""), desc:  String::from("Display this message. Use --help dhcp or --help dhcp6 for known DHCP options."), arg: String::from("") },
+        OptionUsage{ opt: 120, rept: (62  + 1 ), flagdesc: String::from("<path>"), desc:  String::from("Specify path of PID file (defaults to %s)."), arg: String::from("/var/run/dnsmasq.pid")},
+        OptionUsage{ opt: 88, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Specify maximum number of DHCP leases (defaults to %s)."), arg: String::from("")},
+OptionUsage{ opt: 121, rept: 18 ,flagdesc: String::from(""), desc:  String::from("Answer DNS queries based on the interface a query was sent to."), arg: String::from("") },
+OptionUsage{ opt: 89, rept: 62 , flagdesc:  String::from("<name>, txt>[, txt]"), desc:  String::from("Specify TXT DNS record."), arg: String::from("") },
+OptionUsage{ opt: 261 , rept: 62 , flagdesc:  String::from("<name>, target>"), desc:  String::from("Specify PTR DNS record."), arg: String::from("") },
+OptionUsage{ opt: 271 , rept: 62 , flagdesc:  String::from("<name>, interface>"), desc:  String::from("Give DNS name to IPv4 address of interface."), arg: String::from("") },
+OptionUsage{ opt: 122, rept: 13 ,flagdesc: String::from(""), desc:  String::from("Bind only to interfaces in use."), arg: String::from("") },
+OptionUsage{ opt: 90, rept: 14 ,flagdesc: String::from(""), desc:  String::from("Read DHCP static host information from %s."), arg: String::from("/etc/ethers")},
+OptionUsage{ opt: 49, rept: (62  + 1 ), flagdesc: String::from("[=<busname>]"), desc:  String::from("Enable the DBus interface for setting upstream servers, etc."), arg: String::from("") },
+OptionUsage{ opt: 354 , rept: (62  + 1 ), flagdesc: String::from("[=<busname>]"), desc:  String::from("Enable the UBus interface."), arg: String::from("") },
+OptionUsage{ opt: 50, rept: 62 , flagdesc: String::from("<interface>"), desc:  String::from("Do not provide DHCP on this interface, only provide DNS."), arg: String::from("") },
+OptionUsage{ opt: 51, rept: 62 , flagdesc: String::from("[=tag:<tag>]..."), desc:  String::from("Enable dynamic address allocation for bootp."), arg: String::from("") },
+OptionUsage{ opt: 52, rept: 62 , flagdesc:  String::from("set:<tag>, mac address>"), desc:  String::from("Map MAC address (with wildcards) to option set."), arg: String::from("") },
+OptionUsage{ opt: 262 , rept: 62 , flagdesc:  String::from("<iface>, alias>.."), desc:  String::from("Treat DHCP requests on aliases arriving from interface."), arg: String::from("") },
+OptionUsage{ opt: 357 , rept: 62 , flagdesc:  String::from("<iface>|<addr>, addr>"), desc:  String::from("Specify extra networks sharing a broadcast domain for DHCP"), arg: String::from("") },
+OptionUsage{ opt: 53, rept: 21 ,flagdesc: String::from(""), desc:  String::from("Disable ICMP echo address checking in the DHCP server."), arg: String::from("") },
+OptionUsage{ opt: 54, rept: (62  + 1 ), flagdesc: String::from("<path>"), desc:  String::from("Shell script to run on DHCP lease creation and destruction."), arg: String::from("") },
+OptionUsage{ opt: 305 , rept: 62 , flagdesc: String::from("path"), desc:  String::from("Lua script to run on DHCP lease creation and destruction."), arg: String::from("") },
+OptionUsage{ opt: 285 , rept: (62  + 1 ), flagdesc: String::from("<username>"), desc:  String::from("Run lease-change scripts this user."), arg: String::from("") },
+OptionUsage{ opt: 347 , rept: 53 ,flagdesc: String::from(""), desc:  String::from("Call dhcp-script with changes to local ARP table."), arg: String::from("") },
+OptionUsage{ opt: 55, rept: 62 , flagdesc: String::from("<path>"), desc:  String::from("Read configuration from all the files in this directory."), arg: String::from("") },
+OptionUsage{ opt: 56, rept: (62  + 1 ), flagdesc: String::from("<facility>|<file>"), desc:  String::from("Log to this syslog facility or file. (defaults to DAEMON)"), arg: String::from("") },
+OptionUsage{ opt: 57, rept: 22 ,flagdesc: String::from(""), desc:  String::from("Do not use leasefile."), arg: String::from("") },
+OptionUsage{ opt: 48, rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Maximum number of concurrent DNS queries. (defaults to %s)"), arg: String::from("")},
+OptionUsage{ opt: 256 , rept: 24 , flagdesc: String::from(""), desc:  String::from("Clear DNS cache when reloading %s."), arg: String::from("/etc/resolv.conf")},
+OptionUsage{ opt: 257 , rept: 62 , flagdesc: String::from("[=tag:<tag>]..."), desc:  String::from("Ignore hostnames provided by DHCP clients."), arg: String::from("") },
+OptionUsage{ opt: 275 , rept: 30 , flagdesc: String::from(""), desc:  String::from("Do NOT reuse filename and server fields for extra DHCP options."), arg: String::from("") },
+OptionUsage{ opt: 258 , rept: 62 , flagdesc:  String::from("[=<intr>[, intr>]]"), desc:  String::from("Enable integrated read-only TFTP server."), arg: String::from("") },
+OptionUsage{ opt: 260 , rept: 62 , flagdesc:  String::from("<dir>[, iface>]"), desc:  String::from("Export files by TFTP only from the specified subtree."), arg: String::from("") },
+OptionUsage{ opt: 274 , rept: 62 , flagdesc: String::from("[=ip|mac]"), desc:  String::from("Add client IP or hardware address to tftp-root."), arg: String::from("") },
+OptionUsage{ opt: 259 , rept: 26 , flagdesc: String::from(""), desc:  String::from("Allow access only to files owned by the user running dnsmasq."), arg: String::from("") },
+OptionUsage{ opt: 344 , rept: 52 , flagdesc: String::from(""), desc:  String::from("Do not terminate the service if TFTP directories are inaccessible."), arg: String::from("") },
+OptionUsage{ opt: 263 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Maximum number of concurrent TFTP transfers (defaults to %s)."), arg: String::from("")},
+OptionUsage{ opt: 349 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Maximum MTU to use for TFTP transfers."), arg: String::from("") },
+OptionUsage{ opt: 265 , rept: 27 ,flagdesc: String::from(""), desc:  String::from("Disable the TFTP blocksize extension."), arg: String::from("") },
+OptionUsage{ opt: 309 , rept: 38 ,flagdesc: String::from(""), desc:  String::from("Convert TFTP filenames to lowercase"), arg: String::from("") },
+OptionUsage{ opt: 276 , rept: (62  + 1 ), flagdesc:  String::from("<start>, end>"), desc:  String::from("Ephemeral port range for use by TFTP transfers."), arg: String::from("") },
+OptionUsage{ opt: 359 , rept: 60 ,flagdesc: String::from(""), desc:  String::from("Use only one port for TFTP server."), arg: String::from("") },
+OptionUsage{ opt: 266 , rept: 28 ,flagdesc: String::from(""), desc:  String::from("Extra logging for DHCP."), arg: String::from("") },
+OptionUsage{ opt: 267 , rept: (62  + 1 ), flagdesc: String::from("[=<integer>]"), desc:  String::from("Enableync. logging; optionally set queue length."), arg: String::from("") },
+OptionUsage{ opt: 277 , rept: 31 ,flagdesc: String::from(""), desc:  String::from("Stop DNS rebinding. Filter private IP ranges when resolving."), arg: String::from("") },
+OptionUsage{ opt: 299 , rept: 25 ,flagdesc: String::from(""), desc:  String::from("Allow rebinding of 127.0.0.0/8, for RBL servers."), arg: String::from("") },
+OptionUsage{ opt: 298 , rept: 62 , flagdesc: String::from("/<domain>/"), desc:  String::from("Inhibit DNS-rebind protection on this domain."), arg: String::from("") },
+OptionUsage{ opt: 278 , rept: 23 ,flagdesc: String::from(""), desc:  String::from("Always perform DNS queries to all servers."), arg: String::from("") },
+OptionUsage{ opt: 281 , rept: 62 , flagdesc:  String::from("set:<tag>, OptionUsage{ optspec>"), desc:  String::from("Set tag if client includes matching option in request."), arg: String::from("") },
+OptionUsage{ opt: 355 , rept: 62 , flagdesc:  String::from("set:<tag>, string>[*]"), desc:  String::from("Set tag if client provides given name."), arg: String::from("") },
+OptionUsage{ opt: 284 , rept: (62  + 1 ), flagdesc: String::from("[=<ports>]"), desc:  String::from("Use alternative ports for DHCP."), arg: String::from("") },
+OptionUsage{ opt: 287 , rept: 62 , flagdesc:  String::from("<name>, naptr>"), desc:  String::from("Specify NAPTR DNS record."), arg: String::from("") },
+OptionUsage{ opt: 288 , rept: (62  + 1 ), flagdesc: String::from("<port>"), desc:  String::from("Specify lowest port available for DNS query transmission."), arg: String::from("") },
+OptionUsage{ opt: 345 , rept: (62  + 1 ), flagdesc: String::from("<port>"), desc:  String::from("Specify highest port available for DNS query transmission."), arg: String::from("") },
+OptionUsage{ opt: 289 , rept: 20 ,flagdesc: String::from(""), desc:  String::from("Use only fully qualified domain names for DHCP clients."), arg: String::from("") },
+OptionUsage{ opt: 296 , rept: 62 , flagdesc: String::from("[=tag:<tag>]"), desc:  String::from("Generate hostnames based on MAC address for nameless clients."), arg: String::from("") },
+OptionUsage{ opt: 295 , rept: 62 , flagdesc: String::from("[=<ipaddr>]..."), desc:  String::from("Use these DHCP relays full proxies."), arg: String::from("") },
+OptionUsage{ opt: 323 , rept: 62 , flagdesc:  String::from("<local-addr>, server>[, iface>]"), desc:  String::from("Relay DHCP requests to a remote server"), arg: String::from("") },
+OptionUsage{ opt: 290 , rept: 62 , flagdesc:  String::from("<alias>, target>[, ttl>]"), desc:  String::from("Specify alias name for LOCAL DNS name."), arg: String::from("") },
+OptionUsage{ opt: 291 , rept: 62 , flagdesc:  String::from("<prompt>, timeout>]"), desc:  String::from("Prompt to send to PXE clients."), arg: String::from("") },
+OptionUsage{ opt: 292 , rept: 62 , flagdesc: String::from("<service>"), desc:  String::from("Boot service for PXE menu."), arg: String::from("") },
+OptionUsage{ opt: 293 , rept: 0 ,flagdesc: String::from(""), desc:  String::from("Check configuration syntax."), arg: String::from("") },
+OptionUsage{ opt: 300 , rept: 62 , flagdesc: String::from("[=base64|text]"), desc:  String::from("Add requestor\'s MAC address to forwarded DNS queries."), arg: String::from("") },
+OptionUsage{ opt: 325 , rept: (62  + 1 ), flagdesc:  String::from("<v4 pref>[, v6 pref>]"), desc:  String::from("Add specified IP subnet to forwarded DNS queries."), arg: String::from("") },
+OptionUsage{ opt: 346 , rept: (62  + 1 ), flagdesc: String::from("<text>"), desc:  String::from("Add client identification to forwarded DNS queries."), arg: String::from("") },
+OptionUsage{ opt: 301 , rept: 33 ,flagdesc: String::from(""), desc:  String::from("Proxy DNSSEC validation results from upstream nameservers."), arg: String::from("") },
+OptionUsage{ opt: 302 , rept: 34 ,flagdesc: String::from(""), desc:  String::from("Attempt to allocate sequential IP addresses to DHCP clients."), arg: String::from("") },
+OptionUsage{ opt: 358 , rept: 59 ,flagdesc: String::from(""), desc:  String::from("Ignore client identifier option sent by DHCP clients."), arg: String::from("") },
+OptionUsage{ opt: 303 , rept: 35 ,flagdesc: String::from(""), desc:  String::from("Copy connection-track mark from queries to upstream connections."), arg: String::from("") },
+OptionUsage{ opt: 304 , rept: 36 ,flagdesc: String::from(""), desc:  String::from("Allow DHCP clients to do their own DDNS updates."), arg: String::from("") },
+OptionUsage{ opt: 306 , rept: 37 ,flagdesc: String::from(""), desc:  String::from("Send router-advertisements for interfaces doing DHCPv6"), arg: String::from("") },
+OptionUsage{ opt: 307 , rept: (62  + 1 ), flagdesc:  String::from("<enterprise>, duid>"), desc:  String::from("Specify DUID_EN-type DHCPv6 server DUID"), arg: String::from("") },
+OptionUsage{ opt: 308 , rept: 62 , flagdesc:  String::from("<name>, address>[, ttl>]"), desc:  String::from("Specify host (A/AAAA and PTR) records"), arg: String::from("") },
+OptionUsage{ opt: 356 , rept: 62 , flagdesc:  String::from("<name>, flags>, tag>, value>"), desc:  String::from("Specify certification authority authorization record"), arg: String::from("") },
+OptionUsage{ opt: 310 , rept: 62 , flagdesc:  String::from("<name>, RR-number>, data>]"), desc:  String::from("Specify arbitrary DNS resource record"), arg: String::from("") },
+OptionUsage{ opt: 311 , rept: 39 ,flagdesc: String::from(""), desc:  String::from("Bind to interfaces in use - check for new interfaces"), arg: String::from("") },
+OptionUsage{ opt: 314 , rept: (62  + 1 ), flagdesc:  String::from("<NS>, interface>"), desc:  String::from("Export local names to global DNS"), arg: String::from("") },
+OptionUsage{ opt: 313 , rept: 62 , flagdesc:  String::from("<domain>, subnet>...]"), desc:  String::from("Domain to export to global DNS"), arg: String::from("") },
+OptionUsage{ opt: 315 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Set TTL for authoritative replies"), arg: String::from("") },
+OptionUsage{ opt: 316 , rept: (62  + 1 ), flagdesc:  String::from("<serial>["), desc:  String::from("Set authoritative zone information"), arg: String::from("") },
+OptionUsage{ opt: 317 , rept: 62 , flagdesc:  String::from("<NS>[, NS>...]"), desc:  String::from("Secondary authoritative nameservers for forward domains"), arg: String::from("") },
+OptionUsage{ opt: 318 , rept: 62 , flagdesc:  String::from("<ipaddr>[, ipaddr>...]"), desc:  String::from("Peers which are allowed to do zone transfer"), arg: String::from("") },
+OptionUsage{ opt: 319 , rept: 62 , flagdesc: String::from("/<domain>[/<domain>...]/<ipset>..."), desc:  String::from("Specify ipsets to which matching domains should be added"), arg: String::from("") },
+OptionUsage{ opt: 320 , rept: 62 , flagdesc:  String::from("<domain>, range>, prefix>]"), desc:  String::from("Specify a domain and address range for synthesised names"), arg: String::from("") },
+OptionUsage{ opt: 329 , rept: 45 , flagdesc: String::from(""), desc:  String::from("Activate DNSSEC validation"), arg: String::from("") },
+OptionUsage{ opt: 330 , rept: 62 , flagdesc:  String::from("<domain>, class>]"), desc:  String::from("Specify trust anchor key digest."), arg: String::from("") },
+OptionUsage{ opt: 331 , rept: 47 ,flagdesc: String::from(""), desc:  String::from("Disable upstream checking for DNSSEC debugging."), arg: String::from("") },
+OptionUsage{ opt: 334 , rept: 62 ,flagdesc: String::from(""), desc:  String::from("Ensure answers without DNSSEC are in unsigned zones."), arg: String::from("") },
+OptionUsage{ opt: 336 , rept: 46 ,flagdesc: String::from(""), desc:  String::from("Don\'t check DNSSEC signature timestamps until first cache-reload"), arg: String::from("") },
+OptionUsage{ opt: 343 , rept: (62  + 1 ), flagdesc: String::from("<path>"), desc:  String::from("Timestamp file to verify system clock for DNSSEC"), arg: String::from("") },
+OptionUsage{ opt: 324 , rept: 62 , flagdesc:  String::from("<iface>, mtu:<value>|<interface>|off, prio>, intval>[, lifetime>]"), desc:  String::from("Set MTU, priority, resend-interval and router-lifetime"), arg: String::from("") },
+OptionUsage{ opt: 326 , rept: 42 ,flagdesc: String::from(""), desc:  String::from("Do not log routine DHCP."), arg: String::from("") },
+OptionUsage{ opt: 327 , rept: 43 ,flagdesc: String::from(""), desc:  String::from("Do not log routine DHCPv6."), arg: String::from("") },
+OptionUsage{ opt: 328 , rept: 44 ,flagdesc: String::from(""), desc:  String::from("Do not log RA."), arg: String::from("") },
+OptionUsage{ opt: 335 , rept: 49 ,flagdesc: String::from(""), desc:  String::from("Accept queries only from directly-connected networks."), arg: String::from("") },
+OptionUsage{ opt: 337 , rept: 50 ,flagdesc: String::from(""), desc:  String::from("Detect and remove DNS forwarding loops."), arg: String::from("") },
+OptionUsage{ opt: 338 , rept: 62 , flagdesc: String::from("<ipaddr>"), desc:  String::from("Ignore DNS responses containing ipaddr."), arg: String::from("") },
+OptionUsage{ opt: 348 , rept: (62  + 1 ), flagdesc: String::from("<ttl>"), desc:  String::from("Set TTL in DNS responses with DHCP-derived addresses."), arg: String::from("") },
+OptionUsage{ opt: 350 , rept: (62  + 1 ), flagdesc: String::from("<integer>"), desc:  String::from("Delay DHCP replies for at least number of seconds."), arg: String::from("") },
+OptionUsage{ opt: 351 , rept: 57 ,flagdesc: String::from(""), desc:  String::from("Enables DHCPv4 Rapid Commit option."), arg: String::from("") },
+OptionUsage{ opt: 352 , rept: (62  + 1 ), flagdesc: String::from("<path>"), desc:  String::from("Path to debug packet dump file"), arg: String::from("") },
+OptionUsage{ opt: 353 , rept: (62  + 1 ), flagdesc: String::from("<hex>"), desc:  String::from("Mask which packets to dump"), arg: String::from("") },
+OptionUsage{ opt: 360 , rept: 61 ,flagdesc: String::from(""), desc:  String::from("Call dhcp-script when lease expiry changes."), arg: String::from("") }];
 /* We hide metacharacters in quoted strings by mapping them into the ASCII control
    character space. Note that the \0, \t \b \r \033 and \n characters are carefully placed in the
    following sequence so that they map to themselves: it is therefore possible to call
    unhide_metas repeatedly on string without breaking things.
-   The transformation gets undone by opt_canonicalise, atoi_check and opt_string_alloc, and a 
-   couple of other places. 
+   The transformation gets undone by opt_canonicalise, atoi_check and opt_string_alloc, and a
+   couple of other places.
    Note that space is included here so that
    --dhcp-option=3, string
    has five characters, whilst
    --dhcp-option=3," string"
    has six.
 */
-static mut meta: [libc::c_char; 33] =
-    unsafe {
-        *::std::mem::transmute::<&[u8; 33],
-                                 &[libc::c_char; 33]>(b"\x00123456 \x08\t\n78\r90abcdefABCDE\x1bF:,.\x00")
-    };
-unsafe extern "C" fn hide_meta(mut c: libc::c_char) -> libc::c_char {
+pub static META: String = String::from(b"\x00123456 \x08\t\n78\r90abcdefABCDE\x1bF:,.\x00");
+
+ fn hide_meta(mut c: libc::c_char) -> libc::c_char {
     let mut i: libc::c_uint = 0;
-    i = 0 as libc::c_int as libc::c_uint;
+    i = 0 as libc::c_uint;
     while (i as libc::c_ulong) <
               (::std::mem::size_of::<[libc::c_char; 33]>() as
-                   libc::c_ulong).wrapping_sub(1 as libc::c_int as
+                   libc::c_ulong).wrapping_sub(1 as
                                                    libc::c_ulong) {
-        if c as libc::c_int == meta[i as usize] as libc::c_int {
+        if c == META[i as usize] {
             return i as libc::c_char
         }
         i = i.wrapping_add(1)
     }
     return c;
 }
-unsafe extern "C" fn unhide_meta(mut cr: libc::c_char) -> libc::c_char {
+ fn unhide_meta(mut cr: libc::c_char) -> libc::c_char {
     let mut c: libc::c_uint = cr as libc::c_uint;
     if (c as libc::c_ulong) <
            (::std::mem::size_of::<[libc::c_char; 33]>() as
-                libc::c_ulong).wrapping_sub(1 as libc::c_int as libc::c_ulong)
+                libc::c_ulong).wrapping_sub(1 as libc::c_ulong)
        {
-        cr = meta[c as usize]
+        cr = META[c as usize]
     }
     return cr;
 }
-unsafe extern "C" fn unhide_metas(mut cp: *mut libc::c_char) {
-    if !cp.is_null() {
-        while *cp != 0 { *cp = unhide_meta(*cp); cp = cp.offset(1) }
-    };
-}
-unsafe extern "C" fn opt_malloc(mut size: usize) -> *mut libc::c_void {
-    let mut ret: *mut libc::c_void = 0 as *mut libc::c_void;
-    if mem_recover != 0 {
-        ret = whine_malloc(size);
-        if ret.is_null() { longjmp(mem_jmp.as_mut_ptr(), 1 as libc::c_int); }
-    } else { ret = safe_malloc(size) }
-    return ret;
-}
-unsafe extern "C" fn opt_string_alloc(mut cp: *const libc::c_char)
- -> *mut libc::c_char {
-    let mut ret: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut len: usize = 0;
-    if !cp.is_null() &&
-           { len = strlen(cp); (len) != 0 as libc::c_int as libc::c_ulong } {
-        ret =
-            opt_malloc(len.wrapping_add(1 as libc::c_int as libc::c_ulong)) as
-                *mut libc::c_char;
-        memcpy(ret as *mut libc::c_void, cp as *const libc::c_void,
-               len.wrapping_add(1 as libc::c_int as libc::c_ulong));
-        /* restore hidden metachars */
-        unhide_metas(ret);
+ fn unhide_metas(cp: &mut String) {
+    if !cp.is_empty() {
+        let mut i = 0;
+        for c in cp {
+            cp[i] = unhide_meta(c);
+            i += 1;
+        }
     }
-    return ret;
 }
+
+//  fn opt_malloc(mut size: usize) -> *mut libc::c_void {
+//     let mut ret: *mut libc::c_void = 0 as *mut libc::c_void;
+//     if mem_recover != 0 {
+//         ret = whine_malloc(size);
+//         if ret.is_null() { longjmp(mem_jmp.as_mut_ptr(), 1 as libc::c_int); }
+//     } else { ret = safe_malloc(size) }
+//     return ret;
+// }
+//  fn opt_string_alloc(mut cp: *const libc::c_char)
+//  -> *mut libc::c_char {
+//     let mut ret: *mut libc::c_char = 0 as *mut libc::c_char;
+//     let mut len: usize = 0;
+//     if !cp.is_null() &&
+//            { len = strlen(cp); (len) != 0 } {
+//         ret =
+//             opt_malloc(len.wrapping_add(1)) as
+//                 *mut libc::c_char;
+//         memcpy(ret as *mut libc::c_void, cp as *const libc::c_void,
+//                len.wrapping_add(1));
+//         /* restore hidden metachars */
+//         unhide_metas(ret);
+//     }
+//     return ret;
+// }
 /* find next comma, split string with zero and eliminate spaces.
    return start of string following comma */
-unsafe extern "C" fn split_chr(mut s: *mut libc::c_char, mut c: libc::c_char)
- -> *mut libc::c_char {
-    let mut comma: *mut libc::c_char =
-        0 as *mut libc::c_char; /* strlen("xxx.yyy.zzz.ttt.in-addr.arpa")+1 */
-    let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-    if s.is_null() || { comma = strchr(s, c as libc::c_int); comma.is_null() }
-       {
-        return 0 as *mut libc::c_char
-    }
-    p = comma;
-    *comma = ' ' as i32 as libc::c_char;
-    while *comma as libc::c_int == ' ' as i32 { comma = comma.offset(1) }
-    while p >= s && *p as libc::c_int == ' ' as i32 {
-        *p = 0 as libc::c_int as libc::c_char;
-        p = p.offset(-1)
-    }
-    return comma;
+ fn split_chr(mut s: &String, mut c: char)
+ -> String {
+    let mut res = s.split(",");
+    let res2 = res.next().unwrap();
+    String::from(res2)
 }
-unsafe extern "C" fn split(mut s: *mut libc::c_char) -> *mut libc::c_char {
-    return split_chr(s, ',' as i32 as libc::c_char);
-}
-unsafe extern "C" fn canonicalise_opt(mut s: *mut libc::c_char)
- -> *mut libc::c_char {
-    let mut ret: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut nomem: libc::c_int = 0;
-    if s.is_null() { return 0 as *mut libc::c_char }
+
+//  fn split(mut s: *mut libc::c_char) -> *mut libc::c_char {
+//     return split_chr(s, ',' as i32 as libc::c_char);
+// }
+
+ fn canonicalise_opt(s: &mut String)
+ -> Option<String> {
+    let mut ret: String::new();
+    let mut nomem = 0;
     unhide_metas(s);
-    ret = canonicalise(s, &mut nomem);
-    if ret.is_null() && nomem != 0 {
-        if mem_recover != 0 {
-            longjmp(mem_jmp.as_mut_ptr(), 1 as libc::c_int);
-        } else {
-            die(b"could not get memory\x00" as *const u8 as
-                    *const libc::c_char as *mut libc::c_char,
-                0 as *mut libc::c_char, 4 as libc::c_int);
-        }
-    }
-    return ret;
+    canonicalise(s, nomem)
 }
-unsafe extern "C" fn atoi_check(mut a: *mut libc::c_char,
-                                mut res: *mut libc::c_int) -> libc::c_int {
-    let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-    if a.is_null() { return 0 as libc::c_int }
-    unhide_metas(a);
-    p = a;
-    while *p != 0 {
-        if (*p as libc::c_int) < '0' as i32 || *p as libc::c_int > '9' as i32
-           {
-            return 0 as libc::c_int
-        }
-        p = p.offset(1)
-    }
-    *res = atoi(a);
-    return 1 as libc::c_int;
+
+//  fn atoi_check(mut a: *mut libc::c_char,
+//                                 mut res: *mut libc::c_int) -> libc::c_int {
+//     let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
+//     if a.is_null() { return 0 as libc::c_int }
+//     unhide_metas(a);
+//     p = a;
+//     while *p != 0 {
+//         if (*p as libc::c_int) < '0' as i32 || *p as libc::c_int > '9' as i32
+//            {
+//             return 0 as libc::c_int
+//         }
+//         p = p.offset(1)
+//     }
+//     *res = atoi(a);
+//     return 1 as libc::c_int;
+// }
+
+//
+
+ pub fn add_txt(name: &String, txt: &String, stat_0: i32) {
+     let mut r: TxtRecord = Default::default();
+     let mut len: usize = strlen(txt);
+     r.txt = String::from("");
+     r.len = len.wrapping_add(1) as u16;
+     // r.txt = len;
+     // TODO: copy value
+     //memcpy(r.txt.offset(1 as libc::c_int as isize), txt, len);
+     r.stat = stat_0;
+     r.name = name.clone();
+     // r.next = (*dnsmasq_daemon).txt;
+     daemon.txt = r;
+     r.class = 3;
 }
-unsafe extern "C" fn atoi_check16(mut a: *mut libc::c_char,
-                                  mut res: *mut libc::c_int) -> libc::c_int {
-    if atoi_check(a, res) == 0 || *res < 0 as libc::c_int ||
-           *res > 0xffff as libc::c_int {
-        return 0 as libc::c_int
-    }
-    return 1 as libc::c_int;
-}
-unsafe extern "C" fn add_txt(mut name: *mut libc::c_char,
-                             mut txt: *mut libc::c_char,
-                             mut stat_0: libc::c_int) {
-    let mut r: *mut TxtRecord =
-        opt_malloc(::std::mem::size_of::<TxtRecord>() as libc::c_ulong) as
-            *mut TxtRecord;
-    if !txt.is_null() {
-        let mut len: usize = strlen(txt);
-        (*r).txt =
-            opt_malloc(len.wrapping_add(1 as libc::c_int as libc::c_ulong)) as
-                *mut libc::c_uchar;
-        (*r).len =
-            len.wrapping_add(1 as libc::c_int as libc::c_ulong) as
-                libc::c_ushort;
-        *(*r).txt = len as libc::c_uchar;
-        memcpy((*r).txt.offset(1 as libc::c_int as isize) as
-                   *mut libc::c_void, txt as *const libc::c_void, len);
-    }
-    (*r).stat = stat_0;
-    (*r).name = opt_string_alloc(name);
-    (*r).next = (*dnsmasq_daemon).txt;
-    (*dnsmasq_daemon).txt = r;
-    (*r).class = 3 as libc::c_int as libc::c_ushort;
-}
-unsafe extern "C" fn do_usage() {
-    let mut buff: [libc::c_char; 100] = [0; 100];
-    let mut i: libc::c_int = 0;
-    let mut j: libc::c_int = 0;
-    let mut tab: [C2RustUnnamed_10; 6] =
-        [{
-             let mut init =
-                 C2RustUnnamed_10{handle: '$' as i32 as libc::c_char,
-                                  val: 150 as libc::c_int,};
-             init
-         },
-         {
-             let mut init =
-                 C2RustUnnamed_10{handle: '*' as i32 as libc::c_char,
-                                  val: 4096 as libc::c_int,};
-             init
-         },
-         {
-             let mut init =
-                 C2RustUnnamed_10{handle: '&' as i32 as libc::c_char,
-                                  val: 1000 as libc::c_int,};
-             init
-         },
-         {
-             let mut init =
-                 C2RustUnnamed_10{handle: '!' as i32 as libc::c_char,
-                                  val: 150 as libc::c_int,};
-             init
-         },
-         {
-             let mut init =
-                 C2RustUnnamed_10{handle: '#' as i32 as libc::c_char,
-                                  val: 50 as libc::c_int,};
-             init
-         },
-         {
-             let mut init =
-                 C2RustUnnamed_10{handle: '\u{0}' as i32 as libc::c_char,
-                                  val: 0 as libc::c_int,};
-             init
-         }];
-    printf(b"Usage: dnsmasq [options]\n\n\x00" as *const u8 as
-               *const libc::c_char);
-    printf(b"Valid options are:\n\x00" as *const u8 as *const libc::c_char);
-    i = 0 as libc::c_int;
-    while usage[i as usize].opt != 0 as libc::c_int {
-        let mut desc: *mut libc::c_char = usage[i as usize].flagdesc;
-        let mut eq: *mut libc::c_char =
-            b"=\x00" as *const u8 as *const libc::c_char as *mut libc::c_char;
-        if desc.is_null() || *desc as libc::c_int == '[' as i32 {
-            eq =
-                b"\x00" as *const u8 as *const libc::c_char as
-                    *mut libc::c_char
-        }
-        if desc.is_null() {
-            desc =
-                b"\x00" as *const u8 as *const libc::c_char as
-                    *mut libc::c_char
-        }
-        j = 0 as libc::c_int;
-        while !opts[j as usize].name.is_null() {
-            if opts[j as usize].val == usage[i as usize].opt { break ; }
-            j += 1
-        }
-        if usage[i as usize].opt < 256 as libc::c_int {
-            sprintf(buff.as_mut_ptr(),
-                    b"-%c, \x00" as *const u8 as *const libc::c_char,
-                    usage[i as usize].opt);
-        } else {
-            sprintf(buff.as_mut_ptr(),
-                    b"    \x00" as *const u8 as *const libc::c_char);
-        }
-        sprintf(buff.as_mut_ptr().offset(4 as libc::c_int as isize),
-                b"--%s%s%s\x00" as *const u8 as *const libc::c_char,
-                opts[j as usize].name, eq, desc);
-        printf(b"%-55.55s\x00" as *const u8 as *const libc::c_char,
-               buff.as_mut_ptr());
-        if !usage[i as usize].arg.is_null() {
-            strcpy(buff.as_mut_ptr(), usage[i as usize].arg);
-            j = 0 as libc::c_int;
-            while tab[j as usize].handle != 0 {
-                if tab[j as usize].handle as libc::c_int ==
-                       *usage[i as usize].arg as libc::c_int {
-                    sprintf(buff.as_mut_ptr(),
-                            b"%d\x00" as *const u8 as *const libc::c_char,
-                            tab[j as usize].val);
-                }
-                j += 1
-            }
-        }
-        printf(usage[i as usize].desc, buff.as_mut_ptr());
-        printf(b"\n\x00" as *const u8 as *const libc::c_char);
-        i += 1
-    };
-}
-unsafe extern "C" fn parse_mysockaddr(mut arg: *mut libc::c_char,
-                                      mut addr: *mut MySockAddr)
- -> *mut libc::c_char {
-    if inet_pton(2 as libc::c_int, arg,
-                 &mut (*addr).in_0.sin_addr as *mut InAddr as
-                     *mut libc::c_void) > 0 as libc::c_int {
-        (*addr).sa.sa_family = 2 as libc::c_int as sa_family_t
-    } else if inet_pton(10 as libc::c_int, arg,
-                        &mut (*addr).in6.sin6_addr as *mut In6Addr as
-                            *mut libc::c_void) > 0 as libc::c_int {
-        (*addr).sa.sa_family = 10 as libc::c_int as sa_family_t
+
+// pub fn do_usage() {
+//     let mut buff: [libc::c_char; 100] = [0; 100];
+//     let mut i: libc::c_int = 0;
+//     let mut j: libc::c_int = 0;
+//     let mut tab: [TabEntryA; 6] =
+//         [{
+//              let mut init =
+//                  TabEntryA{handle: '$', val: 150 as libc::c_int,};
+//              init
+//          },
+//          {
+//              let mut init =
+//                  TabEntryA{handle: '*', val: 4096 as libc::c_int,};
+//              init
+//          },
+//          {
+//              let mut init =
+//                  TabEntryA{handle: '&', val: 1000 as libc::c_int,};
+//              init
+//          },
+//          {
+//              let mut init =
+//                  TabEntryA{handle: '!', val: 150 as libc::c_int,};
+//              init
+//          },
+//          {
+//              let mut init =
+//                  TabEntryA{handle: '#', val: 50 as libc::c_int,};
+//              init
+//          },
+//          {
+//              let mut init =
+//                  TabEntryA{handle: '\u{0}', val: 0 as libc::c_int,};
+//              init
+//          }];
+//     printf(b"Usage: dnsmasq [options]\n\n\x00" as *const u8 as
+//                *const libc::c_char);
+//     printf(b"Valid options are:\n\x00" as *const u8 as *const libc::c_char);
+//     i = 0 as libc::c_int;
+//     while usage[i as usize].opt != 0 as libc::c_int {
+//         let mut desc: *mut libc::c_char = usage[i as usize].flagdesc;
+//         let mut eq: *mut libc::c_char =
+//             b"=\x00" as *const u8 as *const libc::c_char as *mut libc::c_char;
+//         if desc.is_null() || *desc as libc::c_int == '[' as i32 {
+//             eq =
+//                 b"\x00" as *const u8 as *const libc::c_char as
+//                     *mut libc::c_char
+//         }
+//         if desc.is_null() {
+//             desc =
+//                 b"\x00" as *const u8 as *const libc::c_char as
+//                     *mut libc::c_char
+//         }
+//         j = 0 as libc::c_int;
+//         while !opts[j as usize].name.is_null() {
+//             if opts[j as usize].val == usage[i as usize].opt { break ; }
+//             j += 1
+//         }
+//         if usage[i as usize].opt < 256 as libc::c_int {
+//             sprintf(buff.as_mut_ptr(),
+//                     b"-%c, \x00" as *const u8 as *const libc::c_char,
+//                     usage[i as usize].opt);
+//         } else {
+//             sprintf(buff.as_mut_ptr(),
+//                     b"    \x00" as *const u8 as *const libc::c_char);
+//         }
+//         sprintf(buff.as_mut_ptr().offset(4 as libc::c_int as isize),
+//                 b"--%s%s%s\x00" as *const u8 as *const libc::c_char,
+//                 opts[j as usize].name, eq, desc);
+//         printf(b"%-55.55s\x00" as *const u8 as *const libc::c_char,
+//                buff.as_mut_ptr());
+//         if !usage[i as usize].arg.is_null() {
+//             strcpy(buff.as_mut_ptr(), usage[i as usize].arg);
+//             j = 0 as libc::c_int;
+//             while tab[j as usize].handle != 0 {
+//                 if tab[j as usize].handle as libc::c_int ==
+//                        *usage[i as usize].arg as libc::c_int {
+//                     sprintf(buff.as_mut_ptr(),
+//                             b"%d\x00" as *const u8 as *const libc::c_char,
+//                             tab[j as usize].val);
+//                 }
+//                 j += 1
+//             }
+//         }
+//         printf(usage[i as usize].desc, buff.as_mut_ptr());
+//         printf(b"\n\x00" as *const u8 as *const libc::c_char);
+//         i += 1
+//     };
+// }
+
+pub fn parse_mysockaddr(mut arg: &String, mut addr: &mut MySockAddr)
+ -> Option<String> {
+    if inet_pton(2, arg,
+                 &mut addr.in_0.sin_addr as *mut InAddr as
+                     *mut libc::c_void) > 0 {
+        addr.sa.sa_family = 2 as SaFamily
+    } else if inet_pton(10, arg,
+                        &mut addr.in6.sin6_addr as *mut In6Addr as
+                            *mut libc::c_void) > 0 {
+        addr.sa.sa_family = 10 as SaFamily
     } else {
-        return b"bad address\x00" as *const u8 as *const libc::c_char as
-                   *mut libc::c_char
+        return Some(String::from("bad address"));
     }
-    return 0 as *mut libc::c_char;
+    return None;
 }
-#[no_mangle]
-pub unsafe extern "C" fn parse_server(mut arg: *mut libc::c_char,
-                                      mut addr: *mut MySockAddr,
-                                      mut source_addr: *mut MySockAddr,
-                                      mut interface: *mut libc::c_char,
-                                      mut flags: *mut libc::c_int)
-                                      -> *mut libc::c_char {
-    let mut source_port: libc::c_int = 0 as libc::c_int;
-    let mut serv_port: libc::c_int = 53 as libc::c_int;
-    let mut portno: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut source: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut interface_opt: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut scope_index: libc::c_int = 0 as libc::c_int;
-    let mut scope_id: *mut libc::c_char = 0 as *mut libc::c_char;
-    if arg.is_null() || strlen(arg) == 0 as libc::c_int as libc::c_ulong {
-        *flags |= 2 as libc::c_int;
-        *interface = 0 as libc::c_int as libc::c_char;
-        return 0 as *mut libc::c_char
+
+pub  fn parse_server(arg: &String,
+                     addr: &mut MySockAddr,
+                     source_addr: &mut MySockAddr,
+                     mut interface: &mut String,
+                     mut flags: &mut i32) -> Option<String> {
+    let mut source_port: libc::c_int = 0;
+    let mut serv_port: libc::c_int = 53;
+    let mut portno: String = String::new();
+    let mut source: String = String::new();
+    let mut interface_opt: String = String::new();
+    let mut scope_index: libc::c_int = 0;
+    let mut scope_id: String = String::new();
+    if arg.is_empty() {
+        flags = flags | 2;
+        interface.clear();
+        return None
     }
-    source = split_chr(arg, '@' as i32 as libc::c_char);
-    if !source.is_null() &&
+    source = split_chr(arg, '@');
+    if !source.is_empty() &&
            {
-               portno = split_chr(source, '#' as i32 as libc::c_char);
-               !portno.is_null()
+               portno = split_chr(&source, '#');
+               !portno.is_empty()
            } && atoi_check16(portno, &mut source_port) == 0 {
-        return b"bad port\x00" as *const u8 as *const libc::c_char as
-                   *mut libc::c_char
+        return Some(String::from("bad port"));
     }
-    portno = split_chr(arg, '#' as i32 as libc::c_char);
-    if !portno.is_null() && atoi_check16(portno, &mut serv_port) == 0 {
-        return b"bad port\x00" as *const u8 as *const libc::c_char as
-                   *mut libc::c_char
+    portno = split_chr(arg, '#');
+    if !portno.is_empty() && atoi_check16(portno, &mut serv_port) == 0 {
+        return Some(String::from("bad port"));
     }
-    scope_id = split_chr(arg, '%' as i32 as libc::c_char);
-    if !source.is_null() {
-        interface_opt = split_chr(source, '@' as i32 as libc::c_char);
-        if !interface_opt.is_null() {
-            safe_strncpy(interface, interface_opt,
-                         16 as libc::c_int as usize);
+    scope_id = split_chr(arg, '%');
+    if !source.is_empty() {
+        interface_opt = split_chr(&source, '@');
+        if !interface_opt.is_empty() {
+            *interface = interface_opt.clone();
         }
     }
-    if inet_pton(2 as libc::c_int, arg,
-                 &mut (*addr).in_0.sin_addr as *mut InAddr as
-                     *mut libc::c_void) > 0 as libc::c_int {
-        (*addr).in_0.sin_port = __bswap_16(serv_port as u16);
-        (*source_addr).sa.sa_family = 2 as libc::c_int as sa_family_t;
-        (*addr).sa.sa_family = (*source_addr).sa.sa_family;
-        (*source_addr).in_0.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
-        (*source_addr).in_0.sin_port =
-            __bswap_16((*dnsmasq_daemon).query_port as u16);
-        if !source.is_null() {
-            if !flags.is_null() { *flags |= 16 as libc::c_int }
-            (*source_addr).in_0.sin_port =
+    if inet_pton(2, arg, &mut addr.in_0.sin_addr) > 0 {
+        addr.in_0.sin_port = __bswap_16(serv_port as u16);
+        source_addr.sa.sa_family = 2 as SaFamily;
+        addr.sa.sa_family = source_addr.sa.sa_family;
+        source_addr.in_0.sin_addr.s_addr = 0 as InAddrT;
+        source_addr.in_0.sin_port =
+            __bswap_16(daemon.query_port as u16);
+        if !source.is_empty() {
+            if !flags.is_empty() { *flags |= 16 }
+            source_addr.in_0.sin_port =
                 __bswap_16(source_port as u16);
-            if !(inet_pton(2 as libc::c_int, source,
-                           &mut (*source_addr).in_0.sin_addr as *mut InAddr
-                               as *mut libc::c_void) > 0 as libc::c_int) {
+            if !(inet_pton(2, source,
+                           &mut source_addr.in_0.sin_addr as *mut InAddr
+                               as *mut libc::c_void) > 0) {
                 if !interface_opt.is_null() {
-                    return b"interface can only be specified once\x00" as
-                               *const u8 as *const libc::c_char as
-                               *mut libc::c_char
+                    return Some(String::from("interface can only be specified once"))
                 }
-                (*source_addr).in_0.sin_addr.s_addr =
-                    0 as libc::c_int as in_addr_t;
-                safe_strncpy(interface, source, 16 as libc::c_int as usize);
+                source_addr.in_0.sin_addr.s_addr = 0;
+                *interface = source.clone();
             }
         }
-    } else if inet_pton(10 as libc::c_int, arg,
-                        &mut (*addr).in6.sin6_addr as *mut In6Addr as
-                            *mut libc::c_void) > 0 as libc::c_int {
+    } else if inet_pton(10, arg, &mut addr.in6.sin6_addr) > 0 {
         if !scope_id.is_null() &&
                {
-                   scope_index = if_nametoindex(scope_id) as libc::c_int;
-                   (scope_index) == 0 as libc::c_int
+                   scope_index = if_nametoindex(scope_id);
+                   (scope_index) == 0
                } {
-            return b"bad interface name\x00" as *const u8 as
-                       *const libc::c_char as *mut libc::c_char
+            return Some(string::from("bad interface name"))
         }
-        (*addr).in6.sin6_port = __bswap_16(serv_port as u16);
-        (*addr).in6.sin6_scope_id = scope_index as u32;
-        (*source_addr).in6.sin6_addr = in6addr_any;
-        (*source_addr).in6.sin6_port =
-            __bswap_16((*dnsmasq_daemon).query_port as u16);
-        (*source_addr).in6.sin6_scope_id = 0 as libc::c_int as u32;
-        (*source_addr).sa.sa_family = 10 as libc::c_int as sa_family_t;
-        (*addr).sa.sa_family = (*source_addr).sa.sa_family;
-        (*source_addr).in6.sin6_flowinfo = 0 as libc::c_int as u32;
-        (*addr).in6.sin6_flowinfo = (*source_addr).in6.sin6_flowinfo;
+        addr.in6.sin6_port = __bswap_16(serv_port as u16);
+        addr.in6.sin6_scope_id = scope_index as u32;
+        source_addr.in6.sin6_addr = in6addr_any;
+        source_addr.in6.sin6_port =
+            __bswap_16(daemon.query_port as u16);
+        source_addr.in6.sin6_scope_id = 0 as u32;
+        source_addr.sa.sa_family = 10 as SaFamily;
+        addr.sa.sa_family = source_addr.sa.sa_family;
+        source_addr.in6.sin6_flowinfo = 0 as u32;
+        addr.in6.sin6_flowinfo = source_addr.in6.sin6_flowinfo;
         if !source.is_null() {
-            if !flags.is_null() { *flags |= 16 as libc::c_int }
-            (*source_addr).in6.sin6_port =
+            if !flags.is_null() { *flags |= 16 }
+            source_addr.in6.sin6_port =
                 __bswap_16(source_port as u16);
-            if inet_pton(10 as libc::c_int, source,
-                         &mut (*source_addr).in6.sin6_addr as *mut In6Addr as
-                             *mut libc::c_void) == 0 as libc::c_int {
+            if inet_pton(10, source,
+                         &mut source_addr.in6.sin6_addr as *mut In6Addr as
+                             *mut libc::c_void) == 0 {
                 if !interface_opt.is_null() {
-                    return b"interface can only be specified once\x00" as
-                               *const u8 as *const libc::c_char as
-                               *mut libc::c_char
+                    return Some(String::from("interface can only be specified once"))
                 }
-                (*source_addr).in6.sin6_addr = in6addr_any;
-                safe_strncpy(interface, source, 16 as libc::c_int as usize);
+                source_addr.in6.sin6_addr = in6addr_any;
+                *interface = source.clone();
             }
         }
     } else {
-        return b"bad address\x00" as *const u8 as *const libc::c_char as
-                   *mut libc::c_char
+        return Some(String::from("bad address"))
     }
-    return 0 as *mut libc::c_char;
+    return None
 }
-unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
-                              -> *mut Server {
-    let mut serv: *mut Server =
-        opt_malloc(::std::mem::size_of::<Server>() as libc::c_ulong) as
-            *mut Server;
-    let mut a: in_addr_t = __bswap_32(addr.s_addr);
-    let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-    memset(serv as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<Server>() as libc::c_ulong);
-    (*serv).domain =
-        opt_malloc(29 as libc::c_int as usize) as *mut libc::c_char;
-    p = (*serv).domain;
+
+pub fn add_rev4(daemon: &mut DnsmasqDaemon,
+                mut addr: InAddr,
+                mut msize: libc::c_int) -> Option<Server> {
+    let mut serv: Server = Default::default();
+    let mut a: InAddrT = __bswap_32(addr.s_addr);
+    let mut p: String = String::new();
+    serv.domain = String::new();
+    p = serv.domain.clone();
     let mut current_block_8: u64;
     match msize {
         32 => {
@@ -3356,7 +900,7 @@ unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
                 p.offset(sprintf(p,
                                  b"%u.\x00" as *const u8 as
                                      *const libc::c_char,
-                                 a & 0xff as libc::c_int as libc::c_uint) as
+                                 a & 0xff as libc::c_uint) as
                              isize);
             current_block_8 = 643824972125085941;
         }
@@ -3364,9 +908,9 @@ unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
         16 => { current_block_8 = 17981750616475279043; }
         8 => { current_block_8 = 12821047218658804999; }
         _ => {
-            free((*serv).domain as *mut libc::c_void);
-            free(serv as *mut libc::c_void);
-            return 0 as *mut Server
+            // free(serv.domain as *mut libc::c_void);
+            // free(serv as *mut libc::c_void);
+            return None
         }
     }
     match current_block_8 {
@@ -3377,8 +921,8 @@ unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
                 p.offset(sprintf(p,
                                  b"%d.\x00" as *const u8 as
                                      *const libc::c_char,
-                                 a >> 8 as libc::c_int &
-                                     0xff as libc::c_int as libc::c_uint) as
+                                 a >> 8 &
+                                     0xff as libc::c_uint) as
                              isize);
             current_block_8 = 17981750616475279043;
         }
@@ -3392,8 +936,8 @@ unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
                 p.offset(sprintf(p,
                                  b"%d.\x00" as *const u8 as
                                      *const libc::c_char,
-                                 a >> 16 as libc::c_int &
-                                     0xff as libc::c_int as libc::c_uint) as
+                                 a >> 16 &
+                                     0xff as libc::c_uint) as
                              isize)
         }
         _ => { }
@@ -3401,296 +945,269 @@ unsafe extern "C" fn add_rev4(mut addr: InAddr, mut msize: libc::c_int)
     /* fall through */
     p =
         p.offset(sprintf(p, b"%d.\x00" as *const u8 as *const libc::c_char,
-                         a >> 24 as libc::c_int &
-                             0xff as libc::c_int as libc::c_uint) as
+                         a >> 24 &
+                             0xff as libc::c_uint) as
                      isize); /* strlen("32*<n.>ip6.arpa")+1 */
     p =
         p.offset(sprintf(p,
                          b"in-addr.arpa\x00" as *const u8 as
-                             *const libc::c_char) as isize);
-    (*serv).flags = 8 as libc::c_int;
-    (*serv).next = (*dnsmasq_daemon).servers;
-    (*dnsmasq_daemon).servers = serv;
-    return serv;
+                             *const libc::c_char));
+    serv.flags = 8;
+    serv.next = daemon.servers;
+    daemon.servers = serv.clone();
+    return Some(serv);
 }
-unsafe extern "C" fn add_rev6(mut addr: *mut In6Addr, mut msize: libc::c_int)
-                              -> *mut Server {
-    let mut serv: *mut Server =
-        opt_malloc(::std::mem::size_of::<Server>() as libc::c_ulong) as
-            *mut Server;
-    let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
+
+ pub fn add_rev6(mut addr: In6Addr, mut msize: libc::c_int) -> Option<Server> {
+    let mut serv: Server = Default::default();
+    let mut p: String = String::new();
     let mut i: libc::c_int = 0;
-    memset(serv as *mut libc::c_void, 0 as libc::c_int,
-           ::std::mem::size_of::<Server>() as libc::c_ulong);
-    (*serv).domain =
-        opt_malloc(73 as libc::c_int as usize) as *mut libc::c_char;
-    p = (*serv).domain;
-    i = msize - 1 as libc::c_int;
-    while i >= 0 as libc::c_int {
-        let mut dig: libc::c_int =
-            *(addr as
-                  *mut libc::c_uchar).offset((i >> 3 as libc::c_int) as isize)
-                as libc::c_int;
+    serv.domain = String::new();
+    p = serv.domain.clone();
+    i = msize - 1;
+    while i >= 0 {
+        let mut dig: libc::c_int = addr.__in6_u.__u6_addr16[i >> 3];
         p =
             p.offset(sprintf(p,
                              b"%.1x.\x00" as *const u8 as *const libc::c_char,
-                             if i >> 2 as libc::c_int & 1 as libc::c_int != 0
+                             if i >> 2 & 1 != 0
                                 {
-                                 (dig) & 15 as libc::c_int
-                             } else { (dig) >> 4 as libc::c_int }) as isize);
-        i -= 4 as libc::c_int
+                                 (dig) & 15
+                             } else { (dig) >> 4 }));
+        i -= 4
     }
     p =
         p.offset(sprintf(p,
                          b"ip6.arpa\x00" as *const u8 as *const libc::c_char)
-                     as isize);
-    (*serv).flags = 8 as libc::c_int;
-    (*serv).next = (*dnsmasq_daemon).servers;
-    (*dnsmasq_daemon).servers = serv;
-    return serv;
+                    );
+    serv.flags = 8;
+    // serv.next = daemon.servers;
+    daemon.servers = serv.clone();
+    return Some(serv);
 }
-unsafe extern "C" fn is_tag_prefix(mut arg: *mut libc::c_char)
- -> libc::c_int {
-    if !arg.is_null() &&
+ fn is_tag_prefix(mut arg: &String)
+ -> bool {
+    if !arg.is_empty() &&
            (strstr(arg, b"net:\x00" as *const u8 as *const libc::c_char) ==
                 arg ||
                 strstr(arg, b"tag:\x00" as *const u8 as *const libc::c_char)
                     == arg) {
-        return 1 as libc::c_int
+        return true
     }
-    return 0 as libc::c_int;
+    return false
 }
-unsafe extern "C" fn set_prefix(mut arg: *mut libc::c_char)
- -> *mut libc::c_char {
-    if strstr(arg, b"set:\x00" as *const u8 as *const libc::c_char) == arg {
-        return arg.offset(4 as libc::c_int as isize)
-    }
-    return arg;
+
+
+ fn set_prefix(mut arg: &mut String)
+ -> Option<String> {
+     if arg.find("set:") == 0 {
+         let sl = arg.as_bytes()[4..];
+         Some(String::from(sl))
+     }
+     None
 }
-unsafe extern "C" fn dhcp_netid_create(mut net: *const libc::c_char,
-                                       mut next: *mut DhcpNetId)
- -> *mut DhcpNetId {
-    let mut tt: *mut DhcpNetId = 0 as *mut DhcpNetId;
-    tt =
-        opt_malloc(::std::mem::size_of::<DhcpNetId>() as libc::c_ulong) as
-            *mut DhcpNetId;
-    (*tt).net = opt_string_alloc(net);
-    (*tt).next = next;
+
+
+ fn dhcp_netid_create(mut net: &String, mut next: &DhcpNetId)
+ -> DhcpNetId {
+    let mut tt: DhcpNetId = Default::default();
+    tt.net = net.clone();
+    tt.next = next;
     return tt;
 }
-unsafe extern "C" fn dhcp_netid_free(mut nid: *mut DhcpNetId) {
-    while !nid.is_null() {
-        let mut tmp: *mut DhcpNetId = nid;
-        nid = (*nid).next;
-        free((*tmp).net as *mut libc::c_void);
-        free(tmp as *mut libc::c_void);
-    };
-}
+
+
+//  fn dhcp_netid_free(mut nid: *mut DhcpNetId) {
+//     while !nid.is_null() {
+//         let mut tmp: *mut DhcpNetId = nid;
+//         nid = nid.next;
+//         free((*tmp).net as *mut libc::c_void);
+//         free(tmp as *mut libc::c_void);
+//     };
+// }
+
+
 /* Parse one or more tag:s before parameters.
  * Moves arg to the end of tags. */
-unsafe extern "C" fn dhcp_tags(mut arg: *mut *mut libc::c_char)
- -> *mut DhcpNetId {
-    let mut id: *mut DhcpNetId = 0 as *mut DhcpNetId;
-    while is_tag_prefix(*arg) != 0 {
-        let mut comma: *mut libc::c_char = split(*arg);
-        id = dhcp_netid_create((*arg).offset(4 as libc::c_int as isize), id);
-        *arg = comma
+fn dhcp_tags(mut arg: &mut String)
+ -> DhcpNetId {
+    let mut id: DhcpNetId = Default::default();
+    while is_tag_prefix(arg) != false {
+        let mut comma = arg.split(",");
+        id = dhcp_netid_create(&String::from(arg.as_bytes()[4..]), &id);
+        *arg = comma.next().unwrap().to_string();
     }
-    if (*arg).is_null() { dhcp_netid_free(id); id = 0 as *mut DhcpNetId }
     return id;
 }
-unsafe extern "C" fn dhcp_netid_list_free(mut netid: *mut DhcpNetIdList) {
-    while !netid.is_null() {
-        let mut tmplist: *mut DhcpNetIdList = netid;
-        netid = (*netid).next;
-        dhcp_netid_free((*tmplist).list);
-        free(tmplist as *mut libc::c_void);
-    };
-}
-unsafe extern "C" fn dhcp_config_free(mut config: *mut DhcpConfig) {
-    if !config.is_null() {
-        let mut hwaddr: *mut HwaddrConfig = (*config).hwaddr;
-        while !hwaddr.is_null() {
-            let mut tmp: *mut HwaddrConfig = hwaddr;
-            hwaddr = (*hwaddr).next;
-            free(tmp as *mut libc::c_void);
-        }
-        dhcp_netid_list_free((*config).netid);
-        dhcp_netid_free((*config).filter);
-        if (*config).flags & 2 as libc::c_int as libc::c_uint != 0 {
-            free((*config).clid as *mut libc::c_void);
-        }
-        if (*config).flags & 4096 as libc::c_int as libc::c_uint != 0 {
-            let mut addr: *mut AddrList = 0 as *mut AddrList;
-            let mut tmp_0: *mut AddrList = 0 as *mut AddrList;
-            addr = (*config).addr6;
-            while !addr.is_null() {
-                tmp_0 = (*addr).next;
-                free(addr as *mut libc::c_void);
-                addr = tmp_0
-            }
-        }
-        free(config as *mut libc::c_void);
-    };
-}
-unsafe extern "C" fn dhcp_context_free(mut ctx: *mut DhcpContext) {
-    if !ctx.is_null() {
-        dhcp_netid_free((*ctx).filter);
-        free((*ctx).netid.net as *mut libc::c_void);
-        free((*ctx).template_interface as *mut libc::c_void);
-        free(ctx as *mut libc::c_void);
-    };
-}
-unsafe extern "C" fn dhcp_opt_free(mut opt: *mut DhcpOpt) {
-    if (*opt).flags & 256 as libc::c_int != 0 {
-        free((*opt).u.vendor_class as *mut libc::c_void);
-    }
-    dhcp_netid_free((*opt).netid);
-    free((*opt).val as *mut libc::c_void);
-    free(opt as *mut libc::c_void);
-}
+
+
+// fn dhcp_netid_list_free(mut netid: &mut DhcpNetIdList) {
+//     while !netid.is_null() {
+//         let mut tmplist: mut DhcpNetIdList = netid;
+//         netid = (*netid).next;
+//     };
+// }
+
+//  fn dhcp_config_free(mut config: *mut DhcpConfig) {
+//     if !config.is_null() {
+//         let mut hwaddr: *mut HwaddrConfig = (*config).hwaddr;
+//         while !hwaddr.is_null() {
+//             let mut tmp: *mut HwaddrConfig = hwaddr;
+//             hwaddr = (*hwaddr).next;
+//             free(tmp as *mut libc::c_void);
+//         }
+//         dhcp_netid_list_free((*config).netid);
+//         dhcp_netid_free((*config).filter);
+//         if (*config).flags & 2 as libc::c_int as libc::c_uint != 0 {
+//             free((*config).clid as *mut libc::c_void);
+//         }
+//         if (*config).flags & 4096 as libc::c_int as libc::c_uint != 0 {
+//             let mut addr: *mut AddrList = 0 as *mut AddrList;
+//             let mut tmp_0: *mut AddrList = 0 as *mut AddrList;
+//             addr = (*config).addr6;
+//             while !addr.is_null() {
+//                 tmp_0 = addr.next;
+//                 free(addr as *mut libc::c_void);
+//                 addr = tmp_0
+//             }
+//         }
+//         free(config as *mut libc::c_void);
+//     };
+// }
+
+ fn dhcp_context_free(mut ctx: *mut DhcpContext) {
+//     if !ctx.is_null() {
+//         dhcp_netid_free((*ctx).filter);
+//         free((*ctx).netid.net as *mut libc::c_void);
+//         free((*ctx).template_interface as *mut libc::c_void);
+//         free(ctx as *mut libc::c_void);
+//     };
+// }
+
+//  fn dhcp_opt_free(mut opt: *mut DhcpOpt) {
+//     if (*opt).flags & 256 as libc::c_int != 0 {
+//         free((*opt).u.vendor_class as *mut libc::c_void);
+//     }
+//     dhcp_netid_free((*opt).netid);
+//     free((*opt).val as *mut libc::c_void);
+//     free(opt as *mut libc::c_void);
+// }
+
 /* This is too insanely large to keep in-line in the switch */
-unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
-                                    mut arg: *mut libc::c_char,
-                                    mut flags: libc::c_int) -> libc::c_int {
+ fn parse_dhcp_opt(mut errstr: &mut String, mut arg: &mut String, mut flags: u32) -> u32 {
     let mut current_block: u64;
-    let mut new: *mut DhcpOpt =
-        opt_malloc(::std::mem::size_of::<DhcpOpt>() as libc::c_ulong) as
-            *mut DhcpOpt;
-    let mut lenchar: libc::c_char = 0 as libc::c_int as libc::c_char;
-    let mut cp: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut addrs: libc::c_int = 0;
-    let mut digs: libc::c_int = 0;
-    let mut is_addr: libc::c_int = 0;
-    let mut is_addr6: libc::c_int = 0;
-    let mut is_hex: libc::c_int = 0;
-    let mut is_dec: libc::c_int = 0;
-    let mut is_string: libc::c_int = 0;
-    let mut dots: libc::c_int = 0;
-    let mut comma: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut opt_len: u16 = 0 as libc::c_int as u16;
-    let mut is6: libc::c_int = 0 as libc::c_int;
-    let mut option_ok: libc::c_int = 0 as libc::c_int;
-    (*new).len = 0 as libc::c_int;
-    (*new).flags = flags;
-    (*new).netid = 0 as *mut DhcpNetId;
-    (*new).val = 0 as *mut libc::c_uchar;
-    (*new).opt = 0 as libc::c_int;
-    while !arg.is_null() {
-        comma = split(arg);
-        cp = arg;
-        while *cp != 0 {
-            if (*cp as libc::c_int) < '0' as i32 ||
-                   *cp as libc::c_int > '9' as i32 {
-                break ;
-            }
-            cp = cp.offset(1)
-        }
-        if *cp == 0 {
-            (*new).opt = atoi(arg);
-            opt_len = 0 as libc::c_int as u16;
-            option_ok = 1 as libc::c_int;
-            break ;
-        } else if strstr(arg,
-                         b"option:\x00" as *const u8 as *const libc::c_char)
-                      == arg {
-            (*new).opt =
-                lookup_dhcp_opt(2 as libc::c_int,
-                                arg.offset(7 as libc::c_int as isize));
-            if (*new).opt != -(1 as libc::c_int) {
-                opt_len =
-                    lookup_dhcp_len(2 as libc::c_int, (*new).opt) as u16;
+    let mut new: DhcpOpt = Default:: default();
+    let mut lenchar: u8 = 0;
+    let mut cp: String = String::new();
+    let mut addrs: u32 = 0;
+    let mut digs: u32 = 0;
+    let mut is_addr: bool = false;
+    let mut is_addr6: bool = false;
+    let mut is_hex: bool = false;
+    let mut is_dec: bool = false;
+    let mut is_string: bool = false;
+    let mut dots: u32 = 0;
+    let mut comma: String = String::new();
+    let mut opt_len: usize = 0;
+    let mut is6: bool = false;
+    let mut option_ok: bool = false;
+    new.len = 0;
+    new.flags = flags;
+    new.netid = Default::default();
+    new.val = Vec::new();
+    new.opt = 0;
+
+     for chunk in arg.split(",") {
+        if chunk.find("option:") == 0 {
+            // arg.offset(7)
+            new.opt = lookup_dhcp_opt(2, &string_from_offset(&String::from(chunk), 7));
+            if new.opt != -(1) {
+                opt_len = lookup_dhcp_len(2, new.opt);
                 /* option:<optname> must follow tag and vendor string. */
-                if opt_len as libc::c_int & 0x2000 as libc::c_int == 0 ||
-                       flags == 128 as libc::c_int {
-                    option_ok = 1 as libc::c_int
+                if opt_len & 0x2000 == 0 || flags == 128 {
+                    option_ok = 1
                 }
             }
             break ;
-        } else if strstr(arg,
-                         b"option6:\x00" as *const u8 as *const libc::c_char)
-                      == arg {
-            cp = arg.offset(8 as libc::c_int as isize);
-            while *cp != 0 {
-                if (*cp as libc::c_int) < '0' as i32 ||
-                       *cp as libc::c_int > '9' as i32 {
+        } else if chunk.find("option6") == 0 {
+            cp = arg.offset(8);
+            while cp != 0 {
+                if (cp) < '0' as i32 ||
+                       cp > '9' as i32 {
                     break ;
                 }
                 cp = cp.offset(1)
             }
-            if *cp == 0 {
-                (*new).opt = atoi(arg.offset(8 as libc::c_int as isize));
-                opt_len = 0 as libc::c_int as u16;
-                option_ok = 1 as libc::c_int
+            if cp == 0 {
+                new.opt = atoi(arg.offset(8));
+                opt_len = 0 as u16;
+                option_ok = 1
             } else {
-                (*new).opt =
-                    lookup_dhcp_opt(10 as libc::c_int,
-                                    arg.offset(8 as libc::c_int as isize));
-                if (*new).opt != -(1 as libc::c_int) {
+                new.opt = lookup_dhcp_opt(10, arg.offset(8));
+                if new.opt != -(1) {
                     opt_len =
-                        lookup_dhcp_len(10 as libc::c_int, (*new).opt) as
-                            u16;
-                    if opt_len as libc::c_int & 0x2000 as libc::c_int == 0 ||
-                           flags == 128 as libc::c_int {
-                        option_ok = 1 as libc::c_int
+                        lookup_dhcp_len(10, new.opt);
+                    if opt_len & 0x2000 == 0 ||
+                           flags == 128 {
+                        option_ok = 1
                     }
                 }
             }
             /* option6:<opt>|<optname> must follow tag and vendor string. */
-            is6 = 1 as libc::c_int;
+            is6 = 1;
             break ;
         } else {
             if strstr(arg, b"vendor:\x00" as *const u8 as *const libc::c_char)
                    == arg {
-                (*new).u.vendor_class =
-                    opt_string_alloc(arg.offset(7 as libc::c_int as isize)) as
+                new.u.vendor_class =
+                    opt_string_alloc(arg.offset(7)) as
                         *mut libc::c_uchar;
-                (*new).flags |= 256 as libc::c_int
+                new.flags |= 256
             } else if strstr(arg,
                              b"encap:\x00" as *const u8 as
                                  *const libc::c_char) == arg {
-                (*new).u.encap = atoi(arg.offset(6 as libc::c_int as isize));
-                (*new).flags |= 4 as libc::c_int
+                new.u.encap = atoi(arg.offset(6));
+                new.flags |= 4
             } else if strstr(arg,
                              b"vi-encap:\x00" as *const u8 as
                                  *const libc::c_char) == arg {
-                (*new).u.encap = atoi(arg.offset(9 as libc::c_int as isize));
-                (*new).flags |= 2048 as libc::c_int;
-                if flags == 128 as libc::c_int {
-                    option_ok = 1 as libc::c_int;
+                new.u.encap = atoi(arg.offset(9));
+                new.flags |= 2048;
+                if flags == 128 {
+                    option_ok = 1;
                     break ;
                 }
             } else {
                 /* allow optional "net:" or "tag:" for consistency */
                 let mut name: *const libc::c_char =
                     if is_tag_prefix(arg) != 0 {
-                        arg.offset(4 as libc::c_int as isize)
+                        arg.offset(4)
                     } else { set_prefix(arg) };
-                (*new).netid = dhcp_netid_create(name, (*new).netid)
+                new.netid = dhcp_netid_create(name, new.netid)
             }
             arg = comma
         }
     }
     if is6 != 0 {
-        if (*new).flags & (256 as libc::c_int | 4 as libc::c_int) != 0 {
+        if new.flags & (256 | 4) != 0 {
             strcpy(errstr,
                    b"unsupported encapsulation for IPv6 option\x00" as
                        *const u8 as *const libc::c_char);
             current_block = 14151404249770905673;
         } else {
-            if opt_len as libc::c_int == 0 as libc::c_int &&
-                   (*new).flags & 2048 as libc::c_int == 0 {
+            if opt_len == 0 &&
+                   new.flags & 2048 == 0 {
                 opt_len =
-                    lookup_dhcp_len(10 as libc::c_int, (*new).opt) as u16
+                    lookup_dhcp_len(10, new.opt) as u16
             }
             current_block = 317151059986244064;
         }
     } else {
-        if opt_len as libc::c_int == 0 as libc::c_int &&
-               (*new).flags &
-                   (256 as libc::c_int | 4 as libc::c_int |
-                        2048 as libc::c_int) == 0 {
-            opt_len = lookup_dhcp_len(2 as libc::c_int, (*new).opt) as u16
+        if opt_len == 0 &&
+               new.flags &
+                   (256 | 4 |
+                        2048) == 0 {
+            opt_len = lookup_dhcp_len(2, new.opt) as u16
         }
         current_block = 317151059986244064;
     }
@@ -3706,96 +1223,96 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                 if !comma.is_null() {
                     /* characterise the value */
                     let mut c: libc::c_char = 0;
-                    let mut found_dig: libc::c_int = 0 as libc::c_int;
-                    let mut found_colon: libc::c_int = 0 as libc::c_int;
-                    is_string = 1 as libc::c_int;
+                    let mut found_dig: libc::c_int = 0;
+                    let mut found_colon: libc::c_int = 0;
+                    is_string = 1;
                     is_dec = is_string;
                     is_hex = is_dec;
                     is_addr6 = is_hex;
                     is_addr = is_addr6;
-                    digs = 1 as libc::c_int;
+                    digs = 1;
                     addrs = digs;
-                    dots = 0 as libc::c_int;
+                    dots = 0;
                     cp = comma;
                     loop  {
-                        c = *cp;
+                        c = cp;
                         if !(c != 0) { break ; }
-                        if c as libc::c_int == ',' as i32 {
+                        if c == ',' as i32 {
                             addrs += 1;
-                            is_hex = 0 as libc::c_int;
+                            is_hex = 0;
                             is_dec = is_hex
-                        } else if c as libc::c_int == ':' as i32 {
+                        } else if c == ':' as i32 {
                             digs += 1;
-                            is_addr = 0 as libc::c_int;
+                            is_addr = 0;
                             is_dec = is_addr;
-                            found_colon = 1 as libc::c_int
-                        } else if c as libc::c_int == '/' as i32 {
-                            is_hex = 0 as libc::c_int;
+                            found_colon = 1
+                        } else if c == '/' as i32 {
+                            is_hex = 0;
                             is_dec = is_hex;
                             is_addr6 = is_dec;
                             if cp == comma {
                                 /* leading / means a pathname */
-                                is_addr = 0 as libc::c_int
+                                is_addr = 0
                             }
-                        } else if c as libc::c_int == '.' as i32 {
-                            is_hex = 0 as libc::c_int;
+                        } else if c == '.' as i32 {
+                            is_hex = 0;
                             is_dec = is_hex;
                             dots += 1
-                        } else if c as libc::c_int == '-' as i32 {
-                            is_addr6 = 0 as libc::c_int;
+                        } else if c == '-' as i32 {
+                            is_addr6 = 0;
                             is_addr = is_addr6;
                             is_hex = is_addr
-                        } else if c as libc::c_int == ' ' as i32 {
-                            is_hex = 0 as libc::c_int;
+                        } else if c == ' ' as i32 {
+                            is_hex = 0;
                             is_dec = is_hex
-                        } else if !(c as libc::c_int >= '0' as i32 &&
-                                        c as libc::c_int <= '9' as i32) {
-                            is_addr = 0 as libc::c_int;
-                            if *cp.offset(1 as libc::c_int as isize) as
-                                   libc::c_int == 0 as libc::c_int &&
+                        } else if !(c >= '0' as i32 &&
+                                        c <= '9' as i32) {
+                            is_addr = 0;
+                            if cp.offset(1) as
+                                   libc::c_int == 0 &&
                                    is_dec != 0 &&
-                                   (c as libc::c_int == 'b' as i32 ||
-                                        c as libc::c_int == 's' as i32 ||
-                                        c as libc::c_int == 'i' as i32) {
+                                   (c == 'b' as i32 ||
+                                        c == 's' as i32 ||
+                                        c == 'i' as i32) {
                                 lenchar = c;
-                                *cp = 0 as libc::c_int as libc::c_char
-                            } else { is_dec = 0 as libc::c_int }
-                            if !(c as libc::c_int >= 'A' as i32 &&
-                                     c as libc::c_int <= 'F' as i32 ||
-                                     c as libc::c_int >= 'a' as i32 &&
-                                         c as libc::c_int <= 'f' as i32 ||
-                                     c as libc::c_int == '*' as i32 &&
-                                         flags & 128 as libc::c_int != 0) {
-                                is_hex = 0 as libc::c_int;
-                                if c as libc::c_int != '[' as i32 &&
-                                       c as libc::c_int != ']' as i32 {
-                                    is_addr6 = 0 as libc::c_int
+                                cp = 0 as libc::c_char
+                            } else { is_dec = 0 }
+                            if !(c >= 'A' as i32 &&
+                                     c <= 'F' as i32 ||
+                                     c >= 'a' as i32 &&
+                                         c <= 'f' as i32 ||
+                                     c == '*' as i32 &&
+                                         flags & 128 != 0) {
+                                is_hex = 0;
+                                if c != '[' as i32 &&
+                                       c != ']' as i32 {
+                                    is_addr6 = 0
                                 }
                             }
-                        } else { found_dig = 1 as libc::c_int }
+                        } else { found_dig = 1 }
                         cp = cp.offset(1)
                     }
                     if found_dig == 0 {
-                        is_addr = 0 as libc::c_int;
+                        is_addr = 0;
                         is_dec = is_addr
                     }
-                    if found_colon == 0 { is_addr6 = 0 as libc::c_int }
+                    if found_colon == 0 { is_addr6 = 0 }
                     /* NTP server option takes hex, addresses or FQDN */
-                    if is6 != 0 && (*new).opt == 56 as libc::c_int &&
+                    if is6 != 0 && new.opt == 56 &&
                            is_hex == 0 {
                         opt_len =
-                            (opt_len as libc::c_int |
+                            (opt_len |
                                  if is_addr6 != 0 {
-                                     0x8000 as libc::c_int
-                                 } else { 0x4000 as libc::c_int }) as u16
+                                     0x8000
+                                 } else { 0x4000 }) as u16
                     }
                     /* We know that some options take addresses */
-                    if opt_len as libc::c_int & 0x8000 as libc::c_int != 0 {
-                        is_hex = 0 as libc::c_int;
+                    if opt_len & 0x8000 != 0 {
+                        is_hex = 0;
                         is_dec = is_hex;
                         is_string = is_dec;
                         if is6 == 0 &&
-                               (is_addr == 0 || dots == 0 as libc::c_int) {
+                               (is_addr == 0 || dots == 0) {
                             strcpy(errstr,
                                    b"bad IP address\x00" as *const u8 as
                                        *const libc::c_char);
@@ -3808,10 +1325,10 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                         } else { current_block = 6407515180622463684; }
                     } else {
                         /* or names */
-                        if opt_len as libc::c_int &
-                               (0x1000 as libc::c_int | 0x4000 as libc::c_int
-                                    | 0x800 as libc::c_int) != 0 {
-                            is_hex = 0 as libc::c_int;
+                        if opt_len &
+                               (0x1000 | 0x4000
+                                    | 0x800) != 0 {
+                            is_hex = 0;
                             is_dec = is_hex;
                             is_addr = is_dec;
                             is_addr6 = is_addr
@@ -3822,22 +1339,22 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                         14151404249770905673 => { }
                         _ => {
                             if found_dig != 0 &&
-                                   opt_len as libc::c_int &
-                                       0x200 as libc::c_int != 0 &&
+                                   opt_len &
+                                       0x200 != 0 &&
                                    strlen(comma) >
-                                       0 as libc::c_int as libc::c_ulong {
+                                       0 as libc::c_ulong {
                                 let mut val: libc::c_int = 0;
-                                let mut fac: libc::c_int = 1 as libc::c_int;
+                                let mut fac: libc::c_int = 1;
                                 let mut current_block_105: u64;
                                 match *comma.offset(strlen(comma).wrapping_sub(1
                                                                                    as
                                                                                    libc::c_int
                                                                                    as
                                                                                    libc::c_ulong)
-                                                        as isize) as
+                                                       ) as
                                           libc::c_int {
                                     119 | 87 => {
-                                        fac *= 7 as libc::c_int;
+                                        fac *= 7;
                                         current_block_105 =
                                             13975322803090976125;
                                     }
@@ -3866,7 +1383,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     13975322803090976125 =>
                                     /* fall through */
                                     {
-                                        fac *= 24 as libc::c_int;
+                                        fac *= 24;
                                         current_block_105 =
                                             16222678236269241473;
                                     }
@@ -3876,7 +1393,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     16222678236269241473 =>
                                     /* fall through */
                                     {
-                                        fac *= 60 as libc::c_int;
+                                        fac *= 60;
                                         current_block_105 =
                                             15298318582559719273;
                                     }
@@ -3886,7 +1403,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     15298318582559719273 =>
                                     /* fall through */
                                     {
-                                        fac *= 60 as libc::c_int;
+                                        fac *= 60;
                                         current_block_105 =
                                             10680264320049698114;
                                     }
@@ -3901,31 +1418,31 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                                                                      libc::c_int
                                                                                      as
                                                                                      libc::c_ulong)
-                                                          as isize) =
-                                            0 as libc::c_int as libc::c_char
+                                                         ) =
+                                            0 as libc::c_char
                                     }
                                     _ => { }
                                 }
-                                (*new).len = 4 as libc::c_int;
-                                (*new).val =
-                                    opt_malloc(4 as libc::c_int as usize) as
+                                new.len = 4;
+                                new.val =
+                                    opt_malloc(4 as usize) as
                                         *mut libc::c_uchar;
                                 val = atoi(comma);
-                                *((*new).val as *mut libc::c_int) =
+                                *(new.val as *mut libc::c_int) =
                                     __bswap_32((val * fac) as u32) as
                                         libc::c_int;
                                 current_block = 15439134456549723682;
-                            } else if is_hex != 0 && digs > 1 as libc::c_int {
-                                (*new).len = digs;
-                                (*new).val =
-                                    opt_malloc((*new).len as usize) as
+                            } else if is_hex != 0 && digs > 1 {
+                                new.len = digs;
+                                new.val =
+                                    opt_malloc(new.len as usize) as
                                         *mut libc::c_uchar;
-                                parse_hex(comma, (*new).val, digs,
-                                          if flags & 128 as libc::c_int != 0 {
-                                              &mut (*new).u.wildcard_mask
+                                parse_hex(comma, new.val, digs,
+                                          if flags & 128 != 0 {
+                                              &mut new.u.wildcard_mask
                                           } else { 0 as *mut libc::c_uint },
                                           0 as *mut libc::c_int);
-                                (*new).flags |= 512 as libc::c_int;
+                                new.flags |= 512;
                                 current_block = 15439134456549723682;
                             } else if is_dec != 0 {
                                 let mut i: libc::c_int = 0;
@@ -3933,35 +1450,35 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                 /* assume numeric arg is 1 byte except for
 	     options where it is known otherwise.
 	     For vendor class option, we have to hack. */
-                                if opt_len as libc::c_int != 0 as libc::c_int
+                                if opt_len != 0
                                    {
-                                    (*new).len = opt_len as libc::c_int
+                                    new.len = opt_len
                                 } else if val_0 as libc::c_uint &
                                               0xffff0000 as libc::c_uint != 0
                                  {
-                                    (*new).len = 4 as libc::c_int
-                                } else if val_0 & 0xff00 as libc::c_int != 0 {
-                                    (*new).len = 2 as libc::c_int
-                                } else { (*new).len = 1 as libc::c_int }
-                                if lenchar as libc::c_int == 'b' as i32 {
-                                    (*new).len = 1 as libc::c_int
-                                } else if lenchar as libc::c_int == 's' as i32
+                                    new.len = 4
+                                } else if val_0 & 0xff00 != 0 {
+                                    new.len = 2
+                                } else { new.len = 1 }
+                                if lenchar == 'b' as i32 {
+                                    new.len = 1
+                                } else if lenchar == 's' as i32
                                  {
-                                    (*new).len = 2 as libc::c_int
-                                } else if lenchar as libc::c_int == 'i' as i32
+                                    new.len = 2
+                                } else if lenchar == 'i' as i32
                                  {
-                                    (*new).len = 4 as libc::c_int
+                                    new.len = 4
                                 }
-                                (*new).val =
-                                    opt_malloc((*new).len as usize) as
+                                new.val =
+                                    opt_malloc(new.len as usize) as
                                         *mut libc::c_uchar;
-                                i = 0 as libc::c_int;
-                                while i < (*new).len {
-                                    *(*new).val.offset(i as isize) =
+                                i = 0;
+                                while i < new.len {
+                                    *new.val.offset(i) =
                                         (val_0 >>
-                                             ((*new).len - i -
-                                                  1 as libc::c_int) *
-                                                 8 as libc::c_int) as
+                                             (new.len - i -
+                                                  1) *
+                                                 8) as
                                             libc::c_uchar;
                                     i += 1
                                 }
@@ -3975,21 +1492,21 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                 /* max length of address/subnet descriptor is five bytes,
 	     add one for the option 120 enc byte too */
                                 op =
-                                    opt_malloc((5 as libc::c_int * addrs +
-                                                    1 as libc::c_int) as
+                                    opt_malloc((5 * addrs +
+                                                    1) as
                                                    usize) as
                                         *mut libc::c_uchar; /* RFC 3361 "enc byte" */
-                                (*new).val = op;
-                                (*new).flags |= 1 as libc::c_int;
-                                if (*new).flags &
-                                       (4 as libc::c_int | 256 as libc::c_int
-                                            | 2048 as libc::c_int) == 0 &&
-                                       (*new).opt == 120 as libc::c_int {
+                                new.val = op;
+                                new.flags |= 1;
+                                if new.flags &
+                                       (4 | 256
+                                            | 2048) == 0 &&
+                                       new.opt == 120 {
                                     let fresh6 = op;
                                     op = op.offset(1);
                                     *fresh6 =
-                                        1 as libc::c_int as libc::c_uchar;
-                                    (*new).flags &= !(1 as libc::c_int)
+                                        1 as libc::c_uchar;
+                                    new.flags &= !(1)
                                 }
                                 loop  {
                                     let fresh7 = addrs;
@@ -4003,7 +1520,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     slash =
                                         split_chr(cp,
                                                   '/' as i32 as libc::c_char);
-                                    if inet_pton(2 as libc::c_int, cp,
+                                    if inet_pton(2, cp,
                                                  &mut in_0 as *mut InAddr as
                                                      *mut libc::c_void) == 0 {
                                         strcpy(errstr,
@@ -4016,10 +1533,10 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         memcpy(op as *mut libc::c_void,
                                                &mut in_0 as *mut InAddr as
                                                    *const libc::c_void,
-                                               4 as libc::c_int as
+                                               4 as
                                                    libc::c_ulong);
                                         op =
-                                            op.offset(4 as libc::c_int as
+                                            op.offset(4 as
                                                           isize)
                                     } else {
                                         let mut p: *mut libc::c_uchar =
@@ -4030,43 +1547,43 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         let fresh8 = op;
                                         op = op.offset(1);
                                         *fresh8 = netsize as libc::c_uchar;
-                                        if netsize > 0 as libc::c_int {
+                                        if netsize > 0 {
                                             let fresh9 = p;
                                             p = p.offset(1);
                                             let fresh10 = op;
                                             op = op.offset(1);
                                             *fresh10 = *fresh9
                                         }
-                                        if netsize > 8 as libc::c_int {
+                                        if netsize > 8 {
                                             let fresh11 = p;
                                             p = p.offset(1);
                                             let fresh12 = op;
                                             op = op.offset(1);
                                             *fresh12 = *fresh11
                                         }
-                                        if netsize > 16 as libc::c_int {
+                                        if netsize > 16 {
                                             let fresh13 = p;
                                             p = p.offset(1);
                                             let fresh14 = op;
                                             op = op.offset(1);
                                             *fresh14 = *fresh13
                                         }
-                                        if netsize > 24 as libc::c_int {
+                                        if netsize > 24 {
                                             let fresh15 = p;
                                             p = p.offset(1);
                                             let fresh16 = op;
                                             op = op.offset(1);
                                             *fresh16 = *fresh15
                                         }
-                                        (*new).flags &= !(1 as libc::c_int)
+                                        new.flags &= !(1)
                                         /* cannot re-write descriptor format */
                                     }
                                 }
                                 match current_block {
                                     14151404249770905673 => { }
                                     _ => {
-                                        (*new).len =
-                                            op.wrapping_offset_from((*new).val)
+                                        new.len =
+                                            op.wrapping_offset_from(new.val)
                                                 as libc::c_long as
                                                 libc::c_int;
                                         current_block = 15439134456549723682;
@@ -4076,11 +1593,11 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                 let mut op_0: *mut libc::c_uchar =
                                     0 as *mut libc::c_uchar;
                                 op_0 =
-                                    opt_malloc((16 as libc::c_int * addrs) as
+                                    opt_malloc((16 * addrs) as
                                                    usize) as
                                         *mut libc::c_uchar;
-                                (*new).val = op_0;
-                                (*new).flags |= 8192 as libc::c_int;
+                                new.val = op_0;
+                                new.flags |= 8192;
                                 loop  {
                                     let fresh17 = addrs;
                                     addrs = addrs - 1;
@@ -4091,32 +1608,32 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     cp = comma;
                                     comma = split(cp);
                                     /* check for [1234::7] */
-                                    if *cp as libc::c_int == '[' as i32 {
+                                    if cp == '[' as i32 {
                                         cp = cp.offset(1)
                                     }
                                     if strlen(cp) >
-                                           1 as libc::c_int as libc::c_ulong
+                                           1 as libc::c_ulong
                                            &&
-                                           *cp.offset(strlen(cp).wrapping_sub(1
+                                           cp.offset(strlen(cp).wrapping_sub(1
                                                                                   as
                                                                                   libc::c_int
                                                                                   as
                                                                                   libc::c_ulong)
-                                                          as isize) as
+                                                         ) as
                                                libc::c_int == ']' as i32 {
-                                        *cp.offset(strlen(cp).wrapping_sub(1
+                                        cp.offset(strlen(cp).wrapping_sub(1
                                                                                as
                                                                                libc::c_int
                                                                                as
                                                                                libc::c_ulong)
-                                                       as isize) =
-                                            0 as libc::c_int as libc::c_char
+                                                      ) =
+                                            0 as libc::c_char
                                     }
-                                    if inet_pton(10 as libc::c_int, cp,
+                                    if inet_pton(10, cp,
                                                  op_0 as *mut libc::c_void) !=
                                            0 {
                                         op_0 =
-                                            op_0.offset(16 as libc::c_int as
+                                            op_0.offset(16 as
                                                             isize)
                                     } else {
                                         strcpy(errstr,
@@ -4130,8 +1647,8 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                 match current_block {
                                     14151404249770905673 => { }
                                     _ => {
-                                        (*new).len =
-                                            op_0.wrapping_offset_from((*new).val)
+                                        new.len =
+                                            op_0.wrapping_offset_from(new.val)
                                                 as libc::c_long as
                                                 libc::c_int;
                                         current_block = 15439134456549723682;
@@ -4139,13 +1656,13 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                 }
                             } else if is_string != 0 {
                                 /* text arg */
-                                if ((*new).opt == 119 as libc::c_int ||
-                                        (*new).opt == 120 as libc::c_int) &&
+                                if (new.opt == 119 ||
+                                        new.opt == 120) &&
                                        is6 == 0 &&
-                                       (*new).flags &
-                                           (4 as libc::c_int |
-                                                256 as libc::c_int |
-                                                2048 as libc::c_int) == 0 {
+                                       new.flags &
+                                           (4 |
+                                                256 |
+                                                2048) == 0 {
                                     /* dns search, RFC 3397, or SIP, RFC 3361 */
                                     let mut q: *mut libc::c_uchar =
                                         0 as *mut libc::c_uchar;
@@ -4161,16 +1678,16 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         0 as *mut libc::c_uchar;
                                     let mut newlen: usize = 0;
                                     let mut len: usize =
-                                        0 as libc::c_int as usize;
+                                        0 as usize;
                                     let mut header_size: libc::c_int =
-                                        if (*new).opt == 119 as libc::c_int {
-                                            0 as libc::c_int
-                                        } else { 1 as libc::c_int };
+                                        if new.opt == 119 {
+                                            0
+                                        } else { 1 };
                                     arg = comma;
                                     comma = split(arg);
                                     loop  {
                                         if !(!arg.is_null() &&
-                                                 *arg as libc::c_int != 0) {
+                                                 *arg != 0) {
                                             current_block =
                                                 5913497314667414582;
                                             break ;
@@ -4180,12 +1697,12 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         let mut dom: *mut libc::c_char =
                                             0 as *mut libc::c_char;
                                         let mut domlen: usize =
-                                            1 as libc::c_int as usize;
+                                            1 as usize;
                                         /* Allow "." as an empty domain */
                                         if strcmp(arg,
                                                   b".\x00" as *const u8 as
                                                       *const libc::c_char) !=
-                                               0 as libc::c_int {
+                                               0 {
                                             dom = canonicalise_opt(arg);
                                             if dom.is_null() {
                                                 strcpy(errstr,
@@ -4217,20 +1734,20 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                             free(m as *mut libc::c_void);
                                         }
                                         m = newp;
-                                        p_0 = m.offset(header_size as isize);
-                                        q = p_0.offset(len as isize);
+                                        p_0 = m.offset(header_size);
+                                        q = p_0.offset(len);
                                         /* add string on the end in RFC1035 format */
                                         in_1 = dom;
                                         while !in_1.is_null() &&
-                                                  *in_1 as libc::c_int != 0 {
+                                                  *in_1 != 0 {
                                             let fresh18 = q;
                                             q = q.offset(1);
                                             let mut cp_0: *mut libc::c_uchar =
                                                 fresh18;
                                             let mut j: libc::c_int = 0;
-                                            j = 0 as libc::c_int;
-                                            while *in_1 as libc::c_int != 0 &&
-                                                      *in_1 as libc::c_int !=
+                                            j = 0;
+                                            while *in_1 != 0 &&
+                                                      *in_1 !=
                                                           '.' as i32 {
                                                 let fresh19 = q;
                                                 q = q.offset(1);
@@ -4239,7 +1756,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                                 in_1 = in_1.offset(1);
                                                 j += 1
                                             }
-                                            *cp_0 = j as libc::c_uchar;
+                                            cp_0 = j as libc::c_uchar;
                                             if *in_1 != 0 {
                                                 in_1 = in_1.offset(1)
                                             }
@@ -4247,26 +1764,26 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         let fresh20 = q;
                                         q = q.offset(1);
                                         *fresh20 =
-                                            0 as libc::c_int as libc::c_uchar;
+                                            0 as libc::c_uchar;
                                         free(dom as *mut libc::c_void);
                                         /* Now tail-compress using earlier names. */
                                         newlen =
                                             q.wrapping_offset_from(p_0) as
                                                 libc::c_long as usize;
-                                        tail = p_0.offset(len as isize);
+                                        tail = p_0.offset(len);
                                         's_1219:
                                             while *tail != 0 {
                                                 r = p_0;
                                                 while (r.wrapping_offset_from(p_0)
                                                            as libc::c_long) <
-                                                          len as libc::c_int
+                                                          len
                                                               as libc::c_long
                                                       {
                                                     if strcmp(r as
                                                                   *mut libc::c_char,
                                                               tail as
                                                                   *mut libc::c_char)
-                                                           == 0 as libc::c_int
+                                                           == 0
                                                        {
                                                         let mut t_s: u16 =
                                                             (r.wrapping_offset_from(p_0)
@@ -4322,7 +1839,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                                                      +
                                                                      1 as
                                                                          libc::c_int)
-                                                                    as isize)
+                                                                   )
                                             }
                                         len = newlen;
                                         arg = comma;
@@ -4332,36 +1849,36 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         14151404249770905673 => { }
                                         _ => {
                                             /* RFC 3361, enc byte is zero for names */
-                                            if (*new).opt ==
-                                                   120 as libc::c_int &&
+                                            if new.opt ==
+                                                   120 &&
                                                    !m.is_null() {
-                                                *m.offset(0 as libc::c_int as
+                                                *m.offset(0 as
                                                               isize) =
-                                                    0 as libc::c_int as
+                                                    0 as
                                                         libc::c_uchar
                                             }
-                                            (*new).len =
-                                                len as libc::c_int +
+                                            new.len =
+                                                len +
                                                     header_size;
-                                            (*new).val = m;
+                                            new.val = m;
                                             current_block =
                                                 15439134456549723682;
                                         }
                                     }
                                 } else if !comma.is_null() &&
-                                              opt_len as libc::c_int &
-                                                  0x800 as libc::c_int != 0 {
+                                              opt_len &
+                                                  0x800 != 0 {
                                     /* length fields are two bytes so need 16 bits for each string */
                                     let mut i_0: libc::c_int = 0;
                                     let mut commas: libc::c_int =
-                                        1 as libc::c_int;
+                                        1;
                                     let mut p_1: *mut libc::c_uchar =
                                         0 as *mut libc::c_uchar;
                                     let mut newp_0: *mut libc::c_uchar =
                                         0 as *mut libc::c_uchar;
-                                    i_0 = 0 as libc::c_int;
-                                    while *comma.offset(i_0 as isize) != 0 {
-                                        if *comma.offset(i_0 as isize) as
+                                    i_0 = 0;
+                                    while *comma.offset(i_0) != 0 {
+                                        if *comma.offset(i_0) as
                                                libc::c_int == ',' as i32 {
                                             commas += 1
                                         }
@@ -4380,7 +1897,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     arg = comma;
                                     comma = split(arg);
                                     while !arg.is_null() &&
-                                              *arg as libc::c_int != 0 {
+                                              *arg != 0 {
                                         let mut len_0: u16 =
                                             strlen(arg) as u16;
                                         unhide_metas(arg);
@@ -4390,30 +1907,30 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                         let fresh22 = t_cp_0;
                                         t_cp_0 = t_cp_0.offset(1);
                                         *fresh22 =
-                                            (t_s_0 as libc::c_int >>
-                                                 8 as libc::c_int) as
+                                            (t_s_0 >>
+                                                 8) as
                                                 libc::c_uchar;
                                         *t_cp_0 = t_s_0 as libc::c_uchar;
                                         p_1 =
-                                            p_1.offset(2 as libc::c_int as
+                                            p_1.offset(2 as
                                                            isize);
                                         memcpy(p_1 as *mut libc::c_void,
                                                arg as *const libc::c_void,
                                                len_0 as libc::c_ulong);
                                         p_1 =
-                                            p_1.offset(len_0 as libc::c_int as
+                                            p_1.offset(len_0 as
                                                            isize);
                                         arg = comma;
                                         comma = split(arg)
                                     }
-                                    (*new).val = newp_0;
-                                    (*new).len =
+                                    new.val = newp_0;
+                                    new.len =
                                         p_1.wrapping_offset_from(newp_0) as
-                                            libc::c_long as libc::c_int;
+                                            libc::c_long;
                                     current_block = 15439134456549723682;
                                 } else if !comma.is_null() &&
-                                              opt_len as libc::c_int &
-                                                  0x4000 as libc::c_int != 0 {
+                                              opt_len &
+                                                  0x4000 != 0 {
                                     let mut p_2: *mut libc::c_uchar =
                                         0 as *mut libc::c_uchar;
                                     let mut q_0: *mut libc::c_uchar =
@@ -4423,18 +1940,18 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     let mut end: *mut libc::c_uchar =
                                         0 as *mut libc::c_uchar;
                                     let mut len_1: libc::c_int =
-                                        0 as libc::c_int;
+                                        0;
                                     let mut header_size_0: libc::c_int =
                                         if is6 != 0 &&
-                                               (*new).opt == 56 as libc::c_int
+                                               new.opt == 56
                                            {
-                                            4 as libc::c_int
-                                        } else { 0 as libc::c_int };
+                                            4
+                                        } else { 0 };
                                     arg = comma;
                                     comma = split(arg);
                                     loop  {
                                         if !(!arg.is_null() &&
-                                                 *arg as libc::c_int != 0) {
+                                                 *arg != 0) {
                                             current_block =
                                                 7499465236084769340;
                                             break ;
@@ -4471,7 +1988,7 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                                          *mut libc::c_void);
                                             }
                                             p_2 = newp_1;
-                                            q_0 = p_2.offset(len_1 as isize);
+                                            q_0 = p_2.offset(len_1);
                                             end =
                                                 do_rfc1035_name(q_0.offset(header_size_0
                                                                                as
@@ -4482,32 +1999,32 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                             let fresh23 = end;
                                             end = end.offset(1);
                                             *fresh23 =
-                                                0 as libc::c_int as
+                                                0 as
                                                     libc::c_uchar;
                                             if is6 != 0 &&
-                                                   (*new).opt ==
-                                                       56 as libc::c_int {
+                                                   new.opt ==
+                                                       56 {
                                                 let mut t_s_1: u16 =
-                                                    3 as libc::c_int as u16;
+                                                    3 as u16;
                                                 let mut t_cp_1:
                                                         *mut libc::c_uchar =
                                                     q_0;
                                                 let fresh24 = t_cp_1;
                                                 t_cp_1 = t_cp_1.offset(1);
                                                 *fresh24 =
-                                                    (t_s_1 as libc::c_int >>
-                                                         8 as libc::c_int) as
+                                                    (t_s_1 >>
+                                                         8) as
                                                         libc::c_uchar;
                                                 *t_cp_1 =
                                                     t_s_1 as libc::c_uchar;
                                                 q_0 =
                                                     q_0.offset(2 as
                                                                    libc::c_int
-                                                                   as isize);
+                                                                  );
                                                 let mut t_s_2: u16 =
                                                     (end.wrapping_offset_from(q_0)
                                                          as libc::c_long -
-                                                         2 as libc::c_int as
+                                                         2 as
                                                              libc::c_long) as
                                                         u16;
                                                 let mut t_cp_2:
@@ -4516,15 +2033,15 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                                 let fresh25 = t_cp_2;
                                                 t_cp_2 = t_cp_2.offset(1);
                                                 *fresh25 =
-                                                    (t_s_2 as libc::c_int >>
-                                                         8 as libc::c_int) as
+                                                    (t_s_2 >>
+                                                         8) as
                                                         libc::c_uchar;
                                                 *t_cp_2 =
                                                     t_s_2 as libc::c_uchar;
                                                 q_0 =
                                                     q_0.offset(2 as
                                                                    libc::c_int
-                                                                   as isize)
+                                                                  )
                                             }
                                             len_1 =
                                                 end.wrapping_offset_from(p_2)
@@ -4538,19 +2055,19 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     match current_block {
                                         14151404249770905673 => { }
                                         _ => {
-                                            (*new).val = p_2;
-                                            (*new).len = len_1;
+                                            new.val = p_2;
+                                            new.len = len_1;
                                             current_block =
                                                 15439134456549723682;
                                         }
                                     }
                                 } else {
-                                    (*new).len = strlen(comma) as libc::c_int;
+                                    new.len = strlen(comma);
                                     /* keep terminating zero on string */
-                                    (*new).val =
+                                    new.val =
                                         opt_string_alloc(comma) as
                                             *mut libc::c_uchar;
-                                    (*new).flags |= 2 as libc::c_int;
+                                    new.flags |= 2;
                                     current_block = 15439134456549723682;
                                 }
                             } else { current_block = 15439134456549723682; }
@@ -4561,23 +2078,23 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                     14151404249770905673 => { }
                     _ => {
                         if is6 == 0 &&
-                               ((*new).len > 255 as libc::c_int ||
-                                    (*new).len > 253 as libc::c_int &&
-                                        (*new).flags &
-                                            (256 as libc::c_int |
-                                                 4 as libc::c_int) != 0 ||
-                                    (*new).len > 250 as libc::c_int &&
-                                        (*new).flags & 2048 as libc::c_int !=
+                               (new.len > 255 ||
+                                    new.len > 253 &&
+                                        new.flags &
+                                            (256 |
+                                                 4) != 0 ||
+                                    new.len > 250 &&
+                                        new.flags & 2048 !=
                                             0) {
                             strcpy(errstr,
                                    b"dhcp-option too long\x00" as *const u8 as
                                        *const libc::c_char);
                         } else {
-                            if flags == 128 as libc::c_int {
-                                if (*new).flags &
-                                       (4 as libc::c_int | 256 as libc::c_int)
-                                       != 0 || (*new).netid.is_null() ||
-                                       !(*(*new).netid).next.is_null() {
+                            if flags == 128 {
+                                if new.flags &
+                                       (4 | 256)
+                                       != 0 || new.netid.is_null() ||
+                                       !(*new.netid).next.is_null() {
                                     strcpy(errstr,
                                            b"illegal dhcp-match\x00" as
                                                *const u8 as
@@ -4585,30 +2102,30 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
                                     current_block = 14151404249770905673;
                                 } else {
                                     if is6 != 0 {
-                                        (*new).next =
-                                            (*dnsmasq_daemon).dhcp_match6;
-                                        (*dnsmasq_daemon).dhcp_match6 = new
+                                        new.next =
+                                            daemon.dhcp_match6;
+                                        daemon.dhcp_match6 = new
                                     } else {
-                                        (*new).next =
-                                            (*dnsmasq_daemon).dhcp_match;
-                                        (*dnsmasq_daemon).dhcp_match = new
+                                        new.next =
+                                            daemon.dhcp_match;
+                                        daemon.dhcp_match = new
                                     }
                                     current_block = 7621687701095090519;
                                 }
                             } else {
                                 if is6 != 0 {
-                                    (*new).next =
-                                        (*dnsmasq_daemon).dhcp_opts6;
-                                    (*dnsmasq_daemon).dhcp_opts6 = new
+                                    new.next =
+                                        daemon.dhcp_opts6;
+                                    daemon.dhcp_opts6 = new
                                 } else {
-                                    (*new).next = (*dnsmasq_daemon).dhcp_opts;
-                                    (*dnsmasq_daemon).dhcp_opts = new
+                                    new.next = daemon.dhcp_opts;
+                                    daemon.dhcp_opts = new
                                 }
                                 current_block = 7621687701095090519;
                             }
                             match current_block {
                                 14151404249770905673 => { }
-                                _ => { return 1 as libc::c_int }
+                                _ => { return 1 }
                             }
                         }
                     }
@@ -4618,11 +2135,11 @@ unsafe extern "C" fn parse_dhcp_opt(mut errstr: *mut libc::c_char,
         _ => { }
     }
     dhcp_opt_free(new);
-    return 0 as libc::c_int;
+    return 0;
 }
 #[no_mangle]
-pub unsafe extern "C" fn set_option_bool(mut opt: libc::c_uint) {
-    (*dnsmasq_daemon).options[(opt as
+pub  fn set_option_bool(mut opt: libc::c_uint) {
+    daemon.options[(opt as
                                    libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                     as
                                                                     libc::c_ulong).wrapping_mul(8
@@ -4642,8 +2159,8 @@ pub unsafe extern "C" fn set_option_bool(mut opt: libc::c_uint) {
                                                                                   libc::c_ulong));
 }
 #[no_mangle]
-pub unsafe extern "C" fn reset_option_bool(mut opt: libc::c_uint) {
-    (*dnsmasq_daemon).options[(opt as
+pub  fn reset_option_bool(mut opt: libc::c_uint) {
+    daemon.options[(opt as
                                    libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                     as
                                                                     libc::c_ulong).wrapping_mul(8
@@ -4662,14 +2179,14 @@ pub unsafe extern "C" fn reset_option_bool(mut opt: libc::c_uint) {
                                                                                     as
                                                                                     libc::c_ulong)));
 }
-unsafe extern "C" fn server_list_free(mut list: *mut Server) {
+ fn server_list_free(mut list: *mut Server) {
     while !list.is_null() {
         let mut tmp: *mut Server = list;
         list = (*list).next;
         free(tmp as *mut libc::c_void);
     };
 }
-unsafe extern "C" fn one_opt(mut option: libc::c_int,
+ fn one_opt(mut option: libc::c_int,
                              mut arg: *mut libc::c_char,
                              mut errstr: *mut libc::c_char,
                              mut gen_err: *mut libc::c_char,
@@ -4680,43 +2197,43 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
     let mut comma: *mut libc::c_char = 0 as *mut libc::c_char;
     if option == '?' as i32 {
         strcpy(errstr, gen_err);
-        return 0 as libc::c_int
+        return 0
     }
-    i = 0 as libc::c_int;
-    while usage[i as usize].opt != 0 as libc::c_int {
+    i = 0;
+    while usage[i as usize].opt != 0 {
         if usage[i as usize].opt == option {
-            let mut rept: libc::c_int = usage[i as usize].rept as libc::c_int;
+            let mut rept: libc::c_int = usage[i as usize].rept;
             if command_line != 0 {
                 /* command line */
-                if rept == 62 as libc::c_int + 2 as libc::c_int {
+                if rept == 62 + 2 {
                     strcpy(errstr,
                            b"illegal repeated flag\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
-                if rept == 62 as libc::c_int + 1 as libc::c_int {
+                if rept == 62 + 1 {
                     usage[i as usize].rept =
-                        (62 as libc::c_int + 2 as libc::c_int) as libc::c_uint
+                        (62 + 2) as libc::c_uint
                 }
             } else {
                 /* allow file to override command line */
-                if rept == 62 as libc::c_int + 3 as libc::c_int {
+                if rept == 62 + 3 {
                     strcpy(errstr,
                            b"illegal repeated keyword\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
-                if rept == 62 as libc::c_int + 2 as libc::c_int ||
-                       rept == 62 as libc::c_int + 1 as libc::c_int {
+                if rept == 62 + 2 ||
+                       rept == 62 + 1 {
                     usage[i as usize].rept =
-                        (62 as libc::c_int + 3 as libc::c_int) as libc::c_uint
+                        (62 + 3) as libc::c_uint
                 }
             }
-            if rept != 62 as libc::c_int &&
-                   rept != 62 as libc::c_int + 1 as libc::c_int &&
-                   rept != 62 as libc::c_int + 2 as libc::c_int {
+            if rept != 62 &&
+                   rept != 62 + 1 &&
+                   rept != 62 + 2 {
                 set_option_bool(rept as libc::c_uint);
-                return 1 as libc::c_int
+                return 1
             }
             break ;
         } else { i += 1 }
@@ -4726,7 +2243,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* --conf-file */
             let mut file: *mut libc::c_char = opt_string_alloc(arg);
             if !file.is_null() {
-                one_file(file, 0 as libc::c_int);
+                one_file(file, 0);
                 free(file as *mut libc::c_void);
             }
             current_block = 7879481898411272068;
@@ -4749,14 +2266,14 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 arg = comma;
                 while !arg.is_null() {
                     comma = split(arg);
-                    if strlen(arg) != 0 as libc::c_int as libc::c_ulong {
+                    if strlen(arg) != 0 as libc::c_ulong {
                         li =
                             opt_malloc(::std::mem::size_of::<list>() as
                                            libc::c_ulong) as *mut list;
-                        if *arg as libc::c_int == '*' as i32 {
+                        if *arg == '*' as i32 {
                             /* "*" with no suffix is a no-op */
-                            if *arg.offset(1 as libc::c_int as isize) as
-                                   libc::c_int == 0 as libc::c_int {
+                            if *arg.offset(1) as
+                                   libc::c_int == 0 {
                                 free(li as *mut libc::c_void);
                             } else {
                                 (*li).next = match_suffix;
@@ -4765,7 +2282,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                 (*li).name =
                                     opt_string_alloc(arg.offset(1 as
                                                                     libc::c_int
-                                                                    as isize))
+                                                                   ))
                             }
                         } else {
                             (*li).next = ignore_suffix;
@@ -4780,7 +2297,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 if dir_stream.is_null() {
                     die(b"cannot access directory %s: %s\x00" as *const u8 as
                             *const libc::c_char as *mut libc::c_char,
-                        directory, 3 as libc::c_int);
+                        directory, 3);
                 }
                 loop  {
                     ent = readdir(dir_stream);
@@ -4803,19 +2320,19 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                              st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
                              __glibc_reserved: [0; 3],};
                     /* ignore emacs backups and dotfiles */
-                    if len == 0 as libc::c_int as libc::c_ulong ||
-                           (*ent).d_name[len.wrapping_sub(1 as libc::c_int as
+                    if len == 0 as libc::c_ulong ||
+                           (*ent).d_name[len.wrapping_sub(1 as
                                                               libc::c_ulong)
-                                             as usize] as libc::c_int ==
+                                             as usize] ==
                                '~' as i32 ||
-                           (*ent).d_name[0 as libc::c_int as usize] as
+                           (*ent).d_name[0 as usize] as
                                libc::c_int == '#' as i32 &&
-                               (*ent).d_name[len.wrapping_sub(1 as libc::c_int
+                               (*ent).d_name[len.wrapping_sub(1
                                                                   as
                                                                   libc::c_ulong)
-                                                 as usize] as libc::c_int ==
+                                                 as usize] ==
                                    '#' as i32 ||
-                           (*ent).d_name[0 as libc::c_int as usize] as
+                           (*ent).d_name[0 as usize] as
                                libc::c_int == '.' as i32 {
                         continue ;
                     }
@@ -4829,7 +2346,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                           &mut *(*ent).d_name.as_mut_ptr().offset(len.wrapping_sub(ls)
                                                                                       as
                                                                                       isize))
-                                       == 0 as libc::c_int {
+                                       == 0 {
                                 break ;
                             }
                             li = (*li).next
@@ -4845,7 +2362,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                       &mut *(*ent).d_name.as_mut_ptr().offset(len.wrapping_sub(ls_0)
                                                                                   as
                                                                                   isize))
-                                   == 0 as libc::c_int {
+                                   == 0 {
                             break ;
                         }
                         li = (*li).next
@@ -4863,36 +2380,36 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                            b"/\x00" as *const u8 as *const libc::c_char);
                     strcat(path, (*ent).d_name.as_mut_ptr());
                     /* files must be readable */
-                    if stat(path, &mut buf) == -(1 as libc::c_int) {
+                    if stat(path, &mut buf) == -(1) {
                         die(b"cannot access %s: %s\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char,
-                            path, 3 as libc::c_int);
+                            path, 3);
                     }
                     /* only reg files allowed. */
-                    if buf.st_mode & 0o170000 as libc::c_int as libc::c_uint
-                           == 0o100000 as libc::c_int as libc::c_uint {
+                    if buf.st_mode & 0o170000 as libc::c_uint
+                           == 0o100000 as libc::c_uint {
                         /* sort files into order. */
                         let mut up: *mut *mut list = 0 as *mut *mut list;
                         let mut new: *mut list =
                             opt_malloc(::std::mem::size_of::<list>() as
                                            libc::c_ulong) as *mut list;
-                        (*new).name = path;
+                        new.name = path;
                         up = &mut files;
                         li = files;
                         while !li.is_null() {
-                            if strcmp((*li).name, path) >= 0 as libc::c_int {
+                            if strcmp((*li).name, path) >= 0 {
                                 break ;
                             }
                             up = &mut (*li).next;
                             li = (*li).next
                         }
-                        (*new).next = li;
+                        new.next = li;
                         *up = new
                     }
                 }
                 li = files;
                 while !li.is_null() {
-                    one_file((*li).name, 0 as libc::c_int);
+                    one_file((*li).name, 0);
                     li = (*li).next
                 }
                 closedir(dir_stream);
@@ -4920,7 +2437,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         325 => {
             /* --add-subnet */
-            set_option_bool(41 as libc::c_int as libc::c_uint);
+            set_option_bool(41 as libc::c_uint);
             if !arg.is_null() {
                 let mut err: *mut libc::c_char = 0 as *mut libc::c_char;
                 let mut end: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -4935,20 +2452,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     if !err.is_null() {
                         strcpy(errstr, err);
                         free(new_0 as *mut libc::c_void);
-                        return 0 as libc::c_int
+                        return 0
                     }
                     if atoi_check(end, &mut (*new_0).mask) == 0 {
                         strcpy(errstr, gen_err);
                         free(new_0 as *mut libc::c_void);
-                        return 0 as libc::c_int
+                        return 0
                     }
-                    (*new_0).addr_used = 1 as libc::c_int
+                    (*new_0).addr_used = 1
                 } else if atoi_check(arg, &mut (*new_0).mask) == 0 {
                     strcpy(errstr, gen_err);
                     free(new_0 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 }
-                (*dnsmasq_daemon).add_subnet4 = new_0;
+                daemon.add_subnet4 = new_0;
                 if !comma.is_null() {
                     new_0 =
                         opt_malloc(::std::mem::size_of::<Mysubnet>() as
@@ -4960,31 +2477,31 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         if !err.is_null() {
                             strcpy(errstr, err);
                             free(new_0 as *mut libc::c_void);
-                            return 0 as libc::c_int
+                            return 0
                         }
                         if atoi_check(end, &mut (*new_0).mask) == 0 {
                             strcpy(errstr, gen_err);
                             free(new_0 as *mut libc::c_void);
-                            return 0 as libc::c_int
+                            return 0
                         }
-                        (*new_0).addr_used = 1 as libc::c_int
+                        (*new_0).addr_used = 1
                     } else if atoi_check(comma, &mut (*new_0).mask) == 0 {
                         strcpy(errstr, gen_err);
                         free(new_0 as *mut libc::c_void);
-                        return 0 as libc::c_int
+                        return 0
                     }
-                    (*dnsmasq_daemon).add_subnet6 = new_0
+                    daemon.add_subnet6 = new_0
                 }
             }
             current_block = 7879481898411272068;
         }
         49 => {
             /* --enable-dbus */
-            set_option_bool(19 as libc::c_int as libc::c_uint);
+            set_option_bool(19 as libc::c_uint);
             if !arg.is_null() {
-                (*dnsmasq_daemon).dbus_name = opt_string_alloc(arg)
+                daemon.dbus_name = opt_string_alloc(arg)
             } else {
-                (*dnsmasq_daemon).dbus_name =
+                daemon.dbus_name =
                     b"uk.org.thekelleys.dnsmasq\x00" as *const u8 as
                         *const libc::c_char as *mut libc::c_char
             }
@@ -4992,11 +2509,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         354 => {
             /* --enable-ubus */
-            set_option_bool(58 as libc::c_int as libc::c_uint);
+            set_option_bool(58 as libc::c_uint);
             if !arg.is_null() {
-                (*dnsmasq_daemon).ubus_name = opt_string_alloc(arg)
+                daemon.ubus_name = opt_string_alloc(arg)
             } else {
-                (*dnsmasq_daemon).ubus_name =
+                daemon.ubus_name =
                     b"dnsmasq\x00" as *const u8 as *const libc::c_char as
                         *mut libc::c_char
             }
@@ -5007,10 +2524,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* may be a filename */
             if !strchr(arg, '/' as i32).is_null() ||
                    strcmp(arg, b"-\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
-                (*dnsmasq_daemon).log_file = opt_string_alloc(arg)
+                       == 0 {
+                daemon.log_file = opt_string_alloc(arg)
             } else {
-                i = 0 as libc::c_int;
+                i = 0;
                 while !FACILITYNAMES[i as usize].c_name.is_null() {
                     if hostname_isequal(FACILITYNAMES[i as usize].c_name, arg)
                            != 0 {
@@ -5019,31 +2536,31 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     i += 1
                 }
                 if !FACILITYNAMES[i as usize].c_name.is_null() {
-                    (*dnsmasq_daemon).log_fac =
+                    daemon.log_fac =
                         FACILITYNAMES[i as usize].c_val
                 } else {
                     strcpy(errstr,
                            b"bad log facility\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
             }
             current_block = 7879481898411272068;
         }
         120 => {
             /* --pid-file */
-            (*dnsmasq_daemon).runfile = opt_string_alloc(arg);
+            daemon.runfile = opt_string_alloc(arg);
             current_block = 7879481898411272068;
         }
         114 => {
             /* --resolv-file */
             let mut name: *mut libc::c_char = opt_string_alloc(arg);
             let mut new_1: *mut Resolvc = 0 as *mut Resolvc;
-            let mut list_0: *mut Resolvc = (*dnsmasq_daemon).resolv_files;
+            let mut list_0: *mut Resolvc = daemon.resolv_files;
             if !list_0.is_null() && (*list_0).is_default != 0 {
                 /* replace default resolv file - possibly with nothing */
                 if !name.is_null() {
-                    (*list_0).is_default = 0 as libc::c_int;
+                    (*list_0).is_default = 0;
                     (*list_0).name = name
                 } else { list_0 = 0 as *mut Resolvc }
             } else if !name.is_null() {
@@ -5052,21 +2569,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    libc::c_ulong) as *mut Resolvc;
                 (*new_1).next = list_0;
                 (*new_1).name = name;
-                (*new_1).is_default = 0 as libc::c_int;
-                (*new_1).mtime = 0 as libc::c_int as time_t;
-                (*new_1).logged = 0 as libc::c_int;
+                (*new_1).is_default = 0;
+                (*new_1).mtime = 0 as time_t;
+                (*new_1).logged = 0;
                 list_0 = new_1
             }
-            (*dnsmasq_daemon).resolv_files = list_0;
+            daemon.resolv_files = list_0;
             current_block = 7879481898411272068;
         }
         333 => {
-            (*dnsmasq_daemon).servers_file = opt_string_alloc(arg);
+            daemon.servers_file = opt_string_alloc(arg);
             current_block = 7879481898411272068;
         }
         109 => {
             /* --mx-host */
-            let mut pref: libc::c_int = 1 as libc::c_int; /* may be NULL */
+            let mut pref: libc::c_int = 1; /* may be NULL */
             let mut new_2: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
             let mut name_0: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut target: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -5079,7 +2596,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     strcpy(errstr,
                            b"bad MX preference\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
             }
             name_0 = canonicalise_opt(arg);
@@ -5090,14 +2607,14 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad MX name\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             new_2 =
                 opt_malloc(::std::mem::size_of::<MxSrvRecord>() as
                                libc::c_ulong) as *mut MxSrvRecord;
-            (*new_2).next = (*dnsmasq_daemon).mxnames;
-            (*dnsmasq_daemon).mxnames = new_2;
-            (*new_2).issrv = 0 as libc::c_int;
+            (*new_2).next = daemon.mxnames;
+            daemon.mxnames = new_2;
+            (*new_2).issrv = 0;
             (*new_2).name = name_0;
             (*new_2).target = target;
             (*new_2).weight = pref;
@@ -5105,42 +2622,42 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         116 => {
             /*  --mx-target */
-            (*dnsmasq_daemon).mxtarget = canonicalise_opt(arg);
-            if (*dnsmasq_daemon).mxtarget.is_null() {
+            daemon.mxtarget = canonicalise_opt(arg);
+            if daemon.mxtarget.is_null() {
                 strcpy(errstr,
                        b"bad MX target\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         352 => {
             /* --dumpfile */
-            (*dnsmasq_daemon).dump_file = opt_string_alloc(arg);
+            daemon.dump_file = opt_string_alloc(arg);
             current_block = 7879481898411272068;
         }
         353 => {
             /* --dumpmask */
-            (*dnsmasq_daemon).dump_mask =
-                strtol(arg, 0 as *mut *mut libc::c_char, 0 as libc::c_int) as
+            daemon.dump_mask =
+                strtol(arg, 0 as *mut *mut libc::c_char, 0) as
                     libc::c_int;
             current_block = 7879481898411272068;
         }
         108 => {
             /* --dhcp-leasefile */
-            (*dnsmasq_daemon).lease_file = opt_string_alloc(arg);
+            daemon.lease_file = opt_string_alloc(arg);
             current_block = 7879481898411272068;
         }
         54 | 305 => {
             /* --dhcp-script */
             /* --dhcp-luascript */
-            if option == 305 as libc::c_int {
+            if option == 305 {
                 strcpy(errstr,
                        b"recompile with HAVE_LUASCRIPT defined to enable Lua scripts\x00"
                            as *const u8 as *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             } else {
-                (*dnsmasq_daemon).lease_change_command = opt_string_alloc(arg)
+                daemon.lease_change_command = opt_string_alloc(arg)
             }
             current_block = 7879481898411272068;
         }
@@ -5156,7 +2673,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         314 => {
             /* --auth-server */
             comma = split(arg);
-            (*dnsmasq_daemon).authserver = opt_string_alloc(arg);
+            daemon.authserver = opt_string_alloc(arg);
             loop  {
                 arg = comma;
                 if arg.is_null() { break ; }
@@ -5166,46 +2683,46 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 comma = split(arg);
                 (*new_4).name = 0 as *mut libc::c_char;
                 unhide_metas(arg);
-                if inet_pton(2 as libc::c_int, arg,
+                if inet_pton(2, arg,
                              &mut (*new_4).addr.in_0.sin_addr as *mut InAddr
-                                 as *mut libc::c_void) > 0 as libc::c_int {
+                                 as *mut libc::c_void) > 0 {
                     (*new_4).addr.sa.sa_family =
-                        2 as libc::c_int as sa_family_t
-                } else if inet_pton(10 as libc::c_int, arg,
+                        2 as SaFamily
+                } else if inet_pton(10, arg,
                                     &mut (*new_4).addr.in6.sin6_addr as
                                         *mut In6Addr as *mut libc::c_void) >
-                              0 as libc::c_int {
+                              0 {
                     (*new_4).addr.sa.sa_family =
-                        10 as libc::c_int as sa_family_t
+                        10 as SaFamily
                 } else {
                     let mut fam: *mut libc::c_char =
                         split_chr(arg, '/' as i32 as libc::c_char);
                     (*new_4).name = opt_string_alloc(arg);
                     (*new_4).addr.sa.sa_family =
-                        0 as libc::c_int as sa_family_t;
+                        0 as SaFamily;
                     if !fam.is_null() {
                         if strcmp(fam,
                                   b"4\x00" as *const u8 as
-                                      *const libc::c_char) == 0 as libc::c_int
+                                      *const libc::c_char) == 0
                            {
                             (*new_4).addr.sa.sa_family =
-                                2 as libc::c_int as sa_family_t
+                                2 as SaFamily
                         } else if strcmp(fam,
                                          b"6\x00" as *const u8 as
                                              *const libc::c_char) ==
-                                      0 as libc::c_int {
+                                      0 {
                             (*new_4).addr.sa.sa_family =
-                                10 as libc::c_int as sa_family_t
+                                10 as SaFamily
                         } else {
                             free((*new_4).name as *mut libc::c_void);
                             strcpy(errstr, gen_err);
                             free(new_4 as *mut libc::c_void);
-                            return 0 as libc::c_int
+                            return 0
                         }
                     }
                 }
-                (*new_4).next = (*dnsmasq_daemon).authinterface;
-                (*dnsmasq_daemon).authinterface = new_4
+                (*new_4).next = daemon.authinterface;
+                daemon.authinterface = new_4
             }
             current_block = 7879481898411272068;
         }
@@ -5218,8 +2735,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     opt_malloc(::std::mem::size_of::<NameList>() as
                                    libc::c_ulong) as *mut NameList;
                 (*new_5).name = opt_string_alloc(arg);
-                (*new_5).next = (*dnsmasq_daemon).secondary_forward_server;
-                (*dnsmasq_daemon).secondary_forward_server = new_5;
+                (*new_5).next = daemon.secondary_forward_server;
+                daemon.secondary_forward_server = new_5;
                 arg = comma;
                 if arg.is_null() { break ; }
             }
@@ -5236,13 +2753,13 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             (*new_6).subnet = 0 as *mut AddrList;
             (*new_6).exclude = 0 as *mut AddrList;
             (*new_6).interface_names = 0 as *mut AuthNameList;
-            (*new_6).next = (*dnsmasq_daemon).auth_zones;
-            (*dnsmasq_daemon).auth_zones = new_6;
+            (*new_6).next = daemon.auth_zones;
+            daemon.auth_zones = new_6;
             loop  {
                 arg = comma;
                 if arg.is_null() { break ; }
-                let mut prefixlen: libc::c_int = 0 as libc::c_int;
-                let mut is_exclude: libc::c_int = 0 as libc::c_int;
+                let mut prefixlen: libc::c_int = 0;
+                let mut is_exclude: libc::c_int = 0;
                 let mut prefix: *mut libc::c_char = 0 as *mut libc::c_char;
                 let mut subnet: *mut AddrList = 0 as *mut AddrList;
                 let mut addr: AllAddr =
@@ -5252,52 +2769,52 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 if !prefix.is_null() &&
                        atoi_check(prefix, &mut prefixlen) == 0 {
                     strcpy(errstr, gen_err);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 if strstr(arg,
                           b"exclude:\x00" as *const u8 as *const libc::c_char)
                        == arg {
-                    is_exclude = 1 as libc::c_int;
-                    arg = arg.offset(8 as libc::c_int as isize)
+                    is_exclude = 1;
+                    arg = arg.offset(8)
                 }
-                if inet_pton(2 as libc::c_int, arg,
+                if inet_pton(2, arg,
                              &mut addr.addr4 as *mut InAddr as
                                  *mut libc::c_void) != 0 {
                     subnet =
                         opt_malloc(::std::mem::size_of::<AddrList>() as
                                        libc::c_ulong) as *mut AddrList;
                     (*subnet).prefixlen =
-                        if prefixlen == 0 as libc::c_int {
-                            24 as libc::c_int
+                        if prefixlen == 0 {
+                            24
                         } else { prefixlen };
-                    (*subnet).flags = 1 as libc::c_int
-                } else if inet_pton(10 as libc::c_int, arg,
+                    (*subnet).flags = 1
+                } else if inet_pton(10, arg,
                                     &mut addr.addr6 as *mut In6Addr as
                                         *mut libc::c_void) != 0 {
                     subnet =
                         opt_malloc(::std::mem::size_of::<AddrList>() as
                                        libc::c_ulong) as *mut AddrList;
                     (*subnet).prefixlen =
-                        if prefixlen == 0 as libc::c_int {
-                            64 as libc::c_int
+                        if prefixlen == 0 {
+                            64
                         } else { prefixlen };
-                    (*subnet).flags = 1 as libc::c_int | 2 as libc::c_int
+                    (*subnet).flags = 1 | 2
                 } else {
                     let mut name_1: *mut AuthNameList =
                         opt_malloc(::std::mem::size_of::<AuthNameList>() as
                                        libc::c_ulong) as *mut AuthNameList;
                     (*name_1).name = opt_string_alloc(arg);
-                    (*name_1).flags = 2 as libc::c_int | 1 as libc::c_int;
+                    (*name_1).flags = 2 | 1;
                     (*name_1).next = (*new_6).interface_names;
                     (*new_6).interface_names = name_1;
                     if !prefix.is_null() {
-                        if prefixlen == 4 as libc::c_int {
-                            (*name_1).flags &= !(1 as libc::c_int)
-                        } else if prefixlen == 6 as libc::c_int {
-                            (*name_1).flags &= !(2 as libc::c_int)
+                        if prefixlen == 4 {
+                            (*name_1).flags &= !(1)
+                        } else if prefixlen == 6 {
+                            (*name_1).flags &= !(2)
                         } else {
                             strcpy(errstr, gen_err);
-                            return 0 as libc::c_int
+                            return 0
                         }
                     }
                 }
@@ -5317,31 +2834,31 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         316 => {
             /* --auth-soa */
             comma = split(arg);
-            (*dnsmasq_daemon).soa_sn = atoi(arg) as u32 as libc::c_ulong;
+            daemon.soa_sn = atoi(arg) as u32 as libc::c_ulong;
             if !comma.is_null() {
                 let mut cp: *mut libc::c_char = 0 as *mut libc::c_char;
                 arg = comma;
                 comma = split(arg);
-                (*dnsmasq_daemon).hostmaster = opt_string_alloc(arg);
-                cp = (*dnsmasq_daemon).hostmaster;
-                while *cp != 0 {
-                    if *cp as libc::c_int == '@' as i32 {
-                        *cp = '.' as i32 as libc::c_char
+                daemon.hostmaster = opt_string_alloc(arg);
+                cp = daemon.hostmaster;
+                while cp != 0 {
+                    if cp == '@' as i32 {
+                        cp = '.' as i32 as libc::c_char
                     }
                     cp = cp.offset(1)
                 }
                 if !comma.is_null() {
                     arg = comma;
                     comma = split(arg);
-                    (*dnsmasq_daemon).soa_refresh =
+                    daemon.soa_refresh =
                         atoi(arg) as u32 as libc::c_ulong;
                     if !comma.is_null() {
                         arg = comma;
                         comma = split(arg);
-                        (*dnsmasq_daemon).soa_retry =
+                        daemon.soa_retry =
                             atoi(arg) as u32 as libc::c_ulong;
                         if !comma.is_null() {
-                            (*dnsmasq_daemon).soa_expiry =
+                            daemon.soa_expiry =
                                 atoi(comma) as u32 as libc::c_ulong
                         }
                     }
@@ -5353,15 +2870,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             /* --domain */
             /* --synth-domain */
             if strcmp(arg, b"#\x00" as *const u8 as *const libc::c_char) ==
-                   0 as libc::c_int {
-                set_option_bool(15 as libc::c_int as libc::c_uint);
+                   0 {
+                set_option_bool(15 as libc::c_uint);
             } else {
                 let mut d: *mut libc::c_char = 0 as *mut libc::c_char;
                 comma = split(arg);
                 d = canonicalise_opt(arg);
                 if d.is_null() {
                     strcpy(errstr, gen_err);
-                    return 0 as libc::c_int
+                    return 0
                 } else {
                     if !comma.is_null() {
                         let mut new_7: *mut CondDomain =
@@ -5370,7 +2887,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         let mut netpart: *mut libc::c_char =
                             0 as *mut libc::c_char;
                         (*new_7).prefix = 0 as *mut libc::c_char;
-                        (*new_7).indexed = 0 as libc::c_int;
+                        (*new_7).indexed = 0;
                         unhide_metas(comma);
                         netpart =
                             split_chr(comma, '/' as i32 as libc::c_char);
@@ -5380,17 +2897,17 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             if atoi_check(netpart, &mut msize) == 0 {
                                 strcpy(errstr, gen_err);
                                 free(new_7 as *mut libc::c_void);
-                                return 0 as libc::c_int
+                                return 0
                             } else {
-                                if inet_pton(2 as libc::c_int, comma,
+                                if inet_pton(2, comma,
                                              &mut (*new_7).start as
                                                  *mut InAddr as
                                                  *mut libc::c_void) != 0 {
                                     let mut mask: libc::c_int =
-                                        ((1 as libc::c_int) <<
-                                             32 as libc::c_int - msize) -
-                                            1 as libc::c_int;
-                                    (*new_7).is6 = 0 as libc::c_int;
+                                        ((1) <<
+                                             32 - msize) -
+                                            1;
+                                    (*new_7).is6 = 0;
                                     (*new_7).start.s_addr =
                                         __bswap_32(__bswap_32((*new_7).start.s_addr)
                                                        &
@@ -5404,8 +2921,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                 canonicalise_opt(arg);
                                             if (*new_7).prefix.is_null() ||
                                                    strlen((*new_7).prefix) >
-                                                       (63 as libc::c_int -
-                                                            16 as libc::c_int)
+                                                       (63 -
+                                                            16)
                                                            as libc::c_ulong {
                                                 strcpy(errstr,
                                                        b"bad prefix\x00" as
@@ -5413,15 +2930,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                            *const libc::c_char);
                                                 free(new_7 as
                                                          *mut libc::c_void);
-                                                return 0 as libc::c_int
+                                                return 0
                                             }
                                         } else if strcmp(arg,
                                                          b"local\x00" as
                                                              *const u8 as
                                                              *const libc::c_char)
-                                                      != 0 as libc::c_int ||
+                                                      != 0 ||
                                                       msize !=
-                                                          8 as libc::c_int &&
+                                                          8 &&
                                                           msize !=
                                                               16 as
                                                                   libc::c_int
@@ -5432,7 +2949,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                          {
                                             strcpy(errstr, gen_err);
                                             free(new_7 as *mut libc::c_void);
-                                            return 0 as libc::c_int
+                                            return 0
                                         } else {
                                             /* generate the equivalent of
 				      local=/xxx.yyy.zzz.in-addr.arpa/ */
@@ -5446,9 +2963,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                            *const libc::c_char);
                                                 free(new_7 as
                                                          *mut libc::c_void);
-                                                return 0 as libc::c_int
+                                                return 0
                                             }
-                                            (*serv).flags |= 2 as libc::c_int;
+                                            serv.flags |= 2;
                                             /* local=/<domain>/ */
                                             serv =
                                                 opt_malloc(::std::mem::size_of::<Server>()
@@ -5456,33 +2973,33 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                                libc::c_ulong)
                                                     as *mut Server;
                                             memset(serv as *mut libc::c_void,
-                                                   0 as libc::c_int,
+                                                   0,
                                                    ::std::mem::size_of::<Server>()
                                                        as libc::c_ulong);
-                                            (*serv).domain = d;
-                                            (*serv).flags =
-                                                8 as libc::c_int |
-                                                    2 as libc::c_int;
-                                            (*serv).next =
-                                                (*dnsmasq_daemon).servers;
-                                            (*dnsmasq_daemon).servers = serv
+                                            serv.domain = d;
+                                            serv.flags =
+                                                8 |
+                                                    2;
+                                            serv.next =
+                                                daemon.servers;
+                                            daemon.servers = serv
                                         }
                                     }
-                                } else if inet_pton(10 as libc::c_int, comma,
+                                } else if inet_pton(10, comma,
                                                     &mut (*new_7).start6 as
                                                         *mut In6Addr as
                                                         *mut libc::c_void) !=
                                               0 {
                                     let mut mask_0: u64 =
                                         ((1 as libc::c_ulonglong) <<
-                                             128 as libc::c_int -
+                                             128 -
                                                  msize).wrapping_sub(1 as
                                                                          libc::c_ulonglong);
                                     let mut addrpart: u64 =
                                         addr6part(&mut (*new_7).start6);
-                                    (*new_7).is6 = 1 as libc::c_int;
+                                    (*new_7).is6 = 1;
                                     /* prefix==64 overflows the mask calculation above */
-                                    if msize == 64 as libc::c_int {
+                                    if msize == 64 {
                                         mask_0 =
                                             -(1 as libc::c_longlong) as u64
                                     }
@@ -5491,10 +3008,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                  addrpart & !mask_0);
                                     setaddr6part(&mut (*new_7).end6,
                                                  addrpart | mask_0);
-                                    if msize < 64 as libc::c_int {
+                                    if msize < 64 {
                                         strcpy(errstr, gen_err);
                                         free(new_7 as *mut libc::c_void);
-                                        return 0 as libc::c_int
+                                        return 0
                                     } else {
                                         if !arg.is_null() {
                                             if option != 's' as i32 {
@@ -5504,7 +3021,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                        ||
                                                        strlen((*new_7).prefix)
                                                            >
-                                                           (63 as libc::c_int
+                                                           (63
                                                                 -
                                                                 46 as
                                                                     libc::c_int)
@@ -5516,23 +3033,23 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                                *const libc::c_char);
                                                     free(new_7 as
                                                              *mut libc::c_void);
-                                                    return 0 as libc::c_int
+                                                    return 0
                                                 }
                                             } else if strcmp(arg,
                                                              b"local\x00" as
                                                                  *const u8 as
                                                                  *const libc::c_char)
-                                                          != 0 as libc::c_int
+                                                          != 0
                                                           ||
                                                           msize &
-                                                              4 as libc::c_int
+                                                              4
                                                               !=
-                                                              0 as libc::c_int
+                                                              0
                                              {
                                                 strcpy(errstr, gen_err);
                                                 free(new_7 as
                                                          *mut libc::c_void);
-                                                return 0 as libc::c_int
+                                                return 0
                                             } else {
                                                 /* generate the equivalent of
 				     local=/xxx.yyy.zzz.ip6.arpa/ */
@@ -5540,7 +3057,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                     add_rev6(&mut (*new_7).start6,
                                                              msize);
                                                 (*serv_0).flags |=
-                                                    2 as libc::c_int;
+                                                    2;
                                                 /* local=/<domain>/ */
                                                 serv_0 =
                                                     opt_malloc(::std::mem::size_of::<Server>()
@@ -5549,16 +3066,16 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                         as *mut Server;
                                                 memset(serv_0 as
                                                            *mut libc::c_void,
-                                                       0 as libc::c_int,
+                                                       0,
                                                        ::std::mem::size_of::<Server>()
                                                            as libc::c_ulong);
                                                 (*serv_0).domain = d;
                                                 (*serv_0).flags =
-                                                    8 as libc::c_int |
-                                                        2 as libc::c_int;
+                                                    8 |
+                                                        2;
                                                 (*serv_0).next =
-                                                    (*dnsmasq_daemon).servers;
-                                                (*dnsmasq_daemon).servers =
+                                                    daemon.servers;
+                                                daemon.servers =
                                                     serv_0
                                             }
                                         }
@@ -5566,7 +3083,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                 } else {
                                     strcpy(errstr, gen_err);
                                     free(new_7 as *mut libc::c_void);
-                                    return 0 as libc::c_int
+                                    return 0
                                 }
                             }
                         } else {
@@ -5574,73 +3091,73 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                 0 as *mut libc::c_char;
                             arg = split(comma);
                             prefstr_0 = split(arg);
-                            if inet_pton(2 as libc::c_int, comma,
+                            if inet_pton(2, comma,
                                          &mut (*new_7).start as *mut InAddr
                                              as *mut libc::c_void) != 0 {
-                                (*new_7).is6 = 0 as libc::c_int;
+                                (*new_7).is6 = 0;
                                 if arg.is_null() {
                                     (*new_7).end.s_addr =
                                         (*new_7).start.s_addr
-                                } else if inet_pton(2 as libc::c_int, arg,
+                                } else if inet_pton(2, arg,
                                                     &mut (*new_7).end as
                                                         *mut InAddr as
                                                         *mut libc::c_void) ==
                                               0 {
                                     strcpy(errstr, gen_err);
                                     free(new_7 as *mut libc::c_void);
-                                    return 0 as libc::c_int
+                                    return 0
                                 }
-                            } else if inet_pton(10 as libc::c_int, comma,
+                            } else if inet_pton(10, comma,
                                                 &mut (*new_7).start6 as
                                                     *mut In6Addr as
                                                     *mut libc::c_void) != 0 {
-                                (*new_7).is6 = 1 as libc::c_int;
+                                (*new_7).is6 = 1;
                                 if arg.is_null() {
                                     memcpy(&mut (*new_7).end6 as *mut In6Addr
                                                as *mut libc::c_void,
                                            &mut (*new_7).start6 as
                                                *mut In6Addr as
                                                *const libc::c_void,
-                                           16 as libc::c_int as
+                                           16 as
                                                libc::c_ulong);
-                                } else if inet_pton(10 as libc::c_int, arg,
+                                } else if inet_pton(10, arg,
                                                     &mut (*new_7).end6 as
                                                         *mut In6Addr as
                                                         *mut libc::c_void) ==
                                               0 {
                                     strcpy(errstr, gen_err);
                                     free(new_7 as *mut libc::c_void);
-                                    return 0 as libc::c_int
+                                    return 0
                                 }
                             } else {
                                 strcpy(errstr, gen_err);
                                 free(new_7 as *mut libc::c_void);
-                                return 0 as libc::c_int
+                                return 0
                             }
                             if option != 's' as i32 && !prefstr_0.is_null() {
                                 (*new_7).prefix = canonicalise_opt(prefstr_0);
                                 if (*new_7).prefix.is_null() ||
                                        strlen((*new_7).prefix) >
-                                           (63 as libc::c_int -
-                                                16 as libc::c_int) as
+                                           (63 -
+                                                16) as
                                                libc::c_ulong {
                                     strcpy(errstr,
                                            b"bad prefix\x00" as *const u8 as
                                                *const libc::c_char);
                                     free(new_7 as *mut libc::c_void);
-                                    return 0 as libc::c_int
+                                    return 0
                                 }
                             }
                         }
                         (*new_7).domain = d;
                         if option == 's' as i32 {
-                            (*new_7).next = (*dnsmasq_daemon).cond_domain;
-                            (*dnsmasq_daemon).cond_domain = new_7
+                            (*new_7).next = daemon.cond_domain;
+                            daemon.cond_domain = new_7
                         } else {
                             let mut star: *mut libc::c_char =
                                 0 as *mut libc::c_char;
-                            (*new_7).next = (*dnsmasq_daemon).synth_domains;
-                            (*dnsmasq_daemon).synth_domains = new_7;
+                            (*new_7).next = daemon.synth_domains;
+                            daemon.synth_domains = new_7;
                             if !(*new_7).prefix.is_null() &&
                                    {
                                        star =
@@ -5648,17 +3165,17 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                    '*' as i32);
                                        !star.is_null()
                                    } &&
-                                   *star.offset(1 as libc::c_int as isize) as
-                                       libc::c_int == 0 as libc::c_int {
-                                *star = 0 as libc::c_int as libc::c_char;
-                                (*new_7).indexed = 1 as libc::c_int
+                                   *star.offset(1) as
+                                       libc::c_int == 0 {
+                                *star = 0 as libc::c_char;
+                                (*new_7).indexed = 1
                             }
                         }
                     } else if option == 's' as i32 {
-                        (*dnsmasq_daemon).domain_suffix = d
+                        daemon.domain_suffix = d
                     } else {
                         strcpy(errstr, gen_err);
-                        return 0 as libc::c_int
+                        return 0
                     }
                 }
             }
@@ -5667,59 +3184,59 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         346 => {
             /* --add-dns-client */
             if !arg.is_null() {
-                (*dnsmasq_daemon).dns_client_id = opt_string_alloc(arg)
+                daemon.dns_client_id = opt_string_alloc(arg)
             }
             current_block = 7879481898411272068;
         }
         300 => {
             /* --add-mac */
             if arg.is_null() {
-                set_option_bool(32 as libc::c_int as libc::c_uint);
+                set_option_bool(32 as libc::c_uint);
             } else {
                 unhide_metas(arg);
                 if strcmp(arg,
                           b"base64\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
-                    set_option_bool(54 as libc::c_int as libc::c_uint);
+                       == 0 {
+                    set_option_bool(54 as libc::c_uint);
                 } else if strcmp(arg,
                                  b"text\x00" as *const u8 as
-                                     *const libc::c_char) == 0 as libc::c_int
+                                     *const libc::c_char) == 0
                  {
-                    set_option_bool(55 as libc::c_int as libc::c_uint);
-                } else { strcpy(errstr, gen_err); return 0 as libc::c_int }
+                    set_option_bool(55 as libc::c_uint);
+                } else { strcpy(errstr, gen_err); return 0 }
             }
             current_block = 7879481898411272068;
         }
         117 => {
             /* --user */
-            (*dnsmasq_daemon).username = opt_string_alloc(arg);
+            daemon.username = opt_string_alloc(arg);
             current_block = 7879481898411272068;
         }
         103 => {
             /* --group */
-            (*dnsmasq_daemon).groupname = opt_string_alloc(arg);
-            (*dnsmasq_daemon).group_set = 1 as libc::c_int;
+            daemon.groupname = opt_string_alloc(arg);
+            daemon.group_set = 1;
             current_block = 7879481898411272068;
         }
         285 => {
             /* --scriptuser */
-            (*dnsmasq_daemon).scriptuser = opt_string_alloc(arg);
+            daemon.scriptuser = opt_string_alloc(arg);
             current_block = 7879481898411272068;
         }
         105 => {
-            loop 
+            loop
                  /* --interface */
                  {
                 let mut new_8: *mut Iname =
                     opt_malloc(::std::mem::size_of::<Iname>() as
                                    libc::c_ulong) as *mut Iname;
                 comma = split(arg);
-                (*new_8).next = (*dnsmasq_daemon).if_names;
-                (*dnsmasq_daemon).if_names = new_8;
+                (*new_8).next = daemon.if_names;
+                daemon.if_names = new_8;
                 /* new->name may be NULL if someone does
 	   "interface=" to disable all interfaces except loop. */
                 (*new_8).name = opt_string_alloc(arg);
-                (*new_8).used = 0 as libc::c_int;
+                (*new_8).used = 0;
                 arg = comma;
                 if arg.is_null() { break ; }
             }
@@ -5727,7 +3244,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         258 => {
             /* --enable-tftp */
-            set_option_bool(40 as libc::c_int as libc::c_uint);
+            set_option_bool(40 as libc::c_uint);
             if arg.is_null() {
                 current_block = 7879481898411272068;
             } else {
@@ -5743,7 +3260,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         338 => { current_block = 2926860427235594157; }
         97 | 318 => {
             /* --listen-address */
-            loop 
+            loop
                  /* --auth-peer */
                  {
                 let mut new_10: *mut Iname =
@@ -5752,40 +3269,40 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 comma = split(arg);
                 unhide_metas(arg);
                 if !arg.is_null() &&
-                       inet_pton(2 as libc::c_int, arg,
+                       inet_pton(2, arg,
                                  &mut (*new_10).addr.in_0.sin_addr as
                                      *mut InAddr as *mut libc::c_void) >
-                           0 as libc::c_int {
+                           0 {
                     (*new_10).addr.sa.sa_family =
-                        2 as libc::c_int as sa_family_t;
+                        2 as SaFamily;
                     (*new_10).addr.in_0.sin_port =
-                        0 as libc::c_int as in_port_t
+                        0 as in_port_t
                 } else if !arg.is_null() &&
-                              inet_pton(10 as libc::c_int, arg,
+                              inet_pton(10, arg,
                                         &mut (*new_10).addr.in6.sin6_addr as
                                             *mut In6Addr as
                                             *mut libc::c_void) >
-                                  0 as libc::c_int {
+                                  0 {
                     (*new_10).addr.sa.sa_family =
-                        10 as libc::c_int as sa_family_t;
+                        10 as SaFamily;
                     (*new_10).addr.in6.sin6_flowinfo =
-                        0 as libc::c_int as u32;
+                        0 as u32;
                     (*new_10).addr.in6.sin6_scope_id =
-                        0 as libc::c_int as u32;
+                        0 as u32;
                     (*new_10).addr.in6.sin6_port =
-                        0 as libc::c_int as in_port_t
+                        0 as in_port_t
                 } else {
                     strcpy(errstr, gen_err);
                     free(new_10 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 }
-                (*new_10).used = 0 as libc::c_int;
+                (*new_10).used = 0;
                 if option == 'a' as i32 {
-                    (*new_10).next = (*dnsmasq_daemon).if_addrs;
-                    (*dnsmasq_daemon).if_addrs = new_10
+                    (*new_10).next = daemon.if_addrs;
+                    daemon.if_addrs = new_10
                 } else {
-                    (*new_10).next = (*dnsmasq_daemon).auth_peers;
-                    (*dnsmasq_daemon).auth_peers = new_10
+                    (*new_10).next = daemon.auth_peers;
+                    daemon.auth_peers = new_10
                 }
                 arg = comma;
                 if arg.is_null() { break ; }
@@ -5810,15 +3327,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             unhide_metas(arg);
             if arg.is_null() {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             comma = split(arg);
             string = split_chr(arg, '/' as i32 as libc::c_char);
             if string.is_null() || atoi_check(string, &mut size) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
-            if inet_pton(2 as libc::c_int, arg,
+            if inet_pton(2, arg,
                          &mut addr4 as *mut InAddr as *mut libc::c_void) != 0
                {
                 serv_2 = add_rev4(addr4, size);
@@ -5826,13 +3343,13 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     strcpy(errstr,
                            b"bad prefix\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
-            } else if inet_pton(10 as libc::c_int, arg,
+            } else if inet_pton(10, arg,
                                 &mut addr6 as *mut In6Addr as
                                     *mut libc::c_void) != 0 {
                 serv_2 = add_rev6(&mut addr6, size)
-            } else { strcpy(errstr, gen_err); return 0 as libc::c_int }
+            } else { strcpy(errstr, gen_err); return 0 }
             string =
                 parse_server(comma, &mut (*serv_2).addr,
                              &mut (*serv_2).source_addr,
@@ -5840,9 +3357,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                              &mut (*serv_2).flags);
             if !string.is_null() {
                 strcpy(errstr, string);
-                return 0 as libc::c_int
+                return 0
             }
-            if servers_only != 0 { (*serv_2).flags |= 4096 as libc::c_int }
+            if servers_only != 0 { (*serv_2).flags |= 4096 }
             current_block = 7879481898411272068;
         }
         319 => {
@@ -5858,10 +3375,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 0 as *mut *mut libc::c_char;
             let mut sets_pos: *mut *mut libc::c_char =
                 0 as *mut *mut libc::c_char;
-            memset(ipsets as *mut libc::c_void, 0 as libc::c_int,
+            memset(ipsets as *mut libc::c_void, 0,
                    ::std::mem::size_of::<IpSets>() as libc::c_ulong);
             unhide_metas(arg);
-            if !arg.is_null() && *arg as libc::c_int == '/' as i32 {
+            if !arg.is_null() && *arg == '/' as i32 {
                 arg = arg.offset(1);
                 loop  {
                     end_1 = split_chr(arg, '/' as i32 as libc::c_char);
@@ -5869,30 +3386,30 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     let mut domain_0: *mut libc::c_char =
                         0 as *mut libc::c_char;
                     /* elide leading dots - they are implied in the search algorithm */
-                    while *arg as libc::c_int == '.' as i32 {
+                    while *arg == '.' as i32 {
                         arg = arg.offset(1)
                     }
                     /* # matches everything and becomes a zero length domain string */
                     if strcmp(arg,
                               b"#\x00" as *const u8 as *const libc::c_char) ==
-                           0 as libc::c_int || *arg == 0 {
+                           0 || *arg == 0 {
                         domain_0 =
                             b"\x00" as *const u8 as *const libc::c_char as
                                 *mut libc::c_char
-                    } else if strlen(arg) != 0 as libc::c_int as libc::c_ulong
+                    } else if strlen(arg) != 0 as libc::c_ulong
                                   &&
                                   {
                                       domain_0 = canonicalise_opt(arg);
                                       domain_0.is_null()
                                   } {
                         strcpy(errstr, gen_err);
-                        return 0 as libc::c_int
+                        return 0
                     }
                     (*ipsets).next =
                         opt_malloc(::std::mem::size_of::<IpSets>() as
                                        libc::c_ulong) as *mut IpSets;
                     ipsets = (*ipsets).next;
-                    memset(ipsets as *mut libc::c_void, 0 as libc::c_int,
+                    memset(ipsets as *mut libc::c_void, 0,
                            ::std::mem::size_of::<IpSets>() as libc::c_ulong);
                     (*ipsets).domain = domain_0;
                     arg = end_1
@@ -5902,7 +3419,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     opt_malloc(::std::mem::size_of::<IpSets>() as
                                    libc::c_ulong) as *mut IpSets;
                 ipsets = (*ipsets).next;
-                memset(ipsets as *mut libc::c_void, 0 as libc::c_int,
+                memset(ipsets as *mut libc::c_void, 0,
                        ::std::mem::size_of::<IpSets>() as libc::c_ulong);
                 (*ipsets).domain =
                     b"\x00" as *const u8 as *const libc::c_char as
@@ -5910,12 +3427,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             }
             if arg.is_null() || *arg == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
-            size_0 = 2 as libc::c_int;
+            size_0 = 2;
             end_1 = arg;
             while *end_1 != 0 {
-                if *end_1 as libc::c_int == ',' as i32 { size_0 += 1 }
+                if *end_1 == ',' as i32 { size_0 += 1 }
                 end_1 = end_1.offset(1)
             }
             sets_pos =
@@ -5938,8 +3455,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 (*(*ipsets).next).sets = sets;
                 ipsets = (*ipsets).next
             }
-            (*ipsets).next = (*dnsmasq_daemon).ipsets;
-            (*dnsmasq_daemon).ipsets = ipsets_head.next;
+            (*ipsets).next = daemon.ipsets;
+            daemon.ipsets = ipsets_head.next;
             current_block = 7879481898411272068;
         }
         99 => {
@@ -5947,75 +3464,75 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut size_1: libc::c_int = 0;
             if atoi_check(arg, &mut size_1) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
                 /* zero is OK, and means no caching. */
-                if size_1 < 0 as libc::c_int { size_1 = 0 as libc::c_int }
+                if size_1 < 0 { size_1 = 0 }
                 /* Note that for very large cache sizes, the malloc()
 	       will overflow. For the size of the cache record
 	       at the time this was noted, the value of "very large"
                was 46684428. Limit to an order of magnitude less than
 	       that to be safe from changes to the cache record. */
-                if size_1 > 5000000 as libc::c_int {
-                    size_1 = 5000000 as libc::c_int
+                if size_1 > 5000000 {
+                    size_1 = 5000000
                 }
-                (*dnsmasq_daemon).cachesize = size_1
+                daemon.cachesize = size_1
             }
             current_block = 7879481898411272068;
         }
         112 => {
             /* --port */
-            if atoi_check16(arg, &mut (*dnsmasq_daemon).port) == 0 {
+            if atoi_check16(arg, &mut daemon.port) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         288 => {
             /* --min-port */
-            if atoi_check16(arg, &mut (*dnsmasq_daemon).min_port) == 0 {
+            if atoi_check16(arg, &mut daemon.min_port) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         345 => {
             /* --max-port */
-            if atoi_check16(arg, &mut (*dnsmasq_daemon).max_port) == 0 {
+            if atoi_check16(arg, &mut daemon.max_port) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         48 => {
             /* --dns-forward-max */
-            if atoi_check(arg, &mut (*dnsmasq_daemon).ftabsize) == 0 {
+            if atoi_check(arg, &mut daemon.ftabsize) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         113 => {
             /* --log-queries */
-            set_option_bool(2 as libc::c_int as libc::c_uint); /* default */
+            set_option_bool(2 as libc::c_uint); /* default */
             if !arg.is_null() &&
                    strcmp(arg,
                           b"extra\x00" as *const u8 as *const libc::c_char) ==
-                       0 as libc::c_int {
-                set_option_bool(51 as libc::c_int as libc::c_uint);
+                       0 {
+                set_option_bool(51 as libc::c_uint);
             }
             current_block = 7879481898411272068;
         }
         267 => {
             /* --log-async */
-            (*dnsmasq_daemon).max_logs = 5 as libc::c_int;
+            daemon.max_logs = 5;
             if !arg.is_null() &&
-                   atoi_check(arg, &mut (*dnsmasq_daemon).max_logs) == 0 {
+                   atoi_check(arg, &mut daemon.max_logs) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
-                if (*dnsmasq_daemon).max_logs > 100 as libc::c_int {
-                    (*dnsmasq_daemon).max_logs = 100 as libc::c_int
+                if daemon.max_logs > 100 {
+                    daemon.max_logs = 100
                 }
             }
             current_block = 7879481898411272068;
@@ -6025,21 +3542,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut i_0: libc::c_int = 0;
             if atoi_check(arg, &mut i_0) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
-            (*dnsmasq_daemon).edns_pktsz = i_0 as libc::c_ushort;
+            daemon.edns_pktsz = i_0 as libc::c_ushort;
             current_block = 7879481898411272068;
         }
         81 => {
             /* --query-port */
-            if atoi_check16(arg, &mut (*dnsmasq_daemon).query_port) == 0 {
+            if atoi_check16(arg, &mut daemon.query_port) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             /* if explicitly set to zero, use single OS ephemeral port
 	 and disable random ports */
-            if (*dnsmasq_daemon).query_port == 0 as libc::c_int {
-                (*dnsmasq_daemon).osport = 1 as libc::c_int
+            if daemon.query_port == 0 {
+                daemon.osport = 1
             }
             current_block = 7879481898411272068;
         }
@@ -6055,25 +3572,25 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         348 => { current_block = 5893551302610724882; }
         88 => {
             /* --dhcp-lease-max */
-            if atoi_check(arg, &mut (*dnsmasq_daemon).dhcp_max) == 0 {
+            if atoi_check(arg, &mut daemon.dhcp_max) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         263 => {
             /*  --tftp-max */
-            if atoi_check(arg, &mut (*dnsmasq_daemon).tftp_max) == 0 {
+            if atoi_check(arg, &mut daemon.tftp_max) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
         349 => {
             /*  --tftp-mtu */
-            if atoi_check(arg, &mut (*dnsmasq_daemon).tftp_mtu) == 0 {
+            if atoi_check(arg, &mut daemon.tftp_mtu) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
@@ -6086,30 +3603,30 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    libc::c_ulong) as *mut TftpPrefix;
                 (*new_11).interface = opt_string_alloc(comma);
                 (*new_11).prefix = opt_string_alloc(arg);
-                (*new_11).next = (*dnsmasq_daemon).if_prefix;
-                (*dnsmasq_daemon).if_prefix = new_11
-            } else { (*dnsmasq_daemon).tftp_prefix = opt_string_alloc(arg) }
+                (*new_11).next = daemon.if_prefix;
+                daemon.if_prefix = new_11
+            } else { daemon.tftp_prefix = opt_string_alloc(arg) }
             current_block = 7879481898411272068;
         }
         276 => {
             /* --tftp-port-range */
             comma = split(arg);
             if comma.is_null() ||
-                   atoi_check16(arg, &mut (*dnsmasq_daemon).start_tftp_port)
+                   atoi_check16(arg, &mut daemon.start_tftp_port)
                        == 0 ||
-                   atoi_check16(comma, &mut (*dnsmasq_daemon).end_tftp_port)
+                   atoi_check16(comma, &mut daemon.end_tftp_port)
                        == 0 {
                 strcpy(errstr,
                        b"bad port range\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
-            if (*dnsmasq_daemon).start_tftp_port >
-                   (*dnsmasq_daemon).end_tftp_port {
-                let mut tmp: libc::c_int = (*dnsmasq_daemon).start_tftp_port;
-                (*dnsmasq_daemon).start_tftp_port =
-                    (*dnsmasq_daemon).end_tftp_port;
-                (*dnsmasq_daemon).end_tftp_port = tmp
+            if daemon.start_tftp_port >
+                   daemon.end_tftp_port {
+                let mut tmp: libc::c_int = daemon.start_tftp_port;
+                daemon.start_tftp_port =
+                    daemon.end_tftp_port;
+                daemon.end_tftp_port = tmp
             }
             current_block = 7879481898411272068;
         }
@@ -6118,14 +3635,14 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             if arg.is_null() ||
                    strcasecmp(arg,
                               b"ip\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
-                set_option_bool(29 as libc::c_int as libc::c_uint);
+                       == 0 {
+                set_option_bool(29 as libc::c_uint);
             } else if strcasecmp(arg,
                                  b"mac\x00" as *const u8 as
-                                     *const libc::c_char) == 0 as libc::c_int
+                                     *const libc::c_char) == 0
              {
-                set_option_bool(56 as libc::c_int as libc::c_uint);
-            } else { strcpy(errstr, gen_err); return 0 as libc::c_int }
+                set_option_bool(56 as libc::c_uint);
+            } else { strcpy(errstr, gen_err); return 0 }
             current_block = 7879481898411272068;
         }
         262 => {
@@ -6134,17 +3651,17 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             comma = split(arg);
             if comma.is_null() ||
                    strlen(arg) >
-                       (16 as libc::c_int - 1 as libc::c_int) as libc::c_ulong
+                       (16 - 1) as libc::c_ulong
                {
                 strcpy(errstr,
                        b"bad bridge-interface\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
-            new_12 = (*dnsmasq_daemon).bridges;
+            new_12 = daemon.bridges;
             while !new_12.is_null() {
                 if strcmp((*new_12).iface.as_mut_ptr(), arg) ==
-                       0 as libc::c_int {
+                       0 {
                     break ;
                 }
                 new_12 = (*new_12).next
@@ -6155,15 +3672,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    libc::c_ulong) as *mut DhcpBridge;
                 strcpy((*new_12).iface.as_mut_ptr(), arg);
                 (*new_12).alias = 0 as *mut DhcpBridge;
-                (*new_12).next = (*dnsmasq_daemon).bridges;
-                (*dnsmasq_daemon).bridges = new_12
+                (*new_12).next = daemon.bridges;
+                daemon.bridges = new_12
             }
             loop  {
                 arg = comma;
                 comma = split(arg);
-                if strlen(arg) != 0 as libc::c_int as libc::c_ulong &&
+                if strlen(arg) != 0 as libc::c_ulong &&
                        strlen(arg) <=
-                           (16 as libc::c_int - 1 as libc::c_int) as
+                           (16 - 1) as
                                libc::c_ulong {
                     let mut b: *mut DhcpBridge =
                         opt_malloc(::std::mem::size_of::<DhcpBridge>() as
@@ -6181,35 +3698,35 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut new_13: *mut SharedNetwork =
                 opt_malloc(::std::mem::size_of::<SharedNetwork>() as
                                libc::c_ulong) as *mut SharedNetwork;
-            (*new_13).shared_addr.s_addr = 0 as libc::c_int as in_addr_t;
-            (*new_13).if_index = 0 as libc::c_int;
+            (*new_13).shared_addr.s_addr = 0 as InAddrT;
+            (*new_13).if_index = 0;
             comma = split(arg);
             if comma.is_null() {
                 current_block = 3177757304694473968;
             } else {
-                if inet_pton(2 as libc::c_int, comma,
+                if inet_pton(2, comma,
                              &mut (*new_13).shared_addr as *mut InAddr as
                                  *mut libc::c_void) != 0 {
-                    if inet_pton(2 as libc::c_int, arg,
+                    if inet_pton(2, arg,
                                  &mut (*new_13).match_addr as *mut InAddr as
                                      *mut libc::c_void) == 0 &&
                            {
                                (*new_13).if_index =
-                                   if_nametoindex(arg) as libc::c_int;
+                                   if_nametoindex(arg);
                                ((*new_13).if_index) == 0
                            } {
                         current_block = 3177757304694473968;
                     } else { current_block = 12609744167958600007; }
-                } else if inet_pton(10 as libc::c_int, comma,
+                } else if inet_pton(10, comma,
                                     &mut (*new_13).shared_addr6 as
                                         *mut In6Addr as *mut libc::c_void) !=
                               0 {
-                    if inet_pton(10 as libc::c_int, arg,
+                    if inet_pton(10, arg,
                                  &mut (*new_13).match_addr6 as *mut In6Addr
                                      as *mut libc::c_void) == 0 &&
                            {
                                (*new_13).if_index =
-                                   if_nametoindex(arg) as libc::c_int;
+                                   if_nametoindex(arg);
                                ((*new_13).if_index) == 0
                            } {
                         current_block = 3177757304694473968;
@@ -6218,8 +3735,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 match current_block {
                     3177757304694473968 => { }
                     _ => {
-                        (*new_13).next = (*dnsmasq_daemon).shared_networks;
-                        (*dnsmasq_daemon).shared_networks = new_13;
+                        (*new_13).next = daemon.shared_networks;
+                        daemon.shared_networks = new_13;
                         current_block = 7879481898411272068;
                     }
                 }
@@ -6231,14 +3748,14 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     strcpy(errstr,
                            b"bad shared-network\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
             }
         }
         70 => {
             /* --dhcp-range */
             let mut k: libc::c_int = 0;
-            let mut leasepos: libc::c_int = 2 as libc::c_int;
+            let mut leasepos: libc::c_int = 2;
             let mut cp_0: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut a: [*mut libc::c_char; 8] =
                 [0 as *mut libc::c_char, 0 as *mut libc::c_char,
@@ -6248,32 +3765,32 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut new_14: *mut DhcpContext =
                 opt_malloc(::std::mem::size_of::<DhcpContext>() as
                                libc::c_ulong) as *mut DhcpContext;
-            memset(new_14 as *mut libc::c_void, 0 as libc::c_int,
+            memset(new_14 as *mut libc::c_void, 0,
                    ::std::mem::size_of::<DhcpContext>() as libc::c_ulong);
             loop  {
                 cp_0 = arg;
-                while *cp_0 != 0 {
-                    if !(*cp_0 as libc::c_int == ' ' as i32 ||
-                             *cp_0 as libc::c_int == '.' as i32 ||
-                             *cp_0 as libc::c_int == ':' as i32 ||
-                             *cp_0 as libc::c_int >= 'a' as i32 &&
-                                 *cp_0 as libc::c_int <= 'f' as i32 ||
-                             *cp_0 as libc::c_int >= 'A' as i32 &&
-                                 *cp_0 as libc::c_int <= 'F' as i32 ||
-                             *cp_0 as libc::c_int >= '0' as i32 &&
-                                 *cp_0 as libc::c_int <= '9' as i32) {
+                while cp_0 != 0 {
+                    if !(cp_0 == ' ' as i32 ||
+                             cp_0 == '.' as i32 ||
+                             cp_0 == ':' as i32 ||
+                             cp_0 >= 'a' as i32 &&
+                                 cp_0 <= 'f' as i32 ||
+                             cp_0 >= 'A' as i32 &&
+                                 cp_0 <= 'F' as i32 ||
+                             cp_0 >= '0' as i32 &&
+                                 cp_0 <= '9' as i32) {
                         break ;
                     }
                     cp_0 = cp_0.offset(1)
                 }
-                if *cp_0 as libc::c_int != ',' as i32 &&
+                if cp_0 != ',' as i32 &&
                        { comma = split(arg); !comma.is_null() } {
                     if is_tag_prefix(arg) != 0 {
                         /* ignore empty tag */
-                        if *arg.offset(4 as libc::c_int as isize) != 0 {
+                        if *arg.offset(4) != 0 {
                             (*new_14).filter =
-                                dhcp_netid_create(arg.offset(4 as libc::c_int
-                                                                 as isize),
+                                dhcp_netid_create(arg.offset(4
+                                                                ),
                                                   (*new_14).filter)
                         }
                     } else if !(*new_14).netid.net.is_null() {
@@ -6281,58 +3798,58 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         strcpy(errstr,
                                b"only one tag allowed\x00" as *const u8 as
                                    *const libc::c_char);
-                        return 0 as libc::c_int
+                        return 0
                     } else {
                         (*new_14).netid.net =
                             opt_string_alloc(set_prefix(arg))
                     }
                     arg = comma
-                } else { a[0 as libc::c_int as usize] = arg; break ; }
+                } else { a[0 as usize] = arg; break ; }
             }
-            k = 1 as libc::c_int;
-            while k < 8 as libc::c_int {
-                a[k as usize] = split(a[(k - 1 as libc::c_int) as usize]);
+            k = 1;
+            while k < 8 {
+                a[k as usize] = split(a[(k - 1) as usize]);
                 if a[k as usize].is_null() { break ; }
                 k += 1
             }
-            if k < 2 as libc::c_int {
+            if k < 2 {
                 dhcp_context_free(new_14);
                 strcpy(errstr,
                        b"bad dhcp-range\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
-            if inet_pton(2 as libc::c_int, a[0 as libc::c_int as usize],
+            if inet_pton(2, a[0 as usize],
                          &mut (*new_14).start as *mut InAddr as
                              *mut libc::c_void) != 0 {
-                (*new_14).next = (*dnsmasq_daemon).dhcp;
-                (*new_14).lease_time = 3600 as libc::c_int as libc::c_uint;
-                (*dnsmasq_daemon).dhcp = new_14;
+                (*new_14).next = daemon.dhcp;
+                (*new_14).lease_time = 3600 as libc::c_uint;
+                daemon.dhcp = new_14;
                 (*new_14).end = (*new_14).start;
-                if strcmp(a[1 as libc::c_int as usize],
+                if strcmp(a[1 as usize],
                           b"static\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
+                       == 0 {
                     (*new_14).flags =
                         ((*new_14).flags as libc::c_uint |
-                             (1 as libc::c_uint) << 0 as libc::c_int) as
+                             (1 as libc::c_uint) << 0) as
                             libc::c_int
-                } else if strcmp(a[1 as libc::c_int as usize],
+                } else if strcmp(a[1 as usize],
                                  b"proxy\x00" as *const u8 as
-                                     *const libc::c_char) == 0 as libc::c_int
+                                     *const libc::c_char) == 0
                  {
                     (*new_14).flags =
                         ((*new_14).flags as libc::c_uint |
-                             (1 as libc::c_uint) << 3 as libc::c_int) as
+                             (1 as libc::c_uint) << 3) as
                             libc::c_int
-                } else if inet_pton(2 as libc::c_int,
-                                    a[1 as libc::c_int as usize],
+                } else if inet_pton(2,
+                                    a[1 as usize],
                                     &mut (*new_14).end as *mut InAddr as
                                         *mut libc::c_void) == 0 {
                     dhcp_context_free(new_14);
                     strcpy(errstr,
                            b"bad dhcp-range\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 if __bswap_32((*new_14).start.s_addr) >
                        __bswap_32((*new_14).end.s_addr) {
@@ -6340,124 +3857,124 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     (*new_14).start = (*new_14).end;
                     (*new_14).end = tmp_0
                 }
-                if k >= 3 as libc::c_int &&
-                       !strchr(a[2 as libc::c_int as usize],
+                if k >= 3 &&
+                       !strchr(a[2 as usize],
                                '.' as i32).is_null() &&
-                       inet_pton(2 as libc::c_int,
-                                 a[2 as libc::c_int as usize],
+                       inet_pton(2,
+                                 a[2 as usize],
                                  &mut (*new_14).netmask as *mut InAddr as
-                                     *mut libc::c_void) > 0 as libc::c_int {
+                                     *mut libc::c_void) > 0 {
                     (*new_14).flags =
                         ((*new_14).flags as libc::c_uint |
-                             (1 as libc::c_uint) << 1 as libc::c_int) as
+                             (1 as libc::c_uint) << 1) as
                             libc::c_int;
-                    leasepos = 3 as libc::c_int;
+                    leasepos = 3;
                     if is_same_net((*new_14).start, (*new_14).end,
                                    (*new_14).netmask) == 0 {
                         dhcp_context_free(new_14);
                         strcpy(errstr,
                                b"inconsistent DHCP range\x00" as *const u8 as
                                    *const libc::c_char);
-                        return 0 as libc::c_int
+                        return 0
                     }
-                    if k >= 4 as libc::c_int &&
-                           !strchr(a[3 as libc::c_int as usize],
+                    if k >= 4 &&
+                           !strchr(a[3 as usize],
                                    '.' as i32).is_null() &&
-                           inet_pton(2 as libc::c_int,
-                                     a[3 as libc::c_int as usize],
+                           inet_pton(2,
+                                     a[3 as usize],
                                      &mut (*new_14).broadcast as *mut InAddr
                                          as *mut libc::c_void) >
-                               0 as libc::c_int {
+                               0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 (1 as libc::c_uint) << 2 as libc::c_int) as
+                                 (1 as libc::c_uint) << 2) as
                                 libc::c_int;
-                        leasepos = 4 as libc::c_int
+                        leasepos = 4
                     }
                 }
-            } else if inet_pton(10 as libc::c_int,
-                                a[0 as libc::c_int as usize],
+            } else if inet_pton(10,
+                                a[0 as usize],
                                 &mut (*new_14).start6 as *mut In6Addr as
                                     *mut libc::c_void) != 0 {
                 let mut err_1: *const libc::c_char = 0 as *const libc::c_char;
                 (*new_14).flags =
                     ((*new_14).flags as libc::c_uint |
-                         (1 as libc::c_uint) << 17 as libc::c_int) as
+                         (1 as libc::c_uint) << 17) as
                         libc::c_int;
-                (*new_14).prefix = 64 as libc::c_int;
+                (*new_14).prefix = 64;
                 (*new_14).end6 = (*new_14).start6;
                 (*new_14).lease_time =
-                    (3600 as libc::c_int * 24 as libc::c_int) as libc::c_uint;
-                (*new_14).next = (*dnsmasq_daemon).dhcp6;
-                (*dnsmasq_daemon).dhcp6 = new_14;
-                leasepos = 1 as libc::c_int;
+                    (3600 * 24) as libc::c_uint;
+                (*new_14).next = daemon.dhcp6;
+                daemon.dhcp6 = new_14;
+                leasepos = 1;
                 while leasepos < k {
                     if strcmp(a[leasepos as usize],
                               b"static\x00" as *const u8 as
-                                  *const libc::c_char) == 0 as libc::c_int {
+                                  *const libc::c_char) == 0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 ((1 as libc::c_uint) << 0 as libc::c_int |
+                                 ((1 as libc::c_uint) << 0 |
                                       (1 as libc::c_uint) <<
-                                          8 as libc::c_int)) as libc::c_int
+                                          8))
                     } else if strcmp(a[leasepos as usize],
                                      b"ra-only\x00" as *const u8 as
                                          *const libc::c_char) ==
-                                  0 as libc::c_int ||
+                                  0 ||
                                   strcmp(a[leasepos as usize],
                                          b"slaac\x00" as *const u8 as
                                              *const libc::c_char) ==
-                                      0 as libc::c_int {
+                                      0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 (1 as libc::c_uint) << 13 as libc::c_int) as
+                                 (1 as libc::c_uint) << 13) as
                                 libc::c_int
                     } else if strcmp(a[leasepos as usize],
                                      b"ra-names\x00" as *const u8 as
                                          *const libc::c_char) ==
-                                  0 as libc::c_int {
+                                  0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 ((1 as libc::c_uint) << 6 as libc::c_int |
+                                 ((1 as libc::c_uint) << 6 |
                                       (1 as libc::c_uint) <<
-                                          13 as libc::c_int)) as libc::c_int
+                                          13))
                     } else if strcmp(a[leasepos as usize],
                                      b"ra-advrouter\x00" as *const u8 as
                                          *const libc::c_char) ==
-                                  0 as libc::c_int {
+                                  0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 ((1 as libc::c_uint) << 4 as libc::c_int |
+                                 ((1 as libc::c_uint) << 4 |
                                       (1 as libc::c_uint) <<
-                                          13 as libc::c_int)) as libc::c_int
+                                          13))
                     } else if strcmp(a[leasepos as usize],
                                      b"ra-stateless\x00" as *const u8 as
                                          *const libc::c_char) ==
-                                  0 as libc::c_int {
+                                  0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 ((1 as libc::c_uint) << 7 as libc::c_int |
-                                      (1 as libc::c_uint) << 8 as libc::c_int
+                                 ((1 as libc::c_uint) << 7 |
+                                      (1 as libc::c_uint) << 8
                                       |
                                       (1 as libc::c_uint) <<
-                                          13 as libc::c_int)) as libc::c_int
+                                          13))
                     } else if strcmp(a[leasepos as usize],
                                      b"off-link\x00" as *const u8 as
                                          *const libc::c_char) ==
-                                  0 as libc::c_int {
+                                  0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 (1 as libc::c_uint) << 18 as libc::c_int) as
+                                 (1 as libc::c_uint) << 18) as
                                 libc::c_int
-                    } else if leasepos == 1 as libc::c_int &&
-                                  inet_pton(10 as libc::c_int,
+                    } else if leasepos == 1 &&
+                                  inet_pton(10,
                                             a[leasepos as usize],
                                             &mut (*new_14).end6 as
                                                 *mut In6Addr as
                                                 *mut libc::c_void) != 0 {
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 (1 as libc::c_uint) << 8 as libc::c_int) as
+                                 (1 as libc::c_uint) << 8) as
                                 libc::c_int
                     } else {
                         if !(strstr(a[leasepos as usize],
@@ -6474,7 +3991,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                                      isize));
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 (1 as libc::c_uint) << 10 as libc::c_int) as
+                                 (1 as libc::c_uint) << 10) as
                                 libc::c_int
                     }
                     leasepos += 1
@@ -6483,36 +4000,36 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 if leasepos < k {
                     let mut pref_0: libc::c_int = 0;
                     cp_0 = a[leasepos as usize];
-                    while *cp_0 != 0 {
-                        if !(*cp_0 as libc::c_int >= '0' as i32 &&
-                                 *cp_0 as libc::c_int <= '9' as i32) {
+                    while cp_0 != 0 {
+                        if !(cp_0 >= '0' as i32 &&
+                                 cp_0 <= '9' as i32) {
                             break ;
                         }
                         cp_0 = cp_0.offset(1)
                     }
-                    if *cp_0 == 0 &&
+                    if cp_0 == 0 &&
                            {
                                pref_0 = atoi(a[leasepos as usize]);
-                               (pref_0) <= 128 as libc::c_int
+                               (pref_0) <= 128
                            } {
                         (*new_14).prefix = pref_0;
                         leasepos += 1
                     }
                 }
-                if (*new_14).prefix > 64 as libc::c_int {
+                if (*new_14).prefix > 64 {
                     if (*new_14).flags as libc::c_uint &
-                           (1 as libc::c_uint) << 13 as libc::c_int != 0 {
+                           (1 as libc::c_uint) << 13 != 0 {
                         err_1 =
                             b"prefix length must be exactly 64 for RA subnets\x00"
                                 as *const u8 as *const libc::c_char
                     } else if (*new_14).flags as libc::c_uint &
-                                  (1 as libc::c_uint) << 10 as libc::c_int !=
+                                  (1 as libc::c_uint) << 10 !=
                                   0 {
                         err_1 =
                             b"prefix length must be exactly 64 for subnet constructors\x00"
                                 as *const u8 as *const libc::c_char
                     }
-                } else if (*new_14).prefix < 64 as libc::c_int {
+                } else if (*new_14).prefix < 64 {
                     err_1 =
                         b"prefix length must be at least 64\x00" as *const u8
                             as *const libc::c_char
@@ -6528,37 +4045,37 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 if !err_1.is_null() {
                     dhcp_context_free(new_14);
                     strcpy(errstr, err_1);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 /* dhcp-range=:: enables DHCP stateless on any interface */
                 if ({
                         let mut __a: *const In6Addr =
                             &mut (*new_14).start6 as *mut In6Addr as
                                 *const In6Addr;
-                        ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize]
-                             == 0 as libc::c_int as libc::c_uint &&
-                             (*__a).__in6_u.__u6_addr32[1 as libc::c_int as
+                        ((*__a).__in6_u.__u6_addr32[0 as usize]
+                             == 0 as libc::c_uint &&
+                             (*__a).__in6_u.__u6_addr32[1 as
                                                             usize] ==
-                                 0 as libc::c_int as libc::c_uint &&
-                             (*__a).__in6_u.__u6_addr32[2 as libc::c_int as
+                                 0 as libc::c_uint &&
+                             (*__a).__in6_u.__u6_addr32[2 as
                                                             usize] ==
-                                 0 as libc::c_int as libc::c_uint &&
-                             (*__a).__in6_u.__u6_addr32[3 as libc::c_int as
+                                 0 as libc::c_uint &&
+                             (*__a).__in6_u.__u6_addr32[3 as
                                                             usize] ==
-                                 0 as libc::c_int as libc::c_uint) as
+                                 0 as libc::c_uint) as
                             libc::c_int
                     }) != 0 &&
                        (*new_14).flags as libc::c_uint &
-                           (1 as libc::c_uint) << 10 as libc::c_int == 0 {
-                    (*new_14).prefix = 0 as libc::c_int
+                           (1 as libc::c_uint) << 10 == 0 {
+                    (*new_14).prefix = 0
                 }
                 if (*new_14).flags as libc::c_uint &
-                       (1 as libc::c_uint) << 10 as libc::c_int != 0 {
+                       (1 as libc::c_uint) << 10 != 0 {
                     let mut zero: In6Addr =
                         In6Addr {__in6_u:
                                      C2RustUnnamed{__u6_addr8: [0; 16],},};
                     memset(&mut zero as *mut In6Addr as *mut libc::c_void,
-                           0 as libc::c_int,
+                           0,
                            ::std::mem::size_of::<In6Addr>() as
                                libc::c_ulong);
                     if is_same_net6(&mut zero, &mut (*new_14).start6,
@@ -6567,7 +4084,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         strcpy(errstr,
                                b"prefix must be zero with \"constructor:\" argument\x00"
                                    as *const u8 as *const libc::c_char);
-                        return 0 as libc::c_int
+                        return 0
                     }
                 }
                 if addr6part(&mut (*new_14).start6) >
@@ -6581,36 +4098,36 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad dhcp-range\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             if leasepos < k {
-                if leasepos != k - 1 as libc::c_int {
+                if leasepos != k - 1 {
                     dhcp_context_free(new_14);
                     strcpy(errstr,
                            b"bad dhcp-range\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 if strcmp(a[leasepos as usize],
                           b"infinite\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
+                       == 0 {
                     (*new_14).lease_time = 0xffffffff as libc::c_uint;
                     (*new_14).flags =
                         ((*new_14).flags as libc::c_uint |
-                             (1 as libc::c_uint) << 19 as libc::c_int) as
+                             (1 as libc::c_uint) << 19) as
                             libc::c_int
                 } else if strcmp(a[leasepos as usize],
                                  b"deprecated\x00" as *const u8 as
-                                     *const libc::c_char) == 0 as libc::c_int
+                                     *const libc::c_char) == 0
                  {
                     (*new_14).flags =
                         ((*new_14).flags as libc::c_uint |
-                             (1 as libc::c_uint) << 9 as libc::c_int) as
+                             (1 as libc::c_uint) << 9) as
                             libc::c_int
                 } else {
-                    let mut fac: libc::c_int = 1 as libc::c_int;
+                    let mut fac: libc::c_int = 1;
                     if strlen(a[leasepos as usize]) >
-                           0 as libc::c_int as libc::c_ulong {
+                           0 as libc::c_ulong {
                         let mut current_block_1049: u64;
                         match *a[leasepos as
                                      usize].offset(strlen(a[leasepos as
@@ -6619,10 +4136,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                                                          libc::c_int
                                                                                          as
                                                                                          libc::c_ulong)
-                                                       as isize) as
+                                                      ) as
                                   libc::c_int {
                             119 | 87 => {
-                                fac *= 7 as libc::c_int;
+                                fac *= 7;
                                 current_block_1049 = 9610247714461258384;
                             }
                             100 | 68 => {
@@ -6643,7 +4160,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             9610247714461258384 =>
                             /* fall through */
                             {
-                                fac *= 24 as libc::c_int;
+                                fac *= 24;
                                 current_block_1049 = 9280197982685904555;
                             }
                             _ => { }
@@ -6652,7 +4169,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             9280197982685904555 =>
                             /* fall through */
                             {
-                                fac *= 60 as libc::c_int;
+                                fac *= 60;
                                 current_block_1049 = 17378754114849407475;
                             }
                             _ => { }
@@ -6661,7 +4178,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             17378754114849407475 =>
                             /* fall through */
                             {
-                                fac *= 60 as libc::c_int;
+                                fac *= 60;
                                 current_block_1049 = 8582955123963743225;
                             }
                             _ => { }
@@ -6677,40 +4194,40 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                                                                            libc::c_int
                                                                                            as
                                                                                            libc::c_ulong)
-                                                         as isize) =
-                                    0 as libc::c_int as libc::c_char
+                                                        ) =
+                                    0 as libc::c_char
                             }
                             _ => { }
                         }
                         cp_0 = a[leasepos as usize];
-                        while *cp_0 != 0 {
-                            if !(*cp_0 as libc::c_int >= '0' as i32 &&
-                                     *cp_0 as libc::c_int <= '9' as i32) {
+                        while cp_0 != 0 {
+                            if !(cp_0 >= '0' as i32 &&
+                                     cp_0 <= '9' as i32) {
                                 break ;
                             }
                             cp_0 = cp_0.offset(1)
                         }
-                        if *cp_0 as libc::c_int != 0 ||
-                               (leasepos + 1 as libc::c_int) < k {
+                        if cp_0 != 0 ||
+                               (leasepos + 1) < k {
                             strcpy(errstr,
                                    b"bad dhcp-range\x00" as *const u8 as
                                        *const libc::c_char);
                             free(new_14 as *mut libc::c_void);
-                            return 0 as libc::c_int
+                            return 0
                         }
                         (*new_14).lease_time =
                             (atoi(a[leasepos as usize]) * fac) as
                                 libc::c_uint;
                         (*new_14).flags =
                             ((*new_14).flags as libc::c_uint |
-                                 (1 as libc::c_uint) << 19 as libc::c_int) as
+                                 (1 as libc::c_uint) << 19) as
                                 libc::c_int;
                         /* Leases of a minute or less confuse
 		       some clients, notably Apple's */
                         if (*new_14).lease_time <
-                               120 as libc::c_int as libc::c_uint {
+                               120 as libc::c_uint {
                             (*new_14).lease_time =
-                                120 as libc::c_int as libc::c_uint
+                                120 as libc::c_uint
                         }
                     }
                 }
@@ -6724,11 +4241,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             new_15 =
                 opt_malloc(::std::mem::size_of::<DhcpConfig>() as
                                libc::c_ulong) as *mut DhcpConfig;
-            (*new_15).next = (*dnsmasq_daemon).dhcp_conf;
+            (*new_15).next = daemon.dhcp_conf;
             (*new_15).flags =
-                if option == 272 as libc::c_int {
-                    2048 as libc::c_int
-                } else { 0 as libc::c_int } as libc::c_uint;
+                if option == 272 {
+                    2048
+                } else { 0 } as libc::c_uint;
             (*new_15).hwaddr = 0 as *mut HwaddrConfig;
             (*new_15).netid = 0 as *mut DhcpNetIdList;
             (*new_15).filter = 0 as *mut DhcpNetId;
@@ -6738,46 +4255,46 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 comma = split(arg);
                 if !strchr(arg, ':' as i32).is_null() {
                     /* ethernet address, netid or binary CLID */
-                    if (*arg.offset(0 as libc::c_int as isize) as libc::c_int
+                    if (*arg.offset(0)
                             == 'i' as i32 ||
-                            *arg.offset(0 as libc::c_int as isize) as
+                            *arg.offset(0) as
                                 libc::c_int == 'I' as i32) &&
-                           (*arg.offset(1 as libc::c_int as isize) as
+                           (*arg.offset(1) as
                                 libc::c_int == 'd' as i32 ||
-                                *arg.offset(1 as libc::c_int as isize) as
+                                *arg.offset(1) as
                                     libc::c_int == 'D' as i32) &&
-                           *arg.offset(2 as libc::c_int as isize) as
+                           *arg.offset(2) as
                                libc::c_int == ':' as i32 {
-                        if *arg.offset(3 as libc::c_int as isize) as
+                        if *arg.offset(3) as
                                libc::c_int == '*' as i32 {
                             (*new_15).flags |=
-                                128 as libc::c_int as libc::c_uint
+                                128 as libc::c_uint
                         } else {
                             let mut len_0: libc::c_int = 0; /* dump id: */
-                            arg = arg.offset(3 as libc::c_int as isize);
+                            arg = arg.offset(3);
                             if !strchr(arg, ':' as i32).is_null() {
                                 len_0 =
                                     parse_hex(arg, arg as *mut libc::c_uchar,
-                                              -(1 as libc::c_int),
+                                              -(1),
                                               0 as *mut libc::c_uint,
                                               0 as *mut libc::c_int)
                             } else {
                                 unhide_metas(arg);
-                                len_0 = strlen(arg) as libc::c_int
+                                len_0 = strlen(arg)
                             }
-                            if len_0 == -(1 as libc::c_int) {
+                            if len_0 == -(1) {
                                 dhcp_config_free(new_15);
                                 strcpy(errstr,
                                        b"bad hex constant\x00" as *const u8 as
                                            *const libc::c_char);
-                                return 0 as libc::c_int
+                                return 0
                             } else {
                                 (*new_15).clid =
                                     opt_malloc(len_0 as usize) as
                                         *mut libc::c_uchar;
                                 if !(*new_15).clid.is_null() {
                                     (*new_15).flags |=
-                                        2 as libc::c_int as libc::c_uint;
+                                        2 as libc::c_uint;
                                     (*new_15).clid_len = len_0;
                                     memcpy((*new_15).clid as
                                                *mut libc::c_void,
@@ -6799,23 +4316,23 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         (*newlist_0).next = (*new_15).netid;
                         (*new_15).netid = newlist_0;
                         (*newlist_0).list =
-                            dhcp_netid_create(arg.offset(4 as libc::c_int as
+                            dhcp_netid_create(arg.offset(4 as
                                                              isize),
                                               0 as *mut DhcpNetId)
                     } else if strstr(arg,
                                      b"tag:\x00" as *const u8 as
                                          *const libc::c_char) == arg {
                         (*new_15).filter =
-                            dhcp_netid_create(arg.offset(4 as libc::c_int as
+                            dhcp_netid_create(arg.offset(4 as
                                                              isize),
                                               (*new_15).filter)
-                    } else if *arg.offset(0 as libc::c_int as isize) as
+                    } else if *arg.offset(0) as
                                   libc::c_int == '[' as i32 &&
                                   *arg.offset(strlen(arg).wrapping_sub(1 as
                                                                            libc::c_int
                                                                            as
                                                                            libc::c_ulong)
-                                                  as isize) as libc::c_int ==
+                                                 ) ==
                                       ']' as i32 {
                         let mut pref_1: *mut libc::c_char =
                             0 as *mut libc::c_char;
@@ -6824,66 +4341,66 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                          C2RustUnnamed{__u6_addr8:
                                                            [0; 16],},};
                         let mut new_addr: *mut AddrList = 0 as *mut AddrList;
-                        *arg.offset(strlen(arg).wrapping_sub(1 as libc::c_int
+                        *arg.offset(strlen(arg).wrapping_sub(1
                                                                  as
                                                                  libc::c_ulong)
-                                        as isize) =
-                            0 as libc::c_int as libc::c_char;
+                                       ) =
+                            0 as libc::c_char;
                         arg = arg.offset(1);
                         pref_1 = split_chr(arg, '/' as i32 as libc::c_char);
-                        if inet_pton(10 as libc::c_int, arg,
+                        if inet_pton(10, arg,
                                      &mut in6 as *mut In6Addr as
                                          *mut libc::c_void) == 0 {
                             dhcp_config_free(new_15);
                             strcpy(errstr,
                                    b"bad IPv6 address\x00" as *const u8 as
                                        *const libc::c_char);
-                            return 0 as libc::c_int
+                            return 0
                         }
                         new_addr =
                             opt_malloc(::std::mem::size_of::<AddrList>() as
                                            libc::c_ulong) as *mut AddrList;
                         (*new_addr).next = (*new_15).addr6;
-                        (*new_addr).flags = 0 as libc::c_int;
+                        (*new_addr).flags = 0;
                         (*new_addr).addr.addr6 = in6;
                         (*new_15).addr6 = new_addr;
                         if !pref_1.is_null() {
                             let mut addrpart_0: u64 = addr6part(&mut in6);
                             if atoi_check(pref_1, &mut (*new_addr).prefixlen)
                                    == 0 ||
-                                   (*new_addr).prefixlen > 128 as libc::c_int
+                                   (*new_addr).prefixlen > 128
                                    ||
-                                   ((1 as libc::c_int as u64) <<
-                                        128 as libc::c_int -
+                                   ((1 as u64) <<
+                                        128 -
                                             (*new_addr).prefixlen).wrapping_sub(1
                                                                                     as
                                                                                     libc::c_int
                                                                                     as
                                                                                     libc::c_ulonglong)
                                        & addrpart_0 !=
-                                       0 as libc::c_int as libc::c_ulonglong {
+                                       0 as libc::c_ulonglong {
                                 dhcp_config_free(new_15);
                                 strcpy(errstr,
                                        b"bad IPv6 prefix\x00" as *const u8 as
                                            *const libc::c_char);
-                                return 0 as libc::c_int
+                                return 0
                             }
-                            (*new_addr).flags |= 8 as libc::c_int
+                            (*new_addr).flags |= 8
                         }
-                        i = 0 as libc::c_int;
-                        while i < 8 as libc::c_int {
+                        i = 0;
+                        while i < 8 {
                             if in6.__in6_u.__u6_addr8[i as usize] as
-                                   libc::c_int != 0 as libc::c_int {
+                                   libc::c_int != 0 {
                                 break ;
                             }
                             i += 1
                         }
                         /* dhcp-host has strange backwards-compat needs. */
                         /* set WILDCARD if network part all zeros */
-                        if i == 8 as libc::c_int {
-                            (*new_addr).flags |= 16 as libc::c_int
+                        if i == 8 {
+                            (*new_addr).flags |= 16
                         }
-                        (*new_15).flags |= 4096 as libc::c_int as libc::c_uint
+                        (*new_15).flags |= 4096 as libc::c_uint
                     } else {
                         let mut newhw: *mut HwaddrConfig =
                             opt_malloc(::std::mem::size_of::<HwaddrConfig>()
@@ -6891,42 +4408,42 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                 *mut HwaddrConfig;
                         (*newhw).hwaddr_len =
                             parse_hex(arg, (*newhw).hwaddr.as_mut_ptr(),
-                                      16 as libc::c_int,
+                                      16,
                                       &mut (*newhw).wildcard_mask,
                                       &mut (*newhw).hwaddr_type);
-                        if (*newhw).hwaddr_len == -(1 as libc::c_int) {
+                        if (*newhw).hwaddr_len == -(1) {
                             free(newhw as *mut libc::c_void);
                             dhcp_config_free(new_15);
                             strcpy(errstr,
                                    b"bad hex constant\x00" as *const u8 as
                                        *const libc::c_char);
-                            return 0 as libc::c_int
+                            return 0
                         } else {
                             (*newhw).next = (*new_15).hwaddr;
                             (*new_15).hwaddr = newhw
                         }
                     }
                 } else if !strchr(arg, '.' as i32).is_null() &&
-                              inet_pton(2 as libc::c_int, arg,
+                              inet_pton(2, arg,
                                         &mut in_0 as *mut InAddr as
                                             *mut libc::c_void) >
-                                  0 as libc::c_int {
+                                  0 {
                     let mut configs: *mut DhcpConfig = 0 as *mut DhcpConfig;
                     (*new_15).addr = in_0;
-                    (*new_15).flags |= 32 as libc::c_int as libc::c_uint;
+                    (*new_15).flags |= 32 as libc::c_uint;
                     /* If the same IP appears in more than one host config, then DISCOVER
 		   for one of the hosts will get the address, but REQUEST will be NAKed,
 		   since the address is reserved by the other one -> protocol loop. */
-                    configs = (*dnsmasq_daemon).dhcp_conf;
+                    configs = daemon.dhcp_conf;
                     while !configs.is_null() {
                         if (*configs).flags &
-                               32 as libc::c_int as libc::c_uint != 0 &&
+                               32 as libc::c_uint != 0 &&
                                (*configs).addr.s_addr == in_0.s_addr {
                             sprintf(errstr,
                                     b"duplicate dhcp-host IP address %s\x00"
                                         as *const u8 as *const libc::c_char,
                                     inet_ntoa(in_0));
-                            return 0 as libc::c_int
+                            return 0
                         }
                         configs = (*configs).next
                     }
@@ -6934,19 +4451,19 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     let mut cp_1: *mut libc::c_char = 0 as *mut libc::c_char;
                     let mut lastp: *mut libc::c_char = 0 as *mut libc::c_char;
                     let mut last: libc::c_char =
-                        0 as libc::c_int as libc::c_char;
-                    let mut fac_0: libc::c_int = 1 as libc::c_int;
-                    let mut isdig: libc::c_int = 0 as libc::c_int;
-                    if strlen(arg) > 1 as libc::c_int as libc::c_ulong {
+                        0 as libc::c_char;
+                    let mut fac_0: libc::c_int = 1;
+                    let mut isdig: libc::c_int = 0;
+                    if strlen(arg) > 1 as libc::c_ulong {
                         lastp =
                             arg.offset(strlen(arg) as
-                                           isize).offset(-(1 as libc::c_int as
+                                           isize).offset(-(1 as
                                                                isize));
                         last = *lastp;
                         let mut current_block_1169: u64;
-                        match last as libc::c_int {
+                        match last {
                             119 | 87 => {
-                                fac_0 *= 7 as libc::c_int;
+                                fac_0 *= 7;
                                 current_block_1169 = 16827258629745096341;
                             }
                             100 | 68 => {
@@ -6969,7 +4486,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             16827258629745096341 =>
                             /* fall through */
                             {
-                                fac_0 *= 24 as libc::c_int;
+                                fac_0 *= 24;
                                 current_block_1169 = 1699689399587118340;
                             }
                             _ => { }
@@ -6978,7 +4495,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             1699689399587118340 =>
                             /* fall through */
                             {
-                                fac_0 *= 60 as libc::c_int;
+                                fac_0 *= 60;
                                 current_block_1169 = 9134426092733397760;
                             }
                             _ => { }
@@ -6987,7 +4504,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             9134426092733397760 =>
                             /* fall through */
                             {
-                                fac_0 *= 60 as libc::c_int;
+                                fac_0 *= 60;
                                 current_block_1169 = 13003683363839989667;
                             }
                             _ => { }
@@ -6996,40 +4513,40 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             13003683363839989667 =>
                             /* fall through */
                             {
-                                *lastp = 0 as libc::c_int as libc::c_char
+                                *lastp = 0 as libc::c_char
                             }
                             _ => { }
                         }
                     }
                     cp_1 = arg;
-                    while *cp_1 != 0 {
-                        if *(*__ctype_b_loc()).offset(*cp_1 as libc::c_uchar
-                                                          as libc::c_int as
+                    while cp_1 != 0 {
+                        if *(*__ctype_b_loc()).offset(cp_1 as libc::c_uchar
+                                                          as
                                                           isize) as
                                libc::c_int &
-                               _ISdigit as libc::c_int as libc::c_ushort as
+                               _ISdigit as libc::c_ushort as
                                    libc::c_int != 0 {
-                            isdig = 1 as libc::c_int
-                        } else if *cp_1 as libc::c_int != ' ' as i32 {
+                            isdig = 1
+                        } else if cp_1 != ' ' as i32 {
                             break ;
                         }
                         cp_1 = cp_1.offset(1)
                     }
-                    if *cp_1 != 0 {
+                    if cp_1 != 0 {
                         if !lastp.is_null() { *lastp = last }
                         if strcmp(arg,
                                   b"infinite\x00" as *const u8 as
-                                      *const libc::c_char) == 0 as libc::c_int
+                                      *const libc::c_char) == 0
                            {
                             (*new_15).lease_time = 0xffffffff as libc::c_uint;
                             (*new_15).flags |=
-                                8 as libc::c_int as libc::c_uint
+                                8 as libc::c_uint
                         } else if strcmp(arg,
                                          b"ignore\x00" as *const u8 as
                                              *const libc::c_char) ==
-                                      0 as libc::c_int {
+                                      0 {
                             (*new_15).flags |=
-                                1 as libc::c_int as libc::c_uint
+                                1 as libc::c_uint
                         } else {
                             (*new_15).hostname = canonicalise_opt(arg);
                             if (*new_15).hostname.is_null() ||
@@ -7038,10 +4555,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                 strcpy(errstr,
                                        b"bad DHCP host name\x00" as *const u8
                                            as *const libc::c_char);
-                                return 0 as libc::c_int
+                                return 0
                             }
                             (*new_15).flags |=
-                                16 as libc::c_int as libc::c_uint;
+                                16 as libc::c_uint;
                             (*new_15).domain =
                                 strip_hostname((*new_15).hostname)
                         }
@@ -7051,16 +4568,16 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         /* Leases of a minute or less confuse
 		       some clients, notably Apple's */
                         if (*new_15).lease_time <
-                               120 as libc::c_int as libc::c_uint {
+                               120 as libc::c_uint {
                             (*new_15).lease_time =
-                                120 as libc::c_int as libc::c_uint
+                                120 as libc::c_uint
                         }
-                        (*new_15).flags |= 8 as libc::c_int as libc::c_uint
+                        (*new_15).flags |= 8 as libc::c_uint
                     }
                 }
                 arg = comma
             }
-            (*dnsmasq_daemon).dhcp_conf = new_15;
+            daemon.dhcp_conf = new_15;
             current_block = 7879481898411272068;
         }
         294 => {
@@ -7072,11 +4589,11 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             (*new_16).set = 0 as *mut DhcpNetIdList;
             (*new_16).next = 0 as *mut TagIf;
             /* preserve order */
-            if (*dnsmasq_daemon).tag_if.is_null() {
-                (*dnsmasq_daemon).tag_if = new_16
+            if daemon.tag_if.is_null() {
+                daemon.tag_if = new_16
             } else {
                 let mut tmp_2: *mut TagIf = 0 as *mut TagIf;
-                tmp_2 = (*dnsmasq_daemon).tag_if;
+                tmp_2 = daemon.tag_if;
                 while !(*tmp_2).next.is_null() { tmp_2 = (*tmp_2).next }
                 (*tmp_2).next = new_16
             }
@@ -7084,12 +4601,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 let mut len_1: usize = 0;
                 comma = split(arg);
                 len_1 = strlen(arg);
-                if len_1 < 5 as libc::c_int as libc::c_ulong {
+                if len_1 < 5 as libc::c_ulong {
                     (*new_16).set = 0 as *mut DhcpNetIdList;
                     break ;
                 } else {
                     let mut newtag: *mut DhcpNetId =
-                        dhcp_netid_create(arg.offset(4 as libc::c_int as
+                        dhcp_netid_create(arg.offset(4 as
                                                          isize),
                                           0 as *mut DhcpNetId);
                     if strstr(arg,
@@ -7121,7 +4638,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad tag-if\x00" as *const u8 as *const libc::c_char);
                 free(new_16 as *mut libc::c_void);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
@@ -7143,23 +4660,23 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             if comma.is_null() ||
                    {
                        len_2 = strlen(comma) as susize;
-                       (len_2) == 0 as libc::c_int as libc::c_long
+                       (len_2) == 0 as libc::c_long
                    } {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             }
-            (*new_17).wildcard = 0 as libc::c_int;
+            (*new_17).wildcard = 0;
             (*new_17).netid = id;
             (*id).net = opt_string_alloc(set_prefix(arg));
-            if *comma.offset((len_2 - 1 as libc::c_int as libc::c_long) as
-                                 isize) as libc::c_int == '*' as i32 {
-                *comma.offset((len_2 - 1 as libc::c_int as libc::c_long) as
-                                  isize) = 0 as libc::c_int as libc::c_char;
-                (*new_17).wildcard = 1 as libc::c_int
+            if *comma.offset((len_2 - 1 as libc::c_long) as
+                                 isize) == '*' as i32 {
+                *comma.offset((len_2 - 1 as libc::c_long) as
+                                  isize) = 0 as libc::c_char;
+                (*new_17).wildcard = 1
             }
             (*new_17).name = opt_string_alloc(comma);
-            (*new_17).next = (*dnsmasq_daemon).dhcp_name_match;
-            (*dnsmasq_daemon).dhcp_name_match = new_17;
+            (*new_17).next = daemon.dhcp_name_match;
+            daemon.dhcp_name_match = new_17;
             current_block = 7879481898411272068;
         }
         77 => {
@@ -7167,7 +4684,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut id_0: *mut DhcpNetId = dhcp_tags(&mut arg);
             if arg.is_null() {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
                 let mut dhcp_file: *mut libc::c_char = 0 as *mut libc::c_char;
                 let mut dhcp_sname: *mut libc::c_char =
@@ -7178,17 +4695,17 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 let mut new_18: *mut DhcpBoot = 0 as *mut DhcpBoot;
                 comma = split(arg);
                 dhcp_file = opt_string_alloc(arg);
-                dhcp_next_server.s_addr = 0 as libc::c_int as in_addr_t;
+                dhcp_next_server.s_addr = 0 as InAddrT;
                 if !comma.is_null() {
                     arg = comma;
                     comma = split(arg);
                     dhcp_sname = opt_string_alloc(arg);
                     if !comma.is_null() {
                         unhide_metas(comma);
-                        if !(inet_pton(2 as libc::c_int, comma,
+                        if !(inet_pton(2, comma,
                                        &mut dhcp_next_server as *mut InAddr
                                            as *mut libc::c_void) >
-                                 0 as libc::c_int) {
+                                 0) {
                             /*
 			 * The user may have specified the tftp hostname here.
 			 * save it so that it can be resolved/looked up during
@@ -7196,7 +4713,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
 			 */
                             tftp_sname = opt_string_alloc(comma);
                             dhcp_next_server.s_addr =
-                                0 as libc::c_int as in_addr_t
+                                0 as InAddrT
                         }
                     }
                 }
@@ -7208,8 +4725,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 (*new_18).tftp_sname = tftp_sname;
                 (*new_18).next_server = dhcp_next_server;
                 (*new_18).netid = id_0;
-                (*new_18).next = (*dnsmasq_daemon).boot_config;
-                (*dnsmasq_daemon).boot_config = new_18
+                (*new_18).next = daemon.boot_config;
+                daemon.boot_config = new_18
             }
             current_block = 7879481898411272068;
         }
@@ -7218,21 +4735,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut id_1: *mut DhcpNetId = dhcp_tags(&mut arg);
             if arg.is_null() {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
                 let mut new_19: *mut DelayConfig = 0 as *mut DelayConfig;
                 let mut delay: libc::c_int = 0;
                 if atoi_check(arg, &mut delay) == 0 {
                     strcpy(errstr, gen_err);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 new_19 =
                     opt_malloc(::std::mem::size_of::<DelayConfig>() as
                                    libc::c_ulong) as *mut DelayConfig;
                 (*new_19).delay = delay;
                 (*new_19).netid = id_1;
-                (*new_19).next = (*dnsmasq_daemon).delay_conf;
-                (*dnsmasq_daemon).delay_conf = new_19
+                (*new_19).next = daemon.delay_conf;
+                daemon.delay_conf = new_19
             }
             current_block = 7879481898411272068;
         }
@@ -7243,34 +4760,34 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     as *mut DhcpOpt; /* PXE_MENU_PROMPT */
             let mut timeout: libc::c_int = 0;
             (*new_20).netid = 0 as *mut DhcpNetId;
-            (*new_20).opt = 10 as libc::c_int;
+            (*new_20).opt = 10;
             (*new_20).netid = dhcp_tags(&mut arg);
             if arg.is_null() {
                 dhcp_opt_free(new_20);
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
                 comma = split(arg);
                 unhide_metas(arg);
                 (*new_20).len =
-                    strlen(arg).wrapping_add(1 as libc::c_int as
+                    strlen(arg).wrapping_add(1 as
                                                  libc::c_ulong) as
                         libc::c_int;
                 (*new_20).val =
                     opt_malloc((*new_20).len as usize) as *mut libc::c_uchar;
-                memcpy((*new_20).val.offset(1 as libc::c_int as isize) as
+                memcpy((*new_20).val.offset(1) as
                            *mut libc::c_void, arg as *const libc::c_void,
-                       ((*new_20).len - 1 as libc::c_int) as libc::c_ulong);
+                       ((*new_20).len - 1) as libc::c_ulong);
                 (*new_20).u.vendor_class = 0 as *mut libc::c_uchar;
-                (*new_20).flags = 256 as libc::c_int | 16384 as libc::c_int;
+                (*new_20).flags = 256 | 16384;
                 if !comma.is_null() && atoi_check(comma, &mut timeout) != 0 {
                     *(*new_20).val = timeout as libc::c_uchar
                 } else {
-                    *(*new_20).val = 255 as libc::c_int as libc::c_uchar
+                    *(*new_20).val = 255 as libc::c_uchar
                 }
-                (*new_20).next = (*dnsmasq_daemon).dhcp_opts;
-                (*dnsmasq_daemon).dhcp_opts = new_20;
-                (*dnsmasq_daemon).enable_pxe = 1 as libc::c_int
+                (*new_20).next = daemon.dhcp_opts;
+                daemon.dhcp_opts = new_20;
+                daemon.enable_pxe = 1
             }
             current_block = 7879481898411272068;
         }
@@ -7305,15 +4822,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                      *mut libc::c_char,
                  b"ARM64_EFI\x00" as *const u8 as *const libc::c_char as
                      *mut libc::c_char, 0 as *mut libc::c_char];
-            static mut boottype: libc::c_int = 32768 as libc::c_int;
+            static mut boottype: libc::c_int = 32768;
             (*new_21).netid = 0 as *mut DhcpNetId;
             (*new_21).sname = 0 as *mut libc::c_char;
-            (*new_21).server.s_addr = 0 as libc::c_int as in_addr_t;
+            (*new_21).server.s_addr = 0 as InAddrT;
             (*new_21).netid = dhcp_tags(&mut arg);
             if !arg.is_null() && { comma = split(arg); !comma.is_null() } {
-                i = 0 as libc::c_int;
+                i = 0;
                 while !CSA[i as usize].is_null() {
-                    if strcasecmp(CSA[i as usize], arg) == 0 as libc::c_int {
+                    if strcasecmp(CSA[i as usize], arg) == 0 {
                         break ;
                     }
                     i += 1
@@ -7325,7 +4842,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     (*new_21).CSA = i as libc::c_ushort;
                     (*new_21).menu = opt_string_alloc(arg);
                     if comma.is_null() {
-                        (*new_21).type_0 = 0 as libc::c_int as libc::c_ushort;
+                        (*new_21).type_0 = 0 as libc::c_ushort;
                         (*new_21).basename = 0 as *mut libc::c_char
                     } else {
                         arg = comma;
@@ -7340,32 +4857,32 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                             (*new_21).basename = opt_string_alloc(arg)
                         }
                         if !comma.is_null() {
-                            if inet_pton(2 as libc::c_int, comma,
+                            if inet_pton(2, comma,
                                          &mut (*new_21).server as *mut InAddr
                                              as *mut libc::c_void) == 0 {
                                 (*new_21).server.s_addr =
-                                    0 as libc::c_int as in_addr_t;
+                                    0 as InAddrT;
                                 (*new_21).sname = opt_string_alloc(comma)
                             }
                         }
                     }
                     /* Order matters */
                     (*new_21).next = 0 as *mut PxeService;
-                    if (*dnsmasq_daemon).pxe_services.is_null() {
-                        (*dnsmasq_daemon).pxe_services = new_21
+                    if daemon.pxe_services.is_null() {
+                        daemon.pxe_services = new_21
                     } else {
                         let mut s: *mut PxeService = 0 as *mut PxeService;
-                        s = (*dnsmasq_daemon).pxe_services;
+                        s = daemon.pxe_services;
                         while !(*s).next.is_null() { s = (*s).next }
                         (*s).next = new_21
                     }
-                    (*dnsmasq_daemon).enable_pxe = 1 as libc::c_int;
+                    daemon.enable_pxe = 1;
                     current_block = 7879481898411272068;
                 } else { current_block = 6421703339113101262; }
             } else { current_block = 6421703339113101262; }
             match current_block {
                 7879481898411272068 => { }
-                _ => { strcpy(errstr, gen_err); return 0 as libc::c_int }
+                _ => { strcpy(errstr, gen_err); return 0 }
             }
         }
         52 => {
@@ -7373,7 +4890,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             comma = split(arg);
             if comma.is_null() {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
                 let mut new_22: *mut DhcpMac =
                     opt_malloc(::std::mem::size_of::<DhcpMac>() as
@@ -7382,16 +4899,16 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 unhide_metas(comma);
                 (*new_22).hwaddr_len =
                     parse_hex(comma, (*new_22).hwaddr.as_mut_ptr(),
-                              16 as libc::c_int, &mut (*new_22).mask,
+                              16, &mut (*new_22).mask,
                               &mut (*new_22).hwaddr_type);
-                if (*new_22).hwaddr_len == -(1 as libc::c_int) {
+                if (*new_22).hwaddr_len == -(1) {
                     free((*new_22).netid.net as *mut libc::c_void);
                     strcpy(errstr, gen_err);
                     free(new_22 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 } else {
-                    (*new_22).next = (*dnsmasq_daemon).dhcp_macs;
-                    (*dnsmasq_daemon).dhcp_macs = new_22
+                    (*new_22).next = daemon.dhcp_macs;
+                    daemon.dhcp_macs = new_22
                 }
             }
             current_block = 7879481898411272068;
@@ -7407,24 +4924,24 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         284 => {
             /* --dhcp-alternate-port */
             if arg.is_null() {
-                (*dnsmasq_daemon).dhcp_server_port = 1067 as libc::c_int;
-                (*dnsmasq_daemon).dhcp_client_port = 1068 as libc::c_int
+                daemon.dhcp_server_port = 1067;
+                daemon.dhcp_client_port = 1068
             } else {
                 comma = split(arg);
-                if atoi_check16(arg, &mut (*dnsmasq_daemon).dhcp_server_port)
+                if atoi_check16(arg, &mut daemon.dhcp_server_port)
                        == 0 ||
                        !comma.is_null() &&
                            atoi_check16(comma,
-                                        &mut (*dnsmasq_daemon).dhcp_client_port)
+                                        &mut daemon.dhcp_client_port)
                                == 0 {
                     strcpy(errstr,
                            b"invalid port number\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 if comma.is_null() {
-                    (*dnsmasq_daemon).dhcp_client_port =
-                        (*dnsmasq_daemon).dhcp_server_port + 1 as libc::c_int
+                    daemon.dhcp_client_port =
+                        daemon.dhcp_server_port + 1
                 }
             }
             current_block = 7879481898411272068;
@@ -7439,23 +4956,23 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         296 => { current_block = 8762260891357387630; }
         295 => {
             /* --dhcp-proxy */
-            (*dnsmasq_daemon).override_0 = 1 as libc::c_int;
+            daemon.override_0 = 1;
             while !arg.is_null() {
                 let mut new_25: *mut AddrList2 =
                     opt_malloc(::std::mem::size_of::<AddrList2>() as
                                    libc::c_ulong) as *mut AddrList2;
                 comma = split(arg);
-                if !(inet_pton(2 as libc::c_int, arg,
+                if !(inet_pton(2, arg,
                                &mut (*new_25).addr as *mut InAddr as
-                                   *mut libc::c_void) > 0 as libc::c_int) {
+                                   *mut libc::c_void) > 0) {
                     strcpy(errstr,
                            b"bad dhcp-proxy address\x00" as *const u8 as
                                *const libc::c_char);
                     free(new_25 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 }
-                (*new_25).next = (*dnsmasq_daemon).override_relays;
-                (*dnsmasq_daemon).override_relays = new_25;
+                (*new_25).next = daemon.override_relays;
+                daemon.override_relays = new_25;
                 arg = comma
             }
             current_block = 7879481898411272068;
@@ -7468,8 +4985,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    libc::c_ulong) as *mut DhcpPxeVendor;
                 comma = split(arg);
                 (*new_26).data = opt_string_alloc(arg);
-                (*new_26).next = (*dnsmasq_daemon).dhcp_pxe_vendors;
-                (*dnsmasq_daemon).dhcp_pxe_vendors = new_26;
+                (*new_26).next = daemon.dhcp_pxe_vendors;
+                daemon.dhcp_pxe_vendors = new_26;
                 arg = comma
             }
             current_block = 7879481898411272068;
@@ -7481,30 +4998,30 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                libc::c_ulong) as *mut DhcpRelay;
             comma = split(arg);
             (*new_27).interface = opt_string_alloc(split(comma));
-            (*new_27).iface_index = 0 as libc::c_int;
-            if inet_pton(2 as libc::c_int, arg,
+            (*new_27).iface_index = 0;
+            if inet_pton(2, arg,
                          &mut (*new_27).local as *mut AllAddr as
                              *mut libc::c_void) != 0 &&
-                   inet_pton(2 as libc::c_int, comma,
+                   inet_pton(2, comma,
                              &mut (*new_27).server as *mut AllAddr as
                                  *mut libc::c_void) != 0 {
-                (*new_27).next = (*dnsmasq_daemon).relay4;
-                (*dnsmasq_daemon).relay4 = new_27
-            } else if inet_pton(10 as libc::c_int, arg,
+                (*new_27).next = daemon.relay4;
+                daemon.relay4 = new_27
+            } else if inet_pton(10, arg,
                                 &mut (*new_27).local as *mut AllAddr as
                                     *mut libc::c_void) != 0 &&
-                          inet_pton(10 as libc::c_int, comma,
+                          inet_pton(10, comma,
                                     &mut (*new_27).server as *mut AllAddr as
                                         *mut libc::c_void) != 0 {
-                (*new_27).next = (*dnsmasq_daemon).relay6;
-                (*dnsmasq_daemon).relay6 = new_27
+                (*new_27).next = daemon.relay6;
+                daemon.relay6 = new_27
             } else {
                 free((*new_27).interface as *mut libc::c_void);
                 strcpy(errstr,
                        b"Bad dhcp-relay\x00" as *const u8 as
                            *const libc::c_char);
                 free(new_27 as *mut libc::c_void);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
@@ -7515,27 +5032,27 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 let mut new_28: *mut RaInterface =
                     opt_malloc(::std::mem::size_of::<RaInterface>() as
                                    libc::c_ulong) as *mut RaInterface;
-                (*new_28).lifetime = -(1 as libc::c_int);
-                (*new_28).prio = 0 as libc::c_int;
-                (*new_28).mtu = 0 as libc::c_int;
+                (*new_28).lifetime = -(1);
+                (*new_28).prio = 0;
+                (*new_28).mtu = 0;
                 (*new_28).mtu_name = 0 as *mut libc::c_char;
                 (*new_28).name = opt_string_alloc(arg);
                 if strcasestr(comma,
                               b"mtu:\x00" as *const u8 as *const libc::c_char)
                        == comma {
-                    arg = comma.offset(4 as libc::c_int as isize);
+                    arg = comma.offset(4);
                     comma = split(comma);
                     if comma.is_null() {
                         current_block = 14730872864422895907;
                     } else if strcasecmp(arg,
                                          b"off\x00" as *const u8 as
                                              *const libc::c_char) == 0 {
-                        (*new_28).mtu = -(1 as libc::c_int);
+                        (*new_28).mtu = -(1);
                         current_block = 1840194652026069277;
                     } else if atoi_check(arg, &mut (*new_28).mtu) == 0 {
                         (*new_28).mtu_name = opt_string_alloc(arg);
                         current_block = 1840194652026069277;
-                    } else if (*new_28).mtu < 1280 as libc::c_int {
+                    } else if (*new_28).mtu < 1280 {
                         current_block = 14730872864422895907;
                     } else { current_block = 1840194652026069277; }
                 } else { current_block = 1840194652026069277; }
@@ -7547,10 +5064,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                strcasestr(comma,
                                           b"low\x00" as *const u8 as
                                               *const libc::c_char) == comma {
-                            if *comma as libc::c_int == 'l' as i32 ||
-                                   *comma as libc::c_int == 'L' as i32 {
-                                (*new_28).prio = 0x18 as libc::c_int
-                            } else { (*new_28).prio = 0x8 as libc::c_int }
+                            if *comma == 'l' as i32 ||
+                                   *comma == 'L' as i32 {
+                                (*new_28).prio = 0x18
+                            } else { (*new_28).prio = 0x8 }
                             comma = split(comma)
                         }
                         arg = split(comma);
@@ -7560,8 +5077,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                        0 {
                             current_block = 14730872864422895907;
                         } else {
-                            (*new_28).next = (*dnsmasq_daemon).ra_interfaces;
-                            (*dnsmasq_daemon).ra_interfaces = new_28;
+                            (*new_28).next = daemon.ra_interfaces;
+                            daemon.ra_interfaces = new_28;
                             current_block = 7879481898411272068;
                         }
                     }
@@ -7575,7 +5092,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                b"bad RA-params\x00" as *const u8 as
                                    *const libc::c_char);
                         free(new_28 as *mut libc::c_void);
-                        return 0 as libc::c_int
+                        return 0
                     }
                 }
             } else { current_block = 7879481898411272068; }
@@ -7585,24 +5102,24 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             comma = split(arg);
             if comma.is_null() ||
                    atoi_check(arg,
-                              &mut (*dnsmasq_daemon).duid_enterprise as
+                              &mut daemon.duid_enterprise as
                                   *mut libc::c_uint as *mut libc::c_int) == 0
                {
                 strcpy(errstr,
                        b"bad DUID\x00" as *const u8 as *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             } else {
-                (*dnsmasq_daemon).duid_config_len =
+                daemon.duid_config_len =
                     parse_hex(comma, comma as *mut libc::c_uchar,
-                              strlen(comma) as libc::c_int,
+                              strlen(comma),
                               0 as *mut libc::c_uint, 0 as *mut libc::c_int)
                         as libc::c_uint;
-                (*dnsmasq_daemon).duid_config =
-                    opt_malloc((*dnsmasq_daemon).duid_config_len as usize) as
+                daemon.duid_config =
+                    opt_malloc(daemon.duid_config_len as usize) as
                         *mut libc::c_uchar;
-                memcpy((*dnsmasq_daemon).duid_config as *mut libc::c_void,
+                memcpy(daemon.duid_config as *mut libc::c_void,
                        comma as *const libc::c_void,
-                       (*dnsmasq_daemon).duid_config_len as libc::c_ulong);
+                       daemon.duid_config_len as libc::c_ulong);
             }
             current_block = 7879481898411272068;
         }
@@ -7612,51 +5129,51 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut a_0: [*mut libc::c_char; 3] =
                 [0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char];
-            let mut k_0: libc::c_int = 0 as libc::c_int;
+            let mut k_0: libc::c_int = 0;
             let mut new_29: *mut Doctor =
                 opt_malloc(::std::mem::size_of::<Doctor>() as libc::c_ulong)
                     as *mut Doctor;
-            (*new_29).next = (*dnsmasq_daemon).doctors;
-            (*dnsmasq_daemon).doctors = new_29;
+            (*new_29).next = daemon.doctors;
+            daemon.doctors = new_29;
             (*new_29).mask.s_addr = 0xffffffff as libc::c_uint;
-            (*new_29).end.s_addr = 0 as libc::c_int as in_addr_t;
-            a_0[0 as libc::c_int as usize] = arg;
-            if !a_0[0 as libc::c_int as usize].is_null() {
-                k_0 = 1 as libc::c_int;
-                while k_0 < 3 as libc::c_int {
+            (*new_29).end.s_addr = 0 as InAddrT;
+            a_0[0 as usize] = arg;
+            if !a_0[0 as usize].is_null() {
+                k_0 = 1;
+                while k_0 < 3 {
                     a_0[k_0 as usize] =
-                        split(a_0[(k_0 - 1 as libc::c_int) as usize]);
+                        split(a_0[(k_0 - 1) as usize]);
                     if a_0[k_0 as usize].is_null() { break ; }
                     unhide_metas(a_0[k_0 as usize]);
                     k_0 += 1
                 }
             }
             dash =
-                split_chr(a_0[0 as libc::c_int as usize],
+                split_chr(a_0[0 as usize],
                           '-' as i32 as libc::c_char);
-            if k_0 < 2 as libc::c_int ||
-                   !(inet_pton(2 as libc::c_int,
-                               a_0[0 as libc::c_int as usize],
+            if k_0 < 2 ||
+                   !(inet_pton(2,
+                               a_0[0 as usize],
                                &mut (*new_29).in_0 as *mut InAddr as
-                                   *mut libc::c_void) > 0 as libc::c_int) ||
-                   !(inet_pton(2 as libc::c_int,
-                               a_0[1 as libc::c_int as usize],
+                                   *mut libc::c_void) > 0) ||
+                   !(inet_pton(2,
+                               a_0[1 as usize],
                                &mut (*new_29).out as *mut InAddr as
-                                   *mut libc::c_void) > 0 as libc::c_int) ||
-                   k_0 == 3 as libc::c_int &&
-                       inet_pton(2 as libc::c_int,
-                                 a_0[2 as libc::c_int as usize],
+                                   *mut libc::c_void) > 0) ||
+                   k_0 == 3 &&
+                       inet_pton(2,
+                                 a_0[2 as usize],
                                  &mut (*new_29).mask as *mut InAddr as
                                      *mut libc::c_void) == 0 {
                 strcpy(errstr,
                        b"missing address in alias\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             if !dash.is_null() &&
-                   (!(inet_pton(2 as libc::c_int, dash,
+                   (!(inet_pton(2, dash,
                                 &mut (*new_29).end as *mut InAddr as
-                                    *mut libc::c_void) > 0 as libc::c_int) ||
+                                    *mut libc::c_void) > 0) ||
                         is_same_net((*new_29).in_0, (*new_29).end,
                                     (*new_29).mask) == 0 ||
                         __bswap_32((*new_29).in_0.s_addr) >
@@ -7665,7 +5182,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                        b"invalid alias range\x00" as *const u8 as
                            *const libc::c_char);
                 free(new_29 as *mut libc::c_void);
-                return 0 as libc::c_int
+                return 0
             }
             current_block = 7879481898411272068;
         }
@@ -7681,7 +5198,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad interface name\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             new_30 =
                 opt_malloc(::std::mem::size_of::<InterfaceName>() as
@@ -7690,24 +5207,24 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             (*new_30).addr = 0 as *mut AddrList;
             /* Add to the end of the list, so that first name
 	   of an interface is used for PTR lookups. */
-            up_0 = &mut (*dnsmasq_daemon).int_names;
+            up_0 = &mut daemon.int_names;
             while !(*up_0).is_null() { up_0 = &mut (**up_0).next }
             *up_0 = new_30;
             (*new_30).name = domain_1;
-            (*new_30).family = 0 as libc::c_int;
+            (*new_30).family = 0;
             arg = split_chr(comma, '/' as i32 as libc::c_char);
             if !arg.is_null() {
                 if strcmp(arg, b"4\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
-                    (*new_30).family = 2 as libc::c_int
+                       == 0 {
+                    (*new_30).family = 2
                 } else if strcmp(arg,
                                  b"6\x00" as *const u8 as *const libc::c_char)
-                              == 0 as libc::c_int {
-                    (*new_30).family = 10 as libc::c_int
+                              == 0 {
+                    (*new_30).family = 10
                 } else {
                     strcpy(errstr, gen_err);
                     free(new_30 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 }
             }
             (*new_30).intr = opt_string_alloc(comma);
@@ -7720,7 +5237,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut target_0: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut last_0: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut pen: *mut libc::c_char = 0 as *mut libc::c_char;
-            let mut ttl_0: libc::c_int = -(1 as libc::c_int);
+            let mut ttl_0: libc::c_int = -(1);
             pen = 0 as *mut libc::c_char;
             last_0 = pen;
             comma = arg;
@@ -7732,14 +5249,14 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             if pen.is_null() {
                 strcpy(errstr,
                        b"bad CNAME\x00" as *const u8 as *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             if pen != arg && atoi_check(last_0, &mut ttl_0) != 0 {
                 last_0 = pen
             }
             target_0 = canonicalise_opt(last_0);
             while arg != last_0 {
-                let mut arglen: libc::c_int = strlen(arg) as libc::c_int;
+                let mut arglen: libc::c_int = strlen(arg);
                 alias = canonicalise_opt(arg);
                 if alias.is_null() || target_0.is_null() {
                     free(target_0 as *mut libc::c_void);
@@ -7747,9 +5264,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     strcpy(errstr,
                            b"bad CNAME\x00" as *const u8 as
                                *const libc::c_char);
-                    return 0 as libc::c_int
+                    return 0
                 }
-                new_31 = (*dnsmasq_daemon).cnames;
+                new_31 = daemon.cnames;
                 while !new_31.is_null() {
                     if hostname_isequal((*new_31).alias, alias) != 0 {
                         free(target_0 as *mut libc::c_void);
@@ -7757,24 +5274,24 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                         strcpy(errstr,
                                b"duplicate CNAME\x00" as *const u8 as
                                    *const libc::c_char);
-                        return 0 as libc::c_int
+                        return 0
                     }
                     new_31 = (*new_31).next
                 }
                 new_31 =
                     opt_malloc(::std::mem::size_of::<Cname>() as
                                    libc::c_ulong) as *mut Cname;
-                (*new_31).next = (*dnsmasq_daemon).cnames;
-                (*dnsmasq_daemon).cnames = new_31;
+                (*new_31).next = daemon.cnames;
+                daemon.cnames = new_31;
                 (*new_31).alias = alias;
                 (*new_31).target = target_0;
                 (*new_31).ttl = ttl_0;
-                arg = arg.offset((arglen + 1 as libc::c_int) as isize);
-                while *arg as libc::c_int != 0 &&
-                          *(*__ctype_b_loc()).offset(*arg as libc::c_int as
-                                                         isize) as libc::c_int
+                arg = arg.offset((arglen + 1));
+                while *arg != 0 &&
+                          *(*__ctype_b_loc()).offset(*arg as
+                                                         isize)
                               &
-                              _ISspace as libc::c_int as libc::c_ushort as
+                              _ISspace as libc::c_ushort as
                                   libc::c_int != 0 {
                     arg = arg.offset(1)
                 }
@@ -7799,13 +5316,13 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad PTR record\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             } else {
                 new_32 =
                     opt_malloc(::std::mem::size_of::<PtrRecord>() as
                                    libc::c_ulong) as *mut PtrRecord;
-                (*new_32).next = (*dnsmasq_daemon).ptr;
-                (*dnsmasq_daemon).ptr = new_32;
+                (*new_32).next = daemon.ptr;
+                daemon.ptr = new_32;
                 (*new_32).name = dom;
                 (*new_32).ptr = target_1
             }
@@ -7818,36 +5335,36 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                  0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char, 0 as *mut libc::c_char,
                  0 as *mut libc::c_char];
-            let mut k_1: libc::c_int = 0 as libc::c_int;
+            let mut k_1: libc::c_int = 0;
             let mut new_33: *mut NaPtr = 0 as *mut NaPtr;
             let mut order: libc::c_int = 0;
             let mut pref_2: libc::c_int = 0;
             let mut name_2: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut replace: *mut libc::c_char = 0 as *mut libc::c_char;
-            a_1[0 as libc::c_int as usize] = arg;
-            if !a_1[0 as libc::c_int as usize].is_null() {
-                k_1 = 1 as libc::c_int;
-                while k_1 < 7 as libc::c_int {
+            a_1[0 as usize] = arg;
+            if !a_1[0 as usize].is_null() {
+                k_1 = 1;
+                while k_1 < 7 {
                     a_1[k_1 as usize] =
-                        split(a_1[(k_1 - 1 as libc::c_int) as usize]);
+                        split(a_1[(k_1 - 1) as usize]);
                     if a_1[k_1 as usize].is_null() { break ; }
                     k_1 += 1
                 }
             }
-            if k_1 < 6 as libc::c_int ||
+            if k_1 < 6 ||
                    {
                        name_2 =
-                           canonicalise_opt(a_1[0 as libc::c_int as usize]);
+                           canonicalise_opt(a_1[0 as usize]);
                        name_2.is_null()
                    } ||
-                   atoi_check16(a_1[1 as libc::c_int as usize], &mut order) ==
+                   atoi_check16(a_1[1 as usize], &mut order) ==
                        0 ||
-                   atoi_check16(a_1[2 as libc::c_int as usize], &mut pref_2)
+                   atoi_check16(a_1[2 as usize], &mut pref_2)
                        == 0 ||
-                   k_1 == 7 as libc::c_int &&
+                   k_1 == 7 &&
                        {
                            replace =
-                               canonicalise_opt(a_1[6 as libc::c_int as
+                               canonicalise_opt(a_1[6 as
                                                         usize]);
                            replace.is_null()
                        } {
@@ -7856,20 +5373,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad NAPTR record\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             } else {
                 new_33 =
                     opt_malloc(::std::mem::size_of::<NaPtr>() as
                                    libc::c_ulong) as *mut NaPtr;
-                (*new_33).next = (*dnsmasq_daemon).naptr;
-                (*dnsmasq_daemon).naptr = new_33;
+                (*new_33).next = daemon.naptr;
+                daemon.naptr = new_33;
                 (*new_33).name = name_2;
                 (*new_33).flags =
-                    opt_string_alloc(a_1[3 as libc::c_int as usize]);
+                    opt_string_alloc(a_1[3 as usize]);
                 (*new_33).services =
-                    opt_string_alloc(a_1[4 as libc::c_int as usize]);
+                    opt_string_alloc(a_1[4 as usize]);
                 (*new_33).regexp =
-                    opt_string_alloc(a_1[5 as libc::c_int as usize]);
+                    opt_string_alloc(a_1[5 as usize]);
                 (*new_33).replace = replace;
                 (*new_33).order = order as libc::c_uint;
                 (*new_33).pref = pref_2 as libc::c_uint
@@ -7879,7 +5396,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         310 => {
             /* dns-rr */
             let mut new_34: *mut TxtRecord = 0 as *mut TxtRecord;
-            let mut len_3: usize = 0 as libc::c_int as usize;
+            let mut len_3: usize = 0 as usize;
             let mut data: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut class: libc::c_int = 0;
             comma = split(arg);
@@ -7897,7 +5414,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                        {
                            len_3 =
                                parse_hex(data, data as *mut libc::c_uchar,
-                                         -(1 as libc::c_int),
+                                         -(1),
                                          0 as *mut libc::c_uint,
                                          0 as *mut libc::c_int) as usize;
                            (len_3) ==
@@ -7909,12 +5426,12 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                        b"bad RR record\x00" as *const u8 as
                            *const libc::c_char);
                 free(new_34 as *mut libc::c_void);
-                return 0 as libc::c_int
+                return 0
             }
-            (*new_34).len = 0 as libc::c_int as libc::c_ushort;
+            (*new_34).len = 0 as libc::c_ushort;
             (*new_34).class = class as libc::c_ushort;
-            (*new_34).next = (*dnsmasq_daemon).rr;
-            (*dnsmasq_daemon).rr = new_34;
+            (*new_34).next = daemon.rr;
+            daemon.rr = new_34;
             if !data.is_null() {
                 (*new_34).txt = opt_malloc(len_3) as *mut libc::c_uchar;
                 (*new_34).len = len_3 as libc::c_ushort;
@@ -7935,8 +5452,8 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             new_35 =
                 opt_malloc(::std::mem::size_of::<TxtRecord>() as
                                libc::c_ulong) as *mut TxtRecord;
-            (*new_35).next = (*dnsmasq_daemon).rr;
-            (*dnsmasq_daemon).rr = new_35;
+            (*new_35).next = daemon.rr;
+            daemon.rr = new_35;
             if atoi_check(comma, &mut flags) == 0 || tag.is_null() ||
                    value.is_null() ||
                    {
@@ -7946,7 +5463,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad CAA record\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             unhide_metas(tag);
             unhide_metas(value);
@@ -7958,24 +5475,24 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     as libc::c_ushort;
             (*new_35).txt =
                 opt_malloc((*new_35).len as usize) as *mut libc::c_uchar;
-            *(*new_35).txt.offset(0 as libc::c_int as isize) =
+            *(*new_35).txt.offset(0) =
                 flags as libc::c_uchar;
-            *(*new_35).txt.offset(1 as libc::c_int as isize) =
+            *(*new_35).txt.offset(1) =
                 strlen(tag) as libc::c_uchar;
-            memcpy(&mut *(*new_35).txt.offset(2 as libc::c_int as isize) as
+            memcpy(&mut *(*new_35).txt.offset(2) as
                        *mut libc::c_uchar as *mut libc::c_void,
                    tag as *const libc::c_void, strlen(tag));
-            memcpy(&mut *(*new_35).txt.offset((2 as libc::c_int as
+            memcpy(&mut *(*new_35).txt.offset((2 as
                                                    libc::c_ulong).wrapping_add((strlen
                                                                                     as
-                                                                                    unsafe extern "C" fn(_:
+                                                                                     fn(_:
                                                                                                              *const libc::c_char)
                                                                                         ->
                                                                                             libc::c_ulong)(tag))
-                                                  as isize) as
+                                                 ) as
                        *mut libc::c_uchar as *mut libc::c_void,
                    value as *const libc::c_void, strlen(value));
-            (*new_35).class = 257 as libc::c_int as libc::c_ushort;
+            (*new_35).class = 257 as libc::c_ushort;
             current_block = 7879481898411272068;
         }
         89 => {
@@ -7989,22 +5506,22 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             new_36 =
                 opt_malloc(::std::mem::size_of::<TxtRecord>() as
                                libc::c_ulong) as *mut TxtRecord;
-            (*new_36).class = 1 as libc::c_int as libc::c_ushort;
-            (*new_36).stat = 0 as libc::c_int;
+            (*new_36).class = 1 as libc::c_ushort;
+            (*new_36).stat = 0;
             (*new_36).name = canonicalise_opt(arg);
             if (*new_36).name.is_null() {
                 strcpy(errstr,
                        b"bad TXT record\x00" as *const u8 as
                            *const libc::c_char);
                 free(new_36 as *mut libc::c_void);
-                return 0 as libc::c_int
+                return 0
             }
-            (*new_36).next = (*dnsmasq_daemon).txt;
-            (*dnsmasq_daemon).txt = new_36;
+            (*new_36).next = daemon.txt;
+            daemon.txt = new_36;
             len_4 =
                 if !comma.is_null() {
                     strlen(comma)
-                } else { 0 as libc::c_int as libc::c_ulong };
+                } else { 0 as libc::c_ulong };
             len_4 =
                 (len_4 as
                      libc::c_ulong).wrapping_add(len_4.wrapping_div(255 as
@@ -8021,20 +5538,20 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let fresh29 = p_0;
             p_0 = p_0.offset(1);
             cnt = fresh29;
-            *cnt = 0 as libc::c_int as libc::c_uchar;
-            while !comma.is_null() && *comma as libc::c_int != 0 {
+            *cnt = 0 as libc::c_uchar;
+            while !comma.is_null() && *comma != 0 {
                 let fresh30 = comma;
                 comma = comma.offset(1);
                 let mut c: libc::c_uchar = *fresh30 as libc::c_uchar;
-                if c as libc::c_int == ',' as i32 ||
-                       *cnt as libc::c_int == 255 as libc::c_int {
-                    if c as libc::c_int != ',' as i32 {
+                if c == ',' as i32 ||
+                       *cnt == 255 {
+                    if c != ',' as i32 {
                         comma = comma.offset(-1)
                     }
                     let fresh31 = p_0;
                     p_0 = p_0.offset(1);
                     cnt = fresh31;
-                    *cnt = 0 as libc::c_int as libc::c_uchar
+                    *cnt = 0 as libc::c_uchar
                 } else {
                     let fresh32 = p_0;
                     p_0 = p_0.offset(1);
@@ -8050,9 +5567,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         }
         87 => {
             /* --srv-host */
-            let mut port: libc::c_int = 1 as libc::c_int;
-            let mut priority: libc::c_int = 0 as libc::c_int;
-            let mut weight: libc::c_int = 0 as libc::c_int;
+            let mut port: libc::c_int = 1;
+            let mut priority: libc::c_int = 0;
+            let mut weight: libc::c_int = 0;
             let mut name_3: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut target_2: *mut libc::c_char = 0 as *mut libc::c_char;
             let mut new_37: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
@@ -8062,7 +5579,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"bad SRV record\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             if !comma.is_null() {
                 arg = comma;
@@ -8073,7 +5590,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                            b"bad SRV target\x00" as *const u8 as
                                *const libc::c_char);
                     free(name_3 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 }
                 if !comma.is_null() {
                     arg = comma;
@@ -8084,7 +5601,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                b"invalid port number\x00" as *const u8 as
                                    *const libc::c_char);
                         free(target_2 as *mut libc::c_void);
-                        return 0 as libc::c_int
+                        return 0
                     }
                     if !comma.is_null() {
                         arg = comma;
@@ -8095,7 +5612,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    b"invalid priority\x00" as *const u8 as
                                        *const libc::c_char);
                             free(target_2 as *mut libc::c_void);
-                            return 0 as libc::c_int
+                            return 0
                         }
                         if !comma.is_null() &&
                                atoi_check16(comma, &mut weight) == 0 {
@@ -8104,7 +5621,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                    b"invalid weight\x00" as *const u8 as
                                        *const libc::c_char);
                             free(target_2 as *mut libc::c_void);
-                            return 0 as libc::c_int
+                            return 0
                         }
                     }
                 }
@@ -8112,9 +5629,9 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             new_37 =
                 opt_malloc(::std::mem::size_of::<MxSrvRecord>() as
                                libc::c_ulong) as *mut MxSrvRecord;
-            (*new_37).next = (*dnsmasq_daemon).mxnames;
-            (*dnsmasq_daemon).mxnames = new_37;
-            (*new_37).issrv = 1 as libc::c_int;
+            (*new_37).next = daemon.mxnames;
+            daemon.mxnames = new_37;
+            (*new_37).issrv = 1;
             (*new_37).name = name_3;
             (*new_37).target = target_2;
             (*new_37).srvport = port;
@@ -8129,39 +5646,39 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 strcpy(errstr,
                        b"Bad host-record\x00" as *const u8 as
                            *const libc::c_char);
-                return 0 as libc::c_int
+                return 0
             }
             new_38 =
                 opt_malloc(::std::mem::size_of::<HostRecord>() as
                                libc::c_ulong) as *mut HostRecord;
-            memset(new_38 as *mut libc::c_void, 0 as libc::c_int,
+            memset(new_38 as *mut libc::c_void, 0,
                    ::std::mem::size_of::<HostRecord>() as libc::c_ulong);
-            (*new_38).ttl = -(1 as libc::c_int);
-            (*new_38).flags = 0 as libc::c_int;
+            (*new_38).ttl = -(1);
+            (*new_38).flags = 0;
             while !arg.is_null() {
                 let mut addr_1: AllAddr =
                     AllAddr {addr4: InAddr {s_addr: 0,},};
                 let mut dig_0: *mut libc::c_char = 0 as *mut libc::c_char;
                 dig_0 = arg;
-                while *dig_0 as libc::c_int != 0 as libc::c_int {
-                    if (*dig_0 as libc::c_int) < '0' as i32 ||
-                           *dig_0 as libc::c_int > '9' as i32 {
+                while *dig_0 != 0 {
+                    if (*dig_0) < '0' as i32 ||
+                           *dig_0 > '9' as i32 {
                         break ;
                     }
                     dig_0 = dig_0.offset(1)
                 }
-                if *dig_0 as libc::c_int == 0 as libc::c_int {
+                if *dig_0 == 0 {
                     (*new_38).ttl = atoi(arg)
-                } else if inet_pton(2 as libc::c_int, arg,
+                } else if inet_pton(2, arg,
                                     &mut addr_1.addr4 as *mut InAddr as
                                         *mut libc::c_void) != 0 {
                     (*new_38).addr = addr_1.addr4;
-                    (*new_38).flags |= 2 as libc::c_int
-                } else if inet_pton(10 as libc::c_int, arg,
+                    (*new_38).flags |= 2
+                } else if inet_pton(10, arg,
                                     &mut addr_1.addr6 as *mut In6Addr as
                                         *mut libc::c_void) != 0 {
                     (*new_38).addr6 = addr_1.addr6;
-                    (*new_38).flags |= 1 as libc::c_int
+                    (*new_38).flags |= 1
                 } else {
                     let mut nomem: libc::c_int = 0;
                     let mut canon: *mut libc::c_char =
@@ -8180,7 +5697,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                b"Bad name in host-record\x00" as *const u8 as
                                    *const libc::c_char);
                         free(new_38 as *mut libc::c_void);
-                        return 0 as libc::c_int
+                        return 0
                     }
                     nl =
                         opt_malloc(::std::mem::size_of::<NameList>() as
@@ -8203,18 +5720,18 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 comma = split(arg)
             }
             /* Keep list order */
-            if (*dnsmasq_daemon).host_records_tail.is_null() {
-                (*dnsmasq_daemon).host_records = new_38
-            } else { (*(*dnsmasq_daemon).host_records_tail).next = new_38 }
+            if daemon.host_records_tail.is_null() {
+                daemon.host_records = new_38
+            } else { (*daemon.host_records_tail).next = new_38 }
             (*new_38).next = 0 as *mut HostRecord;
-            (*dnsmasq_daemon).host_records_tail = new_38;
+            daemon.host_records_tail = new_38;
             current_block = 7879481898411272068;
         }
         _ => {
             strcpy(errstr,
                    b"unsupported option (check that dnsmasq was compiled with DHCP/TFTP/DNSSEC/DBus support)\x00"
                        as *const u8 as *const libc::c_char);
-            return 0 as libc::c_int
+            return 0
         }
     }
     match current_block {
@@ -8224,21 +5741,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut addr_0: InAddr = InAddr {s_addr: 0,}; /* error */
             unhide_metas(arg);
             if !arg.is_null() &&
-                   inet_pton(2 as libc::c_int, arg,
+                   inet_pton(2, arg,
                              &mut addr_0 as *mut InAddr as *mut libc::c_void)
-                       > 0 as libc::c_int {
+                       > 0 {
                 let mut baddr: *mut BogusAddr =
                     opt_malloc(::std::mem::size_of::<BogusAddr>() as
                                    libc::c_ulong) as *mut BogusAddr;
                 if option == 'B' as i32 {
-                    (*baddr).next = (*dnsmasq_daemon).bogus_addr;
-                    (*dnsmasq_daemon).bogus_addr = baddr
+                    (*baddr).next = daemon.bogus_addr;
+                    daemon.bogus_addr = baddr
                 } else {
-                    (*baddr).next = (*dnsmasq_daemon).ignore_addr;
-                    (*dnsmasq_daemon).ignore_addr = baddr
+                    (*baddr).next = daemon.ignore_addr;
+                    daemon.ignore_addr = baddr
                 }
                 (*baddr).addr = addr_0
-            } else { strcpy(errstr, gen_err); return 0 as libc::c_int }
+            } else { strcpy(errstr, gen_err); return 0 }
             current_block = 7879481898411272068;
         }
         12010070245366740438 =>
@@ -8249,7 +5766,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         887445304002143054 =>
         /* --except-interface */
         {
-            loop 
+            loop
                  /* --no-dhcp-interface */
                  {
                 let mut new_9: *mut Iname =
@@ -8258,14 +5775,14 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 comma = split(arg);
                 (*new_9).name = opt_string_alloc(arg);
                 if option == 'I' as i32 {
-                    (*new_9).next = (*dnsmasq_daemon).if_except;
-                    (*dnsmasq_daemon).if_except = new_9
-                } else if option == 258 as libc::c_int {
-                    (*new_9).next = (*dnsmasq_daemon).tftp_interfaces;
-                    (*dnsmasq_daemon).tftp_interfaces = new_9
+                    (*new_9).next = daemon.if_except;
+                    daemon.if_except = new_9
+                } else if option == 258 {
+                    (*new_9).next = daemon.tftp_interfaces;
+                    daemon.tftp_interfaces = new_9
                 } else {
-                    (*new_9).next = (*dnsmasq_daemon).dhcp_except;
-                    (*dnsmasq_daemon).dhcp_except = new_9
+                    (*new_9).next = daemon.dhcp_except;
+                    daemon.dhcp_except = new_9
                 }
                 arg = comma;
                 if arg.is_null() { break ; }
@@ -8287,13 +5804,13 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         /* --dhcp-match */
         {
             return parse_dhcp_opt(errstr, arg,
-                                  if option == 264 as libc::c_int {
-                                      16 as libc::c_int
-                                  } else if option == 281 as libc::c_int {
-                                      128 as libc::c_int
-                                  } else if option == 279 as libc::c_int {
-                                      32 as libc::c_int
-                                  } else { 0 as libc::c_int })
+                                  if option == 264 {
+                                      16
+                                  } else if option == 281 {
+                                      128
+                                  } else if option == 279 {
+                                      32
+                                  } else { 0 })
         }
         10375845272849059847 =>
         /* --dhcp-userclass */
@@ -8343,10 +5860,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut newlist: *mut Server = 0 as *mut Server;
             unhide_metas(arg);
             if !arg.is_null() &&
-                   (*arg as libc::c_int == '/' as i32 ||
-                        option == 298 as libc::c_int) {
+                   (*arg == '/' as i32 ||
+                        option == 298) {
                 let mut rebind: libc::c_int =
-                    !(*arg as libc::c_int == '/' as i32) as libc::c_int;
+                    !(*arg == '/' as i32);
                 let mut end_0: *mut libc::c_char = 0 as *mut libc::c_char;
                 if rebind == 0 { arg = arg.offset(1) }
                 while rebind != 0 ||
@@ -8358,75 +5875,75 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     let mut domain: *mut libc::c_char =
                         0 as *mut libc::c_char;
                     /* elide leading dots - they are implied in the search algorithm */
-                    while *arg as libc::c_int == '.' as i32 {
+                    while *arg == '.' as i32 {
                         arg = arg.offset(1)
                     }
                     /* # matches everything and becomes a zero length domain string */
                     if strcmp(arg,
                               b"#\x00" as *const u8 as *const libc::c_char) ==
-                           0 as libc::c_int {
+                           0 {
                         domain =
                             b"\x00" as *const u8 as *const libc::c_char as
                                 *mut libc::c_char
-                    } else if strlen(arg) != 0 as libc::c_int as libc::c_ulong
+                    } else if strlen(arg) != 0 as libc::c_ulong
                                   &&
                                   {
                                       domain = canonicalise_opt(arg);
                                       domain.is_null()
                                   } {
                         strcpy(errstr, gen_err);
-                        return 0 as libc::c_int
+                        return 0
                     }
                     serv_1 =
                         opt_malloc(::std::mem::size_of::<Server>() as
                                        libc::c_ulong) as *mut Server;
-                    memset(serv_1 as *mut libc::c_void, 0 as libc::c_int,
+                    memset(serv_1 as *mut libc::c_void, 0,
                            ::std::mem::size_of::<Server>() as libc::c_ulong);
                     (*serv_1).next = newlist;
                     newlist = serv_1;
                     (*serv_1).domain = domain;
                     (*serv_1).flags =
                         if !domain.is_null() {
-                            8 as libc::c_int
-                        } else { 32 as libc::c_int };
+                            8
+                        } else { 32 };
                     arg = end_0;
                     if rebind != 0 { break ; }
                 }
                 if newlist.is_null() {
                     strcpy(errstr, gen_err);
-                    return 0 as libc::c_int
+                    return 0
                 }
             } else {
                 newlist =
                     opt_malloc(::std::mem::size_of::<Server>() as
                                    libc::c_ulong) as *mut Server;
-                memset(newlist as *mut libc::c_void, 0 as libc::c_int,
+                memset(newlist as *mut libc::c_void, 0,
                        ::std::mem::size_of::<Server>() as libc::c_ulong);
                 (*newlist).uid = rand32()
             }
             if servers_only != 0 && option == 'S' as i32 {
-                (*newlist).flags |= 4096 as libc::c_int
+                (*newlist).flags |= 4096
             }
             if option == 'A' as i32 {
-                (*newlist).flags |= 4 as libc::c_int;
-                if (*newlist).flags & (8 as libc::c_int | 32 as libc::c_int)
+                (*newlist).flags |= 4;
+                if (*newlist).flags & (8 | 32)
                        == 0 {
                     server_list_free(newlist);
                     strcpy(errstr, gen_err);
-                    return 0 as libc::c_int
+                    return 0
                 }
-            } else if option == 298 as libc::c_int {
-                (*newlist).flags |= 2048 as libc::c_int
+            } else if option == 298 {
+                (*newlist).flags |= 2048
             }
             if arg.is_null() || *arg == 0 {
-                if (*newlist).flags & 2048 as libc::c_int == 0 {
-                    (*newlist).flags |= 2 as libc::c_int
+                if (*newlist).flags & 2048 == 0 {
+                    (*newlist).flags |= 2
                 }
                 /* no server */
             } else if strcmp(arg,
                              b"#\x00" as *const u8 as *const libc::c_char) ==
-                          0 as libc::c_int {
-                (*newlist).flags |= 1024 as libc::c_int
+                          0 {
+                (*newlist).flags |= 1024
             } else {
                 let mut err_0: *mut libc::c_char =
                     parse_server(arg, &mut (*newlist).addr,
@@ -8436,21 +5953,21 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 if !err_0.is_null() {
                     server_list_free(newlist);
                     strcpy(errstr, err_0);
-                    return 0 as libc::c_int
+                    return 0
                 }
             }
             serv_1 = newlist;
             while !(*serv_1).next.is_null() {
                 (*(*serv_1).next).flags |=
-                    (*serv_1).flags & !(8 as libc::c_int | 32 as libc::c_int);
+                    (*serv_1).flags & !(8 | 32);
                 (*(*serv_1).next).addr = (*serv_1).addr;
                 (*(*serv_1).next).source_addr = (*serv_1).source_addr;
                 strcpy((*(*serv_1).next).interface.as_mut_ptr(),
                        (*serv_1).interface.as_mut_ptr());
                 serv_1 = (*serv_1).next
             }
-            (*serv_1).next = (*dnsmasq_daemon).servers;
-            (*dnsmasq_daemon).servers = newlist;
+            (*serv_1).next = daemon.servers;
+            daemon.servers = newlist;
             current_block = 7879481898411272068;
         }
         10566976656908717602 =>
@@ -8484,26 +6001,26 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                                libc::c_ulong) as *mut DhcpNetIdList;
             let mut list_1: *mut DhcpNetId = 0 as *mut DhcpNetId;
             if option == 'J' as i32 {
-                (*new_24).next = (*dnsmasq_daemon).dhcp_ignore;
-                (*dnsmasq_daemon).dhcp_ignore = new_24
-            } else if option == 282 as libc::c_int {
-                (*new_24).next = (*dnsmasq_daemon).force_broadcast;
-                (*dnsmasq_daemon).force_broadcast = new_24
+                (*new_24).next = daemon.dhcp_ignore;
+                daemon.dhcp_ignore = new_24
+            } else if option == 282 {
+                (*new_24).next = daemon.force_broadcast;
+                daemon.force_broadcast = new_24
             } else if option == '3' as i32 {
-                (*new_24).next = (*dnsmasq_daemon).bootp_dynamic;
-                (*dnsmasq_daemon).bootp_dynamic = new_24
-            } else if option == 296 as libc::c_int {
-                (*new_24).next = (*dnsmasq_daemon).dhcp_gen_names;
-                (*dnsmasq_daemon).dhcp_gen_names = new_24
+                (*new_24).next = daemon.bootp_dynamic;
+                daemon.bootp_dynamic = new_24
+            } else if option == 296 {
+                (*new_24).next = daemon.dhcp_gen_names;
+                daemon.dhcp_gen_names = new_24
             } else {
-                (*new_24).next = (*dnsmasq_daemon).dhcp_ignore_names;
-                (*dnsmasq_daemon).dhcp_ignore_names = new_24
+                (*new_24).next = daemon.dhcp_ignore_names;
+                daemon.dhcp_ignore_names = new_24
             }
             while !arg.is_null() {
                 comma = split(arg);
                 list_1 =
                     dhcp_netid_create(if is_tag_prefix(arg) != 0 {
-                                          arg.offset(4 as libc::c_int as
+                                          arg.offset(4 as
                                                          isize)
                                       } else { arg }, list_1);
                 arg = comma
@@ -8515,7 +6032,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
         /* --dhcp-subscrid */
         {
             let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-            let mut dig: libc::c_int = 0 as libc::c_int;
+            let mut dig: libc::c_int = 0;
             let mut new_23: *mut DhcpVendor =
                 opt_malloc(::std::mem::size_of::<DhcpVendor>() as
                                libc::c_ulong) as *mut DhcpVendor;
@@ -8523,10 +6040,10 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             if comma.is_null() {
                 strcpy(errstr, gen_err);
                 free(new_23 as *mut libc::c_void);
-                return 0 as libc::c_int
+                return 0
             }
             (*new_23).netid.net = opt_string_alloc(set_prefix(arg));
-            /* check for hex string - must digits may include : must not have nothing else, 
+            /* check for hex string - must digits may include : must not have nothing else,
 	    only allowed for agent-options. */
             arg = comma;
             comma = split(arg);
@@ -8538,27 +6055,27 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                     free((*new_23).netid.net as *mut libc::c_void);
                     strcpy(errstr, gen_err);
                     free(new_23 as *mut libc::c_void);
-                    return 0 as libc::c_int
+                    return 0
                 } else {
                     (*new_23).enterprise =
-                        atoi(arg.offset(11 as libc::c_int as isize)) as
+                        atoi(arg.offset(11)) as
                             libc::c_uint
                 }
             } else { comma = arg }
             p = comma as *mut libc::c_uchar;
             while *p != 0 {
-                if *(*__ctype_b_loc()).offset(*p as libc::c_int as isize) as
+                if *(*__ctype_b_loc()).offset(*p) as
                        libc::c_int &
-                       _ISxdigit as libc::c_int as libc::c_ushort as
+                       _ISxdigit as libc::c_ushort as
                            libc::c_int != 0 {
-                    dig = 1 as libc::c_int
-                } else if *p as libc::c_int != ':' as i32 { break ; }
+                    dig = 1
+                } else if *p != ':' as i32 { break ; }
                 p = p.offset(1)
             }
             unhide_metas(comma);
             if option == 'U' as i32 || option == 'j' as i32 ||
-                   *p as libc::c_int != 0 || dig == 0 {
-                (*new_23).len = strlen(comma) as libc::c_int;
+                   *p != 0 || dig == 0 {
+                (*new_23).len = strlen(comma);
                 (*new_23).data =
                     opt_malloc((*new_23).len as usize) as *mut libc::c_char;
                 memcpy((*new_23).data as *mut libc::c_void,
@@ -8567,7 +6084,7 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             } else {
                 (*new_23).len =
                     parse_hex(comma, comma as *mut libc::c_uchar,
-                              strlen(comma) as libc::c_int,
+                              strlen(comma),
                               0 as *mut libc::c_uint, 0 as *mut libc::c_int);
                 (*new_23).data =
                     opt_malloc((*new_23).len as usize) as *mut libc::c_char;
@@ -8576,15 +6093,15 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                        (*new_23).len as libc::c_ulong);
             }
             match option {
-                106 => { (*new_23).match_type = 2 as libc::c_int }
-                85 => { (*new_23).match_type = 1 as libc::c_int }
-                268 => { (*new_23).match_type = 3 as libc::c_int }
-                269 => { (*new_23).match_type = 4 as libc::c_int }
-                270 => { (*new_23).match_type = 5 as libc::c_int }
+                106 => { (*new_23).match_type = 2 }
+                85 => { (*new_23).match_type = 1 }
+                268 => { (*new_23).match_type = 3 }
+                269 => { (*new_23).match_type = 4 }
+                270 => { (*new_23).match_type = 5 }
                 _ => { }
             }
-            (*new_23).next = (*dnsmasq_daemon).dhcp_vendors;
-            (*dnsmasq_daemon).dhcp_vendors = new_23;
+            (*new_23).next = daemon.dhcp_vendors;
+            daemon.dhcp_vendors = new_23;
             current_block = 7879481898411272068;
         }
         2602045500541335152 =>
@@ -8607,30 +6124,30 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
                 opt_malloc(::std::mem::size_of::<HostsFile>() as
                                libc::c_ulong) as *mut HostsFile;
             static mut hosts_index: libc::c_uint =
-                3 as libc::c_int as libc::c_uint;
+                3 as libc::c_uint;
             (*new_3).fname = opt_string_alloc(arg);
             let fresh26 = hosts_index;
             hosts_index = hosts_index.wrapping_add(1);
             (*new_3).index = fresh26;
-            (*new_3).flags = 0 as libc::c_int;
+            (*new_3).flags = 0;
             if option == 'H' as i32 {
-                (*new_3).next = (*dnsmasq_daemon).addn_hosts;
-                (*dnsmasq_daemon).addn_hosts = new_3
-            } else if option == 273 as libc::c_int {
-                (*new_3).next = (*dnsmasq_daemon).dhcp_hosts_file;
-                (*dnsmasq_daemon).dhcp_hosts_file = new_3
-            } else if option == 280 as libc::c_int {
-                (*new_3).next = (*dnsmasq_daemon).dhcp_opts_file;
-                (*dnsmasq_daemon).dhcp_opts_file = new_3
+                (*new_3).next = daemon.addn_hosts;
+                daemon.addn_hosts = new_3
+            } else if option == 273 {
+                (*new_3).next = daemon.dhcp_hosts_file;
+                daemon.dhcp_hosts_file = new_3
+            } else if option == 280 {
+                (*new_3).next = daemon.dhcp_opts_file;
+                daemon.dhcp_opts_file = new_3
             } else {
-                (*new_3).next = (*dnsmasq_daemon).dynamic_dirs;
-                (*dnsmasq_daemon).dynamic_dirs = new_3;
-                if option == 340 as libc::c_int {
-                    (*new_3).flags |= 16 as libc::c_int
-                } else if option == 341 as libc::c_int {
-                    (*new_3).flags |= 32 as libc::c_int
-                } else if option == 342 as libc::c_int {
-                    (*new_3).flags |= 8 as libc::c_int
+                (*new_3).next = daemon.dynamic_dirs;
+                daemon.dynamic_dirs = new_3;
+                if option == 340 {
+                    (*new_3).flags |= 16
+                } else if option == 341 {
+                    (*new_3).flags |= 32
+                } else if option == 342 {
+                    (*new_3).flags |= 8
                 }
             }
             current_block = 7879481898411272068;
@@ -8649,41 +6166,41 @@ unsafe extern "C" fn one_opt(mut option: libc::c_int,
             let mut ttl: libc::c_int = 0;
             if atoi_check(arg, &mut ttl) == 0 {
                 strcpy(errstr, gen_err);
-                return 0 as libc::c_int
+                return 0
             } else {
-                if option == 283 as libc::c_int {
-                    (*dnsmasq_daemon).neg_ttl = ttl as libc::c_ulong
-                } else if option == 297 as libc::c_int {
-                    (*dnsmasq_daemon).max_ttl = ttl as libc::c_ulong
-                } else if option == 339 as libc::c_int {
-                    if ttl > 3600 as libc::c_int { ttl = 3600 as libc::c_int }
-                    (*dnsmasq_daemon).min_cache_ttl = ttl as libc::c_ulong
-                } else if option == 312 as libc::c_int {
-                    (*dnsmasq_daemon).max_cache_ttl = ttl as libc::c_ulong
-                } else if option == 315 as libc::c_int {
-                    (*dnsmasq_daemon).auth_ttl = ttl as libc::c_ulong
-                } else if option == 348 as libc::c_int {
-                    (*dnsmasq_daemon).dhcp_ttl = ttl as libc::c_ulong;
-                    (*dnsmasq_daemon).use_dhcp_ttl =
-                        1 as libc::c_int as libc::c_ulong
-                } else { (*dnsmasq_daemon).local_ttl = ttl as libc::c_ulong }
+                if option == 283 {
+                    daemon.neg_ttl = ttl as libc::c_ulong
+                } else if option == 297 {
+                    daemon.max_ttl = ttl as libc::c_ulong
+                } else if option == 339 {
+                    if ttl > 3600 { ttl = 3600 }
+                    daemon.min_cache_ttl = ttl as libc::c_ulong
+                } else if option == 312 {
+                    daemon.max_cache_ttl = ttl as libc::c_ulong
+                } else if option == 315 {
+                    daemon.auth_ttl = ttl as libc::c_ulong
+                } else if option == 348 {
+                    daemon.dhcp_ttl = ttl as libc::c_ulong;
+                    daemon.use_dhcp_ttl =
+                        1 as libc::c_ulong
+                } else { daemon.local_ttl = ttl as libc::c_ulong }
             }
         }
         _ => { }
     }
-    return 1 as libc::c_int;
+    return 1;
 }
-unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
+ fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
                                mut hard_opt: libc::c_int) {
-    let mut lineno: libc::c_int = 0 as libc::c_int;
-    let mut buff: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
+    let mut lineno: libc::c_int = 0;
+    let mut buff: *mut libc::c_char = daemon.namebuff;
     let mut current_block_66: u64;
-    while !fgets(buff, 1025 as libc::c_int, f).is_null() {
+    while !fgets(buff, 1025, f).is_null() {
         let mut white: libc::c_int = 0;
         let mut i: libc::c_int = 0;
         let mut option: libc::c_int =
-            if hard_opt == 332 as libc::c_int {
-                0 as libc::c_int
+            if hard_opt == 332 {
+                0
             } else { hard_opt };
         let mut errmess: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -8691,10 +6208,10 @@ unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
         let mut start: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut len: usize = 0;
         /* Memory allocation failure longjmps here if mem_recover == 1 */
-        if option != 0 as libc::c_int || hard_opt == 332 as libc::c_int {
+        if option != 0 || hard_opt == 332 {
             if _setjmp(mem_jmp.as_mut_ptr()) != 0 { continue ; }
             ::std::ptr::write_volatile(&mut mem_recover as *mut libc::c_int,
-                                       1 as libc::c_int)
+                                       1)
         }
         arg = 0 as *mut libc::c_char;
         ::std::ptr::write_volatile(&mut lineno as *mut libc::c_int,
@@ -8703,54 +6220,54 @@ unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
                                                                                 *const libc::c_int)
                                        + 1);
         errmess = 0 as *mut libc::c_char;
-        /* Implement quotes, inside quotes we allow \\ \" \n and \t 
+        /* Implement quotes, inside quotes we allow \\ \" \n and \t
 	 metacharacters get hidden also strip comments */
-        white = 1 as libc::c_int;
+        white = 1;
         p = buff;
         loop  {
             if !(*p != 0) { current_block_66 = 12199444798915819164; break ; }
-            if *p as libc::c_int == '\"' as i32 {
+            if *p == '\"' as i32 {
                 memmove(p as *mut libc::c_void,
-                        p.offset(1 as libc::c_int as isize) as
+                        p.offset(1) as
                             *const libc::c_void,
-                        strlen(p.offset(1 as libc::c_int as
+                        strlen(p.offset(1 as
                                             isize)).wrapping_add(1 as
                                                                      libc::c_int
                                                                      as
                                                                      libc::c_ulong));
-                while *p as libc::c_int != 0 &&
-                          *p as libc::c_int != '\"' as i32 {
-                    if *p as libc::c_int == '\\' as i32 &&
+                while *p != 0 &&
+                          *p != '\"' as i32 {
+                    if *p == '\\' as i32 &&
                            !strchr(b"\"tnebr\\\x00" as *const u8 as
                                        *const libc::c_char,
-                                   *p.offset(1 as libc::c_int as isize) as
+                                   *p.offset(1) as
                                        libc::c_int).is_null() {
-                        if *p.offset(1 as libc::c_int as isize) as libc::c_int
+                        if *p.offset(1)
                                == 't' as i32 {
-                            *p.offset(1 as libc::c_int as isize) =
+                            *p.offset(1) =
                                 '\t' as i32 as libc::c_char
-                        } else if *p.offset(1 as libc::c_int as isize) as
+                        } else if *p.offset(1) as
                                       libc::c_int == 'n' as i32 {
-                            *p.offset(1 as libc::c_int as isize) =
+                            *p.offset(1) =
                                 '\n' as i32 as libc::c_char
-                        } else if *p.offset(1 as libc::c_int as isize) as
+                        } else if *p.offset(1) as
                                       libc::c_int == 'b' as i32 {
-                            *p.offset(1 as libc::c_int as isize) =
+                            *p.offset(1) =
                                 '\u{8}' as i32 as libc::c_char
-                        } else if *p.offset(1 as libc::c_int as isize) as
+                        } else if *p.offset(1) as
                                       libc::c_int == 'r' as i32 {
-                            *p.offset(1 as libc::c_int as isize) =
+                            *p.offset(1) =
                                 '\r' as i32 as libc::c_char
-                        } else if *p.offset(1 as libc::c_int as isize) as
+                        } else if *p.offset(1) as
                                       libc::c_int == 'e' as i32 {
                             /* escape */
-                            *p.offset(1 as libc::c_int as isize) =
+                            *p.offset(1) =
                                 '\u{1b}' as i32 as libc::c_char
                         }
                         memmove(p as *mut libc::c_void,
-                                p.offset(1 as libc::c_int as isize) as
+                                p.offset(1) as
                                     *const libc::c_void,
-                                strlen(p.offset(1 as libc::c_int as
+                                strlen(p.offset(1 as
                                                     isize)).wrapping_add(1 as
                                                                              libc::c_int
                                                                              as
@@ -8759,7 +6276,7 @@ unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
                     *p = hide_meta(*p);
                     p = p.offset(1)
                 }
-                if *p as libc::c_int == 0 as libc::c_int {
+                if *p == 0 {
                     errmess =
                         b"missing \"\x00" as *const u8 as *const libc::c_char
                             as *mut libc::c_char;
@@ -8767,74 +6284,74 @@ unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
                     break ;
                 } else {
                     memmove(p as *mut libc::c_void,
-                            p.offset(1 as libc::c_int as isize) as
+                            p.offset(1) as
                                 *const libc::c_void,
-                            strlen(p.offset(1 as libc::c_int as
+                            strlen(p.offset(1 as
                                                 isize)).wrapping_add(1 as
                                                                          libc::c_int
                                                                          as
                                                                          libc::c_ulong));
                 }
             }
-            if *(*__ctype_b_loc()).offset(*p as libc::c_int as isize) as
+            if *(*__ctype_b_loc()).offset(*p) as
                    libc::c_int &
-                   _ISspace as libc::c_int as libc::c_ushort as libc::c_int !=
+                   _ISspace as libc::c_ushort !=
                    0 {
                 *p = ' ' as i32 as libc::c_char;
-                white = 1 as libc::c_int
-            } else if white != 0 && *p as libc::c_int == '#' as i32 {
-                *p = 0 as libc::c_int as libc::c_char;
+                white = 1
+            } else if white != 0 && *p == '#' as i32 {
+                *p = 0 as libc::c_char;
                 current_block_66 = 12199444798915819164;
                 break ;
-            } else { white = 0 as libc::c_int }
+            } else { white = 0 }
             p = p.offset(1)
         }
         match current_block_66 {
             12199444798915819164 => {
                 /* strip leading spaces */
                 start = buff;
-                while *start as libc::c_int != 0 &&
-                          *start as libc::c_int == ' ' as i32 {
+                while *start != 0 &&
+                          *start == ' ' as i32 {
                     start = start.offset(1)
                 }
                 /* strip trailing spaces */
                 len = strlen(start);
-                while len != 0 as libc::c_int as libc::c_ulong &&
-                          *start.offset(len.wrapping_sub(1 as libc::c_int as
+                while len != 0 as libc::c_ulong &&
+                          *start.offset(len.wrapping_sub(1 as
                                                              libc::c_ulong) as
-                                            isize) as libc::c_int ==
+                                            isize) ==
                               ' ' as i32 {
                     len = len.wrapping_sub(1)
                 }
-                if len == 0 as libc::c_int as libc::c_ulong { continue ; }
-                *start.offset(len as isize) =
-                    0 as libc::c_int as libc::c_char;
-                if option != 0 as libc::c_int {
+                if len == 0 as libc::c_ulong { continue ; }
+                *start.offset(len) =
+                    0 as libc::c_char;
+                if option != 0 {
                     arg = start
                 } else {
                     p = strchr(start, '=' as i32);
                     if !p.is_null() {
                         /* allow spaces around "=" */
-                        arg = p.offset(1 as libc::c_int as isize);
-                        while *arg as libc::c_int == ' ' as i32 {
+                        arg = p.offset(1);
+                        while *arg == ' ' as i32 {
                             arg = arg.offset(1)
                         }
                         while p >= start &&
-                                  (*p as libc::c_int == ' ' as i32 ||
-                                       *p as libc::c_int == '=' as i32) {
-                            *p = 0 as libc::c_int as libc::c_char;
+                                  (*p == ' ' as i32 ||
+                                       *p == '=' as i32) {
+                            *p = 0 as libc::c_char;
                             p = p.offset(-1)
                         }
                     } else { arg = 0 as *mut libc::c_char }
                 }
-                if option == 0 as libc::c_int {
+                if option == 0 {
                     ::std::ptr::write_volatile(&mut option as
                                                    *mut libc::c_int,
-                                               0 as libc::c_int);
-                    i = 0 as libc::c_int;
+                                               0);
+                    i = 0;
                     while !opts[i as usize].name.is_null() {
                         if strcmp(opts[i as usize].name, start) ==
-                               0 as libc::c_int {
+                               0 {
                             ::std::ptr::write_volatile(&mut option as
                                                            *mut libc::c_int,
                                                        opts[i as usize].val);
@@ -8845,19 +6362,19 @@ unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
                         errmess =
                             b"bad option\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char
-                    } else if opts[i as usize].has_arg == 0 as libc::c_int &&
+                    } else if opts[i as usize].has_arg == 0 &&
                                   !arg.is_null() {
                         errmess =
                             b"extraneous parameter\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char
-                    } else if opts[i as usize].has_arg == 1 as libc::c_int &&
+                    } else if opts[i as usize].has_arg == 1 &&
                                   arg.is_null() {
                         errmess =
                             b"missing parameter\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char
-                    } else if hard_opt == 332 as libc::c_int &&
+                    } else if hard_opt == 332 &&
                                   option != 'S' as i32 &&
-                                  option != 332 as libc::c_int {
+                                  option != 332 {
                         errmess =
                             b"illegal option\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char
@@ -8866,63 +6383,63 @@ unsafe extern "C" fn read_file(mut file: *mut libc::c_char, mut f: *mut FILE,
             }
             _ => { }
         }
-        if !errmess.is_null() { strcpy((*dnsmasq_daemon).namebuff, errmess); }
+        if !errmess.is_null() { strcpy(daemon.namebuff, errmess); }
         if !errmess.is_null() ||
-               one_opt(option, arg, (*dnsmasq_daemon).namebuff,
+               one_opt(option, arg, daemon.namebuff,
                        b"error\x00" as *const u8 as *const libc::c_char as
-                           *mut libc::c_char, 0 as libc::c_int,
-                       (hard_opt == 332 as libc::c_int) as libc::c_int) == 0 {
-            sprintf((*dnsmasq_daemon).namebuff.offset(strlen((*dnsmasq_daemon).namebuff)
-                                                          as isize),
+                           *mut libc::c_char, 0,
+                       (hard_opt == 332)) == 0 {
+            sprintf(daemon.namebuff.offset(strlen(daemon.namebuff)
+                                                         ),
                     b" at line %d of %s\x00" as *const u8 as
                         *const libc::c_char, lineno, file);
-            if hard_opt != 0 as libc::c_int {
-                my_syslog(3 as libc::c_int,
+            if hard_opt != 0 {
+                my_syslog(3,
                           b"%s\x00" as *const u8 as *const libc::c_char,
-                          (*dnsmasq_daemon).namebuff);
+                          daemon.namebuff);
             } else {
                 die(b"%s\x00" as *const u8 as *const libc::c_char as
-                        *mut libc::c_char, (*dnsmasq_daemon).namebuff,
-                    1 as libc::c_int);
+                        *mut libc::c_char, daemon.namebuff,
+                    1);
             }
         }
     }
     ::std::ptr::write_volatile(&mut mem_recover as *mut libc::c_int,
-                               0 as libc::c_int);
+                               0);
     fclose(f);
 }
 #[no_mangle]
-pub unsafe extern "C" fn option_read_dynfile(mut file: *mut libc::c_char,
+pub  fn option_read_dynfile(mut file: *mut libc::c_char,
                                              mut flags: libc::c_int)
  -> libc::c_int {
-    my_syslog((3 as libc::c_int) << 3 as libc::c_int | 6 as libc::c_int,
+    my_syslog((3) << 3 | 6,
               b"read %s\x00" as *const u8 as *const libc::c_char, file);
-    if flags & 16 as libc::c_int != 0 {
-        return one_file(file, 272 as libc::c_int)
+    if flags & 16 != 0 {
+        return one_file(file, 272)
     } else {
-        if flags & 32 as libc::c_int != 0 {
-            return one_file(file, 279 as libc::c_int)
+        if flags & 32 != 0 {
+            return one_file(file, 279)
         }
     }
-    return 0 as libc::c_int;
+    return 0;
 }
-unsafe extern "C" fn one_file(mut file: *mut libc::c_char,
+ fn one_file(mut file: *mut libc::c_char,
                               mut hard_opt: libc::c_int) -> libc::c_int {
     let mut f: *mut FILE = 0 as *mut FILE;
-    let mut nofile_ok: libc::c_int = 0 as libc::c_int;
-    static mut read_stdin: libc::c_int = 0 as libc::c_int;
+    let mut nofile_ok: libc::c_int = 0;
+    static mut read_stdin: libc::c_int = 0;
     static mut filesread: *mut fileread =
         0 as *const fileread as *mut fileread;
     if hard_opt == '7' as i32 {
         /* default conf-file reading */
-        hard_opt = 0 as libc::c_int;
-        nofile_ok = 1 as libc::c_int
+        hard_opt = 0;
+        nofile_ok = 1
     }
-    if hard_opt == 0 as libc::c_int &&
+    if hard_opt == 0 &&
            strcmp(file, b"-\x00" as *const u8 as *const libc::c_char) ==
-               0 as libc::c_int {
-        if read_stdin == 1 as libc::c_int { return 1 as libc::c_int }
-        read_stdin = 1 as libc::c_int;
+               0 {
+        if read_stdin == 1 { return 1 }
+        read_stdin = 1;
         file =
             b"stdin\x00" as *const u8 as *const libc::c_char as
                 *mut libc::c_char;
@@ -8945,64 +6462,64 @@ unsafe extern "C" fn one_file(mut file: *mut libc::c_char,
                  st_mtim: timespec{tv_sec: 0, tv_nsec: 0,},
                  st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
                  __glibc_reserved: [0; 3],}; /* No conffile, all done. */
-        if hard_opt == 0 as libc::c_int &&
-               stat(file, &mut statbuf) == 0 as libc::c_int {
+        if hard_opt == 0 &&
+               stat(file, &mut statbuf) == 0 {
             let mut r: *mut fileread = 0 as *mut fileread;
             r = filesread;
             while !r.is_null() {
-                if (*r).dev == statbuf.st_dev && (*r).ino == statbuf.st_ino {
-                    return 1 as libc::c_int
+                if r.dev == statbuf.st_dev && r.ino == statbuf.st_ino {
+                    return 1
                 }
-                r = (*r).next
+                r = r.next
             }
             r =
                 safe_malloc(::std::mem::size_of::<fileread>() as
                                 libc::c_ulong) as *mut fileread;
-            (*r).next = filesread;
+            r.next = filesread;
             filesread = r;
-            (*r).dev = statbuf.st_dev;
-            (*r).ino = statbuf.st_ino
+            r.dev = statbuf.st_dev;
+            r.ino = statbuf.st_ino
         }
         f = fopen(file, b"r\x00" as *const u8 as *const libc::c_char);
         if f.is_null() {
-            if *__errno_location() == 2 as libc::c_int && nofile_ok != 0 {
-                return 1 as libc::c_int
+            if *__errno_location() == 2 && nofile_ok != 0 {
+                return 1
             } else {
                 let mut str: *mut libc::c_char =
                     b"cannot read %s: %s\x00" as *const u8 as
                         *const libc::c_char as *mut libc::c_char;
-                if hard_opt != 0 as libc::c_int {
-                    my_syslog(3 as libc::c_int, str, file,
+                if hard_opt != 0 {
+                    my_syslog(3, str, file,
                               strerror(*__errno_location()));
-                    return 0 as libc::c_int
-                } else { die(str, file, 3 as libc::c_int); }
+                    return 0
+                } else { die(str, file, 3); }
             }
         }
     }
     read_file(file, f, hard_opt);
-    return 1 as libc::c_int;
+    return 1;
 }
 /* expand any name which is a directory */
 #[no_mangle]
-pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
+pub  fn expand_filelist(mut list: *mut HostsFile)
  -> *mut HostsFile {
     let mut i: libc::c_uint = 0;
     let mut ah: *mut HostsFile = 0 as *mut HostsFile;
     /* find largest used index */
-    i = 3 as libc::c_int as libc::c_uint;
+    i = 3 as libc::c_uint;
     ah = list;
     while !ah.is_null() {
         if i <= (*ah).index {
-            i = (*ah).index.wrapping_add(1 as libc::c_int as libc::c_uint)
+            i = (*ah).index.wrapping_add(1 as libc::c_uint)
         }
-        if (*ah).flags & 1 as libc::c_int != 0 {
-            (*ah).flags |= 2 as libc::c_int
-        } else { (*ah).flags &= !(2 as libc::c_int) }
+        if (*ah).flags & 1 != 0 {
+            (*ah).flags |= 2
+        } else { (*ah).flags &= !(2) }
         ah = (*ah).next
     }
     ah = list;
     while !ah.is_null() {
-        if (*ah).flags & 2 as libc::c_int == 0 {
+        if (*ah).flags & 2 == 0 {
             let mut buf: stat =
                 stat{st_dev: 0,
                      st_ino: 0,
@@ -9019,16 +6536,16 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
                      st_mtim: timespec{tv_sec: 0, tv_nsec: 0,},
                      st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
                      __glibc_reserved: [0; 3],};
-            if stat((*ah).fname, &mut buf) != -(1 as libc::c_int) &&
-                   buf.st_mode & 0o170000 as libc::c_int as libc::c_uint ==
-                       0o40000 as libc::c_int as libc::c_uint {
+            if stat((*ah).fname, &mut buf) != -(1) &&
+                   buf.st_mode & 0o170000 as libc::c_uint ==
+                       0o40000 as libc::c_uint {
                 let mut dir_stream: *mut DIR = 0 as *mut DIR;
                 let mut ent: *mut dirent = 0 as *mut dirent;
                 /* don't read this as a file */
-                (*ah).flags |= 2 as libc::c_int;
+                (*ah).flags |= 2;
                 dir_stream = opendir((*ah).fname);
                 if dir_stream.is_null() {
-                    my_syslog(3 as libc::c_int,
+                    my_syslog(3,
                               b"cannot access directory %s: %s\x00" as
                                   *const u8 as *const libc::c_char,
                               (*ah).fname, strerror(*__errno_location()));
@@ -9043,27 +6560,27 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
                         let mut path: *mut libc::c_char =
                             0 as *mut libc::c_char;
                         /* ignore emacs backups and dotfiles */
-                        if lenfile == 0 as libc::c_int as libc::c_ulong ||
+                        if lenfile == 0 as libc::c_ulong ||
                                (*ent).d_name[lenfile.wrapping_sub(1 as
                                                                       libc::c_int
                                                                       as
                                                                       libc::c_ulong)
-                                                 as usize] as libc::c_int ==
+                                                 as usize] ==
                                    '~' as i32 ||
-                               (*ent).d_name[0 as libc::c_int as usize] as
+                               (*ent).d_name[0 as usize] as
                                    libc::c_int == '#' as i32 &&
                                    (*ent).d_name[lenfile.wrapping_sub(1 as
                                                                           libc::c_int
                                                                           as
                                                                           libc::c_ulong)
-                                                     as usize] as libc::c_int
+                                                     as usize]
                                        == '#' as i32 ||
-                               (*ent).d_name[0 as libc::c_int as usize] as
+                               (*ent).d_name[0 as usize] as
                                    libc::c_int == '.' as i32 {
                             continue ;
                         }
                         /* see if we have an existing record.
-		       dir is ah->fname 
+		       dir is ah->fname
 		       file is ent->d_name
 		       path to match is ah1->fname */
                         ah1 = list;
@@ -9071,7 +6588,7 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
                             if lendir < strlen((*ah1).fname) &&
                                    strstr((*ah1).fname, (*ah).fname) ==
                                        (*ah1).fname &&
-                                   *(*ah1).fname.offset(lendir as isize) as
+                                   *(*ah1).fname.offset(lendir) as
                                        libc::c_int == '/' as i32 &&
                                    strcmp((*ah1).fname.offset(lendir as
                                                                   isize).offset(1
@@ -9080,8 +6597,8 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
                                                                                     as
                                                                                     isize),
                                           (*ent).d_name.as_mut_ptr()) ==
-                                       0 as libc::c_int {
-                                (*ah1).flags &= !(2 as libc::c_int);
+                                       0 {
+                                (*ah1).flags &= !(2);
                                 break ;
                             } else { ah1 = (*ah1).next }
                         }
@@ -9112,21 +6629,21 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
                                 let fresh33 = i;
                                 i = i.wrapping_add(1);
                                 (*ah1).index = fresh33;
-                                (*ah1).flags = 1 as libc::c_int;
+                                (*ah1).flags = 1;
                                 (*ah1).next = list;
                                 list = ah1
                             }
                         }
                         /* inactivate record if not regular file */
-                        if (*ah1).flags & 1 as libc::c_int != 0 &&
+                        if (*ah1).flags & 1 != 0 &&
                                stat((*ah1).fname, &mut buf) !=
-                                   -(1 as libc::c_int) &&
+                                   -(1) &&
                                !(buf.st_mode &
-                                     0o170000 as libc::c_int as libc::c_uint
+                                     0o170000 as libc::c_uint
                                      ==
-                                     0o100000 as libc::c_int as libc::c_uint)
+                                     0o100000 as libc::c_uint)
                            {
-                            (*ah1).flags |= 2 as libc::c_int
+                            (*ah1).flags |= 2
                         }
                     }
                     closedir(dir_stream);
@@ -9138,32 +6655,32 @@ pub unsafe extern "C" fn expand_filelist(mut list: *mut HostsFile)
     return list;
 }
 #[no_mangle]
-pub unsafe extern "C" fn read_servers_file() {
+pub  fn read_servers_file() {
     let mut f: *mut FILE = 0 as *mut FILE;
     f =
-        fopen((*dnsmasq_daemon).servers_file,
+        fopen(daemon.servers_file,
               b"r\x00" as *const u8 as *const libc::c_char);
     if f.is_null() {
-        my_syslog(3 as libc::c_int,
+        my_syslog(3,
                   b"cannot read %s: %s\x00" as *const u8 as
-                      *const libc::c_char, (*dnsmasq_daemon).servers_file,
+                      *const libc::c_char, daemon.servers_file,
                   strerror(*__errno_location()));
         return
     }
-    mark_servers(4096 as libc::c_int);
+    mark_servers(4096);
     cleanup_servers();
-    read_file((*dnsmasq_daemon).servers_file, f, 332 as libc::c_int);
+    read_file(daemon.servers_file, f, 332);
 }
-unsafe extern "C" fn clear_dynamic_conf() {
+ fn clear_dynamic_conf() {
     let mut configs: *mut DhcpConfig = 0 as *mut DhcpConfig;
     let mut cp: *mut DhcpConfig = 0 as *mut DhcpConfig;
     let mut up: *mut *mut DhcpConfig = 0 as *mut *mut DhcpConfig;
     /* remove existing... */
-    up = &mut (*dnsmasq_daemon).dhcp_conf;
-    configs = (*dnsmasq_daemon).dhcp_conf;
+    up = &mut daemon.dhcp_conf;
+    configs = daemon.dhcp_conf;
     while !configs.is_null() {
         cp = (*configs).next;
-        if (*configs).flags & 2048 as libc::c_int as libc::c_uint != 0 {
+        if (*configs).flags & 2048 as libc::c_uint != 0 {
             let mut mac: *mut HwaddrConfig = 0 as *mut HwaddrConfig;
             let mut tmp: *mut HwaddrConfig = 0 as *mut HwaddrConfig;
             let mut list: *mut DhcpNetIdList = 0 as *mut DhcpNetIdList;
@@ -9174,7 +6691,7 @@ unsafe extern "C" fn clear_dynamic_conf() {
                 free(mac as *mut libc::c_void);
                 mac = tmp
             }
-            if (*configs).flags & 2 as libc::c_int as libc::c_uint != 0 {
+            if (*configs).flags & 2 as libc::c_uint != 0 {
                 free((*configs).clid as *mut libc::c_void);
             }
             list = (*configs).netid;
@@ -9184,7 +6701,7 @@ unsafe extern "C" fn clear_dynamic_conf() {
                 free(list as *mut libc::c_void);
                 list = tmplist
             }
-            if (*configs).flags & 16 as libc::c_int as libc::c_uint != 0 {
+            if (*configs).flags & 16 as libc::c_uint != 0 {
                 free((*configs).hostname as *mut libc::c_void);
             }
             *up = (*configs).next;
@@ -9193,18 +6710,18 @@ unsafe extern "C" fn clear_dynamic_conf() {
         configs = cp
     };
 }
-unsafe extern "C" fn clear_dynamic_opt() {
+ fn clear_dynamic_opt() {
     let mut opts_0: *mut DhcpOpt = 0 as *mut DhcpOpt;
     let mut cp: *mut DhcpOpt = 0 as *mut DhcpOpt;
     let mut up: *mut *mut DhcpOpt = 0 as *mut *mut DhcpOpt;
     let mut id: *mut DhcpNetId = 0 as *mut DhcpNetId;
     let mut next: *mut DhcpNetId = 0 as *mut DhcpNetId;
-    up = &mut (*dnsmasq_daemon).dhcp_opts;
-    opts_0 = (*dnsmasq_daemon).dhcp_opts;
+    up = &mut daemon.dhcp_opts;
+    opts_0 = daemon.dhcp_opts;
     while !opts_0.is_null() {
         cp = (*opts_0).next;
-        if (*opts_0).flags & 32 as libc::c_int != 0 {
-            if (*opts_0).flags & 256 as libc::c_int != 0 {
+        if (*opts_0).flags & 32 != 0 {
+            if (*opts_0).flags & 256 != 0 {
                 free((*opts_0).u.vendor_class as *mut libc::c_void);
             }
             free((*opts_0).val as *mut libc::c_void);
@@ -9222,22 +6739,22 @@ unsafe extern "C" fn clear_dynamic_opt() {
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn reread_dhcp() {
+pub  fn reread_dhcp() {
     let mut hf: *mut HostsFile = 0 as *mut HostsFile;
     /* Do these even if there is no daemon->dhcp_hosts_file or
       daemon->dhcp_opts_file since entries may have been created by the
       inotify dynamic file reading system. */
     clear_dynamic_conf();
     clear_dynamic_opt();
-    if !(*dnsmasq_daemon).dhcp_hosts_file.is_null() {
-        (*dnsmasq_daemon).dhcp_hosts_file =
-            expand_filelist((*dnsmasq_daemon).dhcp_hosts_file);
-        hf = (*dnsmasq_daemon).dhcp_hosts_file;
+    if !daemon.dhcp_hosts_file.is_null() {
+        daemon.dhcp_hosts_file =
+            expand_filelist(daemon.dhcp_hosts_file);
+        hf = daemon.dhcp_hosts_file;
         while !hf.is_null() {
-            if (*hf).flags & 2 as libc::c_int == 0 {
-                if one_file((*hf).fname, 272 as libc::c_int) != 0 {
-                    my_syslog((3 as libc::c_int) << 3 as libc::c_int |
-                                  6 as libc::c_int,
+            if (*hf).flags & 2 == 0 {
+                if one_file((*hf).fname, 272) != 0 {
+                    my_syslog((3) << 3 |
+                                  6,
                               b"read %s\x00" as *const u8 as
                                   *const libc::c_char, (*hf).fname);
                 }
@@ -9245,15 +6762,15 @@ pub unsafe extern "C" fn reread_dhcp() {
             hf = (*hf).next
         }
     }
-    if !(*dnsmasq_daemon).dhcp_opts_file.is_null() {
-        (*dnsmasq_daemon).dhcp_opts_file =
-            expand_filelist((*dnsmasq_daemon).dhcp_opts_file);
-        hf = (*dnsmasq_daemon).dhcp_opts_file;
+    if !daemon.dhcp_opts_file.is_null() {
+        daemon.dhcp_opts_file =
+            expand_filelist(daemon.dhcp_opts_file);
+        hf = daemon.dhcp_opts_file;
         while !hf.is_null() {
-            if (*hf).flags & 2 as libc::c_int == 0 {
-                if one_file((*hf).fname, 279 as libc::c_int) != 0 {
-                    my_syslog((3 as libc::c_int) << 3 as libc::c_int |
-                                  6 as libc::c_int,
+            if (*hf).flags & 2 == 0 {
+                if one_file((*hf).fname, 279) != 0 {
+                    my_syslog((3) << 3 |
+                                  6,
                               b"read %s\x00" as *const u8 as
                                   *const libc::c_char, (*hf).fname);
                 }
@@ -9262,101 +6779,101 @@ pub unsafe extern "C" fn reread_dhcp() {
         }
     }
     /* Setup notify and read pre-existing files. */
-    set_dynamic_inotify(16 as libc::c_int | 32 as libc::c_int,
-                        0 as libc::c_int, 0 as *mut *mut Crec,
-                        0 as libc::c_int);
+    set_dynamic_inotify(16 | 32,
+                        0, 0 as *mut *mut Crec,
+                        0);
 }
 #[no_mangle]
-pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
+pub  fn read_opts(mut argc: libc::c_int,
                                    mut argv: *mut *mut libc::c_char,
                                    mut compile_opts: *mut libc::c_char) {
-    let mut argbuf_size: usize = 1025 as libc::c_int as usize;
+    let mut argbuf_size: usize = 1025 as usize;
     let mut argbuf: *mut libc::c_char =
         opt_malloc(argbuf_size) as *mut libc::c_char;
     let mut buff: *mut libc::c_char =
-        opt_malloc(1025 as libc::c_int as usize) as *mut libc::c_char;
+        opt_malloc(1025 as usize) as *mut libc::c_char;
     let mut option: libc::c_int = 0;
-    let mut testmode: libc::c_int = 0 as libc::c_int;
+    let mut testmode: libc::c_int = 0;
     let mut arg: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut conffile: *mut libc::c_char = 0 as *mut libc::c_char;
-    opterr = 0 as libc::c_int;
+    opterr = 0;
     dnsmasq_daemon =
         opt_malloc(::std::mem::size_of::<DnsmasqDaemon>() as libc::c_ulong)
             as *mut DnsmasqDaemon;
-    memset(dnsmasq_daemon as *mut libc::c_void, 0 as libc::c_int,
+    memset(dnsmasq_daemon as *mut libc::c_void, 0,
            ::std::mem::size_of::<DnsmasqDaemon>() as libc::c_ulong);
-    (*dnsmasq_daemon).namebuff = buff;
+    daemon.namebuff = buff;
     /* Set defaults - everything else is zero or NULL */
-    (*dnsmasq_daemon).cachesize = 150 as libc::c_int;
-    (*dnsmasq_daemon).ftabsize = 150 as libc::c_int;
-    (*dnsmasq_daemon).port = 53 as libc::c_int;
-    (*dnsmasq_daemon).dhcp_client_port = 68 as libc::c_int;
-    (*dnsmasq_daemon).dhcp_server_port = 67 as libc::c_int;
-    (*dnsmasq_daemon).default_resolv.is_default = 1 as libc::c_int;
-    (*dnsmasq_daemon).default_resolv.name =
+    daemon.cachesize = 150;
+    daemon.ftabsize = 150;
+    daemon.port = 53;
+    daemon.dhcp_client_port = 68;
+    daemon.dhcp_server_port = 67;
+    daemon.default_resolv.is_default = 1;
+    daemon.default_resolv.name =
         b"/etc/resolv.conf\x00" as *const u8 as *const libc::c_char as
             *mut libc::c_char;
-    (*dnsmasq_daemon).resolv_files = &mut (*dnsmasq_daemon).default_resolv;
-    (*dnsmasq_daemon).username =
+    daemon.resolv_files = &mut daemon.default_resolv;
+    daemon.username =
         b"nobody\x00" as *const u8 as *const libc::c_char as
             *mut libc::c_char;
-    (*dnsmasq_daemon).runfile =
+    daemon.runfile =
         b"/var/run/dnsmasq.pid\x00" as *const u8 as *const libc::c_char as
             *mut libc::c_char;
-    (*dnsmasq_daemon).dhcp_max = 1000 as libc::c_int;
-    (*dnsmasq_daemon).tftp_max = 50 as libc::c_int;
-    (*dnsmasq_daemon).edns_pktsz = 4096 as libc::c_int as libc::c_ushort;
-    (*dnsmasq_daemon).log_fac = -(1 as libc::c_int);
-    (*dnsmasq_daemon).auth_ttl = 600 as libc::c_int as libc::c_ulong;
-    (*dnsmasq_daemon).soa_refresh = 1200 as libc::c_int as libc::c_ulong;
-    (*dnsmasq_daemon).soa_retry = 180 as libc::c_int as libc::c_ulong;
-    (*dnsmasq_daemon).soa_expiry = 1209600 as libc::c_int as libc::c_ulong;
-    (*dnsmasq_daemon).max_port = 65535 as libc::c_uint as libc::c_int;
-    (*dnsmasq_daemon).min_port = 1024 as libc::c_int;
+    daemon.dhcp_max = 1000;
+    daemon.tftp_max = 50;
+    daemon.edns_pktsz = 4096 as libc::c_ushort;
+    daemon.log_fac = -(1);
+    daemon.auth_ttl = 600 as libc::c_ulong;
+    daemon.soa_refresh = 1200 as libc::c_ulong;
+    daemon.soa_retry = 180 as libc::c_ulong;
+    daemon.soa_expiry = 1209600 as libc::c_ulong;
+    daemon.max_port = 65535 as libc::c_uint;
+    daemon.min_port = 1024;
     add_txt(b"version.bind\x00" as *const u8 as *const libc::c_char as
                 *mut libc::c_char,
             b"dnsmasq-2.84rc2\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as libc::c_int);
+                *mut libc::c_char, 0);
     add_txt(b"authors.bind\x00" as *const u8 as *const libc::c_char as
                 *mut libc::c_char,
             b"Simon Kelley\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as libc::c_int);
+                *mut libc::c_char, 0);
     add_txt(b"copyright.bind\x00" as *const u8 as *const libc::c_char as
                 *mut libc::c_char,
             b"Copyright (c) 2000-2021 Simon Kelley\x00" as *const u8 as
-                *const libc::c_char as *mut libc::c_char, 0 as libc::c_int);
+                *const libc::c_char as *mut libc::c_char, 0);
     add_txt(b"cachesize.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 1 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 1);
     add_txt(b"insertions.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 2 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 2);
     add_txt(b"evictions.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 3 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 3);
     add_txt(b"misses.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 4 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 4);
     add_txt(b"hits.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 5 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 5);
     add_txt(b"auth.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 6 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 6);
     add_txt(b"servers.bind\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 7 as libc::c_int);
+                *mut libc::c_char, 0 as *mut libc::c_char, 7);
     loop  {
         option =
             getopt_long(argc, argv,
                         b"951yZDNLERKzowefnbvhdkqr:m:p:c:l:s:i:t:u:g:a:x:S:C:A:T:H:Q:I:B:F:G:O:M:X:V:U:j:P:J:W:Y:2:4:6:7:8:0:3:\x00"
                             as *const u8 as *const libc::c_char,
                         opts.as_ptr(), 0 as *mut libc::c_int);
-        if option == -(1 as libc::c_int) {
+        if option == -(1) {
             while optind < argc {
                 let mut c: *mut libc::c_uchar =
-                    *argv.offset(optind as isize) as *mut libc::c_uchar;
-                while *c as libc::c_int != 0 as libc::c_int {
-                    if *(*__ctype_b_loc()).offset(*c as libc::c_int as isize)
-                           as libc::c_int &
-                           _ISspace as libc::c_int as libc::c_ushort as
+                    *argv.offset(optind) as *mut libc::c_uchar;
+                while *c != 0 {
+                    if *(*__ctype_b_loc()).offset(*c)
+                           &
+                           _ISspace as libc::c_ushort as
                                libc::c_int == 0 {
                         die(b"junk found in command line\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char,
-                            0 as *mut libc::c_char, 1 as libc::c_int);
+                            0 as *mut libc::c_char, 1);
                     }
                     c = c.offset(1)
                 }
@@ -9369,7 +6886,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                 if strlen(optarg) >= argbuf_size {
                     free(argbuf as *mut libc::c_void);
                     argbuf_size =
-                        strlen(optarg).wrapping_add(1 as libc::c_int as
+                        strlen(optarg).wrapping_add(1 as
                                                         libc::c_ulong);
                     argbuf = opt_malloc(argbuf_size) as *mut libc::c_char
                 }
@@ -9377,22 +6894,22 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                 arg = argbuf
             } else { arg = 0 as *mut libc::c_char }
             /* command-line only stuff */
-            if option == 293 as libc::c_int {
-                testmode = 1 as libc::c_int
+            if option == 293 {
+                testmode = 1
             } else if option == 'w' as i32 {
-                if argc == 3 as libc::c_int &&
-                       strcmp(*argv.offset(2 as libc::c_int as isize),
+                if argc == 3 &&
+                       strcmp(*argv.offset(2),
                               b"dhcp\x00" as *const u8 as *const libc::c_char)
-                           == 0 as libc::c_int {
+                           == 0 {
                     display_opts();
-                } else if argc == 3 as libc::c_int &&
-                              strcmp(*argv.offset(2 as libc::c_int as isize),
+                } else if argc == 3 &&
+                              strcmp(*argv.offset(2),
                                      b"dhcp6\x00" as *const u8 as
                                          *const libc::c_char) ==
-                                  0 as libc::c_int {
+                                  0 {
                     display_opts6();
                 } else { do_usage(); }
-                exit(0 as libc::c_int);
+                exit(0);
             } else {
                 if option == 'v' as i32 {
                     printf(b"Dnsmasq version %s  %s\n\x00" as *const u8 as
@@ -9408,7 +6925,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                as *const u8 as *const libc::c_char);
                     printf(b"under the terms of the GNU General Public License, version 2 or 3.\n\x00"
                                as *const u8 as *const libc::c_char);
-                    exit(0 as libc::c_int);
+                    exit(0);
                 } else {
                     if option == 'C' as i32 {
                         if conffile.is_null() {
@@ -9416,17 +6933,17 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                         } else {
                             let mut extra: *mut libc::c_char =
                                 opt_string_alloc(arg);
-                            one_file(extra, 0 as libc::c_int);
+                            one_file(extra, 0);
                             free(extra as *mut libc::c_void);
                         }
-                    } else if one_opt(option, arg, (*dnsmasq_daemon).namebuff,
+                    } else if one_opt(option, arg, daemon.namebuff,
                                       b"try --help\x00" as *const u8 as
                                           *const libc::c_char as
-                                          *mut libc::c_char, 1 as libc::c_int,
-                                      0 as libc::c_int) == 0 {
+                                          *mut libc::c_char, 1,
+                                      0) == 0 {
                         die(b"bad command line options: %s\x00" as *const u8
                                 as *const libc::c_char as *mut libc::c_char,
-                            (*dnsmasq_daemon).namebuff, 1 as libc::c_int);
+                            daemon.namebuff, 1);
                     }
                 }
             }
@@ -9434,55 +6951,55 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
     }
     free(argbuf as *mut libc::c_void);
     if !conffile.is_null() {
-        one_file(conffile, 0 as libc::c_int);
+        one_file(conffile, 0);
         free(conffile as *mut libc::c_void);
     } else {
         one_file(b"/etc/dnsmasq.conf\x00" as *const u8 as *const libc::c_char
                      as *mut libc::c_char, '7' as i32);
     }
     /* port might not be known when the address is parsed - fill in here */
-    if !(*dnsmasq_daemon).servers.is_null() {
+    if !daemon.servers.is_null() {
         let mut tmp: *mut Server = 0 as *mut Server;
-        tmp = (*dnsmasq_daemon).servers;
+        tmp = daemon.servers;
         while !tmp.is_null() {
-            if (*tmp).flags & 16 as libc::c_int == 0 {
-                if (*tmp).source_addr.sa.sa_family as libc::c_int ==
-                       2 as libc::c_int {
+            if (*tmp).flags & 16 == 0 {
+                if (*tmp).source_addr.sa.sa_family ==
+                       2 {
                     (*tmp).source_addr.in_0.sin_port =
-                        __bswap_16((*dnsmasq_daemon).query_port as u16)
-                } else if (*tmp).source_addr.sa.sa_family as libc::c_int ==
-                              10 as libc::c_int {
+                        __bswap_16(daemon.query_port as u16)
+                } else if (*tmp).source_addr.sa.sa_family ==
+                              10 {
                     (*tmp).source_addr.in6.sin6_port =
-                        __bswap_16((*dnsmasq_daemon).query_port as u16)
+                        __bswap_16(daemon.query_port as u16)
                 }
             }
             tmp = (*tmp).next
         }
     }
-    if !(*dnsmasq_daemon).host_records.is_null() {
+    if !daemon.host_records.is_null() {
         let mut hr: *mut HostRecord = 0 as *mut HostRecord;
-        hr = (*dnsmasq_daemon).host_records;
+        hr = daemon.host_records;
         while !hr.is_null() {
-            if (*hr).ttl == -(1 as libc::c_int) {
-                (*hr).ttl = (*dnsmasq_daemon).local_ttl as libc::c_int
+            if (*hr).ttl == -(1) {
+                (*hr).ttl = daemon.local_ttl
             }
             hr = (*hr).next
         }
     }
-    if !(*dnsmasq_daemon).cnames.is_null() {
+    if !daemon.cnames.is_null() {
         let mut cn: *mut Cname = 0 as *mut Cname;
         let mut cn2: *mut Cname = 0 as *mut Cname;
         let mut cn3: *mut Cname = 0 as *mut Cname;
         /* Fill in TTL for CNAMES now we have local_ttl.
 	 Also prepare to do loop detection. */
-        cn = (*dnsmasq_daemon).cnames;
+        cn = daemon.cnames;
         while !cn.is_null() {
-            if (*cn).ttl == -(1 as libc::c_int) {
-                (*cn).ttl = (*dnsmasq_daemon).local_ttl as libc::c_int
+            if (*cn).ttl == -(1) {
+                (*cn).ttl = daemon.local_ttl
             }
-            (*cn).flag = 0 as libc::c_int;
+            (*cn).flag = 0;
             (*cn).targetp = 0 as *mut Cname;
-            cn2 = (*dnsmasq_daemon).cnames;
+            cn2 = daemon.cnames;
             while !cn2.is_null() {
                 if hostname_isequal((*cn).target, (*cn2).alias) != 0 {
                     (*cn).targetp = cn2;
@@ -9492,60 +7009,60 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
             cn = (*cn).next
         }
         /* Find any CNAME loops.*/
-        cn = (*dnsmasq_daemon).cnames;
+        cn = daemon.cnames;
         while !cn.is_null() {
             cn2 = (*cn).targetp;
             while !cn2.is_null() {
-                if (*cn2).flag == 1 as libc::c_int { break ; }
-                if (*cn2).flag == 2 as libc::c_int {
+                if (*cn2).flag == 1 { break ; }
+                if (*cn2).flag == 2 {
                     die(b"CNAME loop involving %s\x00" as *const u8 as
                             *const libc::c_char as *mut libc::c_char,
-                        (*cn).alias, 1 as libc::c_int);
+                        (*cn).alias, 1);
                 }
-                (*cn2).flag = 2 as libc::c_int;
+                (*cn2).flag = 2;
                 cn2 = (*cn2).targetp
             }
             cn3 = (*cn).targetp;
             while cn3 != cn2 {
-                (*cn3).flag = 1 as libc::c_int;
+                (*cn3).flag = 1;
                 cn3 = (*cn3).targetp
             }
             cn = (*cn).next
         }
     }
-    if !(*dnsmasq_daemon).if_addrs.is_null() {
+    if !daemon.if_addrs.is_null() {
         let mut tmp_0: *mut Iname = 0 as *mut Iname;
-        tmp_0 = (*dnsmasq_daemon).if_addrs;
+        tmp_0 = daemon.if_addrs;
         while !tmp_0.is_null() {
-            if (*tmp_0).addr.sa.sa_family as libc::c_int == 2 as libc::c_int {
+            if (*tmp_0).addr.sa.sa_family == 2 {
                 (*tmp_0).addr.in_0.sin_port =
-                    __bswap_16((*dnsmasq_daemon).port as u16)
-            } else if (*tmp_0).addr.sa.sa_family as libc::c_int ==
-                          10 as libc::c_int {
+                    __bswap_16(daemon.port as u16)
+            } else if (*tmp_0).addr.sa.sa_family ==
+                          10 {
                 (*tmp_0).addr.in6.sin6_port =
-                    __bswap_16((*dnsmasq_daemon).port as u16)
+                    __bswap_16(daemon.port as u16)
             }
             tmp_0 = (*tmp_0).next
         }
     }
     /* create default, if not specified */
-    if !(*dnsmasq_daemon).authserver.is_null() &&
-           (*dnsmasq_daemon).hostmaster.is_null() {
+    if !daemon.authserver.is_null() &&
+           daemon.hostmaster.is_null() {
         strcpy(buff, b"hostmaster.\x00" as *const u8 as *const libc::c_char);
-        strcat(buff, (*dnsmasq_daemon).authserver);
-        (*dnsmasq_daemon).hostmaster = opt_string_alloc(buff)
+        strcat(buff, daemon.authserver);
+        daemon.hostmaster = opt_string_alloc(buff)
     }
-    if (*dnsmasq_daemon).dhcp_pxe_vendors.is_null() {
-        (*dnsmasq_daemon).dhcp_pxe_vendors =
+    if daemon.dhcp_pxe_vendors.is_null() {
+        daemon.dhcp_pxe_vendors =
             opt_malloc(::std::mem::size_of::<DhcpPxeVendor>() as
                            libc::c_ulong) as *mut DhcpPxeVendor;
-        (*(*dnsmasq_daemon).dhcp_pxe_vendors).data =
+        (*daemon.dhcp_pxe_vendors).data =
             opt_string_alloc(b"PXEClient\x00" as *const u8 as
                                  *const libc::c_char);
-        (*(*dnsmasq_daemon).dhcp_pxe_vendors).next = 0 as *mut DhcpPxeVendor
+        (*daemon.dhcp_pxe_vendors).next = 0 as *mut DhcpPxeVendor
     }
     /* only one of these need be specified: the other defaults to the host-name */
-    if (*dnsmasq_daemon).options[(10 as libc::c_int as
+    if daemon.options[(10 as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
                                                                        libc::c_ulong).wrapping_mul(8
@@ -9555,7 +7072,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                        libc::c_ulong))
                                      as usize] &
            (1 as libc::c_uint) <<
-               (10 as libc::c_int as
+               (10 as
                     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                      as
                                                      libc::c_ulong).wrapping_mul(8
@@ -9563,24 +7080,24 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                      libc::c_int
                                                                                      as
                                                                                      libc::c_ulong))
-           != 0 || !(*dnsmasq_daemon).mxnames.is_null() ||
-           !(*dnsmasq_daemon).mxtarget.is_null() {
+           != 0 || !daemon.mxnames.is_null() ||
+           !daemon.mxtarget.is_null() {
         let mut mx: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
-        if gethostname(buff, 1025 as libc::c_int as usize) ==
-               -(1 as libc::c_int) {
+        if gethostname(buff, 1025 as usize) ==
+               -(1) {
             die(b"cannot get host-name: %s\x00" as *const u8 as
                     *const libc::c_char as *mut libc::c_char,
-                0 as *mut libc::c_char, 5 as libc::c_int);
+                0 as *mut libc::c_char, 5);
         }
-        mx = (*dnsmasq_daemon).mxnames;
+        mx = daemon.mxnames;
         while !mx.is_null() {
             if (*mx).issrv == 0 && hostname_isequal((*mx).name, buff) != 0 {
                 break ;
             }
             mx = (*mx).next
         }
-        if (!(*dnsmasq_daemon).mxtarget.is_null() ||
-                (*dnsmasq_daemon).options[(10 as libc::c_int as
+        if (!daemon.mxtarget.is_null() ||
+                daemon.options[(10 as
                                                libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                 as
                                                                                 libc::c_ulong).wrapping_mul(8
@@ -9590,7 +7107,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                                 libc::c_ulong))
                                               as usize] &
                     (1 as libc::c_uint) <<
-                        (10 as libc::c_int as
+                        (10 as
                              libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                               as
                                                               libc::c_ulong).wrapping_mul(8
@@ -9602,24 +7119,24 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
             mx =
                 opt_malloc(::std::mem::size_of::<MxSrvRecord>() as
                                libc::c_ulong) as *mut MxSrvRecord;
-            (*mx).next = (*dnsmasq_daemon).mxnames;
-            (*mx).issrv = 0 as libc::c_int;
+            (*mx).next = daemon.mxnames;
+            (*mx).issrv = 0;
             (*mx).target = 0 as *mut libc::c_char;
             (*mx).name = opt_string_alloc(buff);
-            (*dnsmasq_daemon).mxnames = mx
+            daemon.mxnames = mx
         }
-        if (*dnsmasq_daemon).mxtarget.is_null() {
-            (*dnsmasq_daemon).mxtarget = opt_string_alloc(buff)
+        if daemon.mxtarget.is_null() {
+            daemon.mxtarget = opt_string_alloc(buff)
         }
-        mx = (*dnsmasq_daemon).mxnames;
+        mx = daemon.mxnames;
         while !mx.is_null() {
             if (*mx).issrv == 0 && (*mx).target.is_null() {
-                (*mx).target = (*dnsmasq_daemon).mxtarget
+                (*mx).target = daemon.mxtarget
             }
             mx = (*mx).next
         }
     }
-    if (*dnsmasq_daemon).options[(8 as libc::c_int as
+    if daemon.options[(8 as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
                                                                        libc::c_ulong).wrapping_mul(8
@@ -9629,7 +7146,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                        libc::c_ulong))
                                      as usize] &
            (1 as libc::c_uint) <<
-               (8 as libc::c_int as
+               (8 as
                     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                      as
                                                      libc::c_ulong).wrapping_mul(8
@@ -9637,9 +7154,9 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                      libc::c_int
                                                                                      as
                                                                                      libc::c_ulong))
-           == 0 && !(*dnsmasq_daemon).resolv_files.is_null() &&
-           !(*(*dnsmasq_daemon).resolv_files).next.is_null() &&
-           (*dnsmasq_daemon).options[(5 as libc::c_int as
+           == 0 && !daemon.resolv_files.is_null() &&
+           !(*daemon.resolv_files).next.is_null() &&
+           daemon.options[(5 as
                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                            as
                                                                            libc::c_ulong).wrapping_mul(8
@@ -9649,7 +7166,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                            libc::c_ulong))
                                          as usize] &
                (1 as libc::c_uint) <<
-                   (5 as libc::c_int as
+                   (5 as
                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                          as
                                                          libc::c_ulong).wrapping_mul(8
@@ -9660,9 +7177,9 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                != 0 {
         die(b"only one resolv.conf file allowed in no-poll mode.\x00" as
                 *const u8 as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char, 1 as libc::c_int);
+            0 as *mut libc::c_char, 1);
     }
-    if (*dnsmasq_daemon).options[(15 as libc::c_int as
+    if daemon.options[(15 as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
                                                                        libc::c_ulong).wrapping_mul(8
@@ -9672,7 +7189,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                        libc::c_ulong))
                                      as usize] &
            (1 as libc::c_uint) <<
-               (15 as libc::c_int as
+               (15 as
                     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                      as
                                                      libc::c_ulong).wrapping_mul(8
@@ -9683,7 +7200,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
            != 0 {
         let mut line: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut f: *mut FILE = 0 as *mut FILE;
-        if (*dnsmasq_daemon).options[(8 as libc::c_int as
+        if daemon.options[(8 as
                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                            as
                                                                            libc::c_ulong).wrapping_mul(8
@@ -9693,7 +7210,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                            libc::c_ulong))
                                          as usize] &
                (1 as libc::c_uint) <<
-                   (8 as libc::c_int as
+                   (8 as
                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                          as
                                                          libc::c_ulong).wrapping_mul(8
@@ -9701,22 +7218,22 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                          libc::c_int
                                                                                          as
                                                                                          libc::c_ulong))
-               != 0 || (*dnsmasq_daemon).resolv_files.is_null() ||
-               !(*(*dnsmasq_daemon).resolv_files).next.is_null() {
+               != 0 || daemon.resolv_files.is_null() ||
+               !(*daemon.resolv_files).next.is_null() {
             die(b"must have exactly one resolv.conf to read domain from.\x00"
                     as *const u8 as *const libc::c_char as *mut libc::c_char,
-                0 as *mut libc::c_char, 1 as libc::c_int);
+                0 as *mut libc::c_char, 1);
         }
         f =
-            fopen((*(*dnsmasq_daemon).resolv_files).name,
+            fopen((*daemon.resolv_files).name,
                   b"r\x00" as *const u8 as *const libc::c_char);
         if f.is_null() {
             die(b"failed to read %s: %s\x00" as *const u8 as
                     *const libc::c_char as *mut libc::c_char,
-                (*(*dnsmasq_daemon).resolv_files).name, 3 as libc::c_int);
+                (*daemon.resolv_files).name, 3);
         }
         loop  {
-            line = fgets(buff, 1025 as libc::c_int, f);
+            line = fgets(buff, 1025, f);
             if line.is_null() { break ; }
             let mut token: *mut libc::c_char =
                 strtok(line,
@@ -9724,7 +7241,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
             if token.is_null() ||
                    strcmp(token,
                           b"search\x00" as *const u8 as *const libc::c_char)
-                       != 0 as libc::c_int {
+                       != 0 {
                 continue ;
             }
             token =
@@ -9732,24 +7249,24 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                        b" \t\n\r\x00" as *const u8 as *const libc::c_char);
             if !token.is_null() &&
                    {
-                       (*dnsmasq_daemon).domain_suffix =
+                       daemon.domain_suffix =
                            canonicalise_opt(token);
-                       !(*dnsmasq_daemon).domain_suffix.is_null()
+                       !daemon.domain_suffix.is_null()
                    } {
                 break ;
             }
         }
         fclose(f);
-        if (*dnsmasq_daemon).domain_suffix.is_null() {
+        if daemon.domain_suffix.is_null() {
             die(b"no search directive found in %s\x00" as *const u8 as
                     *const libc::c_char as *mut libc::c_char,
-                (*(*dnsmasq_daemon).resolv_files).name, 5 as libc::c_int);
+                (*daemon.resolv_files).name, 5);
         }
     }
-    if !(*dnsmasq_daemon).domain_suffix.is_null() {
+    if !daemon.domain_suffix.is_null() {
         /* add domain for any srv record without one. */
         let mut srv: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
-        srv = (*dnsmasq_daemon).mxnames;
+        srv = daemon.mxnames;
         while !srv.is_null() {
             if (*srv).issrv != 0 && !strchr((*srv).name, '.' as i32).is_null()
                    &&
@@ -9757,13 +7274,13 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                        strrchr((*srv).name, '.' as i32) {
                 strcpy(buff, (*srv).name);
                 strcat(buff, b".\x00" as *const u8 as *const libc::c_char);
-                strcat(buff, (*dnsmasq_daemon).domain_suffix);
+                strcat(buff, daemon.domain_suffix);
                 free((*srv).name as *mut libc::c_void);
                 (*srv).name = opt_string_alloc(buff)
             }
             srv = (*srv).next
         }
-    } else if (*dnsmasq_daemon).options[(20 as libc::c_int as
+    } else if daemon.options[(20 as
                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                               as
                                                                               libc::c_ulong).wrapping_mul(8
@@ -9773,7 +7290,7 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                                                                                                               libc::c_ulong))
                                             as usize] &
                   (1 as libc::c_uint) <<
-                      (20 as libc::c_int as
+                      (20 as
                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                             as
                                                             libc::c_ulong).wrapping_mul(8
@@ -9784,20 +7301,20 @@ pub unsafe extern "C" fn read_opts(mut argc: libc::c_int,
                   != 0 {
         die(b"there must be a default domain when --dhcp-fqdn is set\x00" as
                 *const u8 as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char, 1 as libc::c_int);
+            0 as *mut libc::c_char, 1);
     }
     /* If there's access-control config, then ignore --local-service, it's intended
      as a system default to keep otherwise unconfigured installations safe. */
-    if !(*dnsmasq_daemon).if_names.is_null() ||
-           !(*dnsmasq_daemon).if_except.is_null() ||
-           !(*dnsmasq_daemon).if_addrs.is_null() ||
-           !(*dnsmasq_daemon).authserver.is_null() {
-        reset_option_bool(49 as libc::c_int as libc::c_uint);
+    if !daemon.if_names.is_null() ||
+           !daemon.if_except.is_null() ||
+           !daemon.if_addrs.is_null() ||
+           !daemon.authserver.is_null() {
+        reset_option_bool(49 as libc::c_uint);
     }
     if testmode != 0 {
         fprintf(stderr,
                 b"dnsmasq: %s.\n\x00" as *const u8 as *const libc::c_char,
                 b"syntax check OK\x00" as *const u8 as *const libc::c_char);
-        exit(0 as libc::c_int);
+        exit(0);
     };
 }

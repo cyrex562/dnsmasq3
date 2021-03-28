@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsHeader, size_t, AllAddr, _ISdigit, _ISxdigit, In6Addr, __bswap_16, InAddr, __bswap_32, in_addr_t, DnsmasqDaemon, Doctor, _ISprint, time_t, Crec, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, BogusAddr, AddrList, Server};
+use crate::defines::{DnsHeader, size_t, AllAddr, _ISdigit, _ISxdigit, In6Addr, __bswap_16, InAddr, __bswap_32, InAddrT, DnsmasqDaemon, Doctor, _ISprint, time_t, Crec, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, BogusAddr, AddrList, Server};
 use crate::util::{hostname_isequal, is_same_net, hostname_issubdomain, do_rfc1035_name};
 use crate::slack::{u32_0, is_rev_synth, is_name_synthetic};
 use crate::dnsmasq_log::my_syslog;
@@ -505,7 +505,7 @@ pub unsafe extern "C" fn resize_packet(mut header: *mut DnsHeader,
 pub unsafe extern "C" fn private_net(mut addr: InAddr,
                                      mut ban_localhost: libc::c_int)
                                      -> libc::c_int {
-    let mut ip_addr: in_addr_t = __bswap_32(addr.s_addr);
+    let mut ip_addr: InAddrT = __bswap_32(addr.s_addr);
     return (ip_addr & 0xff000000 as libc::c_uint ==
                 0x7f000000 as libc::c_int as libc::c_uint &&
                 ban_localhost != 0 ||

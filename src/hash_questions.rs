@@ -25,7 +25,7 @@
    add a dependency on Nettle, and use a stand-alone implementaion. 
 */
 /* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
-use crate::defines::{MsgHdr, CmsgHdr, size_t, __mode_t, __dev_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, DnsHeader};
+use crate::defines::{MsgHdr, CmsgHdr, size_t, ModeT, DevT, FILE, SsizeT, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, DnsHeader};
 use std::io::{stdout, stdin};
 use crate::rfc1035::extract_name;
 
@@ -188,15 +188,15 @@ unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
 }
 #[inline]
 unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
-                           mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
+                           mut __mode: ModeT, mut __dev: DevT)
+                           -> libc::c_int {
     return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
 }
 #[inline]
 unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
                              mut __path: *const libc::c_char,
-                             mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
+                             mut __mode: ModeT, mut __dev: DevT)
+                             -> libc::c_int {
     return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
 }
 #[inline]
@@ -286,7 +286,7 @@ unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
 #[inline]
 unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
                              mut __n: *mut size_t, mut __stream: *mut FILE)
- -> __ssize_t {
+ -> SsizeT {
     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
 }
 #[inline]

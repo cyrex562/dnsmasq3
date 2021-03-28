@@ -1,6 +1,6 @@
 
 /* defaults in case we die() before we log_start() */
-use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, __gid_t, sockaddr_un, sa_family_t, __CONST_SOCKADDR_ARG, SockAddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, __time_t, __syscall_slong_t};
+use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, GidT, sockaddr_un, SaFamily, __CONST_SOCKADDR_ARG, SockAddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, TimeT, SyscallSlongT};
 use crate::slack::{log_entry, time};
 use crate::send_event;
 use crate::util::{safe_malloc, safe_strncpy};
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
      Failure of the chown call is OK, (for instance when started as non-root) */
     if log_to_file != 0 && log_stderr == 0 && !ent_pw.is_null() &&
            (*ent_pw).pw_uid != 0 as libc::c_int as libc::c_uint &&
-           fchown(log_fd, (*ent_pw).pw_uid, -(1 as libc::c_int) as __gid_t) !=
+           fchown(log_fd, (*ent_pw).pw_uid, -(1 as libc::c_int) as GidT) !=
                0 as libc::c_int {
         ret = *__errno_location()
     }
@@ -220,7 +220,7 @@ unsafe extern "C" fn log_write() {
 		 (ECONNRESET, EDESTADDRREQ are *BSD equivalents) */
                         let mut logaddr: sockaddr_un =
                             sockaddr_un{sun_family: 0, sun_path: [0; 108],};
-                        logaddr.sun_family = 1 as libc::c_int as sa_family_t;
+                        logaddr.sun_family = 1 as libc::c_int as SaFamily;
                         safe_strncpy(logaddr.sun_path.as_mut_ptr(),
                                      b"/dev/log\x00" as *const u8 as
                                          *const libc::c_char,
@@ -442,10 +442,10 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
         }
         if d > 0 as libc::c_int {
             let mut waiter: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
-            waiter.tv_sec = 0 as libc::c_int as __time_t;
+            waiter.tv_sec = 0 as libc::c_int as TimeT;
             waiter.tv_nsec =
                 ((1000000 as libc::c_int) << d - 1 as libc::c_int) as
-                    __syscall_slong_t;
+                    SyscallSlongT;
             nanosleep(&mut waiter, 0 as *mut timespec);
             /* Have another go now */
             log_write();
@@ -480,8 +480,8 @@ pub unsafe extern "C" fn flush_log() {
             close(log_fd);
             break ;
         } else {
-            waiter.tv_sec = 0 as libc::c_int as __time_t;
-            waiter.tv_nsec = 1000000 as libc::c_int as __syscall_slong_t;
+            waiter.tv_sec = 0 as libc::c_int as TimeT;
+            waiter.tv_nsec = 1000000 as libc::c_int as SyscallSlongT;
             nanosleep(&mut waiter, 0 as *mut timespec);
         }
     };

@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::defines::{SockAddrIn6, In6Addr, C2RustUnnamed, SOCK_DGRAM, IPPROTO_UDP, IPPROTO_IPV6, socklen_t, DnsmasqDaemon, sa_family_t, __bswap_16, __CONST_SOCKADDR_ARG, SockAddr, time_t, DhcpContext, DhcpRelay, IfaceParam, CmsgHdr, MsgHdr, iovec, C2RustUnnamed_13, IfReq, C2RustUnnamed_2, Iname, C2RustUnnamed_12, DhcpBridge, DhcpLease, MySockAddr, timespec, __time_t, __syscall_slong_t, SharedNetwork, __bswap_32, DhcpConfig, AddrList, DhcpNetId, Cparam, AllAddr};
+use crate::defines::{SockAddrIn6, In6Addr, C2RustUnnamed, SOCK_DGRAM, IPPROTO_UDP, IPPROTO_IPV6, socklen_t, DnsmasqDaemon, SaFamily, __bswap_16, __CONST_SOCKADDR_ARG, SockAddr, time_t, DhcpContext, DhcpRelay, IfaceParam, CmsgHdr, MsgHdr, iovec, C2RustUnnamed_13, IfReq, C2RustUnnamed_2, Iname, C2RustUnnamed_12, DhcpBridge, DhcpLease, MySockAddr, timespec, TimeT, SyscallSlongT, SharedNetwork, __bswap_32, DhcpConfig, AddrList, DhcpNetId, Cparam, AllAddr};
 use crate::network::{fix_fd, set_ipv6pktinfo, indextoname, iface_check};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{recv_dhcp_packet, match_netid, log_context};
@@ -129,7 +129,7 @@ pub unsafe extern "C" fn dhcp6_init() {
     memset(&mut saddr as *mut SockAddrIn6 as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong);
-    saddr.sin6_family = 10 as libc::c_int as sa_family_t;
+    saddr.sin6_family = 10 as libc::c_int as SaFamily;
     saddr.sin6_addr = in6addr_any;
     saddr.sin6_port = __bswap_16(547 as libc::c_int as u16);
     if bind(fd,
@@ -504,7 +504,7 @@ pub unsafe extern "C" fn get_client_mac(mut client: *mut In6Addr,
     memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-    addr.in6.sin6_family = 10 as libc::c_int as sa_family_t;
+    addr.in6.sin6_family = 10 as libc::c_int as SaFamily;
     addr.in6.sin6_port =
         __bswap_16(IPPROTO_ICMPV6 as libc::c_int as u16);
     addr.in6.sin6_addr = *client;
@@ -521,8 +521,8 @@ pub unsafe extern "C" fn get_client_mac(mut client: *mut In6Addr,
                __CONST_SOCKADDR_ARG{__sockaddr__: &mut addr.sa,},
                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as
                    socklen_t);
-        ts.tv_sec = 0 as libc::c_int as __time_t;
-        ts.tv_nsec = 100000000 as libc::c_int as __syscall_slong_t;
+        ts.tv_sec = 0 as libc::c_int as TimeT;
+        ts.tv_nsec = 100000000 as libc::c_int as SyscallSlongT;
         nanosleep(&mut ts, 0 as *mut timespec);
         i += 1
     }

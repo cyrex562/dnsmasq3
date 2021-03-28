@@ -1,4 +1,4 @@
-use crate::defines::{Listener, time_t, DnsmasqDaemon, MySockAddr, SockAddr, MsgHdr, iovec, IfReq, C2RustUnnamed_2, Iname, TftpTransfer, TftpPrefix, AllAddr, InAddr, C2RustUnnamed_14, CmsgHdr, socklen_t, Server, __SOCKADDR_ARG, sa_family_t, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2RustUnnamed_12, __bswap_16, SOCK_DGRAM, off_t, TftpFile, __CONST_SOCKADDR_ARG, stat, timespec, DhcpLease, uid_t, _ISprint};
+use crate::defines::{Listener, time_t, DnsmasqDaemon, MySockAddr, SockAddr, MsgHdr, iovec, IfReq, C2RustUnnamed_2, Iname, TftpTransfer, TftpPrefix, AllAddr, InAddr, C2RustUnnamed_14, CmsgHdr, socklen_t, Server, __SOCKADDR_ARG, SaFamily, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2RustUnnamed_12, __bswap_16, SOCK_DGRAM, off_t, TftpFile, __CONST_SOCKADDR_ARG, stat, timespec, DhcpLease, uid_t, _ISprint};
 use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, fix_fd};
 use crate::util::{wildcard_match, safe_strncpy, sockaddr_isequal, whine_malloc, prettyprint_addr, sa_len, read_write};
 use crate::dnsmasq_log::my_syslog;
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut Listener,
                ::std::mem::size_of::<CmsgHdr>() as libc::c_ulong {
             return
         }
-        addr.sa.sa_family = family as sa_family_t;
+        addr.sa.sa_family = family as SaFamily;
         if family == 2 as libc::c_int {
             cmptr =
                 if msg.msg_controllen >=

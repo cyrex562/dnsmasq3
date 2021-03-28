@@ -18,7 +18,7 @@
    It therefore cannot use any DHCP buffer resources except outpacket, which is
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
-use crate::defines::{time_t, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, __mode_t, __dev_t, __uint64_t, __u32, __uint16_t, FILE, __ssize_t, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, SockAddrIn6, C2RustUnnamed, Iname, AllAddr, DhcpOpt, RaInterface, sa_family_t, __CONST_SOCKADDR_ARG, SockAddr};
+use crate::defines::{time_t, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, ModeT, DevT, __uint64_t, __u32, __uint16_t, FILE, SsizeT, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, SockAddrIn6, C2RustUnnamed, Iname, AllAddr, DhcpOpt, RaInterface, SaFamily, __CONST_SOCKADDR_ARG, SockAddr};
 use crate::slack::{in6_pktinfo, icmp6_filter, IPPROTO_ICMPV6, ra_packet, prefix_opt};
 use std::io::{stdout, stdin};
 use crate::util::{expand_buf, rand16, wildcard_match, print_mac, wildcard_matchn, setaddr6part, addr6part, retry_send, is_same_net6, whine_malloc};
@@ -178,15 +178,15 @@ unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
 }
 #[inline]
 unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
-                           mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
+                           mut __mode: ModeT, mut __dev: DevT)
+                           -> libc::c_int {
     return __xmknod(0 as libc::c_int, __path, __mode, &mut __dev);
 }
 #[inline]
 unsafe extern "C" fn mknodat(mut __fd: libc::c_int,
                              mut __path: *const libc::c_char,
-                             mut __mode: __mode_t, mut __dev: __dev_t)
- -> libc::c_int {
+                             mut __mode: ModeT, mut __dev: DevT)
+                             -> libc::c_int {
     return __xmknodat(0 as libc::c_int, __fd, __path, __mode, &mut __dev);
 }
 #[inline]
@@ -323,7 +323,7 @@ unsafe extern "C" fn putchar_unlocked(mut __c: libc::c_int) -> libc::c_int {
 #[inline]
 unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
                              mut __n: *mut size_t, mut __stream: *mut FILE)
- -> __ssize_t {
+ -> SsizeT {
     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
 }
 #[inline]
@@ -1337,7 +1337,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
     memset(&mut addr as *mut SockAddrIn6 as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong);
-    addr.sin6_family = 10 as libc::c_int as sa_family_t;
+    addr.sin6_family = 10 as libc::c_int as SaFamily;
     addr.sin6_port = __bswap_16(IPPROTO_ICMPV6 as libc::c_int as __uint16_t);
     if !dest.is_null() {
         addr.sin6_addr = *dest;

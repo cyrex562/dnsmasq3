@@ -1,66 +1,56 @@
 use std::fs::File;
 use std::path::PathBuf;
 
-use socket2::Socket;
+use socket2::{Socket, SockAddr};
+use crate::in_addr::InAddr;
+use crate::in6_addr::In6Addr;
+use std::time;
 
-use crate::slack;
+pub type DevT = libc::c_ulong;
+pub type UidT = u32;
+pub type GidT = u32;
+pub type InoT = libc::c_ulong;
+pub type Ino64T = libc::c_ulong;
+pub type ModeT = u32;
+pub type NLinkT = libc::c_ulong;
+pub type OffT = libc::c_long;
+pub type Off64T = libc::c_long;
+pub type PidT = i32;
+pub type TimeT = libc::c_long;
+pub type BlkSizeT = libc::c_long;
+pub type BlkCntT = libc::c_long;
+pub type BlkCnt64T = libc::c_long;
+pub type SsizeT = libc::c_long;
+pub type SyscallSlongT = libc::c_long;
+pub type SocklenT = u32;
+pub type InAddrT = u32;
 
-pub type __dev_t = libc::c_ulong;
-pub type __uid_t = u32;
-pub type __gid_t = u32;
-pub type __ino_t = libc::c_ulong;
-pub type __ino64_t = libc::c_ulong;
-pub type __mode_t = u32;
-pub type __nlink_t = libc::c_ulong;
-pub type __off_t = libc::c_long;
-pub type __off64_t = libc::c_long;
-pub type __pid_t = i32;
-pub type __time_t = libc::c_long;
-pub type __blksize_t = libc::c_long;
-pub type __blkcnt_t = libc::c_long;
-pub type __blkcnt64_t = libc::c_long;
-pub type __ssize_t = libc::c_long;
-pub type __syscall_slong_t = libc::c_long;
-pub type __socklen_t = u32;
-pub type ino_t = __ino64_t;
-pub type dev_t = __dev_t;
-pub type off_t = __off64_t;
-pub type pid_t = __pid_t;
-pub type time_t = __time_t;
-pub type size_t = libc::c_ulong;
-pub type in_addr_t = u32;
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct timespec {
+//     pub tv_sec: TimeT,
+//     pub tv_nsec: SyscallSlongT,
+// }
 
-pub const NULL: i32 = 0 as i32;
-pub const NULL_0: i32 = 0 as i32;
+// #[derive(Copy,Clone, Default)]
+// #[repr(C)]
+// pub struct iovec {
+//     pub iov_base: *mut libc::c_void,
+//     pub iov_len: libc::size_t,
+// }
 
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct timespec {
-    pub tv_sec: __time_t,
-    pub tv_nsec: __syscall_slong_t,
-}
-
-#[derive(Copy,Clone, Default)]
-#[repr(C)]
-pub struct iovec {
-    pub iov_base: *mut libc::c_void,
-    pub iov_len: libc::size_t,
-}
-
-pub type socklen_t = __socklen_t;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct SockAddr {
-    pub sa_family: sa_family_t,
-    pub sa_data: [i8; 14],
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SockAddr {
+//     pub sa_family: sa_family_t,
+//     pub sa_data: [i8; 14],
+// }
 
 #[derive(Clone)]
 #[repr(C)]
 pub struct MsgHdr {
     pub msg_name: Vec<u8>,
-    pub msg_namelen: socklen_t,
+    pub msg_namelen: SocklenT,
     pub msg_iov: iovec,
     pub msg_iovlen: usize,
     pub msg_buf: Vec<u8>,
@@ -118,23 +108,23 @@ pub const PF_INET6: i32 = 10;
 pub const AF_INET: i32 = PF_INET;
 pub const PF_INET: i32 = 2;
 
-pub type sa_family_t = u16;
+pub type SaFamily = u16;
+//
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub struct SockAddrIn6 {
+//     pub sin6_family: sa_family_t,
+//     pub sin6_port: in_port_t,
+//     pub sin6_flowinfo: u32,
+//     pub sin6_addr: In6Addr,
+//     pub sin6_scope_id: u32,
+// }
 
-#[derive(Clone, Copy)]
-#[repr(C)]
-pub struct SockAddrIn6 {
-    pub sin6_family: sa_family_t,
-    pub sin6_port: in_port_t,
-    pub sin6_flowinfo: u32,
-    pub sin6_addr: In6Addr,
-    pub sin6_scope_id: u32,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct In6Addr {
-    pub __in6_u: C2RustUnnamed,
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct In6Addr {
+//     pub __in6_u: C2RustUnnamed,
+// }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -144,23 +134,19 @@ pub union C2RustUnnamed {
     pub __u6_addr32: [u32; 4],
 }
 
-pub type in_port_t = u16;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct SockAddrIn {
-    pub sin_family: sa_family_t,
-    pub sin_port: in_port_t,
-    pub sin_addr: InAddr,
-    pub sin_zero: [u8; 8],
-}
+// pub type in_port_t = u16;
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SockAddrIn {
+//     pub sin_family: sa_family_t,
+//     pub sin_port: in_port_t,
+//     pub sin_addr: InAddr,
+//     pub sin_zero: [u8; 8],
+// }
 
-pub const INET6_ADDRSTRLEN: i32 = 46 as i32;
+pub const INET6_ADDRSTRLEN: usize = 46;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct InAddr {
-    pub s_addr: in_addr_t,
-}
+
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -199,7 +185,7 @@ pub struct C2RustUnnamed_6 {
     pub is_name_ptr: i32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub union C2RustUnnamed_1A {
     pub ifru_addr: SockAddr,
@@ -207,12 +193,12 @@ pub union C2RustUnnamed_1A {
     pub ifru_broadaddr: SockAddr,
     pub ifru_netmask: SockAddr,
     pub ifru_hwaddr: SockAddr,
-    pub ifru_flags: libc::c_short,
-    pub ifru_ivalue: libc::c_int,
-    pub ifru_mtu: libc::c_int,
+    pub ifru_flags: i16,
+    pub ifru_ivalue: i32,
+    pub ifru_mtu: i32,
     pub ifru_map: Ifmap,
-    pub ifru_slave: [libc::c_char; 16],
-    pub ifru_newname: [libc::c_char; 16],
+    pub ifru_slave: [u8; 16],
+    pub ifru_newname: [u8; 16],
     pub ifru_data: __caddr_t,
 }
 
@@ -263,7 +249,7 @@ pub struct Crec {
     // pub prev: *mut Crec,
     // pub hash_next: *mut Crec,
     pub addr: AllAddr,
-    pub ttd: time_t,
+    pub ttd: TimeT,
     pub uid: u32,
     pub flags: u32,
     pub name: C2RustUnnamed_6,
@@ -363,7 +349,7 @@ pub struct AddrList {
     pub addr: AllAddr,
     pub flags: i32,
     pub prefixlen: i32,
-    pub decline_time: time_t,
+    pub decline_time: TimeT,
     // pub next: *mut addrlist,
 }
 
@@ -450,7 +436,7 @@ pub struct Server {
     pub flags: i32,
     pub tcpfd: i32,
     pub edns_pktsz: i32,
-    pub pktsz_reduced: time_t,
+    pub pktsz_reduced: TimeT,
     pub queries: u32,
     pub failed_queries: u32,
     pub uid: u32,
@@ -520,7 +506,7 @@ pub struct Resolvc {
     // pub next: *mut Resolvc,
     pub is_default: i32,
     pub logged: i32,
-    pub mtime: time_t,
+    pub mtime: TimeT,
     pub name: String,
     pub wd: i32,
     // pub file: String,
@@ -546,7 +532,7 @@ pub struct Frec {
     pub new_id: u16,
     pub forwardall: i32,
     pub flags: i32,
-    pub time: time_t,
+    pub time: TimeT,
     pub hash: Vec<u8>,
     // pub next: *mut frec,
 }
@@ -616,7 +602,7 @@ pub struct DhcpConfig {
     pub filter: DhcpNetId,
     pub addr6: AddrList,
     pub addr: InAddr,
-    pub decline_time: time_t,
+    pub decline_time: TimeT,
     pub lease_time: u32,
     pub hwaddr: HwaddrConfig,
     // pub next: *mut dhcp_config,
@@ -625,9 +611,9 @@ pub struct DhcpConfig {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DhcpOpt {
-    pub opt: i32,
-    pub len: i32,
-    pub flags: i32,
+    pub opt: u32,
+    pub len: u32,
+    pub flags: u32,
     pub u: C2RustUnnamed_7,
     pub val: Vec<u8>,
     pub netid: DhcpNetId,
@@ -754,9 +740,9 @@ pub struct DhcpContext {
     pub valid: u32,
     pub preferred: u32,
     pub saved_valid: u32,
-    pub ra_time: time_t,
-    pub ra_short_period_start: time_t,
-    pub address_lost_time: time_t,
+    pub ra_time: TimeT,
+    pub ra_short_period_start: TimeT,
+    pub address_lost_time: TimeT,
     pub template_interface: String,
     pub flags: i32,
     pub netid: DhcpNetId,
@@ -779,35 +765,35 @@ pub struct SharedNetwork {
 #[repr(C)]
 pub struct PingResult {
     pub addr: InAddr,
-    pub time: time_t,
+    pub time: TimeT,
     pub hash: u32,
     // pub next: *mut ping_result,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone. Default)]
 #[repr(C)]
 pub struct TftpFile {
-    pub refcount: i32,
-    pub fd: i32,
-    pub size: off_t,
-    pub dev: dev_t,
-    pub inode: ino_t,
-    pub filename: [i8; 0],
+    pub refcount: u32,
+    pub fd: File,
+    pub size: usize,
+    pub dev: u32,
+    pub inode: u32,
+    pub filename: String,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone. Default)]
 #[repr(C)]
 pub struct TftpTransfer {
-    pub sockfd: i32,
-    pub timeout: time_t,
+    pub sockfd: Socket,
+    pub timeout: time::Instant,
     pub backoff: i32,
     pub block: u32,
     pub blocksize: u32,
     pub expansion: u32,
-    pub offset: off_t,
+    pub offset: usize,
     pub peer: MySockAddr,
     pub source: AllAddr,
     pub if_index: i32,
-    pub opt_blocksize: libc::c_char,
-    pub opt_transize: libc::c_char,
+    pub opt_blocksize: usize,
+    pub opt_transize: usize,
     pub netascii: libc::c_char,
     pub carrylf: libc::c_char,
     pub file: TftpFile,
@@ -841,10 +827,10 @@ pub struct DhcpRelay {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct OptTab {
+pub struct  DhcpOptTblEntry {
     pub name: String,
     pub val: u16,
-    pub size: u16,
+    pub size: usize,
 }
 
 #[derive(Clone, Default)]
@@ -853,7 +839,7 @@ pub struct DnsmasqDaemon {
     pub options: [u32; 2],
     pub default_resolv: Resolvc,
     pub resolv_files: Resolvc,
-    pub last_resolv: time_t,
+    pub last_resolv: TimeT,
     pub servers_file: String,
     pub mxnames: MxSrvRecord,
     pub naptr: NaPtr,
@@ -981,12 +967,12 @@ pub struct DnsmasqDaemon {
     pub interfaces: Irec,
     pub listeners: Listener,
     pub last_server: Server,
-    pub forwardtime: time_t,
+    pub forwardtime: TimeT,
     pub forwardcount: i32,
     pub srv_save: Server,
-    pub packet_len: size_t,
+    pub packet_len: usize,
     pub rfd_save: RandFd,
-    pub tcp_pids: [pid_t; 20],
+    pub tcp_pids: [PidT; 20],
     pub tcp_pipes: [i32; 20],
     pub pipe_to_parent: i32,
     pub randomsocks: [RandFd; 64],
@@ -1050,16 +1036,16 @@ pub type _IO_finish_t = fn(*mut FILE, i32);
 pub type _IO_overflow_t = fn(*mut FILE, i32) -> i32;
 pub type _IO_underflow_t = fn(*mut FILE) -> i32;
 pub type _IO_pbackfail_t = fn(*mut FILE, i32) -> i32;
-pub type _IO_xsputn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> __off64_t;
+pub type _IO_xsputn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> Off64T;
 pub type _IO_xsgetn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> libc::size_t;
-pub type _IO_seekoff_t = fn(FP: *mut FILE, OFF: __off64_t, DIR: i32, MODE: i32) -> __off64_t;
-pub type _IO_seekpos_t = fn(*mut FILE, __off64_t, i32) -> __off64_t;
+pub type _IO_seekoff_t = fn(FP: *mut FILE, OFF: Off64T, DIR: i32, MODE: i32) -> Off64T;
+pub type _IO_seekpos_t = fn(*mut FILE, Off64T, i32) -> Off64T;
 pub type _IO_setbuf_t = fn(*mut FILE, String, libc::ssize_t) -> *mut FILE;
 pub type _IO_sync_t = fn(*mut FILE) -> i32;
 pub type _IO_doallocate_t = fn(*mut FILE) -> i32;
 pub type _IO_read_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
 pub type _IO_write_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
-pub type _IO_seek_t = fn(*mut FILE, *mut __off64_t, i32) -> __off64_t;
+pub type _IO_seek_t = fn(*mut FILE, *mut Off64T, i32) -> Off64T;
 pub type _IO_close_t = fn(*mut FILE) -> i32;
 pub type _IO_stat_t = fn(*mut FILE, *mut libc::c_void) -> i32;
 pub type _IO_showmanyc_t = fn(*mut FILE) -> i32;
@@ -1718,9 +1704,9 @@ pub union __SOCKADDR_ARG {
 }
 
 pub type __clock_t = libc::c_long;
-pub type gid_t = __gid_t;
-pub type uid_t = __uid_t;
-pub type ssize_t = __ssize_t;
+pub type gid_t = GidT;
+pub type uid_t = UidT;
+pub type ssize_t = SsizeT;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -1745,7 +1731,7 @@ pub const SHUT_RD: u8 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct sockaddr_un {
-    pub sun_family: sa_family_t,
+    pub sun_family: SaFamily,
     pub sun_path: [i8; 108],
 }
 
@@ -1794,6 +1780,17 @@ pub const IPPROTO_IGMP: i32 = 2;
 pub const IPPROTO_ICMP: i32 = 1;
 pub const IPPROTO_IP: i32 = 0;
 pub type __u32 = u32;
+
+
+// pub const ETHERTYPE_IPV4: u16 = 0x0800;
+// pub const ETHERTYPE_IPV6: u16 = 0x86DD;
+#[derive(FromPrimitive)]
+enum Ethertype {
+    ETHERTYPE_IPV4 = 0x0800,
+    ETHERTYPE_IPV6 = 0x86DD,
+};
+
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union sigval {
@@ -1845,8 +1842,8 @@ pub struct siginfo_t {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_8 {
-    pub si_pid: __pid_t,
-    pub si_uid: __uid_t,
+    pub si_pid: PidT,
+    pub si_uid: UidT,
     pub si_status: i32,
     pub si_utime: __clock_t,
     pub si_stime: __clock_t,
@@ -1854,15 +1851,15 @@ pub struct C2RustUnnamed_8 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_9 {
-    pub si_pid: __pid_t,
-    pub si_uid: __uid_t,
+    pub si_pid: PidT,
+    pub si_uid: UidT,
     pub si_sigval: __sigval_t,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_11 {
-    pub si_pid: __pid_t,
-    pub si_uid: __uid_t,
+    pub si_pid: PidT,
+    pub si_uid: UidT,
 }
 pub type __sighandler_t = Option<unsafe extern "C" fn(_: i32) -> ()>;
 #[derive(Copy, Clone)]
@@ -2103,8 +2100,8 @@ pub const _SC_ARG_MAX: C2RustUnnamed_13 = 0;
 pub struct Passwd {
     pub pw_name: String,
     pub pw_passwd: String,
-    pub pw_uid: __uid_t,
-    pub pw_gid: __gid_t,
+    pub pw_uid: UidT,
+    pub pw_gid: GidT,
     pub pw_gecos: String,
     pub pw_dir: String,
     pub pw_shell: String,
@@ -2114,7 +2111,7 @@ pub struct Passwd {
 pub struct Group {
     pub gr_name: String,
     pub gr_passwd: String,
-    pub gr_gid: __gid_t,
+    pub gr_gid: GidT,
     pub gr_mem: String,
 }
 #[derive(Copy, Clone)]
@@ -2484,7 +2481,7 @@ pub struct DhcpLease {
     pub fqdn: String,
     pub old_hostname: String,
     pub flags: i32,
-    pub expires: time_t,
+    pub expires: time::Instant,
     pub hwaddr_len: i32,
     pub hwaddr_type: i32,
     pub hwaddr: [u8; 16],
@@ -2507,7 +2504,7 @@ pub struct DhcpLease {
 #[repr(C)]
 pub struct SlaacAddress {
     pub addr: In6Addr,
-    pub ping_time: time_t,
+    pub ping_time: time::Instant,
     pub backoff: i32,
     // pub next: *mut slaac_address,
 }
@@ -2969,44 +2966,44 @@ pub type __uintmax_t = libc::c_ulong;
 
 
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct stat {
-    pub st_dev: __dev_t,
-    pub st_ino: __ino_t,
-    pub st_nlink: __nlink_t,
-    pub st_mode: __mode_t,
-    pub st_uid: __uid_t,
-    pub st_gid: __gid_t,
-    pub __pad0: libc::c_int,
-    pub st_rdev: __dev_t,
-    pub st_size: __off_t,
-    pub st_blksize: __blksize_t,
-    pub st_blocks: __blkcnt_t,
-    pub st_atim: timespec,
-    pub st_mtim: timespec,
-    pub st_ctim: timespec,
-    pub __glibc_reserved: [__syscall_slong_t; 3],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct stat64 {
-    pub st_dev: __dev_t,
-    pub st_ino: __ino64_t,
-    pub st_nlink: __nlink_t,
-    pub st_mode: __mode_t,
-    pub st_uid: __uid_t,
-    pub st_gid: __gid_t,
-    pub __pad0: libc::c_int,
-    pub st_rdev: __dev_t,
-    pub st_size: __off_t,
-    pub st_blksize: __blksize_t,
-    pub st_blocks: __blkcnt64_t,
-    pub st_atim: timespec,
-    pub st_mtim: timespec,
-    pub st_ctim: timespec,
-    pub __glibc_reserved: [__syscall_slong_t; 3],
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct stat {
+//     pub st_dev: DevT,
+//     pub st_ino: InoT,
+//     pub st_nlink: NLinkT,
+//     pub st_mode: ModeT,
+//     pub st_uid: UidT,
+//     pub st_gid: GidT,
+//     pub __pad0: libc::c_int,
+//     pub st_rdev: DevT,
+//     pub st_size: usize,
+//     pub st_blksize: BlkSizeT,
+//     pub st_blocks: BlkCntT,
+//     pub st_atim: timespec,
+//     pub st_mtim: timespec,
+//     pub st_ctim: timespec,
+//     pub __glibc_reserved: [SyscallSlongT; 3],
+// }
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct stat64 {
+//     pub st_dev: DevT,
+//     pub st_ino: Ino64T,
+//     pub st_nlink: NLinkT,
+//     pub st_mode: ModeT,
+//     pub st_uid: UidT,
+//     pub st_gid: GidT,
+//     pub __pad0: libc::c_int,
+//     pub st_rdev: DevT,
+//     pub st_size: usize,
+//     pub st_blksize: BlkSizeT,
+//     pub st_blocks: BlkCnt64T,
+//     pub st_atim: timespec,
+//     pub st_mtim: timespec,
+//     pub st_ctim: timespec,
+//     pub __glibc_reserved: [SyscallSlongT; 3],
+// }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct _IO_FILE {
@@ -3026,17 +3023,17 @@ pub struct _IO_FILE {
     pub _chain: *mut _IO_FILE,
     pub _fileno: libc::c_int,
     pub _flags2: libc::c_int,
-    pub _old_offset: __off_t,
+    pub _old_offset: usize,
     pub _cur_column: libc::c_ushort,
     pub _vtable_offset: libc::c_schar,
     pub _shortbuf: [libc::c_char; 1],
     pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
+    pub _offset: Off64T,
     pub _codecvt: *mut _IO_codecvt,
     pub _wide_data: *mut _IO_wide_data,
     pub _freeres_list: *mut _IO_FILE,
     pub _freeres_buf: *mut libc::c_void,
-    pub __pad5: size_t,
+    pub __pad5: usize,
     pub _mode: libc::c_int,
     pub _unused2: [libc::c_char; 20],
 }
@@ -3443,42 +3440,55 @@ pub union C2RustUnnamed_14A {
     pub p: InPktInfo,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct Cparam {
-    pub now: time_t,
-    pub newone: libc::c_int,
-    pub newname: libc::c_int,
+    pub now: time::Instant,
+    pub newone: u32,
+    pub newname: u32,
 }
-
 
 pub type __caddr_t = *mut libc::c_char;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct Ifmap {
-    pub mem_start: libc::c_ulong,
-    pub mem_end: libc::c_ulong,
-    pub base_addr: libc::c_ushort,
-    pub irq: libc::c_uchar,
-    pub dma: libc::c_uchar,
-    pub port: libc::c_uchar,
+    pub mem_start: u32,
+    pub mem_end: u32,
+    pub base_addr: u16,
+    pub irq: u8,
+    pub dma: u8,
+    pub port: u8,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct InPktInfo {
-    pub ipi_ifindex: libc::c_int,
-    pub ipi_spec_dst: slack::in_addr,
-    pub ipi_addr: slack::in_addr,
+    pub ipi_ifindex: u32,
+    pub ipi_spec_dst: InAddr,
+    pub ipi_addr: InAddr,
 }
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct OptionUsage {
-    pub opt: char,
+    pub opt: u16,
     pub rept: u16,
     pub flagdesc: String,
     pub desc: String,
-    pub arg: u16
+    pub arg: String
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct OptionValue {
+    pub name: String,
+    pub val: i32
+}
+
+#[derive(Copy,Clone,Default)]
+#[repr(C)]
+pub struct TabEntryA {
+    pub handle: char,
+    pub val: i32
 }

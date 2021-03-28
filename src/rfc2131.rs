@@ -1,4 +1,4 @@
-use crate::defines::{InAddr, DhcpContext, time_t, DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt, __bswap_32, in_addr_t, SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2RustUnnamed_9, DhcpBoot, __bswap_16, Irec, _ISprint, DhcpPxeVendor, socklen_t, DelayConfig};
+use crate::defines::{InAddr, DhcpContext, time_t, DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt, __bswap_32, InAddrT, SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2RustUnnamed_9, DhcpBoot, __bswap_16, Irec, _ISprint, DhcpPxeVendor, socklen_t, DelayConfig};
 use crate::util::{expand_buf, memcmp_masked, is_same_net, legal_hostname, hostname_isequal, safe_strncpy, prettyprint_time, print_mac, rand16, whine_malloc, do_rfc1035_name};
 use crate::lease::{lease_find_by_client, lease_find_by_addr, lease_prune, lease4_allocate, lease_set_hwaddr, lease_set_hostname, lease_set_expires, lease_set_interface, lease_add_extradata};
 use crate::dnsmasq_log::my_syslog;
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
     let mut oui: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut serial: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut class: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    override_0.s_addr = 0 as libc::c_int as in_addr_t;
+    override_0.s_addr = 0 as libc::c_int as InAddrT;
     subnet_addr.s_addr = override_0.s_addr;
     /* set tag with name == interface */
     iface_id.net = iface_name;
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
         if !option_find(mess, sz, 50 as libc::c_int,
                         4 as libc::c_int).is_null() ||
                mess_type == 1 as libc::c_int as libc::c_uint {
-            (*mess).ciaddr.s_addr = 0 as libc::c_int as in_addr_t
+            (*mess).ciaddr.s_addr = 0 as libc::c_int as InAddrT
         }
         /* search for device identity from CPEWAN devices, we pass this through to the script */
         opt = option_find(mess, sz, 125 as libc::c_int, 5 as libc::c_int);
@@ -1483,7 +1483,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
             }
             clear_packet(mess, end);
             (*mess).yiaddr = (*mess).ciaddr;
-            (*mess).ciaddr.s_addr = 0 as libc::c_int as in_addr_t;
+            (*mess).ciaddr.s_addr = 0 as libc::c_int as InAddrT;
             if !(*service).sname.is_null() {
                 (*mess).siaddr = a_record_from_hosts((*service).sname, now)
             } else if (*service).server.s_addr !=
@@ -1554,11 +1554,11 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
                         tagif_netid = run_tag_if(&mut (*tmp_0).netid)
                     }
                     boot = find_boot(tagif_netid);
-                    (*mess).yiaddr.s_addr = 0 as libc::c_int as in_addr_t;
+                    (*mess).yiaddr.s_addr = 0 as libc::c_int as InAddrT;
                     if mess_type == 1 as libc::c_int as libc::c_uint ||
                            (*mess).ciaddr.s_addr ==
                                0 as libc::c_int as libc::c_uint {
-                        (*mess).ciaddr.s_addr = 0 as libc::c_int as in_addr_t;
+                        (*mess).ciaddr.s_addr = 0 as libc::c_int as InAddrT;
                         (*mess).flags =
                             ((*mess).flags as libc::c_int |
                                  __bswap_16(0x8000 as libc::c_int as
@@ -1796,7 +1796,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
                     } else {
                         let mut addr_0: InAddr = InAddr {s_addr: 0,};
                         let mut conf: InAddr = InAddr {s_addr: 0,};
-                        conf.s_addr = 0 as libc::c_int as in_addr_t;
+                        conf.s_addr = 0 as libc::c_int as InAddrT;
                         addr_0.s_addr = conf.s_addr;
                         opt =
                             option_find(mess, sz, 50 as libc::c_int,
@@ -2425,7 +2425,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
                            0 as *mut libc::c_char, message, (*mess).xid);
                 /* rapid commit case: lease allocate failed but don't send DHCPNAK */
                 if rapid_commit != 0 { return 0 as libc::c_int as usize }
-                (*mess).yiaddr.s_addr = 0 as libc::c_int as in_addr_t;
+                (*mess).yiaddr.s_addr = 0 as libc::c_int as InAddrT;
                 clear_packet(mess, end);
                 option_put(mess, end, 53 as libc::c_int, 1 as libc::c_int,
                            6 as libc::c_int as libc::c_uint);
@@ -2447,7 +2447,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
                         ((*mess).flags as libc::c_int |
                              __bswap_16(0x8000 as libc::c_int as u16)
                                  as libc::c_int) as u16; /* broadcast */
-                    (*mess).ciaddr.s_addr = 0 as libc::c_int as in_addr_t
+                    (*mess).ciaddr.s_addr = 0 as libc::c_int as InAddrT
                 }
             } else {
                 if !(*context).netid.net.is_null() {
@@ -3968,7 +3968,7 @@ unsafe extern "C" fn pxe_opts(mut pxe_arch: libc::c_int,
                                 /* dest misaligned */
                                 memcpy(q as *mut libc::c_void,
                                        &mut boot_server.s_addr as
-                                           *mut in_addr_t as
+                                           *mut InAddrT as
                                            *const libc::c_void,
                                        4 as libc::c_int as libc::c_ulong);
                                 q = q.offset(4 as libc::c_int as isize);
@@ -4078,7 +4078,7 @@ unsafe extern "C" fn clear_packet(mut mess: *mut DhcpPacket,
                                                                libc::c_ulong
                                                                as isize)) as
                libc::c_long as libc::c_ulong);
-    (*mess).siaddr.s_addr = 0 as libc::c_int as in_addr_t;
+    (*mess).siaddr.s_addr = 0 as libc::c_int as InAddrT;
 }
 #[no_mangle]
 pub unsafe extern "C" fn find_boot(mut netid: *mut DhcpNetId)

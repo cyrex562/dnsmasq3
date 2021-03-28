@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{AddrList, AllAddr, InAddr, __bswap_32, in_addr_t, AuthZone, DnsHeader, size_t, time_t, MySockAddr, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, __bswap_16, In6Addr, Iname, in_port_t, socklen_t, NameList};
+use crate::defines::{AddrList, AllAddr, InAddr, __bswap_32, InAddrT, AuthZone, DnsHeader, size_t, time_t, MySockAddr, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, __bswap_16, In6Addr, Iname, in_port_t, socklen_t, NameList};
 use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdomain, sockaddr_isequal};
 use crate::rfc1035::{skip_questions, extract_name, in_arpa_name_2_addr, add_resource_record};
 use crate::cache::{log_query, cache_find_by_addr, cache_get_name, record_source, querystr, cache_find_by_name, cache_find_non_terminal, cache_enumerate};
@@ -26,7 +26,7 @@ pub fn find_addrlist(list: &mut Vec<AddrList>, flag: libc::c_int, addr_u: &mut A
             let mut netmask: InAddr = InAddr {s_addr: 0,};
             let mut addr: InAddr = addr_u.addr4;
             if !(flag as libc::c_uint &
-                (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as in_addr_t)) << 32 as libc::c_int - (*list).prefixlen);
+                (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as InAddrT)) << 32 as libc::c_int - (*list).prefixlen);
                 if is_same_net(addr, (*list).addr.addr4, netmask) != 0 {
                     return Some(list_addr.clone())
                 }
@@ -1352,7 +1352,7 @@ pub pub fn answer_auth(mut header: *mut DnsHeader,
             /* handle NS and SOA for PTR records */
             authname = name;
             if (*subnet).flags & 2 as libc::c_int == 0 {
-                let mut a_0: in_addr_t =
+                let mut a_0: InAddrT =
                     __bswap_32((*subnet).addr.addr4.s_addr) >>
                         8 as libc::c_int;
                 let mut p_1: *mut libc::c_char = name;

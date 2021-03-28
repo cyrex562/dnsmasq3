@@ -19,7 +19,7 @@
 /* The SURF random number generator was taken from djbdns-1.05, by 
    Daniel J Bernstein, which is public domain. */
 /* SURF random number generator */
-use crate::defines::{iovec, InAddr, In6Addr, _IScntrl, MySockAddr, SockAddrIn6, SockAddrIn, time_t, socklen_t, __bswap_16, _ISxdigit, timespec, __time_t, __syscall_slong_t, DIR};
+use crate::defines::{iovec, InAddr, In6Addr, _IScntrl, MySockAddr, SockAddrIn6, SockAddrIn, time_t, socklen_t, __bswap_16, _ISxdigit, timespec, TimeT, SyscallSlongT, DIR};
 use std::fs::{File, read, write};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::network::fix_fd;
@@ -325,41 +325,31 @@ pub unsafe extern "C" fn rand64() -> u64 {
                                         32 as libc::c_int);
 }
 /* returns 2 if names is OK but contains one or more underscores */
-unsafe extern "C" fn check_name(mut in_1: *mut libc::c_char) -> libc::c_int {
+pub fn check_name(in_1: &mut String) -> i32 {
     /* remove trailing . 
      also fail empty string and label > 63 chars */
-    let mut dotgap: usize = 0 as libc::c_int as usize;
-    let mut l: usize = strlen(in_1);
+    let mut dotgap: usize = 0;
+    let mut l: usize = in_1.len();
     let mut c: libc::c_char = 0;
-    let mut nowhite: libc::c_int = 0 as libc::c_int;
-    let mut hasuscore: libc::c_int = 0 as libc::c_int;
-    if l == 0 as libc::c_int as libc::c_ulong ||
-           l > 1025 as libc::c_int as libc::c_ulong {
-        return 0 as libc::c_int
+    let mut nowhite: libc::c_int = 0;
+    let mut hasuscore: libc::c_int = 0;
+    if l == 0 || l > 1025 {
+        return 0
     }
-    if *in_1.offset(l.wrapping_sub(1 as libc::c_int as libc::c_ulong) as
-                        isize) as libc::c_int == '.' as i32 {
-        *in_1.offset(l.wrapping_sub(1 as libc::c_int as libc::c_ulong) as
-                         isize) = 0 as libc::c_int as libc::c_char;
-        nowhite = 1 as libc::c_int
+    if in_1.offset(l.wrapping_sub(1)) == '.' as i32 {
+        in_1.offset(l.wrapping_sub(1)) = 0;
+        nowhite = 1
     }
-    loop  {
-        c = *in_1;
-        if !(c != 0) { break ; }
-        if c as libc::c_int == '.' as i32 {
-            dotgap = 0 as libc::c_int as usize
+    for c in in_1  {
+        if c == 0 { break ; }
+        if c == '.' as i32 {
+            dotgap = 0
         } else {
             dotgap = dotgap.wrapping_add(1);
-            if dotgap > 63 as libc::c_int as libc::c_ulong {
-                return 0 as libc::c_int
+            if dotgap > 63 {
+                return 0
             } else {
-                if c as libc::c_uchar as libc::c_int & !(0x7f as libc::c_int)
-                       == 0 as libc::c_int &&
-                       *(*__ctype_b_loc()).offset(c as libc::c_uchar as
-                                                      libc::c_int as isize) as
-                           libc::c_int &
-                           _IScntrl as libc::c_int as libc::c_ushort as
-                               libc::c_int != 0 {
+                if c & !(0x7f) == 0 && __ctype_b_loc().offset(c) & _IScntrl != 0 {
                     /* iscntrl only gives expected results for ascii */
                     return 0 as libc::c_int
                 } else {
@@ -377,7 +367,6 @@ unsafe extern "C" fn check_name(mut in_1: *mut libc::c_char) -> libc::c_int {
                 }
             }
         }
-        in_1 = in_1.offset(1)
     }
     if nowhite == 0 { return 0 as libc::c_int }
     return if hasuscore != 0 { 2 as libc::c_int } else { 1 as libc::c_int };
@@ -386,6 +375,7 @@ unsafe extern "C" fn check_name(mut in_1: *mut libc::c_char) -> libc::c_int {
    so check for legal char a-z A-Z 0-9 - _ 
    Note that this may receive a FQDN, so only check the first label 
    for the tighter criteria. */
+
 #[no_mangle]
 pub unsafe extern "C" fn legal_hostname(mut name: *mut libc::c_char)
  -> libc::c_int {
@@ -416,23 +406,21 @@ pub unsafe extern "C" fn legal_hostname(mut name: *mut libc::c_char)
     }
     return 1 as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn canonicalise(mut in_1: *mut libc::c_char,
-                                      mut nomem: *mut libc::c_int)
- -> *mut libc::c_char {
-    let mut ret: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut rc: libc::c_int = 0;
-    if !nomem.is_null() { *nomem = 0 as libc::c_int }
+
+pub fn string_from_offset(in_str: &String, offset: usize) -> String {
+    String::from(in_str.as_bytes()[offset..])
+}
+
+
+pub fn canonicalise(in_1: &mut String, nomem: i32)
+ -> Option<String> {
+    let mut ret= String::new();
+    let mut rc: i32 = 0;
     rc = check_name(in_1);
-    if rc == 0 { return 0 as *mut libc::c_char }
-    ret =
-        whine_malloc(strlen(in_1).wrapping_add(1 as libc::c_int as
-                                                   libc::c_ulong)) as
-            *mut libc::c_char;
-    if !ret.is_null() {
-        strcpy(ret, in_1);
-    } else if !nomem.is_null() { *nomem = 1 as libc::c_int }
-    return ret;
+    if rc == 0 { return None }
+
+    ret = in_1.clone();
+    return Some(ret);
 }
 #[no_mangle]
 pub unsafe extern "C" fn do_rfc1035_name(mut p: *mut libc::c_uchar,
@@ -974,8 +962,8 @@ pub unsafe extern "C" fn retry_send(mut rc: susize) -> libc::c_int {
      dnsmasq. */
     if *__errno_location() == 11 as libc::c_int ||
            *__errno_location() == 11 as libc::c_int {
-        waiter.tv_sec = 0 as libc::c_int as __time_t;
-        waiter.tv_nsec = 10000 as libc::c_int as __syscall_slong_t;
+        waiter.tv_sec = 0 as libc::c_int as TimeT;
+        waiter.tv_nsec = 10000 as libc::c_int as SyscallSlongT;
         nanosleep(&mut waiter, 0 as *mut timespec);
         let fresh10 = retries;
         retries = retries + 1;

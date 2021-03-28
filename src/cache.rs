@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{Crec, BigName, C2RustUnnamed_10, DnsmasqDaemon, time_t, AllAddr, In6Addr, _ISspace, FILE, InAddr, HostsFile, HostRecord, NameList, Cname, C2RustUnnamed_8, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, Server, in_addr_t, socklen_t, _ISprint};
+use crate::defines::{Crec, BigName, C2RustUnnamed_10, DnsmasqDaemon, time_t, AllAddr, In6Addr, _ISspace, FILE, InAddr, HostsFile, HostRecord, NameList, Cname, C2RustUnnamed_8, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, Server, InAddrT, socklen_t, _ISprint};
 use crate::util::{safe_malloc, whine_malloc, hostname_isequal, read_write, canonicalise, sockaddr_isequal, prettyprint_addr};
 use crate::blockdata::{blockdata_free, blockdata_write, blockdata_read, blockdata_report, blockdata_retrieve};
 use crate::dnsmasq_log::my_syslog;
@@ -1904,7 +1904,7 @@ pub unsafe extern "C" fn a_record_from_hosts(mut name: *mut libc::c_char,
     my_syslog((3 as libc::c_int) << 3 as libc::c_int | 4 as libc::c_int,
               b"No IPv4 address found for %s\x00" as *const u8 as
                   *const libc::c_char, name);
-    ret.s_addr = 0 as libc::c_int as in_addr_t;
+    ret.s_addr = 0 as libc::c_int as InAddrT;
     return ret;
 }
 #[no_mangle]

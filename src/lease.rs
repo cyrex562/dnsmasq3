@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DhcpLease, time_t, FILE, AllAddr, InAddr, DnsmasqDaemon, In6Addr, DhcpConfig, DhcpContext, DhcpNetId, __off64_t, socklen_t, SlaacAddress, __bswap_32};
+use crate::defines::{DhcpLease, time_t, FILE, AllAddr, InAddr, DnsmasqDaemon, In6Addr, DhcpConfig, DhcpContext, DhcpNetId, Off64T, socklen_t, SlaacAddress, __bswap_32};
 use crate::util::{parse_hex, safe_malloc, netmask_length, is_same_net, is_same_net6, addr6part, whine_malloc, hostname_isequal};
 use crate::dnsmasq_log::{my_syslog, die};
 use crate::domain::{get_domain, get_domain6};
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn lease_update_file(mut now: time_t) {
         rewind((*dnsmasq_daemon).lease_stream);
         if *__errno_location() != 0 as libc::c_int ||
                ftruncate(fileno((*dnsmasq_daemon).lease_stream),
-                         0 as libc::c_int as __off64_t) != 0 as libc::c_int {
+                         0 as libc::c_int as Off64T) != 0 as libc::c_int {
             err = *__errno_location()
         }
         lease = leases;

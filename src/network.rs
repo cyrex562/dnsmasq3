@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use crate::slack::{ifreq, IFF_LOOPBACK, uint32_t, ipv6_mreq};
-use crate::defines::{C2RustUnnamed_2, SockAddr, C2RustUnnamed_1A, IfReq, AllAddr, Iname, DnsmasqDaemon, In6Addr, Irec, IfaceParam, MySockAddr, InAddr, AddrList, __bswap_32, InterfaceName, AuthZone, AuthNameList, in_addr_t, sa_family_t, __bswap_16, __uint16_t, Listener, SOCK_DGRAM, socklen_t, IPPROTO_IPV6, __CONST_SOCKADDR_ARG, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr, iovec, Server, C2RustUnnamed_13, C2RustUnnamed_12, in_port_t, C2RustUnnamed, ServerFd, time_t};
+use crate::defines::{C2RustUnnamed_2, SockAddr, C2RustUnnamed_1A, IfReq, AllAddr, Iname, DnsmasqDaemon, In6Addr, Irec, IfaceParam, MySockAddr, InAddr, AddrList, __bswap_32, InterfaceName, AuthZone, AuthNameList, InAddrT, SaFamily, __bswap_16, __uint16_t, Listener, SOCK_DGRAM, socklen_t, IPPROTO_IPV6, __CONST_SOCKADDR_ARG, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr, iovec, Server, C2RustUnnamed_13, C2RustUnnamed_12, in_port_t, C2RustUnnamed, ServerFd, time_t};
 use crate::util::{safe_strncpy, wildcard_match, whine_malloc, sockaddr_isequal, prettyprint_addr, sa_len, safe_malloc, rand16, hostname_isequal, rand32};
 use crate::dnsmasq_log::{my_syslog, die};
 use crate::netlink::iface_enumerate;
@@ -661,12 +661,12 @@ unsafe extern "C" fn iface_allowed_v6(mut local: *mut In6Addr,
     let mut addr: MySockAddr =
         MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
     let mut netmask: InAddr = InAddr {s_addr: 0,};
-    netmask.s_addr = 0 as libc::c_int as in_addr_t;
+    netmask.s_addr = 0 as libc::c_int as InAddrT;
     /* warning */
     memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-    addr.in6.sin6_family = 10 as libc::c_int as sa_family_t;
+    addr.in6.sin6_family = 10 as libc::c_int as SaFamily;
     addr.in6.sin6_addr = *local;
     addr.in6.sin6_port = __bswap_16((*dnsmasq_daemon).port as __uint16_t);
     /* FreeBSD insists this is zero for non-linklocal addresses */
@@ -697,7 +697,7 @@ unsafe extern "C" fn iface_allowed_v4(mut local: InAddr,
     memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-    addr.in_0.sin_family = 2 as libc::c_int as sa_family_t;
+    addr.in_0.sin_family = 2 as libc::c_int as SaFamily;
     addr.in_0.sin_addr = local;
     addr.in_0.sin_port = __bswap_16((*dnsmasq_daemon).port as __uint16_t);
     /* determine prefix length from netmask */
@@ -1305,8 +1305,8 @@ pub unsafe extern "C" fn create_wildcard_listeners() {
     memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-    addr.in_0.sin_family = 2 as libc::c_int as sa_family_t;
-    addr.in_0.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
+    addr.in_0.sin_family = 2 as libc::c_int as SaFamily;
+    addr.in_0.sin_addr.s_addr = 0 as libc::c_int as InAddrT;
     addr.in_0.sin_port = __bswap_16((*dnsmasq_daemon).port as __uint16_t);
     l =
         create_listeners(&mut addr,
@@ -1332,7 +1332,7 @@ pub unsafe extern "C" fn create_wildcard_listeners() {
     memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-    addr.in6.sin6_family = 10 as libc::c_int as sa_family_t;
+    addr.in6.sin6_family = 10 as libc::c_int as SaFamily;
     addr.in6.sin6_addr = in6addr_any;
     addr.in6.sin6_port = __bswap_16((*dnsmasq_daemon).port as __uint16_t);
     l6 =
@@ -1688,7 +1688,7 @@ pub unsafe extern "C" fn random_sock(mut family: libc::c_int) -> libc::c_int {
         memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
                0 as libc::c_int,
                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-        addr.sa.sa_family = family as sa_family_t;
+        addr.sa.sa_family = family as SaFamily;
         /* don't loop forever if all ports in use. */
         if fix_fd(fd) != 0 {
             loop  {
@@ -1701,7 +1701,7 @@ pub unsafe extern "C" fn random_sock(mut family: libc::c_int) -> libc::c_int {
                                         ports_avail as libc::c_ushort as
                                             libc::c_int) as __uint16_t);
                 if family == 2 as libc::c_int {
-                    addr.in_0.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
+                    addr.in_0.sin_addr.s_addr = 0 as libc::c_int as InAddrT;
                     addr.in_0.sin_port = port
                 } else {
                     addr.in6.sin6_addr = in6addr_any;
@@ -1830,7 +1830,7 @@ unsafe extern "C" fn allocate_sfd(mut addr: *mut MySockAddr,
             0 as
                 libc::c_int; /* index == 0 when not binding to an interface */
         if (*addr).sa.sa_family as libc::c_int == 2 as libc::c_int &&
-               (*addr).in_0.sin_addr.s_addr == 0 as libc::c_int as in_addr_t
+               (*addr).in_0.sin_addr.s_addr == 0 as libc::c_int as InAddrT
                &&
                (*addr).in_0.sin_port as libc::c_int ==
                    __bswap_16(0 as libc::c_int as __uint16_t) as libc::c_int {
@@ -1910,8 +1910,8 @@ pub unsafe extern "C" fn pre_allocate_sfds() {
         memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
                0 as libc::c_int,
                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-        addr.in_0.sin_family = 2 as libc::c_int as sa_family_t;
-        addr.in_0.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
+        addr.in_0.sin_family = 2 as libc::c_int as SaFamily;
+        addr.in_0.sin_addr.s_addr = 0 as libc::c_int as InAddrT;
         addr.in_0.sin_port =
             __bswap_16((*dnsmasq_daemon).query_port as __uint16_t);
         sfd =
@@ -1924,7 +1924,7 @@ pub unsafe extern "C" fn pre_allocate_sfds() {
         memset(&mut addr as *mut MySockAddr as *mut libc::c_void,
                0 as libc::c_int,
                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
-        addr.in6.sin6_family = 10 as libc::c_int as sa_family_t;
+        addr.in6.sin6_family = 10 as libc::c_int as SaFamily;
         addr.in6.sin6_addr = in6addr_any;
         addr.in6.sin6_port =
             __bswap_16((*dnsmasq_daemon).query_port as __uint16_t);
@@ -2351,11 +2351,11 @@ pub unsafe extern "C" fn reload_servers(mut fname: *mut libc::c_char)
                0 as libc::c_int,
                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong);
         addr.in_0.sin_addr.s_addr = inet_addr(token);
-        if addr.in_0.sin_addr.s_addr != -(1 as libc::c_int) as in_addr_t {
-            addr.in_0.sin_family = 2 as libc::c_int as sa_family_t;
+        if addr.in_0.sin_addr.s_addr != -(1 as libc::c_int) as InAddrT {
+            addr.in_0.sin_family = 2 as libc::c_int as SaFamily;
             source_addr.in_0.sin_family = addr.in_0.sin_family;
             addr.in_0.sin_port = __bswap_16(53 as libc::c_int as __uint16_t);
-            source_addr.in_0.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
+            source_addr.in_0.sin_addr.s_addr = 0 as libc::c_int as InAddrT;
             source_addr.in_0.sin_port =
                 __bswap_16((*dnsmasq_daemon).query_port as __uint16_t)
         } else {
@@ -2372,7 +2372,7 @@ pub unsafe extern "C" fn reload_servers(mut fname: *mut libc::c_char)
                                *mut libc::c_void) > 0 as libc::c_int) {
                 continue ;
             }
-            addr.in6.sin6_family = 10 as libc::c_int as sa_family_t;
+            addr.in6.sin6_family = 10 as libc::c_int as SaFamily;
             source_addr.in6.sin6_family = addr.in6.sin6_family;
             addr.in6.sin6_flowinfo = 0 as libc::c_int as uint32_t;
             source_addr.in6.sin6_flowinfo = addr.in6.sin6_flowinfo;

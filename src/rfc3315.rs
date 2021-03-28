@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DhcpContext, In6Addr, DhcpNetId, time_t, DhcpVendor, SharedNetwork, __bswap_32, DnsmasqDaemon, socklen_t, C2RustUnnamed, DhcpOpt, DhcpConfig, DhcpMac, DhcpMatchName, DhcpNetIdList, AddrList, DhcpLease, DhcpRelay, AllAddr, InAddr, MySockAddr, SockAddr, sa_family_t, __bswap_16, IPPROTO_IPV6, SockAddrIn6};
+use crate::defines::{DhcpContext, In6Addr, DhcpNetId, time_t, DhcpVendor, SharedNetwork, __bswap_32, DnsmasqDaemon, socklen_t, C2RustUnnamed, DhcpOpt, DhcpConfig, DhcpMac, DhcpMatchName, DhcpNetIdList, AddrList, DhcpLease, DhcpRelay, AllAddr, InAddr, MySockAddr, SockAddr, SaFamily, __bswap_16, IPPROTO_IPV6, SockAddrIn6};
 use crate::dhcp6::{get_client_mac, address6_valid, address6_available, address6_allocate};
 use crate::util::{is_same_net6, print_mac, memcmp_masked, legal_hostname, hostname_isequal, prettyprint_time, do_rfc1035_name, rand16, setaddr6part, addr6part, wildcard_match};
 use crate::dnsmasq_log::my_syslog;
@@ -3926,7 +3926,7 @@ pub unsafe extern "C" fn relay_upstream6(mut relay: *mut DhcpRelay,
         while !relay.is_null() {
             let mut to: MySockAddr =
                 MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
-            to.sa.sa_family = 10 as libc::c_int as sa_family_t;
+            to.sa.sa_family = 10 as libc::c_int as SaFamily;
             to.in6.sin6_addr = (*relay).server.addr6;
             to.in6.sin6_port = __bswap_16(547 as libc::c_int as u16);
             to.in6.sin6_flowinfo = 0 as libc::c_int as u32;

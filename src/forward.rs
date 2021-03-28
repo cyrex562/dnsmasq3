@@ -3,7 +3,7 @@
    unless nowild is true, when we just send it with the kernel default */
 use crate::auth::{answer_auth, in_zone};
 use crate::cache::{log_query, querystr};
-use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, __SOCKADDR_ARG, AddrList, AllAddr, AuthZone, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_15, C2RustUnnamed_16, C2RustUnnamed_4, CmsgHdr, DnsHeader, DnsmasqDaemon, Frec, FrecSrc, IfReq, In6Addr, InAddr, in_addr_t, InPktInfo, iovec, IPPROTO_IP, IPPROTO_IPV6, IpSets, Irec, Listener, MSG_FASTOPEN, MSG_TRUNC, MsgHdr, MySockAddr, RandFd, sa_family_t, Server, SOCK_STREAM, SockAddr, socklen_t, time_t};
+use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, __SOCKADDR_ARG, AddrList, AllAddr, AuthZone, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_15, C2RustUnnamed_16, C2RustUnnamed_4, CmsgHdr, DnsHeader, DnsmasqDaemon, Frec, FrecSrc, IfReq, In6Addr, InAddr, InAddrT, InPktInfo, iovec, IPPROTO_IP, IPPROTO_IPV6, IpSets, Irec, Listener, MSG_FASTOPEN, MSG_TRUNC, MsgHdr, MySockAddr, RandFd, SaFamily, Server, SOCK_STREAM, SockAddr, socklen_t, time_t};
 use crate::dnsmasq_log::{check_log_writer, my_syslog};
 use crate::dnsmasq_loop::detect_loop;
 use crate::dump::dump_packet;
@@ -1130,7 +1130,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
     /* packet buffer overwritten */
     (*dnsmasq_daemon).srv_save = 0 as *mut Server;
     /* Determine the address of the server replying  so that we can mark that as good */
-    serveraddr.sa.sa_family = family as sa_family_t;
+    serveraddr.sa.sa_family = family as SaFamily;
     if serveraddr.sa.sa_family as libc::c_int == 10 as libc::c_int {
         serveraddr.in6.sin6_flowinfo = 0 as libc::c_int as u32
     }
@@ -1541,9 +1541,9 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
              == 0 || family == 10 as libc::c_int) as libc::c_int;
     /* packet buffer overwritten */
     (*dnsmasq_daemon).srv_save = 0 as *mut Server;
-    dst_addr.addr4.s_addr = 0 as libc::c_int as in_addr_t;
+    dst_addr.addr4.s_addr = 0 as libc::c_int as InAddrT;
     dst_addr_4.s_addr = dst_addr.addr4.s_addr;
-    netmask.s_addr = 0 as libc::c_int as in_addr_t;
+    netmask.s_addr = 0 as libc::c_int as InAddrT;
     if (*dnsmasq_daemon).options[(13 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
@@ -1598,7 +1598,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
            0 as libc::c_int,
            ((*dnsmasq_daemon).edns_pktsz as libc::c_long - n) as
                libc::c_ulong);
-    source_addr.sa.sa_family = family as sa_family_t;
+    source_addr.sa.sa_family = family as SaFamily;
     if family == 2 as libc::c_int {
         /* Source-port == 0 is an error, we can't send back to that. 
 	  http://www.ietf.org/mail-archive/web/dnsop/current/msg11441.html */
@@ -1649,7 +1649,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
             addr = (*dnsmasq_daemon).interface_addrs;
             while !addr.is_null() {
                 netmask_0.s_addr =
-                    __bswap_32((!(0 as libc::c_int as in_addr_t)) <<
+                    __bswap_32((!(0 as libc::c_int as InAddrT)) <<
                                    32 as libc::c_int - (*addr).prefixlen);
                 if (*addr).flags & 2 as libc::c_int == 0 &&
                        is_same_net((*addr).addr.addr4,
@@ -1823,7 +1823,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
             /* If we failed, abandon localisation */
             if !iface.is_null() {
                 netmask = (*iface).netmask
-            } else { dst_addr_4.s_addr = 0 as libc::c_int as in_addr_t }
+            } else { dst_addr_4.s_addr = 0 as libc::c_int as InAddrT }
         }
     }
     /* log_query gets called indirectly all over the place, so 
@@ -2156,7 +2156,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
             addr = (*dnsmasq_daemon).interface_addrs;
             while !addr.is_null() {
                 netmask_0.s_addr =
-                    __bswap_32((!(0 as libc::c_int as in_addr_t)) <<
+                    __bswap_32((!(0 as libc::c_int as InAddrT)) <<
                                    32 as libc::c_int - (*addr).prefixlen);
                 if (*addr).flags & 2 as libc::c_int == 0 &&
                        is_same_net((*addr).addr.addr4,
@@ -2269,7 +2269,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
         }
         if (*local_addr).sa.sa_family as libc::c_int == 2 as libc::c_int {
             dst_addr_4 = (*local_addr).in_0.sin_addr
-        } else { dst_addr_4.s_addr = 0 as libc::c_int as in_addr_t }
+        } else { dst_addr_4.s_addr = 0 as libc::c_int as InAddrT }
         do_bit = 0 as libc::c_int;
         if !find_pseudoheader(header, size, 0 as *mut usize, &mut pheader,
                               0 as *mut libc::c_int,

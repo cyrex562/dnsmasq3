@@ -17,7 +17,7 @@
 use std::io::stdout;
 
 use crate::cache::{cache_find_by_addr, cache_get_name};
-use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, __dev_t, __mode_t, _ISspace, AllAddr, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_2, CmsgHdr, Crec, DhcpBridge, DhcpConfig, DhcpContext, DhcpLease, DhcpNetId, DhcpNetIdList, DhcpRelay, DnsmasqDaemon, HwaddrConfig, IfaceParam, IfReq, InAddr, in_addr_t, InPktInfo, Iname, iovec, IPPROTO_IP, IPPROTO_UDP, MatchParam, MsgHdr, MySockAddr, PingResult, sa_family_t, SharedNetwork, SOCK_DGRAM, SockAddr, SockAddrIn, socklen_t, time_t, usize};
+use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, DevT, ModeT, _ISspace, AllAddr, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_2, CmsgHdr, Crec, DhcpBridge, DhcpConfig, DhcpContext, DhcpLease, DhcpNetId, DhcpNetIdList, DhcpRelay, DnsmasqDaemon, HwaddrConfig, IfaceParam, IfReq, InAddr, InAddrT, InPktInfo, Iname, iovec, IPPROTO_IP, IPPROTO_UDP, MatchParam, MsgHdr, MySockAddr, PingResult, SaFamily, SharedNetwork, SOCK_DGRAM, SockAddr, SockAddrIn, socklen_t, time_t, usize};
 use crate::dhcp_common::{match_netid, recv_dhcp_packet, strip_hostname};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::domain::get_domain;
@@ -138,9 +138,9 @@ unsafe extern "C" fn make_fd(mut port: libc::c_int) -> libc::c_int {
     memset(&mut saddr as *mut SockAddrIn as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong);
-    saddr.sin_family = 2 as libc::c_int as sa_family_t;
+    saddr.sin_family = 2 as libc::c_int as SaFamily;
     saddr.sin_port = __bswap_16(port as u16);
-    saddr.sin_addr.s_addr = 0 as libc::c_int as in_addr_t;
+    saddr.sin_addr.s_addr = 0 as libc::c_int as InAddrT;
     if bind(fd,
             __CONST_SOCKADDR_ARG{__sockaddr__:
                                      &mut saddr as *mut SockAddrIn as
@@ -333,7 +333,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
                      ::std::mem::size_of::<[libc::c_char; 16]>() as
                          libc::c_ulong);
     } else {
-        ifr.ifr_ifru.ifru_addr.sa_family = 2 as libc::c_int as sa_family_t;
+        ifr.ifr_ifru.ifru_addr.sa_family = 2 as libc::c_int as SaFamily;
         if ioctl((*dnsmasq_daemon).dhcpfd,
                  0x8915 as libc::c_int as libc::c_ulong,
                  &mut ifr as *mut IfReq) != -(1 as libc::c_int) {
@@ -374,7 +374,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         }
         parm.current = 0 as *mut DhcpContext;
         parm.relay = 0 as *mut DhcpRelay;
-        parm.relay_local.s_addr = 0 as libc::c_int as in_addr_t;
+        parm.relay_local.s_addr = 0 as libc::c_int as InAddrT;
         parm.ind = iface_index;
         if iface_check(2 as libc::c_int,
                        &mut iface_addr as *mut InAddr as *mut AllAddr,
@@ -537,7 +537,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             } else { 0 as *mut CmsgHdr };
         pkt = (*cmptr).__cmsg_data.as_mut_ptr() as *mut InPktInfo;
         (*pkt).ipi_ifindex = rcvd_iface_index;
-        (*pkt).ipi_spec_dst.s_addr = 0 as libc::c_int as in_addr_t;
+        (*pkt).ipi_spec_dst.s_addr = 0 as libc::c_int as InAddrT;
         msg.msg_controllen =
             ((::std::mem::size_of::<InPktInfo>() as
                   libc::c_ulong).wrapping_add(::std::mem::size_of::<usize>()
@@ -603,7 +603,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
             memcpy(&mut arp_req.arp_pa as *mut SockAddr as *mut libc::c_void,
                    &mut dest as *mut SockAddrIn as *const libc::c_void,
                    ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong);
-            arp_req.arp_ha.sa_family = (*mess).htype as sa_family_t;
+            arp_req.arp_ha.sa_family = (*mess).htype as SaFamily;
             memcpy(arp_req.arp_ha.sa_data.as_mut_ptr() as *mut libc::c_void,
                    (*mess).chaddr.as_mut_ptr() as *const libc::c_void,
                    (*mess).hlen as libc::c_ulong);
@@ -732,7 +732,7 @@ unsafe extern "C" fn complete_context(mut local: InAddr,
                                 /* For a shared network, we have no way to guess what the default route should be. */
                                 (*context).router.s_addr =
                                     0 as libc::c_int as
-                                        in_addr_t; /* Use configured address for Server Identifier */
+                                        InAddrT; /* Use configured address for Server Identifier */
                                 (*context).local = local;
                                 (*context).current = (*param).current;
                                 (*param).current = context
@@ -1206,7 +1206,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
     let mut lineno: libc::c_int = 0 as libc::c_int;
     /* address in use: perturb address selection so that we are
 			   less likely to try this address again. */
-    addr.s_addr = 0 as libc::c_int as in_addr_t; /* eliminate warning */
+    addr.s_addr = 0 as libc::c_int as InAddrT; /* eliminate warning */
     if f.is_null() {
         my_syslog((3 as libc::c_int) << 3 as libc::c_int | 3 as libc::c_int,
                   b"failed to read %s: %s\x00" as *const u8 as
@@ -1293,7 +1293,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
             }
             if *cp == 0 {
                 addr.s_addr = inet_addr(ip);
-                if addr.s_addr == -(1 as libc::c_int) as in_addr_t {
+                if addr.s_addr == -(1 as libc::c_int) as InAddrT {
                     my_syslog((3 as libc::c_int) << 3 as libc::c_int |
                                   3 as libc::c_int,
                               b"bad address at %s line %d\x00" as *const u8 as
@@ -1492,7 +1492,7 @@ unsafe extern "C" fn relay_upstream4(mut relay: *mut DhcpRelay,
     while !relay.is_null() {
         let mut to: MySockAddr =
             MySockAddr {sa: SockAddr {sa_family: 0, sa_data: [0; 14],},};
-        to.sa.sa_family = 2 as libc::c_int as sa_family_t;
+        to.sa.sa_family = 2 as libc::c_int as SaFamily;
         to.in_0.sin_addr = (*relay).server.addr4;
         to.in_0.sin_port =
             __bswap_16((*dnsmasq_daemon).dhcp_server_port as u16);
