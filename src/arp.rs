@@ -1,11 +1,9 @@
 use crate::defines::{ArpRecord, InAddr, In6Addr, time_t, MySockAddr, size_t, DnsmasqDaemon};
 use crate::helper::queue_arp;
 
-// #![register_tool(c2rust)]
-// #![feature(const_raw_ptr_to_usize_cast, extern_types, register_tool)]
-
 // static mut arps: *mut arp_record = 0 as *const arp_record as *mut arp_record;
 // static mut old: *mut arp_record = 0 as *const arp_record as *mut arp_record;
+
 pub fn filter_mac<T>(mut family: libc::c_int,
                      mut addrp: &T,
                      mut mac: String,

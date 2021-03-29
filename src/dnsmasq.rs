@@ -1,6 +1,3 @@
-
-
-#![allow(dead_code, mutable_transmutes, unused_assignments, unused_mut)]
 mod defines;
 mod util;
 mod option;
@@ -315,9 +312,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
     if !daemon.dhcp6.is_null() {
         // TODO read in options differently
         daemon.doing_ra =
-            (daemon.options[(37).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) as usize] &
-                 (1) << (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) == 1
-                as libc::c_int;
+            (daemon.options[(37).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) as usize] & (1) << (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) == 1;
         context = daemon.dhcp6;
         while !context.is_null() {
             if (*context).flags as libc::c_uint &

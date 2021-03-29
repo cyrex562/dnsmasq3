@@ -769,7 +769,8 @@ pub struct PingResult {
     pub hash: u32,
     // pub next: *mut ping_result,
 }
-#[derive(Copy, Clone. Default)]
+
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct TftpFile {
     pub refcount: u32,
@@ -779,7 +780,7 @@ pub struct TftpFile {
     pub inode: u32,
     pub filename: String,
 }
-#[derive(Copy, Clone. Default)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct TftpTransfer {
     pub sockfd: Socket,
@@ -1788,7 +1789,7 @@ pub type __u32 = u32;
 enum Ethertype {
     ETHERTYPE_IPV4 = 0x0800,
     ETHERTYPE_IPV6 = 0x86DD,
-};
+}
 
 
 #[derive(Copy, Clone)]

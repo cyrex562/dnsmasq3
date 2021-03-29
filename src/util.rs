@@ -1,6 +1,3 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
-         non_upper_case_globals, unused_assignments, unused_mut)]
-
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -26,32 +23,34 @@ use crate::network::fix_fd;
 use crate::slack::{time, u8, dirent, utsname};
 use std::io::{Seek, Read};
 
-static mut seed: [u32; 32] = [0; 32];
-static mut in_0: [u32; 12] = [0; 12];
-static mut out: [u32; 8] = [0; 8];
-static mut outleft: libc::c_int = 0 as libc::c_int;
-#[no_mangle]
-pub unsafe extern "C" fn rand_init() {
-    let mut fd: libc::c_int =
-        open(b"/dev/urandom\x00" as *const u8 as *const libc::c_char,
-             0 as libc::c_int);
-    if fd == -(1 as libc::c_int) ||
-           read_write(fd, &mut seed as *mut [u32; 32] as *mut libc::c_uchar,
-                      ::std::mem::size_of::<[u32; 32]>() as libc::c_ulong as
-                          libc::c_int, 1 as libc::c_int) == 0 ||
-           read_write(fd, &mut in_0 as *mut [u32; 12] as *mut libc::c_uchar,
-                      ::std::mem::size_of::<[u32; 12]>() as libc::c_ulong as
-                          libc::c_int, 1 as libc::c_int) == 0 {
-        die(b"failed to seed the random number generator: %s\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char, 5 as libc::c_int);
-    }
-    close(fd);
-}
-unsafe extern "C" fn surf() {
+// static mut seed: [u32; 32] = [0; 32];
+// static mut in_0: [u32; 12] = [0; 12];
+// static mut out: [u32; 8] = [0; 8];
+// static mut outleft: libc::c_int = 0 as libc::c_int;
+
+// pub fn rand_init() {
+//     let mut fd: libc::c_int =
+//         open(b"/dev/urandom\x00" as *const u8 as *const libc::c_char,
+//              0 as libc::c_int);
+//     if fd == -(1 as libc::c_int) ||
+//            read_write(fd, &mut seed as *mut [u32; 32] as *mut libc::c_uchar,
+//                       ::std::mem::size_of::<[u32; 32]>() as libc::c_ulong as
+//                           libc::c_int, 1 as libc::c_int) == 0 ||
+//            read_write(fd, &mut in_0 as *mut [u32; 12] as *mut libc::c_uchar,
+//                       ::std::mem::size_of::<[u32; 12]>() as libc::c_ulong as
+//                           libc::c_int, 1 as libc::c_int) == 0 {
+//         die(b"failed to seed the random number generator: %s\x00" as *const u8
+//                 as *const libc::c_char as *mut libc::c_char,
+//             0 as *mut libc::c_char, 5 as libc::c_int);
+//     }
+//     close(fd);
+// }
+
+
+fn surf() {
     let mut t: [u32; 12] = [0; 12];
     let mut x: u32 = 0;
-    let mut sum: u32 = 0 as libc::c_int as u32;
+    let mut sum: u32 = 0;
     let mut r: libc::c_int = 0;
     let mut i: libc::c_int = 0;
     let mut loop_0: libc::c_int = 0;
@@ -252,8 +251,8 @@ unsafe extern "C" fn surf() {
         loop_0 += 1
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn rand16() -> libc::c_ushort {
+
+pub fn rand16() -> libc::c_ushort {
     if outleft == 0 {
         in_0[0 as libc::c_int as usize] =
             in_0[0 as libc::c_int as usize].wrapping_add(1);
@@ -275,8 +274,7 @@ pub unsafe extern "C" fn rand16() -> libc::c_ushort {
     outleft -= 1;
     return out[outleft as usize] as libc::c_ushort;
 }
-#[no_mangle]
-pub unsafe extern "C" fn rand32() -> u32 {
+pub fn rand32() -> u32 {
     if outleft == 0 {
         in_0[0 as libc::c_int as usize] =
             in_0[0 as libc::c_int as usize].wrapping_add(1);
@@ -298,8 +296,7 @@ pub unsafe extern "C" fn rand32() -> u32 {
     outleft -= 1;
     return out[outleft as usize];
 }
-#[no_mangle]
-pub unsafe extern "C" fn rand64() -> u64 {
+pub fn rand64() -> u64 {
     static mut outleft_0: libc::c_int = 0 as libc::c_int;
     if outleft_0 < 2 as libc::c_int {
         in_0[0 as libc::c_int as usize] =
@@ -376,8 +373,7 @@ pub fn check_name(in_1: &mut String) -> i32 {
    Note that this may receive a FQDN, so only check the first label 
    for the tighter criteria. */
 
-#[no_mangle]
-pub unsafe extern "C" fn legal_hostname(mut name: *mut libc::c_char)
+pub fn legal_hostname(mut name: *mut libc::c_char)
  -> libc::c_int {
     let mut c: libc::c_char = 0;
     let mut first: libc::c_int = 0;
@@ -422,8 +418,7 @@ pub fn canonicalise(in_1: &mut String, nomem: i32)
     ret = in_1.clone();
     return Some(ret);
 }
-#[no_mangle]
-pub unsafe extern "C" fn do_rfc1035_name(mut p: *mut libc::c_uchar,
+pub fn do_rfc1035_name(mut p: *mut libc::c_uchar,
                                          mut sval: *mut libc::c_char,
                                          mut limit: *mut libc::c_char)
  -> *mut libc::c_uchar {
@@ -455,8 +450,7 @@ pub unsafe extern "C" fn do_rfc1035_name(mut p: *mut libc::c_uchar,
     return p;
 }
 /* for use during startup */
-#[no_mangle]
-pub unsafe extern "C" fn safe_malloc(mut size: usize) -> *mut libc::c_void {
+pub fn safe_malloc(mut size: usize) -> *mut libc::c_void {
     let mut ret: *mut libc::c_void =
         calloc(1 as libc::c_int as libc::c_ulong, size);
     if ret.is_null() {
@@ -467,8 +461,7 @@ pub unsafe extern "C" fn safe_malloc(mut size: usize) -> *mut libc::c_void {
 }
 /* Ensure limited size string is always terminated.
  * Can be replaced by (void)strlcpy() on some platforms */
-#[no_mangle]
-pub unsafe extern "C" fn safe_strncpy(mut dest: *mut libc::c_char,
+pub fn safe_strncpy(mut dest: *mut libc::c_char,
                                       mut src: *const libc::c_char,
                                       mut size: usize) {
     if size != 0 as libc::c_int as libc::c_ulong {
@@ -478,8 +471,7 @@ pub unsafe extern "C" fn safe_strncpy(mut dest: *mut libc::c_char,
                 size.wrapping_sub(1 as libc::c_int as libc::c_ulong));
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn safe_pipe(mut fd: *mut libc::c_int,
+pub fn safe_pipe(mut fd: *mut libc::c_int,
                                    mut read_noblock: libc::c_int) {
     if pipe(fd) == -(1 as libc::c_int) ||
            fix_fd(*fd.offset(1 as libc::c_int as isize)) == 0 ||
@@ -490,8 +482,7 @@ pub unsafe extern "C" fn safe_pipe(mut fd: *mut libc::c_int,
             5 as libc::c_int);
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn whine_malloc(mut size: usize) -> *mut libc::c_void {
+pub fn whine_malloc(mut size: usize) -> *mut libc::c_void {
     let mut ret: *mut libc::c_void =
         calloc(1 as libc::c_int as libc::c_ulong, size);
     if ret.is_null() {
@@ -501,8 +492,7 @@ pub unsafe extern "C" fn whine_malloc(mut size: usize) -> *mut libc::c_void {
     }
     return ret;
 }
-#[no_mangle]
-pub unsafe extern "C" fn sockaddr_isequal(mut s1: *mut MySockAddr,
+pub fn sockaddr_isequal(mut s1: *mut MySockAddr,
                                           mut s2: *mut MySockAddr)
                                           -> libc::c_int {
     if (*s1).sa.sa_family as libc::c_int == (*s2).sa.sa_family as libc::c_int
@@ -546,8 +536,7 @@ pub unsafe extern "C" fn sockaddr_isequal(mut s1: *mut MySockAddr,
     }
     return 0 as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn sa_len(mut addr: *mut MySockAddr) -> libc::c_int {
+pub fn sa_len(mut addr: *mut MySockAddr) -> libc::c_int {
     if (*addr).sa.sa_family as libc::c_int == 10 as libc::c_int {
         return ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong as
                    libc::c_int
@@ -557,8 +546,7 @@ pub unsafe extern "C" fn sa_len(mut addr: *mut MySockAddr) -> libc::c_int {
     };
 }
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
-#[no_mangle]
-pub unsafe extern "C" fn hostname_isequal(mut a: *const libc::c_char,
+pub fn hostname_isequal(mut a: *const libc::c_char,
                                           mut b: *const libc::c_char)
  -> libc::c_int {
     let mut c1: libc::c_uint = 0;
@@ -584,8 +572,7 @@ pub unsafe extern "C" fn hostname_isequal(mut a: *const libc::c_char,
     return 1 as libc::c_int;
 }
 /* is b equal to or a subdomain of a return 2 for equal, 1 for subdomain */
-#[no_mangle]
-pub unsafe extern "C" fn hostname_issubdomain(mut a: *mut libc::c_char,
+pub fn hostname_issubdomain(mut a: *mut libc::c_char,
                                               mut b: *mut libc::c_char)
  -> libc::c_int {
     let mut ap: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -623,12 +610,10 @@ pub unsafe extern "C" fn hostname_issubdomain(mut a: *mut libc::c_char,
     if *bp as libc::c_int == '.' as i32 { return 1 as libc::c_int }
     return 0 as libc::c_int;
 }
-#[no_mangle]
-pub unsafe extern "C" fn dnsmasq_time() -> time_t {
+pub fn dnsmasq_time() -> time_t {
     return time(0 as *mut time_t);
 }
-#[no_mangle]
-pub unsafe extern "C" fn netmask_length(mut mask: InAddr) -> libc::c_int {
+pub fn netmask_length(mut mask: InAddr) -> libc::c_int {
     let mut zero_count: libc::c_int = 0 as libc::c_int;
     while 0 as libc::c_int as libc::c_uint ==
               mask.s_addr & 0x1 as libc::c_int as libc::c_uint &&
@@ -666,8 +651,7 @@ pub fn is_same_net6(mut a: *mut In6Addr,
 }
 
 /* return least significant 64 bits if IPv6 address */
-#[no_mangle]
-pub unsafe extern "C" fn addr6part(mut addr: *mut In6Addr) -> u64 {
+pub fn addr6part(mut addr: *mut In6Addr) -> u64 {
     let mut i: libc::c_int = 0;
     let mut ret: u64 = 0 as libc::c_int as u64;
     i = 8 as libc::c_int;
@@ -682,8 +666,7 @@ pub unsafe extern "C" fn addr6part(mut addr: *mut In6Addr) -> u64 {
     }
     return ret;
 }
-#[no_mangle]
-pub unsafe extern "C" fn setaddr6part(mut addr: *mut In6Addr,
+pub fn setaddr6part(mut addr: *mut In6Addr,
                                       mut host: u64) {
     let mut i: libc::c_int = 0;
     i = 15 as libc::c_int;
@@ -694,8 +677,7 @@ pub unsafe extern "C" fn setaddr6part(mut addr: *mut In6Addr,
     };
 }
 /* returns port number from address */
-#[no_mangle]
-pub unsafe extern "C" fn prettyprint_addr(mut addr: *mut MySockAddr,
+pub fn prettyprint_addr(mut addr: *mut MySockAddr,
                                           mut buf: *mut libc::c_char)
                                           -> libc::c_int {
     let mut port: libc::c_int = 0 as libc::c_int;
@@ -727,8 +709,7 @@ pub unsafe extern "C" fn prettyprint_addr(mut addr: *mut MySockAddr,
     }
     return port;
 }
-#[no_mangle]
-pub unsafe extern "C" fn prettyprint_time(mut buf: *mut libc::c_char,
+pub fn prettyprint_time(mut buf: *mut libc::c_char,
                                           mut t: libc::c_uint) {
     if t == 0xffffffff as libc::c_uint {
         sprintf(buf, b"infinite\x00" as *const u8 as *const libc::c_char);
@@ -781,8 +762,7 @@ pub unsafe extern "C" fn prettyprint_time(mut buf: *mut libc::c_char,
 }
 /* in may equal out, when maxlen may be -1 (No max len). 
    Return -1 for extraneous no-hex chars found. */
-#[no_mangle]
-pub unsafe extern "C" fn parse_hex(mut in_1: *mut libc::c_char,
+pub fn parse_hex(mut in_1: *mut libc::c_char,
                                    mut out_0: *mut libc::c_uchar,
                                    mut maxlen: libc::c_int,
                                    mut wildcard_mask: *mut libc::c_uint,
@@ -873,8 +853,7 @@ pub unsafe extern "C" fn parse_hex(mut in_1: *mut libc::c_char,
     return i;
 }
 /* return 0 for no match, or (no matched octets) + 1 */
-#[no_mangle]
-pub unsafe extern "C" fn memcmp_masked(mut a: *mut libc::c_uchar,
+pub fn memcmp_masked(mut a: *mut libc::c_uchar,
                                        mut b: *mut libc::c_uchar,
                                        mut len: libc::c_int,
                                        mut mask: libc::c_uint)
@@ -915,8 +894,7 @@ pub unsafe fn expand_buf(mut iov: &mut iovec, mut size: usize)
     return 1;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn print_mac(mut buff: *mut libc::c_char,
+pub fn print_mac(mut buff: *mut libc::c_char,
                                    mut mac: *mut libc::c_uchar,
                                    mut len: libc::c_int)
  -> *mut libc::c_char {
@@ -947,8 +925,7 @@ pub unsafe extern "C" fn print_mac(mut buff: *mut libc::c_char,
 /* rc is return from sendto and friends.
    Return 1 if we should retry.
    Set errno to zero if we succeeded. */
-#[no_mangle]
-pub unsafe extern "C" fn retry_send(mut rc: susize) -> libc::c_int {
+pub fn retry_send(mut rc: susize) -> libc::c_int {
     static mut retries: libc::c_int = 0 as libc::c_int;
     let mut waiter: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
     if rc != -(1 as libc::c_int) as libc::c_long {
@@ -979,127 +956,127 @@ enum ReadWriteMode {
     WRITE
 }
 
-pub fn read_write(fd: &mut File,
-                  packet: &mut Vec<u8>,
-                  size: &mut usize,
-                  rw: &ReadWriteMode) -> Result<(), &'static str> {
-    let mut n: usize = 0;
-    let mut done: usize = 0;
-    while done < size as libc::c_long {
-        loop  {
-            if rw == ReadWriteMode::READ {
-                fd.seek(done)?;
-                n = fd.read(packet, size)?;
-                n =
-                    read(fd,
-                         &mut *packet.offset(done as isize) as
-                             *mut libc::c_uchar as *mut libc::c_void,
-                         (size as libc::c_long - done) as usize)
-            } else {
-                n =
-                    write(fd,
-                          &mut *packet.offset(done as isize) as
-                              *mut libc::c_uchar as *const libc::c_void,
-                          (size as libc::c_long - done) as usize)
-            }
-            if n == 0 as libc::c_int as libc::c_long {
-                return 0 as libc::c_int
-            }
-            if !(retry_send(n) != 0 ||
-                     *__errno_location() == 12 as libc::c_int ||
-                     *__errno_location() == 105 as libc::c_int) {
-                break ;
-            }
-        }
-        if *__errno_location() != 0 as libc::c_int { return 0 as libc::c_int }
-        done += n
-    }
-    return 1 as libc::c_int;
-}
+// pub fn read_write(fd: &mut File,
+//                   packet: &mut Vec<u8>,
+//                   size: &mut usize,
+//                   rw: &ReadWriteMode) -> Result<(), &'static str> {
+//     let mut n: usize = 0;
+//     let mut done: usize = 0;
+//     while done < size as libc::c_long {
+//         loop  {
+//             if rw == ReadWriteMode::READ {
+//                 fd.seek(done)?;
+//                 n = fd.read(packet, size)?;
+//                 n =
+//                     read(fd,
+//                          &mut *packet.offset(done as isize) as
+//                              *mut libc::c_uchar as *mut libc::c_void,
+//                          (size as libc::c_long - done) as usize)
+//             } else {
+//                 n =
+//                     write(fd,
+//                           &mut *packet.offset(done as isize) as
+//                               *mut libc::c_uchar as *const libc::c_void,
+//                           (size as libc::c_long - done) as usize)
+//             }
+//             if n == 0 as libc::c_int as libc::c_long {
+//                 return 0 as libc::c_int
+//             }
+//             if !(retry_send(n) != 0 ||
+//                      *__errno_location() == 12 as libc::c_int ||
+//                      *__errno_location() == 105 as libc::c_int) {
+//                 break ;
+//             }
+//         }
+//         if *__errno_location() != 0 as libc::c_int { return 0 as libc::c_int }
+//         done += n
+//     }
+//     return 1 as libc::c_int;
+// }
+
 /* close all fds except STDIN, STDOUT and STDERR, spare1, spare2 and spare3 */
-#[no_mangle]
-pub unsafe extern "C" fn close_fds(mut max_fd: libc::c_long,
-                                   mut spare1: libc::c_int,
-                                   mut spare2: libc::c_int,
-                                   mut spare3: libc::c_int) {
-    /* On Linux, use the /proc/ filesystem to find which files
-     are actually open, rather than iterate over the whole space,
-     for efficiency reasons. If this fails we drop back to the dumb code. */
-    let mut d: *mut DIR = 0 as *mut DIR;
-    d = opendir(b"/proc/self/fd\x00" as *const u8 as *const libc::c_char);
-    if !d.is_null() {
-        let mut de: *mut dirent = 0 as *mut dirent;
-        loop  {
-            de = readdir(d);
-            if de.is_null() { break ; }
-            let mut fd: libc::c_long = 0;
-            let mut e: *mut libc::c_char = 0 as *mut libc::c_char;
-            *__errno_location() = 0 as libc::c_int;
-            fd = strtol((*de).d_name.as_mut_ptr(), &mut e, 10 as libc::c_int);
-            if *__errno_location() != 0 as libc::c_int || e.is_null() ||
-                   *e as libc::c_int != 0 || fd == dirfd(d) as libc::c_long ||
-                   fd == 1 as libc::c_int as libc::c_long ||
-                   fd == 2 as libc::c_int as libc::c_long ||
-                   fd == 0 as libc::c_int as libc::c_long ||
-                   fd == spare1 as libc::c_long ||
-                   fd == spare2 as libc::c_long ||
-                   fd == spare3 as libc::c_long {
-                continue ;
-            }
-            close(fd as libc::c_int);
-        }
-        closedir(d);
-        return
-    }
-    /* fallback, dumb code. */
-    max_fd -= 1;
-    while max_fd >= 0 as libc::c_int as libc::c_long {
-        if max_fd != 1 as libc::c_int as libc::c_long &&
-               max_fd != 2 as libc::c_int as libc::c_long &&
-               max_fd != 0 as libc::c_int as libc::c_long &&
-               max_fd != spare1 as libc::c_long &&
-               max_fd != spare2 as libc::c_long &&
-               max_fd != spare3 as libc::c_long {
-            close(max_fd as libc::c_int);
-        }
-        max_fd -= 1
-    };
-}
+// pub fn close_fds(mut max_fd: libc::c_long,
+//                                    mut spare1: libc::c_int,
+//                                    mut spare2: libc::c_int,
+//                                    mut spare3: libc::c_int) {
+//     /* On Linux, use the /proc/ filesystem to find which files
+//      are actually open, rather than iterate over the whole space,
+//      for efficiency reasons. If this fails we drop back to the dumb code. */
+//     let mut d: *mut DIR = 0 as *mut DIR;
+//     d = opendir(b"/proc/self/fd\x00" as *const u8 as *const libc::c_char);
+//     if !d.is_null() {
+//         let mut de: *mut dirent = 0 as *mut dirent;
+//         loop  {
+//             de = readdir(d);
+//             if de.is_null() { break ; }
+//             let mut fd: libc::c_long = 0;
+//             let mut e: *mut libc::c_char = 0 as *mut libc::c_char;
+//             *__errno_location() = 0 as libc::c_int;
+//             fd = strtol((*de).d_name.as_mut_ptr(), &mut e, 10 as libc::c_int);
+//             if *__errno_location() != 0 as libc::c_int || e.is_null() ||
+//                    *e as libc::c_int != 0 || fd == dirfd(d) as libc::c_long ||
+//                    fd == 1 as libc::c_int as libc::c_long ||
+//                    fd == 2 as libc::c_int as libc::c_long ||
+//                    fd == 0 as libc::c_int as libc::c_long ||
+//                    fd == spare1 as libc::c_long ||
+//                    fd == spare2 as libc::c_long ||
+//                    fd == spare3 as libc::c_long {
+//                 continue ;
+//             }
+//             close(fd as libc::c_int);
+//         }
+//         closedir(d);
+//         return
+//     }
+//     /* fallback, dumb code. */
+//     max_fd -= 1;
+//     while max_fd >= 0 as libc::c_int as libc::c_long {
+//         if max_fd != 1 as libc::c_int as libc::c_long &&
+//                max_fd != 2 as libc::c_int as libc::c_long &&
+//                max_fd != 0 as libc::c_int as libc::c_long &&
+//                max_fd != spare1 as libc::c_long &&
+//                max_fd != spare2 as libc::c_long &&
+//                max_fd != spare3 as libc::c_long {
+//             close(max_fd as libc::c_int);
+//         }
+//         max_fd -= 1
+//     };
+// }
+
 /* Basically match a string value against a wildcard pattern.  */
-#[no_mangle]
-pub unsafe extern "C" fn wildcard_match(mut wildcard: *const libc::c_char,
-                                        mut match_0: *const libc::c_char)
- -> libc::c_int {
-    while *wildcard as libc::c_int != 0 && *match_0 as libc::c_int != 0 {
-        if *wildcard as libc::c_int == '*' as i32 { return 1 as libc::c_int }
-        if *wildcard as libc::c_int != *match_0 as libc::c_int {
-            return 0 as libc::c_int
-        }
-        wildcard = wildcard.offset(1);
-        match_0 = match_0.offset(1)
-    }
-    return (*wildcard as libc::c_int == *match_0 as libc::c_int) as
-               libc::c_int;
-}
+// pub fn wildcard_match(mut wildcard: *const libc::c_char,
+//                                         mut match_0: *const libc::c_char)
+//  -> libc::c_int {
+//     while *wildcard as libc::c_int != 0 && *match_0 as libc::c_int != 0 {
+//         if *wildcard as libc::c_int == '*' as i32 { return 1 as libc::c_int }
+//         if *wildcard as libc::c_int != *match_0 as libc::c_int {
+//             return 0 as libc::c_int
+//         }
+//         wildcard = wildcard.offset(1);
+//         match_0 = match_0.offset(1)
+//     }
+//     return (*wildcard as libc::c_int == *match_0 as libc::c_int) as
+//                libc::c_int;
+// }
+
 /* The same but comparing a maximum of NUM characters, like strncmp.  */
-#[no_mangle]
-pub unsafe extern "C" fn wildcard_matchn(mut wildcard: *const libc::c_char,
-                                         mut match_0: *const libc::c_char,
-                                         mut num: libc::c_int)
- -> libc::c_int {
-    while *wildcard as libc::c_int != 0 && *match_0 as libc::c_int != 0 &&
-              num != 0 {
-        if *wildcard as libc::c_int == '*' as i32 { return 1 as libc::c_int }
-        if *wildcard as libc::c_int != *match_0 as libc::c_int {
-            return 0 as libc::c_int
-        }
-        wildcard = wildcard.offset(1);
-        match_0 = match_0.offset(1);
-        num -= 1
-    }
-    return (num == 0 || *wildcard as libc::c_int == *match_0 as libc::c_int)
-               as libc::c_int;
-}
+// pub fn wildcard_matchn(mut wildcard: *const libc::c_char,
+//                                          mut match_0: *const libc::c_char,
+//                                          mut num: libc::c_int)
+//  -> libc::c_int {
+//     while *wildcard as libc::c_int != 0 && *match_0 as libc::c_int != 0 &&
+//               num != 0 {
+//         if *wildcard as libc::c_int == '*' as i32 { return 1 as libc::c_int }
+//         if *wildcard as libc::c_int != *match_0 as libc::c_int {
+//             return 0 as libc::c_int
+//         }
+//         wildcard = wildcard.offset(1);
+//         match_0 = match_0.offset(1);
+//         num -= 1
+//     }
+//     return (num == 0 || *wildcard as libc::c_int == *match_0 as libc::c_int)
+//                as libc::c_int;
+// }
 
 #[cfg(target_os = "linux")]
 pub unsafe fn get_linux_kernel_version() -> libc::c_int {
