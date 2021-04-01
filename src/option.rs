@@ -10,6 +10,9 @@ use std::process::exit;
 use clap::{Arg, App, ArgMatches};
 use winapi::um::ws2tcpip::inet_pton;
 
+// todo: get value of doing dhcp6
+// todo: get value of doing ra (implies dhcp6)
+
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -776,6 +779,9 @@ pub static META: String = String::from(b"\x00123456 \x08\t\n78\r90abcdefABCDE\x1
 
 pub fn parse_mysockaddr(mut arg: &String, mut addr: &mut MySockAddr)
  -> Option<String> {
+
+
+
     if inet_pton(2, arg,
                  &mut addr.in_0.sin_addr as *mut InAddr as
                      *mut libc::c_void) > 0 {
