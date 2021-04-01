@@ -309,23 +309,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
             daemon.soa_sn = now as libc::c_ulong
         }
     }
-    if !daemon.dhcp6.is_null() {
-        // TODO read in options differently
-        daemon.doing_ra =
-            (daemon.options[(37).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) as usize] & (1) << (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) == 1;
-        context = daemon.dhcp6;
-        while !context.is_null() {
-            if (*context).flags as libc::c_uint &
-                   (1 as libc::c_uint) << 8 as libc::c_int != 0 {
-                daemon.doing_dhcp6 = true
-            }
-            if (*context).flags as libc::c_uint &
-                   (1 as libc::c_uint) << 13 as libc::c_int != 0 {
-                daemon.doing_ra = true
-            }
-            context = (*context).next
-        }
-    }
+
     /* Note that order matters here, we must call lease_init before
      creating any file descriptors which shouldn't be leaked
      to the lease-script init process. We need to call common_init
@@ -411,15 +395,14 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         need_cap_net_raw = 1 as libc::c_int;
         need_cap_net_admin = 1 as libc::c_int
     }
-    if daemon.doing_dhcp6 != false ||
-           !daemon.relay6.is_null() {
+    if daemon.doing_dhcp6 || daemon.doing_relay6 {
         dhcp6_init();
     }
-    if !daemon.ipsets.is_null() {
+    if !daemon.use_ipsets {
         ipset_init();
-        need_cap_net_admin = 1 as libc::c_int
+        need_cap_net_admin = 1
     }
-    netlink_warn = netlink_init();
+    netlink_warn = netlink_init(&mut daemon);
     if daemon.options[(13 as libc::c_int as
                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                        as
@@ -543,16 +526,16 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         };
 
         if daemon.doing_dhcp {
-            if daemon.doing_relay4 == false && !bound_device.is_empty() {
+            if !daemon.doing_relay4 && !bound_device.is_empty() {
                 bind_to_device(&bound_device, &mut daemon.dhcpfd);
                 did_bind = true
             }
-            if daemon.enable_pxe != 0 && !bound_device.is_empty() {
+            if daemon.enable_pxe && !bound_device.is_empty() {
                 bind_to_device(&bound_device, &mut daemon.pxefd);
                 did_bind = true
             }
         }
-        if daemon.doing_dhcp6 && daemon.doing_relay6 == false && !bound_device.is_empty() {
+        if daemon.doing_dhcp6 && !daemon.doing_relay6 && !bound_device.is_empty() {
             bind_to_device(&bound_device, &mut daemon.dhcp6fd);
             did_bind = true
         }
@@ -570,9 +553,9 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
         blockdata_init();
         hash_questions_init();
     }
-    if (daemon.port != 0 as libc::c_int ||
-            !daemon.dhcp.is_null() ||
-            daemon.doing_dhcp6 != 0) &&
+    if (daemon.port != 0 ||
+            daemon.use_dhcp ||
+            daemon.doing_dhcp6) &&
            (daemon.options[(8 as libc::c_int as
                                            libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                             as
@@ -591,7 +574,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char)
                                                                                           libc::c_int
                                                                                           as
                                                                                           libc::c_ulong))
-                == 0 || !daemon.dynamic_dirs.is_null()) {
+                == 0 || daemon.use_dynamic_dirs) {
         inotify_dnsmasq_init();
     } else { daemon.inotifyfd = -(1 as libc::c_int) }
     if !daemon.dump_file.is_null() {
