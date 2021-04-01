@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{AddrList, AllAddr, InAddr, __bswap_32, InAddrT, AuthZone, DnsHeader, size_t, time_t, MySockAddr, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, __bswap_16, In6Addr, Iname, in_port_t, socklen_t, NameList};
+use crate::defines::{AddrList, AllAddr, InAddr, __bswap_32, InAddrT, AuthZone, DnsHeader, MySockAddr, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, __bswap_16, Iname, NameList};
 use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdomain, sockaddr_isequal};
 use crate::rfc1035::{skip_questions, extract_name, in_arpa_name_2_addr, add_resource_record};
 use crate::cache::{log_query, cache_find_by_addr, cache_get_name, record_source, querystr, cache_find_by_name, cache_find_non_terminal, cache_enumerate};
@@ -23,7 +23,7 @@ use crate::dnsmasq_log::my_syslog;
 pub fn find_addrlist(list: &mut Vec<AddrList>, flag: libc::c_int, addr_u: &mut AllAddr) -> Option<AddrList> {
     for list_addr in list {
         if list_addr.flags & 2 as libc::c_int == 0 {
-            let mut netmask: InAddr = InAddr {s_addr: 0,};
+            let mut netmask: InAddr = Default::default();
             let mut addr: InAddr = addr_u.addr4;
             if !(flag as libc::c_uint &
                 (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as InAddrT)) << 32 as libc::c_int - (*list).prefixlen);
@@ -63,7 +63,7 @@ pub fn filter_zone(mut zone: *mut AuthZone,
                 0 as *mut libc::c_void as *mut AddrList) as libc::c_int;
 }
 
-pub pub fn in_zone(mut zone: &mut AuthZone,
+pub fn in_zone(mut zone: &mut AuthZone,
                    mut name: &mut String,
                    mut cut: &String)
                    -> libc::c_int {
@@ -95,7 +95,7 @@ pub pub fn in_zone(mut zone: &mut AuthZone,
     return 0 as libc::c_int;
 }
 
-pub pub fn answer_auth(mut header: *mut DnsHeader,
+pub fn answer_auth(mut header: *mut DnsHeader,
                        mut limit: *mut libc::c_char,
                        mut qlen: size_t, mut now: time_t,
                        mut peer_addr: *mut MySockAddr,
@@ -130,12 +130,12 @@ pub pub fn answer_auth(mut header: *mut DnsHeader,
     let mut txt: *mut TxtRecord = 0 as *mut TxtRecord;
     let mut intr: *mut InterfaceName = 0 as *mut InterfaceName;
     let mut na: *mut NaPtr = 0 as *mut NaPtr;
-    let mut addr: AllAddr = AllAddr {addr4: InAddr {s_addr: 0,},};
+    let mut addr: AllAddr = Default::default();
     let mut a: *mut Cname = 0 as *mut Cname;
     let mut candidate: *mut Cname = 0 as *mut Cname;
     let mut wclen: libc::c_uint = 0;
-    if __bswap_16((*header).qdcount) as libc::c_int == 0 as libc::c_int ||
-           ((*header).hb3 as libc::c_int & 0x78 as libc::c_int) >>
+    if __bswap_16(header.qdcount) as libc::c_int == 0 as libc::c_int ||
+           (header.hb3 as libc::c_int & 0x78 as libc::c_int) >>
                3 as libc::c_int != 0 as libc::c_int {
         return 0 as libc::c_int as size_t
     }
@@ -145,7 +145,7 @@ pub pub fn answer_auth(mut header: *mut DnsHeader,
     /* now process each question, answers go in RRs after the question */
     p = header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
     let mut current_block_247: u64;
-    q = __bswap_16((*header).qdcount) as libc::c_int;
+    q = __bswap_16(header.qdcount) as libc::c_int;
     while q != 0 as libc::c_int {
         let mut flag: libc::c_uint = 0 as libc::c_int as libc::c_uint;
         let mut found: libc::c_int = 0 as libc::c_int;
@@ -1952,44 +1952,44 @@ pub pub fn answer_auth(mut header: *mut DnsHeader,
     }
     /* done all questions, set up header and return length of result */
   /* clear authoritative and truncated flags, set QR flag */
-    (*header).hb3 =
-        ((*header).hb3 as libc::c_int &
+    header.hb3 =
+        (header.hb3 as libc::c_int &
              !(0x4 as libc::c_int | 0x2 as libc::c_int) | 0x80 as libc::c_int)
             as u8;
     if local_query != 0 {
         /* set RA flag */
-        (*header).hb4 =
-            ((*header).hb4 as libc::c_int | 0x80 as libc::c_int) as u8
+        header.hb4 =
+            (header.hb4 as libc::c_int | 0x80 as libc::c_int) as u8
     } else {
         /* clear RA flag */
-        (*header).hb4 =
-            ((*header).hb4 as libc::c_int & !(0x80 as libc::c_int)) as u8
+        header.hb4 =
+            (header.hb4 as libc::c_int & !(0x80 as libc::c_int)) as u8
     }
     /* data is never DNSSEC signed. */
-    (*header).hb4 =
-        ((*header).hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8;
+    header.hb4 =
+        (header.hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8;
     /* authoritative */
     if auth != 0 {
-        (*header).hb3 =
-            ((*header).hb3 as libc::c_int | 0x4 as libc::c_int) as u8
+        header.hb3 =
+            (header.hb3 as libc::c_int | 0x4 as libc::c_int) as u8
     }
     /* truncation */
     if trunc != 0 {
-        (*header).hb3 =
-            ((*header).hb3 as libc::c_int | 0x2 as libc::c_int) as u8
+        header.hb3 =
+            (header.hb3 as libc::c_int | 0x2 as libc::c_int) as u8
     } /* no error */
     if (auth != 0 || local_query != 0) && nxdomain != 0 {
-        (*header).hb4 =
-            ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
+        header.hb4 =
+            (header.hb4 as libc::c_int & !(0xf as libc::c_int) |
                  3 as libc::c_int) as u8
     } else {
-        (*header).hb4 =
-            ((*header).hb4 as libc::c_int & !(0xf as libc::c_int) |
+        header.hb4 =
+            (header.hb4 as libc::c_int & !(0xf as libc::c_int) |
                  0 as libc::c_int) as u8
     }
-    (*header).ancount = __bswap_16(anscount as u16);
-    (*header).nscount = __bswap_16(authcount as u16);
-    (*header).arcount = __bswap_16(0 as libc::c_int as u16);
+    header.ancount = __bswap_16(anscount as u16);
+    header.nscount = __bswap_16(authcount as u16);
+    header.arcount = __bswap_16(0 as libc::c_int as u16);
     /* Advertise our packet size limit in our reply */
     if have_pseudoheader != 0 {
         return add_pseudoheader(header,

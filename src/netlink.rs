@@ -50,7 +50,7 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
            != 0 {
         addr.nl_groups |= 0x100 as libc::c_int as libc::c_uint
     }
-    if daemon.doing_ra != 0 || daemon.doing_dhcp6 != 0 {
+    if daemon.ra_enabled != 0 || daemon.dhcp6_enabled != 0 {
         addr.nl_groups |= 0x100 as libc::c_int as libc::c_uint
     }
     /* May not be able to have permission to set multicast groups don't die in that case */

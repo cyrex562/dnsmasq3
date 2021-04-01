@@ -18,7 +18,7 @@
 use crate::defines::{SockAddrIn6, In6Addr, C2RustUnnamed, SOCK_DGRAM, IPPROTO_UDP, IPPROTO_IPV6, socklen_t, DnsmasqDaemon, SaFamily, __bswap_16, __CONST_SOCKADDR_ARG, SockAddr, time_t, DhcpContext, DhcpRelay, IfaceParam, CmsgHdr, MsgHdr, iovec, C2RustUnnamed_13, IfReq, C2RustUnnamed_2, Iname, C2RustUnnamed_12, DhcpBridge, DhcpLease, MySockAddr, timespec, TimeT, SyscallSlongT, SharedNetwork, __bswap_32, DhcpConfig, AddrList, DhcpNetId, Cparam, AllAddr};
 use crate::network::{fix_fd, set_ipv6pktinfo, indextoname, iface_check};
 use crate::dnsmasq_log::{die, my_syslog};
-use crate::dhcp_common::{recv_dhcp_packet, match_netid, log_context};
+use crate::dhcp_common::{recv_dhcp_packet, match_netid, dhcp_context_to_string};
 use crate::rfc3315::{relay_reply6, relay_upstream6, dhcp6_reply};
 use crate::util::{retry_send, wildcard_match, wildcard_matchn, is_same_net6, rand64, addr6part, setaddr6part, safe_malloc, whine_malloc};
 use crate::outpacket::save_counter;
@@ -1392,7 +1392,7 @@ unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
                         if cflags as libc::c_uint &
                                (1 as libc::c_uint) << 16 as libc::c_int != 0 {
                             /* address went, now it's back, and on the same interface */
-                            log_context(10 as libc::c_int, context);
+                            dhcp_context_to_string(10 as libc::c_int, context);
                             /* fast RAs for a while */
                             ra_start_unsolicited((*param).now, context);
                             (*param).newone = 1 as libc::c_int;
@@ -1441,7 +1441,7 @@ unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
                        (1 as libc::c_uint) << 6 as libc::c_int != 0 {
                     (*param).newname = 1 as libc::c_int
                 }
-                log_context(10 as libc::c_int, context);
+                dhcp_context_to_string(10 as libc::c_int, context);
             }
         }
         template = (*template).next
@@ -1560,7 +1560,7 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time_t) {
                        (1 as libc::c_uint) << 6 as libc::c_int != 0 {
                     param.newname = 1 as libc::c_int
                 }
-                log_context(10 as libc::c_int, context);
+                dhcp_context_to_string(10 as libc::c_int, context);
                 up = &mut (*context).next
             } else {
                 /* we were never doing RA for this, so free now */

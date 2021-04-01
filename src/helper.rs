@@ -886,7 +886,7 @@ pub unsafe extern "C" fn queue_tftp(mut file_len: off_t,
 
 pub fn queue_arp(daemon: &mut DnsmasqDaemon,
                  mut action: u32,
-                 mut mac: &[u8;6],
+                 mut mac: &[u8;16],
                  mut family: u32,
                  mut addr: all_addr) {
     /* no script */

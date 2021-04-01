@@ -14,8 +14,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddrList, Crec, time_t, AllAddr, socklen_t, In6Addr, DhcpOptTblEntry, InAddr, _ISprint, DhcpRelay};
-use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net, hostname_isequal, whine_malloc, prettyprint_time, print_mac, setaddr6part};
+use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddrList, Crec,  AllAddr, DhcpOptTblEntry, InAddr, _ISprint, DhcpRelay};
+use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net, hostname_isequal,  prettyprint_time, print_mac, setaddr6part};
+use libc::recvmsg;
 use socket2::Socket;
 use std::io;
 use crate::dnsmasq_log::my_syslog;
@@ -43,72 +44,38 @@ pub fn dhcp_common_init(daemon: &mut DnsmasqDaemon) {
 }
 
 
-pub fn recv_dhcp_packet(mut fd: libc::c_int, mut msg: &mut MsgHdr) -> isize {
-    let mut sz: isize = 0;
-    let mut new_sz: isize = 0;
-    loop  {
-        (*msg).msg_flags = 0 ;
-        loop  {
-            sz =
-                recvmsg(fd, msg,
-                        MSG_PEEK  | MSG_TRUNC );
-            if !(sz == -(1 ) as libc::c_long &&
-                     *__errno_location() == 4 ) {
-                break ;
-            }
-        }
-        if sz == -(1 ) as libc::c_long {
-            return -(1 ) as isize
-        }
-        if (*msg).msg_flags & MSG_TRUNC  == 0 { break ; }
-        /* Very new Linux kernels return the actual size needed, 
-	 older ones always return truncated size */
-        if sz as usize == (*(*msg).msg_iov).iov_len {
-            if expand_buf((*msg).msg_iov,
-                          (sz + 100  as libc::c_long) as usize)
-                   == 0 {
-                return -(1 ) as isize
-            }
-        } else { expand_buf((*msg).msg_iov, sz as usize); break ; }
-    }
-    loop  {
-        new_sz = recvmsg(fd, msg, 0 );
-        if !(new_sz == -(1 ) as libc::c_long &&
-                 *__errno_location() == 4 ) {
-            break ;
-        }
-    }
-    /* Some kernels seem to ignore MSG_PEEK, and dequeue the packet anyway. 
-     If that happens we get EAGAIN here because the socket is non-blocking.
-     Use the result of the original testing recvmsg as long as the buffer
-     was big enough. There's a small race here that may lose the odd packet,
-     but it's UDP anyway. */
-    if new_sz == -(1 ) as libc::c_long &&
-           (*__errno_location() == 11  ||
-                *__errno_location() == 11 ) {
-        new_sz = sz
-    }
-    return if (*msg).msg_flags & MSG_TRUNC  != 0 {
-               -(1 ) as libc::c_long
-           } else { new_sz };
+pub fn recv_dhcp_packet(daemon: &mut DnsmasqDaemon, socket: UdpSocket, packet_buf: &mut Vec<u8>) -> Result<usize,  std::io::Error> {
+    socket.recv(packet_buf)
 }
 
-pub fn run_tag_if(mut tags: *mut DhcpNetId)
+pub fn run_tag_if(mut tags: &mut DhcpNetId)
  -> *mut DhcpNetId {
-    let mut exprs: *mut TagIf = 0 as *mut TagIf;
-    let mut list: *mut DhcpNetIdList = 0 as *mut DhcpNetIdList;
-    exprs = (*dnsmasq_daemon).tag_if;
-    while !exprs.is_null() {
-        if match_netid((*exprs).tag, tags, 1 ) != 0 {
-            list = (*exprs).set;
-            while !list.is_null() {
-                (*(*list).list).next = tags;
-                tags = (*list).list;
-                list = (*list).next
-            }
+    let mut exprs: TagIf;
+    let mut list: DhcpNetIdList;
+    exprs = daemon.tag_if;
+
+    for exprs in daemon.tag_if {
+        if match_netid(exprs.tag, tags, 1) != 0 {
+            // list = exprs.set;
+            // for item in list {
+            //     list.list = tags;
+            //     tags = 
+            // }
         }
-        exprs = (*exprs).next
+        
     }
+
+    // while !exprs.is_null() {
+    //     if match_netid((*exprs).tag, tags, 1 ) != 0 {
+    //         list = (*exprs).set;
+    //         while !list.is_null() {
+    //             (*(*list).list).next = tags;
+    //             tags = (*list).list;
+    //             list = (*list).next
+    //         }
+    //     }
+    //     exprs = (*exprs).next
+    // }
     return tags;
 }
 
@@ -267,7 +234,7 @@ pub fn strip_hostname(mut hostname: *mut libc::c_char)
 pub fn log_tags(mut netid: *mut DhcpNetId,
                                   mut xid: u32) {
     if !netid.is_null() &&
-           (*dnsmasq_daemon).options[(28  as
+           daemon.options[(28  as
                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                            as
                                                                            libc::c_ulong).wrapping_mul(8
@@ -286,7 +253,7 @@ pub fn log_tags(mut netid: *mut DhcpNetId,
                                                                                          as
                                                                                          libc::c_ulong))
                != 0 {
-        let mut s: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
+        let mut s: *mut libc::c_char = daemon.namebuff;
         *s = 0  as libc::c_char;
         while !netid.is_null() {
             /* kill dupes. */
@@ -561,7 +528,7 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
         config = (*config).next
     }
     loop  {
-        if (*dnsmasq_daemon).port != 0  {
+        if daemon.port != 0  {
             let mut current_block_27: u64;
             config = configs;
             while !config.is_null() {
@@ -607,14 +574,14 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                             inet_ntop(prot,
                                       &mut (*crec).addr as *mut AllAddr as
                                           *const libc::c_void,
-                                      (*dnsmasq_daemon).addrbuff,
+                                      daemon.addrbuff,
                                       46  as socklen_t);
                             my_syslog((3 ) << 3  |
                                           4 ,
                                       "%s has more than one address in hostsfile, using %s for DHCP"
                                           ,
                                       (*config).hostname,
-                                      (*dnsmasq_daemon).addrbuff);
+                                      daemon.addrbuff);
                             current_block_27 = 1109700713171191020;
                         }
                     } else { current_block_27 = 1109700713171191020; }
@@ -683,7 +650,7 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                 inet_ntop(prot,
                                           &mut (*crec).addr as *mut AllAddr
                                               as *const libc::c_void,
-                                          (*dnsmasq_daemon).addrbuff,
+                                          daemon.addrbuff,
                                           46  as socklen_t);
                                 my_syslog((3 ) <<
                                               3  |
@@ -691,7 +658,7 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                           "duplicate IP address %s (%s) in dhcp-config directive"
                                               as
                                               *const libc::c_char,
-                                          (*dnsmasq_daemon).addrbuff,
+                                          daemon.addrbuff,
                                           (*config).hostname);
                             }
                         }
@@ -974,9 +941,9 @@ pub fn option_string(mut prot: libc::c_int,
                                   &mut *val.offset(i as isize) as
                                       *mut libc::c_uchar as
                                       *const libc::c_void,
-                                  (*dnsmasq_daemon).addrbuff,
+                                  daemon.addrbuff,
                                   46  as socklen_t);
-                        strncat(buf, (*dnsmasq_daemon).addrbuff,
+                        strncat(buf, daemon.addrbuff,
                                 (buf_len as
                                      libc::c_ulong).wrapping_sub(strlen(buf)));
                         i += addr_len
@@ -1123,180 +1090,12 @@ pub fn option_string(mut prot: libc::c_int,
                *mut libc::c_char;
 }
 
-pub fn log_context(mut family: libc::c_int,
-                                     mut context: *mut DhcpContext) {
+pub fn dhcp_context_to_string(mut family: u32, mut context: &DhcpContext) -> String {
     /* We don't handle compressed rfc1035 names, so no good in IPv4 land */
     /* Cannot use dhcp_buff* for RA contexts */
-    let mut start: *mut libc::c_void =
-        &mut (*context).start as *mut InAddr as *mut libc::c_void;
-    let mut end: *mut libc::c_void =
-        &mut (*context).end as *mut InAddr as *mut libc::c_void;
-    let mut template: *mut libc::c_char =
-        """;
-    let mut p: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
-    *p = 0  as libc::c_char;
-    if family == 10  {
-        let mut subnet: In6Addr = (*context).start6;
-        if (*context).flags as libc::c_uint &
-               (1 as libc::c_uint) << 10  == 0 {
-            setaddr6part(&mut subnet, 0  as u64);
-        }
-        inet_ntop(10 ,
-                  &mut subnet as *mut In6Addr as *const libc::c_void,
-                  (*dnsmasq_daemon).addrbuff, 46  as socklen_t);
-        start = &mut (*context).start6 as *mut In6Addr as *mut libc::c_void;
-        end = &mut (*context).end6 as *mut In6Addr as *mut libc::c_void
-    }
-    if family != 2  &&
-           (*context).flags as libc::c_uint &
-               (1 as libc::c_uint) << 9  != 0 {
-        strcpy((*dnsmasq_daemon).namebuff,
-               ", prefix deprecated" as
-                   *const libc::c_char);
-    } else {
-        p =
-            p.offset(sprintf(p,
-                             ", lease time " as
-                                 *const libc::c_char) as isize);
-        prettyprint_time(p, (*context).lease_time);
-        p = p.offset(strlen(p) as isize)
-    }
-    if (*context).flags as libc::c_uint &
-           (1 as libc::c_uint) << 11  != 0 {
-        let mut ifrn_name: [libc::c_char; 16] = [0; 16];
-        template = p;
-        p =
-            p.offset(sprintf(p, ", " )
-                         as isize);
-        if indextoname((*dnsmasq_daemon).icmp6fd, (*context).if_index,
-                       ifrn_name.as_mut_ptr()) != 0 {
-            sprintf(p, "%s for %s" ,
-                    if (*context).flags as libc::c_uint &
-                           (1 as libc::c_uint) << 16  != 0 {
-                        "old prefix" 
-                    } else {
-                        "constructed" 
-                    }, ifrn_name.as_mut_ptr());
-        }
-    } else if (*context).flags as libc::c_uint &
-                  (1 as libc::c_uint) << 10  != 0 &&
-                  (*context).flags as libc::c_uint &
-                      (1 as libc::c_uint) << 7  == 0 {
-        template = p;
-        p =
-            p.offset(sprintf(p, ", " )
-                         as isize);
-        sprintf(p, "template for %s" ,
-                (*context).template_interface);
-    }
-    if (*context).flags as libc::c_uint &
-           (1 as libc::c_uint) << 16  == 0 &&
-           ((*context).flags as libc::c_uint &
-                (1 as libc::c_uint) << 8  != 0 ||
-                family == 2 ) {
-        if (*context).flags as libc::c_uint &
-               (1 as libc::c_uint) << 7  != 0 {
-            if (*context).flags as libc::c_uint &
-                   (1 as libc::c_uint) << 10  != 0 {
-                strncpy((*dnsmasq_daemon).dhcp_buff,
-                        (*context).template_interface,
-                        256  as libc::c_ulong);
-            } else {
-                strcpy((*dnsmasq_daemon).dhcp_buff,
-                       (*dnsmasq_daemon).addrbuff);
-            }
-        } else {
-            inet_ntop(family, start, (*dnsmasq_daemon).dhcp_buff,
-                      256  as socklen_t);
-        }
-        inet_ntop(family, end, (*dnsmasq_daemon).dhcp_buff3,
-                  256  as socklen_t);
-        my_syslog((3 ) << 3  | 6 ,
-                  if (*context).flags as libc::c_uint &
-                         (1 as libc::c_uint) << 7  != 0 {
-                      "%s stateless on %s%.0s%.0s%s" as
-                          *const libc::c_char
-                  } else if (*context).flags as libc::c_uint &
-                                (1 as libc::c_uint) << 0  != 0 {
-                      "%s, static leases only on %.0s%s%s%.0s" as
-                          *const u8 
-                  } else if (*context).flags as libc::c_uint &
-                                (1 as libc::c_uint) << 3  != 0 {
-                      "%s, proxy on subnet %.0s%s%.0s%.0s" as *const u8
-                          
-                  } else {
-                      "%s, IP range %s -- %s%s%.0s" as
-                          *const libc::c_char
-                  },
-                  if family != 2  {
-                      "DHCPv6" 
-                  } else { "DHCP"  },
-                  (*dnsmasq_daemon).dhcp_buff, (*dnsmasq_daemon).dhcp_buff3,
-                  (*dnsmasq_daemon).namebuff, template);
-    }
-    if (*context).flags as libc::c_uint &
-           (1 as libc::c_uint) << 10  != 0 {
-        strcpy((*dnsmasq_daemon).addrbuff, (*context).template_interface);
-        template =
-            """
-    }
-    if (*context).flags as libc::c_uint &
-           (1 as libc::c_uint) << 6  != 0 &&
-           (*context).flags as libc::c_uint &
-               (1 as libc::c_uint) << 16  == 0 {
-        my_syslog((3 ) << 3  | 6 ,
-                  "DHCPv4-derived IPv6 names on %s%s" as
-                      *const libc::c_char, (*dnsmasq_daemon).addrbuff,
-                  template);
-    }
-    if (*context).flags as libc::c_uint &
-           (1 as libc::c_uint) << 13  != 0 ||
-           (*dnsmasq_daemon).options[(37  as
-                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                           as
-                                                                           libc::c_ulong).wrapping_mul(8
-                                                                                                           as
-                                                                                                           libc::c_int
-                                                                                                           as
-                                                                                                           libc::c_ulong))
-                                         as usize] &
-               (1 as libc::c_uint) <<
-                   (37  as
-                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                         as
-                                                         libc::c_ulong).wrapping_mul(8
-                                                                                         as
-                                                                                         libc::c_int
-                                                                                         as
-                                                                                         libc::c_ulong))
-               != 0 &&
-               (*context).flags as libc::c_uint &
-                   (1 as libc::c_uint) << 8  != 0 &&
-               family == 10  {
-        my_syslog((3 ) << 3  | 6 ,
-                  "router advertisement on %s%s" as
-                      *const libc::c_char, (*dnsmasq_daemon).addrbuff,
-                  template);
-    };
+    format!("{}", context).to_string()
 }
 
-pub fn log_relay(mut family: libc::c_int,
-                                   mut relay: *mut DhcpRelay) {
-    inet_ntop(family,
-              &mut (*relay).local as *mut AllAddr as *const libc::c_void,
-              (*dnsmasq_daemon).addrbuff, 46  as socklen_t);
-    inet_ntop(family,
-              &mut (*relay).server as *mut AllAddr as *const libc::c_void,
-              (*dnsmasq_daemon).namebuff, 46  as socklen_t);
-    if !(*relay).interface.is_null() {
-        my_syslog((3 ) << 3  | 6 ,
-                  "DHCP relay from %s to %s via %s" as
-                      *const libc::c_char, (*dnsmasq_daemon).addrbuff,
-                  (*dnsmasq_daemon).namebuff, (*relay).interface);
-    } else {
-        my_syslog((3 ) << 3  | 6 ,
-                  "DHCP relay from %s to %s" as
-                      *const libc::c_char, (*dnsmasq_daemon).addrbuff,
-                  (*dnsmasq_daemon).namebuff);
-    };
+pub fn log_relay(mut family: u32, mut relay: &DhcpRelay) -> String {
+    format!("{}", relay).to_string()
 }

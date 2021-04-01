@@ -1,10 +1,9 @@
 use std::fs::File;
 use std::path::PathBuf;
-
-use socket2::{Socket, SockAddr};
-use crate::in_addr::InAddr;
-use crate::in6_addr::In6Addr;
 use std::time;
+use socket2::{Socket, SockAddr};
+use num::FromPrimitive;
+use crate::in_addr::InAddr;
 
 pub type DevT = libc::c_ulong;
 pub type UidT = u32;
@@ -185,9 +184,9 @@ pub struct C2RustUnnamed_6 {
     pub is_name_ptr: i32,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
-pub union C2RustUnnamed_1A {
+pub struct C2RustUnnamed_1A {
     pub ifru_addr: SockAddr,
     pub ifru_dstaddr: SockAddr,
     pub ifru_broadaddr: SockAddr,
@@ -564,7 +563,7 @@ pub struct DhcpNetIdList {
     // pub next: *mut dhcp_netid_list,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct TagIf {
     pub set: DhcpNetIdList,
@@ -721,7 +720,7 @@ pub struct RaInterface {
     // pub next: *mut ra_interface,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct DhcpContext {
     pub lease_time: u32,
@@ -815,7 +814,7 @@ pub struct TftpPrefix {
     // pub next: *mut tftp_prefix,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct DhcpRelay {
     pub local: AllAddr,
@@ -902,7 +901,7 @@ pub struct DnsmasqDaemon {
     pub use_dhcp_ttl: u32,
     pub dns_client_id: String,
     pub addn_hosts: HostsFile,
-    pub use_dhcp: bool,
+    pub dhcp_enabled: bool,
     pub dhcp: DhcpContext,
     pub dhcp6: DhcpContext,
     pub ra_interfaces: RaInterface,
@@ -917,7 +916,7 @@ pub struct DnsmasqDaemon {
     pub dhcp_macs: DhcpMac,
     pub boot_config: DhcpBoot,
     pub pxe_services: PxeService,
-    pub tag_if: TagIf,
+    pub tag_if: Vec<TagIf>,
     pub override_relays: AddrList2,
     pub relay4: DhcpRelay,
     pub doing_relay_6: bool,
@@ -925,11 +924,11 @@ pub struct DnsmasqDaemon {
     pub delay_conf: DelayConfig,
     pub override_0: i32,
     pub enable_pxe: bool,
-    pub doing_ra: bool,
+    pub ra_enabled: bool,
     pub doing_dhcp: bool,
-    pub doing_relay4: bool,
-    pub doing_dhcp6: bool,
-    pub doing_relay6: bool,
+    pub relay4_enabled: bool,
+    pub dhcp6_enabled: bool,
+    pub relay6_enabled: bool,
     pub dhcp_ignore: DhcpNetIdList,
     pub dhcp_ignore_names: DhcpNetIdList,
     pub dhcp_gen_names: DhcpNetIdList,
@@ -1450,7 +1449,7 @@ pub const LOG_DAEMON: i32 =
 pub struct ArpRecord {
     pub hwlen: u16,
     pub status: u16,
-    pub family: i32,
+    pub family: u32,
     pub hwaddr: [u8; 16],
     pub addr: AllAddr,
     // pub next: *mut arp_record,
@@ -2319,15 +2318,15 @@ pub union C2RustUnnamed_24 {
 pub type wint_t = u32;
 
 
-pub type __gconv_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut*mut u8, *mut u8, *mut*mut u8, libc::size_t, i32, i32) -> i32;
-pub type __gconv_btowc_fct = fn(*mut __gconv_step, u8) -> wint_t;
-pub type __gconv_init_fct = fn(*mut __gconv_step) -> i32;
-pub type __gconv_end_fct = fn(*mut __gconv_step);
-pub type __gconv_trans_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut libc::c_void, *mut u8, *mut*mut u8, *mut u8, *mut*mut u8, *mut libc::size_t);
-pub type __gconv_trans_context_fct = fn(*mut libc::c_void, *mut u8, *mut u8, *mut u8, *mut u8) -> i32;
-pub type __gconv_trans_query_fct = fn(String, *mut*mutString, *mut libc::size_t);
-pub type __gconv_trans_init_fct = fn(*mut *mut libc::c_void, String) -> i32;
-pub type __gconv_trans_end_fct = fn(*mut libc::c_void);
+// pub type __gconv_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut*mut u8, *mut u8, *mut*mut u8, libc::size_t, i32, i32) -> i32;
+// pub type __gconv_btowc_fct = fn(*mut __gconv_step, u8) -> wint_t;
+// pub type __gconv_init_fct = fn(*mut __gconv_step) -> i32;
+// pub type __gconv_end_fct = fn(*mut __gconv_step);
+// pub type __gconv_trans_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut libc::c_void, *mut u8, *mut*mut u8, *mut u8, *mut*mut u8, *mut libc::size_t);
+// pub type __gconv_trans_context_fct = fn(*mut libc::c_void, *mut u8, *mut u8, *mut u8, *mut u8) -> i32;
+// pub type __gconv_trans_query_fct = fn(String, *mut*mutString, *mut libc::size_t);
+// pub type __gconv_trans_init_fct = fn(*mut *mut libc::c_void, String) -> i32;
+// pub type __gconv_trans_end_fct = fn(*mut libc::c_void);
 
 
 

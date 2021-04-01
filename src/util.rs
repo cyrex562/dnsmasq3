@@ -16,12 +16,13 @@
 /* The SURF random number generator was taken from djbdns-1.05, by 
    Daniel J Bernstein, which is public domain. */
 /* SURF random number generator */
-use crate::defines::{iovec, InAddr, In6Addr, _IScntrl, MySockAddr, SockAddrIn6, SockAddrIn, time_t, socklen_t, __bswap_16, _ISxdigit, timespec, TimeT, SyscallSlongT, DIR};
+use rand::Rng;
 use std::fs::{File, read, write};
+use std::io::{Seek, Read};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::network::fix_fd;
-use crate::slack::{time, u8, dirent, utsname};
-use std::io::{Seek, Read};
+use crate::defines::{ InAddr, _IScntrl, MySockAddr, __bswap_16, _ISxdigit, TimeT, SyscallSlongT, DIR};
+
 
 // static mut seed: [u32; 32] = [0; 32];
 // static mut in_0: [u32; 12] = [0; 12];
@@ -297,30 +298,10 @@ pub fn rand32() -> u32 {
     return out[outleft as usize];
 }
 pub fn rand64() -> u64 {
-    static mut outleft_0: libc::c_int = 0 as libc::c_int;
-    if outleft_0 < 2 as libc::c_int {
-        in_0[0 as libc::c_int as usize] =
-            in_0[0 as libc::c_int as usize].wrapping_add(1);
-        if in_0[0 as libc::c_int as usize] == 0 {
-            in_0[1 as libc::c_int as usize] =
-                in_0[1 as libc::c_int as usize].wrapping_add(1);
-            if in_0[1 as libc::c_int as usize] == 0 {
-                in_0[2 as libc::c_int as usize] =
-                    in_0[2 as libc::c_int as usize].wrapping_add(1);
-                if in_0[2 as libc::c_int as usize] == 0 {
-                    in_0[3 as libc::c_int as usize] =
-                        in_0[3 as libc::c_int as usize].wrapping_add(1)
-                }
-            }
-        }
-        surf();
-        outleft_0 = 8 as libc::c_int
-    }
-    outleft_0 -= 2 as libc::c_int;
-    return (out[(outleft_0 + 1 as libc::c_int) as usize] as
-                u64).wrapping_add((out[outleft_0 as usize] as u64) <<
-                                        32 as libc::c_int);
+    let x: u64 = rng.gen();
+    x
 }
+
 /* returns 2 if names is OK but contains one or more underscores */
 pub fn check_name(in_1: &mut String) -> i32 {
     /* remove trailing . 
@@ -373,34 +354,25 @@ pub fn check_name(in_1: &mut String) -> i32 {
    Note that this may receive a FQDN, so only check the first label 
    for the tighter criteria. */
 
-pub fn legal_hostname(mut name: *mut libc::c_char)
- -> libc::c_int {
+pub fn legal_hostname(mut name: &String)
+ -> bool {
     let mut c: libc::c_char = 0;
     let mut first: libc::c_int = 0;
     if check_name(name) == 0 { return 0 as libc::c_int }
-    first = 1 as libc::c_int;
-    loop  {
-        c = *name;
-        if !(c != 0) { break ; }
-        /* check for legal char a-z A-Z 0-9 - _ . */
-        if !(c as libc::c_int >= 'A' as i32 && c as libc::c_int <= 'Z' as i32
-                 ||
-                 c as libc::c_int >= 'a' as i32 &&
-                     c as libc::c_int <= 'z' as i32 ||
-                 c as libc::c_int >= '0' as i32 &&
-                     c as libc::c_int <= '9' as i32) {
-            if !(first == 0 &&
-                     (c as libc::c_int == '-' as i32 ||
-                          c as libc::c_int == '_' as i32)) {
-                /* end of hostname part */
-                if c as libc::c_int == '.' as i32 { return 1 as libc::c_int }
-                return 0 as libc::c_int
+    
+    let mut first: bool = true;
+    for c in name {
+        if (c as u8 >= 'A' as u8 && c as u8 <= 'Z' as u8) || (c as u8 >= 'a' as u8 && c as u8 <= 'z' as u8) || (c as u8 >= '0' as u8 && c as u8 <= '9') {
+            if !(first && (c as u8  == '-' as u8 || c as u8 == '_' as u8)) {
+                if (c as u8 == '.' as u8) {
+                    return true;
+                }
+                return false;
             }
+
         }
-        name = name.offset(1);
-        first = 0 as libc::c_int
     }
-    return 1 as libc::c_int;
+    return true;
 }
 
 pub fn string_from_offset(in_str: &String, offset: usize) -> String {
@@ -418,19 +390,19 @@ pub fn canonicalise(in_1: &mut String, nomem: i32)
     ret = in_1.clone();
     return Some(ret);
 }
-pub fn do_rfc1035_name(mut p: *mut libc::c_uchar,
-                                         mut sval: *mut libc::c_char,
-                                         mut limit: *mut libc::c_char)
- -> *mut libc::c_uchar {
-    let mut j: libc::c_int = 0;
+pub fn do_rfc1035_name(mut p:&mut String,
+                                         mut sval: &mut String,
+                                         mut limit: &mut String)
+ -> String {
+    let mut j = 0;
     while !sval.is_null() && *sval as libc::c_int != 0 {
         let fresh6 = p;
         p = p.offset(1);
-        let mut cp: *mut libc::c_uchar = fresh6;
+        let mut cp: String = fresh6;
         if !limit.is_null() && p > limit as *mut libc::c_uchar {
             return 0 as *mut libc::c_uchar
         }
-        j = 0 as libc::c_int;
+        j = 0;
         while *sval as libc::c_int != 0 && *sval as libc::c_int != '.' as i32
               {
             if !limit.is_null() &&
@@ -449,52 +421,13 @@ pub fn do_rfc1035_name(mut p: *mut libc::c_uchar,
     }
     return p;
 }
-/* for use during startup */
-pub fn safe_malloc(mut size: usize) -> *mut libc::c_void {
-    let mut ret: *mut libc::c_void =
-        calloc(1 as libc::c_int as libc::c_ulong, size);
-    if ret.is_null() {
-        die(b"could not get memory\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char, 0 as *mut libc::c_char, 4 as libc::c_int);
-    }
-    return ret;
-}
-/* Ensure limited size string is always terminated.
- * Can be replaced by (void)strlcpy() on some platforms */
-pub fn safe_strncpy(mut dest: *mut libc::c_char,
-                                      mut src: *const libc::c_char,
-                                      mut size: usize) {
-    if size != 0 as libc::c_int as libc::c_ulong {
-        *dest.offset(size.wrapping_sub(1 as libc::c_int as libc::c_ulong) as
-                         isize) = '\u{0}' as i32 as libc::c_char;
-        strncpy(dest, src,
-                size.wrapping_sub(1 as libc::c_int as libc::c_ulong));
-    };
-}
-pub fn safe_pipe(mut fd: *mut libc::c_int,
-                                   mut read_noblock: libc::c_int) {
-    if pipe(fd) == -(1 as libc::c_int) ||
-           fix_fd(*fd.offset(1 as libc::c_int as isize)) == 0 ||
-           read_noblock != 0 &&
-               fix_fd(*fd.offset(0 as libc::c_int as isize)) == 0 {
-        die(b"cannot create pipe: %s\x00" as *const u8 as *const libc::c_char
-                as *mut libc::c_char, 0 as *mut libc::c_char,
-            5 as libc::c_int);
-    };
-}
-pub fn whine_malloc(mut size: usize) -> *mut libc::c_void {
-    let mut ret: *mut libc::c_void =
-        calloc(1 as libc::c_int as libc::c_ulong, size);
-    if ret.is_null() {
-        my_syslog(3 as libc::c_int,
-                  b"failed to allocate %d bytes\x00" as *const u8 as
-                      *const libc::c_char, size as libc::c_int);
-    }
-    return ret;
-}
-pub fn sockaddr_isequal(mut s1: *mut MySockAddr,
-                                          mut s2: *mut MySockAddr)
-                                          -> libc::c_int {
+
+pub fn sockaddr_isequal(mut s1: &MySockAddr, mut s2: &MySockAddr) -> bool 
+{
+    if s1
+
+
+
     if (*s1).sa.sa_family as libc::c_int == (*s2).sa.sa_family as libc::c_int
        {
         if (*s1).sa.sa_family as libc::c_int == 2 as libc::c_int &&
