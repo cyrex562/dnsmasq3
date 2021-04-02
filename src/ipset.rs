@@ -1,12 +1,12 @@
 use crate::slack::{sockaddr_nl, nlmsghdr, my_nlattr, my_nfgenmsg, ip_set_req_adt_get, ip_set_req_adt};
-use crate::defines::{__kernel_sa_family_t, DnsmasqDaemon, SOCK_RAW, IPPROTO_RAW, __CONST_SOCKADDR_ARG, SockAddr, socklen_t, AllAddr, __bswap_16, C2RustUnnamed_9, __bswap_32};
+use crate::defines::{KernelSaFamily, DnsmasqDaemon, SOCK_RAW, IPPROTO_RAW, ConstSockaddrArg, SockAddr, socklen_t, AllAddr, __bswap_16, C2rustUnnamed9, __bswap_32};
 use crate::util::{safe_malloc, retry_send};
 use crate::dnsmasq_log::{die, my_syslog};
 
 static mut snl: sockaddr_nl =
     {
         let mut init =
-            sockaddr_nl{nl_family: 16 as libc::c_int as __kernel_sa_family_t,
+            sockaddr_nl{nl_family: 16 as libc::c_int as KernelSaFamily,
                         nl_pad: 0,
                         nl_pid: 0,
                         nl_groups: 0,};
@@ -86,7 +86,7 @@ pub unsafe extern "C" fn ipset_init() {
                (ipset_sock) != -(1 as libc::c_int)
            } &&
            bind(ipset_sock,
-                __CONST_SOCKADDR_ARG{__sockaddr__:
+                ConstSockaddrArg {__sockaddr__:
                                          &snl as *const sockaddr_nl as
                                              *mut SockAddr,},
                 ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong as
@@ -228,7 +228,7 @@ unsafe extern "C" fn new_add_to_ipset(mut setname: *const libc::c_char,
             as libc::c_long as u16;
     while retry_send(sendto(ipset_sock, buffer as *const libc::c_void,
                             (*nlh).nlmsg_len as usize, 0 as libc::c_int,
-                            __CONST_SOCKADDR_ARG{__sockaddr__:
+                            ConstSockaddrArg {__sockaddr__:
                                                      &snl as
                                                          *const sockaddr_nl as
                                                          *mut SockAddr,},
@@ -247,7 +247,7 @@ unsafe extern "C" fn old_add_to_ipset(mut setname: *const libc::c_char,
     let mut req_adt_get: ip_set_req_adt_get =
         ip_set_req_adt_get{op: 0,
                            version: 0,
-                           set: C2RustUnnamed_9{name: [0; 32],},
+                           set: C2rustUnnamed9 {name: [0; 32],},
                            typename: [0; 32],};
     let mut req_adt: ip_set_req_adt = ip_set_req_adt{op: 0, index: 0, ip: 0,};
     if strlen(setname) >=

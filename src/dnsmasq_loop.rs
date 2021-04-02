@@ -1,4 +1,4 @@
-use crate::defines::{Server, DnsmasqDaemon, RandFd, __CONST_SOCKADDR_ARG, socklen_t, DnsHeader, __bswap_16, _ISxdigit};
+use crate::defines::{Server, DnsmasqDaemon, RandFd, ConstSockaddrArg, socklen_t, DnsHeader, __bswap_16, _ISXDIGIT};
 use crate::forward::{allocate_rfd, free_rfd};
 use crate::util::{retry_send, sa_len, rand16};
 use crate::network::check_servers;
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn loop_send_probes() {
                                             (*dnsmasq_daemon).packet as
                                                 *const libc::c_void,
                                             len as usize, 0 as libc::c_int,
-                                            __CONST_SOCKADDR_ARG{__sockaddr__:
+                                            ConstSockaddrArg {__sockaddr__:
                                                                      &mut (*serv).addr.sa,},
                                             sa_len(&mut (*serv).addr) as
                                                 socklen_t)) != 0 {
@@ -178,7 +178,7 @@ pub unsafe extern "C" fn detect_loop(mut query: *mut libc::c_char,
     while i < 8 as libc::c_int {
         if *(*__ctype_b_loc()).offset(*query.offset(i as isize) as libc::c_int
                                           as isize) as libc::c_int &
-               _ISxdigit as libc::c_int as libc::c_ushort as libc::c_int == 0
+               _ISXDIGIT as libc::c_int as libc::c_ushort as libc::c_int == 0
            {
             return 0 as libc::c_int
         }

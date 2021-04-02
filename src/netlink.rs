@@ -1,4 +1,4 @@
-use crate::defines::{iovec, socklen_t, __kernel_sa_family_t, __u32, DnsmasqDaemon, SOCK_RAW, __CONST_SOCKADDR_ARG, SockAddr, __SOCKADDR_ARG, size_t, ssize_t, MsgHdr, MSG_PEEK, MSG_TRUNC, C2RustUnnamed_10, InAddr, __bswap_32, InAddrT, In6Addr};
+use crate::defines::{iovec, socklen_t, KernelSaFamily, __u32, DnsmasqDaemon, SOCK_RAW, ConstSockaddrArg, SockAddr, SockaddrArg, size_t, ssize_t, MsgHdr, MSG_PEEK, MSG_TRUNC, C2rustUnnamed10, InAddr, __bswap_32, InAddrT, In6Addr};
 use crate::slack::{sockaddr_nl, nlmsghdr, rtgenmsg, RTM_GETNEIGH, RTM_GETLINK, RTM_GETADDR, RTM_NEWADDR, ifaddrmsg, rtattr, IFA_LOCAL, IFA_BROADCAST, IFA_LABEL, IFA_ADDRESS, IFA_CACHEINFO, ifa_cacheinfo, RTM_NEWNEIGH, ndmsg, NDA_DST, NDA_LLADDR, RTM_NEWLINK, ifinfomsg, IFLA_ADDRESS, IFF_LOOPBACK, IFF_POINTOPOINT, nlmsgerr, RTM_NEWROUTE, rtmsg, RTN_UNICAST, RT_SCOPE_LINK, RT_TABLE_MAIN, RT_TABLE_LOCAL, RTM_DELADDR};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::util::{safe_malloc, expand_buf, retry_send};
@@ -58,7 +58,7 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
         socket(16 as libc::c_int, SOCK_RAW as libc::c_int, 0 as libc::c_int);
     if daemon.netlinkfd != -(1 as libc::c_int) {
         if bind(daemon.netlinkfd,
-                __CONST_SOCKADDR_ARG{__sockaddr__:
+                ConstSockaddrArg {__sockaddr__:
                                          &mut addr as *mut sockaddr_nl as
                                              *mut SockAddr,},
                 ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong as
@@ -66,7 +66,7 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
             addr.nl_groups = 0 as libc::c_int as __u32;
             if *__errno_location() != 1 as libc::c_int ||
                    bind(daemon.netlinkfd,
-                        __CONST_SOCKADDR_ARG{__sockaddr__:
+                        ConstSockaddrArg {__sockaddr__:
                                                  &mut addr as *mut sockaddr_nl
                                                      as *mut SockAddr,},
                         ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong
@@ -77,7 +77,7 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
     }
     if daemon.netlinkfd == -(1 as libc::c_int) ||
            getsockname(daemon.netlinkfd,
-                       __SOCKADDR_ARG{__sockaddr__:
+                       SockaddrArg {__sockaddr__:
                                           &mut addr as *mut sockaddr_nl as
                                               *mut SockAddr,}, &mut slen) ==
                -(1 as libc::c_int) {
@@ -184,21 +184,21 @@ pub fn iface_enumerate(mut family: libc::c_int,
     let mut len: ssize_t = 0;
     static mut seq: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     let mut callback_ok: libc::c_int = 1 as libc::c_int;
-    let mut req: C2RustUnnamed_10 =
-        C2RustUnnamed_10{nlh:
+    let mut req: C2rustUnnamed10 =
+        C2rustUnnamed10 {nlh:
                              nlmsghdr{nlmsg_len: 0,
                                       nlmsg_type: 0,
                                       nlmsg_flags: 0,
                                       nlmsg_seq: 0,
                                       nlmsg_pid: 0,},
                          g: rtgenmsg{rtgen_family: 0,},};
-    memset(&mut req as *mut C2RustUnnamed_10 as *mut libc::c_void,
+    memset(&mut req as *mut C2rustUnnamed10 as *mut libc::c_void,
            0 as libc::c_int,
-           ::std::mem::size_of::<C2RustUnnamed_10>() as libc::c_ulong);
+           ::std::mem::size_of::<C2rustUnnamed10>() as libc::c_ulong);
     memset(&mut addr as *mut sockaddr_nl as *mut libc::c_void,
            0 as libc::c_int,
            ::std::mem::size_of::<sockaddr_nl>() as libc::c_ulong);
-    addr.nl_family = 16 as libc::c_int as __kernel_sa_family_t;
+    addr.nl_family = 16 as libc::c_int as KernelSaFamily;
     loop  {
         if family == 0 as libc::c_int {
             req.nlh.nlmsg_type = RTM_GETNEIGH as libc::c_int as u16
@@ -206,7 +206,7 @@ pub fn iface_enumerate(mut family: libc::c_int,
             req.nlh.nlmsg_type = RTM_GETLINK as libc::c_int as u16
         } else { req.nlh.nlmsg_type = RTM_GETADDR as libc::c_int as u16 }
         req.nlh.nlmsg_len =
-            ::std::mem::size_of::<C2RustUnnamed_10>() as libc::c_ulong as
+            ::std::mem::size_of::<C2rustUnnamed10>() as libc::c_ulong as
                 __u32;
         req.nlh.nlmsg_flags =
             (0x100 as libc::c_int | 0x200 as libc::c_int | 0x1 as libc::c_int
@@ -217,11 +217,11 @@ pub fn iface_enumerate(mut family: libc::c_int,
         req.g.rtgen_family = family as libc::c_uchar;
         /* Don't block in recvfrom if send fails */
         while retry_send(sendto(daemon.netlinkfd,
-                                &mut req as *mut C2RustUnnamed_10 as
+                                &mut req as *mut C2rustUnnamed10 as
                                     *mut libc::c_void,
-                                ::std::mem::size_of::<C2RustUnnamed_10>() as
+                                ::std::mem::size_of::<C2rustUnnamed10>() as
                                     libc::c_ulong, 0 as libc::c_int,
-                                __CONST_SOCKADDR_ARG{__sockaddr__:
+                                ConstSockaddrArg {__sockaddr__:
                                                          &mut addr as
                                                              *mut sockaddr_nl
                                                              as

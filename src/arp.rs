@@ -170,18 +170,13 @@ pub fn find_mac(
     if addr.sa.sa_family == 2 {
         arp.addr.addr4.s_addr = addr.in_0.sin_addr.s_addr
     } else {
-        memcpy(
-            &mut arp.addr.addr6 as *mut In6Addr as *mut libc::c_void,
-            &mut addr.in6.sin6_addr as *mut In6Addr as *const libc::c_void,
-            16 as libc::c_int as libc::c_ulong,
-        );
+        arp.addr.addr6 = addr.in6.sin6_addr;
     }
-
     return 0;
 }
 
 pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> libc::c_int {
-    let mut arp: *mut ArpRecord = 0 as *mut ArpRecord;
+    let mut arp: ArpRecord;
 
     /* Notify any which went, then move to free list */
     if !old.is_null() {

@@ -4,6 +4,7 @@ use std::time;
 use socket2::{Socket, SockAddr};
 use num::FromPrimitive;
 use crate::in_addr::InAddr;
+use crate::in6_addr::In6Addr;
 
 pub type DevT = libc::c_ulong;
 pub type UidT = u32;
@@ -154,14 +155,14 @@ pub union AllAddr {
     pub addr6: In6Addr,
     pub cname: String,
     pub key: Vec<u8>,
-    pub ds: C2RustUnnamed_2,
+    pub ds: C2rustUnnamed2,
     pub srv: String,
     pub log: u8,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_29 {
+pub struct C2RustUnnamed29 {
     pub target: BlockData,
     pub targetlen: u16,
     pub srvport: u16,
@@ -178,15 +179,15 @@ pub struct BlockData {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
-    pub target: C2RustUnnamed_7,
+pub struct C2rustUnnamed6 {
+    pub target: C2rustUnnamed7,
     pub uid: u32,
     pub is_name_ptr: i32,
 }
 
 #[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
-pub struct C2RustUnnamed_1A {
+pub struct C2rustUnnamed1a {
     pub ifru_addr: SockAddr,
     pub ifru_dstaddr: SockAddr,
     pub ifru_broadaddr: SockAddr,
@@ -204,21 +205,21 @@ pub struct C2RustUnnamed_1A {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct IfReq {
-    pub ifr_ifrn: C2RustUnnamed_2,
-    pub ifr_ifru: C2RustUnnamed_1A,
+    pub ifr_ifrn: C2rustUnnamed2,
+    pub ifr_ifru: C2rustUnnamed1a,
 }
 
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_7 {
+pub union C2rustUnnamed7 {
     pub cache: Crec,
     pub name: String,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct C2rustUnnamed2 {
     pub keydata: BlockData,
     pub keylen: u16,
     pub keytag: u16,
@@ -228,15 +229,15 @@ pub struct C2RustUnnamed_2 {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_4 {
-    pub target: C2RustUnnamed_5,
+pub struct C2RustUnnamed4 {
+    pub target: C2rustUnnamed5,
     pub uid: u32,
     pub is_name_ptr: i32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_5 {
+pub union C2rustUnnamed5 {
     pub cache: Crec,
     pub name: String,
 }
@@ -251,12 +252,12 @@ pub struct Crec {
     pub ttd: TimeT,
     pub uid: u32,
     pub flags: u32,
-    pub name: C2RustUnnamed_6,
+    pub name: C2rustUnnamed6,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_32 {
+pub union C2rustUnnamed32 {
     pub sname: String,
     pub bname: BigName,
     pub namep: String,
@@ -613,7 +614,7 @@ pub struct DhcpOpt {
     pub opt: u32,
     pub len: u32,
     pub flags: u32,
-    pub u: C2RustUnnamed_7,
+    pub u: C2rustUnnamed7,
     pub val: Vec<u8>,
     pub netid: DhcpNetId,
     // pub next: *mut dhcp_opt,
@@ -622,7 +623,7 @@ pub struct DhcpOpt {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_31 {
+pub union C2rustUnnamed31 {
     pub encap: i32,
     pub wildcard_mask: u32,
     pub vendor_class: Vec<u8>,
@@ -651,7 +652,7 @@ pub struct DhcpMatchName {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct PxeService {
-    pub CSA: u16,
+    pub csa: u16,
     pub type_0: u16,
     pub menu: String,
     pub basename: String,
@@ -986,9 +987,9 @@ pub struct DnsmasqDaemon {
     pub log_id: u32,
     pub log_display_id: u32,
     pub log_source_addr: MySockAddr,
-    pub dhcpfd: Socket,
-    pub helperfd: Socket,
-    pub pxefd: Socket,
+    pub dhcpfd: Option<Socket>,
+    pub helperfd: Option<Socket>,
+    pub pxefd: Option<Socket>,
     pub inotifyfd: i32,
     pub netlinkfd: i32,
     pub kernel_version: i32,
@@ -1037,113 +1038,113 @@ pub const _STAT_VER_LINUX: i32 = 1 as i32;
 pub const _STAT_VER: i32 = _STAT_VER_LINUX;
 
 // https://code.woboq.org/userspace/glibc/libio/libioP.h.html#117
-pub type _IO_finish_t = fn(*mut FILE, i32);
-pub type _IO_overflow_t = fn(*mut FILE, i32) -> i32;
-pub type _IO_underflow_t = fn(*mut FILE) -> i32;
-pub type _IO_pbackfail_t = fn(*mut FILE, i32) -> i32;
-pub type _IO_xsputn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> Off64T;
-pub type _IO_xsgetn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> libc::size_t;
-pub type _IO_seekoff_t = fn(FP: *mut FILE, OFF: Off64T, DIR: i32, MODE: i32) -> Off64T;
-pub type _IO_seekpos_t = fn(*mut FILE, Off64T, i32) -> Off64T;
-pub type _IO_setbuf_t = fn(*mut FILE, String, libc::ssize_t) -> *mut FILE;
-pub type _IO_sync_t = fn(*mut FILE) -> i32;
-pub type _IO_doallocate_t = fn(*mut FILE) -> i32;
-pub type _IO_read_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
-pub type _IO_write_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
-pub type _IO_seek_t = fn(*mut FILE, *mut Off64T, i32) -> Off64T;
-pub type _IO_close_t = fn(*mut FILE) -> i32;
-pub type _IO_stat_t = fn(*mut FILE, *mut libc::c_void) -> i32;
-pub type _IO_showmanyc_t = fn(*mut FILE) -> i32;
-pub type _IO_imbue_t = fn(*mut FILE, libc::c_void);
+// pub type _IO_finish_t = fn(*mut FILE, i32);
+// pub type _IO_overflow_t = fn(*mut FILE, i32) -> i32;
+// pub type _IO_underflow_t = fn(*mut FILE) -> i32;
+// pub type _IO_pbackfail_t = fn(*mut FILE, i32) -> i32;
+// pub type _IO_xsputn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> Off64T;
+// pub type _IO_xsgetn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> libc::size_t;
+// pub type _IO_seekoff_t = fn(FP: *mut FILE, OFF: Off64T, DIR: i32, MODE: i32) -> Off64T;
+// pub type _IO_seekpos_t = fn(*mut FILE, Off64T, i32) -> Off64T;
+// pub type _IO_setbuf_t = fn(*mut FILE, String, libc::ssize_t) -> *mut FILE;
+// pub type _IO_sync_t = fn(*mut FILE) -> i32;
+// pub type _IO_doallocate_t = fn(*mut FILE) -> i32;
+// pub type _IO_read_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
+// pub type _IO_write_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
+// pub type _IO_seek_t = fn(*mut FILE, *mut Off64T, i32) -> Off64T;
+// pub type _IO_close_t = fn(*mut FILE) -> i32;
+// pub type _IO_stat_t = fn(*mut FILE, *mut libc::c_void) -> i32;
+// pub type _IO_showmanyc_t = fn(*mut FILE) -> i32;
+// pub type _IO_imbue_t = fn(*mut FILE, libc::c_void);
 
 
 // #define JUMP_FIELD(TYPE, NAME) TYPE NAME
-pub struct _IO_jump_t
-{
-    // JUMP_FIELD(size_t, __dummy);
-    pub __dummy: libc::size_t,
-    // JUMP_FIELD(size_t, __dummy2);
-    pub __dummy2: libc::size_t,
-    // JUMP_FIELD(_IO_finish_t, __finish);
-    pub __finish: _IO_finish_t,
-    // JUMP_FIELD(_IO_overflow_t, __overflow);
-    pub __overflow: _IO_overflow_t,
-    // JUMP_FIELD(_IO_underflow_t, __underflow);
-    pub __underflow: _IO_underflow_t,
-    // JUMP_FIELD(_IO_underflow_t, __uflow);
-    pub __uflow: _IO_underflow_t,
-    // JUMP_FIELD(_IO_pbackfail_t, __pbackfail);
-    pub __pbackfail: _IO_pbackfail_t,
-    /* showmany */
-    // JUMP_FIELD(_IO_xsputn_t, __xsputn);
-    pub __xsputn: _IO_xsputn_t,
-    // JUMP_FIELD(_IO_xsgetn_t, __xsgetn);
-    pub __xsgetn: _IO_xsgetn_t,
-    // JUMP_FIELD(_IO_seekoff_t, __seekoff);
-    pub __seekpos: _IO_seekpos_t,
-    // JUMP_FIELD(_IO_seekpos_t, __seekpos);
-    pub __seekoff: _IO_seekoff_t,
-    // JUMP_FIELD(_IO_setbuf_t, __setbuf);
-    pub __setbuf: _IO_setbuf_t,
-    // JUMP_FIELD(_IO_sync_t, __sync);
-    pub __sync: _IO_sync_t,
-    // JUMP_FIELD(_IO_doallocate_t, __doallocate);
-    pub __doallocate: _IO_doallocate_t,
-    // JUMP_FIELD(_IO_read_t, __read);
-    pub __read: _IO_read_t,
-    // JUMP_FIELD(_IO_write_t, __write);
-    pub __write: _IO_write_t,
-    // JUMP_FIELD(_IO_seek_t, __seek);
-    pub __seek: _IO_seek_t,
-    // JUMP_FIELD(_IO_close_t, __close);
-    pub __close: _IO_close_t,
-    // JUMP_FIELD(_IO_stat_t, __stat);
-    pub __stat: _IO_stat_t,
-    // JUMP_FIELD(_IO_showmanyc_t, __showmanyc);
-    pub __showmanyc: _IO_showmanyc_t,
-    // JUMP_FIELD(_IO_imbue_t, __imbue);
-    pub __imbue: _IO_imbue_t,
-}
+// pub struct _IO_jump_t
+// {
+//     // JUMP_FIELD(size_t, __dummy);
+//     pub __dummy: libc::size_t,
+//     // JUMP_FIELD(size_t, __dummy2);
+//     pub __dummy2: libc::size_t,
+//     // JUMP_FIELD(_IO_finish_t, __finish);
+//     pub __finish: _IO_finish_t,
+//     // JUMP_FIELD(_IO_overflow_t, __overflow);
+//     pub __overflow: _IO_overflow_t,
+//     // JUMP_FIELD(_IO_underflow_t, __underflow);
+//     pub __underflow: _IO_underflow_t,
+//     // JUMP_FIELD(_IO_underflow_t, __uflow);
+//     pub __uflow: _IO_underflow_t,
+//     // JUMP_FIELD(_IO_pbackfail_t, __pbackfail);
+//     pub __pbackfail: _IO_pbackfail_t,
+//     /* showmany */
+//     // JUMP_FIELD(_IO_xsputn_t, __xsputn);
+//     pub __xsputn: _IO_xsputn_t,
+//     // JUMP_FIELD(_IO_xsgetn_t, __xsgetn);
+//     pub __xsgetn: _IO_xsgetn_t,
+//     // JUMP_FIELD(_IO_seekoff_t, __seekoff);
+//     pub __seekpos: _IO_seekpos_t,
+//     // JUMP_FIELD(_IO_seekpos_t, __seekpos);
+//     pub __seekoff: _IO_seekoff_t,
+//     // JUMP_FIELD(_IO_setbuf_t, __setbuf);
+//     pub __setbuf: _IO_setbuf_t,
+//     // JUMP_FIELD(_IO_sync_t, __sync);
+//     pub __sync: _IO_sync_t,
+//     // JUMP_FIELD(_IO_doallocate_t, __doallocate);
+//     pub __doallocate: _IO_doallocate_t,
+//     // JUMP_FIELD(_IO_read_t, __read);
+//     pub __read: _IO_read_t,
+//     // JUMP_FIELD(_IO_write_t, __write);
+//     pub __write: _IO_write_t,
+//     // JUMP_FIELD(_IO_seek_t, __seek);
+//     pub __seek: _IO_seek_t,
+//     // JUMP_FIELD(_IO_close_t, __close);
+//     pub __close: _IO_close_t,
+//     // JUMP_FIELD(_IO_stat_t, __stat);
+//     pub __stat: _IO_stat_t,
+//     // JUMP_FIELD(_IO_showmanyc_t, __showmanyc);
+//     pub __showmanyc: _IO_showmanyc_t,
+//     // JUMP_FIELD(_IO_imbue_t, __imbue);
+//     pub __imbue: _IO_imbue_t,
+// }
 
 
-#[derive(Clone, Copy)]
-#[repr(C)]
-pub struct _IO_wide_data
-{
-//   wchar_t *_IO_read_ptr;        /* Current read pointer */
-    pub _IO_read_ptr: *mut libc::wchar_t,
-//   wchar_t *_IO_read_end;        /* End of get area. */
-    pub _IO_read_end: *mut libc::wchar_t,
-//   wchar_t *_IO_read_base;        /* Start of putback+get area. */
-    pub _IO_read_base: *mut libc::wchar_t,
-//   wchar_t *_IO_write_base;        /* Start of put area. */
-    pub _IO_wriate_base: *mut libc::wchar_t,
-//   wchar_t *_IO_write_ptr;        /* Current put pointer. */
-    pub _IO_write_ptr: *mut libc::wchar_t,
-//   wchar_t *_IO_write_end;        /* End of put area. */
-    pub _IO_write_ned: *mut libc::wchar_t,
-//   wchar_t *_IO_buf_base;        /* Start of reserve area. */
-    pub _IO_buf_base: *mut libc::wchar_t,
-//   wchar_t *_IO_buf_end;                /* End of reserve area. */
-    pub _IO_buf_end: *mut libc::wchar_t,
-  /* The following fields are used to support backing up and undo. */
-//   wchar_t *_IO_save_base;        /* Pointer to start of non-current get area. */
-    pub _IO_save_base: *mut libc::wchar_t,
-//   wchar_t *_IO_backup_base;        /* Pointer to first valid character of                                    backup area */
-    pub _IO_backup_base: *mut libc::wchar_t,
-//   wchar_t *_IO_save_end;        /* Pointer to end of non-current get area. */
-    pub _IO_save_end: *mut libc::wchar_t,
-//   __mbstate_t _IO_state;
-    pub _IO_state: *mut __mbstate_t,
-//   __mbstate_t _IO_last_state;
-    pub __IO_laste_state: *mut __mbstate_t,
-//   struct _IO_codecvt _codecvt;
-    pub __codecvt: *mut _IO_codecvt,
-//   wchar_t _shortbuf[1];
-    pub _shortbuf: [libc::wchar_t;1],
-//   const struct _IO_jump_t *_wide_vtable;
-    pub _wide_vtable: *mut _IO_jump_t,
-}
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub struct _IO_wide_data
+// {
+// //   wchar_t *_IO_read_ptr;        /* Current read pointer */
+//     pub _IO_read_ptr: *mut libc::wchar_t,
+// //   wchar_t *_IO_read_end;        /* End of get area. */
+//     pub _IO_read_end: *mut libc::wchar_t,
+// //   wchar_t *_IO_read_base;        /* Start of putback+get area. */
+//     pub _IO_read_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_write_base;        /* Start of put area. */
+//     pub _IO_wriate_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_write_ptr;        /* Current put pointer. */
+//     pub _IO_write_ptr: *mut libc::wchar_t,
+// //   wchar_t *_IO_write_end;        /* End of put area. */
+//     pub _IO_write_ned: *mut libc::wchar_t,
+// //   wchar_t *_IO_buf_base;        /* Start of reserve area. */
+//     pub _IO_buf_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_buf_end;                /* End of reserve area. */
+//     pub _IO_buf_end: *mut libc::wchar_t,
+//   /* The following fields are used to support backing up and undo. */
+// //   wchar_t *_IO_save_base;        /* Pointer to start of non-current get area. */
+//     pub _IO_save_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_backup_base;        /* Pointer to first valid character of                                    backup area */
+//     pub _IO_backup_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_save_end;        /* Pointer to end of non-current get area. */
+//     pub _IO_save_end: *mut libc::wchar_t,
+// //   __mbstate_t _IO_state;
+//     pub _IO_state: *mut __mbstate_t,
+// //   __mbstate_t _IO_last_state;
+//     pub __IO_laste_state: *mut __mbstate_t,
+// //   struct _IO_codecvt _codecvt;
+//     pub __codecvt: *mut _IO_codecvt,
+// //   wchar_t _shortbuf[1];
+//     pub _shortbuf: [libc::wchar_t;1],
+// //   const struct _IO_jump_t *_wide_vtable;
+//     pub _wide_vtable: *mut _IO_jump_t,
+// }
 
 
 
@@ -1286,7 +1287,7 @@ pub const HB3_OPCODE: i32 = 0x78 as i32;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_10 {
+pub struct C2rustUnnamed10 {
     pub type_0: u32,
     pub name: *const libc::c_char,
 }
@@ -1455,10 +1456,7 @@ pub struct ArpRecord {
     // pub next: *mut arp_record,
 }
 
-pub type __kernel_sa_family_t = u16;
-
-pub type __u8 = u8;
-pub type __be16 = u16;
+pub type KernelSaFamily = u16;
 
 //    26 struct atalk_addr {
 //    27     __be16  s_net;
@@ -1480,7 +1478,7 @@ pub struct AtalkAddr {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SockaddrAt {
-    pub sat_family: __kernel_sa_family_t,
+    pub sat_family: KernelSaFamily,
     pub sat_port: __u8,
     pub sat_addr: AtalkAddr,
     pub sat_zer: [i8;8],
@@ -1501,7 +1499,7 @@ pub struct Ax25Address {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SockaddrAx25 {
-    pub sax25_family: __kernel_sa_family_t,
+    pub sax25_family: KernelSaFamily,
     pub sax25_call: Ax25Address,
     pub sax25_ndigis: i32,
 }
@@ -1554,25 +1552,25 @@ pub struct SockaddrDl {
 // 	u_int			seon_ipaddr;	/* a.b.c.d */
 // 	u_char			seon_protoid;	/* NSEL */
 // };
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct SockaddrEon {
-    pub seon_len: u8,
-    pub seon_family: u8,
-    pub seon_status: u8,
-    pub seon_pad1: u8,
-    pub seon_adrlen: u8,
-    pub seon_afi: u8,
-    pub seon_idi: [u8;2],
-    pub seon_vers: u8,
-    pub seon_glbnum: [u8;2],
-    pub seon_RDN: [u8;2],
-    pub seon_pad2: [u8;3],
-    pub seon_LAREA: [u8;2],
-    pub seon_pad3: [u8;2],
-    pub seon_ipaddr: u32,
-    pub seon_protoid: u8
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SockaddrEon {
+//     pub seon_len: u8,
+//     pub seon_family: u8,
+//     pub seon_status: u8,
+//     pub seon_pad1: u8,
+//     pub seon_adrlen: u8,
+//     pub seon_afi: u8,
+//     pub seon_idi: [u8;2],
+//     pub seon_vers: u8,
+//     pub seon_glbnum: [u8;2],
+//     pub seon_RDN: [u8;2],
+//     pub seon_pad2: [u8;3],
+//     pub seon_LAREA: [u8;2],
+//     pub seon_pad3: [u8;2],
+//     pub seon_ipaddr: u32,
+//     pub seon_protoid: u8
+// }
 
 //  #ifndef BURN_BRIDGES    /* Can be used by third party software. */
 //  struct sockaddr_inarp {
@@ -1586,19 +1584,19 @@ pub struct SockaddrEon {
 //  #define SIN_PROXY 1
 //  };
 //  #endif /* !BURN_BRIDGES  */
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct sockaddr_inarp {
-    pub sin_len: u8,
-    pub sin_family: u8,
-    pub sin_port: u16,
-    pub sin_addr: InAddr,
-    pub sin_srcaddr: InAddr,
-    pub sin_tos: u16,
-    pub sin_other: u16,
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct sockaddr_inarp {
+//     pub sin_len: u8,
+//     pub sin_family: u8,
+//     pub sin_port: u16,
+//     pub sin_addr: InAddr,
+//     pub sin_srcaddr: InAddr,
+//     pub sin_tos: u16,
+//     pub sin_other: u16,
+// }
 
-type __be32 = u32;
+// type __be32 = u32;
 
 pub const IPX_NODE_LEN: usize = 6;
 
@@ -1610,25 +1608,25 @@ pub const IPX_NODE_LEN: usize = 6;
 //    14     __u8        sipx_type;
 //    15     unsigned char   sipx_zero;  /* 16 byte fill */
 //    16 };
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct sockaddr_ipx {
-    sipx_family: __kernel_sa_family_t,
-    sipx_port: __be16,
-    sipx_network: __be32,
-    sipx_node: [u8;IPX_NODE_LEN],
-    sipx_type: __u8,
-    sipx_zero: u8
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct sockaddr_ipx {
+//     sipx_family: KernelSaFamily,
+//     sipx_port: __be16,
+//     sipx_network: __be32,
+//     sipx_node: [u8;IPX_NODE_LEN],
+//     sipx_type: __u8,
+//     sipx_zero: u8
+// }
 
 
-// struct iso_addr {
+// struct IsoAddr {
 // 	u_char	isoa_len;						/* length (in bytes) */
 // 	char	isoa_genaddr[20];				/* general opaque address */
 // };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct iso_addr{
+pub struct IsoAddr {
     pub isoa_len: u8,
     pub isoa_genaddr: [u8;20]
 }
@@ -1639,21 +1637,21 @@ pub struct iso_addr{
 // 	u_char				siso_plen;			/* presentation selector length */
 // 	u_char				siso_slen;			/* session selector length */
 // 	u_char				siso_tlen;			/* transport selector length */
-// 	struct 	iso_addr	siso_addr;			/* network address */
+// 	struct 	IsoAddr	siso_addr;			/* network address */
 // 	u_char				siso_pad[6];		/* space for gosip v2 sels */
 // 											/* makes struct 32 bytes long */
 // };
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct sockaddr_iso {
-    siso_len: u8,
-    siso_family: u8,
-    siso_plen: u8,
-    siso_slen: u8,
-    siso_tlen: u8,
-    siso_addr: iso_addr,
-    siso_pad: [u8;6]
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct sockaddr_iso {
+//     siso_len: u8,
+//     siso_family: u8,
+//     siso_plen: u8,
+//     siso_slen: u8,
+//     siso_tlen: u8,
+//     siso_addr: IsoAddr,
+//     siso_pad: [u8;6]
+// }
 
 
 //  union sockaddr_ns {
@@ -1663,36 +1661,36 @@ pub struct sockaddr_iso {
 //    struct sockaddr_in6 sin6;
 //  #endif
 //  };
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct sockaddr_ns {
-    sa: SockAddr,
-    sin: SockAddrIn,
-    sin6: SockAddrIn6
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct sockaddr_ns {
+//     sa: SockAddr,
+//     sin: SockAddrIn,
+//     sin6: SockAddrIn6
+// }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct x25_address {
-    pub x25_addr: [char;16]
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct x25_address {
+//     pub x25_addr: [char;16]
+// }
 
 // struct sockaddr_x25 {
 //    61     __kernel_sa_family_t sx25_family;   /* Must be AF_X25 */
 //    62     struct x25_address sx25_addr;       /* X.121 Address */
 //    63 };
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct sockaddr_x25 {
-    sx25_family: __kernel_sa_family_t,
-    sx25_addr: x25_address
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct sockaddr_x25 {
+//     sx25_family: KernelSaFamily,
+//     sx25_addr: x25_address
+// }
 
 
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union __SOCKADDR_ARG {
+pub union SockaddrArg {
     pub __sockaddr__: *mut SockAddr,
     pub __sockaddr_at__: *mut SockaddrAt,
     pub __sockaddr_ax25__: *mut SockaddrAx25,
@@ -1704,22 +1702,22 @@ pub union __SOCKADDR_ARG {
     pub __sockaddr_ipx__: *mut sockaddr_ipx,
     pub __sockaddr_iso__: *mut sockaddr_iso,
     pub __sockaddr_ns__: *mut sockaddr_ns,
-    pub __sockaddr_un__: *mut sockaddr_un,
+    pub __sockaddr_un__: *mut SockaddrUn,
     pub __sockaddr_x25__: *mut sockaddr_x25,
 }
 
-pub type __clock_t = libc::c_long;
-pub type gid_t = GidT;
-pub type uid_t = UidT;
-pub type ssize_t = SsizeT;
+// pub type __clock_t = libc::c_long;
+// pub type gid_t = GidT;
+// pub type uid_t = UidT;
+// pub type ssize_t = SsizeT;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __sigset_t {
-    pub __val: [libc::c_ulong; 16],
-}
-pub type sigset_t = __sigset_t;
-pub type __socket_type = u32;
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct __sigset_t {
+//     pub __val: [libc::c_ulong; 16],
+// }
+// pub type sigset_t = __sigset_t;
+// pub type __socket_type = u32;
 pub const SOCK_NONBLOCK: __socket_type = 2048;
 pub const SOCK_CLOEXEC: __socket_type = 524288;
 pub const SOCK_PACKET: __socket_type = 10;
@@ -1735,14 +1733,14 @@ pub const SHUT_RD: u8 = 0;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sockaddr_un {
+pub struct SockaddrUn {
     pub sun_family: SaFamily,
     pub sun_path: [i8; 108],
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union __CONST_SOCKADDR_ARG {
+pub union ConstSockaddrArg {
     pub __sockaddr__: *const SockAddr,
     pub __sockaddr_at__: *const SockaddrAt,
     pub __sockaddr_ax25__: *const SockaddrAx25,
@@ -1754,7 +1752,7 @@ pub union __CONST_SOCKADDR_ARG {
     pub __sockaddr_ipx__: *const sockaddr_ipx,
     pub __sockaddr_iso__: *const sockaddr_iso,
     pub __sockaddr_ns__: *const sockaddr_ns,
-    pub __sockaddr_un__: *const sockaddr_un,
+    pub __sockaddr_un__: *const SockaddrUn,
     pub __sockaddr_x25__: *const sockaddr_x25,
 }
 
@@ -1784,7 +1782,7 @@ pub const IPPROTO_IPIP: i32 = 4;
 pub const IPPROTO_IGMP: i32 = 2;
 pub const IPPROTO_ICMP: i32 = 1;
 pub const IPPROTO_IP: i32 = 0;
-pub type __u32 = u32;
+// pub type __u32 = u32;
 
 
 // pub const EthertypeIpv4: u16 = 0x0800;
@@ -1798,14 +1796,14 @@ enum Ethertype {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union sigval {
+pub union Sigval {
     pub sival_int: i32,
     pub sival_ptr: *mut libc::c_void,
 }
-pub type __sigval_t = sigval;
+// pub type __sigval_t = Sigval;
 
 // __WINT_TYPE__ unsigned int
-pub type __WINT_TYPE__ = u32;
+// pub type __WINT_TYPE__ = u32;
 
 
 #[derive(Copy, Clone)]
@@ -1816,37 +1814,37 @@ pub union Unnamed29 {
 }
 
 
-#[derive(Clone, Copy)]
-#[repr(C)]
-pub struct __mbstate_t
-{
-//   int __count;
-    pub __count: i32,
-//   union
-//   {
-//     __WINT_TYPE__ __wch;
-//     char __wchb[4];
-//   } __value;   
-             /* Value so far.  */
-    pub __value: Unnamed29,
-}
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub struct __mbstate_t
+// {
+// //   int __count;
+//     pub __count: i32,
+// //   union
+// //   {
+// //     __WINT_TYPE__ __wch;
+// //     char __wchb[4];
+// //   } __value;
+//              /* Value so far.  */
+//     pub __value: Unnamed29,
+// }
 
 // __mbstate_t _IO_state;
-pub type _IO_state = __mbstate_t;
+// pub type _IO_state = __mbstate_t;
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SiginfoT {
+//     pub si_signo: i32,
+//     pub si_errno: i32,
+//     pub si_code: i32,
+//     pub __pad0: i32,
+//     pub _sifields: C2rustUnnamed2,
+// }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct siginfo_t {
-    pub si_signo: i32,
-    pub si_errno: i32,
-    pub si_code: i32,
-    pub __pad0: i32,
-    pub _sifields: C2RustUnnamed_2,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_8 {
+pub struct C2rustUnnamed8 {
     pub si_pid: PidT,
     pub si_uid: UidT,
     pub si_status: i32,
@@ -1855,251 +1853,256 @@ pub struct C2RustUnnamed_8 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_9 {
+pub struct C2rustUnnamed9 {
     pub si_pid: PidT,
     pub si_uid: UidT,
     pub si_sigval: __sigval_t,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_11 {
+pub struct C2rustUnnamed11 {
     pub si_pid: PidT,
     pub si_uid: UidT,
 }
-pub type __sighandler_t = Option<unsafe extern "C" fn(_: i32) -> ()>;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct sigaction {
-    pub __sigaction_handler: C2RustUnnamed_12,
-    pub sa_mask: __sigset_t,
-    pub sa_flags: i32,
-    pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_12 {
-    pub sa_handler: __sighandler_t,
-    pub sa_sigaction: Option<unsafe extern "C" fn(_: i32,
-                                                  _: *mut siginfo_t,
-                                                  _: *mut libc::c_void)
-                                 -> ()>,
-}
-pub type C2RustUnnamed_13 = u32;
-pub const _SC_THREAD_ROBUST_PRIO_PROTECT: C2RustUnnamed_13 = 248;
-pub const _SC_THREAD_ROBUST_PRIO_INHERIT: C2RustUnnamed_13 = 247;
-pub const _SC_XOPEN_STREAMS: C2RustUnnamed_13 = 246;
-pub const _SC_TRACE_USER_EVENT_MAX: C2RustUnnamed_13 = 245;
-pub const _SC_TRACE_SYS_MAX: C2RustUnnamed_13 = 244;
-pub const _SC_TRACE_NAME_MAX: C2RustUnnamed_13 = 243;
-pub const _SC_TRACE_EVENT_NAME_MAX: C2RustUnnamed_13 = 242;
-pub const _SC_SS_REPL_MAX: C2RustUnnamed_13 = 241;
-pub const _SC_V7_LPBIG_OFFBIG: C2RustUnnamed_13 = 240;
-pub const _SC_V7_LP64_OFF64: C2RustUnnamed_13 = 239;
-pub const _SC_V7_ILP32_OFFBIG: C2RustUnnamed_13 = 238;
-pub const _SC_V7_ILP32_OFF32: C2RustUnnamed_13 = 237;
-pub const _SC_RAW_SOCKETS: C2RustUnnamed_13 = 236;
-pub const _SC_IPV6: C2RustUnnamed_13 = 235;
-pub const _SC_LEVEL4_CACHE_LINESIZE: C2RustUnnamed_13 = 199;
-pub const _SC_LEVEL4_CACHE_ASSOC: C2RustUnnamed_13 = 198;
-pub const _SC_LEVEL4_CACHE_SIZE: C2RustUnnamed_13 = 197;
-pub const _SC_LEVEL3_CACHE_LINESIZE: C2RustUnnamed_13 = 196;
-pub const _SC_LEVEL3_CACHE_ASSOC: C2RustUnnamed_13 = 195;
-pub const _SC_LEVEL3_CACHE_SIZE: C2RustUnnamed_13 = 194;
-pub const _SC_LEVEL2_CACHE_LINESIZE: C2RustUnnamed_13 = 193;
-pub const _SC_LEVEL2_CACHE_ASSOC: C2RustUnnamed_13 = 192;
-pub const _SC_LEVEL2_CACHE_SIZE: C2RustUnnamed_13 = 191;
-pub const _SC_LEVEL1_DCACHE_LINESIZE: C2RustUnnamed_13 = 190;
-pub const _SC_LEVEL1_DCACHE_ASSOC: C2RustUnnamed_13 = 189;
-pub const _SC_LEVEL1_DCACHE_SIZE: C2RustUnnamed_13 = 188;
-pub const _SC_LEVEL1_ICACHE_LINESIZE: C2RustUnnamed_13 = 187;
-pub const _SC_LEVEL1_ICACHE_ASSOC: C2RustUnnamed_13 = 186;
-pub const _SC_LEVEL1_ICACHE_SIZE: C2RustUnnamed_13 = 185;
-pub const _SC_TRACE_LOG: C2RustUnnamed_13 = 184;
-pub const _SC_TRACE_INHERIT: C2RustUnnamed_13 = 183;
-pub const _SC_TRACE_EVENT_FILTER: C2RustUnnamed_13 = 182;
-pub const _SC_TRACE: C2RustUnnamed_13 = 181;
-pub const _SC_HOST_NAME_MAX: C2RustUnnamed_13 = 180;
-pub const _SC_V6_LPBIG_OFFBIG: C2RustUnnamed_13 = 179;
-pub const _SC_V6_LP64_OFF64: C2RustUnnamed_13 = 178;
-pub const _SC_V6_ILP32_OFFBIG: C2RustUnnamed_13 = 177;
-pub const _SC_V6_ILP32_OFF32: C2RustUnnamed_13 = 176;
-pub const _SC_2_PBS_CHECKPOINT: C2RustUnnamed_13 = 175;
-pub const _SC_STREAMS: C2RustUnnamed_13 = 174;
-pub const _SC_SYMLOOP_MAX: C2RustUnnamed_13 = 173;
-pub const _SC_2_PBS_TRACK: C2RustUnnamed_13 = 172;
-pub const _SC_2_PBS_MESSAGE: C2RustUnnamed_13 = 171;
-pub const _SC_2_PBS_LOCATE: C2RustUnnamed_13 = 170;
-pub const _SC_2_PBS_ACCOUNTING: C2RustUnnamed_13 = 169;
-pub const _SC_2_PBS: C2RustUnnamed_13 = 168;
-pub const _SC_USER_GROUPS_R: C2RustUnnamed_13 = 167;
-pub const _SC_USER_GROUPS: C2RustUnnamed_13 = 166;
-pub const _SC_TYPED_MEMORY_OBJECTS: C2RustUnnamed_13 = 165;
-pub const _SC_TIMEOUTS: C2RustUnnamed_13 = 164;
-pub const _SC_SYSTEM_DATABASE_R: C2RustUnnamed_13 = 163;
-pub const _SC_SYSTEM_DATABASE: C2RustUnnamed_13 = 162;
-pub const _SC_THREAD_SPORADIC_SERVER: C2RustUnnamed_13 = 161;
-pub const _SC_SPORADIC_SERVER: C2RustUnnamed_13 = 160;
-pub const _SC_SPAWN: C2RustUnnamed_13 = 159;
-pub const _SC_SIGNALS: C2RustUnnamed_13 = 158;
-pub const _SC_SHELL: C2RustUnnamed_13 = 157;
-pub const _SC_REGEX_VERSION: C2RustUnnamed_13 = 156;
-pub const _SC_REGEXP: C2RustUnnamed_13 = 155;
-pub const _SC_SPIN_LOCKS: C2RustUnnamed_13 = 154;
-pub const _SC_READER_WRITER_LOCKS: C2RustUnnamed_13 = 153;
-pub const _SC_NETWORKING: C2RustUnnamed_13 = 152;
-pub const _SC_SINGLE_PROCESS: C2RustUnnamed_13 = 151;
-pub const _SC_MULTI_PROCESS: C2RustUnnamed_13 = 150;
-pub const _SC_MONOTONIC_CLOCK: C2RustUnnamed_13 = 149;
-pub const _SC_FILE_SYSTEM: C2RustUnnamed_13 = 148;
-pub const _SC_FILE_LOCKING: C2RustUnnamed_13 = 147;
-pub const _SC_FILE_ATTRIBUTES: C2RustUnnamed_13 = 146;
-pub const _SC_PIPE: C2RustUnnamed_13 = 145;
-pub const _SC_FIFO: C2RustUnnamed_13 = 144;
-pub const _SC_FD_MGMT: C2RustUnnamed_13 = 143;
-pub const _SC_DEVICE_SPECIFIC_R: C2RustUnnamed_13 = 142;
-pub const _SC_DEVICE_SPECIFIC: C2RustUnnamed_13 = 141;
-pub const _SC_DEVICE_IO: C2RustUnnamed_13 = 140;
-pub const _SC_THREAD_CPUTIME: C2RustUnnamed_13 = 139;
-pub const _SC_CPUTIME: C2RustUnnamed_13 = 138;
-pub const _SC_CLOCK_SELECTION: C2RustUnnamed_13 = 137;
-pub const _SC_C_LANG_SUPPORT_R: C2RustUnnamed_13 = 136;
-pub const _SC_C_LANG_SUPPORT: C2RustUnnamed_13 = 135;
-pub const _SC_BASE: C2RustUnnamed_13 = 134;
-pub const _SC_BARRIERS: C2RustUnnamed_13 = 133;
-pub const _SC_ADVISORY_INFO: C2RustUnnamed_13 = 132;
-pub const _SC_XOPEN_REALTIME_THREADS: C2RustUnnamed_13 = 131;
-pub const _SC_XOPEN_REALTIME: C2RustUnnamed_13 = 130;
-pub const _SC_XOPEN_LEGACY: C2RustUnnamed_13 = 129;
-pub const _SC_XBS5_LPBIG_OFFBIG: C2RustUnnamed_13 = 128;
-pub const _SC_XBS5_LP64_OFF64: C2RustUnnamed_13 = 127;
-pub const _SC_XBS5_ILP32_OFFBIG: C2RustUnnamed_13 = 126;
-pub const _SC_XBS5_ILP32_OFF32: C2RustUnnamed_13 = 125;
-pub const _SC_NL_TEXTMAX: C2RustUnnamed_13 = 124;
-pub const _SC_NL_SETMAX: C2RustUnnamed_13 = 123;
-pub const _SC_NL_NMAX: C2RustUnnamed_13 = 122;
-pub const _SC_NL_MSGMAX: C2RustUnnamed_13 = 121;
-pub const _SC_NL_LANGMAX: C2RustUnnamed_13 = 120;
-pub const _SC_NL_ARGMAX: C2RustUnnamed_13 = 119;
-pub const _SC_USHRT_MAX: C2RustUnnamed_13 = 118;
-pub const _SC_ULONG_MAX: C2RustUnnamed_13 = 117;
-pub const _SC_UINT_MAX: C2RustUnnamed_13 = 116;
-pub const _SC_UCHAR_MAX: C2RustUnnamed_13 = 115;
-pub const _SC_SHRT_MIN: C2RustUnnamed_13 = 114;
-pub const _SC_SHRT_MAX: C2RustUnnamed_13 = 113;
-pub const _SC_SCHAR_MIN: C2RustUnnamed_13 = 112;
-pub const _SC_SCHAR_MAX: C2RustUnnamed_13 = 111;
-pub const _SC_SSIZE_MAX: C2RustUnnamed_13 = 110;
-pub const _SC_NZERO: C2RustUnnamed_13 = 109;
-pub const _SC_MB_LEN_MAX: C2RustUnnamed_13 = 108;
-pub const _SC_WORD_BIT: C2RustUnnamed_13 = 107;
-pub const _SC_LONG_BIT: C2RustUnnamed_13 = 106;
-pub const _SC_INT_MIN: C2RustUnnamed_13 = 105;
-pub const _SC_INT_MAX: C2RustUnnamed_13 = 104;
-pub const _SC_CHAR_MIN: C2RustUnnamed_13 = 103;
-pub const _SC_CHAR_MAX: C2RustUnnamed_13 = 102;
-pub const _SC_CHAR_BIT: C2RustUnnamed_13 = 101;
-pub const _SC_XOPEN_XPG4: C2RustUnnamed_13 = 100;
-pub const _SC_XOPEN_XPG3: C2RustUnnamed_13 = 99;
-pub const _SC_XOPEN_XPG2: C2RustUnnamed_13 = 98;
-pub const _SC_2_UPE: C2RustUnnamed_13 = 97;
-pub const _SC_2_C_VERSION: C2RustUnnamed_13 = 96;
-pub const _SC_2_CHAR_TERM: C2RustUnnamed_13 = 95;
-pub const _SC_XOPEN_SHM: C2RustUnnamed_13 = 94;
-pub const _SC_XOPEN_ENH_I18N: C2RustUnnamed_13 = 93;
-pub const _SC_XOPEN_CRYPT: C2RustUnnamed_13 = 92;
-pub const _SC_XOPEN_UNIX: C2RustUnnamed_13 = 91;
-pub const _SC_XOPEN_XCU_VERSION: C2RustUnnamed_13 = 90;
-pub const _SC_XOPEN_VERSION: C2RustUnnamed_13 = 89;
-pub const _SC_PASS_MAX: C2RustUnnamed_13 = 88;
-pub const _SC_ATEXIT_MAX: C2RustUnnamed_13 = 87;
-pub const _SC_AVPHYS_PAGES: C2RustUnnamed_13 = 86;
-pub const _SC_PHYS_PAGES: C2RustUnnamed_13 = 85;
-pub const _SC_NPROCESSORS_ONLN: C2RustUnnamed_13 = 84;
-pub const _SC_NPROCESSORS_CONF: C2RustUnnamed_13 = 83;
-pub const _SC_THREAD_PROCESS_SHARED: C2RustUnnamed_13 = 82;
-pub const _SC_THREAD_PRIO_PROTECT: C2RustUnnamed_13 = 81;
-pub const _SC_THREAD_PRIO_INHERIT: C2RustUnnamed_13 = 80;
-pub const _SC_THREAD_PRIORITY_SCHEDULING: C2RustUnnamed_13 = 79;
-pub const _SC_THREAD_ATTR_STACKSIZE: C2RustUnnamed_13 = 78;
-pub const _SC_THREAD_ATTR_STACKADDR: C2RustUnnamed_13 = 77;
-pub const _SC_THREAD_THREADS_MAX: C2RustUnnamed_13 = 76;
-pub const _SC_THREAD_STACK_MIN: C2RustUnnamed_13 = 75;
-pub const _SC_THREAD_KEYS_MAX: C2RustUnnamed_13 = 74;
-pub const _SC_THREAD_DESTRUCTOR_ITERATIONS: C2RustUnnamed_13 = 73;
-pub const _SC_TTY_NAME_MAX: C2RustUnnamed_13 = 72;
-pub const _SC_LOGIN_NAME_MAX: C2RustUnnamed_13 = 71;
-pub const _SC_GETPW_R_SIZE_MAX: C2RustUnnamed_13 = 70;
-pub const _SC_GETGR_R_SIZE_MAX: C2RustUnnamed_13 = 69;
-pub const _SC_THREAD_SAFE_FUNCTIONS: C2RustUnnamed_13 = 68;
-pub const _SC_THREADS: C2RustUnnamed_13 = 67;
-pub const _SC_T_IOV_MAX: C2RustUnnamed_13 = 66;
-pub const _SC_PII_OSI_M: C2RustUnnamed_13 = 65;
-pub const _SC_PII_OSI_CLTS: C2RustUnnamed_13 = 64;
-pub const _SC_PII_OSI_COTS: C2RustUnnamed_13 = 63;
-pub const _SC_PII_INTERNET_DGRAM: C2RustUnnamed_13 = 62;
-pub const _SC_PII_INTERNET_STREAM: C2RustUnnamed_13 = 61;
-pub const _SC_IOV_MAX: C2RustUnnamed_13 = 60;
-pub const _SC_UIO_MAXIOV: C2RustUnnamed_13 = 60;
-pub const _SC_SELECT: C2RustUnnamed_13 = 59;
-pub const _SC_POLL: C2RustUnnamed_13 = 58;
-pub const _SC_PII_OSI: C2RustUnnamed_13 = 57;
-pub const _SC_PII_INTERNET: C2RustUnnamed_13 = 56;
-pub const _SC_PII_SOCKET: C2RustUnnamed_13 = 55;
-pub const _SC_PII_XTI: C2RustUnnamed_13 = 54;
-pub const _SC_PII: C2RustUnnamed_13 = 53;
-pub const _SC_2_LOCALEDEF: C2RustUnnamed_13 = 52;
-pub const _SC_2_SW_DEV: C2RustUnnamed_13 = 51;
-pub const _SC_2_FORT_RUN: C2RustUnnamed_13 = 50;
-pub const _SC_2_FORT_DEV: C2RustUnnamed_13 = 49;
-pub const _SC_2_C_DEV: C2RustUnnamed_13 = 48;
-pub const _SC_2_C_BIND: C2RustUnnamed_13 = 47;
-pub const _SC_2_VERSION: C2RustUnnamed_13 = 46;
-pub const _SC_CHARCLASS_NAME_MAX: C2RustUnnamed_13 = 45;
-pub const _SC_RE_DUP_MAX: C2RustUnnamed_13 = 44;
-pub const _SC_LINE_MAX: C2RustUnnamed_13 = 43;
-pub const _SC_EXPR_NEST_MAX: C2RustUnnamed_13 = 42;
-pub const _SC_EQUIV_CLASS_MAX: C2RustUnnamed_13 = 41;
-pub const _SC_COLL_WEIGHTS_MAX: C2RustUnnamed_13 = 40;
-pub const _SC_BC_STRING_MAX: C2RustUnnamed_13 = 39;
-pub const _SC_BC_SCALE_MAX: C2RustUnnamed_13 = 38;
-pub const _SC_BC_DIM_MAX: C2RustUnnamed_13 = 37;
-pub const _SC_BC_BASE_MAX: C2RustUnnamed_13 = 36;
-pub const _SC_TIMER_MAX: C2RustUnnamed_13 = 35;
-pub const _SC_SIGQUEUE_MAX: C2RustUnnamed_13 = 34;
-pub const _SC_SEM_VALUE_MAX: C2RustUnnamed_13 = 33;
-pub const _SC_SEM_NSEMS_MAX: C2RustUnnamed_13 = 32;
-pub const _SC_RTSIG_MAX: C2RustUnnamed_13 = 31;
-pub const _SC_PAGESIZE: C2RustUnnamed_13 = 30;
-pub const _SC_VERSION: C2RustUnnamed_13 = 29;
-pub const _SC_MQ_PRIO_MAX: C2RustUnnamed_13 = 28;
-pub const _SC_MQ_OPEN_MAX: C2RustUnnamed_13 = 27;
-pub const _SC_DELAYTIMER_MAX: C2RustUnnamed_13 = 26;
-pub const _SC_AIO_PRIO_DELTA_MAX: C2RustUnnamed_13 = 25;
-pub const _SC_AIO_MAX: C2RustUnnamed_13 = 24;
-pub const _SC_AIO_LISTIO_MAX: C2RustUnnamed_13 = 23;
-pub const _SC_SHARED_MEMORY_OBJECTS: C2RustUnnamed_13 = 22;
-pub const _SC_SEMAPHORES: C2RustUnnamed_13 = 21;
-pub const _SC_MESSAGE_PASSING: C2RustUnnamed_13 = 20;
-pub const _SC_MEMORY_PROTECTION: C2RustUnnamed_13 = 19;
-pub const _SC_MEMLOCK_RANGE: C2RustUnnamed_13 = 18;
-pub const _SC_MEMLOCK: C2RustUnnamed_13 = 17;
-pub const _SC_MAPPED_FILES: C2RustUnnamed_13 = 16;
-pub const _SC_FSYNC: C2RustUnnamed_13 = 15;
-pub const _SC_SYNCHRONIZED_IO: C2RustUnnamed_13 = 14;
-pub const _SC_PRIORITIZED_IO: C2RustUnnamed_13 = 13;
-pub const _SC_ASYNCHRONOUS_IO: C2RustUnnamed_13 = 12;
-pub const _SC_TIMERS: C2RustUnnamed_13 = 11;
-pub const _SC_PRIORITY_SCHEDULING: C2RustUnnamed_13 = 10;
-pub const _SC_REALTIME_SIGNALS: C2RustUnnamed_13 = 9;
-pub const _SC_SAVED_IDS: C2RustUnnamed_13 = 8;
-pub const _SC_JOB_CONTROL: C2RustUnnamed_13 = 7;
-pub const _SC_TZNAME_MAX: C2RustUnnamed_13 = 6;
-pub const _SC_STREAM_MAX: C2RustUnnamed_13 = 5;
-pub const _SC_OPEN_MAX: C2RustUnnamed_13 = 4;
-pub const _SC_NGROUPS_MAX: C2RustUnnamed_13 = 3;
-pub const _SC_CLK_TCK: C2RustUnnamed_13 = 2;
-pub const _SC_CHILD_MAX: C2RustUnnamed_13 = 1;
-pub const _SC_ARG_MAX: C2RustUnnamed_13 = 0;
+// pub type __sighandler_t = Option<unsafe extern "C" fn(_: i32) -> ()>;
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct Sigaction {
+//     pub __sigaction_handler: C2rustUnnamed12,
+//     pub sa_mask: __sigset_t,
+//     pub sa_flags: i32,
+//     pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
+// }
+
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub union C2rustUnnamed12 {
+//     pub sa_handler: __sighandler_t,
+//     pub sa_sigaction: Option<unsafe extern "C" fn(_: i32,
+//                                                   _: *mut SiginfoT,
+//                                                   _: *mut libc::c_void)
+//                                                   -> ()>,
+// }
+
+// pub type C2RustUnnamed_13 = u32;
+pub const _SC_THREAD_ROBUST_PRIO_PROTECT: u32 = 248;
+pub const _SC_THREAD_ROBUST_PRIO_INHERIT: u32 = 247;
+pub const _SC_XOPEN_STREAMS: u32 = 246;
+pub const _SC_TRACE_USER_EVENT_MAX: u32 = 245;
+pub const _SC_TRACE_SYS_MAX: u32 = 244;
+pub const _SC_TRACE_NAME_MAX: u32 = 243;
+pub const _SC_TRACE_EVENT_NAME_MAX: u32 = 242;
+pub const _SC_SS_REPL_MAX: u32 = 241;
+pub const _SC_V7_LPBIG_OFFBIG: u32 = 240;
+pub const _SC_V7_LP64_OFF64: u32 = 239;
+pub const _SC_V7_ILP32_OFFBIG: u32 = 238;
+pub const _SC_V7_ILP32_OFF32: u32 = 237;
+pub const _SC_RAW_SOCKETS: u32 = 236;
+pub const _SC_IPV6: u32 = 235;
+pub const _SC_LEVEL4_CACHE_LINESIZE: u32 = 199;
+pub const _SC_LEVEL4_CACHE_ASSOC: u32 = 198;
+pub const _SC_LEVEL4_CACHE_SIZE: u32 = 197;
+pub const _SC_LEVEL3_CACHE_LINESIZE: u32 = 196;
+pub const _SC_LEVEL3_CACHE_ASSOC: u32 = 195;
+pub const _SC_LEVEL3_CACHE_SIZE: u32 = 194;
+pub const _SC_LEVEL2_CACHE_LINESIZE: u32 = 193;
+pub const _SC_LEVEL2_CACHE_ASSOC: u32 = 192;
+pub const _SC_LEVEL2_CACHE_SIZE: u32 = 191;
+pub const _SC_LEVEL1_DCACHE_LINESIZE: u32 = 190;
+pub const _SC_LEVEL1_DCACHE_ASSOC: u32 = 189;
+pub const _SC_LEVEL1_DCACHE_SIZE: u32 = 188;
+pub const _SC_LEVEL1_ICACHE_LINESIZE: u32 = 187;
+pub const _SC_LEVEL1_ICACHE_ASSOC: u32 = 186;
+pub const _SC_LEVEL1_ICACHE_SIZE: u32 = 185;
+pub const _SC_TRACE_LOG: u32 = 184;
+pub const _SC_TRACE_INHERIT: u32 = 183;
+pub const _SC_TRACE_EVENT_FILTER: u32 = 182;
+pub const _SC_TRACE: u32 = 181;
+pub const _SC_HOST_NAME_MAX: u32 = 180;
+pub const _SC_V6_LPBIG_OFFBIG: u32 = 179;
+pub const _SC_V6_LP64_OFF64: u32 = 178;
+pub const _SC_V6_ILP32_OFFBIG: u32 = 177;
+pub const _SC_V6_ILP32_OFF32: u32 = 176;
+pub const _SC_2_PBS_CHECKPOINT: u32 = 175;
+pub const _SC_STREAMS: u32 = 174;
+pub const _SC_SYMLOOP_MAX: u32 = 173;
+pub const _SC_2_PBS_TRACK: u32 = 172;
+pub const _SC_2_PBS_MESSAGE: u32 = 171;
+pub const _SC_2_PBS_LOCATE: u32 = 170;
+pub const _SC_2_PBS_ACCOUNTING: u32 = 169;
+pub const _SC_2_PBS: u32 = 168;
+pub const _SC_USER_GROUPS_R: u32 = 167;
+pub const _SC_USER_GROUPS: u32 = 166;
+pub const _SC_TYPED_MEMORY_OBJECTS: u32 = 165;
+pub const _SC_TIMEOUTS: u32 = 164;
+pub const _SC_SYSTEM_DATABASE_R: u32 = 163;
+pub const _SC_SYSTEM_DATABASE: u32 = 162;
+pub const _SC_THREAD_SPORADIC_SERVER: u32 = 161;
+pub const _SC_SPORADIC_SERVER: u32 = 160;
+pub const _SC_SPAWN: u32 = 159;
+pub const _SC_SIGNALS: u32 = 158;
+pub const _SC_SHELL: u32 = 157;
+pub const _SC_REGEX_VERSION: u32 = 156;
+pub const _SC_REGEXP: u32 = 155;
+pub const _SC_SPIN_LOCKS: u32 = 154;
+pub const _SC_READER_WRITER_LOCKS: u32 = 153;
+pub const _SC_NETWORKING: u32 = 152;
+pub const _SC_SINGLE_PROCESS: u32 = 151;
+pub const _SC_MULTI_PROCESS: u32 = 150;
+pub const _SC_MONOTONIC_CLOCK: u32 = 149;
+pub const _SC_FILE_SYSTEM: u32 = 148;
+pub const _SC_FILE_LOCKING: u32 = 147;
+pub const _SC_FILE_ATTRIBUTES: u32 = 146;
+pub const _SC_PIPE: u32 = 145;
+pub const _SC_FIFO: u32 = 144;
+pub const _SC_FD_MGMT: u32 = 143;
+pub const _SC_DEVICE_SPECIFIC_R: u32 = 142;
+pub const _SC_DEVICE_SPECIFIC: u32 = 141;
+pub const _SC_DEVICE_IO: u32 = 140;
+pub const _SC_THREAD_CPUTIME: u32 = 139;
+pub const _SC_CPUTIME: u32 = 138;
+pub const _SC_CLOCK_SELECTION: u32 = 137;
+pub const _SC_C_LANG_SUPPORT_R: u32 = 136;
+pub const _SC_C_LANG_SUPPORT: u32 = 135;
+pub const _SC_BASE: u32 = 134;
+pub const _SC_BARRIERS: u32 = 133;
+pub const _SC_ADVISORY_INFO: u32 = 132;
+pub const _SC_XOPEN_REALTIME_THREADS: u32 = 131;
+pub const _SC_XOPEN_REALTIME: u32 = 130;
+pub const _SC_XOPEN_LEGACY: u32 = 129;
+pub const _SC_XBS5_LPBIG_OFFBIG: u32 = 128;
+pub const _SC_XBS5_LP64_OFF64: u32 = 127;
+pub const _SC_XBS5_ILP32_OFFBIG: u32 = 126;
+pub const _SC_XBS5_ILP32_OFF32: u32 = 125;
+pub const _SC_NL_TEXTMAX: u32 = 124;
+pub const _SC_NL_SETMAX: u32 = 123;
+pub const _SC_NL_NMAX: u32 = 122;
+pub const _SC_NL_MSGMAX: u32 = 121;
+pub const _SC_NL_LANGMAX: u32 = 120;
+pub const _SC_NL_ARGMAX: u32 = 119;
+pub const _SC_USHRT_MAX: u32 = 118;
+pub const _SC_ULONG_MAX: u32 = 117;
+pub const _SC_UINT_MAX: u32 = 116;
+pub const _SC_UCHAR_MAX: u32 = 115;
+pub const _SC_SHRT_MIN: u32 = 114;
+pub const _SC_SHRT_MAX: u32 = 113;
+pub const _SC_SCHAR_MIN: u32 = 112;
+pub const _SC_SCHAR_MAX: u32 = 111;
+pub const _SC_SSIZE_MAX: u32 = 110;
+pub const _SC_NZERO: u32 = 109;
+pub const _SC_MB_LEN_MAX: u32 = 108;
+pub const _SC_WORD_BIT: u32 = 107;
+pub const _SC_LONG_BIT: u32 = 106;
+pub const _SC_INT_MIN: u32 = 105;
+pub const _SC_INT_MAX: u32 = 104;
+pub const _SC_CHAR_MIN: u32 = 103;
+pub const _SC_CHAR_MAX: u32 = 102;
+pub const _SC_CHAR_BIT: u32 = 101;
+pub const _SC_XOPEN_XPG4: u32 = 100;
+pub const _SC_XOPEN_XPG3: u32 = 99;
+pub const _SC_XOPEN_XPG2: u32 = 98;
+pub const _SC_2_UPE: u32 = 97;
+pub const _SC_2_C_VERSION: u32 = 96;
+pub const _SC_2_CHAR_TERM: u32 = 95;
+pub const _SC_XOPEN_SHM: u32 = 94;
+pub const _SC_XOPEN_ENH_I18N: u32 = 93;
+pub const _SC_XOPEN_CRYPT: u32 = 92;
+pub const _SC_XOPEN_UNIX: u32 = 91;
+pub const _SC_XOPEN_XCU_VERSION: u32 = 90;
+pub const _SC_XOPEN_VERSION: u32 = 89;
+pub const _SC_PASS_MAX: u32 = 88;
+pub const _SC_ATEXIT_MAX: u32 = 87;
+pub const _SC_AVPHYS_PAGES: u32 = 86;
+pub const _SC_PHYS_PAGES: u32 = 85;
+pub const _SC_NPROCESSORS_ONLN: u32 = 84;
+pub const _SC_NPROCESSORS_CONF: u32 = 83;
+pub const _SC_THREAD_PROCESS_SHARED: u32 = 82;
+pub const _SC_THREAD_PRIO_PROTECT: u32 = 81;
+pub const _SC_THREAD_PRIO_INHERIT: u32 = 80;
+pub const _SC_THREAD_PRIORITY_SCHEDULING: u32 = 79;
+pub const _SC_THREAD_ATTR_STACKSIZE: u32 = 78;
+pub const _SC_THREAD_ATTR_STACKADDR: u32 = 77;
+pub const _SC_THREAD_THREADS_MAX: u32 = 76;
+pub const _SC_THREAD_STACK_MIN: u32 = 75;
+pub const _SC_THREAD_KEYS_MAX: u32 = 74;
+pub const _SC_THREAD_DESTRUCTOR_ITERATIONS: u32 = 73;
+pub const _SC_TTY_NAME_MAX: u32 = 72;
+pub const _SC_LOGIN_NAME_MAX: u32 = 71;
+pub const _SC_GETPW_R_SIZE_MAX: u32 = 70;
+pub const _SC_GETGR_R_SIZE_MAX: u32 = 69;
+pub const _SC_THREAD_SAFE_FUNCTIONS: u32 = 68;
+pub const _SC_THREADS: u32 = 67;
+pub const _SC_T_IOV_MAX: u32 = 66;
+pub const _SC_PII_OSI_M: u32 = 65;
+pub const _SC_PII_OSI_CLTS: u32 = 64;
+pub const _SC_PII_OSI_COTS: u32 = 63;
+pub const _SC_PII_INTERNET_DGRAM: u32 = 62;
+pub const _SC_PII_INTERNET_STREAM: u32 = 61;
+pub const _SC_IOV_MAX: u32 = 60;
+pub const _SC_UIO_MAXIOV: u32 = 60;
+pub const _SC_SELECT: u32 = 59;
+pub const _SC_POLL: u32 = 58;
+pub const _SC_PII_OSI: u32 = 57;
+pub const _SC_PII_INTERNET: u32 = 56;
+pub const _SC_PII_SOCKET: u32 = 55;
+pub const _SC_PII_XTI: u32 = 54;
+pub const _SC_PII: u32 = 53;
+pub const _SC_2_LOCALEDEF: u32 = 52;
+pub const _SC_2_SW_DEV: u32 = 51;
+pub const _SC_2_FORT_RUN: u32 = 50;
+pub const _SC_2_FORT_DEV: u32 = 49;
+pub const _SC_2_C_DEV: u32 = 48;
+pub const _SC_2_C_BIND: u32 = 47;
+pub const _SC_2_VERSION: u32 = 46;
+pub const _SC_CHARCLASS_NAME_MAX: u32 = 45;
+pub const _SC_RE_DUP_MAX: u32 = 44;
+pub const _SC_LINE_MAX: u32 = 43;
+pub const _SC_EXPR_NEST_MAX: u32 = 42;
+pub const _SC_EQUIV_CLASS_MAX: u32 = 41;
+pub const _SC_COLL_WEIGHTS_MAX: u32 = 40;
+pub const _SC_BC_STRING_MAX: u32 = 39;
+pub const _SC_BC_SCALE_MAX: u32 = 38;
+pub const _SC_BC_DIM_MAX: u32 = 37;
+pub const _SC_BC_BASE_MAX: u32 = 36;
+pub const _SC_TIMER_MAX: u32 = 35;
+pub const _SC_SIGQUEUE_MAX: u32 = 34;
+pub const _SC_SEM_VALUE_MAX: u32 = 33;
+pub const _SC_SEM_NSEMS_MAX: u32 = 32;
+pub const _SC_RTSIG_MAX: u32 = 31;
+pub const _SC_PAGESIZE: u32 = 30;
+pub const _SC_VERSION: u32 = 29;
+pub const _SC_MQ_PRIO_MAX: u32 = 28;
+pub const _SC_MQ_OPEN_MAX: u32 = 27;
+pub const _SC_DELAYTIMER_MAX: u32 = 26;
+pub const _SC_AIO_PRIO_DELTA_MAX: u32 = 25;
+pub const _SC_AIO_MAX: u32 = 24;
+pub const _SC_AIO_LISTIO_MAX: u32 = 23;
+pub const _SC_SHARED_MEMORY_OBJECTS: u32 = 22;
+pub const _SC_SEMAPHORES: u32 = 21;
+pub const _SC_MESSAGE_PASSING: u32 = 20;
+pub const _SC_MEMORY_PROTECTION: u32 = 19;
+pub const _SC_MEMLOCK_RANGE: u32 = 18;
+pub const _SC_MEMLOCK: u32 = 17;
+pub const _SC_MAPPED_FILES: u32 = 16;
+pub const _SC_FSYNC: u32 = 15;
+pub const _SC_SYNCHRONIZED_IO: u32 = 14;
+pub const _SC_PRIORITIZED_IO: u32 = 13;
+pub const _SC_ASYNCHRONOUS_IO: u32 = 12;
+pub const _SC_TIMERS: u32 = 11;
+pub const _SC_PRIORITY_SCHEDULING: u32 = 10;
+pub const _SC_REALTIME_SIGNALS: u32 = 9;
+pub const _SC_SAVED_IDS: u32 = 8;
+pub const _SC_JOB_CONTROL: u32 = 7;
+pub const _SC_TZNAME_MAX: u32 = 6;
+pub const _SC_STREAM_MAX: u32 = 5;
+pub const _SC_OPEN_MAX: u32 = 4;
+pub const _SC_NGROUPS_MAX: u32 = 3;
+pub const _SC_CLK_TCK: u32 = 2;
+pub const _SC_CHILD_MAX: u32 = 1;
+pub const _SC_ARG_MAX: u32 = 0;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Passwd {
@@ -2111,6 +2114,7 @@ pub struct Passwd {
     pub pw_dir: String,
     pub pw_shell: String,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Group {
@@ -2147,33 +2151,33 @@ pub struct IcmpHdr {
     pub icmp_type: u8,
     pub icmp_code: u8,
     pub icmp_cksum: u16,
-    pub icmp_hun: C2RustUnnamed_17,
-    pub icmp_dun: C2RustUnnamed_14,
+    pub icmp_hun: C2rustUnnamed17,
+    pub icmp_dun: C2rustUnnamed14,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_14 {
-    pub id_ts: C2RustUnnamed_16,
-    pub id_ip: C2RustUnnamed_15,
+pub union C2rustUnnamed14 {
+    pub id_ts: C2rustUnnamed16,
+    pub id_ip: C2rustUnnamed15,
     pub id_radv: IcmpRaAddr,
     pub id_mask: u32,
     pub id_data: [u8; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_15 {
+pub struct C2rustUnnamed15 {
     pub idi_ip: IpHdr,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_16 {
+pub struct C2rustUnnamed16 {
     pub its_otime: u32,
     pub its_rtime: u32,
     pub its_ttime: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_17 {
+pub union C2rustUnnamed17 {
     pub ih_pptr: u8,
     pub ih_gwaddr: InAddr,
     pub ih_idseq: IhIdSeq,
@@ -2202,7 +2206,7 @@ pub struct IhIdSeq {
 }
 
 
-pub type libc_lock_t = i32;
+// pub type libc_lock_t = i32;
 
 // struct __dirstream
 //   {
@@ -2221,28 +2225,31 @@ pub type libc_lock_t = i32;
 //        with what malloc uses.  */
 //     char data[0] __attribute__ ((aligned (__alignof__ (long double))));
 //   };
-pub struct __dirstream {
-    pub fd: i32,
-    pub lock: libc_lock_t,
-    pub allocation: libc::size_t,
-    pub size: libc::size_t,
-    pub offset: libc::size_t,
-    pub filepos: libc::off_t,
-    pub errcode: i32,
-}
+// pub struct __dirstream {
+//     pub fd: i32,
+//     pub lock: libc_lock_t,
+//     pub allocation: libc::size_t,
+//     pub size: libc::size_t,
+//     pub offset: libc::size_t,
+//     pub filepos: libc::off_t,
+//     pub errcode: i32,
+// }
 
 
-pub type DIR = __dirstream;
+// pub type DIR = __dirstream;
+
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct __user_cap_header_struct {
+pub struct UserCapHeader {
     pub version: __u32,
     pub pid: i32,
 }
-pub type cap_user_header_t = *mut __user_cap_header_struct;
+
+pub type CapUserHeader = *mut UserCapHeader;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct __user_cap_data_struct {
+pub struct UserCapData {
     pub effective: __u32,
     pub permitted: __u32,
     pub inheritable: __u32,
@@ -2251,7 +2258,7 @@ pub struct __user_cap_data_struct {
 // pub type cap_user_data_t = *mut __user_cap_data_struct;
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
-pub struct event_desc {
+pub struct EventDesc {
     pub event: i32,
     pub data: i32,
     pub msg_sz: i32,
@@ -2259,7 +2266,7 @@ pub struct event_desc {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_18 {
+pub struct C2rustUnnamed18 {
     pub keytag: u16,
     pub algo: u16,
     pub digest: u16,
@@ -2267,7 +2274,7 @@ pub struct C2RustUnnamed_18 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_19 {
+pub struct C2rustUnnamed19 {
     pub target: BlockData,
     pub targetlen: u16,
     pub srvport: u16,
@@ -2277,7 +2284,7 @@ pub struct C2RustUnnamed_19 {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_20 {
+pub struct C2rustUnnamed20 {
     pub keydata: BlockData,
     pub keylen: u16,
     pub keytag: u16,
@@ -2286,7 +2293,7 @@ pub struct C2RustUnnamed_20 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_21 {
+pub struct C2rustUnnamed21 {
     pub keydata: BlockData,
     pub keylen: u16,
     pub flags: u16,
@@ -2295,27 +2302,27 @@ pub struct C2RustUnnamed_21 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_22 {
-    pub target: C2RustUnnamed_23,
+pub struct C2rustUnnamed22 {
+    pub target: C2rustUnnamed23,
     pub uid: u32,
     pub is_name_ptr: i32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_23 {
+pub union C2rustUnnamed23 {
     pub cache: Crec,
     pub name: String,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_24 {
+pub union C2rustUnnamed24 {
     pub sname: [i8; 50],
     pub bname: BigName,
     pub namep: String,
 }
 
-pub type wint_t = u32;
+// pub type wint_t = u32;
 
 
 // pub type __gconv_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut*mut u8, *mut u8, *mut*mut u8, libc::size_t, i32, i32) -> i32;
@@ -2344,16 +2351,16 @@ pub type wint_t = u32;
 //   __gconv_init_fct init_fct;
 //   __gconv_end_fct end_fct;
 // };
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct __gconv_loaded_object {
-    pub name: String,
-    pub counter: i32,
-    pub handle: *mut libc::c_void,
-    pub fct: __gconv_fct,
-    pub init_fct: __gconv_init_fct,
-    pub end_fct: __gconv_end_fct,
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_loaded_object {
+//     pub name: String,
+//     pub counter: i32,
+//     pub handle: *mut libc::c_void,
+//     pub fct: __gconv_fct,
+//     pub init_fct: __gconv_init_fct,
+//     pub end_fct: __gconv_end_fct,
+// }
 
 
 // struct __gconv_step
@@ -2374,24 +2381,24 @@ pub struct __gconv_loaded_object {
 //   int __stateful;
 //   void *__data;
 // };
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct __gconv_step {
-    pub __shlib_handle: *mut __gconv_loaded_object,
-    pub __modname: String,
-    pub __counter: i32,
-    pub __from_name: String,
-    pub __to_name: String,
-    pub __fct: __gconv_fct,
-    pub __btowc_fct: __gconv_btowc_fct,
-    pub __init_fct: __gconv_init_fct,
-    pub __end_fct: __gconv_end_fct,
-    pub __min_needed_from: i32,
-    pub __max_needed_from: i32,
-    pub __min_needed_to: i32,
-    pub __max_needed_to: i32,
-    pub __data: *mut libc::c_void,
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_step {
+//     pub __shlib_handle: *mut __gconv_loaded_object,
+//     pub __modname: String,
+//     pub __counter: i32,
+//     pub __from_name: String,
+//     pub __to_name: String,
+//     pub __fct: __gconv_fct,
+//     pub __btowc_fct: __gconv_btowc_fct,
+//     pub __init_fct: __gconv_init_fct,
+//     pub __end_fct: __gconv_end_fct,
+//     pub __min_needed_from: i32,
+//     pub __max_needed_from: i32,
+//     pub __min_needed_to: i32,
+//     pub __max_needed_to: i32,
+//     pub __data: *mut libc::c_void,
+// }
 
 
 // struct __gconv_trans_data
@@ -2402,15 +2409,15 @@ pub struct __gconv_step {
 //   void *__data;
 //   struct __gconv_trans_data *__next;
 // };
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct __gconv_trans_data {
-    pub __trans_fct: __gconv_trans_fct,
-    pub __trans_context_fct: __gconv_trans_context_fct,
-    pub __trans_end_fct: __gconv_trans_end_fct,
-    pub __data: *mut libc::c_void,
-    pub __next: *mut __gconv_trans_data,
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_trans_data {
+//     pub __trans_fct: __gconv_trans_fct,
+//     pub __trans_context_fct: __gconv_trans_context_fct,
+//     pub __trans_end_fct: __gconv_trans_end_fct,
+//     pub __data: *mut libc::c_void,
+//     pub __next: *mut __gconv_trans_data,
+// }
 
 
 // struct __gconv_step_data
@@ -2424,18 +2431,18 @@ pub struct __gconv_trans_data {
 //   __mbstate_t __state;
 //   struct __gconv_trans_data *__trans;
 // };
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct __gconv_step_data {
-    pub __outbuf: *mut u8,
-    pub __outbufend: *mut u8,
-    pub __flags: i32,
-    pub __invocation_counter: i32,
-    pub __internal_use: i32,
-    pub __statep: *mut __mbstate_t,
-    pub __state: __mbstate_t,
-    pub __trans: *mut __gconv_trans_data,
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_step_data {
+//     pub __outbuf: *mut u8,
+//     pub __outbufend: *mut u8,
+//     pub __flags: i32,
+//     pub __invocation_counter: i32,
+//     pub __internal_use: i32,
+//     pub __statep: *mut __mbstate_t,
+//     pub __state: __mbstate_t,
+//     pub __trans: *mut __gconv_trans_data,
+// }
 
 
 
@@ -2445,13 +2452,13 @@ pub struct __gconv_step_data {
 //   struct __gconv_step *__steps;
 //   __extension__ struct __gconv_step_data __data [];
 // } *__gconv_t;
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct __gconv_info {
-    pub __nsteps: libc::size_t,
-    pub __steps: *mut __gconv_step,
-    pub __data: *mut __gconv_step_data
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_info {
+//     pub __nsteps: libc::size_t,
+//     pub __steps: *mut __gconv_step,
+//     pub __data: *mut __gconv_step_data
+// }
 
 // typedef union
 // {
@@ -2464,17 +2471,17 @@ pub struct __gconv_info {
 // } _IO_iconv_t;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Unnamed_28 {
+pub struct Unnamed28 {
     pub __cd: __gconv_info,
     pub __data: __gconv_step_data
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union _IO_iconv_t {
-    pub __cd: __gconv_info,
-    pub __combined: Unnamed_28,
-}
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub union _IO_iconv_t {
+//     pub __cd: __gconv_info,
+//     pub __combined: Unnamed28,
+// }
 
 
 #[derive(Copy, Clone)]
@@ -2515,106 +2522,104 @@ pub struct SlaacAddress {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_25 {
+pub union C2rustUnnamed25 {
     pub encap: i32,
     pub wildcard_mask: u32,
     pub vendor_class: Vec<u8>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_26 {
+pub struct C2rustUnnamed26 {
     pub ip: IpHdr,
     pub icmp: IcmpHdr,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_27 {
+pub struct C2rustUnnamed27 {
     pub ip: IpHdr,
     pub icmp: IcmpHdr,
 }
 
-#[derive(Copy,Clone)]
-#[repr(C)]
-pub struct _IO_marker {
-  pub next: *mut _IO_marker,
-  pub sbuf: *mut FILE,
-  /* If _pos >= 0
- it points to _buf->Gbase()+_pos. FIXME comment */
-  /* if _pos < 0, it points to _buf->eBptr()+_pos. FIXME comment */
-  pub _pos: i32
-}
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct _IO_marker {
+//   pub next: *mut _IO_marker,
+//   pub sbuf: *mut FILE,
+//   /* If _pos >= 0
+//  it points to _buf->Gbase()+_pos. FIXME comment */
+//   /* if _pos < 0, it points to _buf->eBptr()+_pos. FIXME comment */
+//   pub _pos: i32
+// }
 
 
-pub enum __codecvt_result
-{
-  __codecvt_ok,
-  __codecvt_partial,
-  __codecvt_error,
-  __codecvt_noconv
-}
+// pub enum __codecvt_result
+// {
+//   __codecvt_ok,
+//   __codecvt_partial,
+//   __codecvt_error,
+//   __codecvt_noconv
+// }
 
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// struct _IO_codecvt
+// {
+// //   void (*__codecvt_destr) (struct _IO_codecvt *);
+//   pub __codecvt_destr: fn(&mut _IO_codecvt),
+// //   enum __codecvt_result (*__codecvt_do_out) (struct _IO_codecvt *,
+// //                                              __mbstate_t *,
+// //                                              const wchar_t *,
+// //                                              const wchar_t *,
+// //                                              const wchar_t **, char *,
+// //                                              char *, char **);
+//     pub __codecvt_do_out: fn(*mut _IO_codecvt, *mut __mbstate_t, *mut libc::wchar_t, *mut libc::wchar_t, *mut*mut libc::wchar_t, String, String, *mut String) -> __codecvt_result,
+// //   enum __codecvt_result (*__codecvt_do_unshift) (struct _IO_codecvt *,
+// //                                                  __mbstate_t *, char *,
+// //                                                  char *, char **);
+//     pub __codecvt_do_unshift: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String) -> __codecvt_result,
+// //   enum __codecvt_result (*__codecvt_do_in) (struct _IO_codecvt *,
+// //                                             __mbstate_t *,
+// //                                             const char *, const char *,
+// //                                             const char **, wchar_t *,
+// //                                             wchar_t *, wchar_t **);
+//     pub __codecvt_do_in: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String, *mut libc::wchar_t, *mut libc::wchar_t, *mut *mut libc::wchar_t) -> __codecvt_result,
+// //   int (*__codecvt_do_encoding) (struct _IO_codecvt *);
+//     pub __codecvt_do_encoding: fn(*mut _IO_codecvt) -> i32,
+// //   int (*__codecvt_do_always_noconv) (struct _IO_codecvt *);
+//     pub __codecvt_do_always_noconv: fn(*mut _IO_codecvt) -> i32,
+// //   int (*__codecvt_do_length) (struct _IO_codecvt *, __mbstate_t *,
+// //                               const char *, const char *, size_t);
+//     pub __codecvt_do_length: fn(*mut _IO_codecvt, *mut __mbstate_t, String) -> i32,
+// //   int (*__codecvt_do_max_length) (struct _IO_codecvt *);
+//     pub __codecvt_do_max_length: fn(*mut _IO_codecvt) -> i32,
+// //   _IO_iconv_t __cd_in;
+//     pub __cd_in: _IO_iconv_t,
+// //   _IO_iconv_t __cd_out;
+//     pub __cd_out: _IO_iconv_t,
+// }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-struct _IO_codecvt
-{
-//   void (*__codecvt_destr) (struct _IO_codecvt *);
-  pub __codecvt_destr: fn(&mut _IO_codecvt),
-//   enum __codecvt_result (*__codecvt_do_out) (struct _IO_codecvt *,
-//                                              __mbstate_t *,
-//                                              const wchar_t *,
-//                                              const wchar_t *,
-//                                              const wchar_t **, char *,
-//                                              char *, char **);
-    pub __codecvt_do_out: fn(*mut _IO_codecvt, *mut __mbstate_t, *mut libc::wchar_t, *mut libc::wchar_t, *mut*mut libc::wchar_t, String, String, *mut String) -> __codecvt_result,
-//   enum __codecvt_result (*__codecvt_do_unshift) (struct _IO_codecvt *,
-//                                                  __mbstate_t *, char *,
-//                                                  char *, char **);
-    pub __codecvt_do_unshift: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String) -> __codecvt_result,
-//   enum __codecvt_result (*__codecvt_do_in) (struct _IO_codecvt *,
-//                                             __mbstate_t *,
-//                                             const char *, const char *,
-//                                             const char **, wchar_t *,
-//                                             wchar_t *, wchar_t **);
-    pub __codecvt_do_in: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String, *mut libc::wchar_t, *mut libc::wchar_t, *mut *mut libc::wchar_t) -> __codecvt_result,
-//   int (*__codecvt_do_encoding) (struct _IO_codecvt *);
-    pub __codecvt_do_encoding: fn(*mut _IO_codecvt) -> i32,
-//   int (*__codecvt_do_always_noconv) (struct _IO_codecvt *);
-    pub __codecvt_do_always_noconv: fn(*mut _IO_codecvt) -> i32,
-//   int (*__codecvt_do_length) (struct _IO_codecvt *, __mbstate_t *,
-//                               const char *, const char *, size_t);
-    pub __codecvt_do_length: fn(*mut _IO_codecvt, *mut __mbstate_t, String) -> i32,
-//   int (*__codecvt_do_max_length) (struct _IO_codecvt *);
-    pub __codecvt_do_max_length: fn(*mut _IO_codecvt) -> i32,
-//   _IO_iconv_t __cd_in;
-    pub __cd_in: _IO_iconv_t,
-//   _IO_iconv_t __cd_out;
-    pub __cd_out: _IO_iconv_t,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _code {
+pub struct Code {
     pub c_name: String,
     pub c_val: i32,
 }
 
-pub type CODE = _code;
+pub type CODE = Code;
 
-
-pub type C2RustUnnamed_1 = u32;
-pub const _ISalnum: u32 = 8;
-pub const _ISpunct: u32 = 4;
-pub const _IScntrl: u32 = 2;
-pub const _ISblank: u32 = 1;
-pub const _ISgraph: u32 = 32768;
-pub const _ISprint: u32 = 16384;
-pub const _ISspace: u32 = 8192;
-pub const _ISxdigit: u32 = 4096;
-pub const _ISdigit: u32 = 2048;
-pub const _ISalpha: u32 = 1024;
-pub const _ISlower: u32 = 512;
-pub const _ISupper: u32 = 256;
+pub const _ISALNUM: u32 = 8;
+pub const _ISPUNCT: u32 = 4;
+pub const _ISCNTRL: u32 = 2;
+pub const _ISBLANK: u32 = 1;
+pub const _ISGRAPH: u32 = 32768;
+pub const _ISPRINT: u32 = 16384;
+pub const _ISSPACE: u32 = 8192;
+pub const _ISXDIGIT: u32 = 4096;
+pub const _ISDIGIT: u32 = 2048;
+pub const _ISALPHA: u32 = 1024;
+pub const _ISLOWER: u32 = 512;
+pub const _ISUPPER: u32 = 256;
 
 pub const MSG_CMSG_CLOEXEC: u32 = 1073741824;
 pub const MSG_FASTOPEN: u32 = 536870912;
@@ -2835,44 +2840,44 @@ pub struct DhcpPacket {
 }
 
 pub static PRIORITY_NAMES: [CODE; 13] =
-    [ _code{c_name: String::from("alert"), c_val: 1},
-        _code{c_name: String::from("crit"), c_val: 2},
-        _code{c_name: String::from("debug"), c_val: 7},
-        _code{c_name: String::from("emerg"), c_val: 0},
-        _code{c_name: String::from("err"), c_val: 3},
-        _code{c_name: String::from("error"), c_val: 3},
-        _code{c_name: String::from("info"), c_val: 6},
-        _code{c_name: String::from("none"), c_val: 0x10},
-        _code{c_name: String::from("notice"), c_val: 5},
-        _code{c_name: String::from("panic"), c_val: 0},
-        _code{c_name: String::from("warn"), c_val: 4},
-        _code{c_name: String::from("warning"), c_val: 4},
-        _code{c_name: String::from(""), c_val: -1}];
+    [ Code {c_name: String::from("alert"), c_val: 1},
+        Code {c_name: String::from("crit"), c_val: 2},
+        Code {c_name: String::from("debug"), c_val: 7},
+        Code {c_name: String::from("emerg"), c_val: 0},
+        Code {c_name: String::from("err"), c_val: 3},
+        Code {c_name: String::from("error"), c_val: 3},
+        Code {c_name: String::from("info"), c_val: 6},
+        Code {c_name: String::from("none"), c_val: 0x10},
+        Code {c_name: String::from("notice"), c_val: 5},
+        Code {c_name: String::from("panic"), c_val: 0},
+        Code {c_name: String::from("warn"), c_val: 4},
+        Code {c_name: String::from("warning"), c_val: 4},
+        Code {c_name: String::from(""), c_val: -1}];
 
 pub static FACILITYNAMES: [CODE; 23] = [
-    _code{c_name: String::from("auth"), c_val: 4 << 3},
-    _code{c_name: String::from("authpriv"), c_val: 10 << 3},
-    _code{c_name: String::from("cron"), c_val: 9 << 3},
-    _code{c_name: String::from("daemon"), c_val: 3 << 3},
-    _code{c_name: String::from("ftp"), c_val: 11 << 3},
-    _code{c_name: String::from("kern"), c_val: 0 << 3},
-    _code{c_name: String::from("lpr"), c_val: 6 << 3},
-    _code{c_name: String::from("mail"), c_val: 2 << 3},
-    _code{c_name: String::from("mark"), c_val: (24 << 3) | 0},
-    _code{c_name: String::from("news"), c_val: 7 << 3},
-    _code{c_name: String::from("security"), c_val: 4 << 3},
-    _code{c_name: String::from("syslog"), c_val: 5 << 3},
-    _code{c_name: String::from("user"), c_val: 1 << 3},
-    _code{c_name: String::from("uucp"), c_val: 8 << 3},
-    _code{c_name: String::from("local0"), c_val: 16 << 3},
-    _code{c_name: String::from("local1"), c_val: 17 << 3},
-    _code{c_name: String::from("local2"), c_val: 18 << 3},
-    _code{c_name: String::from("local3"), c_val: 19 << 3},
-    _code{c_name: String::from("local4"), c_val: 20 << 3},
-    _code{c_name: String::from("local5"), c_val: 21 << 3},
-    _code{c_name: String::from("local6"), c_val: 22 << 3},
-    _code{c_name: String::from("local7"), c_val: 23 << 3},
-    _code{c_name: String::from(""), c_val:-1},
+    Code {c_name: String::from("auth"), c_val: 4 << 3},
+    Code {c_name: String::from("authpriv"), c_val: 10 << 3},
+    Code {c_name: String::from("cron"), c_val: 9 << 3},
+    Code {c_name: String::from("daemon"), c_val: 3 << 3},
+    Code {c_name: String::from("ftp"), c_val: 11 << 3},
+    Code {c_name: String::from("kern"), c_val: 0 << 3},
+    Code {c_name: String::from("lpr"), c_val: 6 << 3},
+    Code {c_name: String::from("mail"), c_val: 2 << 3},
+    Code {c_name: String::from("mark"), c_val: (24 << 3) | 0},
+    Code {c_name: String::from("news"), c_val: 7 << 3},
+    Code {c_name: String::from("security"), c_val: 4 << 3},
+    Code {c_name: String::from("syslog"), c_val: 5 << 3},
+    Code {c_name: String::from("user"), c_val: 1 << 3},
+    Code {c_name: String::from("uucp"), c_val: 8 << 3},
+    Code {c_name: String::from("local0"), c_val: 16 << 3},
+    Code {c_name: String::from("local1"), c_val: 17 << 3},
+    Code {c_name: String::from("local2"), c_val: 18 << 3},
+    Code {c_name: String::from("local3"), c_val: 19 << 3},
+    Code {c_name: String::from("local4"), c_val: 20 << 3},
+    Code {c_name: String::from("local5"), c_val: 21 << 3},
+    Code {c_name: String::from("local6"), c_val: 22 << 3},
+    Code {c_name: String::from("local7"), c_val: 23 << 3},
+    Code {c_name: String::from(""), c_val:-1},
 ];
 
 // extern "C" {
@@ -2962,12 +2967,12 @@ pub static FACILITYNAMES: [CODE; 23] = [
 //                           __endptr: *mut *mut __gwchar_t, __base: libc::c_int,
 //                           __group: libc::c_int) -> libc::c_ulong;
 // }
-pub type __uint16_t = libc::c_ushort;
-pub type __int32_t = libc::c_int;
-pub type __uint32_t = libc::c_uint;
-pub type __uint64_t = libc::c_ulong;
-pub type __intmax_t = libc::c_long;
-pub type __uintmax_t = libc::c_ulong;
+// pub type __uint16_t = libc::c_ushort;
+// pub type __int32_t = libc::c_int;
+// pub type __uint32_t = libc::c_uint;
+// pub type __uint64_t = libc::c_ulong;
+// pub type __intmax_t = libc::c_long;
+// pub type __uintmax_t = libc::c_ulong;
 
 
 
@@ -3009,48 +3014,48 @@ pub type __uintmax_t = libc::c_ulong;
 //     pub st_ctim: timespec,
 //     pub __glibc_reserved: [SyscallSlongT; 3],
 // }
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _IO_FILE {
-    pub _flags: libc::c_int,
-    pub _IO_read_ptr: *mut libc::c_char,
-    pub _IO_read_end: *mut libc::c_char,
-    pub _IO_read_base: *mut libc::c_char,
-    pub _IO_write_base: *mut libc::c_char,
-    pub _IO_write_ptr: *mut libc::c_char,
-    pub _IO_write_end: *mut libc::c_char,
-    pub _IO_buf_base: *mut libc::c_char,
-    pub _IO_buf_end: *mut libc::c_char,
-    pub _IO_save_base: *mut libc::c_char,
-    pub _IO_backup_base: *mut libc::c_char,
-    pub _IO_save_end: *mut libc::c_char,
-    pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE,
-    pub _fileno: libc::c_int,
-    pub _flags2: libc::c_int,
-    pub _old_offset: usize,
-    pub _cur_column: libc::c_ushort,
-    pub _vtable_offset: libc::c_schar,
-    pub _shortbuf: [libc::c_char; 1],
-    pub _lock: *mut libc::c_void,
-    pub _offset: Off64T,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
-    pub _freeres_list: *mut _IO_FILE,
-    pub _freeres_buf: *mut libc::c_void,
-    pub __pad5: usize,
-    pub _mode: libc::c_int,
-    pub _unused2: [libc::c_char; 20],
-}
-pub type _IO_lock_t = ();
-pub type FILE = _IO_FILE;
-pub type __compar_fn_t
-=
-Option<unsafe extern "C" fn(_: *const libc::c_void,
-                            _: *const libc::c_void) -> libc::c_int>;
-pub type intmax_t = __intmax_t;
-pub type uintmax_t = __uintmax_t;
-pub type __gwchar_t = libc::c_int;
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct IoFile {
+//     pub _flags: libc::c_int,
+//     pub _IO_read_ptr: *mut libc::c_char,
+//     pub _IO_read_end: *mut libc::c_char,
+//     pub _IO_read_base: *mut libc::c_char,
+//     pub _IO_write_base: *mut libc::c_char,
+//     pub _IO_write_ptr: *mut libc::c_char,
+//     pub _IO_write_end: *mut libc::c_char,
+//     pub _IO_buf_base: *mut libc::c_char,
+//     pub _IO_buf_end: *mut libc::c_char,
+//     pub _IO_save_base: *mut libc::c_char,
+//     pub _IO_backup_base: *mut libc::c_char,
+//     pub _IO_save_end: *mut libc::c_char,
+//     pub _markers: *mut _IO_marker,
+//     pub _chain: *mut IoFile,
+//     pub _fileno: libc::c_int,
+//     pub _flags2: libc::c_int,
+//     pub _old_offset: usize,
+//     pub _cur_column: libc::c_ushort,
+//     pub _vtable_offset: libc::c_schar,
+//     pub _shortbuf: [libc::c_char; 1],
+//     pub _lock: *mut libc::c_void,
+//     pub _offset: Off64T,
+//     pub _codecvt: *mut _IO_codecvt,
+//     pub _wide_data: *mut _IO_wide_data,
+//     pub _freeres_list: *mut IoFile,
+//     pub _freeres_buf: *mut libc::c_void,
+//     pub __pad5: usize,
+//     pub _mode: libc::c_int,
+//     pub _unused2: [libc::c_char; 20],
+// }
+// pub type _IO_lock_t = ();
+// pub type FILE = IoFile;
+// pub type __compar_fn_t
+// =
+// Option<unsafe extern "C" fn(_: *const libc::c_void,
+//                             _: *const libc::c_void) -> libc::c_int>;
+// pub type intmax_t = __intmax_t;
+// pub type uintmax_t = __uintmax_t;
+// pub type __gwchar_t = libc::c_int;
 // #[inline]
 // unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
 //                              mut __arg: ::std::ffi::VaList) -> libc::c_int {
@@ -3440,7 +3445,7 @@ pub struct MatchParam {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_14A {
+pub union C2rustUnnamed14a {
     pub c: Vec<u8>,
     pub p: InPktInfo,
 }
@@ -3453,7 +3458,7 @@ pub struct Cparam {
     pub newname: u32,
 }
 
-pub type __caddr_t = *mut libc::c_char;
+// pub type __caddr_t = *mut libc::c_char;
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]

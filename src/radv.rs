@@ -18,7 +18,7 @@
    It therefore cannot use any DHCP buffer resources except outpacket, which is
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
-use crate::defines::{time_t, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, ModeT, DevT, __uint64_t, __u32, __uint16_t, FILE, SsizeT, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, SockAddrIn6, C2RustUnnamed, Iname, AllAddr, DhcpOpt, RaInterface, SaFamily, __CONST_SOCKADDR_ARG, SockAddr};
+use crate::defines::{time_t, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, ModeT, DevT, __uint64_t, __u32, __uint16_t, FILE, SsizeT, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, SockAddrIn6, C2RustUnnamed, Iname, AllAddr, DhcpOpt, RaInterface, SaFamily, ConstSockaddrArg, SockAddr};
 use crate::slack::{in6_pktinfo, icmp6_filter, IPPROTO_ICMPV6, ra_packet, prefix_opt};
 use std::io::{stdout, stdin};
 use crate::util::{expand_buf, rand16, wildcard_match, print_mac, wildcard_matchn, setaddr6part, addr6part, retry_send, is_same_net6, whine_malloc};
@@ -1368,7 +1368,7 @@ unsafe extern "C" fn send_ra_alias(mut now: time_t, mut iface: libc::c_int,
                             (*dnsmasq_daemon).outpacket.iov_base,
                             save_counter(-(1 as libc::c_int)) as size_t,
                             0 as libc::c_int,
-                            __CONST_SOCKADDR_ARG{__sockaddr__:
+                            ConstSockaddrArg {__sockaddr__:
                                                      &mut addr as
                                                          *mut SockAddrIn6 as
                                                          *mut SockAddr,},

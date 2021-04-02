@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddrList, Crec,  AllAddr, DhcpOptTblEntry, InAddr, _ISprint, DhcpRelay};
+use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddrList, Crec, AllAddr, DhcpOptTblEntry, InAddr, _ISPRINT, DhcpRelay};
 use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net, hostname_isequal,  prettyprint_time, print_mac, setaddr6part};
 use libc::recvmsg;
 use socket2::Socket;
@@ -958,7 +958,7 @@ pub fn option_string(mut prot: libc::c_int,
                         if *(*__ctype_b_loc()).offset(c  as
                                                           isize) as
                                libc::c_int &
-                               _ISprint  as libc::c_ushort as
+                               _ISPRINT as libc::c_ushort as
                                    libc::c_int != 0 {
                             let fresh6 = j;
                             j = j + 1;
@@ -985,7 +985,7 @@ pub fn option_string(mut prot: libc::c_int,
                             if *(*__ctype_b_loc()).offset(c_0 
                                                               as isize) as
                                    libc::c_int &
-                                   _ISprint  as libc::c_ushort
+                                   _ISPRINT as libc::c_ushort
                                         != 0 {
                                 let fresh7 = j;
                                 j = j + 1;
@@ -1029,7 +1029,7 @@ pub fn option_string(mut prot: libc::c_int,
                             if *(*__ctype_b_loc()).offset(c_1 
                                                               as isize) as
                                    libc::c_int &
-                                   _ISprint  as libc::c_ushort
+                                   _ISPRINT as libc::c_ushort
                                         != 0 {
                                 let fresh10 = j;
                                 j = j + 1;

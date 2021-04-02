@@ -738,18 +738,18 @@ extern "C" {
 
 
 
-// pub const _ISalnum: C2RustUnnamed_1 = 8;
-// pub const _ISpunct: C2RustUnnamed_1 = 4;
-// pub const _IScntrl: C2RustUnnamed_1 = 2;
-// pub const _ISblank: C2RustUnnamed_1 = 1;
-// pub const _ISgraph: C2RustUnnamed_1 = 32768;
-// pub const _ISprint: C2RustUnnamed_1 = 16384;
-// pub const _ISspace: C2RustUnnamed_1 = 8192;
-// pub const _ISxdigit: C2RustUnnamed_1 = 4096;
-// pub const _ISdigit: C2RustUnnamed_1 = 2048;
-// pub const _ISalpha: C2RustUnnamed_1 = 1024;
-// pub const _ISlower: C2RustUnnamed_1 = 512;
-// pub const _ISupper: C2RustUnnamed_1 = 256;
+// pub const _ISALNUM: C2RustUnnamed_1 = 8;
+// pub const _ISPUNCT: C2RustUnnamed_1 = 4;
+// pub const _ISCNTRL: C2RustUnnamed_1 = 2;
+// pub const _ISBLANK: C2RustUnnamed_1 = 1;
+// pub const _ISGRAPH: C2RustUnnamed_1 = 32768;
+// pub const _ISPRINT: C2RustUnnamed_1 = 16384;
+// pub const _ISSPACE: C2RustUnnamed_1 = 8192;
+// pub const _ISXDIGIT: C2RustUnnamed_1 = 4096;
+// pub const _ISDIGIT: C2RustUnnamed_1 = 2048;
+// pub const _ISALPHA: C2RustUnnamed_1 = 1024;
+// pub const _ISLOWER: C2RustUnnamed_1 = 512;
+// pub const _ISUPPER: C2RustUnnamed_1 = 256;
 
 
 
@@ -1064,18 +1064,18 @@ pub type __syscall_slong_t = libc::c_long;
 
 
 pub type C2RustUnnamed_4 = libc::c_uint;
-// pub const _ISalnum: C2RustUnnamed_4 = 8;
-// pub const _ISpunct: C2RustUnnamed_4 = 4;
-// pub const _IScntrl: C2RustUnnamed_4 = 2;
-// pub const _ISblank: C2RustUnnamed_4 = 1;
-// pub const _ISgraph: C2RustUnnamed_4 = 32768;
-// pub const _ISprint: C2RustUnnamed_4 = 16384;
-// pub const _ISspace: C2RustUnnamed_4 = 8192;
-// pub const _ISxdigit: C2RustUnnamed_4 = 4096;
-// pub const _ISdigit: C2RustUnnamed_4 = 2048;
-// pub const _ISalpha: C2RustUnnamed_4 = 1024;
-// pub const _ISlower: C2RustUnnamed_4 = 512;
-// pub const _ISupper: C2RustUnnamed_4 = 256;
+// pub const _ISALNUM: C2RustUnnamed_4 = 8;
+// pub const _ISPUNCT: C2RustUnnamed_4 = 4;
+// pub const _ISCNTRL: C2RustUnnamed_4 = 2;
+// pub const _ISBLANK: C2RustUnnamed_4 = 1;
+// pub const _ISGRAPH: C2RustUnnamed_4 = 32768;
+// pub const _ISPRINT: C2RustUnnamed_4 = 16384;
+// pub const _ISSPACE: C2RustUnnamed_4 = 8192;
+// pub const _ISXDIGIT: C2RustUnnamed_4 = 4096;
+// pub const _ISDIGIT: C2RustUnnamed_4 = 2048;
+// pub const _ISALPHA: C2RustUnnamed_4 = 1024;
+// pub const _ISLOWER: C2RustUnnamed_4 = 512;
+// pub const _ISUPPER: C2RustUnnamed_4 = 256;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2561,28 +2561,28 @@ pub type C2RustUnnamed999 = libc::c_uint;
 // pub const IPPROTO_ICMP: C2RustUnnamed_1 = 1;
 // pub const IPPROTO_IP: C2RustUnnamed_1 = 0;
 
-// pub type C2RustUnnamed_2 = libc::c_uint;
-// pub const __METRIC_MAX: C2RustUnnamed_2 = 20;
-// pub const METRIC_LEASES_PRUNED_6: C2RustUnnamed_2 = 19;
-// pub const METRIC_LEASES_ALLOCATED_6: C2RustUnnamed_2 = 18;
-// pub const METRIC_LEASES_PRUNED_4: C2RustUnnamed_2 = 17;
-// pub const METRIC_LEASES_ALLOCATED_4: C2RustUnnamed_2 = 16;
-// pub const METRIC_NOANSWER: C2RustUnnamed_2 = 15;
-// pub const METRIC_DHCPREQUEST: C2RustUnnamed_2 = 14;
-// pub const METRIC_DHCPRELEASE: C2RustUnnamed_2 = 13;
-// pub const METRIC_DHCPOFFER: C2RustUnnamed_2 = 12;
-// pub const METRIC_DHCPNAK: C2RustUnnamed_2 = 11;
-// pub const METRIC_DHCPINFORM: C2RustUnnamed_2 = 10;
-// pub const METRIC_DHCPDISCOVER: C2RustUnnamed_2 = 9;
-// pub const METRIC_DHCPDECLINE: C2RustUnnamed_2 = 8;
-// pub const METRIC_DHCPACK: C2RustUnnamed_2 = 7;
-// pub const METRIC_PXE: C2RustUnnamed_2 = 6;
-// pub const METRIC_BOOTP: C2RustUnnamed_2 = 5;
-// pub const METRIC_DNS_LOCAL_ANSWERED: C2RustUnnamed_2 = 4;
-// pub const METRIC_DNS_AUTH_ANSWERED: C2RustUnnamed_2 = 3;
-// pub const METRIC_DNS_QUERIES_FORWARDED: C2RustUnnamed_2 = 2;
-// pub const METRIC_DNS_CACHE_LIVE_FREED: C2RustUnnamed_2 = 1;
-// pub const METRIC_DNS_CACHE_INSERTED: C2RustUnnamed_2 = 0;
+// pub type C2rustUnnamed2 = libc::c_uint;
+// pub const __METRIC_MAX: C2rustUnnamed2 = 20;
+// pub const METRIC_LEASES_PRUNED_6: C2rustUnnamed2 = 19;
+// pub const METRIC_LEASES_ALLOCATED_6: C2rustUnnamed2 = 18;
+// pub const METRIC_LEASES_PRUNED_4: C2rustUnnamed2 = 17;
+// pub const METRIC_LEASES_ALLOCATED_4: C2rustUnnamed2 = 16;
+// pub const METRIC_NOANSWER: C2rustUnnamed2 = 15;
+// pub const METRIC_DHCPREQUEST: C2rustUnnamed2 = 14;
+// pub const METRIC_DHCPRELEASE: C2rustUnnamed2 = 13;
+// pub const METRIC_DHCPOFFER: C2rustUnnamed2 = 12;
+// pub const METRIC_DHCPNAK: C2rustUnnamed2 = 11;
+// pub const METRIC_DHCPINFORM: C2rustUnnamed2 = 10;
+// pub const METRIC_DHCPDISCOVER: C2rustUnnamed2 = 9;
+// pub const METRIC_DHCPDECLINE: C2rustUnnamed2 = 8;
+// pub const METRIC_DHCPACK: C2rustUnnamed2 = 7;
+// pub const METRIC_PXE: C2rustUnnamed2 = 6;
+// pub const METRIC_BOOTP: C2rustUnnamed2 = 5;
+// pub const METRIC_DNS_LOCAL_ANSWERED: C2rustUnnamed2 = 4;
+// pub const METRIC_DNS_AUTH_ANSWERED: C2rustUnnamed2 = 3;
+// pub const METRIC_DNS_QUERIES_FORWARDED: C2rustUnnamed2 = 2;
+// pub const METRIC_DNS_CACHE_LIVE_FREED: C2rustUnnamed2 = 1;
+// pub const METRIC_DNS_CACHE_INSERTED: C2rustUnnamed2 = 0;
 
 
 
@@ -4389,7 +4389,7 @@ extern "C" {
 
 
 
-//pub const _ISpunct: C2RustUnnamed_0 = 4;
+//pub const _ISPUNCT: C2RustUnnamed_0 = 4;
 
 
 
@@ -6336,18 +6336,18 @@ pub type va_list = __builtin_va_list;
 
 
 
-// pub const _ISalnum: C2RustUnnamed_0 = 8;
+// pub const _ISALNUM: C2RustUnnamed_0 = 8;
 //
-// pub const _IScntrl: C2RustUnnamed_0 = 2;
-// pub const _ISblank: C2RustUnnamed_0 = 1;
-// pub const _ISgraph: C2RustUnnamed_0 = 32768;
-// pub const _ISprint: C2RustUnnamed_0 = 16384;
-// pub const _ISspace: C2RustUnnamed_0 = 8192;
-// pub const _ISxdigit: C2RustUnnamed_0 = 4096;
-// pub const _ISdigit: C2RustUnnamed_0 = 2048;
-// pub const _ISalpha: C2RustUnnamed_0 = 1024;
-// pub const _ISlower: C2RustUnnamed_0 = 512;
-// pub const _ISupper: C2RustUnnamed_0 = 256;
+// pub const _ISCNTRL: C2RustUnnamed_0 = 2;
+// pub const _ISBLANK: C2RustUnnamed_0 = 1;
+// pub const _ISGRAPH: C2RustUnnamed_0 = 32768;
+// pub const _ISPRINT: C2RustUnnamed_0 = 16384;
+// pub const _ISSPACE: C2RustUnnamed_0 = 8192;
+// pub const _ISXDIGIT: C2RustUnnamed_0 = 4096;
+// pub const _ISDIGIT: C2RustUnnamed_0 = 2048;
+// pub const _ISALPHA: C2RustUnnamed_0 = 1024;
+// pub const _ISLOWER: C2RustUnnamed_0 = 512;
+// pub const _ISUPPER: C2RustUnnamed_0 = 256;
 
 
 

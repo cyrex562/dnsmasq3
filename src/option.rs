@@ -1,4 +1,4 @@
-use crate::defines::{_code, CODE, FACILITYNAMES, __sigset_t, OptionUsage, TxtRecord, DnsmasqDaemon, C2RustUnnamed_10, MySockAddr, InAddr, SaFamily, In6Addr, __bswap_16, InAddrT, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISdigit, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISspace, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISxdigit, HostsFile, FILE, stat, timespec, DIR, Crec, OptionValue, TabEntryA};
+use crate::defines::{Code, CODE, FACILITYNAMES, __sigset_t, OptionUsage, TxtRecord, DnsmasqDaemon, C2rustUnnamed10, MySockAddr, InAddr, SaFamily, In6Addr, __bswap_16, InAddrT, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddrList, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time_t, MxSrvRecord, Iname, NameList, AuthZone, AuthNameList, AllAddr, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISDIGIT, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISSPACE, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISXDIGIT, HostsFile, FILE, stat, timespec, DIR, Crec, OptionValue, TabEntryA};
 use crate::util::{whine_malloc, safe_malloc, canonicalise, safe_strncpy, hostname_isequal, addr6part, setaddr6part, is_same_net, is_same_net6, parse_hex, legal_hostname, rand32, string_from_offset};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{lookup_dhcp_opt, lookup_dhcp_len, strip_hostname, display_opts, display_opts6};
@@ -4530,7 +4530,7 @@ pub  fn reset_option_bool(mut opt: libc::c_uint) {
                                                           as
                                                           isize) as
                                libc::c_int &
-                               _ISdigit as libc::c_ushort as
+                               _ISDIGIT as libc::c_ushort as
                                    libc::c_int != 0 {
                             isdig = 1
                         } else if cp_1 != ' ' as i32 {
@@ -4845,7 +4845,7 @@ pub  fn reset_option_bool(mut opt: libc::c_uint) {
                    {
                     arg = comma;
                     comma = split(arg);
-                    (*new_21).CSA = i as libc::c_ushort;
+                    (*new_21).csa = i as libc::c_ushort;
                     (*new_21).menu = opt_string_alloc(arg);
                     if comma.is_null() {
                         (*new_21).type_0 = 0 as libc::c_ushort;
@@ -5297,7 +5297,7 @@ pub  fn reset_option_bool(mut opt: libc::c_uint) {
                           *(*__ctype_b_loc()).offset(*arg as
                                                          isize)
                               &
-                              _ISspace as libc::c_ushort as
+                              _ISSPACE as libc::c_ushort as
                                   libc::c_int != 0 {
                     arg = arg.offset(1)
                 }
@@ -6072,7 +6072,7 @@ pub  fn reset_option_bool(mut opt: libc::c_uint) {
             while *p != 0 {
                 if *(*__ctype_b_loc()).offset(*p) as
                        libc::c_int &
-                       _ISxdigit as libc::c_ushort as
+                       _ISXDIGIT as libc::c_ushort as
                            libc::c_int != 0 {
                     dig = 1
                 } else if *p != ':' as i32 { break ; }
@@ -6301,7 +6301,7 @@ pub  fn reset_option_bool(mut opt: libc::c_uint) {
             }
             if *(*__ctype_b_loc()).offset(*p) as
                    libc::c_int &
-                   _ISspace as libc::c_ushort !=
+                   _ISSPACE as libc::c_ushort !=
                    0 {
                 *p = ' ' as i32 as libc::c_char;
                 white = 1
@@ -6875,7 +6875,7 @@ pub  fn read_opts(mut argc: libc::c_int,
                 while *c != 0 {
                     if *(*__ctype_b_loc()).offset(*c)
                            &
-                           _ISspace as libc::c_ushort as
+                           _ISSPACE as libc::c_ushort as
                                libc::c_int == 0 {
                         die(b"junk found in command line\x00" as *const u8 as
                                 *const libc::c_char as *mut libc::c_char,

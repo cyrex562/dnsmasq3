@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-use crate::defines::{SockAddrIn6, In6Addr, C2RustUnnamed, SOCK_DGRAM, IPPROTO_UDP, IPPROTO_IPV6, socklen_t, DnsmasqDaemon, SaFamily, __bswap_16, __CONST_SOCKADDR_ARG, SockAddr, time_t, DhcpContext, DhcpRelay, IfaceParam, CmsgHdr, MsgHdr, iovec, C2RustUnnamed_13, IfReq, C2RustUnnamed_2, Iname, C2RustUnnamed_12, DhcpBridge, DhcpLease, MySockAddr, timespec, TimeT, SyscallSlongT, SharedNetwork, __bswap_32, DhcpConfig, AddrList, DhcpNetId, Cparam, AllAddr};
+use crate::defines::{SockAddrIn6, In6Addr, C2RustUnnamed, SOCK_DGRAM, IPPROTO_UDP, IPPROTO_IPV6, socklen_t, DnsmasqDaemon, SaFamily, __bswap_16, ConstSockaddrArg, SockAddr, time_t, DhcpContext, DhcpRelay, IfaceParam, CmsgHdr, MsgHdr, iovec, C2RustUnnamed_13, IfReq, C2rustUnnamed2, Iname, C2rustUnnamed12, DhcpBridge, DhcpLease, MySockAddr, timespec, TimeT, SyscallSlongT, SharedNetwork, __bswap_32, DhcpConfig, AddrList, DhcpNetId, Cparam, AllAddr};
 use crate::network::{fix_fd, set_ipv6pktinfo, indextoname, iface_check};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{recv_dhcp_packet, match_netid, dhcp_context_to_string};
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn dhcp6_init() {
     saddr.sin6_addr = in6addr_any;
     saddr.sin6_port = __bswap_16(547 as libc::c_int as u16);
     if bind(fd,
-            __CONST_SOCKADDR_ARG{__sockaddr__:
+            ConstSockaddrArg {__sockaddr__:
                                      &mut saddr as *mut SockAddrIn6 as
                                          *mut SockAddr,},
             ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong as
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
     let mut ifr: IfReq =
         IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_2{ifru_addr:
+                  C2rustUnnamed2 {ifru_addr:
                                       SockAddr {sa_family: 0,
                                                sa_data: [0; 14],},},};
     let mut tmp: *mut Iname = 0 as *mut Iname;
@@ -222,8 +222,8 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
     while !cmptr.is_null() {
         if (*cmptr).cmsg_level == IPPROTO_IPV6 as libc::c_int &&
                (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
-            let mut p: C2RustUnnamed_12 =
-                C2RustUnnamed_12{c: 0 as *mut libc::c_uchar,};
+            let mut p: C2rustUnnamed12 =
+                C2rustUnnamed12 {c: 0 as *mut libc::c_uchar,};
             p.c = (*cmptr).__cmsg_data.as_mut_ptr();
             if_index = (*p.p).ipi6_ifindex as libc::c_int;
             dst_addr = (*p.p).ipi6_addr
@@ -241,7 +241,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
                                 (*dnsmasq_daemon).outpacket.iov_base,
                                 save_counter(-(1 as libc::c_int)) as usize,
                                 0 as libc::c_int,
-                                __CONST_SOCKADDR_ARG{__sockaddr__:
+                                ConstSockaddrArg {__sockaddr__:
                                                          &mut from as
                                                              *mut SockAddrIn6
                                                              as
@@ -458,7 +458,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time_t) {
                                     (*dnsmasq_daemon).outpacket.iov_base,
                                     save_counter(-(1 as libc::c_int)) as
                                         usize, 0 as libc::c_int,
-                                    __CONST_SOCKADDR_ARG{__sockaddr__:
+                                    ConstSockaddrArg {__sockaddr__:
                                                              &mut from as
                                                                  *mut SockAddrIn6
                                                                  as
@@ -518,7 +518,7 @@ pub unsafe extern "C" fn get_client_mac(mut client: *mut In6Addr,
                &mut neigh as *mut neigh_packet as *const libc::c_void,
                ::std::mem::size_of::<neigh_packet>() as libc::c_ulong,
                0 as libc::c_int,
-               __CONST_SOCKADDR_ARG{__sockaddr__: &mut addr.sa,},
+               ConstSockaddrArg {__sockaddr__: &mut addr.sa,},
                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as
                    socklen_t);
         ts.tv_sec = 0 as libc::c_int as TimeT;

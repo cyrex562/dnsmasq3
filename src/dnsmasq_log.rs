@@ -1,6 +1,6 @@
 
 /* defaults in case we die() before we log_start() */
-use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, GidT, sockaddr_un, SaFamily, __CONST_SOCKADDR_ARG, SockAddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, TimeT, SyscallSlongT};
+use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, GidT, SockaddrUn, SaFamily, ConstSockaddrArg, SockAddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, TimeT, SyscallSlongT};
 use crate::slack::{log_entry, time};
 use crate::send_event;
 use crate::util::{safe_malloc, safe_strncpy};
@@ -218,8 +218,8 @@ unsafe extern "C" fn log_write() {
 		 ECONNREFUSED -> connection went down
 		 ENOTCONN -> nobody listening
 		 (ECONNRESET, EDESTADDRREQ are *BSD equivalents) */
-                        let mut logaddr: sockaddr_un =
-                            sockaddr_un{sun_family: 0, sun_path: [0; 108],};
+                        let mut logaddr: SockaddrUn =
+                            SockaddrUn {sun_family: 0, sun_path: [0; 108],};
                         logaddr.sun_family = 1 as libc::c_int as SaFamily;
                         safe_strncpy(logaddr.sun_path.as_mut_ptr(),
                                      b"/dev/log\x00" as *const u8 as
@@ -228,12 +228,12 @@ unsafe extern "C" fn log_write() {
                                          as libc::c_ulong);
                         /* Got connection back? try again. */
                         if connect(log_fd,
-                                   __CONST_SOCKADDR_ARG{__sockaddr__:
+                                   ConstSockaddrArg {__sockaddr__:
                                                             &mut logaddr as
-                                                                *mut sockaddr_un
+                                                                *mut SockaddrUn
                                                                 as
                                                                 *mut SockAddr,},
-                                   ::std::mem::size_of::<sockaddr_un>() as
+                                   ::std::mem::size_of::<SockaddrUn>() as
                                        libc::c_ulong as socklen_t) !=
                                -(1 as libc::c_int) {
                             continue ;

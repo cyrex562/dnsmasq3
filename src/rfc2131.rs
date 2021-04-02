@@ -1,4 +1,4 @@
-use crate::defines::{InAddr, DhcpContext, time_t, DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt, __bswap_32, InAddrT, SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2RustUnnamed_9, DhcpBoot, __bswap_16, Irec, _ISprint, DhcpPxeVendor, socklen_t, DelayConfig};
+use crate::defines::{InAddr, DhcpContext, time_t, DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt, __bswap_32, InAddrT, SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2rustUnnamed9, DhcpBoot, __bswap_16, Irec, _ISPRINT, DhcpPxeVendor, socklen_t, DelayConfig};
 use crate::util::{expand_buf, memcmp_masked, is_same_net, legal_hostname, hostname_isequal, safe_strncpy, prettyprint_time, print_mac, rand16, whine_malloc, do_rfc1035_name};
 use crate::lease::{lease_find_by_client, lease_find_by_addr, lease_prune, lease4_allocate, lease_set_hwaddr, lease_set_hostname, lease_set_expires, lease_set_interface, lease_add_extradata};
 use crate::dnsmasq_log::my_syslog;
@@ -1443,7 +1443,7 @@ pub unsafe extern "C" fn dhcp_reply(mut context: *mut DhcpContext,
                 DhcpOpt {opt: 0,
                          len: 0,
                          flags: 0,
-                         u: C2RustUnnamed_9{encap: 0,},
+                         u: C2rustUnnamed9 {encap: 0,},
                          val: 0 as *mut libc::c_uchar,
                          netid: 0 as *mut DhcpNetId,
                          next: 0 as *mut DhcpOpt,};
@@ -2920,7 +2920,7 @@ unsafe extern "C" fn sanitise(mut opt: *mut libc::c_uchar,
         let mut c: libc::c_char = *fresh7;
         if *(*__ctype_b_loc()).offset(c as libc::c_int as isize) as
                libc::c_int &
-               _ISprint as libc::c_int as libc::c_ushort as libc::c_int != 0 {
+               _ISPRINT as libc::c_int as libc::c_ushort as libc::c_int != 0 {
             let fresh8 = buf;
             buf = buf.offset(1);
             *fresh8 = c
@@ -3817,7 +3817,7 @@ unsafe extern "C" fn pxe_uefi_workaround(mut pxe_arch: libc::c_int,
     found = 0 as *mut PxeService; /* No relevant menu items. */
     service = (*dnsmasq_daemon).pxe_services;
     while !service.is_null() {
-        if pxe_arch == (*service).CSA as libc::c_int &&
+        if pxe_arch == (*service).csa as libc::c_int &&
                !(*service).basename.is_null() &&
                match_netid((*service).netid, netid, 1 as libc::c_int) != 0 {
             if !found.is_null() { return 0 as libc::c_int }
@@ -3905,7 +3905,7 @@ unsafe extern "C" fn pxe_opts(mut pxe_arch: libc::c_int,
     i = 0 as libc::c_int;
     service = (*dnsmasq_daemon).pxe_services;
     while !service.is_null() {
-        if pxe_arch == (*service).CSA as libc::c_int &&
+        if pxe_arch == (*service).csa as libc::c_int &&
                match_netid((*service).netid, netid, 1 as libc::c_int) != 0 {
             's_185:
                 {

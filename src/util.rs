@@ -21,7 +21,7 @@ use std::fs::{File, read, write};
 use std::io::{Seek, Read};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::network::fix_fd;
-use crate::defines::{ InAddr, _IScntrl, MySockAddr, __bswap_16, _ISxdigit, TimeT, SyscallSlongT, DIR};
+use crate::defines::{InAddr, _ISCNTRL, MySockAddr, __bswap_16, _ISXDIGIT, TimeT, SyscallSlongT, DIR};
 
 
 // static mut seed: [u32; 32] = [0; 32];
@@ -327,7 +327,7 @@ pub fn check_name(in_1: &mut String) -> i32 {
             if dotgap > 63 {
                 return 0
             } else {
-                if c & !(0x7f) == 0 && __ctype_b_loc().offset(c) & _IScntrl != 0 {
+                if c & !(0x7f) == 0 && __ctype_b_loc().offset(c) & _ISCNTRL != 0 {
                     /* iscntrl only gives expected results for ascii */
                     return 0 as libc::c_int
                 } else {
@@ -479,31 +479,11 @@ pub fn sa_len(mut addr: *mut MySockAddr) -> libc::c_int {
     };
 }
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
-pub fn hostname_isequal(mut a: *const libc::c_char,
-                                          mut b: *const libc::c_char)
- -> libc::c_int {
-    let mut c1: libc::c_uint = 0;
-    let mut c2: libc::c_uint = 0;
-    loop  {
-        let fresh8 = a;
-        a = a.offset(1);
-        c1 = *fresh8 as libc::c_uchar as libc::c_uint;
-        let fresh9 = b;
-        b = b.offset(1);
-        c2 = *fresh9 as libc::c_uchar as libc::c_uint;
-        if c1 >= 'A' as i32 as libc::c_uint &&
-               c1 <= 'Z' as i32 as libc::c_uint {
-            c1 = c1.wrapping_add(('a' as i32 - 'A' as i32) as libc::c_uint)
-        }
-        if c2 >= 'A' as i32 as libc::c_uint &&
-               c2 <= 'Z' as i32 as libc::c_uint {
-            c2 = c2.wrapping_add(('a' as i32 - 'A' as i32) as libc::c_uint)
-        }
-        if c1 != c2 { return 0 as libc::c_int }
-        if !(c1 != 0) { break ; }
-    }
-    return 1 as libc::c_int;
+pub fn hostname_isequal(mut a: &String, mut b: &String)
+ -> bool {
+    a == b
 }
+
 /* is b equal to or a subdomain of a return 2 for equal, 1 for subdomain */
 pub fn hostname_issubdomain(mut a: *mut libc::c_char,
                                               mut b: *mut libc::c_char)
@@ -716,7 +696,7 @@ pub fn parse_hex(mut in_1: *mut libc::c_char,
                    *(*__ctype_b_loc()).offset(*r as libc::c_uchar as
                                                   libc::c_int as isize) as
                        libc::c_int &
-                       _ISxdigit as libc::c_int as libc::c_ushort as
+                       _ISXDIGIT as libc::c_int as libc::c_ushort as
                            libc::c_int == 0 {
                 return -(1 as libc::c_int)
             }

@@ -19,14 +19,15 @@ use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdom
 use crate::rfc1035::{skip_questions, extract_name, in_arpa_name_2_addr, add_resource_record};
 use crate::cache::{log_query, cache_find_by_addr, cache_get_name, record_source, querystr, cache_find_by_name, cache_find_non_terminal, cache_enumerate};
 use crate::dnsmasq_log::my_syslog;
+use crate::in6_addr::In6Addr;
 
 pub fn find_addrlist(list: &mut Vec<AddrList>, flag: libc::c_int, addr_u: &mut AllAddr) -> Option<AddrList> {
     for list_addr in list {
-        if list_addr.flags & 2 as libc::c_int == 0 {
+        if list_addr.flags & 2 == 0 {
             let mut netmask: InAddr = Default::default();
             let mut addr: InAddr = addr_u.addr4;
-            if !(flag as libc::c_uint &
-                (1 as libc::c_uint) << 7 as libc::c_int == 0) { netmask.s_addr = __bswap_32((!(0 as libc::c_int as InAddrT)) << 32 as libc::c_int - (*list).prefixlen);
+            if !(flag __b &
+                (1 __b) << 7 == 0) { netmask.s_addr = __bswap_32((!(0 as InAddrT)) << 32 - (*list).prefixlen);
                 if is_same_net(addr, (*list).addr.addr4, netmask) != 0 {
                     return Some(list_addr.clone())
                 }
@@ -53,154 +54,138 @@ pub fn find_exclude(mut zone: &mut AuthZone,
     if zone.exclude.is_null() { return None }
     return find_addrlist(zone.exclude, flag, addr_u);
 }
-pub fn filter_zone(mut zone: *mut AuthZone,
-                   mut flag: libc::c_int,
-                   mut addr_u: *mut AllAddr) -> libc::c_int {
-    if !find_exclude(zone, flag, addr_u).is_null() { return 0 as libc::c_int }
+
+pub fn filter_zone(mut zone: &mut AuthZone,
+                   mut flag: i32,
+                   mut addr_u: &mut AllAddr) -> bool {
+    if find_exclude(zone, flag, addr_u).is_some() { return false }
     /* No subnets specified, no filter */
-    if zone.subnet.is_null() { return 1 as libc::c_int }
-    return (find_subnet(zone, flag, addr_u) !=
-                0 as *mut libc::c_void as *mut AddrList) as libc::c_int;
+    if zone.subnet.is_empty() { return true }
+    return find_subnet(zone, flag, addr_u).is_some();
 }
 
-pub fn in_zone(mut zone: &mut AuthZone,
-                   mut name: &mut String,
-                   mut cut: &String)
-                   -> libc::c_int {
-    let mut namelen: usize = strlen(name);
-    let mut domainlen: usize = strlen(zone.domain);
-    if !cut.is_null() { *cut = 0 as *mut libc::c_char }
-    if namelen >= domainlen &&
-           hostname_isequal(zone.domain,
-                            &mut *name.offset(namelen.wrapping_sub(domainlen)
-                                                  as isize)) != 0 {
-        if namelen == domainlen { return 1 as libc::c_int }
-        if *name.offset(namelen.wrapping_sub(domainlen).wrapping_sub(1 as
-                                                                         libc::c_int
-                                                                         as
-                                                                         libc::c_ulong)
-                            as isize) as libc::c_int == '.' as i32 {
-            if !cut.is_null() {
-                *cut =
-                    &mut *name.offset(namelen.wrapping_sub(domainlen).wrapping_sub(1
-                                                                                       as
-                                                                                       libc::c_int
-                                                                                       as
-                                                                                       libc::c_ulong)
-                                          as isize) as *mut libc::c_char
+pub fn in_zone(mut zone: &mut AuthZone, mut name: &mut String, mut cut: &String) -> bool 
+{
+    let mut namelen: usize = name.len();
+    let mut domainlen: usize = zone.domain.len();
+    // if !cut.is_empty() { *cut = 0 as *mut libc::c_char }
+    if namelen >= domainlen && hostname_isequal(&zone.domain, &name[domainlen..].to_string()) {
+        if namelen == domainlen { return true }
+        if name[domainlen] == '.' {
+            if !cut.is_empty() {
+                cut = &name[domainlen..].to_string();
             }
-            return 1 as libc::c_int
+            return true
         }
     }
-    return 0 as libc::c_int;
+    return false;
 }
 
-pub fn answer_auth(mut header: *mut DnsHeader,
-                       mut limit: *mut libc::c_char,
+pub fn answer_auth(
+    daemon: &mut DnsmasqDaemon,
+    mut header: &mut DnsHeader,
+                       mut limit: &mut String,
                        mut qlen: size_t, mut now: time_t,
-                       mut peer_addr: *mut MySockAddr,
+                       mut peer_addr: &mut MySockAddr,
                        mut local_query: libc::c_int,
                        mut do_bit: libc::c_int,
                        mut have_pseudoheader: libc::c_int)
-                       -> size_t {
-    let mut name: *mut libc::c_char = (*dnsmasq_daemon).namebuff;
-    let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut ansp: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut qtype: libc::c_int = 0;
-    let mut qclass: libc::c_int = 0;
-    let mut rc: libc::c_int = 0;
-    let mut nameoffset: libc::c_int = 0;
-    let mut axfroffset: libc::c_int = 0 as libc::c_int;
-    let mut q: libc::c_int = 0;
-    let mut anscount: libc::c_int = 0 as libc::c_int;
-    let mut authcount: libc::c_int = 0 as libc::c_int;
-    let mut crecp: *mut Crec = 0 as *mut Crec;
-    let mut auth: libc::c_int = (local_query == 0) as libc::c_int;
-    let mut trunc: libc::c_int = 0 as libc::c_int;
-    let mut nxdomain: libc::c_int = 1 as libc::c_int;
-    let mut soa: libc::c_int = 0 as libc::c_int;
-    let mut ns: libc::c_int = 0 as libc::c_int;
-    let mut axfr: libc::c_int = 0 as libc::c_int;
-    let mut zone: *mut AuthZone = 0 as *mut AuthZone;
-    let mut subnet: *mut AddrList = 0 as *mut AddrList;
-    let mut cut: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut rec: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
-    let mut move_0: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
-    let mut up: *mut *mut MxSrvRecord = 0 as *mut *mut MxSrvRecord;
-    let mut txt: *mut TxtRecord = 0 as *mut TxtRecord;
-    let mut intr: *mut InterfaceName = 0 as *mut InterfaceName;
-    let mut na: *mut NaPtr = 0 as *mut NaPtr;
-    let mut addr: AllAddr = Default::default();
-    let mut a: *mut Cname = 0 as *mut Cname;
-    let mut candidate: *mut Cname = 0 as *mut Cname;
-    let mut wclen: libc::c_uint = 0;
-    if __bswap_16(header.qdcount) as libc::c_int == 0 as libc::c_int ||
-           (header.hb3 as libc::c_int & 0x78 as libc::c_int) >>
-               3 as libc::c_int != 0 as libc::c_int {
-        return 0 as libc::c_int as size_t
+                       -> usize {
+    let mut name= daemon.namebuff.clone();
+    let mut p: String;
+    let mut ansp: String;
+    let mut qtype = 0;
+    let mut qclass = 0;
+    let mut rc = 0;
+    let mut nameoffset = 0;
+    let mut axfroffset = 0;
+    let mut q = 0;
+    let mut anscount = 0;
+    let mut authcount = 0;
+    let mut crecp: Crec;
+    let mut auth = local_query == 0;
+    let mut trunc = 0;
+    let mut nxdomain = 1;
+    let mut soa = 0;
+    let mut ns = 0;
+    let mut axfr = 0;
+    let mut zone: AuthZone;
+    let mut subnet: AddrList;
+    let mut cut: String;
+    let mut rec: MxSrvRecord;
+    let mut move_0: MxSrvRecord;
+    let mut up: MxSrvRecord = 0;
+    let mut txt: TxtRecord;
+    let mut intr: InterfaceName;
+    let mut na: NaPtr;
+    let mut addr: AllAddr;
+    let mut a: Cname;
+    let mut candidate: Cname;
+    let mut wclen = 0;
+    if __bswap_16(header.qdcount) == 0 || (header.hb3 & 0x78) >> 3 != 0 {
+        return 0
     }
     /* determine end of question section (we put answers there) */
     ansp = skip_questions(header, qlen); /* bad packet */
-    if ansp.is_null() { return 0 as libc::c_int as size_t }
+    if ansp.is_null() { return 0 as size_t }
     /* now process each question, answers go in RRs after the question */
-    p = header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
+    p = header.offset(1);
     let mut current_block_247: u64;
-    q = __bswap_16(header.qdcount) as libc::c_int;
-    while q != 0 as libc::c_int {
-        let mut flag: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-        let mut found: libc::c_int = 0 as libc::c_int;
-        let mut cname_wildcard: libc::c_int = 0 as libc::c_int;
+    q = __bswap_16(header.qdcount);
+    while q != 0 {
+        let mut flag: libc::c_uint = 0 __b;
+        let mut found: libc::c_int = 0;
+        let mut cname_wildcard: libc::c_int = 0;
         /* save pointer to name for copying into answers */
         nameoffset =
-            p.wrapping_offset_from(header as *mut libc::c_uchar) as
-                libc::c_long as libc::c_int;
+            p.wrapping_offset_from(header) as
+                libc::c_long;
         /* now extract name as .-concatenated string into name */
-        if extract_name(header, qlen, &mut p, name, 1 as libc::c_int,
-                        4 as libc::c_int) == 0 {
-            return 0 as libc::c_int as size_t
+        if extract_name(header, qlen, &mut p, name, 1, 4) == 0 {
+            return 0 as size_t
         } /* bad packet */
         let mut t_cp: *mut libc::c_uchar = p; /* must be bare name */
         qtype =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
-                << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16 as
+            (t_cp.offset(0) as u16)
+                << 8 |
+                t_cp.offset(1) as u16 as
                     libc::c_int;
-        p = p.offset(2 as libc::c_int as isize);
-        let mut t_cp_0: *mut libc::c_uchar = p;
+        p = p.offset(2);
+        let mut t_cp_0: String = p;
         qclass =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
-                 libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
+            (t_cp_0.offset(0) as u16 as
+                 libc::c_int) << 8 |
+                t_cp_0.offset(1) as u16 as
                     libc::c_int;
-        p = p.offset(2 as libc::c_int as isize);
-        if qclass != 1 as libc::c_int {
-            auth = 0 as libc::c_int
+        p = p.offset(2);
+        if qclass != 1 {
+            auth = 0
         } else {
-            if (qtype == 12 as libc::c_int || qtype == 6 as libc::c_int ||
-                    qtype == 2 as libc::c_int) &&
+            if (qtype == 12 || qtype == 6 ||
+                    qtype == 2) &&
                    {
                        flag =
                            in_arpa_name_2_addr(name, &mut addr) as
                                libc::c_uint;
                        (flag) != 0
                    } && local_query == 0 {
-                zone = (*dnsmasq_daemon).auth_zones;
+                zone = daemon.auth_zones;
                 while !zone.is_null() {
                     subnet =
-                        find_subnet(zone, flag as libc::c_int, &mut addr);
+                        find_subnet(zone, flag, &mut addr);
                     if !subnet.is_null() { break ; }
                     zone = zone.next
                 }
                 if zone.is_null() {
-                    auth = 0 as libc::c_int;
+                    auth = 0;
                     current_block_247 = 17860125682698302841;
                 } else {
-                    if qtype == 6 as libc::c_int {
-                        soa = 1 as libc::c_int;
-                        found = 1 as libc::c_int
-                    } else if qtype == 2 as libc::c_int {
-                        ns = 1 as libc::c_int;
-                        found = 1 as libc::c_int
+                    if qtype == 6 {
+                        soa = 1;
+                        found = 1
+                    } else if qtype == 2 {
+                        ns = 1;
+                        found = 1
                     }
                     current_block_247 = 4567019141635105728;
                 }
@@ -208,16 +193,15 @@ pub fn answer_auth(mut header: *mut DnsHeader,
             match current_block_247 {
                 17860125682698302841 => { }
                 _ => {
-                    if qtype == 12 as libc::c_int && flag != 0 {
-                        intr = 0 as *mut InterfaceName;
-                        if flag == (1 as libc::c_uint) << 7 as libc::c_int {
-                            intr = (*dnsmasq_daemon).int_names;
+                    if qtype == 12 && flag != 0 {
+                        intr = None;
+                        if flag == (1 __b) << 7 {
+                            intr = daemon.int_names;
                             while !intr.is_null() {
-                                let mut addrlist: *mut AddrList =
-                                    0 as *mut AddrList;
-                                addrlist = (*intr).addr;
+                                let mut addrlist: AddrList;
+                                addrlist = intr.addr;
                                 while !addrlist.is_null() {
-                                    if (*addrlist).flags & 2 as libc::c_int ==
+                                    if (*addrlist).flags & 2 ==
                                            0 &&
                                            addr.addr4.s_addr ==
                                                (*addrlist).addr.addr4.s_addr {
@@ -226,127 +210,76 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                     addrlist = (*addrlist).next
                                 }
                                 if !addrlist.is_null() { break ; }
-                                while !(*intr).next.is_null() &&
-                                          strcmp((*intr).intr,
-                                                 (*(*intr).next).intr) ==
-                                              0 as libc::c_int {
-                                    intr = (*intr).next
+                                while !intr.next.is_null() &&
+                                          strcmp(intr.intr,
+                                                 (*intr.next).intr) ==
+                                              0 {
+                                    intr = intr.next
                                 }
-                                intr = (*intr).next
+                                intr = intr.next
                             }
                         } else if flag ==
-                                      (1 as libc::c_uint) << 8 as libc::c_int
+                                      (1 __b) << 8
                          {
-                            intr = (*dnsmasq_daemon).int_names;
+                            intr = daemon.int_names;
                             while !intr.is_null() {
-                                let mut addrlist_0: *mut AddrList =
-                                    0 as *mut AddrList;
-                                addrlist_0 = (*intr).addr;
+                                let mut addrlist_0: AddrList;
+                                addrlist_0 = intr.addr;
                                 while !addrlist_0.is_null() {
-                                    if (*addrlist_0).flags & 2 as libc::c_int
+                                    if addrlist_0.flags & 2
                                            != 0 &&
                                            ({
-                                                let mut __a: *const In6Addr =
-                                                    &mut addr.addr6 as
-                                                        *mut In6Addr as
-                                                        *const In6Addr;
-                                                let mut __b: *const In6Addr =
-                                                    &mut (*addrlist_0).addr.addr6
-                                                        as *mut In6Addr as
-                                                        *const In6Addr;
-                                                ((*__a).__in6_u.__u6_addr32[0
-                                                                                as
-                                                                                libc::c_int
-                                                                                as
-                                                                                usize]
+                                                let mut __a: In6Addr = addr.addr6.clone();
+                                                let mut __b: In6Addr = addrlist_0.addr.addr6.clone();
+                                                (__a.__in6_u.__u6_addr32[0]
                                                      ==
-                                                     (*__b).__in6_u.__u6_addr32[0
-                                                                                    as
-                                                                                    libc::c_int
-                                                                                    as
-                                                                                    usize]
+                                                     __b.__in6_u.__u6_addr32[0]
                                                      &&
-                                                     (*__a).__in6_u.__u6_addr32[1
-                                                                                    as
-                                                                                    libc::c_int
-                                                                                    as
-                                                                                    usize]
+                                                     __a.__in6_u.__u6_addr32[1]
                                                          ==
-                                                         (*__b).__in6_u.__u6_addr32[1
-                                                                                        as
-                                                                                        libc::c_int
-                                                                                        as
-                                                                                        usize]
+                                                         __b.__in6_u.__u6_addr32[1]
                                                      &&
-                                                     (*__a).__in6_u.__u6_addr32[2
-                                                                                    as
-                                                                                    libc::c_int
-                                                                                    as
-                                                                                    usize]
+                                                     __a.__in6_u.__u6_addr32[2]
                                                          ==
-                                                         (*__b).__in6_u.__u6_addr32[2
-                                                                                        as
-                                                                                        libc::c_int
-                                                                                        as
-                                                                                        usize]
+                                                         __b.__in6_u.__u6_addr32[2]
                                                      &&
-                                                     (*__a).__in6_u.__u6_addr32[3
-                                                                                    as
-                                                                                    libc::c_int
-                                                                                    as
-                                                                                    usize]
+                                                     __a.__in6_u.__u6_addr32[3]
                                                          ==
-                                                         (*__b).__in6_u.__u6_addr32[3
-                                                                                        as
-                                                                                        libc::c_int
-                                                                                        as
-                                                                                        usize])
-                                                    as libc::c_int
-                                            }) != 0 {
+                                                         __b.__in6_u.__u6_addr32[3])
+                                                   
+                                            }) != false {
                                         break ;
                                     }
-                                    addrlist_0 = (*addrlist_0).next
+                                    addrlist_0 = addrlist_0.next
                                 }
                                 if !addrlist_0.is_null() { break ; }
-                                while !(*intr).next.is_null() &&
-                                          strcmp((*intr).intr,
-                                                 (*(*intr).next).intr) ==
-                                              0 as libc::c_int {
-                                    intr = (*intr).next
+                                while !intr.next.is_null() &&
+                                          strcmp(intr.intr, (*intr.next).intr) ==
+                                              0 {
+                                    intr = intr.next
                                 }
-                                intr = (*intr).next
+                                intr = intr.next
                             }
                         }
                         if !intr.is_null() {
                             if local_query != 0 ||
-                                   in_zone(zone, (*intr).name,
-                                           0 as *mut *mut libc::c_char) != 0 {
-                                found = 1 as libc::c_int;
-                                log_query(flag |
-                                              (1 as libc::c_uint) <<
-                                                  2 as libc::c_int |
-                                              (1 as libc::c_uint) <<
-                                                  13 as libc::c_int,
-                                          (*intr).name, &mut addr,
+                                   in_zone(zone, intr.name, 0) != false {
+                                found = 1;
+                                log_query(flag | (1 __b) << 2 | (1 __b) << 13,
+                                          intr.name,
+                                &mut addr,
                                           0 as *mut libc::c_char);
-                                if add_resource_record(header, limit,
-                                                       &mut trunc as
-                                                           *mut libc::c_int,
+                                if add_resource_record(header,
+                                                       limit,
+                                                       &mut trunc,
                                                        nameoffset,
-                                                       &mut ansp as
-                                                           *mut *mut libc::c_uchar,
-                                                       (*dnsmasq_daemon).auth_ttl,
-                                                       0 as *mut libc::c_int,
-                                                       12 as libc::c_int as
-                                                           libc::c_ushort,
-                                                       1 as libc::c_int as
-                                                           libc::c_ushort,
-                                                       b"d\x00" as *const u8
-                                                           as
-                                                           *const libc::c_char
-                                                           as
-                                                           *mut libc::c_char,
-                                                       (*intr).name) != 0 {
+                                                       &mut ansp,
+                                                       daemon.auth_ttl,
+                                                       0,
+                                                       12,
+                                                       1,
+                                                       b"d\x00",
+                                                       intr.name) != 0 {
                                     anscount += 1
                                 }
                             }
@@ -358,9 +291,9 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                             loop  {
                                 strcpy(name, cache_get_name(crecp));
                                 if (*crecp).flags &
-                                       (1 as libc::c_uint) << 4 as libc::c_int
+                                       (1 __b) << 4
                                        != 0 &&
-                                       (*dnsmasq_daemon).options[(20 as
+                                       daemon.options[(20 as
                                                                       libc::c_int
                                                                       as
                                                                       libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -372,8 +305,8 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                                                                                        libc::c_ulong))
                                                                      as usize]
                                            &
-                                           (1 as libc::c_uint) <<
-                                               (20 as libc::c_int as
+                                           (1 __b) <<
+                                               (20 as
                                                     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                                      as
                                                                                      libc::c_ulong).wrapping_mul(8
@@ -386,7 +319,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                         strchr(name, '.' as i32);
                                     if !p_0.is_null() {
                                         *p_0 =
-                                            0 as libc::c_int as libc::c_char
+                                            0 as libc::c_char
                                     }
                                     /* add  external domain */
                                     if !zone.is_null() {
@@ -396,26 +329,26 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                         strcat(name, zone.domain);
                                     }
                                     log_query(flag |
-                                                  (1 as libc::c_uint) <<
-                                                      4 as libc::c_int |
-                                                  (1 as libc::c_uint) <<
-                                                      2 as libc::c_int, name,
+                                                  (1 __b) <<
+                                                      4 |
+                                                  (1 __b) <<
+                                                      2, name,
                                               &mut addr,
                                               record_source((*crecp).uid));
-                                    found = 1 as libc::c_int;
+                                    found = 1;
                                     if add_resource_record(header, limit,
                                                            &mut trunc as
                                                                *mut libc::c_int,
                                                            nameoffset,
                                                            &mut ansp as
                                                                *mut *mut libc::c_uchar,
-                                                           (*dnsmasq_daemon).auth_ttl,
+                                                           daemon.auth_ttl,
                                                            0 as
                                                                *mut libc::c_int,
-                                                           12 as libc::c_int
+                                                           12
                                                                as
                                                                libc::c_ushort,
-                                                           1 as libc::c_int as
+                                                           1 as
                                                                libc::c_ushort,
                                                            b"d\x00" as
                                                                *const u8 as
@@ -426,10 +359,10 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                         anscount += 1
                                     }
                                 } else if (*crecp).flags &
-                                              ((1 as libc::c_uint) <<
-                                                   4 as libc::c_int |
-                                                   (1 as libc::c_uint) <<
-                                                       6 as libc::c_int) != 0
+                                              ((1 __b) <<
+                                                   4 |
+                                                   (1 __b) <<
+                                                       6) != 0
                                               &&
                                               (local_query != 0 ||
                                                    in_zone(zone, name,
@@ -437,24 +370,24 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                *mut *mut libc::c_char)
                                                        != 0) {
                                     log_query((*crecp).flags &
-                                                  !((1 as libc::c_uint) <<
-                                                        3 as libc::c_int),
+                                                  !((1 __b) <<
+                                                        3),
                                               name, &mut addr,
                                               record_source((*crecp).uid));
-                                    found = 1 as libc::c_int;
+                                    found = 1;
                                     if add_resource_record(header, limit,
                                                            &mut trunc as
                                                                *mut libc::c_int,
                                                            nameoffset,
                                                            &mut ansp as
                                                                *mut *mut libc::c_uchar,
-                                                           (*dnsmasq_daemon).auth_ttl,
+                                                           daemon.auth_ttl,
                                                            0 as
                                                                *mut libc::c_int,
-                                                           12 as libc::c_int
+                                                           12
                                                                as
                                                                libc::c_ushort,
-                                                           1 as libc::c_int as
+                                                           1 as
                                                                libc::c_ushort,
                                                            b"d\x00" as
                                                                *const u8 as
@@ -472,20 +405,20 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                             }
                         }
                         if found != 0 {
-                            nxdomain = 0 as libc::c_int
+                            nxdomain = 0
                         } else {
                             log_query(flag |
-                                          (1 as libc::c_uint) <<
-                                              5 as libc::c_int |
-                                          (1 as libc::c_uint) <<
-                                              10 as libc::c_int |
-                                          (1 as libc::c_uint) <<
-                                              2 as libc::c_int |
+                                          (1 __b) <<
+                                              5 |
+                                          (1 __b) <<
+                                              10 |
+                                          (1 __b) <<
+                                              2 |
                                           (if auth != 0 {
-                                               ((1 as libc::c_uint)) <<
-                                                   21 as libc::c_int
+                                               ((1 __b)) <<
+                                                   21
                                            } else {
-                                               0 as libc::c_int as
+                                               0 as
                                                    libc::c_uint
                                            }), 0 as *mut libc::c_char,
                                       &mut addr, 0 as *mut libc::c_char);
@@ -496,7 +429,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 /* NS and SOA .arpa requests have set found above. */
                                 cut = 0 as *mut libc::c_char
                             } else {
-                                zone = (*dnsmasq_daemon).auth_zones;
+                                zone = daemon.auth_zones;
                                 while !zone.is_null() {
                                     if in_zone(zone, name, &mut cut) != 0 {
                                         break ;
@@ -504,11 +437,11 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                     zone = zone.next
                                 }
                                 if zone.is_null() {
-                                    auth = 0 as libc::c_int;
+                                    auth = 0;
                                     break ;
                                 }
                             }
-                            rec = (*dnsmasq_daemon).mxnames;
+                            rec = daemon.mxnames;
                             while !rec.is_null() {
                                 if (*rec).issrv == 0 &&
                                        {
@@ -517,14 +450,14 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                     (*rec).name);
                                            (rc) != 0
                                        } {
-                                    nxdomain = 0 as libc::c_int;
-                                    if rc == 2 as libc::c_int &&
-                                           qtype == 15 as libc::c_int {
-                                        found = 1 as libc::c_int;
-                                        log_query((1 as libc::c_uint) <<
-                                                      13 as libc::c_int |
-                                                      (1 as libc::c_uint) <<
-                                                          17 as libc::c_int,
+                                    nxdomain = 0;
+                                    if rc == 2 &&
+                                           qtype == 15 {
+                                        found = 1;
+                                        log_query((1 __b) <<
+                                                      13 |
+                                                      (1 __b) <<
+                                                          17,
                                                   name, 0 as *mut AllAddr,
                                                   b"<MX>\x00" as *const u8 as
                                                       *const libc::c_char as
@@ -535,7 +468,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                nameoffset,
                                                                &mut ansp as
                                                                    *mut *mut libc::c_uchar,
-                                                               (*dnsmasq_daemon).auth_ttl,
+                                                               daemon.auth_ttl,
                                                                0 as
                                                                    *mut libc::c_int,
                                                                15 as
@@ -562,8 +495,8 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 rec = (*rec).next
                             }
                             move_0 = 0 as *mut MxSrvRecord;
-                            up = &mut (*dnsmasq_daemon).mxnames;
-                            rec = (*dnsmasq_daemon).mxnames;
+                            up = &mut daemon.mxnames;
+                            rec = daemon.mxnames;
                             while !rec.is_null() {
                                 if (*rec).issrv != 0 &&
                                        {
@@ -572,14 +505,14 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                     (*rec).name);
                                            (rc) != 0
                                        } {
-                                    nxdomain = 0 as libc::c_int;
-                                    if rc == 2 as libc::c_int &&
-                                           qtype == 33 as libc::c_int {
-                                        found = 1 as libc::c_int;
-                                        log_query((1 as libc::c_uint) <<
-                                                      13 as libc::c_int |
-                                                      (1 as libc::c_uint) <<
-                                                          17 as libc::c_int,
+                                    nxdomain = 0;
+                                    if rc == 2 &&
+                                           qtype == 33 {
+                                        found = 1;
+                                        log_query((1 __b) <<
+                                                      13 |
+                                                      (1 __b) <<
+                                                          17,
                                                   name, 0 as *mut AllAddr,
                                                   b"<SRV>\x00" as *const u8 as
                                                       *const libc::c_char as
@@ -590,7 +523,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                nameoffset,
                                                                &mut ansp as
                                                                    *mut *mut libc::c_uchar,
-                                                               (*dnsmasq_daemon).auth_ttl,
+                                                               daemon.auth_ttl,
                                                                0 as
                                                                    *mut libc::c_int,
                                                                33 as
@@ -628,19 +561,19 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 *up = move_0; /* inhibits auth section */
                                 (*move_0).next = 0 as *mut MxSrvRecord
                             }
-                            txt = (*dnsmasq_daemon).rr;
+                            txt = daemon.rr;
                             while !txt.is_null() {
                                 rc = hostname_issubdomain(name, (*txt).name);
                                 if rc != 0 {
-                                    nxdomain = 0 as libc::c_int;
-                                    if rc == 2 as libc::c_int &&
-                                           (*txt).class as libc::c_int ==
+                                    nxdomain = 0;
+                                    if rc == 2 &&
+                                           (*txt).class ==
                                                qtype {
-                                        found = 1 as libc::c_int;
-                                        log_query((1 as libc::c_uint) <<
-                                                      13 as libc::c_int |
-                                                      (1 as libc::c_uint) <<
-                                                          17 as libc::c_int,
+                                        found = 1;
+                                        log_query((1 __b) <<
+                                                      13 |
+                                                      (1 __b) <<
+                                                          17,
                                                   name, 0 as *mut AllAddr,
                                                   querystr(0 as
                                                                *mut libc::c_char,
@@ -651,7 +584,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                nameoffset,
                                                                &mut ansp as
                                                                    *mut *mut libc::c_uchar,
-                                                               (*dnsmasq_daemon).auth_ttl,
+                                                               daemon.auth_ttl,
                                                                0 as
                                                                    *mut libc::c_int,
                                                                (*txt).class,
@@ -675,24 +608,24 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 }
                                 txt = (*txt).next
                             }
-                            txt = (*dnsmasq_daemon).txt;
+                            txt = daemon.txt;
                             while !txt.is_null() {
-                                if (*txt).class as libc::c_int ==
-                                       1 as libc::c_int &&
+                                if (*txt).class ==
+                                       1 &&
                                        {
                                            rc =
                                                hostname_issubdomain(name,
                                                                     (*txt).name);
                                            (rc) != 0
                                        } {
-                                    nxdomain = 0 as libc::c_int;
-                                    if rc == 2 as libc::c_int &&
-                                           qtype == 16 as libc::c_int {
-                                        found = 1 as libc::c_int;
-                                        log_query((1 as libc::c_uint) <<
-                                                      13 as libc::c_int |
-                                                      (1 as libc::c_uint) <<
-                                                          17 as libc::c_int,
+                                    nxdomain = 0;
+                                    if rc == 2 &&
+                                           qtype == 16 {
+                                        found = 1;
+                                        log_query((1 __b) <<
+                                                      13 |
+                                                      (1 __b) <<
+                                                          17,
                                                   name, 0 as *mut AllAddr,
                                                   b"<TXT>\x00" as *const u8 as
                                                       *const libc::c_char as
@@ -703,7 +636,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                nameoffset,
                                                                &mut ansp as
                                                                    *mut *mut libc::c_uchar,
-                                                               (*dnsmasq_daemon).auth_ttl,
+                                                               daemon.auth_ttl,
                                                                0 as
                                                                    *mut libc::c_int,
                                                                16 as
@@ -730,18 +663,18 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 }
                                 txt = (*txt).next
                             }
-                            na = (*dnsmasq_daemon).naptr;
+                            na = daemon.naptr;
                             while !na.is_null() {
                                 rc = hostname_issubdomain(name, (*na).name);
                                 if rc != 0 {
-                                    nxdomain = 0 as libc::c_int;
-                                    if rc == 2 as libc::c_int &&
-                                           qtype == 35 as libc::c_int {
-                                        found = 1 as libc::c_int;
-                                        log_query((1 as libc::c_uint) <<
-                                                      13 as libc::c_int |
-                                                      (1 as libc::c_uint) <<
-                                                          17 as libc::c_int,
+                                    nxdomain = 0;
+                                    if rc == 2 &&
+                                           qtype == 35 {
+                                        found = 1;
+                                        log_query((1 __b) <<
+                                                      13 |
+                                                      (1 __b) <<
+                                                          17,
                                                   name, 0 as *mut AllAddr,
                                                   b"<NAPTR>\x00" as *const u8
                                                       as *const libc::c_char
@@ -752,7 +685,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                nameoffset,
                                                                &mut ansp as
                                                                    *mut *mut libc::c_uchar,
-                                                               (*dnsmasq_daemon).auth_ttl,
+                                                               daemon.auth_ttl,
                                                                0 as
                                                                    *mut libc::c_int,
                                                                35 as
@@ -783,26 +716,26 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 }
                                 na = (*na).next
                             }
-                            if qtype == 1 as libc::c_int {
-                                flag = (1 as libc::c_uint) << 7 as libc::c_int
+                            if qtype == 1 {
+                                flag = (1 __b) << 7
                             }
-                            if qtype == 28 as libc::c_int {
-                                flag = (1 as libc::c_uint) << 8 as libc::c_int
+                            if qtype == 28 {
+                                flag = (1 __b) << 8
                             }
-                            intr = (*dnsmasq_daemon).int_names;
+                            intr = daemon.int_names;
                             while !intr.is_null() {
-                                rc = hostname_issubdomain(name, (*intr).name);
+                                rc = hostname_issubdomain(name, intr.name);
                                 if rc != 0 {
                                     let mut addrlist_1: *mut AddrList =
                                         0 as *mut AddrList;
-                                    nxdomain = 0 as libc::c_int;
-                                    if rc == 2 as libc::c_int && flag != 0 {
-                                        addrlist_1 = (*intr).addr;
+                                    nxdomain = 0;
+                                    if rc == 2 && flag != 0 {
+                                        addrlist_1 = intr.addr;
                                         while !addrlist_1.is_null() {
                                             if (if (*addrlist_1).flags &
-                                                       2 as libc::c_int != 0 {
-                                                    28 as libc::c_int
-                                                } else { 1 as libc::c_int })
+                                                       2 != 0 {
+                                                    28
+                                                } else { 1 })
                                                    == qtype &&
                                                    (local_query != 0 ||
                                                         filter_zone(zone,
@@ -811,9 +744,9 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                     &mut (*addrlist_1).addr)
                                                             != 0) {
                                                 if !((*addrlist_1).flags &
-                                                         4 as libc::c_int !=
+                                                         4 !=
                                                          0) {
-                                                    found = 1 as libc::c_int;
+                                                    found = 1;
                                                     log_query((1 as
                                                                    libc::c_uint)
                                                                   <<
@@ -839,7 +772,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                            &mut ansp
                                                                                as
                                                                                *mut *mut libc::c_uchar,
-                                                                           (*dnsmasq_daemon).auth_ttl,
+                                                                           daemon.auth_ttl,
                                                                            0
                                                                                as
                                                                                *mut libc::c_int,
@@ -883,37 +816,37 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                         }
                                     }
                                 }
-                                intr = (*intr).next
+                                intr = intr.next
                             }
                             if cut.is_null() {
-                                nxdomain = 0 as libc::c_int;
-                                if qtype == 6 as libc::c_int {
-                                    soa = 1 as libc::c_int;
+                                nxdomain = 0;
+                                if qtype == 6 {
+                                    soa = 1;
                                     auth = soa;
-                                    found = 1 as libc::c_int;
-                                    log_query((1 as libc::c_uint) <<
-                                                  17 as libc::c_int |
-                                                  (1 as libc::c_uint) <<
-                                                      21 as libc::c_int,
+                                    found = 1;
+                                    log_query((1 __b) <<
+                                                  17 |
+                                                  (1 __b) <<
+                                                      21,
                                               zone.domain,
                                               0 as *mut AllAddr,
                                               b"<SOA>\x00" as *const u8 as
                                                   *const libc::c_char as
                                                   *mut libc::c_char);
-                                } else if qtype == 252 as libc::c_int {
+                                } else if qtype == 252 {
                                     let mut peers: *mut Iname =
                                         0 as *mut Iname;
                                     if (*peer_addr).sa.sa_family as
-                                           libc::c_int == 2 as libc::c_int {
+                                           libc::c_int == 2 {
                                         (*peer_addr).in_0.sin_port =
-                                            0 as libc::c_int as in_port_t
+                                            0 as in_port_t
                                     } else {
                                         (*peer_addr).in6.sin6_port =
-                                            0 as libc::c_int as in_port_t;
+                                            0 as in_port_t;
                                         (*peer_addr).in6.sin6_scope_id =
-                                            0 as libc::c_int as u32
+                                            0 as u32
                                     }
-                                    peers = (*dnsmasq_daemon).auth_peers;
+                                    peers = daemon.auth_peers;
                                     while !peers.is_null() {
                                         if sockaddr_isequal(peer_addr,
                                                             &mut (*peers).addr)
@@ -923,61 +856,61 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                         peers = (*peers).next
                                     }
                                     /* Refuse all AXFR unless --auth-sec-servers or auth-peers is set */
-                                    if (*dnsmasq_daemon).secondary_forward_server.is_null()
+                                    if daemon.secondary_forward_server.is_null()
                                            &&
-                                           (*dnsmasq_daemon).auth_peers.is_null()
+                                           daemon.auth_peers.is_null()
                                            ||
-                                           !(*dnsmasq_daemon).auth_peers.is_null()
+                                           !daemon.auth_peers.is_null()
                                                && peers.is_null() {
                                         if (*peer_addr).sa.sa_family as
-                                               libc::c_int == 2 as libc::c_int
+                                               libc::c_int == 2
                                            {
-                                            inet_ntop(2 as libc::c_int,
+                                            inet_ntop(2,
                                                       &mut (*peer_addr).in_0.sin_addr
                                                           as *mut InAddr as
                                                           *const libc::c_void,
-                                                      (*dnsmasq_daemon).addrbuff,
-                                                      46 as libc::c_int as
+                                                      daemon.addrbuff,
+                                                      46 as
                                                           socklen_t); /* inhibits auth section */
                                         } else {
-                                            inet_ntop(10 as libc::c_int,
+                                            inet_ntop(10,
                                                       &mut (*peer_addr).in6.sin6_addr
                                                           as *mut In6Addr as
                                                           *const libc::c_void,
-                                                      (*dnsmasq_daemon).addrbuff,
-                                                      46 as libc::c_int as
+                                                      daemon.addrbuff,
+                                                      46 as
                                                           socklen_t); /* ensure we include NS records! */
                                         } /* inhibits auth section */
-                                        my_syslog(4 as libc::c_int,
+                                        my_syslog(4,
                                                   b"ignoring zone transfer request from %s\x00"
                                                       as *const u8 as
                                                       *const libc::c_char,
-                                                  (*dnsmasq_daemon).addrbuff); /* remove domain part */
-                                        return 0 as libc::c_int as size_t
+                                                  daemon.addrbuff); /* remove domain part */
+                                        return 0 as size_t
                                     }
-                                    auth = 1 as libc::c_int;
-                                    soa = 1 as libc::c_int;
-                                    ns = 1 as libc::c_int;
-                                    axfr = 1 as libc::c_int;
-                                    found = 1 as libc::c_int;
+                                    auth = 1;
+                                    soa = 1;
+                                    ns = 1;
+                                    axfr = 1;
+                                    found = 1;
                                     axfroffset = nameoffset;
-                                    log_query((1 as libc::c_uint) <<
-                                                  17 as libc::c_int |
-                                                  (1 as libc::c_uint) <<
-                                                      21 as libc::c_int,
+                                    log_query((1 __b) <<
+                                                  17 |
+                                                  (1 __b) <<
+                                                      21,
                                               zone.domain,
                                               0 as *mut AllAddr,
                                               b"<AXFR>\x00" as *const u8 as
                                                   *const libc::c_char as
                                                   *mut libc::c_char);
-                                } else if qtype == 2 as libc::c_int {
-                                    auth = 1 as libc::c_int;
-                                    ns = 1 as libc::c_int;
-                                    found = 1 as libc::c_int;
-                                    log_query((1 as libc::c_uint) <<
-                                                  17 as libc::c_int |
-                                                  (1 as libc::c_uint) <<
-                                                      21 as libc::c_int,
+                                } else if qtype == 2 {
+                                    auth = 1;
+                                    ns = 1;
+                                    found = 1;
+                                    log_query((1 __b) <<
+                                                  17 |
+                                                  (1 __b) <<
+                                                      21,
                                               zone.domain,
                                               0 as *mut AllAddr,
                                               b"<NS>\x00" as *const u8 as
@@ -985,7 +918,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                   *mut libc::c_char);
                                 }
                             }
-                            if (*dnsmasq_daemon).options[(20 as libc::c_int as
+                            if daemon.options[(20 as
                                                               libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                as
                                                                                                libc::c_ulong).wrapping_mul(8
@@ -994,8 +927,8 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                                                                                as
                                                                                                                                libc::c_ulong))
                                                              as usize] &
-                                   (1 as libc::c_uint) <<
-                                       (20 as libc::c_int as
+                                   (1 __b) <<
+                                       (20 as
                                             libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                              as
                                                                              libc::c_ulong).wrapping_mul(8
@@ -1004,7 +937,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                                                              as
                                                                                                              libc::c_ulong))
                                    == 0 && !cut.is_null() {
-                                *cut = 0 as libc::c_int as libc::c_char;
+                                *cut = 0 as libc::c_char;
                                 if strchr(name, '.' as i32).is_null() &&
                                        {
                                            crecp =
@@ -1025,10 +958,10 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                            !crecp.is_null()
                                        } {
                                     if (*crecp).flags &
-                                           (1 as libc::c_uint) <<
-                                               4 as libc::c_int != 0 {
+                                           (1 __b) <<
+                                               4 != 0 {
                                         loop  {
-                                            nxdomain = 0 as libc::c_int;
+                                            nxdomain = 0;
                                             if (*crecp).flags & flag != 0 &&
                                                    (local_query != 0 ||
                                                         filter_zone(zone,
@@ -1045,9 +978,9 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                           &mut (*crecp).addr,
                                                           record_source((*crecp).uid)); /* remove domain part */
                                                 *cut =
-                                                    0 as libc::c_int as
+                                                    0 as
                                                         libc::c_char;
-                                                found = 1 as libc::c_int;
+                                                found = 1;
                                                 if add_resource_record(header,
                                                                        limit,
                                                                        &mut trunc
@@ -1057,7 +990,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                        &mut ansp
                                                                            as
                                                                            *mut *mut libc::c_uchar,
-                                                                       (*dnsmasq_daemon).auth_ttl,
+                                                                       daemon.auth_ttl,
                                                                        0 as
                                                                            *mut libc::c_int,
                                                                        qtype
@@ -1116,18 +1049,18 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                             }
                             crecp =
                                 cache_find_by_name(0 as *mut Crec, name, now,
-                                                   (1 as libc::c_uint) <<
-                                                       7 as libc::c_int |
-                                                       (1 as libc::c_uint) <<
-                                                           8 as libc::c_int);
+                                                   (1 __b) <<
+                                                       7 |
+                                                       (1 __b) <<
+                                                           8);
                             if !crecp.is_null() {
                                 if (*crecp).flags &
-                                       (1 as libc::c_uint) << 6 as libc::c_int
+                                       (1 __b) << 6
                                        != 0 ||
                                        (*crecp).flags &
-                                           (1 as libc::c_uint) <<
-                                               4 as libc::c_int != 0 &&
-                                           (*dnsmasq_daemon).options[(20 as
+                                           (1 __b) <<
+                                               4 != 0 &&
+                                           daemon.options[(20 as
                                                                           libc::c_int
                                                                           as
                                                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -1140,8 +1073,8 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                          as
                                                                          usize]
                                                &
-                                               (1 as libc::c_uint) <<
-                                                   (20 as libc::c_int as
+                                               (1 __b) <<
+                                                   (20 as
                                                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                                          as
                                                                                          libc::c_ulong).wrapping_mul(8
@@ -1151,7 +1084,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                                                                          libc::c_ulong))
                                                != 0 {
                                     loop  {
-                                        nxdomain = 0 as libc::c_int;
+                                        nxdomain = 0;
                                         if (*crecp).flags & flag != 0 &&
                                                (local_query != 0 ||
                                                     filter_zone(zone,
@@ -1162,7 +1095,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                             log_query((*crecp).flags, name,
                                                       &mut (*crecp).addr,
                                                       record_source((*crecp).uid));
-                                            found = 1 as libc::c_int;
+                                            found = 1;
                                             if add_resource_record(header,
                                                                    limit,
                                                                    &mut trunc
@@ -1172,7 +1105,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                    &mut ansp
                                                                        as
                                                                        *mut *mut libc::c_uchar,
-                                                                   (*dnsmasq_daemon).auth_ttl,
+                                                                   daemon.auth_ttl,
                                                                    0 as
                                                                        *mut libc::c_int,
                                                                    qtype as
@@ -1231,11 +1164,11 @@ pub fn answer_auth(mut header: *mut DnsHeader,
 	     we match b.simon to _both_ *.simon and b.simon
 	     but return a longer (better) match to b.simon.
 	  */
-                            wclen = 0 as libc::c_int as libc::c_uint;
+                            wclen = 0 __b;
                             candidate = 0 as *mut Cname;
-                            a = (*dnsmasq_daemon).cnames;
+                            a = daemon.cnames;
                             while !a.is_null() {
-                                if *(*a).alias.offset(0 as libc::c_int as
+                                if *(*a).alias.offset(0 as
                                                           isize) as
                                        libc::c_int == '*' as i32 {
                                     let mut test: *mut libc::c_char = name;
@@ -1243,7 +1176,7 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                         test =
                                             strchr(test.offset(1 as
                                                                    libc::c_int
-                                                                   as isize),
+                                                                  ),
                                                    '.' as i32);
                                         if test.is_null() { break ; }
                                         if !(hostname_isequal(test,
@@ -1259,9 +1192,9 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                wclen as libc::c_ulong &&
                                                cname_wildcard == 0 {
                                             wclen =
-                                                strlen(test) as libc::c_uint;
+                                                strlen(test) __b;
                                             candidate = a;
-                                            cname_wildcard = 1 as libc::c_int
+                                            cname_wildcard = 1
                                         }
                                         break ;
                                     }
@@ -1271,16 +1204,16 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                   wclen as libc::c_ulong {
                                     /* Simple case, no wildcard */
                                     wclen =
-                                        strlen((*a).alias) as libc::c_uint;
+                                        strlen((*a).alias) __b;
                                     candidate = a
                                 }
                                 a = (*a).next
                             }
                             if !candidate.is_null() {
-                                log_query((1 as libc::c_uint) <<
-                                              13 as libc::c_int |
-                                              (1 as libc::c_uint) <<
-                                                  11 as libc::c_int, name,
+                                log_query((1 __b) <<
+                                              13 |
+                                              (1 __b) <<
+                                                  11, name,
                                           0 as *mut AllAddr,
                                           0 as *mut libc::c_char);
                                 strcpy(name, (*candidate).target);
@@ -1290,19 +1223,19 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                *const libc::c_char);
                                     strcat(name, zone.domain);
                                 }
-                                found = 1 as libc::c_int;
+                                found = 1;
                                 if add_resource_record(header, limit,
                                                        &mut trunc as
                                                            *mut libc::c_int,
                                                        nameoffset,
                                                        &mut ansp as
                                                            *mut *mut libc::c_uchar,
-                                                       (*dnsmasq_daemon).auth_ttl,
+                                                       daemon.auth_ttl,
                                                        &mut nameoffset as
                                                            *mut libc::c_int,
-                                                       5 as libc::c_int as
+                                                       5 as
                                                            libc::c_ushort,
-                                                       1 as libc::c_int as
+                                                       1 as
                                                            libc::c_ushort,
                                                        b"d\x00" as *const u8
                                                            as
@@ -1314,22 +1247,22 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                 }
                             } else {
                                 if cache_find_non_terminal(name, now) != 0 {
-                                    nxdomain = 0 as libc::c_int
+                                    nxdomain = 0
                                 }
                                 log_query(flag |
-                                              (1 as libc::c_uint) <<
-                                                  5 as libc::c_int |
+                                              (1 __b) <<
+                                                  5 |
                                               (if nxdomain != 0 {
-                                                   ((1 as libc::c_uint)) <<
-                                                       10 as libc::c_int
+                                                   ((1 __b)) <<
+                                                       10
                                                } else {
-                                                   0 as libc::c_int as
+                                                   0 as
                                                        libc::c_uint
                                                }) |
-                                              (1 as libc::c_uint) <<
-                                                  3 as libc::c_int |
-                                              (1 as libc::c_uint) <<
-                                                  21 as libc::c_int, name,
+                                              (1 __b) <<
+                                                  3 |
+                                              (1 __b) <<
+                                                  21, name,
                                           0 as *mut AllAddr,
                                           0 as *mut libc::c_char);
                                 break ;
@@ -1345,138 +1278,138 @@ pub fn answer_auth(mut header: *mut DnsHeader,
     if auth != 0 && !zone.is_null() {
         let mut authname: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut newoffset: libc::c_int = 0;
-        let mut offset: libc::c_int = 0 as libc::c_int;
+        let mut offset: libc::c_int = 0;
         if subnet.is_null() {
             authname = zone.domain
         } else {
             /* handle NS and SOA for PTR records */
             authname = name;
-            if (*subnet).flags & 2 as libc::c_int == 0 {
+            if (*subnet).flags & 2 == 0 {
                 let mut a_0: InAddrT =
                     __bswap_32((*subnet).addr.addr4.s_addr) >>
-                        8 as libc::c_int;
+                        8;
                 let mut p_1: *mut libc::c_char = name;
-                if (*subnet).prefixlen >= 24 as libc::c_int {
+                if (*subnet).prefixlen >= 24 {
                     p_1 =
                         p_1.offset(sprintf(p_1,
                                            b"%u.\x00" as *const u8 as
                                                *const libc::c_char,
                                            a_0 &
-                                               0xff as libc::c_int as
-                                                   libc::c_uint) as isize)
+                                               0xff as
+                                                   libc::c_uint))
                 }
-                a_0 = a_0 >> 8 as libc::c_int;
-                if (*subnet).prefixlen >= 16 as libc::c_int {
+                a_0 = a_0 >> 8;
+                if (*subnet).prefixlen >= 16 {
                     p_1 =
                         p_1.offset(sprintf(p_1,
                                            b"%u.\x00" as *const u8 as
                                                *const libc::c_char,
                                            a_0 &
-                                               0xff as libc::c_int as
-                                                   libc::c_uint) as isize)
+                                               0xff as
+                                                   libc::c_uint))
                 }
-                a_0 = a_0 >> 8 as libc::c_int;
+                a_0 = a_0 >> 8;
                 p_1 =
                     p_1.offset(sprintf(p_1,
                                        b"%u.in-addr.arpa\x00" as *const u8 as
                                            *const libc::c_char,
                                        a_0 &
-                                           0xff as libc::c_int as
-                                               libc::c_uint) as isize)
+                                           0xff as
+                                               libc::c_uint))
             } else {
                 let mut p_2: *mut libc::c_char = name;
                 let mut i: libc::c_int = 0;
-                i = (*subnet).prefixlen - 1 as libc::c_int;
-                while i >= 0 as libc::c_int {
+                i = (*subnet).prefixlen - 1;
+                while i >= 0 {
                     let mut dig: libc::c_int =
                         *(&mut (*subnet).addr.addr6 as *mut In6Addr as
                               *mut libc::c_uchar).offset((i >>
                                                               3 as
                                                                   libc::c_int)
-                                                             as isize) as
+                                                            ) as
                             libc::c_int;
                     p_2 =
                         p_2.offset(sprintf(p_2,
                                            b"%.1x.\x00" as *const u8 as
                                                *const libc::c_char,
-                                           if i >> 2 as libc::c_int &
-                                                  1 as libc::c_int != 0 {
-                                               (dig) & 15 as libc::c_int
+                                           if i >> 2 &
+                                                  1 != 0 {
+                                               (dig) & 15
                                            } else {
-                                               (dig) >> 4 as libc::c_int
-                                           }) as isize);
-                    i -= 4 as libc::c_int
+                                               (dig) >> 4
+                                           }));
+                    i -= 4
                 }
                 p_2 =
                     p_2.offset(sprintf(p_2,
                                        b"ip6.arpa\x00" as *const u8 as
-                                           *const libc::c_char) as isize)
+                                           *const libc::c_char))
             }
         }
         /* handle NS and SOA in auth section or for explicit queries */
         newoffset =
-            ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                libc::c_long as libc::c_int;
-        if (anscount == 0 as libc::c_int && ns == 0 || soa != 0) &&
+            ansp.wrapping_offset_from(header) as
+                libc::c_long;
+        if (anscount == 0 && ns == 0 || soa != 0) &&
                add_resource_record(header, limit,
                                    &mut trunc as *mut libc::c_int,
-                                   0 as libc::c_int,
+                                   0,
                                    &mut ansp as *mut *mut libc::c_uchar,
-                                   (*dnsmasq_daemon).auth_ttl,
+                                   daemon.auth_ttl,
                                    0 as *mut libc::c_int,
-                                   6 as libc::c_int as libc::c_ushort,
-                                   1 as libc::c_int as libc::c_ushort,
+                                   6 as libc::c_ushort,
+                                   1 as libc::c_ushort,
                                    b"ddlllll\x00" as *const u8 as
                                        *const libc::c_char as
                                        *mut libc::c_char, authname,
-                                   (*dnsmasq_daemon).authserver,
-                                   (*dnsmasq_daemon).hostmaster,
-                                   (*dnsmasq_daemon).soa_sn,
-                                   (*dnsmasq_daemon).soa_refresh,
-                                   (*dnsmasq_daemon).soa_retry,
-                                   (*dnsmasq_daemon).soa_expiry,
-                                   (*dnsmasq_daemon).auth_ttl) != 0 {
+                                   daemon.authserver,
+                                   daemon.hostmaster,
+                                   daemon.soa_sn,
+                                   daemon.soa_refresh,
+                                   daemon.soa_retry,
+                                   daemon.soa_expiry,
+                                   daemon.auth_ttl) != 0 {
             offset = newoffset;
             if soa != 0 { anscount += 1 } else { authcount += 1 }
         }
-        if anscount != 0 as libc::c_int || ns != 0 {
+        if anscount != 0 || ns != 0 {
             let mut secondary: *mut NameList = 0 as *mut NameList;
             /* Only include the machine running dnsmasq if it's acting as an auth server */
-            if !(*dnsmasq_daemon).authinterface.is_null() {
+            if !daemon.authinterface.is_null() {
                 newoffset =
-                    ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                        libc::c_long as libc::c_int;
+                    ansp.wrapping_offset_from(header) as
+                        libc::c_long;
                 if add_resource_record(header, limit,
                                        &mut trunc as *mut libc::c_int,
                                        -offset,
                                        &mut ansp as *mut *mut libc::c_uchar,
-                                       (*dnsmasq_daemon).auth_ttl,
+                                       daemon.auth_ttl,
                                        0 as *mut libc::c_int,
-                                       2 as libc::c_int as libc::c_ushort,
-                                       1 as libc::c_int as libc::c_ushort,
+                                       2 as libc::c_ushort,
+                                       1 as libc::c_ushort,
                                        b"d\x00" as *const u8 as
                                            *const libc::c_char as
                                            *mut libc::c_char,
-                                       if offset == 0 as libc::c_int {
+                                       if offset == 0 {
                                            authname
                                        } else { 0 as *mut libc::c_char },
-                                       (*dnsmasq_daemon).authserver) != 0 {
-                    if offset == 0 as libc::c_int { offset = newoffset }
+                                       daemon.authserver) != 0 {
+                    if offset == 0 { offset = newoffset }
                     if ns != 0 { anscount += 1 } else { authcount += 1 }
                 }
             }
             if subnet.is_null() {
-                secondary = (*dnsmasq_daemon).secondary_forward_server;
+                secondary = daemon.secondary_forward_server;
                 while !secondary.is_null() {
                     if add_resource_record(header, limit,
                                            &mut trunc as *mut libc::c_int,
                                            offset,
                                            &mut ansp as
                                                *mut *mut libc::c_uchar,
-                                           (*dnsmasq_daemon).auth_ttl,
+                                           daemon.auth_ttl,
                                            0 as *mut libc::c_int,
-                                           2 as libc::c_int as libc::c_ushort,
-                                           1 as libc::c_int as libc::c_ushort,
+                                           2 as libc::c_ushort,
+                                           1 as libc::c_ushort,
                                            b"d\x00" as *const u8 as
                                                *const libc::c_char as
                                                *mut libc::c_char,
@@ -1488,11 +1421,11 @@ pub fn answer_auth(mut header: *mut DnsHeader,
             }
         }
         if axfr != 0 {
-            rec = (*dnsmasq_daemon).mxnames;
+            rec = daemon.mxnames;
             while !rec.is_null() {
                 if in_zone(zone, (*rec).name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_int as libc::c_char
+                        *cut = 0 as libc::c_char
                     }
                     if (*rec).issrv != 0 {
                         if add_resource_record(header, limit,
@@ -1500,11 +1433,11 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                -axfroffset,
                                                &mut ansp as
                                                    *mut *mut libc::c_uchar,
-                                               (*dnsmasq_daemon).auth_ttl,
+                                               daemon.auth_ttl,
                                                0 as *mut libc::c_int,
-                                               33 as libc::c_int as
+                                               33 as
                                                    libc::c_ushort,
-                                               1 as libc::c_int as
+                                               1 as
                                                    libc::c_ushort,
                                                b"sssd\x00" as *const u8 as
                                                    *const libc::c_char as
@@ -1524,11 +1457,11 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                   -axfroffset,
                                                   &mut ansp as
                                                       *mut *mut libc::c_uchar,
-                                                  (*dnsmasq_daemon).auth_ttl,
+                                                  daemon.auth_ttl,
                                                   0 as *mut libc::c_int,
-                                                  15 as libc::c_int as
+                                                  15 as
                                                       libc::c_ushort,
-                                                  1 as libc::c_int as
+                                                  1 as
                                                       libc::c_ushort,
                                                   b"sd\x00" as *const u8 as
                                                       *const libc::c_char as
@@ -1546,28 +1479,28 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                 }
                 rec = (*rec).next
             }
-            txt = (*dnsmasq_daemon).rr;
+            txt = daemon.rr;
             while !txt.is_null() {
                 if in_zone(zone, (*txt).name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_int as libc::c_char
+                        *cut = 0 as libc::c_char
                     }
                     if add_resource_record(header, limit,
                                            &mut trunc as *mut libc::c_int,
                                            -axfroffset,
                                            &mut ansp as
                                                *mut *mut libc::c_uchar,
-                                           (*dnsmasq_daemon).auth_ttl,
+                                           daemon.auth_ttl,
                                            0 as *mut libc::c_int,
                                            (*txt).class,
-                                           1 as libc::c_int as libc::c_ushort,
+                                           1 as libc::c_ushort,
                                            b"t\x00" as *const u8 as
                                                *const libc::c_char as
                                                *mut libc::c_char,
                                            if !cut.is_null() {
                                                (*txt).name
                                            } else { 0 as *mut libc::c_char },
-                                           (*txt).len as libc::c_int,
+                                           (*txt).len,
                                            (*txt).txt) != 0 {
                         anscount += 1
                     }
@@ -1576,30 +1509,30 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                 }
                 txt = (*txt).next
             }
-            txt = (*dnsmasq_daemon).txt;
+            txt = daemon.txt;
             while !txt.is_null() {
-                if (*txt).class as libc::c_int == 1 as libc::c_int &&
+                if (*txt).class == 1 &&
                        in_zone(zone, (*txt).name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_int as libc::c_char
+                        *cut = 0 as libc::c_char
                     }
                     if add_resource_record(header, limit,
                                            &mut trunc as *mut libc::c_int,
                                            -axfroffset,
                                            &mut ansp as
                                                *mut *mut libc::c_uchar,
-                                           (*dnsmasq_daemon).auth_ttl,
+                                           daemon.auth_ttl,
                                            0 as *mut libc::c_int,
-                                           16 as libc::c_int as
+                                           16 as
                                                libc::c_ushort,
-                                           1 as libc::c_int as libc::c_ushort,
+                                           1 as libc::c_ushort,
                                            b"t\x00" as *const u8 as
                                                *const libc::c_char as
                                                *mut libc::c_char,
                                            if !cut.is_null() {
                                                (*txt).name
                                            } else { 0 as *mut libc::c_char },
-                                           (*txt).len as libc::c_int,
+                                           (*txt).len,
                                            (*txt).txt) != 0 {
                         anscount += 1
                     }
@@ -1608,22 +1541,22 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                 }
                 txt = (*txt).next
             }
-            na = (*dnsmasq_daemon).naptr;
+            na = daemon.naptr;
             while !na.is_null() {
                 if in_zone(zone, (*na).name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_int as libc::c_char
+                        *cut = 0 as libc::c_char
                     }
                     if add_resource_record(header, limit,
                                            &mut trunc as *mut libc::c_int,
                                            -axfroffset,
                                            &mut ansp as
                                                *mut *mut libc::c_uchar,
-                                           (*dnsmasq_daemon).auth_ttl,
+                                           daemon.auth_ttl,
                                            0 as *mut libc::c_int,
-                                           35 as libc::c_int as
+                                           35 as
                                                libc::c_ushort,
-                                           1 as libc::c_int as libc::c_ushort,
+                                           1 as libc::c_ushort,
                                            b"sszzzd\x00" as *const u8 as
                                                *const libc::c_char as
                                                *mut libc::c_char,
@@ -1640,20 +1573,20 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                 }
                 na = (*na).next
             }
-            intr = (*dnsmasq_daemon).int_names;
+            intr = daemon.int_names;
             while !intr.is_null() {
-                if in_zone(zone, (*intr).name, &mut cut) != 0 {
+                if in_zone(zone, intr.name, &mut cut) != 0 {
                     let mut addrlist_2: *mut AddrList = 0 as *mut AddrList;
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_int as libc::c_char
+                        *cut = 0 as libc::c_char
                     }
-                    addrlist_2 = (*intr).addr;
+                    addrlist_2 = intr.addr;
                     while !addrlist_2.is_null() {
-                        if (*addrlist_2).flags & 2 as libc::c_int == 0 &&
+                        if (*addrlist_2).flags & 2 == 0 &&
                                (local_query != 0 ||
                                     filter_zone(zone,
-                                                ((1 as libc::c_uint) <<
-                                                     7 as libc::c_int) as
+                                                ((1 __b) <<
+                                                     7) as
                                                     libc::c_int,
                                                 &mut (*addrlist_2).addr) != 0)
                                &&
@@ -1663,17 +1596,17 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                    -axfroffset,
                                                    &mut ansp as
                                                        *mut *mut libc::c_uchar,
-                                                   (*dnsmasq_daemon).auth_ttl,
+                                                   daemon.auth_ttl,
                                                    0 as *mut libc::c_int,
-                                                   1 as libc::c_int as
+                                                   1 as
                                                        libc::c_ushort,
-                                                   1 as libc::c_int as
+                                                   1 as
                                                        libc::c_ushort,
                                                    b"4\x00" as *const u8 as
                                                        *const libc::c_char as
                                                        *mut libc::c_char,
                                                    (if !cut.is_null() {
-                                                        (*intr).name
+                                                        intr.name
                                                     } else {
                                                         0 as *mut libc::c_char
                                                     }),
@@ -1683,13 +1616,13 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                         }
                         addrlist_2 = (*addrlist_2).next
                     }
-                    addrlist_2 = (*intr).addr;
+                    addrlist_2 = intr.addr;
                     while !addrlist_2.is_null() {
-                        if (*addrlist_2).flags & 2 as libc::c_int != 0 &&
+                        if (*addrlist_2).flags & 2 != 0 &&
                                (local_query != 0 ||
                                     filter_zone(zone,
-                                                ((1 as libc::c_uint) <<
-                                                     8 as libc::c_int) as
+                                                ((1 __b) <<
+                                                     8) as
                                                     libc::c_int,
                                                 &mut (*addrlist_2).addr) != 0)
                                &&
@@ -1699,17 +1632,17 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                    -axfroffset,
                                                    &mut ansp as
                                                        *mut *mut libc::c_uchar,
-                                                   (*dnsmasq_daemon).auth_ttl,
+                                                   daemon.auth_ttl,
                                                    0 as *mut libc::c_int,
-                                                   28 as libc::c_int as
+                                                   28 as
                                                        libc::c_ushort,
-                                                   1 as libc::c_int as
+                                                   1 as
                                                        libc::c_ushort,
                                                    b"6\x00" as *const u8 as
                                                        *const libc::c_char as
                                                        *mut libc::c_char,
                                                    (if !cut.is_null() {
-                                                        (*intr).name
+                                                        intr.name
                                                     } else {
                                                         0 as *mut libc::c_char
                                                     }),
@@ -1722,9 +1655,9 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                     /* restore config data */
                     if !cut.is_null() { *cut = '.' as i32 as libc::c_char }
                 }
-                intr = (*intr).next
+                intr = intr.next
             }
-            a = (*dnsmasq_daemon).cnames;
+            a = daemon.cnames;
             while !a.is_null() {
                 if in_zone(zone, (*a).alias, &mut cut) != 0 {
                     strcpy(name, (*a).target);
@@ -1734,17 +1667,17 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                         strcat(name, zone.domain);
                     }
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_int as libc::c_char
+                        *cut = 0 as libc::c_char
                     }
                     if add_resource_record(header, limit,
                                            &mut trunc as *mut libc::c_int,
                                            -axfroffset,
                                            &mut ansp as
                                                *mut *mut libc::c_uchar,
-                                           (*dnsmasq_daemon).auth_ttl,
+                                           daemon.auth_ttl,
                                            0 as *mut libc::c_int,
-                                           5 as libc::c_int as libc::c_ushort,
-                                           1 as libc::c_int as libc::c_ushort,
+                                           5 as libc::c_ushort,
+                                           1 as libc::c_ushort,
                                            b"d\x00" as *const u8 as
                                                *const libc::c_char as
                                                *mut libc::c_char,
@@ -1757,22 +1690,22 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                 }
                 a = (*a).next
             }
-            cache_enumerate(1 as libc::c_int);
+            cache_enumerate(1);
             loop  {
-                crecp = cache_enumerate(0 as libc::c_int);
+                crecp = cache_enumerate(0);
                 if crecp.is_null() { break ; }
                 if (*crecp).flags &
-                       ((1 as libc::c_uint) << 7 as libc::c_int |
-                            (1 as libc::c_uint) << 8 as libc::c_int) != 0 &&
+                       ((1 __b) << 7 |
+                            (1 __b) << 8) != 0 &&
                        (*crecp).flags &
-                           ((1 as libc::c_uint) << 5 as libc::c_int |
-                                (1 as libc::c_uint) << 10 as libc::c_int) == 0
+                           ((1 __b) << 5 |
+                                (1 __b) << 10) == 0
                        &&
                        (*crecp).flags &
-                           (1 as libc::c_uint) << 3 as libc::c_int != 0 {
+                           (1 __b) << 3 != 0 {
                     if (*crecp).flags &
-                           (1 as libc::c_uint) << 4 as libc::c_int != 0 &&
-                           (*dnsmasq_daemon).options[(20 as libc::c_int as
+                           (1 __b) << 4 != 0 &&
+                           daemon.options[(20 as
                                                           libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                            as
                                                                                            libc::c_ulong).wrapping_mul(8
@@ -1781,8 +1714,8 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                                                                            as
                                                                                                                            libc::c_ulong))
                                                          as usize] &
-                               (1 as libc::c_uint) <<
-                                   (20 as libc::c_int as
+                               (1 __b) <<
+                                   (20 as
                                         libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                          as
                                                                          libc::c_ulong).wrapping_mul(8
@@ -1797,13 +1730,13 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                (local_query != 0 ||
                                     filter_zone(zone,
                                                 ((*crecp).flags &
-                                                     ((1 as libc::c_uint) <<
-                                                          8 as libc::c_int |
-                                                          (1 as libc::c_uint)
+                                                     ((1 __b) <<
+                                                          8 |
+                                                          (1 __b)
                                                               <<
                                                               7 as
                                                                   libc::c_int))
-                                                    as libc::c_int,
+                                                   ,
                                                 &mut (*crecp).addr) != 0) &&
                                add_resource_record(header, limit,
                                                    &mut trunc as
@@ -1811,22 +1744,22 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                    -axfroffset,
                                                    &mut ansp as
                                                        *mut *mut libc::c_uchar,
-                                                   (*dnsmasq_daemon).auth_ttl,
+                                                   daemon.auth_ttl,
                                                    0 as *mut libc::c_int,
                                                    (if (*crecp).flags &
-                                                           (1 as libc::c_uint)
+                                                           (1 __b)
                                                                <<
                                                                8 as
                                                                    libc::c_int
                                                            != 0 {
-                                                        28 as libc::c_int
+                                                        28
                                                     } else {
-                                                        1 as libc::c_int
+                                                        1
                                                     }) as libc::c_ushort,
-                                                   1 as libc::c_int as
+                                                   1 as
                                                        libc::c_ushort,
                                                    (if (*crecp).flags &
-                                                           (1 as libc::c_uint)
+                                                           (1 __b)
                                                                <<
                                                                7 as
                                                                    libc::c_int
@@ -1846,10 +1779,10 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                         }
                     }
                     if (*crecp).flags &
-                           (1 as libc::c_uint) << 6 as libc::c_int != 0 ||
+                           (1 __b) << 6 != 0 ||
                            (*crecp).flags &
-                               (1 as libc::c_uint) << 4 as libc::c_int != 0 &&
-                               (*dnsmasq_daemon).options[(20 as libc::c_int as
+                               (1 __b) << 4 != 0 &&
+                               daemon.options[(20 as
                                                               libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                as
                                                                                                libc::c_ulong).wrapping_mul(8
@@ -1858,8 +1791,8 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                                                                                                as
                                                                                                                                libc::c_ulong))
                                                              as usize] &
-                                   (1 as libc::c_uint) <<
-                                       (20 as libc::c_int as
+                                   (1 __b) <<
+                                       (20 as
                                             libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                              as
                                                                              libc::c_ulong).wrapping_mul(8
@@ -1873,16 +1806,16 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                (local_query != 0 ||
                                     filter_zone(zone,
                                                 ((*crecp).flags &
-                                                     ((1 as libc::c_uint) <<
-                                                          8 as libc::c_int |
-                                                          (1 as libc::c_uint)
+                                                     ((1 __b) <<
+                                                          8 |
+                                                          (1 __b)
                                                               <<
                                                               7 as
                                                                   libc::c_int))
-                                                    as libc::c_int,
+                                                   ,
                                                 &mut (*crecp).addr) != 0) {
                             if !cut.is_null() {
-                                *cut = 0 as libc::c_int as libc::c_char
+                                *cut = 0 as libc::c_char
                             }
                             if add_resource_record(header, limit,
                                                    &mut trunc as
@@ -1890,22 +1823,22 @@ pub fn answer_auth(mut header: *mut DnsHeader,
                                                    -axfroffset,
                                                    &mut ansp as
                                                        *mut *mut libc::c_uchar,
-                                                   (*dnsmasq_daemon).auth_ttl,
+                                                   daemon.auth_ttl,
                                                    0 as *mut libc::c_int,
                                                    if (*crecp).flags &
-                                                          (1 as libc::c_uint)
+                                                          (1 __b)
                                                               <<
-                                                              8 as libc::c_int
+                                                              8
                                                           != 0 {
-                                                       28 as libc::c_int
-                                                   } else { 1 as libc::c_int }
+                                                       28
+                                                   } else { 1 }
                                                        as libc::c_ushort,
-                                                   1 as libc::c_int as
+                                                   1 as
                                                        libc::c_ushort,
                                                    if (*crecp).flags &
-                                                          (1 as libc::c_uint)
+                                                          (1 __b)
                                                               <<
-                                                              7 as libc::c_int
+                                                              7
                                                           != 0 {
                                                        b"4\x00" as *const u8
                                                            as
@@ -1932,20 +1865,20 @@ pub fn answer_auth(mut header: *mut DnsHeader,
             if add_resource_record(header, limit,
                                    &mut trunc as *mut libc::c_int, axfroffset,
                                    &mut ansp as *mut *mut libc::c_uchar,
-                                   (*dnsmasq_daemon).auth_ttl,
+                                   daemon.auth_ttl,
                                    0 as *mut libc::c_int,
-                                   6 as libc::c_int as libc::c_ushort,
-                                   1 as libc::c_int as libc::c_ushort,
+                                   6 as libc::c_ushort,
+                                   1 as libc::c_ushort,
                                    b"ddlllll\x00" as *const u8 as
                                        *const libc::c_char as
                                        *mut libc::c_char,
-                                   (*dnsmasq_daemon).authserver,
-                                   (*dnsmasq_daemon).hostmaster,
-                                   (*dnsmasq_daemon).soa_sn,
-                                   (*dnsmasq_daemon).soa_refresh,
-                                   (*dnsmasq_daemon).soa_retry,
-                                   (*dnsmasq_daemon).soa_expiry,
-                                   (*dnsmasq_daemon).auth_ttl) != 0 {
+                                   daemon.authserver,
+                                   daemon.hostmaster,
+                                   daemon.soa_sn,
+                                   daemon.soa_refresh,
+                                   daemon.soa_retry,
+                                   daemon.soa_expiry,
+                                   daemon.auth_ttl) != 0 {
                 anscount += 1
             }
         }
@@ -1953,55 +1886,55 @@ pub fn answer_auth(mut header: *mut DnsHeader,
     /* done all questions, set up header and return length of result */
   /* clear authoritative and truncated flags, set QR flag */
     header.hb3 =
-        (header.hb3 as libc::c_int &
-             !(0x4 as libc::c_int | 0x2 as libc::c_int) | 0x80 as libc::c_int)
+        (header.hb3 &
+             !(0x4 | 0x2) | 0x80)
             as u8;
     if local_query != 0 {
         /* set RA flag */
         header.hb4 =
-            (header.hb4 as libc::c_int | 0x80 as libc::c_int) as u8
+            (header.hb4 | 0x80) as u8
     } else {
         /* clear RA flag */
         header.hb4 =
-            (header.hb4 as libc::c_int & !(0x80 as libc::c_int)) as u8
+            (header.hb4 & !(0x80)) as u8
     }
     /* data is never DNSSEC signed. */
     header.hb4 =
-        (header.hb4 as libc::c_int & !(0x20 as libc::c_int)) as u8;
+        (header.hb4 & !(0x20)) as u8;
     /* authoritative */
     if auth != 0 {
         header.hb3 =
-            (header.hb3 as libc::c_int | 0x4 as libc::c_int) as u8
+            (header.hb3 | 0x4) as u8
     }
     /* truncation */
     if trunc != 0 {
         header.hb3 =
-            (header.hb3 as libc::c_int | 0x2 as libc::c_int) as u8
+            (header.hb3 | 0x2) as u8
     } /* no error */
     if (auth != 0 || local_query != 0) && nxdomain != 0 {
         header.hb4 =
-            (header.hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 3 as libc::c_int) as u8
+            (header.hb4 & !(0xf) |
+                 3) as u8
     } else {
         header.hb4 =
-            (header.hb4 as libc::c_int & !(0xf as libc::c_int) |
-                 0 as libc::c_int) as u8
+            (header.hb4 & !(0xf) |
+                 0) as u8
     }
     header.ancount = __bswap_16(anscount as u16);
     header.nscount = __bswap_16(authcount as u16);
-    header.arcount = __bswap_16(0 as libc::c_int as u16);
+    header.arcount = __bswap_16(0 as u16);
     /* Advertise our packet size limit in our reply */
     if have_pseudoheader != 0 {
         return add_pseudoheader(header,
                                 ansp.wrapping_offset_from(header as
                                                               *mut libc::c_uchar)
                                     as libc::c_long as size_t,
-                                limit as *mut libc::c_uchar,
-                                (*dnsmasq_daemon).edns_pktsz,
-                                0 as libc::c_int, 0 as *mut libc::c_uchar,
-                                0 as libc::c_int as size_t, do_bit,
-                                0 as libc::c_int)
+                                limit,
+                                daemon.edns_pktsz,
+                                0, 0,
+                                0 as size_t, do_bit,
+                                0)
     }
-    return ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
+    return ansp.wrapping_offset_from(header) as
                libc::c_long as size_t;
 }

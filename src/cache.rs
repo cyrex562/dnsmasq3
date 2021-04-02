@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{Crec, BigName, C2RustUnnamed_10, DnsmasqDaemon, time_t, AllAddr, In6Addr, _ISspace, FILE, InAddr, HostsFile, HostRecord, NameList, Cname, C2RustUnnamed_8, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, Server, InAddrT, socklen_t, _ISprint};
+use crate::defines::{Crec, BigName, C2rustUnnamed10, DnsmasqDaemon, time_t, AllAddr, In6Addr, _ISSPACE, FILE, InAddr, HostsFile, HostRecord, NameList, Cname, C2rustUnnamed8, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, Server, InAddrT, socklen_t, _ISPRINT};
 use crate::util::{safe_malloc, whine_malloc, hostname_isequal, read_write, canonicalise, sockaddr_isequal, prettyprint_addr};
 use crate::blockdata::{blockdata_free, blockdata_write, blockdata_read, blockdata_report, blockdata_retrieve};
 use crate::dnsmasq_log::my_syslog;
@@ -33,10 +33,10 @@ static mut insert_error: libc::c_int = 0;
 static mut big_free: *mut BigName = 0 as *const BigName as *mut BigName;
 static mut bignames_left: libc::c_int = 0;
 static mut hash_size: libc::c_int = 0;
-static mut typestr: [C2RustUnnamed_10; 40] =
+static mut typestr: [C2rustUnnamed10; 40] =
     [{
          let mut init =
-             C2RustUnnamed_10{type_0: 1 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 1 as libc::c_int as libc::c_uint,
                               name:
                                   b"A\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -44,7 +44,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 2 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 2 as libc::c_int as libc::c_uint,
                               name:
                                   b"NS\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -52,7 +52,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 5 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 5 as libc::c_int as libc::c_uint,
                               name:
                                   b"CNAME\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -60,7 +60,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 6 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 6 as libc::c_int as libc::c_uint,
                               name:
                                   b"SOA\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -68,7 +68,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 10 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 10 as libc::c_int as libc::c_uint,
                               name:
                                   b"NULL\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -76,7 +76,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 11 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 11 as libc::c_int as libc::c_uint,
                               name:
                                   b"WKS\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -84,7 +84,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 12 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 12 as libc::c_int as libc::c_uint,
                               name:
                                   b"PTR\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -92,7 +92,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 13 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 13 as libc::c_int as libc::c_uint,
                               name:
                                   b"HINFO\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -100,7 +100,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 15 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 15 as libc::c_int as libc::c_uint,
                               name:
                                   b"MX\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -108,7 +108,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 16 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 16 as libc::c_int as libc::c_uint,
                               name:
                                   b"TXT\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -116,7 +116,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 22 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 22 as libc::c_int as libc::c_uint,
                               name:
                                   b"NSAP\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -124,7 +124,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 23 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 23 as libc::c_int as libc::c_uint,
                               name:
                                   b"NSAP_PTR\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -132,7 +132,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 24 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 24 as libc::c_int as libc::c_uint,
                               name:
                                   b"SIG\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -140,7 +140,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 25 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 25 as libc::c_int as libc::c_uint,
                               name:
                                   b"KEY\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -148,7 +148,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 28 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 28 as libc::c_int as libc::c_uint,
                               name:
                                   b"AAAA\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -156,7 +156,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 29 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 29 as libc::c_int as libc::c_uint,
                               name:
                                   b"LOC\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -164,7 +164,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 33 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 33 as libc::c_int as libc::c_uint,
                               name:
                                   b"SRV\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -172,7 +172,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 35 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 35 as libc::c_int as libc::c_uint,
                               name:
                                   b"NAPTR\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -180,7 +180,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 36 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 36 as libc::c_int as libc::c_uint,
                               name:
                                   b"KX\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -188,7 +188,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 37 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 37 as libc::c_int as libc::c_uint,
                               name:
                                   b"CERT\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -196,7 +196,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 38 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 38 as libc::c_int as libc::c_uint,
                               name:
                                   b"A6\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -204,7 +204,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 39 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 39 as libc::c_int as libc::c_uint,
                               name:
                                   b"DNAME\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -212,7 +212,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 41 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 41 as libc::c_int as libc::c_uint,
                               name:
                                   b"OPT\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -220,7 +220,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 43 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 43 as libc::c_int as libc::c_uint,
                               name:
                                   b"DS\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -228,7 +228,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 46 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 46 as libc::c_int as libc::c_uint,
                               name:
                                   b"RRSIG\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -236,7 +236,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 47 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 47 as libc::c_int as libc::c_uint,
                               name:
                                   b"NSEC\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -244,7 +244,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 48 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 48 as libc::c_int as libc::c_uint,
                               name:
                                   b"DNSKEY\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -252,7 +252,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 50 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 50 as libc::c_int as libc::c_uint,
                               name:
                                   b"NSEC3\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -260,7 +260,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 51 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 51 as libc::c_int as libc::c_uint,
                               name:
                                   b"NSEC3PARAM\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -268,7 +268,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 52 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 52 as libc::c_int as libc::c_uint,
                               name:
                                   b"TLSA\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -276,7 +276,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 53 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 53 as libc::c_int as libc::c_uint,
                               name:
                                   b"SMIMEA\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -284,7 +284,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 55 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 55 as libc::c_int as libc::c_uint,
                               name:
                                   b"HIP\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -292,7 +292,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 249 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 249 as libc::c_int as libc::c_uint,
                               name:
                                   b"TKEY\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -300,7 +300,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 250 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 250 as libc::c_int as libc::c_uint,
                               name:
                                   b"TSIG\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -308,7 +308,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 251 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 251 as libc::c_int as libc::c_uint,
                               name:
                                   b"IXFR\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -316,7 +316,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 252 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 252 as libc::c_int as libc::c_uint,
                               name:
                                   b"AXFR\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -324,7 +324,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 253 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 253 as libc::c_int as libc::c_uint,
                               name:
                                   b"MAILB\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -332,7 +332,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 254 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 254 as libc::c_int as libc::c_uint,
                               name:
                                   b"MAILA\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -340,7 +340,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 255 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 255 as libc::c_int as libc::c_uint,
                               name:
                                   b"ANY\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -348,7 +348,7 @@ static mut typestr: [C2RustUnnamed_10; 40] =
      },
      {
          let mut init =
-             C2RustUnnamed_10{type_0: 257 as libc::c_int as libc::c_uint,
+             C2rustUnnamed10 {type_0: 257 as libc::c_int as libc::c_uint,
                               name:
                                   b"CAA\x00" as *const u8 as
                                       *const libc::c_char,};
@@ -1426,7 +1426,7 @@ unsafe extern "C" fn eatspace(mut f: *mut FILE) -> libc::c_int {
         }
         if c == -(1 as libc::c_int) { return 1 as libc::c_int }
         if *(*__ctype_b_loc()).offset(c as isize) as libc::c_int &
-               _ISspace as libc::c_int as libc::c_ushort as libc::c_int == 0 {
+               _ISSPACE as libc::c_int as libc::c_ushort as libc::c_int == 0 {
             ungetc(c, f);
             return nl
         }
@@ -1445,7 +1445,7 @@ unsafe extern "C" fn gettok(mut f: *mut FILE, mut token: *mut libc::c_char)
                    } else { 1 as libc::c_int }
         }
         if *(*__ctype_b_loc()).offset(c as isize) as libc::c_int &
-               _ISspace as libc::c_int as libc::c_ushort as libc::c_int != 0
+               _ISSPACE as libc::c_int as libc::c_ushort as libc::c_int != 0
                || c == '#' as i32 {
             ungetc(c, f);
             return eatspace(f)
@@ -1633,7 +1633,7 @@ pub unsafe extern "C" fn cache_reload() {
              ttd: 0,
              uid: 0,
              flags: 0,
-             name: C2RustUnnamed_8{sname: [0; 50],},};
+             name: C2rustUnnamed8 {sname: [0; 50],},};
     let mut mx: *mut MxSrvRecord = 0 as *mut MxSrvRecord;
     let mut txt: *mut TxtRecord = 0 as *mut TxtRecord;
     let mut intr: *mut InterfaceName = 0 as *mut InterfaceName;
@@ -2319,7 +2319,7 @@ unsafe extern "C" fn sanitise(mut name: *mut libc::c_char)
         while *r != 0 {
             if *(*__ctype_b_loc()).offset(*r as libc::c_int as isize) as
                    libc::c_int &
-                   _ISprint as libc::c_int as libc::c_ushort as libc::c_int ==
+                   _ISPRINT as libc::c_int as libc::c_ushort as libc::c_int ==
                    0 {
                 return b"<name unprintable>\x00" as *const u8 as
                            *const libc::c_char as *mut libc::c_char
@@ -2677,8 +2677,8 @@ pub unsafe extern "C" fn querystr(mut desc: *mut libc::c_char,
     static mut bufflen: libc::c_int = 0 as libc::c_int;
     i = 0 as libc::c_int as libc::c_uint;
     while (i as libc::c_ulong) <
-              (::std::mem::size_of::<[C2RustUnnamed_10; 40]>() as
-                   libc::c_ulong).wrapping_div(::std::mem::size_of::<C2RustUnnamed_10>()
+              (::std::mem::size_of::<[C2rustUnnamed10; 40]>() as
+                   libc::c_ulong).wrapping_div(::std::mem::size_of::<C2rustUnnamed10>()
                                                    as libc::c_ulong) {
         if typestr[i as usize].type_0 == type_0 as libc::c_uint {
             types = typestr[i as usize].name;

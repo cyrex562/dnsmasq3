@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsHeader, size_t, AllAddr, _ISdigit, _ISxdigit, In6Addr, __bswap_16, InAddr, __bswap_32, InAddrT, DnsmasqDaemon, Doctor, _ISprint, time_t, Crec, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, BogusAddr, AddrList, Server};
+use crate::defines::{DnsHeader, size_t, AllAddr, _ISDIGIT, _ISXDIGIT, In6Addr, __bswap_16, InAddr, __bswap_32, InAddrT, DnsmasqDaemon, Doctor, _ISPRINT, time_t, Crec, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, BogusAddr, AddrList, Server};
 use crate::util::{hostname_isequal, is_same_net, hostname_issubdomain, do_rfc1035_name};
 use crate::slack::{u32_0, is_rev_synth, is_name_synthetic};
 use crate::dnsmasq_log::my_syslog;
@@ -25,7 +25,7 @@ use std::env::args;
 use crate::network::enumerate_interfaces;
 use crate::edns0::add_pseudoheader;
 
-#[no_mangle]
+
 pub fn extract_name(mut header: *mut DnsHeader,
                                       mut plen: size_t,
                                       mut pp: *mut *mut libc::c_uchar,
@@ -166,7 +166,7 @@ pub fn extract_name(mut header: *mut DnsHeader,
         } else { return 0 as libc::c_int }
     };
 }
-#[no_mangle]
+
 pub fn in_arpa_name_2_addr(mut namein: *mut libc::c_char,
                                              mut addrp: *mut AllAddr)
  -> libc::c_int {
@@ -219,7 +219,7 @@ pub fn in_arpa_name_2_addr(mut namein: *mut libc::c_char,
                 if *(*__ctype_b_loc()).offset(*cp as libc::c_uchar as
                                                   libc::c_int as isize) as
                        libc::c_int &
-                       _ISdigit as libc::c_int as libc::c_ushort as
+                       _ISDIGIT as libc::c_int as libc::c_ushort as
                            libc::c_int == 0 {
                     return 0 as libc::c_int
                 }
@@ -270,7 +270,7 @@ pub fn in_arpa_name_2_addr(mut namein: *mut libc::c_char,
                           *(*__ctype_b_loc()).offset(*cp1 as libc::c_uchar as
                                                          libc::c_int as isize)
                               as libc::c_int &
-                              _ISxdigit as libc::c_int as libc::c_ushort as
+                              _ISXDIGIT as libc::c_int as libc::c_ushort as
                                   libc::c_int != 0 && j < 32 as libc::c_int {
                     let mut xdig: [libc::c_char; 2] = [0; 2];
                     xdig[0 as libc::c_int as usize] = *cp1;
@@ -308,7 +308,7 @@ pub fn in_arpa_name_2_addr(mut namein: *mut libc::c_char,
                                                           libc::c_int as
                                                           isize) as
                                libc::c_int &
-                               _ISxdigit as libc::c_int as libc::c_ushort as
+                               _ISXDIGIT as libc::c_int as libc::c_ushort as
                                    libc::c_int == 0 {
                         return 0 as libc::c_int
                     }
@@ -346,73 +346,50 @@ pub fn in_arpa_name_2_addr(mut namein: *mut libc::c_char,
     }
     return 0 as libc::c_int;
 }
-#[no_mangle]
-pub fn skip_name(mut ansp: *mut libc::c_uchar,
-                                   mut header: *mut DnsHeader,
-                                   mut plen: size_t,
-                                   mut extrabytes: libc::c_int)
-                                   -> *mut libc::c_uchar {
+
+pub fn skip_name(mut ansp: &mut String, mut header: &mut DnsHeader, mut plen: usize, mut extrabytes: u32) -> Option<String> {
     loop  {
-        let mut label_type: libc::c_uint = 0;
-        if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                  libc::c_long + 1 as libc::c_int as libc::c_long) as size_t
-                 <= plen) {
-            return 0 as *mut libc::c_uchar
+        let mut label_type = 0;
+        if !((ansp.wrapping_offset_from(header) + 1) <= plen) {
+            return None
         }
-        label_type =
-            (*ansp as libc::c_int & 0xc0 as libc::c_int) as libc::c_uint;
-        if label_type == 0xc0 as libc::c_int as libc::c_uint {
+        label_type = (ansp[0] & 0xc0);
+        if label_type == 0xc0 {
             /* pointer for compression. */
-            ansp = ansp.offset(2 as libc::c_int as isize); /* reserved */
-            break ;
-        } else if label_type == 0x80 as libc::c_int as libc::c_uint {
-            return 0 as *mut libc::c_uchar
-        } else if label_type == 0x40 as libc::c_int as libc::c_uint {
+            *ansp = ansp[2..].to_string(); /* reserved */
+            break;
+        } else if label_type == 0x80 {
+            return None
+        } else if label_type == 0x40 {
             /* Extended label type */
-            let mut count: libc::c_uint =
-                0; /* we only understand bitstrings */
-            if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                      libc::c_long + 2 as libc::c_int as libc::c_long) as
-                     size_t <= plen) {
-                return 0 as *mut libc::c_uchar
+            let mut count = 0; /* we only understand bitstrings */
+            if !((ansp.wrapping_offset_from(header) + 2) <= plen) {
+                return None
             } /* Bits in bitstring */
             let fresh12 = ansp;
-            ansp = ansp.offset(1);
-            if *fresh12 as libc::c_int & 0x3f as libc::c_int !=
-                   1 as libc::c_int {
-                return 0 as *mut libc::c_uchar
+            *ansp = ansp[1..].to_string();
+            if fresh12[0] & 0x3f != 1 {
+                return None
             }
             let fresh13 = ansp;
-            ansp = ansp.offset(1);
-            count = *fresh13 as libc::c_uint;
-            if count == 0 as libc::c_int as libc::c_uint {
+            *ansp = ansp[1..].to_string();
+            count = fresh13[0];
+            if count == 0 {
                 /* count == 0 means 256 bits */
-                ansp = ansp.offset(32 as libc::c_int as isize)
+                *ansp = ansp[32..].to_string();
             } else {
-                ansp =
-                    ansp.offset((count.wrapping_sub(1 as libc::c_int as
-                                                        libc::c_uint) >>
-                                     3 as
-                                         libc::c_int).wrapping_add(1 as
-                                                                       libc::c_int
-                                                                       as
-                                                                       libc::c_uint)
-                                    as isize)
+                *ansp = ansp[1..].to_string();
             }
         } else {
             /* label type == 0 Bottom six bits is length */
             let fresh14 = ansp;
-            ansp = ansp.offset(1);
-            let mut len: libc::c_uint =
-                (*fresh14 as libc::c_int & 0x3f as libc::c_int) as
-                    libc::c_uint;
-            if if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar)
-                         as libc::c_long + len as libc::c_long) as size_t <=
-                        plen) {
-                   0 as libc::c_int
+            *ansp = ansp[1..].to_string();
+            let mut len: libc::c_uint = (fresh14[0] & 0x3f);
+            if if !((ansp.wrapping_offset_from(header) + len) <= plen) {
+                   return None
                } else { ansp = ansp.offset(len as isize); 1 as libc::c_int }
                    == 0 {
-                return 0 as *mut libc::c_uchar
+                return None
             }
             if len == 0 as libc::c_int as libc::c_uint { break ; }
             /* zero length label marks the end. */
@@ -420,88 +397,74 @@ pub fn skip_name(mut ansp: *mut libc::c_uchar,
     }
     if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
               libc::c_long + extrabytes as libc::c_long) as size_t <= plen) {
-        return 0 as *mut libc::c_uchar
+        return None
     }
-    return ansp;
+    return Some((*ansp).clone());
 }
-#[no_mangle]
-pub fn skip_questions(mut header: *mut DnsHeader,
-                                        mut plen: size_t)
-                                        -> *mut libc::c_uchar {
-    let mut q: libc::c_int = 0;
-    let mut ansp: *mut libc::c_uchar =
-        header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
-    q = __bswap_16((*header).qdcount) as libc::c_int;
-    while q != 0 as libc::c_int {
-        ansp = skip_name(ansp, header, plen, 4 as libc::c_int);
-        if ansp.is_null() { return 0 as *mut libc::c_uchar }
+
+pub fn skip_questions(mut header: &DnsHeader, mut plen: size_t) -> Option<String> {
+    let mut q: u16 = 0;
+    let mut ansp: String = header[1..].to_string();
+    q = header.qdcount.to_be();
+    while q != 0 {
+        ansp = skip_name(ansp, header, plen, 4);
+        if ansp.is_null() { return None }
         ansp = ansp.offset(4 as libc::c_int as isize);
         q -= 1
         /* class and type */
     } /* type, class, TTL */
-    return ansp;
+    return Some(ansp);
 }
-#[no_mangle]
-pub fn skip_section(mut ansp: *mut libc::c_uchar,
-                                      mut count: libc::c_int,
-                                      mut header: *mut DnsHeader,
-                                      mut plen: size_t)
-                                      -> *mut libc::c_uchar {
-    let mut i: libc::c_int = 0;
-    let mut rdlen: libc::c_int = 0;
-    i = 0 as libc::c_int;
+
+pub fn skip_section(mut ansp: &mut String, mut count: usize mut header: &mut DnsHeader, mut plen: usize) -> Option<String> {
+    let mut i = 0;
+    let mut rdlen = 0;
+    i = 0;
     while i < count {
-        ansp = skip_name(ansp, header, plen, 10 as libc::c_int);
-        if ansp.is_null() { return 0 as *mut libc::c_uchar }
-        ansp = ansp.offset(8 as libc::c_int as isize);
-        let mut t_cp: *mut libc::c_uchar = ansp;
-        rdlen =
-            (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
-                << 8 as libc::c_int |
-                *t_cp.offset(1 as libc::c_int as isize) as u16 as
-                    libc::c_int;
-        ansp = ansp.offset(2 as libc::c_int as isize);
-        if if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                     libc::c_long + rdlen as libc::c_long) as size_t <= plen)
+        match skip_name(ansp, header, plen, 10) {
+            Some(x) => ansp,
+            None => return None,
+        };
+        *ansp = ansp[8..].to_string();
+
+        let mut t_cp: String = (*ansp).clone();
+        rdlen = t_cp[0] << 8 | t_cp[1];
+        *ansp = ansp[2..].to_string();
+        if if !((ansp.wrapping_offset_from(header) + rdlen) <= plen)
               {
-               0 as libc::c_int
+               return None
            } else { ansp = ansp.offset(rdlen as isize); 1 as libc::c_int } ==
                0 {
-            return 0 as *mut libc::c_uchar
+            return None
         }
         i += 1
     }
-    return ansp;
+    return Some((*ansp).clone());
 }
-#[no_mangle]
-pub fn resize_packet(mut header: *mut DnsHeader,
-                                       mut plen: size_t,
-                                       mut pheader: *mut libc::c_uchar,
-                                       mut hlen: size_t) -> size_t {
-    let mut ansp: *mut libc::c_uchar = skip_questions(header, plen);
+
+pub fn resize_packet(mut header: &mut DnsHeader, mut plen: size_t,
+                                       mut pheader: &mut String,
+                                       mut hlen: size_t) -> usize {
+    let mut ansp_res = skip_questions(&header, plen);
     /* if packet is malformed, just return as-is. */
-    if ansp.is_null() { return plen }
-    ansp =
-        skip_section(ansp,
-                     __bswap_16((*header).ancount) as libc::c_int +
-                         __bswap_16((*header).nscount) as libc::c_int +
-                         __bswap_16((*header).arcount) as libc::c_int, header,
-                     plen);
-    if ansp.is_null() { return plen }
+    if ansp_res.is_none() { return plen }
+    ansp_res = skip_section(&mut ansp.unwrap(),
+                        header.ancount.to_be() as usize+ header.nscount.to_be() as usize+ header.arcount.to_be(),
+                        header,
+                        plen);
+    if ansp_res.is_none() { return plen }
+    let mut ansp = ansp_res.unwrap();
     /* restore pseudoheader */
-    if !pheader.is_null() &&
-           __bswap_16((*header).arcount) as libc::c_int == 0 as libc::c_int {
+    if !pheader.is_empty() && header.arcount.to_be() == 0 {
         /* must use memmove, may overlap */
-        memmove(ansp as *mut libc::c_void, pheader as *const libc::c_void,
-                hlen);
-        (*header).arcount = __bswap_16(1 as libc::c_int as u16);
-        ansp = ansp.offset(hlen as isize)
+        pheader[0..hlen].clone_into(&mut ansp[0..hlen].as_string());
+        header.arcount = 1;
+        ansp = ansp[hlen..]
     }
-    return ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-               libc::c_long as size_t;
+    return ansp[header..];
 }
 /* is addr in the non-globally-routed IP space? */
-#[no_mangle]
+
 pub fn private_net(mut addr: InAddr,
                                      mut ban_localhost: libc::c_int)
                                      -> libc::c_int {
@@ -721,7 +684,7 @@ fn do_doctor(mut p: *mut libc::c_uchar,
                                                                  as isize) as
                                                       libc::c_int as isize) as
                            libc::c_int &
-                           _ISprint as libc::c_int as libc::c_ushort as
+                           _ISPRINT as libc::c_int as libc::c_ushort as
                                libc::c_int == 0 {
                         break ;
                     }
@@ -865,7 +828,7 @@ fn find_soa(mut header: *mut DnsHeader, mut qlen: size_t,
    either because of lack of memory, or lack of SOA records.  These are treated by the cache code as 
    expired and cleaned out that way. 
    Return 1 if we reject an address because it look like part of dns-rebinding attack. */
-#[no_mangle]
+
 pub fn extract_addresses(mut header: *mut DnsHeader,
                                            mut qlen: size_t,
                                            mut name: *mut libc::c_char,
@@ -1988,7 +1951,7 @@ pub fn extract_addresses(mut header: *mut DnsHeader,
 }
 /* If the packet holds exactly one query
    return F_IPV4 or F_IPV6  and leave the name from the query in name */
-#[no_mangle]
+
 pub fn extract_request(mut header: *mut DnsHeader,
                                          mut qlen: size_t,
                                          mut name: *mut libc::c_char,
@@ -2043,7 +2006,7 @@ pub fn extract_request(mut header: *mut DnsHeader,
     }
     return (1 as libc::c_uint) << 19 as libc::c_int;
 }
-#[no_mangle]
+
 pub fn setup_reply(mut header: *mut DnsHeader,
                                      mut qlen: size_t,
                                      mut addrp: *mut AllAddr,
@@ -2142,7 +2105,7 @@ pub fn setup_reply(mut header: *mut DnsHeader,
                libc::c_long as size_t;
 }
 /* check if name matches local names ie from /etc/hosts or DHCP or local mx names. */
-#[no_mangle]
+
 pub fn check_for_local_domain(mut name: *mut libc::c_char,
                                                 mut now: time_t)
  -> libc::c_int {
@@ -2192,7 +2155,7 @@ pub fn check_for_local_domain(mut name: *mut libc::c_char,
 /* Is the packet a reply with the answer address equal to addr?
    If so mung is into an NXDOMAIN reply and also put that information
    in the cache. */
-#[no_mangle]
+
 pub fn check_for_bogus_wildcard(mut header: *mut DnsHeader,
                                                   mut qlen: size_t,
                                                   mut name: *mut libc::c_char,
@@ -2286,7 +2249,7 @@ pub fn check_for_bogus_wildcard(mut header: *mut DnsHeader,
     }
     return 0 as libc::c_int;
 }
-#[no_mangle]
+
 pub fn check_for_ignored_address(mut header:
                                                        *mut DnsHeader,
                                                    mut qlen: size_t,
@@ -2358,7 +2321,7 @@ pub fn check_for_ignored_address(mut header:
     }
     return 0 as libc::c_int;
 }
-#[no_mangle]
+
 pub fn add_resource_record(mut header: *mut DnsHeader,
                                              mut limit: *mut libc::c_char,
                                              mut truncp: *mut libc::c_int,
@@ -2731,7 +2694,7 @@ fn cache_validated(mut crecp: *const Crec) -> libc::c_int {
                     0) as libc::c_int;
 }
 /* return zero if we can't answer from cache, or packet size if we can */
-#[no_mangle]
+
 pub fn answer_request(mut header: *mut DnsHeader,
                                         mut limit: *mut libc::c_char,
                                         mut qlen: size_t,

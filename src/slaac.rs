@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DhcpLease, time_t, SlaacAddress, DhcpContext, DnsmasqDaemon, In6Addr, SockAddrIn6, C2RustUnnamed, SaFamily, __bswap_16, __CONST_SOCKADDR_ARG, SockAddr, socklen_t};
+use crate::defines::{DhcpLease, time_t, SlaacAddress, DhcpContext, DnsmasqDaemon, In6Addr, SockAddrIn6, C2RustUnnamed, SaFamily, __bswap_16, ConstSockaddrArg, SockAddr, socklen_t};
 use crate::util::{whine_malloc, rand16};
 use crate::radv::ra_start_unsolicited;
 use crate::lease::lease_update_dns;
@@ -264,7 +264,7 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time_t,
                                   (*dnsmasq_daemon).outpacket.iov_base,
                                   save_counter(-(1 as libc::c_int)) as usize,
                                   0 as libc::c_int,
-                                  __CONST_SOCKADDR_ARG{__sockaddr__:
+                                  ConstSockaddrArg {__sockaddr__:
                                                            &mut addr as
                                                                *mut SockAddrIn6
                                                                as

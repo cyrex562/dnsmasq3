@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use crate::slack::{ifreq, IFF_LOOPBACK, uint32_t, ipv6_mreq};
-use crate::defines::{C2RustUnnamed_2, SockAddr, C2RustUnnamed_1A, IfReq, AllAddr, Iname, DnsmasqDaemon, In6Addr, Irec, IfaceParam, MySockAddr, InAddr, AddrList, __bswap_32, InterfaceName, AuthZone, AuthNameList, InAddrT, SaFamily, __bswap_16, __uint16_t, Listener, SOCK_DGRAM, socklen_t, IPPROTO_IPV6, __CONST_SOCKADDR_ARG, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr, iovec, Server, C2RustUnnamed_13, C2RustUnnamed_12, in_port_t, C2RustUnnamed, ServerFd, time_t};
+use crate::defines::{C2rustUnnamed2, SockAddr, C2rustUnnamed1a, IfReq, AllAddr, Iname, DnsmasqDaemon, In6Addr, Irec, IfaceParam, MySockAddr, InAddr, AddrList, __bswap_32, InterfaceName, AuthZone, AuthNameList, InAddrT, SaFamily, __bswap_16, __uint16_t, Listener, SOCK_DGRAM, socklen_t, IPPROTO_IPV6, ConstSockaddrArg, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr, iovec, Server, C2RustUnnamed_13, C2rustUnnamed12, in_port_t, C2RustUnnamed, ServerFd, time_t};
 use crate::util::{safe_strncpy, wildcard_match, whine_malloc, sockaddr_isequal, prettyprint_addr, sa_len, safe_malloc, rand16, hostname_isequal, rand32};
 use crate::dnsmasq_log::{my_syslog, die};
 use crate::netlink::iface_enumerate;
@@ -33,7 +33,7 @@ pub unsafe extern "C" fn indextoname(mut fd: libc::c_int,
     let mut ifr: IfReq =
         IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_1A{ifru_addr:
+                  C2rustUnnamed1a {ifru_addr:
                                       SockAddr {sa_family: 0,
                                                sa_data: [0; 14],},},};
     if index == 0 as libc::c_int { return 0 as libc::c_int }
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn loopback_exception(mut fd: libc::c_int,
     let mut ifr: IfReq =
         IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_2{
+                  C2rustUnnamed2 {
                       keydata: blockdata {},
                       keylen: 0,
                       keytag: 0,
@@ -334,7 +334,7 @@ unsafe extern "C" fn iface_allowed(mut param: *mut IfaceParam,
     let mut ifr: IfReq =
         IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_2{ifru_addr:
+                  C2rustUnnamed2 {ifru_addr:
                                       SockAddr {sa_family: 0,
                                                sa_data: [0; 14],},},};
     let mut tftp_ok: libc::c_int =
@@ -1017,7 +1017,7 @@ unsafe extern "C" fn make_sock(mut addr: *mut MySockAddr,
                      -(1 as libc::c_int)) {
             rc =
                 bind(fd,
-                     __CONST_SOCKADDR_ARG{__sockaddr__:
+                     ConstSockaddrArg {__sockaddr__:
                                               addr as *mut SockAddr,},
                      sa_len(addr) as socklen_t);
             if !(rc == -(1 as libc::c_int)) {
@@ -1235,8 +1235,8 @@ pub unsafe extern "C" fn tcp_interface(mut fd: libc::c_int,
         while !cmptr.is_null() {
             if (*cmptr).cmsg_level == IPPROTO_IPV6 as libc::c_int &&
                    (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
-                let mut p_0: C2RustUnnamed_12 =
-                    C2RustUnnamed_12{c: 0 as *mut libc::c_uchar,};
+                let mut p_0: C2rustUnnamed12 =
+                    C2rustUnnamed12 {c: 0 as *mut libc::c_uchar,};
                 p_0.c = (*cmptr).__cmsg_data.as_mut_ptr();
                 if_index = (*p_0.p).ipi6_ifindex as libc::c_int
             }
@@ -1708,7 +1708,7 @@ pub unsafe extern "C" fn random_sock(mut family: libc::c_int) -> libc::c_int {
                     addr.in6.sin6_port = port
                 }
                 if bind(fd,
-                        __CONST_SOCKADDR_ARG{__sockaddr__:
+                        ConstSockaddrArg {__sockaddr__:
                                                  &mut addr as *mut MySockAddr
                                                      as *mut SockAddr,},
                         sa_len(&mut addr) as socklen_t) == 0 as libc::c_int {
@@ -1763,7 +1763,7 @@ pub unsafe extern "C" fn local_bind(mut fd: libc::c_int,
             addr_copy.in_0.sin_port = port
         } else { addr_copy.in6.sin6_port = port }
         if bind(fd,
-                __CONST_SOCKADDR_ARG{__sockaddr__:
+                ConstSockaddrArg {__sockaddr__:
                                          &mut addr_copy as *mut MySockAddr as
                                              *mut SockAddr,},
                 sa_len(&mut addr_copy) as socklen_t) != -(1 as libc::c_int) {

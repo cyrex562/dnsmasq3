@@ -3,7 +3,7 @@
    unless nowild is true, when we just send it with the kernel default */
 use crate::auth::{answer_auth, in_zone};
 use crate::cache::{log_query, querystr};
-use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, __SOCKADDR_ARG, AddrList, AllAddr, AuthZone, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_15, C2RustUnnamed_16, C2RustUnnamed_4, CmsgHdr, DnsHeader, DnsmasqDaemon, Frec, FrecSrc, IfReq, In6Addr, InAddr, InAddrT, InPktInfo, iovec, IPPROTO_IP, IPPROTO_IPV6, IpSets, Irec, Listener, MSG_FASTOPEN, MSG_TRUNC, MsgHdr, MySockAddr, RandFd, SaFamily, Server, SOCK_STREAM, SockAddr, socklen_t, time_t};
+use crate::defines::{__bswap_16, __bswap_32, ConstSockaddrArg, SockaddrArg, AddrList, AllAddr, AuthZone, C2RustUnnamed_13, C2rustUnnamed14, C2rustUnnamed15, C2rustUnnamed16, C2RustUnnamed4, CmsgHdr, DnsHeader, DnsmasqDaemon, Frec, FrecSrc, IfReq, In6Addr, InAddr, InAddrT, InPktInfo, iovec, IPPROTO_IP, IPPROTO_IPV6, IpSets, Irec, Listener, MSG_FASTOPEN, MSG_TRUNC, MsgHdr, MySockAddr, RandFd, SaFamily, Server, SOCK_STREAM, SockAddr, socklen_t, time_t};
 use crate::dnsmasq_log::{check_log_writer, my_syslog};
 use crate::dnsmasq_loop::detect_loop;
 use crate::dump::dump_packet;
@@ -768,7 +768,7 @@ unsafe extern "C" fn forward_query(mut udpfd: libc::c_int,
                                      header as *mut libc::c_char as
                                          *const libc::c_void, plen,
                                      0 as libc::c_int,
-                                     __CONST_SOCKADDR_ARG{__sockaddr__:
+                                     ConstSockaddrArg {__sockaddr__:
                                                               &mut (*start).addr.sa,},
                                      sa_len(&mut (*start).addr) as socklen_t))
                        != 0 {
@@ -1121,7 +1121,7 @@ pub unsafe extern "C" fn reply_query(mut fd: libc::c_int,
     let mut n: susize =
         recvfrom(fd, (*dnsmasq_daemon).packet as *mut libc::c_void,
                  (*dnsmasq_daemon).packet_buff_sz as usize, 0 as libc::c_int,
-                 __SOCKADDR_ARG{__sockaddr__:
+                 SockaddrArg {__sockaddr__:
                                     &mut serveraddr.sa as *mut SockAddr,},
                  &mut addrlen);
     let mut nn: usize = 0;
@@ -1511,8 +1511,8 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
                msg_controllen: 0,
                msg_flags: 0,};
     let mut cmptr: *mut CmsgHdr = 0 as *mut CmsgHdr;
-    let mut control_u: C2RustUnnamed_16 =
-        C2RustUnnamed_16{align:
+    let mut control_u: C2rustUnnamed16 =
+        C2rustUnnamed16 {align:
                              CmsgHdr {cmsg_len: 0,
                                      cmsg_level: 0,
                                      cmsg_type: 0,
@@ -1576,7 +1576,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
         (*dnsmasq_daemon).edns_pktsz as usize;
     msg.msg_control = control_u.control.as_mut_ptr() as *mut libc::c_void;
     msg.msg_controllen =
-        ::std::mem::size_of::<C2RustUnnamed_16>() as libc::c_ulong;
+        ::std::mem::size_of::<C2rustUnnamed16>() as libc::c_ulong;
     msg.msg_flags = 0 as libc::c_int;
     msg.msg_name = &mut source_addr as *mut MySockAddr as *mut libc::c_void;
     msg.msg_namelen =
@@ -1673,7 +1673,7 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
     }
     if check_dst != 0 {
         let mut ifr: IfReq =
-            IfReq {ifr_ifrn: C2RustUnnamed_4{ifrn_name: [0; 16],},
+            IfReq {ifr_ifrn: C2RustUnnamed4 {ifrn_name: [0; 16],},
                   ifr_ifru:
                       C2RustUnnamed_3{ifru_addr:
                                           SockAddr {sa_family: 0,
@@ -1691,8 +1691,8 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
             while !cmptr.is_null() {
                 if (*cmptr).cmsg_level == IPPROTO_IP as libc::c_int &&
                        (*cmptr).cmsg_type == 8 as libc::c_int {
-                    let mut p: C2RustUnnamed_15 =
-                        C2RustUnnamed_15{c: 0 as *mut libc::c_uchar,};
+                    let mut p: C2rustUnnamed15 =
+                        C2rustUnnamed15 {c: 0 as *mut libc::c_uchar,};
                     p.c = (*cmptr).__cmsg_data.as_mut_ptr();
                     dst_addr.addr4 = (*p.p).ipi_spec_dst;
                     dst_addr_4 = dst_addr.addr4;
@@ -1710,8 +1710,8 @@ pub unsafe extern "C" fn receive_query(mut listen: *mut Listener,
             while !cmptr.is_null() {
                 if (*cmptr).cmsg_level == IPPROTO_IPV6 as libc::c_int &&
                        (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
-                    let mut p_0: C2RustUnnamed_14 =
-                        C2RustUnnamed_14{c: 0 as *mut libc::c_uchar,};
+                    let mut p_0: C2rustUnnamed14 =
+                        C2rustUnnamed14 {c: 0 as *mut libc::c_uchar,};
                     p_0.c = (*cmptr).__cmsg_data.as_mut_ptr();
                     dst_addr.addr6 = (*p_0.p).ipi6_addr;
                     if_index = (*p_0.p).ipi6_ifindex as libc::c_int
@@ -2113,7 +2113,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
     let mut mark: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     let mut have_mark: libc::c_int = 0 as libc::c_int;
     if getpeername(confd,
-                   __SOCKADDR_ARG{__sockaddr__:
+                   SockaddrArg {__sockaddr__:
                                       &mut peer_addr as *mut MySockAddr as
                                           *mut SockAddr,}, &mut peer_len) ==
            -(1 as libc::c_int) {
@@ -2449,7 +2449,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                                                 MSG_FASTOPEN
                                                                     as
                                                                     libc::c_int,
-                                                                __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                                ConstSockaddrArg {__sockaddr__:
                                                                                          &mut (*last_server).addr.sa,},
                                                                 sa_len(&mut (*last_server).addr)
                                                                     as
@@ -2462,7 +2462,7 @@ pub unsafe extern "C" fn tcp_request(mut confd: libc::c_int, mut now: time_t,
                                         }
                                         if data_sent == 0 &&
                                                connect((*last_server).tcpfd,
-                                                       __CONST_SOCKADDR_ARG{__sockaddr__:
+                                                       ConstSockaddrArg {__sockaddr__:
                                                                                 &mut (*last_server).addr.sa,},
                                                        sa_len(&mut (*last_server).addr)
                                                            as socklen_t) ==
@@ -2967,7 +2967,7 @@ pub unsafe extern "C" fn resend_query() {
                                     *const libc::c_void,
                                 (*dnsmasq_daemon).packet_len,
                                 0 as libc::c_int,
-                                __CONST_SOCKADDR_ARG{__sockaddr__:
+                                ConstSockaddrArg {__sockaddr__:
                                                          &mut (*(*dnsmasq_daemon).srv_save).addr.sa,},
                                 sa_len(&mut (*(*dnsmasq_daemon).srv_save).addr)
                                     as socklen_t)) != 0 {

@@ -17,7 +17,7 @@
 use std::io::stdout;
 
 use crate::cache::{cache_find_by_addr, cache_get_name};
-use crate::defines::{__bswap_16, __bswap_32, __CONST_SOCKADDR_ARG, DevT, ModeT, _ISspace, AllAddr, C2RustUnnamed_13, C2RustUnnamed_14, C2RustUnnamed_2, CmsgHdr, Crec, DhcpBridge, DhcpConfig, DhcpContext, DhcpLease, DhcpNetId, DhcpNetIdList, DhcpRelay, DnsmasqDaemon, HwaddrConfig, IfaceParam, IfReq, InAddr, InAddrT, InPktInfo, Iname, iovec, IPPROTO_IP, IPPROTO_UDP, MatchParam, MsgHdr, MySockAddr, PingResult, SaFamily, SharedNetwork, SOCK_DGRAM, SockAddr, SockAddrIn, socklen_t, time_t, usize};
+use crate::defines::{__bswap_16, __bswap_32, ConstSockaddrArg, DevT, ModeT, _ISSPACE, AllAddr, C2RustUnnamed_13, C2rustUnnamed14, C2rustUnnamed2, CmsgHdr, Crec, DhcpBridge, DhcpConfig, DhcpContext, DhcpLease, DhcpNetId, DhcpNetIdList, DhcpRelay, DnsmasqDaemon, HwaddrConfig, IfaceParam, IfReq, InAddr, InAddrT, InPktInfo, Iname, iovec, IPPROTO_IP, IPPROTO_UDP, MatchParam, MsgHdr, MySockAddr, PingResult, SaFamily, SharedNetwork, SOCK_DGRAM, SockAddr, SockAddrIn, socklen_t, time_t, usize};
 use crate::dhcp_common::{match_netid, recv_dhcp_packet, strip_hostname};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::domain::get_domain;
@@ -142,7 +142,7 @@ unsafe extern "C" fn make_fd(mut port: libc::c_int) -> libc::c_int {
     saddr.sin_port = __bswap_16(port as u16);
     saddr.sin_addr.s_addr = 0 as libc::c_int as InAddrT;
     if bind(fd,
-            __CONST_SOCKADDR_ARG{__sockaddr__:
+            ConstSockaddrArg {__sockaddr__:
                                      &mut saddr as *mut SockAddrIn as
                                          *mut SockAddr,},
             ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
     let mut ifr: IfReq =
         IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
               ifr_ifru:
-                  C2RustUnnamed_2{ifru_addr:
+                  C2rustUnnamed2 {ifru_addr:
                                       SockAddr {sa_family: 0,
                                                sa_data: [0; 14],},},};
     let mut msg: MsgHdr =
@@ -252,8 +252,8 @@ pub unsafe extern "C" fn dhcp_packet(mut now: time_t,
         while !cmptr.is_null() {
             if (*cmptr).cmsg_level == IPPROTO_IP as libc::c_int &&
                    (*cmptr).cmsg_type == 8 as libc::c_int {
-                let mut p: C2RustUnnamed_14 =
-                    C2RustUnnamed_14{c: 0 as *mut libc::c_uchar,};
+                let mut p: C2rustUnnamed14 =
+                    C2rustUnnamed14 {c: 0 as *mut libc::c_uchar,};
                 p.c = (*cmptr).__cmsg_data.as_mut_ptr();
                 iface_index = (*p.p).ipi_ifindex;
                 if (*p.p).ipi_addr.s_addr != 0xffffffff as libc::c_uint {
@@ -1243,7 +1243,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                                                               as isize) as
                                                  libc::c_int as isize) as
                       libc::c_int &
-                      _ISspace as libc::c_int as libc::c_ushort as libc::c_int
+                      _ISSPACE as libc::c_int as libc::c_ushort as libc::c_int
                       != 0 {
             *buff.offset(strlen(buff).wrapping_sub(1 as libc::c_int as
                                                        libc::c_ulong) as
@@ -1258,14 +1258,14 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
         while *ip as libc::c_int != 0 &&
                   *(*__ctype_b_loc()).offset(*ip as libc::c_int as isize) as
                       libc::c_int &
-                      _ISspace as libc::c_int as libc::c_ushort as libc::c_int
+                      _ISSPACE as libc::c_int as libc::c_ushort as libc::c_int
                       == 0 {
             ip = ip.offset(1)
         }
         while *ip as libc::c_int != 0 &&
                   *(*__ctype_b_loc()).offset(*ip as libc::c_int as isize) as
                       libc::c_int &
-                      _ISspace as libc::c_int as libc::c_ushort as libc::c_int
+                      _ISSPACE as libc::c_int as libc::c_ushort as libc::c_int
                       != 0 {
             *ip = 0 as libc::c_int as libc::c_char;
             ip = ip.offset(1)

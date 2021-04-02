@@ -1,4 +1,4 @@
-use crate::defines::{Listener, time_t, DnsmasqDaemon, MySockAddr, SockAddr, MsgHdr, iovec, IfReq, C2RustUnnamed_2, Iname, TftpTransfer, TftpPrefix, AllAddr, InAddr, C2RustUnnamed_14, CmsgHdr, socklen_t, Server, __SOCKADDR_ARG, SaFamily, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2RustUnnamed_12, __bswap_16, SOCK_DGRAM, off_t, TftpFile, __CONST_SOCKADDR_ARG, stat, timespec, DhcpLease, uid_t, _ISprint};
+use crate::defines::{Listener, time_t, DnsmasqDaemon, MySockAddr, SockAddr, MsgHdr, iovec, IfReq, C2rustUnnamed2, Iname, TftpTransfer, TftpPrefix, AllAddr, InAddr, C2rustUnnamed14, CmsgHdr, socklen_t, Server, SockaddrArg, SaFamily, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2rustUnnamed12, __bswap_16, SOCK_DGRAM, off_t, TftpFile, ConstSockaddrArg, stat, timespec, DhcpLease, uid_t, _ISPRINT};
 use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, fix_fd};
 use crate::util::{wildcard_match, safe_strncpy, sockaddr_isequal, whine_malloc, prettyprint_addr, sa_len, read_write};
 use crate::dnsmasq_log::my_syslog;
@@ -33,7 +33,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut Listener,
                msg_flags: 0,};
     let mut iov: iovec = iovec{iov_base: 0 as *mut libc::c_void, iov_len: 0,};
     let mut ifr: IfReq =
-        IfReq {ifr_ifrn: C2RustUnnamed_2{ifrn_name: [0; 16],},
+        IfReq {ifr_ifrn: C2rustUnnamed2 {ifrn_name: [0; 16],},
               ifr_ifru:
                   C2RustUnnamed_1{ifru_addr:
                                       SockAddr {sa_family: 0,
@@ -73,14 +73,14 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut Listener,
                                                                                        as
                                                                                        libc::c_ulong))
              == 0 || family == 10 as libc::c_int) as libc::c_int;
-    let mut control_u: C2RustUnnamed_14 =
-        C2RustUnnamed_14{align:
+    let mut control_u: C2rustUnnamed14 =
+        C2rustUnnamed14 {align:
                              CmsgHdr {cmsg_len: 0,
                                      cmsg_level: 0,
                                      cmsg_type: 0,
                                      __cmsg_data: [],},};
     msg.msg_controllen =
-        ::std::mem::size_of::<C2RustUnnamed_14>() as libc::c_ulong;
+        ::std::mem::size_of::<C2rustUnnamed14>() as libc::c_ulong;
     msg.msg_control = control_u.control.as_mut_ptr() as *mut libc::c_void;
     msg.msg_flags = 0 as libc::c_int;
     msg.msg_name = &mut peer as *mut MySockAddr as *mut libc::c_void;
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut Listener,
                 ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as
                     socklen_t;
             if getsockname((*listen).tftpfd,
-                           __SOCKADDR_ARG{__sockaddr__:
+                           SockaddrArg {__sockaddr__:
                                               &mut addr as *mut MySockAddr as
                                                   *mut SockAddr,},
                            &mut tcp_len) == -(1 as libc::c_int) {
@@ -152,8 +152,8 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut Listener,
             while !cmptr.is_null() {
                 if (*cmptr).cmsg_level == IPPROTO_IPV6 as libc::c_int &&
                        (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
-                    let mut p_1: C2RustUnnamed_12 =
-                        C2RustUnnamed_12{c: 0 as *mut libc::c_uchar,};
+                    let mut p_1: C2rustUnnamed12 =
+                        C2rustUnnamed12 {c: 0 as *mut libc::c_uchar,};
                     p_1.c = (*cmptr).__cmsg_data.as_mut_ptr();
                     addr.in6.sin6_addr = (*p_1.p).ipi6_addr;
                     if_index = (*p_1.p).ipi6_ifindex as libc::c_int
@@ -366,7 +366,7 @@ pub unsafe extern "C" fn tftp_request(mut listen: *mut Listener,
                                                                                         libc::c_ulong))
               == 0 {
         if !(bind((*transfer).sockfd,
-                  __CONST_SOCKADDR_ARG{__sockaddr__: &mut addr.sa,},
+                  ConstSockaddrArg {__sockaddr__: &mut addr.sa,},
                   sa_len(&mut addr) as socklen_t) == -(1 as libc::c_int) ||
                  setsockopt((*transfer).sockfd, IPPROTO_IP as libc::c_int,
                             10 as libc::c_int,
@@ -1147,7 +1147,7 @@ unsafe extern "C" fn sanitise(mut buf: *mut libc::c_char) {
     while *r != 0 {
         if *(*__ctype_b_loc()).offset(*r as libc::c_int as isize) as
                libc::c_int &
-               _ISprint as libc::c_int as libc::c_ushort as libc::c_int != 0 {
+               _ISPRINT as libc::c_int as libc::c_ushort as libc::c_int != 0 {
             let fresh7 = q;
             q = q.offset(1);
             *fresh7 = *r
