@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddrList, Crec, AllAddr, DhcpOptTblEntry, InAddr, _ISPRINT, DhcpRelay};
+use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddressListEntry, Crec, NetAddress, DhcpOptTblEntry, NetAddress, _ISPRINT, DhcpRelay};
 use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net, hostname_isequal,  prettyprint_time, print_mac, setaddr6part};
 use libc::recvmsg;
 use socket2::Socket;
@@ -84,8 +84,8 @@ pub fn option_filter(mut tags: *mut DhcpNetId,
                                        mut opts: *mut DhcpOpt)
                                        -> *mut DhcpNetId {
     let mut tagif: *mut DhcpNetId = run_tag_if(tags);
-    let mut opt: *mut DhcpOpt = 0 as *mut DhcpOpt;
-    let mut tmp: *mut DhcpOpt = 0 as *mut DhcpOpt;
+    let mut opt: *mut DhcpOpt = 0 ;
+    let mut tmp: *mut DhcpOpt = 0 ;
     /* flag options which are valid with the current tag set (sans context tags) */
     opt = opts;
     while !opt.is_null() {
@@ -101,7 +101,7 @@ pub fn option_filter(mut tags: *mut DhcpNetId,
     /* now flag options which are valid, including the context tags,
      otherwise valid options are inhibited if we found a higher priority one above */
     if !context_tags.is_null() {
-        let mut last_tag: *mut DhcpNetId = 0 as *mut DhcpNetId;
+        let mut last_tag: *mut DhcpNetId = 0 ;
         last_tag = context_tags;
         while !(*last_tag).next.is_null() { last_tag = (*last_tag).next }
         (*last_tag).next = tags;
@@ -124,7 +124,7 @@ pub fn option_filter(mut tags: *mut DhcpNetId,
                    (4  | 256  |
                         2048  | 4096 ) == 0 &&
                    match_netid((*opt).netid, tagif, 0 ) != 0 {
-                let mut tmp_0: *mut DhcpOpt = 0 as *mut DhcpOpt;
+                let mut tmp_0: *mut DhcpOpt = 0 ;
                 tmp_0 = opts;
                 while !tmp_0.is_null() {
                     if (*tmp_0).opt == (*opt).opt && !(*opt).netid.is_null()
@@ -157,8 +157,7 @@ pub fn option_filter(mut tags: *mut DhcpNetId,
             } else if (*tmp).netid.is_null() {
                 my_syslog((3 ) << 3  |
                               4 ,
-                          "Ignoring duplicate dhcp-option %d" as
-                              *const u8 , (*tmp).opt);
+                          "Ignoring duplicate dhcp-option %d"                        *const u8 , (*tmp).opt);
             }
         }
         opt = (*opt).next
@@ -184,15 +183,15 @@ pub fn option_filter(mut tags: *mut DhcpNetId,
 
 pub fn match_netid(mut check: *mut DhcpNetId,
                                      mut pool: *mut DhcpNetId,
-                                     mut tagnotneeded: libc::c_int)
-                                     -> libc::c_int {
-    let mut tmp1: *mut DhcpNetId = 0 as *mut DhcpNetId;
+                                     mut tagnotneeded: i32)
+                                     -> i32 {
+    let mut tmp1: *mut DhcpNetId = 0 ;
     if check.is_null() && tagnotneeded == 0 { return 0  }
     while !check.is_null() {
         /* '#' for not is for backwards compat. */
-        if *(*check).net.offset(0  as isize)  !=
+        if *(*check).net.offset(0 )  !=
                '!' as i32 &&
-               *(*check).net.offset(0  as isize) 
+               *(*check).net.offset(0 )
                    != '#' as i32 {
             tmp1 = pool;
             while !tmp1.is_null() {
@@ -205,7 +204,7 @@ pub fn match_netid(mut check: *mut DhcpNetId,
         } else {
             tmp1 = pool;
             while !tmp1.is_null() {
-                if strcmp((*check).net.offset(1  as isize),
+                if strcmp((*check).net.offset(1 ),
                           (*tmp1).net) == 0  {
                     return 0 
                 }
@@ -218,46 +217,35 @@ pub fn match_netid(mut check: *mut DhcpNetId,
 }
 /* return domain or NULL if none. */
 
-pub fn strip_hostname(mut hostname: *mut libc::c_char)
- -> *mut libc::c_char {
-    let mut dot: *mut libc::c_char =
+pub fn strip_hostname(mut hostname: &mut String)
+ -> &mut String {
+    let mut dot: &mut String =
         strchr(hostname, '.' as i32); /* truncate */
-    if dot.is_null() { return 0 as *mut libc::c_char }
-    *dot = 0  as libc::c_char;
-    if strlen(dot.offset(1  as isize)) !=
-           0  as libc::c_ulong {
-        return dot.offset(1  as isize)
+    if dot.is_null() { return 0  }
+    *dot = 0 ;
+    if strlen(dot.offset(1 )) !=
+           0  {
+        return dot.offset(1 )
     }
-    return 0 as *mut libc::c_char;
+    return 0 ;
 }
 
 pub fn log_tags(mut netid: *mut DhcpNetId,
                                   mut xid: u32) {
     if !netid.is_null() &&
-           daemon.options[(28  as
-                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                           as
-                                                                           libc::c_ulong).wrapping_mul(8
-                                                                                                           as
-                                                                                                           libc::c_int
-                                                                                                           as
-                                                                                                           libc::c_ulong))
-                                         as usize] &
-               (1 as libc::c_uint) <<
-                   (28  as
-                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                         as
-                                                         libc::c_ulong).wrapping_mul(8
-                                                                                         as
-                                                                                         libc::c_int
-                                                                                         as
-                                                                                         libc::c_ulong))
+           daemon.options[(28  ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                         ] &
+               (1) <<
+                   (28  )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                       ).wrapping_mul(8 libc::c_int
+                                                                                                                       ))
                != 0 {
-        let mut s: *mut libc::c_char = daemon.namebuff;
-        *s = 0  as libc::c_char;
+        let mut s: &mut String = daemon.namebuff;
+        *s = 0 ;
         while !netid.is_null() {
             /* kill dupes. */
-            let mut n: *mut DhcpNetId = 0 as *mut DhcpNetId;
+            let mut n: *mut DhcpNetId = 0 ;
             n = (*netid).next;
             while !n.is_null() {
                 if strcmp((*netid).net, (*n).net) == 0  {
@@ -267,12 +255,10 @@ pub fn log_tags(mut netid: *mut DhcpNetId,
             }
             if n.is_null() {
                 strncat(s, (*netid).net,
-                        ((1025  - 1 ) as
-                             libc::c_ulong).wrapping_sub(strlen(s)));
+                        ((1025  - 1 )).wrapping_sub(strlen(s)));
                 if !(*netid).next.is_null() {
                     strncat(s, ", " ,
-                            ((1025  - 1 ) as
-                                 libc::c_ulong).wrapping_sub(strlen(s)));
+                            ((1025  - 1 ))).wrapping_sub(strlen(s)));
                 }
             }
             netid = (*netid).next
@@ -284,9 +270,9 @@ pub fn log_tags(mut netid: *mut DhcpNetId,
 }
 
 pub fn match_bytes(mut o: *mut DhcpOpt,
-                                     mut p: *mut libc::c_uchar,
-                                     mut len: libc::c_int) -> libc::c_int {
-    let mut i: libc::c_int = 0;
+                                     mut p: mut Vec<u8>,
+                                     mut len: i32) -> i32 {
+    let mut i: i32 = 0;
     if (*o).len > len { return 0  }
     if (*o).len == 0  { return 1  }
     if (*o).flags & 512  != 0 {
@@ -296,9 +282,9 @@ pub fn match_bytes(mut o: *mut DhcpOpt,
     } else {
         i = 0 ;
         while i <= len - (*o).len {
-            if memcmp((*o).val as *const libc::c_void,
-                      p.offset(i as isize) as *const libc::c_void,
-                      (*o).len as libc::c_ulong) == 0  {
+            if memcmp((*o).val,
+                      p.offset(i),
+                      (*o).len) == 0  {
                 return 1 
             }
             if (*o).flags & 2  != 0 {
@@ -310,19 +296,19 @@ pub fn match_bytes(mut o: *mut DhcpOpt,
 }
 
 pub fn config_has_mac(mut config: *mut DhcpConfig,
-                                        mut hwaddr: *mut libc::c_uchar,
-                                        mut len: libc::c_int,
-                                        mut type_0: libc::c_int)
-                                        -> libc::c_int {
-    let mut conf_addr: *mut HwaddrConfig = 0 as *mut HwaddrConfig;
+                                        mut hwaddr: mut Vec<u8>,
+                                        mut len: i32,
+                                        mut type_0: i32)
+                                        -> i32 {
+    let mut conf_addr: *mut HwaddrConfig = 0;
     conf_addr = (*config).hwaddr;
     while !conf_addr.is_null() {
-        if (*conf_addr).wildcard_mask == 0  as libc::c_uint &&
+        if (*conf_addr).wildcard_mask == 0  &&
                (*conf_addr).hwaddr_len == len &&
                ((*conf_addr).hwaddr_type == type_0 ||
                     (*conf_addr).hwaddr_type == 0 ) &&
-               memcmp((*conf_addr).hwaddr.as_mut_ptr() as *const libc::c_void,
-                      hwaddr as *const libc::c_void, len as libc::c_ulong) ==
+               memcmp((*conf_addr).hwaddr.as_mut_ptr(),
+                      hwaddr, len) ==
                    0  {
             return 1 
         }
@@ -330,17 +316,17 @@ pub fn config_has_mac(mut config: *mut DhcpConfig,
     }
     return 0 ;
 }
-unsafe extern "C" fn is_config_in_context(mut context: *mut DhcpContext,
+unsafe extern "C" fn is_config_in_context(mut context: DhcpContext,
                                           mut config: *mut DhcpConfig)
-                                          -> libc::c_int {
+                                          -> i32 {
     if context.is_null() {
         /* called via find_config() from lease_update_from_configs() */
         return 1 
     }
-    if (*context).flags as libc::c_uint &
-           (1 as libc::c_uint) << 17  != 0 {
-        let mut addr_list: *mut AddrList = 0 as *mut AddrList;
-        if (*config).flags & 4096  as libc::c_uint == 0 {
+    if (*context).flags &
+           (1) << 17  != 0 {
+        let mut addr_list: *mut AddressListEntry = 0 ;
+        if (*config).flags & 4096  == 0 {
             return 1 
         }
         while !context.is_null() {
@@ -360,11 +346,11 @@ unsafe extern "C" fn is_config_in_context(mut context: *mut DhcpContext,
             context = (*context).current
         }
     } else {
-        if (*config).flags & 32  as libc::c_uint == 0 {
+        if (*config).flags & 32  == 0 {
             return 1 
         }
         while !context.is_null() {
-            if (*config).flags & 32  as libc::c_uint != 0 &&
+            if (*config).flags & 32  != 0 &&
                    is_same_net((*config).addr, (*context).start,
                                (*context).netmask) != 0 {
                 return 1 
@@ -375,29 +361,29 @@ unsafe extern "C" fn is_config_in_context(mut context: *mut DhcpContext,
     return 0 ;
 }
 unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
-                                       mut context: *mut DhcpContext,
-                                       mut clid: *mut libc::c_uchar,
-                                       mut clid_len: libc::c_int,
-                                       mut hwaddr: *mut libc::c_uchar,
-                                       mut hw_len: libc::c_int,
-                                       mut hw_type: libc::c_int,
-                                       mut hostname: *mut libc::c_char,
+                                       mut context: DhcpContext,
+                                       mut clid: mut Vec<u8>,
+                                       mut clid_len: i32,
+                                       mut hwaddr: mut Vec<u8>,
+                                       mut hw_len: i32,
+                                       mut hw_type: i32,
+                                       mut hostname: &mut String,
                                        mut tags: *mut DhcpNetId,
-                                       mut tag_not_needed: libc::c_int)
+                                       mut tag_not_needed: i32)
                                        -> *mut DhcpConfig {
-    let mut count: libc::c_int = 0;
-    let mut new: libc::c_int = 0;
-    let mut config: *mut DhcpConfig = 0 as *mut DhcpConfig;
-    let mut candidate: *mut DhcpConfig = 0 as *mut DhcpConfig;
-    let mut conf_addr: *mut HwaddrConfig = 0 as *mut HwaddrConfig;
+    let mut count: i32 = 0;
+    let mut new: i32 = 0;
+    let mut config: *mut DhcpConfig = 0;
+    let mut candidate: *mut DhcpConfig = 0;
+    let mut conf_addr: *mut HwaddrConfig = 0;
     if !clid.is_null() {
         config = configs;
         while !config.is_null() {
-            if (*config).flags & 2  as libc::c_uint != 0 {
+            if (*config).flags & 2  != 0 {
                 if (*config).clid_len == clid_len &&
-                       memcmp((*config).clid as *const libc::c_void,
-                              clid as *const libc::c_void,
-                              clid_len as libc::c_ulong) == 0 
+                       memcmp((*config).clid,
+                              clid,
+                              clid_len) == 0
                        && is_config_in_context(context, config) != 0 &&
                        match_netid((*config).filter, tags, tag_not_needed) !=
                            0 {
@@ -407,14 +393,13 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
 	     cope with that here. This is IPv4 only. context==NULL implies IPv4, 
 	     see lease_update_from_configs() */
                 if (context.is_null() ||
-                        (*context).flags as libc::c_uint &
-                            (1 as libc::c_uint) << 17  == 0) &&
+                        (*context).flags &
+                            (1) << 17  == 0) &&
                        *clid  == 0  &&
                        (*config).clid_len == clid_len - 1  &&
-                       memcmp((*config).clid as *const libc::c_void,
-                              clid.offset(1  as isize) as
-                                  *const libc::c_void,
-                              (clid_len - 1 ) as libc::c_ulong)
+                       memcmp((*config).clid,
+                              clid.offset(1 )
+                              (clid_len - 1 ))
                            == 0  &&
                        is_config_in_context(context, config) != 0 &&
                        match_netid((*config).filter, tags, tag_not_needed) !=
@@ -439,7 +424,7 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
     if !hostname.is_null() && !context.is_null() {
         config = configs;
         while !config.is_null() {
-            if (*config).flags & 16  as libc::c_uint != 0 &&
+            if (*config).flags & 16  != 0 &&
                    hostname_isequal((*config).hostname, hostname) != 0 &&
                    is_config_in_context(context, config) != 0 &&
                    match_netid((*config).filter, tags, tag_not_needed) != 0 {
@@ -448,9 +433,9 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
             config = (*config).next
         }
     }
-    if hwaddr.is_null() { return 0 as *mut DhcpConfig }
+    if hwaddr.is_null() { return 0 }
     /* use match with fewest wildcard octets */
-    candidate = 0 as *mut DhcpConfig;
+    candidate = 0;
     count = 0 ;
     config = configs;
     while !config.is_null() {
@@ -459,7 +444,7 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
             conf_addr = (*config).hwaddr;
             while !conf_addr.is_null() {
                 if (*conf_addr).wildcard_mask !=
-                       0  as libc::c_uint &&
+                       0  &&
                        (*conf_addr).hwaddr_len == hw_len &&
                        ((*conf_addr).hwaddr_type == hw_type ||
                             (*conf_addr).hwaddr_type == 0 ) &&
@@ -483,13 +468,13 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
 /* Find tagged configs first. */
 
 pub fn find_config(mut configs: *mut DhcpConfig,
-                                     mut context: *mut DhcpContext,
-                                     mut clid: *mut libc::c_uchar,
-                                     mut clid_len: libc::c_int,
-                                     mut hwaddr: *mut libc::c_uchar,
-                                     mut hw_len: libc::c_int,
-                                     mut hw_type: libc::c_int,
-                                     mut hostname: *mut libc::c_char,
+                                     mut context: DhcpContext,
+                                     mut clid: mut Vec<u8>,
+                                     mut clid_len: i32,
+                                     mut hwaddr: mut Vec<u8>,
+                                     mut hw_len: i32,
+                                     mut hw_type: i32,
+                                     mut hostname: &mut String,
                                      mut tags: *mut DhcpNetId)
                                      -> *mut DhcpConfig {
     let mut ret: *mut DhcpConfig =
@@ -511,19 +496,19 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
      We take care to maintain the invariant that any IP address can appear
      in at most one dhcp-host. Since /etc/hosts can be re-read by SIGHUP, 
      restore the status-quo ante first. */
-    let mut config: *mut DhcpConfig = 0 as *mut DhcpConfig;
-    let mut conf_tmp: *mut DhcpConfig = 0 as *mut DhcpConfig;
-    let mut crec: *mut Crec = 0 as *mut Crec;
-    let mut prot: libc::c_int = 2 ;
+    let mut config: *mut DhcpConfig = 0;
+    let mut conf_tmp: *mut DhcpConfig = 0;
+    let mut crec: Crec = 0 ;
+    let mut prot: i32 = 2 ;
     config = configs;
     while !config.is_null() {
-        if (*config).flags & 512  as libc::c_uint != 0 {
+        if (*config).flags & 512  != 0 {
             (*config).flags &=
-                !(32  | 512 ) as libc::c_uint
+                !(32  | 512 )
         }
-        if (*config).flags & 16384  as libc::c_uint != 0 {
+        if (*config).flags & 16384  != 0 {
             (*config).flags &=
-                !(4096  | 16384 ) as libc::c_uint
+                !(4096  | 16384 )
         }
         config = (*config).next
     }
@@ -532,50 +517,47 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
             let mut current_block_27: u64;
             config = configs;
             while !config.is_null() {
-                let mut conflags: libc::c_int = 32 ;
-                let mut cacheflags: libc::c_int =
-                    ((1 as libc::c_uint) << 7 ) ;
+                let mut conflags: i32 = 32 ;
+                let mut cacheflags: i32 =
+                    ((1) << 7 ) ;
                 if prot == 10  {
                     conflags = 4096 ;
                     cacheflags =
-                        ((1 as libc::c_uint) << 8 ) as
-                            libc::c_int
+                        ((1) << 8 )                      libc::c_int
                 }
-                if (*config).flags & conflags as libc::c_uint == 0 &&
-                       (*config).flags & 16  as libc::c_uint !=
+                if (*config).flags & conflags == 0 &&
+                       (*config).flags & 16  !=
                            0 &&
                        {
                            crec =
-                               cache_find_by_name(0 as *mut Crec,
+                               cache_find_by_name(0 ,
                                                   (*config).hostname,
-                                                  0  as time_t,
-                                                  cacheflags as libc::c_uint);
+                                                  0 ,
+                                                  cacheflags);
                            !crec.is_null()
                        } &&
-                       (*crec).flags & (1 as libc::c_uint) << 6 
+                       (*crec).flags & (1) << 6
                            != 0 {
                     if !cache_find_by_name(crec, (*config).hostname,
-                                           0  as time_t,
-                                           cacheflags as
-                                               libc::c_uint).is_null() {
+                                           0 ,
+                                           cacheflags                                         libc::c_uint).is_null() {
                         /* use primary (first) address */
                         while !crec.is_null() &&
                                   (*crec).flags &
-                                      (1 as libc::c_uint) << 2 
+                                      (1) << 2
                                       == 0 {
                             crec =
                                 cache_find_by_name(crec, (*config).hostname,
-                                                   0  as time_t,
-                                                   cacheflags as libc::c_uint)
+                                                   0 ,
+                                                   cacheflags)
                         } /* should be never */
                         if crec.is_null() {
                             current_block_27 = 3640593987805443782;
                         } else {
                             inet_ntop(prot,
-                                      &mut (*crec).addr as *mut AllAddr as
-                                          *const libc::c_void,
+                                      &mut (*crec).addr
                                       daemon.addrbuff,
-                                      46  as socklen_t);
+                                      46 );
                             my_syslog((3 ) << 3  |
                                           4 ,
                                       "%s has more than one address in hostsfile, using %s for DHCP"
@@ -599,15 +581,13 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                 (*config).addr = (*crec).addr.addr4;
                                 (*config).flags |=
                                     (32  | 512 )
-                                        as libc::c_uint
+
                             } else if prot == 10  &&
                                           {
                                               conf_tmp =
                                                   config_find_by_address6(configs,
-                                                                          0 as
-                                                                              *mut In6Addr,
-                                                                          0 as
-                                                                              libc::c_int,
+                                                                          0                           *mut In6Addr,
+                                                                          0                           libc::c_int,
                                                                           &mut (*crec).addr.addr6);
                                               (conf_tmp.is_null()) ||
                                                   conf_tmp == config
@@ -617,14 +597,13 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                        {
                                            (*config).addr6 =
                                                whine_m
-                                           alloc(::std::mem::size_of::<AddrList>()
-                                                                as
-                                                                libc::c_ulong)
-                                                   as *mut AddrList;
+                                           alloc(::std::mem::size_of::<AddressListEntry>()
+                                                                     )
+                                                   ;
                                            !(*config).addr6.is_null()
                                        } {
                                     (*(*config).addr6).next =
-                                        0 as *mut AddrList;
+                                        0 ;
                                     (*(*config).addr6).flags =
                                         0 
                                 }
@@ -634,30 +613,24 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                            (16  |
                                                 8 ) == 0 {
                                     memcpy(&mut (*(*config).addr6).addr.addr6
-                                               as *mut In6Addr as
-                                               *mut libc::c_void,
-                                           &mut (*crec).addr.addr6 as
-                                               *mut In6Addr as
-                                               *const libc::c_void,
-                                           16  as
-                                               libc::c_ulong);
+                                                                                      Vec<u8>,
+                                           &mut (*crec).addr.addr6                                         *mut In6Addr
+                                           16 );
                                     (*config).flags |=
                                         (4096  |
-                                             16384 ) as
-                                            libc::c_uint
+                                             16384 )                                      libc::c_uint
                                 }
                             } else {
                                 inet_ntop(prot,
-                                          &mut (*crec).addr as *mut AllAddr
-                                              as *const libc::c_void,
+                                          &mut (*crec).addr
+                                             ,
                                           daemon.addrbuff,
-                                          46  as socklen_t);
+                                          46 );
                                 my_syslog((3 ) <<
                                               3  |
                                               4 ,
                                           "duplicate IP address %s (%s) in dhcp-config directive"
-                                              as
-                                              *const libc::c_char,
+                                                                                     *const libc::c_char,
                                           daemon.addrbuff,
                                           (*config).hostname);
                             }
@@ -726,7 +699,7 @@ static DHCPV4_OPT_TBL: Vec<DhcpOptTblEntry> = vec!
      DhcpOptTblEntry {name: String::from("log-server"), val: 7  , size: 0x8000  ,},
      DhcpOptTblEntry {name: String::from("lpr-server"), val: 9  , size: 0x8000  ,},
      DhcpOptTblEntry {name: String::from("hostname"), val: 12  , size: (0x2000  | 0x1000 ),},
-     DhcpOptTblEntry {name: String::from("boot-file-size"), val: 13  , size: (2  | 0x400 ) as u16,},
+     DhcpOptTblEntry {name: String::from("boot-file-size"), val: 13  , size: (2  | 0x400 ),},
      DhcpOptTblEntry {name: String::from("domain-name"), val: 15  , size: 0x1000  ,},
      DhcpOptTblEntry {name: String::from("swap-server"), val: 16  , size: 0x8000  ,},
      DhcpOptTblEntry {name: String::from("root-path"), val: 17  , size: 0x1000  ,},
@@ -825,31 +798,30 @@ static DHCPV6_OPT_TBL: Vec<DhcpOptTblEntry> = vec![
      DhcpOptTblEntry {name: String::from("bootfile-param"), val: 60  , size: 0x800  ,},];
 
 pub fn display_opts() {
-    let mut i: libc::c_int = 0;
+    let mut i: i32 = 0;
     printf("Known DHCP options:\n" );
     i = 0 ;
-    while !DHCPV4_OPT_TBL[i as usize].name.is_null() {
-        if DHCPV4_OPT_TBL[i as usize].size  & 0x2000  == 0
+    while !DHCPV4_OPT_TBL[i ].name.is_null() {
+        if DHCPV4_OPT_TBL[i ].size  & 0x2000  == 0
            {
             printf("%3d %s\n" ,
-                   DHCPV4_OPT_TBL[i as usize].val,
-                   DHCPV4_OPT_TBL[i as usize].name);
+                   DHCPV4_OPT_TBL[i ].val,
+                   DHCPV4_OPT_TBL[i ].name);
         }
         i += 1
     };
 }
 
 pub fn display_opts6() {
-    let mut i: libc::c_int = 0;
-    printf("Known DHCPv6 options:\n" as
-               *const libc::c_char);
+    let mut i: i32 = 0;
+    printf("Known DHCPv6 options:\n"         *const libc::c_char);
     i = 0 ;
-    while !DHCPV6_OPT_TBL[i as usize].name.is_null() {
-        if DHCPV6_OPT_TBL[i as usize].size  & 0x2000  ==
+    while !DHCPV6_OPT_TBL[i ].name.is_null() {
+        if DHCPV6_OPT_TBL[i ].size  & 0x2000  ==
                0 {
             printf("%3d %s\n" ,
-                   DHCPV6_OPT_TBL[i as usize].val,
-                   DHCPV6_OPT_TBL[i as usize].name);
+                   DHCPV6_OPT_TBL[i ].val,
+                   DHCPV6_OPT_TBL[i ].name);
         }
         i += 1
     };
@@ -893,147 +865,132 @@ pub fn lookup_dhcp_len(mut protocol: u32, mut val: u16) -> Option<usize> {
     return None
 }
 
-pub fn option_string(mut prot: libc::c_int,
-                                       mut opt: libc::c_uint,
-                                       mut val: *mut libc::c_uchar,
-                                       mut opt_len: libc::c_int,
-                                       mut buf: *mut libc::c_char,
-                                       mut buf_len: libc::c_int)
- -> *mut libc::c_char {
-    let mut o: libc::c_int = 0;
-    let mut i: libc::c_int = 0;
-    let mut j: libc::c_int = 0;
-    let mut nodecode: libc::c_int = 0 ;
+pub fn option_string(mut prot: i32,
+                                       mut opt: u32,
+                                       mut val: mut Vec<u8>,
+                                       mut opt_len: i32,
+                                       mut buf: &mut String,
+                                       mut buf_len: i32)
+ -> &mut String {
+    let mut o: i32 = 0;
+    let mut i: i32 = 0;
+    let mut j: i32 = 0;
+    let mut nodecode: i32 = 0 ;
     let mut ot: *const DhcpOptTblEntry = DHCPV4_OPT_TBL.as_ptr();
     if prot == 10  { ot = DHCPV6_OPT_TBL.as_ptr() }
     o = 0 ;
-    while !(*ot.offset(o as isize)).name.is_null() {
-        if (*ot.offset(o as isize)).val as libc::c_uint == opt {
-            if !buf.is_null() {
-                memset(buf as *mut libc::c_void, 0 ,
-                       buf_len as libc::c_ulong);
-                if (*ot.offset(o as isize)).size  &
+    while !(*ot.offset(o)).name.is_null() {
+        if (*ot.offset(o)).val == opt {
+            if !buf.is_empty() {
+                buf.clear();
+                if (*ot.offset(o)).size  &
                        0x8000  != 0 {
-                    let mut addr: AllAddr =
-                        AllAddr {addr4: InAddr {s_addr: 0,},};
-                    let mut addr_len: libc::c_int = 4 ;
+                    let mut addr: NetAddress =
+                        NetAddress {addr4: NetAddress {s_addr: 0,},};
+                    let mut addr_len: i32 = 4 ;
                     if prot == 10  {
                         addr_len = 16 
                     }
-                    *buf.offset(0  as isize) =
-                        0  as libc::c_char;
+                    *buf.offset(0 ) =
+                        0 ;
                     i = 0 ;
                     while i <= opt_len - addr_len {
                         if i != 0  {
                             strncat(buf,
-                                    ", " as
-                                        *const libc::c_char,
-                                    (buf_len as
-                                         libc::c_ulong).wrapping_sub(strlen(buf)));
+                                    ", "                                  *const libc::c_char,
+                                    (buf_len).wrapping_sub(strlen(buf)));
                         }
                         /* align */
-                        memcpy(&mut addr as *mut AllAddr as
-                                   *mut libc::c_void,
-                               &mut *val.offset(i as isize) as
-                                   *mut libc::c_uchar as *const libc::c_void,
-                               addr_len as libc::c_ulong);
+                        memcpy(&mut addr                             Vec<u8>,
+                               &mut *val.offset(i)                             mut Vec<u8>,
+                               addr_len);
                         inet_ntop(prot,
-                                  &mut *val.offset(i as isize) as
-                                      *mut libc::c_uchar as
-                                      *const libc::c_void,
+                                  &mut *val.offset(i)                                mut Vec<u8>
                                   daemon.addrbuff,
-                                  46  as socklen_t);
+                                  46 );
                         strncat(buf, daemon.addrbuff,
-                                (buf_len as
-                                     libc::c_ulong).wrapping_sub(strlen(buf)));
+                                (buf_len                        ).wrapping_sub(strlen(buf)));
                         i += addr_len
                     }
-                } else if (*ot.offset(o as isize)).size  &
+                } else if (*ot.offset(o)).size  &
                               0x1000  != 0 {
                     i = 0 ;
                     j = 0 ;
                     while i < opt_len && j < buf_len {
                         let mut c: libc::c_char =
-                            *val.offset(i as isize) as libc::c_char;
-                        if *(*__ctype_b_loc()).offset(c  as
-                                                          isize) as
-                               libc::c_int &
-                               _ISPRINT as libc::c_ushort as
-                                   libc::c_int != 0 {
+                            *val.offset(i);
+                        if *(*__ctype_b_loc()).offset(c        isize) &
+                               _ISPRINT                              libc::c_int != 0 {
                             let fresh6 = j;
                             j = j + 1;
-                            *buf.offset(fresh6 as isize) = c
+                            *buf.offset(fresh6) = c
                         }
                         i += 1
                     }
-                } else if (*ot.offset(o as isize)).size  &
+                } else if (*ot.offset(o)).size  &
                               0x4000  != 0 &&
                               prot == 10  {
                     i = 0 ;
                     j = 0 ;
                     while i < opt_len &&
-                              *val.offset(i as isize)  !=
+                              *val.offset(i)  !=
                                   0  {
-                        let mut k: libc::c_int = 0;
-                        let mut l: libc::c_int =
-                            i + *val.offset(i as isize)  +
+                        let mut k: i32 = 0;
+                        let mut l: i32 =
+                            i + *val.offset(i)  +
                                 1 ;
                         k = i + 1 ;
                         while k < opt_len && k < l && j < buf_len {
                             let mut c_0: libc::c_char =
-                                *val.offset(k as isize) as libc::c_char;
+                                *val.offset(k);
                             if *(*__ctype_b_loc()).offset(c_0 
-                                                              as isize) as
-                                   libc::c_int &
-                                   _ISPRINT as libc::c_ushort
+                                                             )                             libc::c_int &
+                                   _ISPRINT
                                         != 0 {
                                 let fresh7 = j;
                                 j = j + 1;
-                                *buf.offset(fresh7 as isize) = c_0
+                                *buf.offset(fresh7) = c_0
                             }
                             k += 1
                         }
                         i = l;
-                        if *val.offset(i as isize)  !=
+                        if *val.offset(i)  !=
                                0  && j < buf_len {
                             let fresh8 = j;
                             j = j + 1;
-                            *buf.offset(fresh8 as isize) =
-                                '.' as i32 as libc::c_char
+                            *buf.offset(fresh8) =
+                                '.'
                         }
                     }
-                } else if (*ot.offset(o as isize)).size  &
+                } else if (*ot.offset(o)).size  &
                               0x800  != 0 {
-                    let mut k_0: libc::c_int = 0;
-                    let mut len: libc::c_int = 0;
-                    let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
+                    let mut k_0: i32 = 0;
+                    let mut len: i32 = 0;
+                    let mut p: mut Vec<u8> = 0;
                     i = 0 ;
                     j = 0 ;
                     loop  {
                         p =
-                            &mut *val.offset(i as isize) as
-                                *mut libc::c_uchar;
-                        let mut t_cp: *mut libc::c_uchar = p;
+                            &mut *val.offset(i)                          mut Vec<u8>;
+                        let mut t_cp: mut Vec<u8> = p;
                         len =
-                            (*t_cp.offset(0  as isize) 
+                            (*t_cp.offset(0 )
                                  ) << 8  |
-                                *t_cp.offset(1  as isize) as
-                                    u16 ;
-                        p = p.offset(2  as isize);
+                                *t_cp.offset(1 )                              u16 ;
+                        p = p.offset(2 );
                         k_0 = 0 ;
                         while k_0 < len && j < buf_len {
                             let fresh9 = p;
                             p = p.offset(1);
                             let mut c_1: libc::c_char =
-                                *fresh9 as libc::c_char;
+                                *fresh9;
                             if *(*__ctype_b_loc()).offset(c_1 
-                                                              as isize) as
-                                   libc::c_int &
-                                   _ISPRINT as libc::c_ushort
+                                                             )                             libc::c_int &
+                                   _ISPRINT
                                         != 0 {
                                 let fresh10 = j;
                                 j = j + 1;
-                                *buf.offset(fresh10 as isize) = c_1
+                                *buf.offset(fresh10) = c_1
                             }
                             k_0 += 1
                         }
@@ -1042,23 +999,23 @@ pub fn option_string(mut prot: libc::c_int,
                         if j < buf_len {
                             let fresh11 = j;
                             j = j + 1;
-                            *buf.offset(fresh11 as isize) =
-                                ',' as i32 as libc::c_char
+                            *buf.offset(fresh11) =
+                                ','
                         }
                     }
-                } else if (*ot.offset(o as isize)).size  &
+                } else if (*ot.offset(o)).size  &
                               (0x400  | 0x200 ) !=
                               0 && opt_len != 0  {
-                    let mut dec: libc::c_uint =
-                        0  as libc::c_uint;
+                    let mut dec: u32 =
+                        0 ;
                     i = 0 ;
                     while i < opt_len {
                         dec =
                             dec << 8  |
-                                *val.offset(i as isize) as libc::c_uint;
+                                *val.offset(i);
                         i += 1
                     }
-                    if (*ot.offset(o as isize)).size  &
+                    if (*ot.offset(o)).size  &
                            0x200  != 0 {
                         prettyprint_time(buf, dec);
                     } else {
@@ -1072,8 +1029,8 @@ pub fn option_string(mut prot: libc::c_int,
         } else { o += 1 }
     }
     if opt_len != 0  && !buf.is_null() &&
-           ((*ot.offset(o as isize)).name.is_null() || nodecode != 0) {
-        let mut trunc: libc::c_int = 0 ;
+           ((*ot.offset(o)).name.is_null() || nodecode != 0) {
+        let mut trunc: i32 = 0 ;
         if opt_len > 14  {
             trunc = 1 ;
             opt_len = 14 
@@ -1081,13 +1038,12 @@ pub fn option_string(mut prot: libc::c_int,
         print_mac(buf, val, opt_len);
         if trunc != 0 {
             strncat(buf, "..." ,
-                    (buf_len as libc::c_ulong).wrapping_sub(strlen(buf)));
+                    (buf_len).wrapping_sub(strlen(buf)));
         }
     }
-    return if !(*ot.offset(o as isize)).name.is_null() {
-               (*ot.offset(o as isize)).name 
-           } else { ""  } as
-               *mut libc::c_char;
+    return if !(*ot.offset(o)).name.is_null() {
+               (*ot.offset(o)).name
+           } else { ""  }         &mut String;
 }
 
 pub fn dhcp_context_to_string(mut family: u32, mut context: &DhcpContext) -> String {

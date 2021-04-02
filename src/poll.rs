@@ -38,103 +38,91 @@
 use crate::slack::{pollfd, nfds_t};
 use crate::util::whine_malloc;
 
-static mut pollfds: *mut pollfd = 0 as *const pollfd as *mut pollfd;
+static mut pollfds: *mut pollfd = 0 ;
 static mut nfds: nfds_t = 0;
-static mut arrsize: nfds_t = 0 as libc::c_int as nfds_t;
+static mut arrsize: nfds_t = 0 as nfds_t;
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry
    to the left of which a new record should be inserted. */
-unsafe extern "C" fn fd_search(mut fd: libc::c_int) -> nfds_t {
+unsafe extern "C" fn fd_search(mut fd: i32) -> nfds_t {
     let mut left: nfds_t = 0;
     let mut right: nfds_t = 0;
     let mut mid: nfds_t = 0;
     right = nfds;
-    if right == 0 as libc::c_int as libc::c_ulong {
-        return 0 as libc::c_int as nfds_t
+    if right == 0 {
+        return 0 as nfds_t
     }
-    left = 0 as libc::c_int as nfds_t;
+    left = 0 as nfds_t;
     loop  {
-        if right == left.wrapping_add(1 as libc::c_int as libc::c_ulong) {
-            return if (*pollfds.offset(left as isize)).fd >= fd {
+        if right == left.wrapping_add(1) {
+            return if (*pollfds.offset(left)).fd >= fd {
                        left
                    } else { right }
         }
         mid =
-            left.wrapping_add(right).wrapping_div(2 as libc::c_int as
-                                                      libc::c_ulong);
-        if (*pollfds.offset(mid as isize)).fd > fd {
+            left.wrapping_add(right).wrapping_div(2   libc::c_ulong);
+        if (*pollfds.offset(mid)).fd > fd {
             right = mid
         } else { left = mid }
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn poll_reset() { nfds = 0 as libc::c_int as nfds_t; }
+pub unsafe extern "C" fn poll_reset() { nfds = 0 as nfds_t; }
 #[no_mangle]
-pub unsafe extern "C" fn do_poll(mut timeout: libc::c_int) -> libc::c_int {
+pub unsafe extern "C" fn do_poll(mut timeout: i32) -> i32 {
     return poll(pollfds, nfds, timeout);
 }
 #[no_mangle]
-pub unsafe extern "C" fn poll_check(mut fd: libc::c_int,
-                                    mut event: libc::c_short) -> libc::c_int {
+pub unsafe extern "C" fn poll_check(mut fd: i32,
+                                    mut event: libc::c_short) -> i32 {
     let mut i: nfds_t = fd_search(fd);
-    if i < nfds && (*pollfds.offset(i as isize)).fd == fd {
-        return (*pollfds.offset(i as isize)).revents as libc::c_int &
-                   event as libc::c_int
+    if i < nfds && (*pollfds.offset(i)).fd == fd {
+        return (*pollfds.offset(i)).revents &
+                   event
     }
-    return 0 as libc::c_int;
+    return 0;
 }
 #[no_mangle]
-pub unsafe extern "C" fn poll_listen(mut fd: libc::c_int,
+pub unsafe extern "C" fn poll_listen(mut fd: i32,
                                      mut event: libc::c_short) {
     let mut i: nfds_t = fd_search(fd);
-    if i < nfds && (*pollfds.offset(i as isize)).fd == fd {
-        let ref mut fresh6 = (*pollfds.offset(i as isize)).events;
+    if i < nfds && (*pollfds.offset(i)).fd == fd {
+        let ref mut fresh6 = (*pollfds.offset(i)).events;
         *fresh6 =
-            (*fresh6 as libc::c_int | event as libc::c_int) as libc::c_short
+            (*fresh6 | event)
     } else {
         if arrsize != nfds {
-            memmove(&mut *pollfds.offset(i.wrapping_add(1 as libc::c_int as
-                                                            libc::c_ulong) as
-                                             isize) as *mut pollfd as
-                        *mut libc::c_void,
-                    &mut *pollfds.offset(i as isize) as *mut pollfd as
-                        *const libc::c_void,
+            memmove(&mut *pollfds.offset(i.wrapping_add(1  ) )                  Vec<u8>,
+                    &mut *pollfds.offset(i)
                     nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                          as libc::c_ulong));
+                                                         ));
         } else {
             /* Array too small, extend. */
-            let mut new: *mut pollfd = 0 as *mut pollfd;
+            let mut new: *mut pollfd = 0 ;
             arrsize =
-                if arrsize == 0 as libc::c_int as libc::c_ulong {
-                    64 as libc::c_int as libc::c_ulong
+                if arrsize == 0 {
+                    64
                 } else {
-                    arrsize.wrapping_mul(2 as libc::c_int as libc::c_ulong)
+                    arrsize.wrapping_mul(2)
                 };
             new =
                 whine_malloc(arrsize.wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                      as libc::c_ulong)) as
-                    *mut pollfd;
+                                                     ))              *mut pollfd;
             if new.is_null() { return }
             if !pollfds.is_null() {
-                memcpy(new as *mut libc::c_void,
-                       pollfds as *const libc::c_void,
-                       i.wrapping_mul(::std::mem::size_of::<pollfd>() as
-                                          libc::c_ulong));
-                memcpy(&mut *new.offset(i.wrapping_add(1 as libc::c_int as
-                                                           libc::c_ulong) as
-                                            isize) as *mut pollfd as
-                           *mut libc::c_void,
-                       &mut *pollfds.offset(i as isize) as *mut pollfd as
-                           *const libc::c_void,
+                memcpy(new,
+                       pollfds,
+                       i.wrapping_mul(::std::mem::size_of::<pollfd>() ));
+                memcpy(&mut *new.offset(i.wrapping_add(1 ))                     Vec<u8>,
+                       &mut *pollfds.offset(i)
                        nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                             as
-                                                             libc::c_ulong));
-                free(pollfds as *mut libc::c_void);
+                                                               ));
+                free(pollfds);
             }
             pollfds = new
         }
-        (*pollfds.offset(i as isize)).fd = fd;
-        (*pollfds.offset(i as isize)).events = event;
+        (*pollfds.offset(i)).fd = fd;
+        (*pollfds.offset(i)).events = event;
         nfds = nfds.wrapping_add(1)
     };
 }

@@ -1,5 +1,7 @@
-use crate::defines::{ArpRecord, DnsmasqDaemon, InAddr, MySockAddr};
+use crate::defines::{ArpRecord, DnsmasqDaemon, NetAddress};
 use crate::helper::queue_arp;
+use crate::in6_addr::In6Addr;
+use std::time;
 
 // static mut arps: *mut arp_record = 0 as *const arp_record as *mut arp_record;
 // static mut old: *mut arp_record = 0 as *const arp_record as *mut arp_record;
@@ -9,7 +11,7 @@ pub fn filter_mac<T>(
     mut addrp: &T,
     mut mac: &String,
     arps: &mut Vec<ArpRecord>,
-) -> libc::c_int {
+) -> i32 {
     // let mut arp: *mut arp_record = 0 as *mut arp_record;
     // let mut arp: arp_record = Default::default();
     if maclen > 16 {
@@ -51,7 +53,7 @@ pub fn filter_mac<T>(
                         break;
                     } else if arp.hwlen == maclen && arp.hwaddr == mac {
                         /* Existing entry matches - confirm. */
-                        arp.status = 1 as libc::c_int as libc::c_ushort;
+                        arp.status = 1 ;
                         modified = true;
                         break;
                     }
@@ -79,16 +81,16 @@ pub fn filter_mac<T>(
 
 /* If in lazy mode, we cache absence of ARP entries. */
 pub fn find_mac(
-    addr: Optiona<MySockAddr>,
+    addr: Optiona<NetAddress>,
     mac: Option<Vec<u8>>,
-    lazy: libc::c_int,
-    now: time_t,
+    lazy: i32,
+    now: time::Instant,
     arps: &mut Vec<ArpRecord>,
 ) -> u16 {
     let mut arp: ArpRecord = Default::default();
     // let mut tmp: arp_record = Default::default();
     // let mut up: arp_record = Default::default();
-    let mut updated: libc::c_int = 0;
+    let mut updated: i32 = 0;
     loop {
         /* If the database is less then INTERVAL old, look in there */
         if difftime(now, last) < 90 {
@@ -175,7 +177,7 @@ pub fn find_mac(
     return 0;
 }
 
-pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> libc::c_int {
+pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32 {
     let mut arp: ArpRecord;
 
     /* Notify any which went, then move to free list */
@@ -196,11 +198,11 @@ pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> libc::c_int {
         old = arp.next;
         arp.next = freelist;
         freelist = arp;
-        return 1 as libc::c_int;
+        return 1;
     }
     arp = arps;
     while !arp.is_null() {
-        if arp.status as libc::c_int == 2 as libc::c_int {
+        if arp.status == 2 {
             if daemon.options[53] {
                 queue_arp(daemon, 6, &arp.hwaddr, arp.family, arp.addr);
             }

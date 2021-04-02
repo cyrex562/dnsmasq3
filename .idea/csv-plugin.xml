@@ -31,6 +31,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\src\auth.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\src\defines.rs">
           <value>
             <Attribute>
@@ -52,6 +59,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\src\edns0.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\src\helper.rs">
           <value>
             <Attribute>
@@ -60,6 +74,13 @@
           </value>
         </entry>
         <entry key="\src\netlink.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\src\network.rs">
           <value>
             <Attribute>
               <option name="separator" value=":" />

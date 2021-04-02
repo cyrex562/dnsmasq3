@@ -49,12 +49,12 @@ use crate::arp::{do_arp_script_run, find_mac};
 use crate::blockdata::blockdata_init;
 use crate::cache::{cache_init, cache_recv_insert, cache_reload, dump_cache};
 use crate::defines::{
-    AllAddr, C2rustUnnamed14, C2rustUnnamed16, C2rustUnnamed17, C2rustUnnamed26,
-    C2rustUnnamed27, IcmpHdr, InAddr, InAddrT, IpHdr, Irec, Listener, SaFamily, SockAddr,
+    NetAddress, C2rustUnnamed14, C2rustUnnamed16, C2rustUnnamed17, C2rustUnnamed26,
+    C2rustUnnamed27, IcmpHdr, NetAddress, InAddrT, IpHdr, Irec, Listener, SaFamily, NetAddress,
     TftpTransfer, UserCapData, UserCapHeader, EventDesc, Sigaction,
-    DhcpLease, DhcpPacket, MySockAddr, Resolvc, ServerFd, TftpPrefix, DIR, IPPROTO_ICMP, SHUT_RDWR,
+    DhcpLease, DhcpPacket, NetAddress, Resolvc, ServerFd, TftpPrefix, DIR, IPPROTO_ICMP, SHUT_RDWR,
     SIGALRM, SIGCHLD, SIGHUP, SIGINT, SIGPIPE, SIGTERM, SIGUSR1, SIGUSR2, SOCK_RAW,
-    ConstSockaddrArg, SockaddrArg,
+    ConstNetAddressArg, NetAddressArg,
 };
 use crate::dhcp::{dhcp_init, dhcp_read_ethers};
 use crate::dhcp6::{dhcp6_init, dhcp6_packet, dhcp_construct_contexts};
@@ -84,7 +84,7 @@ use crate::network::{
 use crate::poll::{do_poll, poll_check, poll_listen, poll_reset};
 use crate::radv::{icmp6_packet, periodic_ra, ra_init};
 use crate::tftp::{check_tftp_listeners, do_tftp_script_run, tftp_request};
-use crate::util::{dnsmasq_time, rand16, retry_send, sockaddr_isequal};
+use crate::util::{dnsmasq_time, rand16, retry_send, NetAddress_isequal};
 use libc;
 use log;
 use std::process::exit;
@@ -109,10 +109,10 @@ use std::process::exit;
 
 // static mut pid: pid_t = 0;
 // static mut pipewrite: libc::c_int = 0;
-unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> libc::c_int {
+unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     let mut compiler_opts: String = String::from("");
-    let mut bind_fallback: libc::c_int = 0;
-    let mut now: time_t = 0;
+    let mut bind_fallback: i32 = 0;
+    let mut now: time::Instant = 0;
     let mut sigact: libc::sigaction = libc::sigaction {
         sa_sigaction: 0,
         sa_mask: libc::sigset_t { __val: [0; 16] },
@@ -120,55 +120,55 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         sa_restorer: None,
     };
     let mut if_tmp: Iname = Default::default();
-    let mut piperead: libc::c_int = 0;
+    let mut piperead: i32 = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     let mut err_pipe: [libc::c_int; 2] = [0; 2];
-    let mut ent_pw: *mut Passwd = 0 as *mut Passwd;
-    let mut script_uid: uid_t = 0 as uid_t;
-    let mut script_gid: gid_t = 0 as gid_t;
-    let mut gp: *mut Group = 0 as *mut Group;
-    let mut i: libc::c_long = 0;
+    let mut ent_pw: *mut Passwd = 0 ;
+    let mut script_uid: uid_t = 0 ;
+    let mut script_gid: gid_t = 0 ;
+    let mut gp: *mut Group = 0 ;
+    let mut i: i32 = 0;
     // if cfg!(target_os = "linux") {
     //     let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX);
     // }
     let mut baduser: String;
-    let mut log_err: libc::c_int = 0;
-    let mut chown_warn: libc::c_int = 0;
+    let mut log_err: i32 = 0;
+    let mut chown_warn: i32 = 0;
     // let mut hdr: cap_user_header_t = 0 as cap_user_header_t;
     let mut hdr: UserCapHeader = Default::default();
     let mut data: UserCapData = Default::default();
-    let mut need_cap_net_admin: libc::c_int = 0;
-    let mut need_cap_net_raw: libc::c_int = 0;
-    let mut need_cap_net_bind_service: libc::c_int = 0;
+    let mut need_cap_net_admin: i32 = 0;
+    let mut need_cap_net_raw: i32 = 0;
+    let mut need_cap_net_bind_service: i32 = 0;
     let mut bound_device: String = String::new();
     let mut did_bind: bool = false;
     let mut serv: Server = Default::default();
     let mut netlink_warn: String = String::new();
     let mut context: DhcpContext = Default::default();
     let mut relay: DhcpRelay = Default::default();
-    let mut tftp_prefix_missing: libc::c_int = 0;
+    let mut tftp_prefix_missing: i32 = 0;
     sigact.__sigaction_handler.sa_handler =
-        Some(sig_handler as fn(_: libc::c_int) -> ());
+        Some(sig_handler as fn(_: i32) -> ());
     sigact.sa_flags = 0;
     if cfg!(target = "linux") {
-        libc::sigemptyset(&mut sigact.sa_mask as *mut libc::sigset_t);
-        libc::sigaction(SIGUSR1, &mut sigact, 0 as *mut libc::sigaction);
-        libc::sigaction(SIGUSR2, &mut sigact, 0 as *mut libc::sigaction);
-        libc::sigaction(SIGHUP, &mut sigact, 0 as *mut libc::sigaction);
-        libc::sigaction(SIGTERM, &mut sigact, 0 as *mut libc::sigaction);
-        libc::sigaction(SIGALRM, &mut sigact, 0 as *mut libc::sigaction);
-        libc::sigaction(SIGCHLD, &mut sigact, 0 as *mut libc::sigaction);
-        libc::sigaction(SIGINT, &mut sigact, 0 as *mut libc::sigaction);
+        libc::sigemptyset(&mut sigact.sa_mask );
+        libc::sigaction(SIGUSR1, &mut sigact, 0 );
+        libc::sigaction(SIGUSR2, &mut sigact, 0 );
+        libc::sigaction(SIGHUP, &mut sigact, 0 );
+        libc::sigaction(SIGTERM, &mut sigact, 0 );
+        libc::sigaction(SIGALRM, &mut sigact, 0 );
+        libc::sigaction(SIGCHLD, &mut sigact, 0 );
+        libc::sigaction(SIGINT, &mut sigact, 0 );
         sigact.__sigaction_handler.sa_handler = ::std::mem::transmute::<
             libc::intptr_t,
             __sighandler_t,
-        >(1 as libc::intptr_t); /* known umask, create leases and pid files as 0644 */
+        >(1 ); /* known umask, create leases and pid files as 0644 */
         libc::sigaction(
             SIGPIPE,
             &mut sigact,
-            0 as *mut libc::sigaction,
+            0 ,
         ); /* Must precede read_opts() */
-        libc::umask(0o22 as defines::ModeT);
+        libc::umask(0o22 );
     }
 
     /* ignore SIGPIPE */
@@ -183,7 +183,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     }
 
     if (daemon.edns_pktsz) < 512 {
-        daemon.edns_pktsz = 512 as libc::c_ushort
+        daemon.edns_pktsz = 512
     }
     /* Min buffer size: we check after adding each record, so there must be
     memory for the largest packet, and the largest record so the
@@ -198,14 +198,14 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     // daemon.addrbuff =
     //     safe_malloc(46 as libc::size_t) as *mut libc::c_char;
     daemon.addrbuff = Vec::new();
-    if daemon.options[(51 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (51 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(51).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (51).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
@@ -224,10 +224,10 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     open to /dev/null. Normally we'll be started with 0, 1 and 2 open,
     but it's not guaranteed. By opening /dev/null three times, we
     ensure that we're not using those fds for real stuff. */
-    i = 0 as libc::c_long;
-    while i < 3 as libc::c_long {
+    i = 0;
+    while i < 3 {
         open(
-            b"/dev/null\x00" as *const u8 as *const libc::c_char,
+            b"/dev/null\x00" ,
             0o2,
         );
         i += 1
@@ -236,65 +236,65 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     // TODO:
     // close_fds(max_fd, -(1), -(1),
     //           -(1));
-    if daemon.options[(45 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (45 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(45).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (45).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         die(
-            b"DNSSEC not available: set HAVE_DNSSEC in src/config.h\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"DNSSEC not available: set HAVE_DNSSEC in src/config.h\x00"
+                ,
+            0 ,
             1,
         );
     }
-    if daemon.options[(35 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (35 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(35).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (35).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         die(
-            b"conntrack support not available: set HAVE_CONNTRACK in src/config.h\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"conntrack support not available: set HAVE_CONNTRACK in src/config.h\x00"
+                ,
+            0 ,
             1,
         );
     }
-    if daemon.options[(58 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (58 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(58).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (58).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         die(
-            b"Ubus not available: set HAVE_UBUS in src/config.h\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"Ubus not available: set HAVE_UBUS in src/config.h\x00"
+                ,
+            0 ,
             1,
         );
     }
     if daemon.max_port < daemon.min_port {
         die(
-            b"max_port cannot be smaller than min_port\x00" as *const u8 as *const libc::c_char
-                as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"max_port cannot be smaller than min_port\x00"
+                ,
+            0 ,
             1,
         );
     }
@@ -302,15 +302,15 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     if !daemon.auth_zones.is_null() {
         if daemon.authserver.is_null() {
             die(
-                b"--auth-server required when an auth zone is defined.\x00" as *const u8
-                    as *const libc::c_char as *mut libc::c_char,
-                0 as *mut libc::c_char,
+                b"--auth-server required when an auth zone is defined.\x00"
+                    ,
+                0 ,
                 1,
             );
         }
         /* Create a serial at startup if not configured. */
-        if daemon.soa_sn == 0 as libc::c_ulong {
-            daemon.soa_sn = now as libc::c_ulong
+        if daemon.soa_sn == 0 {
+            daemon.soa_sn = now
         }
     }
 
@@ -352,72 +352,72 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         need_cap_net_admin = 1
     }
     netlink_warn = netlink_init(&mut daemon);
-    if daemon.options[(13 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (13 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(13).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (13).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
-        && daemon.options[(39 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (39 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        && daemon.options[(39).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (39).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
     {
         die(
-            b"cannot set --bind-interfaces and --bind-dynamic\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"cannot set --bind-interfaces and --bind-dynamic\x00"
+                ,
+            0 ,
             1,
         );
     }
     if enumerate_interfaces(1) == 0 || enumerate_interfaces(0) == 0 {
         die(
-            b"failed to find list of interfaces: %s\x00" as *const u8 as *const libc::c_char
-                as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"failed to find list of interfaces: %s\x00"
+                ,
+            0 ,
             5,
         );
     }
-    if daemon.options[(13 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (13 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(13).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (13).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
-        || daemon.options[(39 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (39 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        || daemon.options[(39).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (39).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
     {
         create_bound_listeners(1);
-        if daemon.options[(39 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (39 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        if daemon.options[(39).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (39).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             == 0
         {
@@ -425,8 +425,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             while !if_tmp.is_null() {
                 if !(*if_tmp).name.is_null() && (*if_tmp).used == 0 {
                     die(
-                        b"unknown interface %s\x00" as *const u8 as *const libc::c_char
-                            as *mut libc::c_char,
+                        b"unknown interface %s\x00"
+                            ,
                         (*if_tmp).name,
                         2,
                     );
@@ -469,14 +469,14 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         hash_questions_init();
     }
     if (daemon.port != 0 || daemon.dhcp_enabled || daemon.dhcp6_enabled)
-        && (daemon.options[(8 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (8 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        && (daemon.options[(8).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (8).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             == 0
             || daemon.use_dynamic_dirs)
@@ -490,39 +490,39 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     } else {
         // daemon.dumpfd = -1;
     }
-    if daemon.options[(19 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (19 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(19).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (19).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         die(
-            b"DBus not available: set HAVE_DBUS in src/config.h\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"DBus not available: set HAVE_DBUS in src/config.h\x00"
+                ,
+            0 ,
             1,
         );
     }
-    if daemon.options[(58 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (58 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    if daemon.options[(58).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (58).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         die(
-            b"UBus not available: set HAVE_UBUS in src/config.h\x00" as *const u8
-                as *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char,
+            b"UBus not available: set HAVE_UBUS in src/config.h\x00"
+                ,
+            0 ,
             1,
         );
     }
@@ -534,7 +534,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         && !daemon.scriptuser.is_null()
         && (!daemon.lease_change_command.is_null() || !daemon.luascript.is_null())
     {
-        let mut scr_pw: *mut Passwd = 0 as *mut Passwd;
+        let mut scr_pw: *mut Passwd = 0 ;
         scr_pw = getpwnam(daemon.scriptuser);
         if !scr_pw.is_null() {
             script_uid = (*scr_pw).pw_uid;
@@ -564,7 +564,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     }
     /* implement group defaults, "dip" if available, or group associated with uid */
     if daemon.group_set == 0 && gp.is_null() {
-        gp = getgrnam(b"dip\x00" as *const u8 as *const libc::c_char);
+        gp = getgrnam(b"dip\x00" );
         if gp.is_null() && !ent_pw.is_null() {
             gp = getgrgid(ent_pw.pw_gid)
         }
@@ -578,24 +578,24 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     if we have yet to bind ports because of DAD,
     or we're doing it dynamically, we need CAP_NET_BIND_SERVICE. */
     if (is_dad_listeners() != 0
-        || daemon.options[(39 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (39 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        || daemon.options[(39).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (39).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0)
-        && (daemon.options[(40 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (40 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        && (daemon.options[(40).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (40).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
             || daemon.port != 0 && daemon.port <= 1024)
@@ -606,7 +606,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     for each TCP connection, so need CAP_NET_RAW */
     serv = daemon.servers;
     while !serv.is_null() {
-        if (*serv).interface[0 as usize] != 0 {
+        if (*serv).interface[0 ] != 0 {
             need_cap_net_raw = 1
         }
         serv = (*serv).next
@@ -615,8 +615,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     (as can ports) so always (potentially) needed. */
     /* determine capability API version here, while we can still
     call safe_malloc */
-    let mut capsize: libc::c_int = 1; /* for header version 1 */
-    let mut fail: *mut libc::c_char = 0 as *mut libc::c_char;
+    let mut capsize: i32 = 1; /* for header version 1 */
+    let mut fail: &mut String = 0 ;
     // hdr =
     //     safe_malloc(::std::mem::size_of::<__user_cap_header_struct>() as
     //                     libc::c_ulong) as cap_user_header_t;
@@ -633,55 +633,52 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         capsize = 2
     }
     data = safe_malloc(
-        (::std::mem::size_of::<UserCapData>() as libc::c_ulong)
-            .wrapping_mul(capsize as libc::c_ulong),
+        (::std::mem::size_of::<UserCapData>())
+            .wrapping_mul(capsize),
     ) as cap_user_data_t;
     capget(hdr, data);
     if need_cap_net_admin != 0
-        && data.permitted & ((1) << 12) as libc::c_uint == 0
+        && data.permitted & ((1) << 12) == 0
     {
-        fail = b"NET_ADMIN\x00" as *const u8 as *const libc::c_char as *mut libc::c_char
+        fail = b"NET_ADMIN\x00"
     } else if need_cap_net_raw != 0
-        && data.permitted & ((1) << 13) as libc::c_uint == 0
+        && data.permitted & ((1) << 13) == 0
     {
-        fail = b"NET_RAW\x00" as *const u8 as *const libc::c_char as *mut libc::c_char
+        fail = b"NET_RAW\x00"
     } else if need_cap_net_bind_service != 0
-        && data.permitted & ((1) << 10) as libc::c_uint == 0
+        && data.permitted & ((1) << 10) == 0
     {
-        fail = b"NET_BIND_SERVICE\x00" as *const u8 as *const libc::c_char as *mut libc::c_char
+        fail = b"NET_BIND_SERVICE\x00"
     }
     if !fail.is_null() {
         die(
-            b"process is missing required capability %s\x00" as *const u8 as *const libc::c_char
-                as *mut libc::c_char,
+            b"process is missing required capability %s\x00"
+                ,
             fail,
             5,
         );
     }
     /* Now set bitmaps to set caps after daemonising */
-    memset(
-        data as *mut libc::c_void,
-        0,
-        (::std::mem::size_of::<UserCapData>() as libc::c_ulong)
-            .wrapping_mul(capsize as libc::c_ulong),
+    data = Default::default();
+
     );
     if need_cap_net_admin != 0 {
-        data.effective |= ((1) << 12) as libc::c_uint
+        data.effective |= ((1) << 12)
     }
     if need_cap_net_raw != 0 {
-        data.effective |= ((1) << 13) as libc::c_uint
+        data.effective |= ((1) << 13)
     }
     if need_cap_net_bind_service != 0 {
-        data.effective |= ((1) << 10) as libc::c_uint
+        data.effective |= ((1) << 10)
     }
     data.permitted = data.effective;
     /* Use a pipe to carry signals and other events back to the event loop
     in a race-free manner and another to carry errors to daemon-invoking process */
     safe_pipe(pipefd.as_mut_ptr(), 1);
-    piperead = pipefd[0 as usize];
+    piperead = pipefd[0 ];
     ::std::ptr::write_volatile(
-        &mut pipewrite as *mut libc::c_int,
-        pipefd[1 as usize],
+        &mut pipewrite,
+        pipefd[1 ],
     );
     /* prime the pipe to load stuff first time. */
     send_event(
@@ -690,36 +687,36 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         0,
         None,
     );
-    err_pipe[1 as usize] = -(1);
-    if daemon.options[(6 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (6 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    err_pipe[1 ] = -(1);
+    if daemon.options[(6).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (6).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
         /* The following code "daemonizes" the process.
         See Stevens section 12.4 */
-        if chdir(b"/\x00" as *const u8 as *const libc::c_char) != 0 {
+        if chdir(b"/\x00" ) != 0 {
             die(
-                b"cannot chdir to filesystem root: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
-                0 as *mut libc::c_char,
+                b"cannot chdir to filesystem root: %s\x00"
+                    ,
+                0 ,
                 5,
             );
         }
-        if daemon.options[(16 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
-            & (1 as libc::c_uint)
-                << (16 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+        if daemon.options[(16).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
+            & (1)
+                << (16).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             == 0
         {
@@ -743,22 +740,22 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
                     data: 0,
                     msg_sz: 0,
                 };
-                let mut msg: *mut libc::c_char = 0 as *mut libc::c_char;
+                let mut msg: &mut String = 0 ;
                 /* close our copy of write-end */
-                close(err_pipe[1 as usize]);
+                close(err_pipe[1 ]);
                 /* check for errors after the fork */
-                if read_event(err_pipe[0 as usize], &mut ev, &mut msg) != 0 {
+                if read_event(err_pipe[0 ], &mut ev, &mut msg) != 0 {
                     fatal_event(&mut ev, msg);
                 }
                 _exit(0);
             }
-            close(err_pipe[0 as usize]);
+            close(err_pipe[0 ]);
             /* NO calls to die() from here on. */
             setsid();
             pid_0 = fork();
             if pid_0 == -(1) {
                 send_event(
-                    err_pipe[1 as usize],
+                    err_pipe[1 ],
                     18,
                     *__errno_location(),
                     None,
@@ -770,11 +767,11 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         }
         /* write pidfile _after_ forking ! */
         if !daemon.runfile.is_null() {
-            let mut fd: libc::c_int = 0;
-            let mut err: libc::c_int = 0;
+            let mut fd: i32 = 0;
+            let mut err: i32 = 0;
             sprintf(
                 daemon.namebuff,
-                b"%d\n\x00" as *const u8 as *const libc::c_char,
+                b"%d\n\x00" ,
                 getpid(),
             );
             /* Explanation: Some installations of dnsmasq (eg Debian/Ubuntu) locate the pid-file
@@ -809,7 +806,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             );
             if fd == -(1) {
                 /* only complain if started as root */
-                if getuid() == 0 as libc::c_uint {
+                if getuid() == 0 {
                     err = 1
                 }
             } else {
@@ -819,16 +816,16 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
                 of the directory containing the file. That directory will
                 need to by owned by the dnsmasq user, and the ownership of the
                 file has to match, to keep systemd >273 happy. */
-                if getuid() == 0 as libc::c_uint
+                if getuid() == 0
                     && !ent_pw.is_null()
-                    && ent_pw.pw_uid != 0 as libc::c_uint
+                    && ent_pw.pw_uid != 0
                     && fchown(fd, ent_pw.pw_uid, ent_pw.pw_gid) == -(1)
                 {
                     chown_warn = *__errno_location()
                 }
                 if read_write(
                     fd,
-                    daemon.namebuff.clone() as *mut libc::c_uchar,
+                    daemon.namebuff.clone(),
                     strlen(daemon.namebuff.clone()),
                     0,
                 ) == 0
@@ -840,7 +837,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             }
             if err != 0 {
                 send_event(
-                    err_pipe[1 as usize],
+                    err_pipe[1 ],
                     13,
                     *__errno_location(),
                     Some(&mut daemon.runfile),
@@ -849,21 +846,21 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             }
         }
     }
-    log_err = log_start(ent_pw, err_pipe[1 as usize]);
-    if daemon.options[(6 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
-        & (1 as libc::c_uint)
-            << (6 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+    log_err = log_start(ent_pw, err_pipe[1 ]);
+    if daemon.options[(6).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
+        & (1)
+            << (6).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
         /* open  stdout etc to /dev/null */
-        let mut nullfd: libc::c_int = open(
-            b"/dev/null\x00" as *const u8 as *const libc::c_char,
+        let mut nullfd: i32 = open(
+            b"/dev/null\x00" ,
             0o2,
         );
         if nullfd != -(1) {
@@ -883,45 +880,45 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     {
         daemon.helperfd = create_helper( pipewrite, err_pipe[1], script_uid, script_gid, max_fd)
     }
-    if daemon.options[6] == 0 && getuid() == 0 as libc::c_uint
+    if daemon.options[6] == 0 && getuid() == 0
     {
-        let mut bad_capabilities: libc::c_int = 0;
+        let mut bad_capabilities: i32 = 0;
         let mut dummy: gid_t = 0;
         /* remove all supplementary groups */
-        if !gp.is_null() && (setgroups(0 as size_t, &mut dummy) == -(1) || setgid((*gp).gr_gid) == -(1))
+        if !gp.is_null() && (setgroups(0 , &mut dummy) == -(1) || setgid((*gp).gr_gid) == -(1))
         {
-            send_event( err_pipe[1 as usize], 15, *__errno_location(), Some(&mut daemon.groupname));
+            send_event( err_pipe[1 ], 15, *__errno_location(), Some(&mut daemon.groupname));
             _exit(0);
         }
-        if !ent_pw.is_null() && ent_pw.pw_uid != 0 as libc::c_uint {
+        if !ent_pw.is_null() && ent_pw.pw_uid != 0 {
             /* Need to be able to drop root. */
-            data.effective |= ((1) << 7) as libc::c_uint;
-            data.permitted |= ((1) << 7) as libc::c_uint;
+            data.effective |= ((1) << 7);
+            data.permitted |= ((1) << 7);
             /* Tell kernel to not clear capabilities when dropping root */
             if capset(hdr, data) == -(1) || prctl(8, 1, 0, 0, 0) == -1
             {
                 bad_capabilities = *__errno_location()
             }
             if bad_capabilities != 0 {
-                send_event( err_pipe[1 as usize], 12, bad_capabilities, None);
+                send_event( err_pipe[1 ], 12, bad_capabilities, None);
                 _exit(0);
             }
             /* finally drop root */
             if setuid(ent_pw.pw_uid) == -(1) {
-                send_event(err_pipe[1 as usize], 11, *__errno_location(), Some(&mut daemon.username));
+                send_event(err_pipe[1 ], 11, *__errno_location(), Some(&mut daemon.username));
                 _exit(0);
             }
             data.effective &= !((1) << 7);
             data.permitted &= !((1) << 7);
             /* lose the setuid capability */
             if capset(hdr, data) == -(1) {
-                send_event(err_pipe[1 as usize], 12, *__errno_location(), None);
+                send_event(err_pipe[1 ], 12, *__errno_location(), None);
                 _exit(0);
             }
         }
     }
-    free(hdr as *mut libc::c_void);
-    free(data as *mut libc::c_void);
+    free(hdr);
+    free(data);
     if daemon.options[6]
     {
         prctl(
@@ -934,15 +931,15 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     }
     if daemon.options[40] != 0
     {
-        let mut dir: *mut DIR = 0 as *mut DIR;
-        let mut p: *mut TftpPrefix = 0 as *mut TftpPrefix;
+        let mut dir: *mut DIR = 0 ;
+        let mut p: *mut TftpPrefix = 0 ;
         if !daemon.tftp_prefix.is_null() {
             dir = opendir(daemon.tftp_prefix);
             if dir.is_null() {
                 tftp_prefix_missing = 1;
                 if daemon.options[52] == false
                 {
-                    send_event( err_pipe[1 as usize], 20, *__errno_location(), Some(&mut daemon.tftp_prefix));
+                    send_event( err_pipe[1 ], 20, *__errno_location(), Some(&mut daemon.tftp_prefix));
                     _exit(0);
                 }
             } else {
@@ -958,7 +955,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
                 if daemon.options[52] == false
                 {
                     send_event(
-                        err_pipe[1 as usize],
+                        err_pipe[1 ],
                         20,
                         *__errno_location(),
                         p.prefix,
@@ -977,48 +974,48 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         if daemon.cachesize != 0 {
             my_syslog(
                 6,
-                b"started, version %s cachesize %d\x00" as *const u8 as *const libc::c_char,
-                b"2.84rc2\x00" as *const u8 as *const libc::c_char,
+                b"started, version %s cachesize %d\x00" ,
+                b"2.84rc2\x00" ,
                 daemon.cachesize,
             );
             if daemon.cachesize > 10000 {
                 my_syslog(4,
                           b"cache size greater than 10000 may cause performance issues, and is unlikely to be useful.\x00"
-                              as *const u8 as *const libc::c_char);
+                              );
             }
         } else {
             my_syslog(
                 6,
-                b"started, version %s cache disabled\x00" as *const u8 as *const libc::c_char,
-                b"2.84rc2\x00" as *const u8 as *const libc::c_char,
+                b"started, version %s cache disabled\x00" ,
+                b"2.84rc2\x00" ,
             );
         }
-        if daemon.options[(49 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
+        if daemon.options[(49).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
             & (1)
-                << (49 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+                << (49).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
         {
             my_syslog(
                 6,
-                b"DNS service limited to local subnets\x00" as *const u8 as *const libc::c_char,
+                b"DNS service limited to local subnets\x00" ,
             );
         }
     }
     my_syslog(
         6,
-        b"compile time options: %s\x00" as *const u8 as *const libc::c_char,
+        b"compile time options: %s\x00" ,
         compile_opts,
     );
     if chown_warn != 0 {
         my_syslog(
             4,
-            b"chown of PID file %s failed: %s\x00" as *const u8 as *const libc::c_char,
+            b"chown of PID file %s failed: %s\x00" ,
             daemon.runfile,
             strerror(chown_warn),
         );
@@ -1026,7 +1023,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     if log_err != 0 {
         my_syslog(
             4,
-            b"warning: failed to change owner of %s: %s\x00" as *const u8 as *const libc::c_char,
+            b"warning: failed to change owner of %s: %s\x00" ,
             daemon.log_file,
             strerror(log_err),
         );
@@ -1034,44 +1031,44 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     if bind_fallback != 0 {
         my_syslog(
             4,
-            b"setting --bind-interfaces option because of OS limitations\x00" as *const u8
-                as *const libc::c_char,
+            b"setting --bind-interfaces option because of OS limitations\x00"
+               ,
         );
     }
-    if daemon.options[(13 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    if daemon.options[(13).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (13 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (13).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         warn_bound_listeners();
-    } else if daemon.options[(39 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    } else if daemon.options[(39).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (39 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (39).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
         warn_wild_labels();
     }
     warn_int_names();
-    if daemon.options[(13 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    if daemon.options[(13).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (13 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (13).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
@@ -1080,8 +1077,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             if !(*if_tmp).name.is_null() && (*if_tmp).used == 0 {
                 my_syslog(
                     4,
-                    b"warning: interface %s does not currently exist\x00" as *const u8
-                        as *const libc::c_char,
+                    b"warning: interface %s does not currently exist\x00"
+                       ,
                     (*if_tmp).name,
                 );
             }
@@ -1089,37 +1086,37 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         }
     }
     if daemon.port != 0
-        && daemon.options[(8 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
+        && daemon.options[(8).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
             & (1)
-                << (8 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+                << (8).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
     {
         if !daemon.resolv_files.is_null() && (*daemon.resolv_files).is_default == 0 {
             my_syslog(
                 4,
-                b"warning: ignoring resolv-file flag because no-resolv is set\x00" as *const u8
-                    as *const libc::c_char,
+                b"warning: ignoring resolv-file flag because no-resolv is set\x00"
+                   ,
             );
         }
-        daemon.resolv_files = 0 as *mut Resolvc;
+        daemon.resolv_files = 0 ;
         if daemon.servers.is_null() {
             my_syslog(
                 4,
-                b"warning: no upstream servers configured\x00" as *const u8 as *const libc::c_char,
+                b"warning: no upstream servers configured\x00" ,
             );
         }
     }
     if daemon.max_logs != 0 {
         my_syslog(
             6,
-            b"asynchronous logging enabled, queue limit is %d messages\x00" as *const u8
-                as *const libc::c_char,
+            b"asynchronous logging enabled, queue limit is %d messages\x00"
+               ,
             daemon.max_logs,
         );
     }
@@ -1146,27 +1143,27 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     if daemon.dhcp6_enabled != 0 || daemon.ra_enabled != 0 {
         dhcp_construct_contexts(now);
     }
-    if daemon.options[(37 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    if daemon.options[(37).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (37 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (37).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
         my_syslog(
             (3) << 3 | 6,
-            b"IPv6 router advertisement enabled\x00" as *const u8 as *const libc::c_char,
+            b"IPv6 router advertisement enabled\x00" ,
         );
     }
     if did_bind != 0 {
         my_syslog(
             (3) << 3 | 6,
-            b"DHCP, sockets bound exclusively to interface %s\x00" as *const u8
-                as *const libc::c_char,
+            b"DHCP, sockets bound exclusively to interface %s\x00"
+               ,
             bound_device,
         );
     }
@@ -1177,66 +1174,66 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
     if !daemon.dhcp.is_null() || daemon.dhcp6_enabled != 0 {
         lease_find_interfaces(now);
     }
-    if daemon.options[(40 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    if daemon.options[(40).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (40 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (40).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         != 0
     {
-        let mut p_0: *mut TftpPrefix = 0 as *mut TftpPrefix;
+        let mut p_0: *mut TftpPrefix = 0 ;
         my_syslog(
             (1) << 3 | 6,
-            b"TFTP %s%s %s %s\x00" as *const u8 as *const libc::c_char,
+            b"TFTP %s%s %s %s\x00" ,
             if !daemon.tftp_prefix.is_null() {
-                b"root is \x00" as *const u8 as *const libc::c_char
+                b"root is \x00"
             } else {
-                b"enabled\x00" as *const u8 as *const libc::c_char
+                b"enabled\x00"
             },
             if !daemon.tftp_prefix.is_null() {
-                daemon.tftp_prefix as *const libc::c_char
+                daemon.tftp_prefix
             } else {
-                b"\x00" as *const u8 as *const libc::c_char
+                b"\x00"
             },
-            if daemon.options[(26 as libc::c_ulong).wrapping_div(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
-            ) as usize]
+            if daemon.options[(26).wrapping_div(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
+            ) ]
                 & (1)
-                    << (26 as libc::c_ulong).wrapping_rem(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
+                    << (26).wrapping_rem(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
                     )
                 != 0
             {
-                b"secure mode\x00" as *const u8 as *const libc::c_char
+                b"secure mode\x00"
             } else {
-                b"\x00" as *const u8 as *const libc::c_char
+                b"\x00"
             },
-            if daemon.options[(60 as libc::c_ulong).wrapping_div(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
-            ) as usize]
+            if daemon.options[(60).wrapping_div(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
+            ) ]
                 & (1)
-                    << (60 as libc::c_ulong).wrapping_rem(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
+                    << (60).wrapping_rem(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
                     )
                 != 0
             {
-                b"single port mode\x00" as *const u8 as *const libc::c_char
+                b"single port mode\x00"
             } else {
-                b"\x00" as *const u8 as *const libc::c_char
+                b"\x00"
             },
         );
         if tftp_prefix_missing != 0 {
             my_syslog(
                 (1) << 3 | 4,
-                b"warning: %s inaccessible\x00" as *const u8 as *const libc::c_char,
+                b"warning: %s inaccessible\x00" ,
                 daemon.tftp_prefix,
             );
         }
@@ -1245,8 +1242,8 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             if (*p_0).missing != 0 {
                 my_syslog(
                     (1) << 3 | 4,
-                    b"warning: TFTP directory %s inaccessible\x00" as *const u8
-                        as *const libc::c_char,
+                    b"warning: TFTP directory %s inaccessible\x00"
+                       ,
                     (*p_0).prefix,
                 );
             }
@@ -1256,63 +1253,63 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         disjoint files might be served, but for large limits,
         a single file will be sent to may clients (the file only needs
         one fd). */
-        max_fd -= 30 as libc::c_long; /* use other than TFTP */
-        if max_fd < 0 as libc::c_long {
-            max_fd = 5 as libc::c_long
-        } else if max_fd < 100 as libc::c_long
-            && daemon.options[(60 as libc::c_ulong).wrapping_div(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
-            ) as usize]
+        max_fd -= 30; /* use other than TFTP */
+        if max_fd < 0 {
+            max_fd = 5
+        } else if max_fd < 100
+            && daemon.options[(60).wrapping_div(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
+            ) ]
                 & (1)
-                    << (60 as libc::c_ulong).wrapping_rem(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
+                    << (60).wrapping_rem(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
                     )
                 == 0
         {
-            max_fd = max_fd / 2 as libc::c_long
+            max_fd = max_fd / 2
         } else {
-            max_fd = max_fd - 20 as libc::c_long
+            max_fd = max_fd - 20
         }
         /* if we have to use a limited range of ports,
         that will limit the number of transfers */
         if daemon.start_tftp_port != 0
-            && ((daemon.end_tftp_port - daemon.start_tftp_port + 1) as libc::c_long)
+            && ((daemon.end_tftp_port - daemon.start_tftp_port + 1))
                 < max_fd
         {
             max_fd =
-                (daemon.end_tftp_port - daemon.start_tftp_port + 1) as libc::c_long
+                (daemon.end_tftp_port - daemon.start_tftp_port + 1)
         }
-        if daemon.tftp_max as libc::c_long > max_fd {
+        if daemon.tftp_max > max_fd {
             daemon.tftp_max = max_fd;
             my_syslog(
                 (1) << 3 | 4,
-                b"restricting maximum simultaneous TFTP transfers to %d\x00" as *const u8
-                    as *const libc::c_char,
+                b"restricting maximum simultaneous TFTP transfers to %d\x00"
+                   ,
                 daemon.tftp_max,
             );
         }
     }
     /* finished start-up - release original process */
-    if err_pipe[1 as usize] != -(1) {
-        close(err_pipe[1 as usize]);
+    if err_pipe[1 ] != -(1) {
+        close(err_pipe[1 ]);
     }
     if daemon.port != 0 {
         check_servers();
     }
-    ::std::ptr::write_volatile(&mut pid as *mut pid_t, getpid());
+    ::std::ptr::write_volatile(&mut pid , getpid());
     daemon.pipe_to_parent = -(1);
-    i = 0 as libc::c_long;
-    while i < 20 as libc::c_long {
-        daemon.tcp_pipes[i as usize] = -(1);
+    i = 0;
+    while i < 20 {
+        daemon.tcp_pipes[i ] = -(1);
         i += 1
     }
     /* Using inotify, have to select a resolv file at startup */
     poll_resolv(1, 0, now);
     loop {
-        let mut t: libc::c_int = 0;
-        let mut timeout: libc::c_int = -(1);
+        let mut t: i32 = 0;
+        let mut timeout: i32 = -(1);
         poll_reset();
         /* if we are out of resources, find how long we have to wait
         for some to come free, we'll loop around then and restart
@@ -1323,14 +1320,14 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         }
         /* Whilst polling for the dbus, or doing a tftp transfer, wake every quarter second */
         if !daemon.tftp_trans.is_null()
-            || daemon.options[(19 as libc::c_ulong).wrapping_div(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
-            ) as usize]
+            || daemon.options[(19).wrapping_div(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
+            ) ]
                 & (1)
-                    << (19 as libc::c_ulong).wrapping_rem(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
+                    << (19).wrapping_rem(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
                     )
                 != 0
                 && daemon.dbus.is_null()
@@ -1340,39 +1337,39 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             timeout = 1000
         }
         if !daemon.dhcp.is_null() || !daemon.relay4.is_null() {
-            poll_listen(daemon.dhcpfd, 0x1 as libc::c_short);
+            poll_listen(daemon.dhcpfd, 0x1 );
             if daemon.pxefd != -(1) {
-                poll_listen(daemon.pxefd, 0x1 as libc::c_short);
+                poll_listen(daemon.pxefd, 0x1 );
             }
         }
         if daemon.dhcp6_enabled != 0 || !daemon.relay6.is_null() {
-            poll_listen(daemon.dhcp6fd, 0x1 as libc::c_short);
+            poll_listen(daemon.dhcp6fd, 0x1 );
         }
         if daemon.ra_enabled != 0 {
-            poll_listen(daemon.icmp6fd, 0x1 as libc::c_short);
+            poll_listen(daemon.icmp6fd, 0x1 );
         }
         if daemon.inotifyfd != -(1) {
-            poll_listen(daemon.inotifyfd, 0x1 as libc::c_short);
+            poll_listen(daemon.inotifyfd, 0x1 );
         }
-        poll_listen(daemon.netlinkfd, 0x1 as libc::c_short);
-        poll_listen(piperead, 0x1 as libc::c_short);
+        poll_listen(daemon.netlinkfd, 0x1 );
+        poll_listen(piperead, 0x1 );
         while helper_buf_empty() != 0 && do_script_run(now) != 0 {}
         /* Wake every second whilst waiting for DAD to complete */
         /* Refresh cache */
-        if daemon.options[(53 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
+        if daemon.options[(53).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
             & (1)
-                << (53 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+                << (53).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
         {
             find_mac(
-                0 as *mut MySockAddr,
-                0 as *mut libc::c_uchar,
+                0 ,
+                0,
                 0,
                 now,
             );
@@ -1380,7 +1377,7 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
         while helper_buf_empty() != 0 && do_arp_script_run() != 0 {}
         while helper_buf_empty() != 0 && do_tftp_script_run() != 0 {}
         if helper_buf_empty() == 0 {
-            poll_listen(daemon.helperfd, 0x4 as libc::c_short);
+            poll_listen(daemon.helperfd, 0x4 );
         }
         /* must do this just before do_poll(), when we know no
         more calls to my_syslog() can occur */
@@ -1400,61 +1397,61 @@ unsafe fn main_0(mut argc: libc::c_int, mut argv: *mut *mut libc::c_char) -> lib
             create_bound_listeners(0);
             warn_bound_listeners();
         }
-        if poll_check(daemon.netlinkfd, 0x1 as libc::c_short) != 0 {
+        if poll_check(daemon.netlinkfd, 0x1 ) != 0 {
             netlink_multicast();
         }
         if daemon.inotifyfd != -(1)
-            && poll_check(daemon.inotifyfd, 0x1 as libc::c_short) != 0
+            && poll_check(daemon.inotifyfd, 0x1 ) != 0
             && inotify_check(now) != 0
         {
             if daemon.port != 0
-                && daemon.options[(5 as libc::c_ulong).wrapping_div(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
-                ) as usize]
+                && daemon.options[(5).wrapping_div(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
+                ) ]
                     & (1)
-                        << (5 as libc::c_ulong).wrapping_rem(
-                            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                .wrapping_mul(8 as libc::c_ulong),
+                        << (5).wrapping_rem(
+                            (::std::mem::size_of::<libc::c_uint>())
+                                .wrapping_mul(8),
                         )
                     == 0
             {
                 poll_resolv(1, 1, now);
             }
         }
-        if poll_check(piperead, 0x1 as libc::c_short) != 0 {
+        if poll_check(piperead, 0x1 ) != 0 {
             async_event(piperead, now);
         }
         check_dns_listeners(now);
         check_tftp_listeners(now);
         if !daemon.dhcp.is_null() || !daemon.relay4.is_null() {
-            if poll_check(daemon.dhcpfd, 0x1 as libc::c_short) != 0 {
+            if poll_check(daemon.dhcpfd, 0x1 ) != 0 {
                 dhcp_packet(now, 0);
             }
             if daemon.pxefd != -(1)
-                && poll_check(daemon.pxefd, 0x1 as libc::c_short) != 0
+                && poll_check(daemon.pxefd, 0x1 ) != 0
             {
                 dhcp_packet(now, 1);
             }
         }
         if (daemon.dhcp6_enabled != 0 || !daemon.relay6.is_null())
-            && poll_check(daemon.dhcp6fd, 0x1 as libc::c_short) != 0
+            && poll_check(daemon.dhcp6fd, 0x1 ) != 0
         {
             dhcp6_packet(now);
         }
         if daemon.ra_enabled != 0
-            && poll_check(daemon.icmp6fd, 0x1 as libc::c_short) != 0
+            && poll_check(daemon.icmp6fd, 0x1 ) != 0
         {
             icmp6_packet(now);
         }
         if daemon.helperfd != -(1)
-            && poll_check(daemon.helperfd, 0x4 as libc::c_short) != 0
+            && poll_check(daemon.helperfd, 0x4 ) != 0
         {
             helper_write();
         }
     }
 }
-fn sig_handler(mut sig: libc::c_int) {
+fn sig_handler(mut sig: i32) {
     if pid == 0 {
         /* ignore anything other than TERM during startup
         and in helper proc. (helper ignore TERM too) */
@@ -1468,8 +1465,8 @@ fn sig_handler(mut sig: libc::c_int) {
         }
     } else {
         /* master process */
-        let mut event: libc::c_int = 0;
-        let mut errsave: libc::c_int = *__errno_location();
+        let mut event: i32 = 0;
+        let mut errsave: i32 = *__errno_location();
         if sig == 1 {
             event = 1
         } else if sig == 17 {
@@ -1485,14 +1482,14 @@ fn sig_handler(mut sig: libc::c_int) {
         } else if sig == 2 {
             /* Handle SIGINT normally in debug mode, so
             ctrl-c continues to operate. */
-            if daemon.options[(6 as libc::c_ulong).wrapping_div(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
-            ) as usize]
+            if daemon.options[(6).wrapping_div(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
+            ) ]
                 & (1)
-                    << (6 as libc::c_ulong).wrapping_rem(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
+                    << (6).wrapping_rem(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
                     )
                 != 0
             {
@@ -1503,16 +1500,16 @@ fn sig_handler(mut sig: libc::c_int) {
         } else {
             return;
         }
-        send_event(pipewrite, event, 0, 0 as *mut libc::c_char);
+        send_event(pipewrite, event, 0, 0 );
         *__errno_location() = errsave
     };
 }
 /* now == 0 -> queue immediate callback */
 
-pub fn send_alarm(mut event: time_t, mut now: time_t) {
-    if now == 0 as libc::c_long || event != 0 as libc::c_long {
+pub fn send_alarm(mut event: time::Instant, mut now: time::Instant) {
+    if now == 0 || event != 0 {
         /* alarm(0) or alarm(-ve) doesn't do what we want.... */
-        if now == 0 as libc::c_long || difftime(event, now) <= 0.0f64 {
+        if now == 0 || difftime(event, now) <= 0.0f64 {
             send_event(
                 pipewrite,
                 3,
@@ -1525,7 +1522,7 @@ pub fn send_alarm(mut event: time_t, mut now: time_t) {
     };
 }
 
-pub fn queue_event(mut event: libc::c_int) {
+pub fn queue_event(mut event: i32) {
     send_event(pipewrite, event, 0, None);
 }
 
@@ -1542,7 +1539,7 @@ pub fn send_event(
         msg_sz: 0,
     };
     let mut iov: [iovec; 2] = [iovec {
-        iov_base: 0 as *mut libc::c_void,
+        iov_base: 0,
         iov_len: 0,
     }; 2];
     ev.event = event;
@@ -1550,12 +1547,12 @@ pub fn send_event(
     ev.msg_sz = if !msg.is_null() {
         strlen(msg)
     } else {
-        0 as libc::c_ulong
+        0
     };
-    iov[0 as usize].iov_base = &mut ev as *mut EventDesc as *mut libc::c_void;
-    iov[0 as usize].iov_len = ::std::mem::size_of::<EventDesc>() as libc::c_ulong;
-    iov[1 as usize].iov_base = msg as *mut libc::c_void;
-    iov[1 as usize].iov_len = ev.msg_sz as size_t;
+    iov[0 ].iov_base = &mut ev ;
+    iov[0 ].iov_len = ::std::mem::size_of::<EventDesc>();
+    iov[1 ].iov_base = msg;
+    iov[1 ].iov_len = ev.msg_sz ;
     /* error pipe, debug mode. */
     if fd == -(1) {
         fatal_event(&mut ev, msg);
@@ -1570,7 +1567,7 @@ pub fn send_event(
             } else {
                 1
             }),
-        ) == -(1) as libc::c_long
+        ) == -(1)
             && *__errno_location() == 4
         {}
     };
@@ -1578,39 +1575,39 @@ pub fn send_event(
 /* NOTE: the memory used to return msg is leaked: use msgs in events only
 to describe fatal errors. */
 fn read_event(
-    mut fd: libc::c_int,
+    mut fd: i32,
     mut evp: *mut EventDesc,
-    mut msg: *mut *mut libc::c_char,
-) -> libc::c_int {
-    let mut buf: *mut libc::c_char = 0 as *mut libc::c_char;
+    mut msg: String,
+) -> i32 {
+    let mut buf: &mut String = 0 ;
     if read_write(
         fd,
-        evp as *mut libc::c_uchar,
-        ::std::mem::size_of::<EventDesc>() as libc::c_ulong,
+        evp,
+        ::std::mem::size_of::<EventDesc>(),
         1,
     ) == 0
     {
         return 0;
     }
-    *msg = 0 as *mut libc::c_char;
+    *msg = 0 ;
     if (*evp).msg_sz != 0
         && {
-            buf = malloc(((*evp).msg_sz + 1) as libc::c_ulong) as *mut libc::c_char;
+            buf = malloc(((*evp).msg_sz + 1)) ;
             !buf.is_null()
         }
         && read_write(
             fd,
-            buf as *mut libc::c_uchar,
+            buf,
             (*evp).msg_sz,
             1,
         ) != 0
     {
-        *buf.offset((*evp).msg_sz as isize) = 0 as libc::c_char;
+        *buf.offset((*evp).msg_sz) = 0;
         *msg = buf
     }
     return 1;
 }
-fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
+fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
     *__errno_location() = (*ev).data;
     match (*ev).event {
         16 => {
@@ -1618,35 +1615,35 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         }
         18 => {
             die(
-                b"cannot fork into background: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
-                0 as *mut libc::c_char,
+                b"cannot fork into background: %s\x00"
+                    ,
+                0 ,
                 5,
             );
         }
         10 => {
             /* fall through */
             die(
-                b"failed to create helper: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
-                0 as *mut libc::c_char,
+                b"failed to create helper: %s\x00"
+                    ,
+                0 ,
                 5,
             );
         }
         12 => {
             /* fall through */
             die(
-                b"setting capabilities failed: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
-                0 as *mut libc::c_char,
+                b"setting capabilities failed: %s\x00"
+                    ,
+                0 ,
                 5,
             );
         }
         11 => {
             /* fall through */
             die(
-                b"failed to change user-id to %s: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"failed to change user-id to %s: %s\x00"
+                    ,
                 msg,
                 5,
             );
@@ -1654,8 +1651,8 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         15 => {
             /* fall through */
             die(
-                b"failed to change group-id to %s: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"failed to change group-id to %s: %s\x00"
+                    ,
                 msg,
                 5,
             );
@@ -1663,8 +1660,8 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         13 => {
             /* fall through */
             die(
-                b"failed to open pidfile %s: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"failed to open pidfile %s: %s\x00"
+                    ,
                 msg,
                 3,
             );
@@ -1672,8 +1669,8 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         17 => {
             /* fall through */
             die(
-                b"cannot open log %s: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"cannot open log %s: %s\x00"
+                    ,
                 msg,
                 3,
             );
@@ -1681,8 +1678,8 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         19 => {
             /* fall through */
             die(
-                b"failed to load Lua script: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"failed to load Lua script: %s\x00"
+                    ,
                 msg,
                 5,
             );
@@ -1690,8 +1687,8 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         20 => {
             /* fall through */
             die(
-                b"TFTP directory %s inaccessible: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"TFTP directory %s inaccessible: %s\x00"
+                    ,
                 msg,
                 3,
             );
@@ -1699,8 +1696,8 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         24 => {
             /* fall through */
             die(
-                b"cannot create timestamp file %s: %s\x00" as *const u8 as *const libc::c_char
-                    as *mut libc::c_char,
+                b"cannot create timestamp file %s: %s\x00"
+                    ,
                 msg,
                 1,
             );
@@ -1708,16 +1705,16 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: *mut libc::c_char) {
         _ => {}
     };
 }
-fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
+fn async_event(mut pipe_0: i32, mut now: time::Instant) {
     let mut p: pid_t = 0;
     let mut ev: EventDesc = EventDesc {
         event: 0,
         data: 0,
         msg_sz: 0,
     };
-    let mut i: libc::c_int = 0;
-    let mut check: libc::c_int = 0;
-    let mut msg: *mut libc::c_char = 0 as *mut libc::c_char;
+    let mut i: i32 = 0;
+    let mut check: i32 = 0;
+    let mut msg: &mut String = 0 ;
     /* NOTE: the memory used to return msg is leaked: use msgs in events only
     to describe fatal errors. */
     if read_event(pipe_0, &mut ev, &mut msg) != 0 {
@@ -1738,7 +1735,7 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
             }
             3 => {
                 if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != 0 {
-                    lease_prune(0 as *mut DhcpLease, now);
+                    lease_prune(0, now);
                     lease_update_file(now);
                 } else if daemon.doing_ra != 0 {
                     /* Not doing DHCP, so no lease system, manage alarms for ra only */
@@ -1750,7 +1747,7 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
                 loop
                 /* See Stevens 5.10 */
                 {
-                    p = waitpid(-(1), 0 as *mut libc::c_int, 1);
+                    p = waitpid(-(1), 0, 1);
                     if !(p != 0) {
                         break;
                     }
@@ -1761,8 +1758,8 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
                     } else {
                         i = 0;
                         while i < 20 {
-                            if daemon.tcp_pids[i as usize] == p {
-                                daemon.tcp_pids[i as usize] = 0
+                            if daemon.tcp_pids[i ] == p {
+                                daemon.tcp_pids[i ] = 0
                             }
                             i += 1
                         }
@@ -1773,7 +1770,7 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
             8 => {
                 my_syslog(
                     4,
-                    b"script process killed by signal %d\x00" as *const u8 as *const libc::c_char,
+                    b"script process killed by signal %d\x00" ,
                     ev.data,
                 );
                 current_block_60 = 6367734732029634840;
@@ -1781,7 +1778,7 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
             7 => {
                 my_syslog(
                     4,
-                    b"script process exited with status %d\x00" as *const u8 as *const libc::c_char,
+                    b"script process exited with status %d\x00" ,
                     ev.data,
                 );
                 current_block_60 = 6367734732029634840;
@@ -1789,7 +1786,7 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
             9 => {
                 my_syslog(
                     3,
-                    b"failed to execute %s: %s\x00" as *const u8 as *const libc::c_char,
+                    b"failed to execute %s: %s\x00" ,
                     daemon.lease_change_command,
                     strerror(ev.data),
                 );
@@ -1798,15 +1795,15 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
             25 => {
                 my_syslog(
                     (2) << 3 | 7,
-                    b"%s\x00" as *const u8 as *const libc::c_char,
+                    b"%s\x00" ,
                     if !msg.is_null() {
-                        msg as *const libc::c_char
+                        msg
                     } else {
-                        b"\x00" as *const u8 as *const libc::c_char
+                        b"\x00"
                     },
                 );
-                free(msg as *mut libc::c_void);
-                msg = 0 as *mut libc::c_char;
+                free(msg);
+                msg = 0 ;
                 current_block_60 = 6367734732029634840;
             }
             11 | 16 | 19 => {
@@ -1837,8 +1834,8 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
                 /* Knock all our children on the head. */
                 i = 0;
                 while i < 20 {
-                    if daemon.tcp_pids[i as usize] != 0 {
-                        kill(daemon.tcp_pids[i as usize], 14);
+                    if daemon.tcp_pids[i ] != 0 {
+                        kill(daemon.tcp_pids[i ], 14);
                     }
                     i += 1
                 }
@@ -1872,7 +1869,7 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
                 }
                 my_syslog(
                     6,
-                    b"exiting on receipt of SIGTERM\x00" as *const u8 as *const libc::c_char,
+                    b"exiting on receipt of SIGTERM\x00" ,
                 );
                 flush_log();
                 exit(0);
@@ -1888,14 +1885,14 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
                 clear_cache_and_reload(now);
                 if daemon.port != 0 {
                     if !daemon.resolv_files.is_null()
-                        && daemon.options[(5 as libc::c_ulong).wrapping_div(
-                            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                .wrapping_mul(8 as libc::c_ulong),
-                        ) as usize]
+                        && daemon.options[(5).wrapping_div(
+                            (::std::mem::size_of::<libc::c_uint>())
+                                .wrapping_mul(8),
+                        ) ]
                             & (1)
-                                << (5 as libc::c_ulong).wrapping_rem(
-                                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                        .wrapping_mul(8 as libc::c_ulong),
+                                << (5).wrapping_rem(
+                                    (::std::mem::size_of::<libc::c_uint>())
+                                        .wrapping_mul(8),
                                 )
                             != 0
                     {
@@ -1917,12 +1914,12 @@ fn async_event(mut pipe_0: libc::c_int, mut now: time_t) {
     };
 }
 fn poll_resolv(
-    mut force: libc::c_int,
-    mut do_reload: libc::c_int,
-    mut now: time_t,
+    mut force: i32,
+    mut do_reload: i32,
+    mut now: time::Instant,
 ) {
-    let mut res: *mut Resolvc = 0 as *mut Resolvc;
-    let mut latest: *mut Resolvc = 0 as *mut Resolvc;
+    let mut res: *mut Resolvc = 0 ;
+    let mut latest: *mut Resolvc = 0 ;
     let mut statbuf: stat = stat {
         st_dev: 0,
         st_ino: 0,
@@ -1949,41 +1946,41 @@ fn poll_resolv(
         },
         __glibc_reserved: [0; 3],
     };
-    let mut last_change: time_t = 0 as time_t;
+    let mut last_change: time::Instant = 0;
     /* There may be more than one possible file.
     Go through and find the one which changed _last_.
     Warn of any which can't be read. */
     if daemon.port == 0
-        || daemon.options[(5 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
+        || daemon.options[(5).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
             & (1)
-                << (5 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+                << (5).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
     {
         return;
     }
-    latest = 0 as *mut Resolvc;
+    latest = 0 ;
     res = daemon.resolv_files;
     while !res.is_null() {
         if stat((*res).name, &mut statbuf) == -(1) {
             if force != 0 {
-                (*res).mtime = 0 as time_t
+                (*res).mtime = 0
             } else {
                 if (*res).logged == 0 {
                     my_syslog(
                         4,
-                        b"failed to access %s: %s\x00" as *const u8 as *const libc::c_char,
+                        b"failed to access %s: %s\x00" ,
                         (*res).name,
                         strerror(*__errno_location()),
                     );
                 }
                 (*res).logged = 1;
-                if (*res).mtime != 0 as libc::c_long {
+                if (*res).mtime != 0 {
                     /* existing file evaporated, force selection of the latest
                     file even if its mtime hasn't changed since we last looked */
                     poll_resolv(1, do_reload, now);
@@ -2003,23 +2000,23 @@ fn poll_resolv(
         res = (*res).next
     }
     if !latest.is_null() {
-        static mut warned: libc::c_int = 0;
+        static mut warned: i32 = 0;
         if reload_servers((*latest).name) != 0 {
             my_syslog(
                 6,
-                b"reading %s\x00" as *const u8 as *const libc::c_char,
+                b"reading %s\x00" ,
                 (*latest).name,
             );
             warned = 0;
             check_servers();
-            if daemon.options[(24 as libc::c_ulong).wrapping_div(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
-            ) as usize]
+            if daemon.options[(24).wrapping_div(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
+            ) ]
                 & (1)
-                    << (24 as libc::c_ulong).wrapping_rem(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
+                    << (24).wrapping_rem(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
                     )
                 != 0
                 && do_reload != 0
@@ -2027,11 +2024,11 @@ fn poll_resolv(
                 clear_cache_and_reload(now);
             }
         } else {
-            (*latest).mtime = 0 as time_t;
+            (*latest).mtime = 0;
             if warned == 0 {
                 my_syslog(
                     4,
-                    b"no servers found in %s, will retry\x00" as *const u8 as *const libc::c_char,
+                    b"no servers found in %s, will retry\x00" ,
                     (*latest).name,
                 );
                 warned = 1
@@ -2040,19 +2037,19 @@ fn poll_resolv(
     };
 }
 
-pub fn clear_cache_and_reload(mut now: time_t) {
+pub fn clear_cache_and_reload(mut now: time::Instant) {
     if daemon.port != 0 {
         cache_reload();
     }
     if !daemon.dhcp.is_null() || daemon.doing_dhcp6 != 0 {
-        if daemon.options[(14 as libc::c_ulong).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                .wrapping_mul(8 as libc::c_ulong),
-        ) as usize]
+        if daemon.options[(14).wrapping_div(
+            (::std::mem::size_of::<libc::c_uint>())
+                .wrapping_mul(8),
+        ) ]
             & (1)
-                << (14 as libc::c_ulong).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                        .wrapping_mul(8 as libc::c_ulong),
+                << (14).wrapping_rem(
+                    (::std::mem::size_of::<libc::c_uint>())
+                        .wrapping_mul(8),
                 )
             != 0
         {
@@ -2069,47 +2066,47 @@ pub fn clear_cache_and_reload(mut now: time_t) {
         send_alarm(periodic_ra(now), now);
     };
 }
-fn set_dns_listeners(mut now: time_t) -> libc::c_int {
-    let mut serverfdp: *mut ServerFd = 0 as *mut ServerFd;
-    let mut listener: *mut Listener = 0 as *mut Listener;
-    let mut wait: libc::c_int = 0;
-    let mut i: libc::c_int = 0;
-    let mut tftp: libc::c_int = 0;
-    let mut transfer: *mut TftpTransfer = 0 as *mut TftpTransfer;
-    if daemon.options[(60 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+fn set_dns_listeners(mut now: time::Instant) -> i32 {
+    let mut serverfdp:ServerFd = 0Fd;
+    let mut listener: Listener = 0 ;
+    let mut wait: i32 = 0;
+    let mut i: i32 = 0;
+    let mut tftp: i32 = 0;
+    let mut transfer: *mut TftpTransfer = 0 ;
+    if daemon.options[(60).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (60 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (60).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
         transfer = daemon.tftp_trans;
         while !transfer.is_null() {
             tftp += 1;
-            poll_listen((*transfer).sockfd, 0x1 as libc::c_short);
+            poll_listen((*transfer).sockfd, 0x1 );
             transfer = (*transfer).next
         }
     }
     /* will we be able to get memory? */
     if daemon.port != 0 {
-        get_new_frec(now, &mut wait, 0 as *mut frec);
+        get_new_frec(now, &mut wait, 0 );
     }
     serverfdp = daemon.sfds;
     while !serverfdp.is_null() {
-        poll_listen((*serverfdp).fd, 0x1 as libc::c_short);
+        poll_listen((*serverfdp).fd, 0x1 );
         serverfdp = (*serverfdp).next
     }
     if daemon.port != 0 && daemon.osport == 0 {
         i = 0;
         while i < 64 {
-            if daemon.randomsocks[i as usize].refcount != 0 {
+            if daemon.randomsocks[i ].refcount != 0 {
                 poll_listen(
-                    daemon.randomsocks[i as usize].fd,
-                    0x1 as libc::c_short,
+                    daemon.randomsocks[i ].fd,
+                    0x1 ,
                 );
             }
             i += 1
@@ -2119,17 +2116,17 @@ fn set_dns_listeners(mut now: time_t) -> libc::c_int {
     while !listener.is_null() {
         /* only listen for queries if we have resources */
         if (*listener).fd != -(1) && wait == 0 {
-            poll_listen((*listener).fd, 0x1 as libc::c_short);
+            poll_listen((*listener).fd, 0x1 );
         }
         /* death of a child goes through the select loop, so
         we don't need to explicitly arrange to wake up here */
         if (*listener).tcpfd != -(1) {
             i = 0;
             while i < 20 {
-                if daemon.tcp_pids[i as usize] == 0
-                    && daemon.tcp_pipes[i as usize] == -(1)
+                if daemon.tcp_pids[i ] == 0
+                    && daemon.tcp_pipes[i ] == -(1)
                 {
-                    poll_listen((*listener).tcpfd, 0x1 as libc::c_short);
+                    poll_listen((*listener).tcpfd, 0x1 );
                     break;
                 } else {
                     i += 1
@@ -2138,27 +2135,27 @@ fn set_dns_listeners(mut now: time_t) -> libc::c_int {
         }
         /* tftp == 0 in single-port mode. */
         if tftp <= daemon.tftp_max && (*listener).tftpfd != -(1) {
-            poll_listen((*listener).tftpfd, 0x1 as libc::c_short);
+            poll_listen((*listener).tftpfd, 0x1 );
         }
         listener = (*listener).next
     }
-    if daemon.options[(6 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    if daemon.options[(6).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (6 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (6).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
         i = 0;
         while i < 20 {
-            if daemon.tcp_pipes[i as usize] != -(1) {
+            if daemon.tcp_pipes[i ] != -(1) {
                 poll_listen(
-                    daemon.tcp_pipes[i as usize],
-                    0x1 as libc::c_short,
+                    daemon.tcp_pipes[i ],
+                    0x1 ,
                 );
             }
             i += 1
@@ -2166,14 +2163,14 @@ fn set_dns_listeners(mut now: time_t) -> libc::c_int {
     }
     return wait;
 }
-fn check_dns_listeners(mut now: time_t) {
-    let mut serverfdp: *mut ServerFd = 0 as *mut ServerFd;
-    let mut listener: *mut Listener = 0 as *mut Listener;
-    let mut i: libc::c_int = 0;
+fn check_dns_listeners(mut now: time::Instant) {
+    let mut serverfdp:ServerFd = 0Fd;
+    let mut listener: Listener = 0 ;
+    let mut i: i32 = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     serverfdp = daemon.sfds;
     while !serverfdp.is_null() {
-        if poll_check((*serverfdp).fd, 0x1 as libc::c_short) != 0 {
+        if poll_check((*serverfdp).fd, 0x1 ) != 0 {
             reply_query(
                 (*serverfdp).fd,
                 (*serverfdp).source_addr.sa.sa_family,
@@ -2185,15 +2182,15 @@ fn check_dns_listeners(mut now: time_t) {
     if daemon.port != 0 && daemon.osport == 0 {
         i = 0;
         while i < 64 {
-            if daemon.randomsocks[i as usize].refcount != 0
+            if daemon.randomsocks[i ].refcount != 0
                 && poll_check(
-                    daemon.randomsocks[i as usize].fd,
-                    0x1 as libc::c_short,
+                    daemon.randomsocks[i ].fd,
+                    0x1 ,
                 ) != 0
             {
                 reply_query(
-                    daemon.randomsocks[i as usize].fd,
-                    daemon.randomsocks[i as usize].family,
+                    daemon.randomsocks[i ].fd,
+                    daemon.randomsocks[i ].family,
                     now,
                 );
             }
@@ -2207,28 +2204,28 @@ fn check_dns_listeners(mut now: time_t) {
     The order of these events is indeterminate, and both are needed
     to free the process slot. Once the child process has gone, poll()
     returns POLLHUP, not POLLIN, so have to check for both here. */
-    if daemon.options[(6 as libc::c_ulong).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-            .wrapping_mul(8 as libc::c_ulong),
-    ) as usize]
+    if daemon.options[(6).wrapping_div(
+        (::std::mem::size_of::<libc::c_uint>())
+            .wrapping_mul(8),
+    ) ]
         & (1)
-            << (6 as libc::c_ulong).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                    .wrapping_mul(8 as libc::c_ulong),
+            << (6).wrapping_rem(
+                (::std::mem::size_of::<libc::c_uint>())
+                    .wrapping_mul(8),
             )
         == 0
     {
         i = 0;
         while i < 20 {
-            if daemon.tcp_pipes[i as usize] != -(1)
+            if daemon.tcp_pipes[i ] != -(1)
                 && poll_check(
-                    daemon.tcp_pipes[i as usize],
-                    (0x1 | 0x10) as libc::c_short,
+                    daemon.tcp_pipes[i ],
+                    (0x1 | 0x10) ,
                 ) != 0
-                && cache_recv_insert(now, daemon.tcp_pipes[i as usize]) == 0
+                && cache_recv_insert(now, daemon.tcp_pipes[i ]) == 0
             {
-                close(daemon.tcp_pipes[i as usize]);
-                daemon.tcp_pipes[i as usize] = -(1)
+                close(daemon.tcp_pipes[i ]);
+                daemon.tcp_pipes[i ] = -(1)
             }
             i += 1
         }
@@ -2236,37 +2233,37 @@ fn check_dns_listeners(mut now: time_t) {
     listener = daemon.listeners;
     while !listener.is_null() {
         if (*listener).fd != -(1)
-            && poll_check((*listener).fd, 0x1 as libc::c_short) != 0
+            && poll_check((*listener).fd, 0x1 ) != 0
         {
             receive_query(listener, now);
         }
         if (*listener).tftpfd != -(1)
-            && poll_check((*listener).tftpfd, 0x1 as libc::c_short) != 0
+            && poll_check((*listener).tftpfd, 0x1 ) != 0
         {
             tftp_request(listener, now);
         }
         if (*listener).tcpfd != -(1)
-            && poll_check((*listener).tcpfd, 0x1 as libc::c_short) != 0
+            && poll_check((*listener).tcpfd, 0x1 ) != 0
         {
-            let mut confd: libc::c_int = 0;
-            let mut client_ok: libc::c_int = 1;
-            let mut iface: *mut Irec = 0 as *mut Irec;
+            let mut confd: i32 = 0;
+            let mut client_ok: i32 = 1;
+            let mut iface: *mut Irec = 0 ;
             let mut p: pid_t = 0;
-            let mut tcp_addr: MySockAddr = MySockAddr {
-                sa: SockAddr {
+            let mut tcp_addr: NetAddress = NetAddress {
+                sa: NetAddress {
                     sa_family: 0,
                     sa_data: [0; 14],
                 },
             };
             let mut tcp_len: socklen_t =
-                ::std::mem::size_of::<MySockAddr>() as libc::c_ulong as socklen_t;
+                ::std::mem::size_of::<NetAddress>();
             loop {
                 confd = accept(
                     (*listener).tcpfd,
-                    SockaddrArg {
-                        __sockaddr__: 0 as *mut libc::c_void as *mut SockAddr,
+                    NetAddressArg {
+                        __NetAddress__: 0,
                     },
-                    0 as *mut socklen_t,
+                    0 ,
                 );
                 if !(confd == -(1) && *__errno_location() == 4) {
                     break;
@@ -2275,8 +2272,8 @@ fn check_dns_listeners(mut now: time_t) {
             if !(confd == -(1)) {
                 if getsockname(
                     confd,
-                    SockaddrArg {
-                        __sockaddr__: &mut tcp_addr as *mut MySockAddr as *mut SockAddr,
+                    NetAddressArg {
+                        __NetAddress__: &mut tcp_addr ,
                     },
                     &mut tcp_len,
                 ) == -(1)
@@ -2294,28 +2291,28 @@ fn check_dns_listeners(mut now: time_t) {
                        netlink fd and screwing the pooch entirely.
                     */
                     enumerate_interfaces(0); /* May be NULL */
-                    if daemon.options[(13 as libc::c_ulong).wrapping_div(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
-                    ) as usize]
+                    if daemon.options[(13).wrapping_div(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
+                    ) ]
                         & (1)
-                            << (13 as libc::c_ulong).wrapping_rem(
-                                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                    .wrapping_mul(8 as libc::c_ulong),
+                            << (13).wrapping_rem(
+                                (::std::mem::size_of::<libc::c_uint>())
+                                    .wrapping_mul(8),
                             )
                         != 0
                     {
                         iface = (*listener).iface
                     } else {
-                        let mut if_index: libc::c_int = 0;
+                        let mut if_index: i32 = 0;
                         let mut intr_name: [libc::c_char; 16] = [0; 16];
                         /* if we can find the arrival interface, check it's one that's allowed */
                         if_index = tcp_interface(confd, tcp_addr.sa.sa_family); /* May be NULL */
                         if if_index != 0
                             && indextoname((*listener).tcpfd, if_index, intr_name.as_mut_ptr()) != 0
                         {
-                            let mut addr: AllAddr = AllAddr {
-                                addr4: InAddr { s_addr: 0 },
+                            let mut addr: NetAddress = NetAddress {
+                                addr4: NetAddress { s_addr: 0 },
                             };
                             if tcp_addr.sa.sa_family == 10 {
                                 addr.addr6 = tcp_addr.in6.sin6_addr
@@ -2343,14 +2340,14 @@ fn check_dns_listeners(mut now: time_t) {
                                 client_ok = 0
                             }
                         }
-                        if daemon.options[(39 as libc::c_ulong).wrapping_div(
-                            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                .wrapping_mul(8 as libc::c_ulong),
-                        ) as usize]
+                        if daemon.options[(39).wrapping_div(
+                            (::std::mem::size_of::<libc::c_uint>())
+                                .wrapping_mul(8),
+                        ) ]
                             & (1)
-                                << (39 as libc::c_ulong).wrapping_rem(
-                                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                        .wrapping_mul(8 as libc::c_ulong),
+                                << (39).wrapping_rem(
+                                    (::std::mem::size_of::<libc::c_uint>())
+                                        .wrapping_mul(8),
                                 )
                             != 0
                         {
@@ -2363,7 +2360,7 @@ fn check_dns_listeners(mut now: time_t) {
                             interface too, for localisation. */
                             iface = daemon.interfaces; /* parent needs read pipe end. */
                             while !iface.is_null() {
-                                if sockaddr_isequal(&mut (*iface).addr, &mut tcp_addr) != 0 {
+                                if NetAddress_isequal(&mut (*iface).addr, &mut tcp_addr) != 0 {
                                     break;
                                 }
                                 iface = (*iface).next
@@ -2376,14 +2373,14 @@ fn check_dns_listeners(mut now: time_t) {
                     if client_ok == 0 {
                         shutdown(confd, SHUT_RDWR);
                         close(confd);
-                    } else if daemon.options[(6 as libc::c_ulong).wrapping_div(
-                        (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                            .wrapping_mul(8 as libc::c_ulong),
-                    ) as usize]
+                    } else if daemon.options[(6).wrapping_div(
+                        (::std::mem::size_of::<libc::c_uint>())
+                            .wrapping_mul(8),
+                    ) ]
                         & (1)
-                            << (6 as libc::c_ulong).wrapping_rem(
-                                (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                    .wrapping_mul(8 as libc::c_ulong),
+                            << (6).wrapping_rem(
+                                (::std::mem::size_of::<libc::c_uint>())
+                                    .wrapping_mul(8),
                             )
                         == 0
                         && pipe(pipefd.as_mut_ptr()) == 0
@@ -2392,11 +2389,11 @@ fn check_dns_listeners(mut now: time_t) {
                             (p) != 0
                         }
                     {
-                        close(pipefd[1 as usize]);
+                        close(pipefd[1 ]);
                         if p == -(1) {
-                            close(pipefd[0 as usize]);
+                            close(pipefd[0 ]);
                         } else {
-                            let mut i_0: libc::c_int = 0;
+                            let mut i_0: i32 = 0;
                             /* The child process inherits the netlink socket,
                             which it never uses, but when the parent (us)
                             uses it in the future, the answer may go to the
@@ -2412,19 +2409,19 @@ fn check_dns_listeners(mut now: time_t) {
                             netlink socket. */
                             let mut a: libc::c_uchar = 0;
                             read_write(
-                                pipefd[0 as usize],
+                                pipefd[0 ],
                                 &mut a,
                                 1,
                                 1,
                             );
                             i_0 = 0;
                             while i_0 < 20 {
-                                if daemon.tcp_pids[i_0 as usize] == 0
-                                    && daemon.tcp_pipes[i_0 as usize] == -(1)
+                                if daemon.tcp_pids[i_0 ] == 0
+                                    && daemon.tcp_pipes[i_0 ] == -(1)
                                 {
-                                    daemon.tcp_pids[i_0 as usize] = p;
-                                    daemon.tcp_pipes[i_0 as usize] =
-                                        pipefd[0 as usize];
+                                    daemon.tcp_pids[i_0 ] = p;
+                                    daemon.tcp_pipes[i_0 ] =
+                                        pipefd[0 ];
                                     break;
                                 } else {
                                     i_0 += 1
@@ -2435,43 +2432,43 @@ fn check_dns_listeners(mut now: time_t) {
                         /* The child can use up to TCP_MAX_QUERIES ids, so skip that many. */
                         daemon.log_id += 100
                     } else {
-                        let mut buff: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-                        let mut s: *mut Server = 0 as *mut Server;
-                        let mut flags: libc::c_int = 0;
-                        let mut netmask: InAddr = InAddr { s_addr: 0 };
-                        let mut auth_dns: libc::c_int = 0;
+                        let mut buff: mut Vec<u8> = 0;
+                        let mut s: Server = 0;
+                        let mut flags: i32 = 0;
+                        let mut netmask: NetAddress = NetAddress { s_addr: 0 };
+                        let mut auth_dns: i32 = 0;
                         if !iface.is_null() {
                             netmask = (*iface).netmask;
                             auth_dns = (*iface).dns_auth
                         } else {
-                            netmask.s_addr = 0 as InAddrT;
+                            netmask.s_addr = 0;
                             auth_dns = 0
                         }
                         /* Arrange for SIGALRM after CHILD_LIFETIME seconds to
                         terminate the process. */
-                        if daemon.options[(6 as libc::c_ulong).wrapping_div(
-                            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                .wrapping_mul(8 as libc::c_ulong),
-                        ) as usize]
+                        if daemon.options[(6).wrapping_div(
+                            (::std::mem::size_of::<libc::c_uint>())
+                                .wrapping_mul(8),
+                        ) ]
                             & (1)
-                                << (6 as libc::c_ulong).wrapping_rem(
-                                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                        .wrapping_mul(8 as libc::c_ulong),
+                                << (6).wrapping_rem(
+                                    (::std::mem::size_of::<libc::c_uint>())
+                                        .wrapping_mul(8),
                                 )
                             == 0
                         {
                             /* See comment above re: netlink socket. */
-                            let mut a_0: libc::c_uchar = 0 as libc::c_uchar; /* close read end in child. */
+                            let mut a_0: libc::c_uchar = 0; /* close read end in child. */
                             close(daemon.netlinkfd);
                             read_write(
-                                pipefd[1 as usize],
+                                pipefd[1 ],
                                 &mut a_0,
                                 1,
                                 0,
                             );
                             alarm(150);
-                            close(pipefd[0 as usize]);
-                            daemon.pipe_to_parent = pipefd[1 as usize]
+                            close(pipefd[0 ]);
+                            daemon.pipe_to_parent = pipefd[1 ]
                         }
                         /* start with no upstream connections. */
                         s = daemon.servers;
@@ -2490,7 +2487,7 @@ fn check_dns_listeners(mut now: time_t) {
                         shutdown(confd, SHUT_RDWR);
                         close(confd);
                         if !buff.is_null() {
-                            free(buff as *mut libc::c_void);
+                            free(buff);
                         }
                         s = daemon.servers;
                         while !s.is_null() {
@@ -2500,14 +2497,14 @@ fn check_dns_listeners(mut now: time_t) {
                             }
                             s = (*s).next
                         }
-                        if daemon.options[(6 as libc::c_ulong).wrapping_div(
-                            (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                .wrapping_mul(8 as libc::c_ulong),
-                        ) as usize]
+                        if daemon.options[(6).wrapping_div(
+                            (::std::mem::size_of::<libc::c_uint>())
+                                .wrapping_mul(8),
+                        ) ]
                             & (1)
-                                << (6 as libc::c_ulong).wrapping_rem(
-                                    (::std::mem::size_of::<libc::c_uint>() as libc::c_ulong)
-                                        .wrapping_mul(8 as libc::c_ulong),
+                                << (6).wrapping_rem(
+                                    (::std::mem::size_of::<libc::c_uint>())
+                                        .wrapping_mul(8),
                                 )
                             == 0
                         {
@@ -2523,9 +2520,9 @@ fn check_dns_listeners(mut now: time_t) {
     }
 }
 
-pub fn make_icmp_sock() -> libc::c_int {
-    let mut fd: libc::c_int = 0;
-    let mut zeroopt: libc::c_int = 0;
+pub fn make_icmp_sock() -> i32 {
+    let mut fd: i32 = 0;
+    let mut zeroopt: i32 = 0;
     fd = socket(
         2,
         SOCK_RAW,
@@ -2537,8 +2534,8 @@ pub fn make_icmp_sock() -> libc::c_int {
                 fd,
                 1,
                 5,
-                &mut zeroopt as *mut libc::c_int as *const libc::c_void,
-                ::std::mem::size_of::<libc::c_int>() as libc::c_ulong as socklen_t,
+                &mut zeroopt,
+                ::std::mem::size_of::<libc::c_int>(),
             ) == -(1)
         {
             close(fd);
@@ -2548,13 +2545,13 @@ pub fn make_icmp_sock() -> libc::c_int {
     return fd;
 }
 
-pub fn icmp_ping(mut addr: InAddr) -> libc::c_int {
+pub fn icmp_ping(mut addr: NetAddress) -> i32 {
     /* Try and get an ICMP echo from a machine. */
-    let mut fd: libc::c_int = 0;
-    let mut saddr: SockAddrIn = SockAddrIn {
+    let mut fd: i32 = 0;
+    let mut saddr: NetAddress = NetAddress {
         sin_family: 0,
         sin_port: 0,
-        sin_addr: InAddr { s_addr: 0 },
+        sin_addr: NetAddress { s_addr: 0 },
         sin_zero: [0; 8],
     };
     let mut packet: C2rustUnnamed27 = C2rustUnnamed27 {
@@ -2567,8 +2564,8 @@ pub fn icmp_ping(mut addr: InAddr) -> libc::c_int {
             ip_ttl: 0,
             ip_p: 0,
             ip_sum: 0,
-            ip_src: InAddr { s_addr: 0 },
-            ip_dst: InAddr { s_addr: 0 },
+            ip_src: NetAddress { s_addr: 0 },
+            ip_dst: NetAddress { s_addr: 0 },
         },
         icmp: IcmpHdr {
             icmp_type: 0,
@@ -2584,32 +2581,27 @@ pub fn icmp_ping(mut addr: InAddr) -> libc::c_int {
             },
         },
     };
-    let mut id: libc::c_ushort = rand16();
-    let mut i: libc::c_uint = 0;
-    let mut j: libc::c_uint = 0;
-    let mut gotreply: libc::c_int = 0;
+    let mut id: u16 = rand16();
+    let mut i: u32 = 0;
+    let mut j: u32 = 0;
+    let mut gotreply: i32 = 0;
     fd = make_icmp_sock();
     if fd == -(1) {
         return 0;
     }
-    saddr.sin_family = 2 as SaFamily;
+    saddr.sin_family = 2;
     saddr.sin_port = 0 as in_port_t;
     saddr.sin_addr = addr;
-    memset(
-        &mut packet.icmp as *mut IcmpHdr as *mut libc::c_void,
-        0,
-        ::std::mem::size_of::<IcmpHdr>() as libc::c_ulong,
-    );
-    packet.icmp.icmp_type = 8 as uint8_t;
+    packet.icmp.icmp_type = 8 ;
     packet.icmp.icmp_hun.ih_idseq.icd_id = id;
     j = 0;
     i = 0;
-    while (i as libc::c_ulong)
-        < (::std::mem::size_of::<IcmpHdr>() as libc::c_ulong)
-            .wrapping_div(2 as libc::c_ulong)
+    while (i)
+        < (::std::mem::size_of::<IcmpHdr>())
+            .wrapping_div(2)
     {
         j = j.wrapping_add(
-            *(&mut packet.icmp as *mut IcmpHdr as *mut u16).offset(i as isize),
+            *(&mut packet.icmp ).offset(i),
         );
         i = i.wrapping_add(1)
     }
@@ -2620,16 +2612,16 @@ pub fn icmp_ping(mut addr: InAddr) -> libc::c_int {
         j
     } else {
         !j
-    } as u16;
+    };
     while retry_send(sendto(
         fd,
-        &mut packet.icmp as *mut IcmpHdr as *mut libc::c_char as *const libc::c_void,
-        ::std::mem::size_of::<IcmpHdr>() as libc::c_ulong,
+        &mut packet.icmp  ,
+        ::std::mem::size_of::<IcmpHdr>(),
         0,
-        ConstSockaddrArg {
-            __sockaddr__: &mut saddr as *mut SockAddrIn as *mut SockAddr,
+        ConstNetAddressArg {
+            __NetAddress__: &mut saddr,
         },
-        ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as socklen_t,
+        ::std::mem::size_of::<NetAddress>(),
     )) != 0
     {}
     gotreply = delay_dhcp(dnsmasq_time(), 3, fd, addr.s_addr, id);
@@ -2638,12 +2630,12 @@ pub fn icmp_ping(mut addr: InAddr) -> libc::c_int {
 }
 
 pub fn delay_dhcp(
-    mut start: time_t,
-    mut sec: libc::c_int,
-    mut fd: libc::c_int,
+    mut start: time::Instant,
+    mut sec: i32,
+    mut fd: i32,
     mut addr: u32,
-    mut id: libc::c_ushort,
-) -> libc::c_int {
+    mut id: u16,
+) -> i32 {
     /* Delay processing DHCP packets for "sec" seconds counting from "start".
     If "fd" is not -1 it will stop waiting if an ICMP echo reply is received
     from "addr" with ICMP ID "id" and return 1 */
@@ -2658,22 +2650,22 @@ pub fn delay_dhcp(
     as a result of a timeout rather than a socket becoming available. We
     only allow this to happen as many times as it takes to get to the wait time
     in quarter-second chunks. This provides a fallback way to end loop. */
-    let mut rc: libc::c_int = 0;
-    let mut timeout_count: libc::c_int = 0;
-    let mut now: time_t = 0;
+    let mut rc: i32 = 0;
+    let mut timeout_count: i32 = 0;
+    let mut now: time::Instant = 0;
     now = dnsmasq_time();
     timeout_count = 0;
-    while difftime(now, start) <= sec as libc::c_float as libc::c_double
+    while difftime(now, start) <= sec
         && timeout_count < sec * 4
     {
         poll_reset();
         if fd != -(1) {
-            poll_listen(fd, 0x1 as libc::c_short);
+            poll_listen(fd, 0x1 );
         }
         set_dns_listeners(now);
         set_log_writer();
         if daemon.doing_ra != 0 {
-            poll_listen(daemon.icmp6fd, 0x1 as libc::c_short);
+            poll_listen(daemon.icmp6fd, 0x1 );
         }
         rc = do_poll(250);
         if rc < 0 {
@@ -2686,7 +2678,7 @@ pub fn delay_dhcp(
         check_log_writer(0);
         check_dns_listeners(now);
         if daemon.doing_ra != 0
-            && poll_check(daemon.icmp6fd, 0x1 as libc::c_short) != 0
+            && poll_check(daemon.icmp6fd, 0x1 ) != 0
         {
             icmp6_packet(now);
         }
@@ -2702,8 +2694,8 @@ pub fn delay_dhcp(
                     ip_ttl: 0,
                     ip_p: 0,
                     ip_sum: 0,
-                    ip_src: InAddr { s_addr: 0 },
-                    ip_dst: InAddr { s_addr: 0 },
+                    ip_src: NetAddress { s_addr: 0 },
+                    ip_dst: NetAddress { s_addr: 0 },
                 },
                 icmp: IcmpHdr {
                     icmp_type: 0,
@@ -2719,26 +2711,26 @@ pub fn delay_dhcp(
                     },
                 },
             };
-            let mut faddr: SockAddrIn = SockAddrIn {
+            let mut faddr: NetAddress = NetAddress {
                 sin_family: 0,
                 sin_port: 0,
-                sin_addr: InAddr { s_addr: 0 },
+                sin_addr: NetAddress { s_addr: 0 },
                 sin_zero: [0; 8],
             };
             let mut len: socklen_t =
-                ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as socklen_t;
-            if poll_check(fd, 0x1 as libc::c_short) != 0
+                ::std::mem::size_of::<NetAddress>();
+            if poll_check(fd, 0x1 ) != 0
                 && recvfrom(
                 fd,
-                &mut packet as *mut C2rustUnnamed26 as *mut libc::c_void,
-                ::std::mem::size_of::<C2rustUnnamed26>() as libc::c_ulong,
+                &mut packet ,
+                ::std::mem::size_of::<C2rustUnnamed26>(),
                 0,
-                SockaddrArg {
-                        __sockaddr__: &mut faddr as *mut SockAddrIn as *mut SockAddr,
+                NetAddressArg {
+                        __NetAddress__: &mut faddr,
                     },
                 &mut len,
-                ) as libc::c_ulong
-                    == ::std::mem::size_of::<C2rustUnnamed26>() as libc::c_ulong
+                )
+                    == ::std::mem::size_of::<C2rustUnnamed26>()
                 && addr == faddr.sin_addr.s_addr
                 && packet.icmp.icmp_type == 0
                 && packet.icmp.icmp_hun.ih_idseq.icd_seq == 0
@@ -2752,7 +2744,7 @@ pub fn delay_dhcp(
 }
 #[main]
 pub fn main() {
-    let mut args: Vec<*mut libc::c_char> = Vec::new();
+    let mut args: Vec<&mut String> = Vec::new();
     for arg in ::std::env::args() {
         args.push(
             ::std::ffi::CString::new(arg)
@@ -2764,7 +2756,7 @@ pub fn main() {
     unsafe {
         ::std::process::exit(main_0(
             (args.len() - 1),
-            args.as_mut_ptr() as *mut *mut libc::c_char,
+            args.as_mut_ptr() ,
         ) as i32)
     }
 }

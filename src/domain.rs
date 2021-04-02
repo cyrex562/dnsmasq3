@@ -14,10 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{InAddr, CondDomain, __bswap_32, DnsmasqDaemon, In6Addr};
+use crate::defines::{NetAddress, CondDomain, __bswap_32, DnsmasqDaemon, In6Addr};
 use crate::util::{addr6part, is_same_net6};
 
-unsafe extern "C" fn search_domain(mut addr: InAddr, mut c: *mut CondDomain)
+unsafe extern "C" fn search_domain(mut addr: NetAddress, mut c: *mut CondDomain)
                                    -> *mut CondDomain {
     while !c.is_null() {
         if (*c).is6 == 0 &&
@@ -27,11 +27,11 @@ unsafe extern "C" fn search_domain(mut addr: InAddr, mut c: *mut CondDomain)
         }
         c = (*c).next
     }
-    return 0 as *mut CondDomain;
+    return 0 ;
 }
 #[no_mangle]
-pub unsafe extern "C" fn get_domain(mut addr: InAddr) -> *mut libc::c_char {
-    let mut c: *mut CondDomain = 0 as *mut CondDomain;
+pub unsafe extern "C" fn get_domain(mut addr: NetAddress) -> &mut String {
+    let mut c: *mut CondDomain = 0 ;
     c = search_domain(addr, (*dnsmasq_daemon).cond_domain);
     if !c.is_null() { return (*c).domain }
     return (*dnsmasq_daemon).domain_suffix;
@@ -42,19 +42,19 @@ unsafe extern "C" fn search_domain6(mut addr: *mut In6Addr,
     let mut addrpart: u64 = addr6part(addr);
     while !c.is_null() {
         if (*c).is6 != 0 &&
-               is_same_net6(addr, &mut (*c).start6, 64 as libc::c_int) != 0 &&
+               is_same_net6(addr, &mut (*c).start6, 64) != 0 &&
                addrpart >= addr6part(&mut (*c).start6) &&
                addrpart <= addr6part(&mut (*c).end6) {
             return c
         }
         c = (*c).next
     }
-    return 0 as *mut CondDomain;
+    return 0 ;
 }
 #[no_mangle]
 pub unsafe extern "C" fn get_domain6(mut addr: *mut In6Addr)
- -> *mut libc::c_char {
-    let mut c: *mut CondDomain = 0 as *mut CondDomain;
+ -> &mut String {
+    let mut c: *mut CondDomain = 0 ;
     if !addr.is_null() &&
            {
                c = search_domain6(addr, (*dnsmasq_daemon).cond_domain);

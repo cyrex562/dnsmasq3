@@ -21,7 +21,7 @@ use std::fs::{File, read, write};
 use std::io::{Seek, Read};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::network::fix_fd;
-use crate::defines::{InAddr, _ISCNTRL, MySockAddr, __bswap_16, _ISXDIGIT, TimeT, SyscallSlongT, DIR};
+use crate::defines::{NetAddress, SyscallSlongT, };
 
 
 // static mut seed: [u32; 32] = [0; 32];
@@ -52,250 +52,214 @@ fn surf() {
     let mut t: [u32; 12] = [0; 12];
     let mut x: u32 = 0;
     let mut sum: u32 = 0;
-    let mut r: libc::c_int = 0;
-    let mut i: libc::c_int = 0;
-    let mut loop_0: libc::c_int = 0;
-    i = 0 as libc::c_int;
-    while i < 12 as libc::c_int {
-        t[i as usize] =
-            in_0[i as usize] ^ seed[(12 as libc::c_int + i) as usize];
+    let mut r: i32 = 0;
+    let mut i: i32 = 0;
+    let mut loop_0: i32 = 0;
+    i = 0;
+    while i < 12 {
+        t[i ] =
+            in_0[i ] ^ seed[(12 + i) ];
         i += 1
     }
-    i = 0 as libc::c_int;
-    while i < 8 as libc::c_int {
-        out[i as usize] = seed[(24 as libc::c_int + i) as usize];
+    i = 0;
+    while i < 8 {
+        out[i ] = seed[(24 + i) ];
         i += 1
     }
-    x = t[11 as libc::c_int as usize];
-    loop_0 = 0 as libc::c_int;
-    while loop_0 < 2 as libc::c_int {
-        r = 0 as libc::c_int;
-        while r < 16 as libc::c_int {
+    x = t[11 ];
+    loop_0 = 0;
+    while loop_0 < 2 {
+        r = 0;
+        while r < 16 {
             sum =
-                (sum as libc::c_uint).wrapping_add(0x9e3779b9 as libc::c_uint)
-                    as u32 as u32;
-            t[0 as libc::c_int as usize] =
-                (t[0 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[0 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                (sum).wrapping_add(0x9e3779b9)
+                   ;
+            t[0 ] =
+                (t[0 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[0           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 5 as libc::c_int |
+                                                    (x << 5 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 5 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[0 as libc::c_int as usize];
-            t[1 as libc::c_int as usize] =
-                (t[1 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[1 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 5                  libc::c_int))
+                   ;
+            x = t[0 ];
+            t[1 ] =
+                (t[1 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[1           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 7 as libc::c_int |
+                                                    (x << 7 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 7 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[1 as libc::c_int as usize];
-            t[2 as libc::c_int as usize] =
-                (t[2 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[2 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 7                  libc::c_int))
+                   ;
+            x = t[1 ];
+            t[2 ] =
+                (t[2 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[2           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 9 as libc::c_int |
+                                                    (x << 9 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 9 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[2 as libc::c_int as usize];
-            t[3 as libc::c_int as usize] =
-                (t[3 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[3 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 9                  libc::c_int))
+                   ;
+            x = t[2 ];
+            t[3 ] =
+                (t[3 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[3           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 13 as libc::c_int |
+                                                    (x << 13 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 13 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[3 as libc::c_int as usize];
-            t[4 as libc::c_int as usize] =
-                (t[4 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[4 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 13                  libc::c_int))
+                   ;
+            x = t[3 ];
+            t[4 ] =
+                (t[4 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[4           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 5 as libc::c_int |
+                                                    (x << 5 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 5 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[4 as libc::c_int as usize];
-            t[5 as libc::c_int as usize] =
-                (t[5 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[5 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 5                  libc::c_int))
+                   ;
+            x = t[4 ];
+            t[5 ] =
+                (t[5 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[5           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 7 as libc::c_int |
+                                                    (x << 7 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 7 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[5 as libc::c_int as usize];
-            t[6 as libc::c_int as usize] =
-                (t[6 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[6 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 7                  libc::c_int))
+                   ;
+            x = t[5 ];
+            t[6 ] =
+                (t[6 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[6           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 9 as libc::c_int |
+                                                    (x << 9 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 9 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[6 as libc::c_int as usize];
-            t[7 as libc::c_int as usize] =
-                (t[7 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[7 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 9                  libc::c_int))
+                   ;
+            x = t[6 ];
+            t[7 ] =
+                (t[7 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[7           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 13 as libc::c_int |
+                                                    (x << 13 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 13 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[7 as libc::c_int as usize];
-            t[8 as libc::c_int as usize] =
-                (t[8 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[8 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 13                  libc::c_int))
+                   ;
+            x = t[7 ];
+            t[8 ] =
+                (t[8 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[8           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 5 as libc::c_int |
+                                                    (x << 5 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 5 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[8 as libc::c_int as usize];
-            t[9 as libc::c_int as usize] =
-                (t[9 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[9 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 5                  libc::c_int))
+                   ;
+            x = t[8 ];
+            t[9 ] =
+                (t[9 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[9           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 7 as libc::c_int |
+                                                    (x << 7 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 7 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[9 as libc::c_int as usize];
-            t[10 as libc::c_int as usize] =
-                (t[10 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[10 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 7                  libc::c_int))
+                   ;
+            x = t[9 ];
+            t[10 ] =
+                (t[10 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[10           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 9 as libc::c_int |
+                                                    (x << 9 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 9 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[10 as libc::c_int as usize];
-            t[11 as libc::c_int as usize] =
-                (t[11 as libc::c_int as usize] as
-                     libc::c_uint).wrapping_add((x ^
-                                                     seed[11 as libc::c_int as
-                                                              usize]).wrapping_add(sum)
+                                                                 9                  libc::c_int))
+                   ;
+            x = t[10 ];
+            t[11 ] =
+                (t[11 ]               libc::c_uint).wrapping_add((x ^
+                                                     seed[11           usize]).wrapping_add(sum)
                                                     ^
-                                                    (x << 13 as libc::c_int |
+                                                    (x << 13 |
                                                          x >>
-                                                             32 as libc::c_int
+                                                             32
                                                                  -
-                                                                 13 as
-                                                                     libc::c_int))
-                    as u32 as u32;
-            x = t[11 as libc::c_int as usize];
+                                                                 13                  libc::c_int))
+                   ;
+            x = t[11 ];
             r += 1
         }
-        i = 0 as libc::c_int;
-        while i < 8 as libc::c_int {
-            out[i as usize] ^= t[(i + 4 as libc::c_int) as usize];
+        i = 0;
+        while i < 8 {
+            out[i ] ^= t[(i + 4) ];
             i += 1
         }
         loop_0 += 1
     };
 }
 
-pub fn rand16() -> libc::c_ushort {
+pub fn rand16() -> u16 {
     if outleft == 0 {
-        in_0[0 as libc::c_int as usize] =
-            in_0[0 as libc::c_int as usize].wrapping_add(1);
-        if in_0[0 as libc::c_int as usize] == 0 {
-            in_0[1 as libc::c_int as usize] =
-                in_0[1 as libc::c_int as usize].wrapping_add(1);
-            if in_0[1 as libc::c_int as usize] == 0 {
-                in_0[2 as libc::c_int as usize] =
-                    in_0[2 as libc::c_int as usize].wrapping_add(1);
-                if in_0[2 as libc::c_int as usize] == 0 {
-                    in_0[3 as libc::c_int as usize] =
-                        in_0[3 as libc::c_int as usize].wrapping_add(1)
+        in_0[0 ] =
+            in_0[0 ].wrapping_add(1);
+        if in_0[0 ] == 0 {
+            in_0[1 ] =
+                in_0[1 ].wrapping_add(1);
+            if in_0[1 ] == 0 {
+                in_0[2 ] =
+                    in_0[2 ].wrapping_add(1);
+                if in_0[2 ] == 0 {
+                    in_0[3 ] =
+                        in_0[3 ].wrapping_add(1)
                 }
             }
         }
         surf();
-        outleft = 8 as libc::c_int
+        outleft = 8
     }
     outleft -= 1;
-    return out[outleft as usize] as libc::c_ushort;
+    return out[outleft ] ;
 }
 pub fn rand32() -> u32 {
     if outleft == 0 {
-        in_0[0 as libc::c_int as usize] =
-            in_0[0 as libc::c_int as usize].wrapping_add(1);
-        if in_0[0 as libc::c_int as usize] == 0 {
-            in_0[1 as libc::c_int as usize] =
-                in_0[1 as libc::c_int as usize].wrapping_add(1);
-            if in_0[1 as libc::c_int as usize] == 0 {
-                in_0[2 as libc::c_int as usize] =
-                    in_0[2 as libc::c_int as usize].wrapping_add(1);
-                if in_0[2 as libc::c_int as usize] == 0 {
-                    in_0[3 as libc::c_int as usize] =
-                        in_0[3 as libc::c_int as usize].wrapping_add(1)
+        in_0[0 ] =
+            in_0[0 ].wrapping_add(1);
+        if in_0[0 ] == 0 {
+            in_0[1 ] =
+                in_0[1 ].wrapping_add(1);
+            if in_0[1 ] == 0 {
+                in_0[2 ] =
+                    in_0[2 ].wrapping_add(1);
+                if in_0[2 ] == 0 {
+                    in_0[3 ] =
+                        in_0[3 ].wrapping_add(1)
                 }
             }
         }
         surf();
-        outleft = 8 as libc::c_int
+        outleft = 8
     }
     outleft -= 1;
-    return out[outleft as usize];
+    return out[outleft ];
 }
 pub fn rand64() -> u64 {
     let x: u64 = rng.gen();
@@ -309,8 +273,8 @@ pub fn check_name(in_1: &mut String) -> i32 {
     let mut dotgap: usize = 0;
     let mut l: usize = in_1.len();
     let mut c: libc::c_char = 0;
-    let mut nowhite: libc::c_int = 0;
-    let mut hasuscore: libc::c_int = 0;
+    let mut nowhite: i32 = 0;
+    let mut hasuscore: i32 = 0;
     if l == 0 || l > 1025 {
         return 0
     }
@@ -329,16 +293,16 @@ pub fn check_name(in_1: &mut String) -> i32 {
             } else {
                 if c & !(0x7f) == 0 && __ctype_b_loc().offset(c) & _ISCNTRL != 0 {
                     /* iscntrl only gives expected results for ascii */
-                    return 0 as libc::c_int
+                    return 0
                 } else {
-                    if !(c as libc::c_uchar as libc::c_int &
-                             !(0x7f as libc::c_int) == 0 as libc::c_int) {
-                        return 0 as libc::c_int
+                    if !(c &
+                             !(0x7f) == 0) {
+                        return 0
                     } else {
-                        if c as libc::c_int != ' ' as i32 {
-                            nowhite = 1 as libc::c_int;
-                            if c as libc::c_int == '_' as i32 {
-                                hasuscore = 1 as libc::c_int
+                        if c != ' ' as i32 {
+                            nowhite = 1;
+                            if c == '_' as i32 {
+                                hasuscore = 1
                             }
                         }
                     }
@@ -346,8 +310,8 @@ pub fn check_name(in_1: &mut String) -> i32 {
             }
         }
     }
-    if nowhite == 0 { return 0 as libc::c_int }
-    return if hasuscore != 0 { 2 as libc::c_int } else { 1 as libc::c_int };
+    if nowhite == 0 { return 0 }
+    return if hasuscore != 0 { 2 } else { 1 };
 }
 /* Hostnames have a more limited valid charset than domain names
    so check for legal char a-z A-Z 0-9 - _ 
@@ -357,8 +321,8 @@ pub fn check_name(in_1: &mut String) -> i32 {
 pub fn legal_hostname(mut name: &String)
  -> bool {
     let mut c: libc::c_char = 0;
-    let mut first: libc::c_int = 0;
-    if check_name(name) == 0 { return 0 as libc::c_int }
+    let mut first: i32 = 0;
+    if check_name(name) == 0 { return 0 }
     
     let mut first: bool = true;
     for c in name {
@@ -395,89 +359,99 @@ pub fn do_rfc1035_name(mut p:&mut String,
                                          mut limit: &mut String)
  -> String {
     let mut j = 0;
-    while !sval.is_null() && *sval as libc::c_int != 0 {
+    while !sval.is_null() && *sval != 0 {
         let fresh6 = p;
         p = p.offset(1);
         let mut cp: String = fresh6;
-        if !limit.is_null() && p > limit as *mut libc::c_uchar {
-            return 0 as *mut libc::c_uchar
+        if !limit.is_null() && p > limit {
+            return 0
         }
         j = 0;
-        while *sval as libc::c_int != 0 && *sval as libc::c_int != '.' as i32
+        while *sval != 0 && *sval != '.' as i32
               {
             if !limit.is_null() &&
-                   p.offset(1 as libc::c_int as isize) >
-                       limit as *mut libc::c_uchar {
-                return 0 as *mut libc::c_uchar
+                   p.offset(1) >
+                       limit {
+                return 0
             }
             let fresh7 = p;
             p = p.offset(1);
-            *fresh7 = *sval as libc::c_uchar;
+            *fresh7 = *sval;
             sval = sval.offset(1);
             j += 1
         }
-        *cp = j as libc::c_uchar;
+        cp = j;
         if *sval != 0 { sval = sval.offset(1) }
     }
     return p;
 }
 
-pub fn sockaddr_isequal(mut s1: &MySockAddr, mut s2: &MySockAddr) -> bool 
+pub fn netaddr_isequal(a: &NetAddress, b: &NetAddress) -> bool {
+    if a._type != b._type {
+        false
+    }
+    if a.port != b.port {
+        false
+    }
+    if a.name != b.name {
+        false
+    }
+    if a.value != b.value {
+        false
+    }
+    true
+}
+
+pub fn NetAddress_isequal(mut s1: &NetAddress, mut s2: &NetAddress) -> bool
 {
     if s1
 
 
 
-    if (*s1).sa.sa_family as libc::c_int == (*s2).sa.sa_family as libc::c_int
+    if (*s1).sa.sa_family == (*s2).sa.sa_family
        {
-        if (*s1).sa.sa_family as libc::c_int == 2 as libc::c_int &&
-               (*s1).in_0.sin_port as libc::c_int ==
-                   (*s2).in_0.sin_port as libc::c_int &&
+        if (*s1).sa.sa_family == 2 &&
+               (*s1).in_0.sin_port ==
+                   (*s2).in_0.sin_port &&
                (*s1).in_0.sin_addr.s_addr == (*s2).in_0.sin_addr.s_addr {
-            return 1 as libc::c_int
+            return 1
         }
-        if (*s1).sa.sa_family as libc::c_int == 10 as libc::c_int &&
-               (*s1).in6.sin6_port as libc::c_int ==
-                   (*s2).in6.sin6_port as libc::c_int &&
+        if (*s1).sa.sa_family == 10 &&
+               (*s1).in6.sin6_port ==
+                   (*s2).in6.sin6_port &&
                (*s1).in6.sin6_scope_id == (*s2).in6.sin6_scope_id &&
                ({
                     let mut __a: *const In6Addr =
-                        &mut (*s1).in6.sin6_addr as *mut In6Addr as
-                            *const In6Addr;
+                        &mut (*s1).in6.sin6_addr                      *const In6Addr;
                     let mut __b: *const In6Addr =
-                        &mut (*s2).in6.sin6_addr as *mut In6Addr as
-                            *const In6Addr;
-                    ((*__a).__in6_u.__u6_addr32[0 as libc::c_int as usize] ==
-                         (*__b).__in6_u.__u6_addr32[0 as libc::c_int as usize]
+                        &mut (*s2).in6.sin6_addr                      *const In6Addr;
+                    ((*__a).__in6_u.__u6_addr32[0 ] ==
+                         (*__b).__in6_u.__u6_addr32[0 ]
                          &&
-                         (*__a).__in6_u.__u6_addr32[1 as libc::c_int as usize]
+                         (*__a).__in6_u.__u6_addr32[1 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[1 as libc::c_int as
-                                                            usize] &&
-                         (*__a).__in6_u.__u6_addr32[2 as libc::c_int as usize]
+                             (*__b).__in6_u.__u6_addr32[1         usize] &&
+                         (*__a).__in6_u.__u6_addr32[2 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[2 as libc::c_int as
-                                                            usize] &&
-                         (*__a).__in6_u.__u6_addr32[3 as libc::c_int as usize]
+                             (*__b).__in6_u.__u6_addr32[2         usize] &&
+                         (*__a).__in6_u.__u6_addr32[3 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[3 as libc::c_int as
-                                                            usize]) as
-                        libc::c_int
-                }) != 0 {
-            return 1 as libc::c_int
+                             (*__b).__in6_u.__u6_addr32[3         usize])
+                }) != false {
+            return true
         }
     }
-    return 0 as libc::c_int;
+    return false;
 }
-pub fn sa_len(mut addr: *mut MySockAddr) -> libc::c_int {
-    if (*addr).sa.sa_family as libc::c_int == 10 as libc::c_int {
-        return ::std::mem::size_of::<SockAddrIn6>() as libc::c_ulong as
-                   libc::c_int
+
+pub fn sa_len(mut addr: NetAddress) -> usize {
+    if addr.sa.sa_family == 10 {
+        ::std::mem::size_of::<NetAddress>()
     } else {
-        return ::std::mem::size_of::<SockAddrIn>() as libc::c_ulong as
-                   libc::c_int
-    };
+        ::std::mem::size_of::<NetAddress>()
+    }
 }
+
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
 pub fn hostname_isequal(mut a: &String, mut b: &String)
  -> bool {
@@ -485,274 +459,243 @@ pub fn hostname_isequal(mut a: &String, mut b: &String)
 }
 
 /* is b equal to or a subdomain of a return 2 for equal, 1 for subdomain */
-pub fn hostname_issubdomain(mut a: *mut libc::c_char,
-                                              mut b: *mut libc::c_char)
- -> libc::c_int {
-    let mut ap: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut bp: *mut libc::c_char = 0 as *mut libc::c_char;
-    let mut c1: libc::c_uint = 0;
-    let mut c2: libc::c_uint = 0;
+pub fn hostname_issubdomain(mut a: &String, mut b: &String)
+ -> i32 {
+    let mut ap: String;
+    let mut bp: String;
+    let mut c1: u32 = 0;
+    let mut c2: u32 = 0;
     /* move to the end */
-    ap = a;
+    ap = a.clone();
     while *ap != 0 { ap = ap.offset(1) }
-    bp = b;
+    bp = b.clone();
     while *bp != 0 { bp = bp.offset(1) }
     /* a shorter than b or a empty. */
-    if (bp.wrapping_offset_from(b) as libc::c_long) <
-           ap.wrapping_offset_from(a) as libc::c_long || ap == a {
-        return 0 as libc::c_int
+    if (bp.wrapping_offset_from(b)) <
+           ap.wrapping_offset_from(a) || ap == a {
+        return 0
     }
     loop  {
         ap = ap.offset(-1);
-        c1 = *ap as libc::c_uchar as libc::c_uint;
+        c1 = *ap;
         bp = bp.offset(-1);
-        c2 = *bp as libc::c_uchar as libc::c_uint;
-        if c1 >= 'A' as i32 as libc::c_uint &&
-               c1 <= 'Z' as i32 as libc::c_uint {
-            c1 = c1.wrapping_add(('a' as i32 - 'A' as i32) as libc::c_uint)
+        c2 = *bp;
+        if c1 >= 'A' as i32 &&
+               c1 <= 'Z' as i32 {
+            c1 = c1.wrapping_add(('a' as i32 - 'A' as i32))
         }
-        if c2 >= 'A' as i32 as libc::c_uint &&
-               c2 <= 'Z' as i32 as libc::c_uint {
-            c2 = c2.wrapping_add(('a' as i32 - 'A' as i32) as libc::c_uint)
+        if c2 >= 'A' as i32 &&
+               c2 <= 'Z' as i32 {
+            c2 = c2.wrapping_add(('a' as i32 - 'A' as i32))
         }
-        if c1 != c2 { return 0 as libc::c_int }
+        if c1 != c2 { return 0 }
         if !(ap != a) { break ; }
     }
-    if bp == b { return 2 as libc::c_int }
+    if bp == b { return 2 }
     bp = bp.offset(-1);
-    if *bp as libc::c_int == '.' as i32 { return 1 as libc::c_int }
-    return 0 as libc::c_int;
+    if *bp == '.' as i32 { return 1 }
+    return 0;
 }
-pub fn dnsmasq_time() -> time_t {
-    return time(0 as *mut time_t);
+pub fn dnsmasq_time() -> time::Instant {
+    return time(0);
 }
-pub fn netmask_length(mut mask: InAddr) -> libc::c_int {
-    let mut zero_count: libc::c_int = 0 as libc::c_int;
-    while 0 as libc::c_int as libc::c_uint ==
-              mask.s_addr & 0x1 as libc::c_int as libc::c_uint &&
-              zero_count < 32 as libc::c_int {
-        mask.s_addr >>= 1 as libc::c_int;
+pub fn netmask_length(mut mask: NetAddress) -> i32 {
+    let mut zero_count: i32 = 0;
+    while 0 ==
+              mask.s_addr & 0x1 &&
+              zero_count < 32 {
+        mask.s_addr >>= 1;
         zero_count += 1
     }
-    return 32 as libc::c_int - zero_count;
+    return 32 - zero_count;
 }
-pub fn is_same_net(mut a: InAddr, mut b: InAddr, mut mask: InAddr) -> libc::c_int {
-    return (a.s_addr & mask.s_addr == b.s_addr & mask.s_addr) as libc::c_int;
+pub fn is_same_net(mut a: NetAddress, mut b: NetAddress, mut mask: NetAddress) -> i32 {
+    return (a.s_addr & mask.s_addr == b.s_addr & mask.s_addr);
 }
 
 pub fn is_same_net6(mut a: *mut In6Addr,
                     mut b: *mut In6Addr,
-                    mut prefixlen: libc::c_int)
-                    -> libc::c_int {
-    let mut pfbytes: libc::c_int = prefixlen >> 3 as libc::c_int;
-    let mut pfbits: libc::c_int = prefixlen & 7 as libc::c_int;
-    if memcmp(&mut a.__in6_u.__u6_addr8 as *mut [u8; 16] as
-                  *const libc::c_void,
-              &mut b.__in6_u.__u6_addr8 as *mut [u8; 16] as
-                  *const libc::c_void, pfbytes as libc::c_ulong) !=
-           0 as libc::c_int {
-        return 0 as libc::c_int
+                    mut prefixlen: i32)
+                    -> i32 {
+    let mut pfbytes: i32 = prefixlen >> 3;
+    let mut pfbits: i32 = prefixlen & 7;
+    if memcmp(&mut a.__in6_u.__u6_addr8             *const libc::c_void,
+              &mut b.__in6_u.__u6_addr8             *const libc::c_void, pfbytes) !=
+           0 {
+        return 0
     }
-    if pfbits == 0 as libc::c_int ||
-           a.__in6_u.__u6_addr8[pfbytes as usize] as libc::c_int >>
-               8 as libc::c_int - pfbits ==
-               b.__in6_u.__u6_addr8[pfbytes as usize] as libc::c_int >>
-                   8 as libc::c_int - pfbits {
-        return 1 as libc::c_int
+    if pfbits == 0 ||
+           a.__in6_u.__u6_addr8[pfbytes ] >>
+               8 - pfbits ==
+               b.__in6_u.__u6_addr8[pfbytes ] >>
+                   8 - pfbits {
+        return 1
     }
-    return 0 as libc::c_int;
+    return 0;
 }
 
 /* return least significant 64 bits if IPv6 address */
 pub fn addr6part(mut addr: *mut In6Addr) -> u64 {
-    let mut i: libc::c_int = 0;
-    let mut ret: u64 = 0 as libc::c_int as u64;
-    i = 8 as libc::c_int;
-    while i < 16 as libc::c_int {
+    let mut i: i32 = 0;
+    let mut ret: u64 = 0 as u64;
+    i = 8;
+    while i < 16 {
         ret =
             (ret <<
-                 8 as
-                     libc::c_int).wrapping_add((*addr).__in6_u.__u6_addr8[i as
-                                                                              usize]
-                                                   as libc::c_ulonglong);
+                 8 ).wrapping_add(addr.__in6_u.__u6_addr8[i                           usize]
+                                                  long);
         i += 1
     }
     return ret;
 }
 pub fn setaddr6part(mut addr: *mut In6Addr,
                                       mut host: u64) {
-    let mut i: libc::c_int = 0;
-    i = 15 as libc::c_int;
-    while i >= 8 as libc::c_int {
-        (*addr).__in6_u.__u6_addr8[i as usize] = host as u8;
-        host = host >> 8 as libc::c_int;
+    let mut i: i32 = 0;
+    i = 15;
+    while i >= 8 {
+        addr.__in6_u.__u6_addr8[i ] = host as u8;
+        host = host >> 8;
         i -= 1
     };
 }
 /* returns port number from address */
-pub fn prettyprint_addr(mut addr: *mut MySockAddr,
-                                          mut buf: *mut libc::c_char)
-                                          -> libc::c_int {
-    let mut port: libc::c_int = 0 as libc::c_int;
-    if (*addr).sa.sa_family as libc::c_int == 2 as libc::c_int {
-        inet_ntop(2 as libc::c_int,
-                  &mut (*addr).in_0.sin_addr as *mut InAddr as
-                      *const libc::c_void, buf,
-                  46 as libc::c_int as socklen_t);
-        port = __bswap_16((*addr).in_0.sin_port) as libc::c_int
-    } else if (*addr).sa.sa_family as libc::c_int == 10 as libc::c_int {
+pub fn prettyprint_addr(mut addr: NetAddress,
+                                          mut buf: &mut String)
+                                          -> i32 {
+    let mut port: i32 = 0;
+    if addr.sa.sa_family == 2 {
+        inet_ntop(2,
+                  &mut addr.in_0.sin_addr                *const libc::c_void, buf,
+                  46);
+        port = __bswap_16(addr.in_0.sin_port)
+    } else if addr.sa.sa_family == 10 {
         let mut name: [libc::c_char; 16] = [0; 16];
-        inet_ntop(10 as libc::c_int,
-                  &mut (*addr).in6.sin6_addr as *mut In6Addr as
-                      *const libc::c_void, buf,
-                  46 as libc::c_int as socklen_t);
-        if (*addr).in6.sin6_scope_id != 0 as libc::c_int as libc::c_uint &&
-               !if_indextoname((*addr).in6.sin6_scope_id,
+        inet_ntop(10,
+                  &mut addr.in6.sin6_addr                *const libc::c_void, buf,
+                  46);
+        if addr.in6.sin6_scope_id != 0 &&
+               !if_indextoname(addr.in6.sin6_scope_id,
                                name.as_mut_ptr()).is_null() &&
                strlen(buf).wrapping_add(strlen(name.as_mut_ptr())).wrapping_add(2
-                                                                                    as
-                                                                                    libc::c_int
-                                                                                    as
-                                                                                    libc::c_ulong)
-                   <= 46 as libc::c_int as libc::c_ulong {
-            strcat(buf, b"%\x00" as *const u8 as *const libc::c_char);
+                                                                                                                    libc::c_int
+                                                                                                             )
+                   <= 46 {
+            strcat(buf, b"%\x00" );
             strcat(buf, name.as_mut_ptr());
         }
-        port = __bswap_16((*addr).in6.sin6_port) as libc::c_int
+        port = __bswap_16(addr.in6.sin6_port)
     }
     return port;
 }
-pub fn prettyprint_time(mut buf: *mut libc::c_char,
-                                          mut t: libc::c_uint) {
-    if t == 0xffffffff as libc::c_uint {
-        sprintf(buf, b"infinite\x00" as *const u8 as *const libc::c_char);
+pub fn prettyprint_time(mut buf: &mut String,
+                                          mut t: u32) {
+    if t == 0xffffffff {
+        sprintf(buf, b"infinite\x00" );
     } else {
-        let mut x: libc::c_uint = 0;
-        let mut p: libc::c_uint = 0 as libc::c_int as libc::c_uint;
-        x = t.wrapping_div(86400 as libc::c_int as libc::c_uint);
+        let mut x: u32 = 0;
+        let mut p: u32 = 0;
+        x = t.wrapping_div(86400);
         if x != 0 {
             p =
-                p.wrapping_add(sprintf(&mut *buf.offset(p as isize) as
-                                           *mut libc::c_char,
-                                       b"%ud\x00" as *const u8 as
-                                           *const libc::c_char, x) as
-                                   libc::c_uint)
+                p.wrapping_add(sprintf(&mut *buf.offset(p)                                     &mut String,
+                                       b"%ud\x00"                                      *const libc::c_char, x)                             libc::c_uint)
         }
         x =
-            t.wrapping_div(3600 as libc::c_int as
-                               libc::c_uint).wrapping_rem(24 as libc::c_int as
-                                                              libc::c_uint);
+            t.wrapping_div(3600                         libc::c_uint).wrapping_rem(24           libc::c_uint);
         if x != 0 {
             p =
-                p.wrapping_add(sprintf(&mut *buf.offset(p as isize) as
-                                           *mut libc::c_char,
-                                       b"%uh\x00" as *const u8 as
-                                           *const libc::c_char, x) as
-                                   libc::c_uint)
+                p.wrapping_add(sprintf(&mut *buf.offset(p)                                     &mut String,
+                                       b"%uh\x00"                                      *const libc::c_char, x)                             libc::c_uint)
         }
         x =
-            t.wrapping_div(60 as libc::c_int as
-                               libc::c_uint).wrapping_rem(60 as libc::c_int as
-                                                              libc::c_uint);
+            t.wrapping_div(60                         libc::c_uint).wrapping_rem(60           libc::c_uint);
         if x != 0 {
             p =
-                p.wrapping_add(sprintf(&mut *buf.offset(p as isize) as
-                                           *mut libc::c_char,
-                                       b"%um\x00" as *const u8 as
-                                           *const libc::c_char, x) as
-                                   libc::c_uint)
+                p.wrapping_add(sprintf(&mut *buf.offset(p)                                     &mut String,
+                                       b"%um\x00"                                      *const libc::c_char, x)                             libc::c_uint)
         }
-        x = t.wrapping_rem(60 as libc::c_int as libc::c_uint);
+        x = t.wrapping_rem(60);
         if x != 0 {
             p =
-                p.wrapping_add(sprintf(&mut *buf.offset(p as isize) as
-                                           *mut libc::c_char,
-                                       b"%us\x00" as *const u8 as
-                                           *const libc::c_char, x) as
-                                   libc::c_uint)
+                p.wrapping_add(sprintf(&mut *buf.offset(p)                                     &mut String,
+                                       b"%us\x00"                                      *const libc::c_char, x)                             libc::c_uint)
         }
     };
 }
 /* in may equal out, when maxlen may be -1 (No max len). 
    Return -1 for extraneous no-hex chars found. */
-pub fn parse_hex(mut in_1: *mut libc::c_char,
-                                   mut out_0: *mut libc::c_uchar,
-                                   mut maxlen: libc::c_int,
+pub fn parse_hex(mut in_1: &mut String,
+                                   mut out_0: mut Vec<u8>,
+                                   mut maxlen: i32,
                                    mut wildcard_mask: *mut libc::c_uint,
-                                   mut mac_type: *mut libc::c_int)
- -> libc::c_int {
-    let mut done: libc::c_int = 0 as libc::c_int;
-    let mut mask: libc::c_int = 0 as libc::c_int;
-    let mut i: libc::c_int = 0 as libc::c_int;
-    let mut r: *mut libc::c_char = 0 as *mut libc::c_char;
-    if !mac_type.is_null() { *mac_type = 0 as libc::c_int }
-    while done == 0 && (maxlen == -(1 as libc::c_int) || i < maxlen) {
+                                   mut mac_type: )
+ -> i32 {
+    let mut done: i32 = 0;
+    let mut mask: i32 = 0;
+    let mut i: i32 = 0;
+    let mut r: &mut String = 0 ;
+    if !mac_type.is_null() { *mac_type = 0 }
+    while done == 0 && (maxlen == -(1) || i < maxlen) {
         r = in_1;
-        while *r as libc::c_int != 0 as libc::c_int &&
-                  *r as libc::c_int != ':' as i32 &&
-                  *r as libc::c_int != '-' as i32 &&
-                  *r as libc::c_int != ' ' as i32 {
-            if *r as libc::c_int != '*' as i32 &&
-                   *(*__ctype_b_loc()).offset(*r as libc::c_uchar as
-                                                  libc::c_int as isize) as
-                       libc::c_int &
-                       _ISXDIGIT as libc::c_int as libc::c_ushort as
-                           libc::c_int == 0 {
-                return -(1 as libc::c_int)
+        while *r != 0 &&
+                  *r != ':' as i32 &&
+                  *r != '-' as i32 &&
+                  *r != ' ' as i32 {
+            if *r != '*' as i32 &&
+                   *(*__ctype_b_loc()).offset(*r                                            libc::c_int) &
+                       _ISXDIGIT                      libc::c_int == 0 {
+                return -(1)
             }
             r = r.offset(1)
         }
-        if *r as libc::c_int == 0 as libc::c_int { done = 1 as libc::c_int }
+        if *r == 0 { done = 1 }
         if r != in_1 {
-            if *r as libc::c_int == '-' as i32 && i == 0 as libc::c_int &&
+            if *r == '-' as i32 && i == 0 &&
                    !mac_type.is_null() {
-                *r = 0 as libc::c_int as libc::c_char;
+                *r = 0;
                 *mac_type =
-                    strtol(in_1, 0 as *mut *mut libc::c_char,
-                           16 as libc::c_int) as libc::c_int;
-                mac_type = 0 as *mut libc::c_int
-            } else {
-                *r = 0 as libc::c_int as libc::c_char;
-                if strcmp(in_1, b"*\x00" as *const u8 as *const libc::c_char)
-                       == 0 as libc::c_int {
-                    mask = mask << 1 as libc::c_int | 1 as libc::c_int;
+                    strtol(in_1, 0 ,
+                           16);
+                mac_type = 0      } else {
+                *r = 0;
+                if strcmp(in_1, b"*\x00" )
+                       == 0 {
+                    mask = mask << 1 | 1;
                     i += 1
                 } else {
-                    let mut j: libc::c_int = 0;
-                    let mut bytes: libc::c_int =
-                        ((1 as libc::c_int as libc::c_long +
-                              r.wrapping_offset_from(in_1) as libc::c_long) /
-                             2 as libc::c_int as libc::c_long) as libc::c_int;
-                    j = 0 as libc::c_int;
+                    let mut j: i32 = 0;
+                    let mut bytes: i32 =
+                        ((1 +
+                              r.wrapping_offset_from(in_1)) /
+                             2);
+                    j = 0;
                     while j < bytes {
                         let mut sav: libc::c_char = 0;
                         sav = sav;
-                        if j < bytes - 1 as libc::c_int {
+                        if j < bytes - 1 {
                             sav =
-                                *in_1.offset(((j + 1 as libc::c_int) *
-                                                  2 as libc::c_int) as isize);
-                            *in_1.offset(((j + 1 as libc::c_int) *
-                                              2 as libc::c_int) as isize) =
-                                0 as libc::c_int as libc::c_char
+                                *in_1.offset(((j + 1) *
+                                                  2));
+                            *in_1.offset(((j + 1) *
+                                              2)) =
+                                0
                         }
                         /* checks above allow mix of hexdigit and *, which
 			 is illegal. */
-                        if !strchr(&mut *in_1.offset((j * 2 as libc::c_int) as
-                                                         isize),
+                        if !strchr(&mut *in_1.offset((j * 2)      isize),
                                    '*' as i32).is_null() {
-                            return -(1 as libc::c_int)
+                            return -(1)
                         }
-                        *out_0.offset(i as isize) =
-                            strtol(&mut *in_1.offset((j * 2 as libc::c_int) as
-                                                         isize),
-                                   0 as *mut *mut libc::c_char,
-                                   16 as libc::c_int) as libc::c_uchar;
-                        mask = mask << 1 as libc::c_int;
+                        *out_0.offset(i) =
+                            strtol(&mut *in_1.offset((j * 2)      isize),
+                                   0 ,
+                                   16);
+                        mask = mask << 1;
                         i += 1;
                         if i == maxlen { break ; }
-                        if j < bytes - 1 as libc::c_int {
-                            *in_1.offset(((j + 1 as libc::c_int) *
-                                              2 as libc::c_int) as isize) =
+                        if j < bytes - 1 {
+                            *in_1.offset(((j + 1) *
+                                              2)) =
                                 sav
                         }
                         j += 1
@@ -760,30 +703,30 @@ pub fn parse_hex(mut in_1: *mut libc::c_char,
                 }
             }
         }
-        in_1 = r.offset(1 as libc::c_int as isize)
+        in_1 = r.offset(1)
     }
-    if !wildcard_mask.is_null() { *wildcard_mask = mask as libc::c_uint }
+    if !wildcard_mask.is_null() { *wildcard_mask = mask }
     return i;
 }
 /* return 0 for no match, or (no matched octets) + 1 */
-pub fn memcmp_masked(mut a: *mut libc::c_uchar,
-                                       mut b: *mut libc::c_uchar,
-                                       mut len: libc::c_int,
-                                       mut mask: libc::c_uint)
- -> libc::c_int {
-    let mut i: libc::c_int = 0;
-    let mut count: libc::c_int = 0;
-    count = 1 as libc::c_int;
-    i = len - 1 as libc::c_int;
-    while i >= 0 as libc::c_int {
-        if mask & 1 as libc::c_int as libc::c_uint == 0 {
-            if *a.offset(i as isize) as libc::c_int ==
-                   *b.offset(i as isize) as libc::c_int {
+pub fn memcmp_masked(mut a: mut Vec<u8>,
+                                       mut b: mut Vec<u8>,
+                                       mut len: i32,
+                                       mut mask: u32)
+ -> i32 {
+    let mut i: i32 = 0;
+    let mut count: i32 = 0;
+    count = 1;
+    i = len - 1;
+    while i >= 0 {
+        if mask & 1 == 0 {
+            if *a.offset(i) ==
+                   *b.offset(i) {
                 count += 1
-            } else { return 0 as libc::c_int }
+            } else { return 0 }
         }
         i -= 1;
-        mask = mask >> 1 as libc::c_int
+        mask = mask >> 1
     }
     return count;
 }
@@ -791,7 +734,7 @@ pub fn memcmp_masked(mut a: *mut libc::c_uchar,
 /* _note_ may copy buffer */
 pub unsafe fn expand_buf(mut iov: &mut iovec, mut size: usize)
  -> u8 {
-    let mut new: *mut libc::c_void = 0 as *mut libc::c_void;
+    let mut new:Vec<u8> = 0;
     if size <= iov.iov_len { return 1; }
     new = whine_malloc(size);
     if new.is_null() {
@@ -807,29 +750,26 @@ pub unsafe fn expand_buf(mut iov: &mut iovec, mut size: usize)
     return 1;
 }
 
-pub fn print_mac(mut buff: *mut libc::c_char,
-                                   mut mac: *mut libc::c_uchar,
-                                   mut len: libc::c_int)
- -> *mut libc::c_char {
-    let mut p: *mut libc::c_char = buff;
-    let mut i: libc::c_int = 0;
-    if len == 0 as libc::c_int {
-        sprintf(p, b"<null>\x00" as *const u8 as *const libc::c_char);
+pub fn print_mac(mut buff: &mut String,
+                                   mut mac: mut Vec<u8>,
+                                   mut len: i32)
+ -> &mut String {
+    let mut p: &mut String = buff;
+    let mut i: i32 = 0;
+    if len == 0 {
+        sprintf(p, b"<null>\x00" );
     } else {
-        i = 0 as libc::c_int;
+        i = 0;
         while i < len {
             p =
                 p.offset(sprintf(p,
-                                 b"%.2x%s\x00" as *const u8 as
-                                     *const libc::c_char,
-                                 *mac.offset(i as isize) as libc::c_int,
-                                 if i == len - 1 as libc::c_int {
-                                     b"\x00" as *const u8 as
-                                         *const libc::c_char
+                                 b"%.2x%s\x00"                                *const libc::c_char,
+                                 *mac.offset(i),
+                                 if i == len - 1 {
+                                     b"\x00"
                                  } else {
-                                     b":\x00" as *const u8 as
-                                         *const libc::c_char
-                                 }) as isize);
+                                     b":\x00"
+                                 }));
             i += 1
         }
     }
@@ -838,30 +778,30 @@ pub fn print_mac(mut buff: *mut libc::c_char,
 /* rc is return from sendto and friends.
    Return 1 if we should retry.
    Set errno to zero if we succeeded. */
-pub fn retry_send(mut rc: susize) -> libc::c_int {
-    static mut retries: libc::c_int = 0 as libc::c_int;
+pub fn retry_send(mut rc: susize) -> i32 {
+    static mut retries: i32 = 0;
     let mut waiter: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
-    if rc != -(1 as libc::c_int) as libc::c_long {
-        retries = 0 as libc::c_int;
-        *__errno_location() = 0 as libc::c_int;
-        return 0 as libc::c_int
+    if rc != -(1) {
+        retries = 0;
+        *__errno_location() = 0;
+        return 0
     }
     /* Linux kernels can return EAGAIN in perpetuity when calling
      sendmsg() and the relevant interface has gone. Here we loop
      retrying in EAGAIN for 1 second max, to avoid this hanging 
      dnsmasq. */
-    if *__errno_location() == 11 as libc::c_int ||
-           *__errno_location() == 11 as libc::c_int {
-        waiter.tv_sec = 0 as libc::c_int as TimeT;
-        waiter.tv_nsec = 10000 as libc::c_int as SyscallSlongT;
-        nanosleep(&mut waiter, 0 as *mut timespec);
+    if *__errno_location() == 11 ||
+           *__errno_location() == 11 {
+        waiter.tv_sec = 0 ;
+        waiter.tv_nsec = 10000;
+        nanosleep(&mut waiter, 0);
         let fresh10 = retries;
         retries = retries + 1;
-        if fresh10 < 1000 as libc::c_int { return 1 as libc::c_int }
+        if fresh10 < 1000 { return 1 }
     }
-    retries = 0 as libc::c_int;
-    if *__errno_location() == 4 as libc::c_int { return 1 as libc::c_int }
-    return 0 as libc::c_int;
+    retries = 0;
+    if *__errno_location() == 4 { return 1 }
+    return 0;
 }
 
 enum ReadWriteMode {
@@ -992,7 +932,7 @@ enum ReadWriteMode {
 // }
 
 #[cfg(target_os = "linux")]
-pub unsafe fn get_linux_kernel_version() -> libc::c_int {
+pub unsafe fn get_linux_kernel_version() -> i32 {
     let mut utsname: utsname =
         utsname{sysname: [0; 65],
                 nodename: [0; 65],
@@ -1000,28 +940,33 @@ pub unsafe fn get_linux_kernel_version() -> libc::c_int {
                 version: [0; 65],
                 machine: [0; 65],
                 domainname: [0; 65],};
-    let mut version: libc::c_int = 0;
-    let mut split: *mut libc::c_char = 0 as *mut libc::c_char;
-    if libc::uname(&mut utsname) < 0 as libc::c_int {
-        die(b"failed to find kernel version: %s\x00" as *const u8 as
-                *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char, 5 as libc::c_int);
+    let mut version: i32 = 0;
+    let mut split: &mut String = 0 ;
+    if libc::uname(&mut utsname) < 0 {
+        die(b"failed to find kernel version: %s\x00",
+            0 , 5);
     }
     split =
         strtok(utsname.release.as_mut_ptr(),
-               b".\x00" as *const u8 as *const libc::c_char);
-    version = if !split.is_null() { atoi(split) } else { 0 as libc::c_int };
+               b".\x00" );
+    version = if !split.is_null() { atoi(split) } else { 0 };
     split =
-        strtok(0 as *mut libc::c_char,
-               b".\x00" as *const u8 as *const libc::c_char);
+        strtok(0 ,
+               b".\x00" );
     version =
-        version * 256 as libc::c_int +
-            (if !split.is_null() { atoi(split) } else { 0 as libc::c_int });
+        version * 256 +
+            (if !split.is_null() { atoi(split) } else { 0 });
     split =
-        strtok(0 as *mut libc::c_char,
-               b".\x00" as *const u8 as *const libc::c_char);
-    return version * 256 as libc::c_int +
+        strtok(0 ,
+               b".\x00" );
+    return version * 256 +
                (if !split.is_null() {
                     atoi(split)
-                } else { 0 as libc::c_int });
+                } else { 0 });
+}
+
+pub fn zero_array_1<T>(array: &mut T, len: usize) {
+    for i in len {
+        array[i] = 0
+    }
 }

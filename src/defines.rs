@@ -1,10 +1,10 @@
 use std::fs::File;
 use std::path::PathBuf;
 use std::time;
-use socket2::{Socket, SockAddr};
+use socket2::{Socket, NetAddress};
 use num::FromPrimitive;
-use crate::in_addr::InAddr;
-use crate::in6_addr::In6Addr;
+use crate::in_addr::NetAddress;
+use crate::in6_addr::NetAddress;
 
 pub type DevT = libc::c_ulong;
 pub type UidT = u32;
@@ -13,17 +13,17 @@ pub type InoT = libc::c_ulong;
 pub type Ino64T = libc::c_ulong;
 pub type ModeT = u32;
 pub type NLinkT = libc::c_ulong;
-pub type OffT = libc::c_long;
-pub type Off64T = libc::c_long;
+pub type OffT = i32;
+pub type Off64T = i32;
 pub type PidT = i32;
-pub type TimeT = libc::c_long;
-pub type BlkSizeT = libc::c_long;
-pub type BlkCntT = libc::c_long;
-pub type BlkCnt64T = libc::c_long;
-pub type SsizeT = libc::c_long;
-pub type SyscallSlongT = libc::c_long;
+pub type TimeT = i32;
+pub type BlkSizeT = i32;
+pub type BlkCntT = i32;
+pub type BlkCnt64T = i32;
+pub type SsizeT = i32;
+pub type SyscallSlongT = i32;
 pub type SocklenT = u32;
-pub type InAddrT = u32;
+pub type NetAddressT = u32;
 
 // #[derive(Copy,Clone)]
 // #[repr(C)]
@@ -116,13 +116,13 @@ pub type SaFamily = u16;
 //     pub sin6_family: sa_family_t,
 //     pub sin6_port: in_port_t,
 //     pub sin6_flowinfo: u32,
-//     pub sin6_addr: In6Addr,
+//     pub sin6_addr: NetAddress,
 //     pub sin6_scope_id: u32,
 // }
 
 // #[derive(Copy, Clone)]
 // #[repr(C)]
-// pub struct In6Addr {
+// pub struct NetAddress {
 //     pub __in6_u: C2RustUnnamed,
 // }
 
@@ -140,24 +140,35 @@ pub union C2RustUnnamed {
 // pub struct SockAddrIn {
 //     pub sin_family: sa_family_t,
 //     pub sin_port: in_port_t,
-//     pub sin_addr: InAddr,
+//     pub sin_addr: NetAddress,
 //     pub sin_zero: [u8; 8],
 // }
 
 pub const INET6_ADDRSTRLEN: usize = 46;
 
+pub enum AddressType {
+    Unknown = 0,
+    MacAddress,
+    Ipv4Address,
+    Ipv6Address
+}
 
+pub struct DhcpLeaseContext {
+    pub leases: Vec<DhcpLease>,
+    pub file_diry: bool,
+    pub dns_dirty: bool,
+    pub old_leases: Vec< DhcpLease>,
+    pub leases_left: i32,
+}
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union AllAddr {
-    pub addr4: InAddr,
-    pub addr6: In6Addr,
-    pub cname: String,
+#[derive(Copy,Clone,Debug,Default, Display)]
+pub struct NetAddress {
+    pub _type: AddressType,
+    pub value: [u8;16],
+    pub name: String,
+    pub port: u16,
     pub key: Vec<u8>,
-    pub ds: C2rustUnnamed2,
-    pub srv: String,
-    pub log: u8,
+    pub ds: DigitalSignature
 }
 
 #[derive(Copy, Clone)]
@@ -188,11 +199,11 @@ pub struct C2rustUnnamed6 {
 #[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct C2rustUnnamed1a {
-    pub ifru_addr: SockAddr,
-    pub ifru_dstaddr: SockAddr,
-    pub ifru_broadaddr: SockAddr,
-    pub ifru_netmask: SockAddr,
-    pub ifru_hwaddr: SockAddr,
+    pub ifru_addr: NetAddress,
+    pub ifru_dstaddr: NetAddress,
+    pub ifru_broadaddr: NetAddress,
+    pub ifru_netmask: NetAddress,
+    pub ifru_hwaddr: NetAddress,
     pub ifru_flags: i16,
     pub ifru_ivalue: i32,
     pub ifru_mtu: i32,
@@ -205,7 +216,7 @@ pub struct C2rustUnnamed1a {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct IfReq {
-    pub ifr_ifrn: C2rustUnnamed2,
+    pub ifr_ifrn: DigitalSignature,
     pub ifr_ifru: C2rustUnnamed1a,
 }
 
@@ -217,11 +228,10 @@ pub union C2rustUnnamed7 {
     pub name: String,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
-pub struct C2rustUnnamed2 {
-    pub keydata: BlockData,
-    pub keylen: u16,
+pub struct DigitalSignature {
+    pub keydata: Vec<u8>,
     pub keytag: u16,
     pub algo: u8,
     pub digest: u8,
@@ -248,7 +258,7 @@ pub struct Crec {
     // pub next: *mut Crec,
     // pub prev: *mut Crec,
     // pub hash_next: *mut Crec,
-    pub addr: AllAddr,
+    pub addr: NetAddress,
     pub ttd: TimeT,
     pub uid: u32,
     pub flags: u32,
@@ -273,17 +283,17 @@ pub union BigName {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct BogusAddr {
-    pub addr: InAddr,
+    pub addr: NetAddress,
     // pub next: *mut BogusAddr,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Doctor {
-    pub in_0: InAddr,
-    pub end: InAddr,
-    pub out: InAddr,
-    pub mask: InAddr,
+    pub in_0: NetAddress,
+    pub end: NetAddress,
+    pub out: NetAddress,
+    pub mask: NetAddress,
     // pub next: *mut Doctor,
 }
 
@@ -343,14 +353,13 @@ pub struct Cname {
     pub targetp: Cname,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
-pub struct AddrList {
-    pub addr: AllAddr,
-    pub flags: i32,
-    pub prefixlen: i32,
-    pub decline_time: TimeT,
-    // pub next: *mut addrlist,
+pub struct AddressListEntry {
+    pub addr: NetAddress,
+    pub flags: [bool;32],
+    pub prefixlen: usize,
+    pub decline_time: time::Instant,
 }
 
 #[derive(Copy, Clone)]
@@ -358,7 +367,7 @@ pub struct AddrList {
 pub struct AuthZone {
     pub domain: String,
     pub interface_names: Vec<AuthNameList>,
-    pub subnet: Vec<AddrList>,
+    pub subnet: Vec<AddressListEntry>,
     pub exclude: Vec<ddrlist>,
     // pub next: *mut auth_zone,
 }
@@ -374,17 +383,16 @@ pub struct AuthNameList {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct HostRecord {
-    pub ttl: i32,
-    pub flags: i32,
-    pub names: Vec<NameList>,
-    pub addr: InAddr,
-    pub addr6: In6Addr,
-    // pub next: *mut host_record,
+    pub ttl: u32,
+    pub flags: [bool;32],
+    pub names: Vec<NameListEntry>,
+    pub addr: NetAddress,
+    pub addr6: NetAddress,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct NameList {
+pub struct NameListEntry {
     pub name: String,
     // pub next: *mut name_list,
 }
@@ -395,23 +403,23 @@ pub struct InterfaceName {
     pub name: String,
     pub intr: String,
     pub family: i32,
-    pub addr: AddrList,
+    pub addresses: Vec<AddressListEntry>,
     // pub next: *mut interface_name,
 }
 
-#[derive(Clone, Copy)]
-#[repr(C)]
-pub union MySockAddr {
-    pub sa: SockAddr,
-    pub in_0: SockAddrIn,
-    pub in6: SockAddrIn6,
-}
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub union MySockAddr {
+//     pub sa: SockAddr,
+//     pub in_0: SockAddrIn,
+//     pub in6: SockAddrIn6,
+// }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ServerFd {
     pub fd: i32,
-    pub source_addr: MySockAddr,
+    pub source_addr: NetAddress,
     pub interface: [i8; 17],
     pub ifindex: u32,
     pub used: u32,
@@ -428,8 +436,8 @@ pub struct RandFd {
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct Server {
-    pub addr: MySockAddr,
-    pub source_addr: MySockAddr,
+    pub addr: NetAddress,
+    pub source_addr: NetAddress,
     pub interface: [i8; 17],
     pub sfd: ServerFd,
     pub domain: String,
@@ -454,18 +462,18 @@ pub struct IpSets {
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct Irec {
-    pub addr: MySockAddr,
-    pub netmask: InAddr,
-    pub tftp_ok: i32,
-    pub dhcp_ok: i32,
-    pub mtu: i32,
-    pub done: i32,
-    pub warned: i32,
+    pub addr: NetAddress,
+    pub netmask: NetAddress,
+    pub tftp_ok: bool,
+    pub dhcp_ok: bool,
+    pub mtu: u16,
+    pub done: bool,
+    pub warned: bool,
     pub dad: i32,
     pub dns_auth: i32,
     pub index: i32,
-    pub multicast_done: i32,
-    pub found: i32,
+    pub multicast_done: bool,
+    pub found: bool,
     pub label: i32,
     pub name: String,
     // pub next: *mut irec,
@@ -478,7 +486,7 @@ pub struct Listener {
     pub tcpfd: i32,
     pub tftpfd: i32,
     pub used: i32,
-    pub addr: MySockAddr,
+    pub addr: NetAddress,
     pub iface: Irec,
     // pub next: *mut listener,
 }
@@ -487,7 +495,7 @@ pub struct Listener {
 #[repr(C)]
 pub struct Iname {
     pub name: String,
-    pub addr: MySockAddr,
+    pub addr: NetAddress,
     pub used: i32,
     // pub next: *mut iname,
 }
@@ -495,7 +503,7 @@ pub struct Iname {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Mysubnet {
-    pub addr: MySockAddr,
+    pub addr: NetAddress,
     pub addr_used: i32,
     // pub mask: i32,
 }
@@ -540,8 +548,8 @@ pub struct Frec {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct FrecSrc {
-    pub source: MySockAddr,
-    pub dest: AllAddr,
+    pub source: NetAddress,
+    pub dest: NetAddress,
     pub iface: u32,
     pub log_id: u32,
     pub fd: i32,
@@ -600,8 +608,8 @@ pub struct DhcpConfig {
     pub domain: String,
     pub netid: DhcpNetIdList,
     pub filter: DhcpNetId,
-    pub addr6: AddrList,
-    pub addr: InAddr,
+    pub addr6: AddressListEntry,
+    pub addr: NetAddress,
     pub decline_time: TimeT,
     pub lease_time: u32,
     pub hwaddr: HwaddrConfig,
@@ -635,7 +643,7 @@ pub struct DhcpBoot {
     pub file: String,
     pub sname: String,
     pub tftp_sname: String,
-    pub next_server: InAddr,
+    pub next_server: NetAddress,
     pub netid: DhcpNetId,
     // pub next: *mut dhcp_boot,
 }
@@ -657,7 +665,7 @@ pub struct PxeService {
     pub menu: String,
     pub basename: String,
     pub sname: String,
-    pub server: InAddr,
+    pub server: NetAddress,
     pub netid: DhcpNetId,
     // pub next: *mut pxe_service,
 }
@@ -701,10 +709,10 @@ pub struct DhcpBridge {
 pub struct CondDomain {
     pub domain: String,
     pub prefix: String,
-    pub start: InAddr,
-    pub end: InAddr,
-    pub start6: In6Addr,
-    pub end6: In6Addr,
+    pub start: NetAddress,
+    pub end: NetAddress,
+    pub start6: NetAddress,
+    pub end6: NetAddress,
     pub is6: i32,
     pub indexed: i32,
     // pub next: *mut cond_domain,
@@ -726,15 +734,15 @@ pub struct RaInterface {
 pub struct DhcpContext {
     pub lease_time: u32,
     pub addr_epoch: u32,
-    pub netmask: InAddr,
-    pub broadcast: InAddr,
-    pub local: InAddr,
-    pub router: InAddr,
-    pub start: InAddr,
-    pub end: InAddr,
-    pub start6: In6Addr,
-    pub end6: In6Addr,
-    pub local6: In6Addr,
+    pub netmask: NetAddress,
+    pub broadcast: NetAddress,
+    pub local: NetAddress,
+    pub router: NetAddress,
+    pub start: NetAddress,
+    pub end: NetAddress,
+    pub start6: NetAddress,
+    pub end6: NetAddress,
+    pub local6: NetAddress,
     pub prefix: i32,
     pub if_index: i32,
     pub valid: u32,
@@ -755,16 +763,16 @@ pub struct DhcpContext {
 #[repr(C)]
 pub struct SharedNetwork {
     pub if_index: i32,
-    pub match_addr: InAddr,
-    pub shared_addr: InAddr,
-    pub match_addr6: In6Addr,
-    pub shared_addr6: In6Addr,
+    pub match_addr: NetAddress,
+    pub shared_addr: NetAddress,
+    pub match_addr6: NetAddress,
+    pub shared_addr6: NetAddress,
     // pub next: *mut shared_network,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct PingResult {
-    pub addr: InAddr,
+    pub addr: NetAddress,
     pub time: TimeT,
     pub hash: u32,
     // pub next: *mut ping_result,
@@ -790,8 +798,8 @@ pub struct TftpTransfer {
     pub blocksize: u32,
     pub expansion: u32,
     pub offset: usize,
-    pub peer: MySockAddr,
-    pub source: AllAddr,
+    pub peer: NetAddress,
+    pub source: NetAddress,
     pub if_index: i32,
     pub opt_blocksize: usize,
     pub opt_transize: usize,
@@ -803,7 +811,7 @@ pub struct TftpTransfer {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct AddrList2 {
-    pub addr: InAddr,
+    pub addr: NetAddress,
     // pub next: *mut addr_list,
 }
 #[derive(Copy, Clone)]
@@ -818,8 +826,8 @@ pub struct TftpPrefix {
 #[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct DhcpRelay {
-    pub local: AllAddr,
-    pub server: AllAddr,
+    pub local: NetAddress,
+    pub server: NetAddress,
     pub interface: String,
     pub iface_index: i32,
     pub current: DhcpRelay,
@@ -843,16 +851,16 @@ pub struct DnsmasqDaemon {
     pub resolv_files: Resolvc,
     pub last_resolv: TimeT,
     pub servers_file: String,
-    pub mxnames: MxSrvRecord,
+    pub mxnames: Vec<MxSrvRecord>,
     pub naptr: NaPtr,
     pub txt: TxtRecord,
     pub rr: TxtRecord,
     pub ptr: PtrRecord,
-    pub host_records: HostRecord,
+    pub host_records: Vec<HostRecord>,
     pub host_records_tail: HostRecord,
-    pub cnames: Cname,
-    pub auth_zones: AuthZone,
-    pub int_names: InterfaceName,
+    pub cnames: Vec<Cname>,
+    pub auth_zones: Vec<AuthZone>,
+    pub int_names: Vec<InterfaceName>,
     pub mxtarget: String,
     pub add_subnet4: Mysubnet,
     pub add_subnet6: Mysubnet,
@@ -864,7 +872,7 @@ pub struct DnsmasqDaemon {
     pub authserver: String,
     pub hostmaster: String,
     pub authinterface: Iname,
-    pub secondary_forward_server: NameList,
+    pub secondary_forward_server: NameListEntry,
     pub group_set: i32,
     pub osport: i32,
     pub domain_suffix: String,
@@ -872,15 +880,15 @@ pub struct DnsmasqDaemon {
     pub synth_domains: CondDomain,
     pub runfile: String,
     pub lease_change_command: String,
-    pub if_names: Iname,
-    pub if_addrs: Iname,
+    pub if_names: Vec<Iname>,
+    pub if_addrs: Vec<Iname>,
     pub if_except: Iname,
     pub dhcp_except: Iname,
-    pub auth_peers: Iname,
-    pub tftp_interfaces: Iname,
+    pub auth_peers: Vec<Iname>,
+    pub tftp_interfaces: Vec<Iname>,
     pub bogus_addr: BogusAddr,
     pub ignore_addr: BogusAddr,
-    pub servers: Server,
+    pub servers: Vec<Server>,
     pub use_ipsets: bool,
     pub ipsets: IpSets,
     pub log_fac: u32,
@@ -971,7 +979,7 @@ pub struct DnsmasqDaemon {
     pub frec_src_count: u32,
     pub sfds: ServerFd,
     pub interfaces: Irec,
-    pub listeners: Listener,
+    pub listeners: Vec<Listener>,
     pub last_server: Server,
     pub forwardtime: time::Instant,
     pub forwardcount: ue,
@@ -983,10 +991,10 @@ pub struct DnsmasqDaemon {
     pub pipe_to_parent: u32,
     pub randomsocks: [RandFd; 64],
     pub v6pktinfo: u32,
-    pub interface_addrs: AddrList,
+    pub interface_addrs: AddressListEntry,
     pub log_id: u32,
     pub log_display_id: u32,
-    pub log_source_addr: MySockAddr,
+    pub log_source_addr: NetAddress,
     pub dhcpfd: Option<Socket>,
     pub helperfd: Option<Socket>,
     pub pxefd: Option<Socket>,
@@ -1014,25 +1022,25 @@ pub struct DnsmasqDaemon {
     pub dumpfd: File,
 }
 
-pub const F_IPV4: u32 = (1 as u32) << 7 as i32;
-pub const F_IPV6: u32 = (1 as u32) << 8 as i32;
+pub const F_IPV4: u32 = (1) << 7 as i32;
+pub const F_IPV6: u32 = (1) << 8 as i32;
 pub const ADDRLIST_IPV6: i32 = 2 as i32;
-pub const F_DHCP: u32 = (1 as u32) << 4 as i32;
-pub const F_HOSTS: u32 = (1 as u32) << 6 as i32;
-pub const F_FORWARD: u32 = (1 as u32) << 3 as i32;
-pub const F_NXDOMAIN: u32 = (1 as u32) << 10 as i32;
-pub const F_NEG: u32 = (1 as u32) << 5 as i32;
-pub const F_AUTH: u32 = (1 as u32) << 21 as i32;
+pub const F_DHCP: u32 = (1) << 4 as i32;
+pub const F_HOSTS: u32 = (1) << 6 as i32;
+pub const F_FORWARD: u32 = (1) << 3 as i32;
+pub const F_NXDOMAIN: u32 = (1) << 10 as i32;
+pub const F_NEG: u32 = (1) << 5 as i32;
+pub const F_AUTH: u32 = (1) << 21 as i32;
 pub const F_CNAME: u32 =
-        (1 as u32) << 11 as i32;
+        (1) << 11 as i32;
 pub const F_CONFIG: u32 =
-        (1 as u32) << 13 as i32;
+        (1) << 13 as i32;
 pub const F_RRNAME: u32 =
-        (1 as u32) << 17 as i32;
+        (1) << 17 as i32;
 pub const ADDRSTRLEN: i32 = 46 as i32;
 pub const ADDRLIST_REVONLY: i32 = 4 as i32;
 pub const F_REVERSE: u32 =
-        (1 as u32) << 2 as i32;
+        (1) << 2 as i32;
 
 pub const _STAT_VER_LINUX: i32 = 1 as i32;
 pub const _STAT_VER: i32 = _STAT_VER_LINUX;
@@ -1146,17 +1154,8 @@ pub const _STAT_VER: i32 = _STAT_VER_LINUX;
 //     pub _wide_vtable: *mut _IO_jump_t,
 // }
 
-
-
-
 pub const _MKNOD_VER: i32 = 0 as i32;
-
-
-
-
 pub const DHCP_CHADDR_MAX: i32 = 16 as i32;
-
-pub const IN6ADDRSZ: i32 = 16 as i32;
 
 // #[inline]
 // pub unsafe extern "C" fn tolower(mut __c: i32) -> i32 {
@@ -1307,8 +1306,6 @@ pub const REFUSED: i32 = 5 as i32;
 
 pub const SERVFAIL: i32 = 2 as i32;
 
-pub const INADDRSZ: i32 = 4 as i32;
-
 pub const MAXDNAME: i32 = 1025 as i32;
     
 pub const LOG_ERR: i32 = 3 as i32;
@@ -1452,7 +1449,7 @@ pub struct ArpRecord {
     pub status: u16,
     pub family: u32,
     pub hwaddr: [u8; 16],
-    pub addr: AllAddr,
+    pub addr: NetAddress,
     // pub next: *mut arp_record,
 }
 
@@ -1477,7 +1474,7 @@ pub struct AtalkAddr {
 //    36 };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct SockaddrAt {
+pub struct NetAddressAt {
     pub sat_family: KernelSaFamily,
     pub sat_port: __u8,
     pub sat_addr: AtalkAddr,
@@ -1498,7 +1495,7 @@ pub struct Ax25Address {
 //    54 };
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct SockaddrAx25 {
+pub struct NetAddressAx25 {
     pub sax25_family: KernelSaFamily,
     pub sax25_call: Ax25Address,
     pub sax25_ndigis: i32,
@@ -1517,7 +1514,7 @@ pub struct SockaddrAx25 {
 // };
 #[derive(Copy,Clone)]
 #[repr(C)]
-pub struct SockaddrDl {
+pub struct NetAddressDl {
     pub sdl_len: u8,
     pub sdl_family: u8,
     pub sdl_index: u16,
@@ -1590,8 +1587,8 @@ pub struct SockaddrDl {
 //     pub sin_len: u8,
 //     pub sin_family: u8,
 //     pub sin_port: u16,
-//     pub sin_addr: InAddr,
-//     pub sin_srcaddr: InAddr,
+//     pub sin_addr: NetAddress,
+//     pub sin_srcaddr: NetAddress,
 //     pub sin_tos: u16,
 //     pub sin_other: u16,
 // }
@@ -1690,20 +1687,20 @@ pub struct IsoAddr {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union SockaddrArg {
-    pub __sockaddr__: *mut SockAddr,
-    pub __sockaddr_at__: *mut SockaddrAt,
-    pub __sockaddr_ax25__: *mut SockaddrAx25,
-    pub __sockaddr_dl__: *mut SockaddrDl,
-    pub __sockaddr_eon__: *mut SockaddrEon,
-    pub __sockaddr_in__: *mut SockAddrIn,
-    pub __sockaddr_in6__: *mut SockAddrIn6,
-    pub __sockaddr_inarp__: *mut sockaddr_inarp,
-    pub __sockaddr_ipx__: *mut sockaddr_ipx,
-    pub __sockaddr_iso__: *mut sockaddr_iso,
-    pub __sockaddr_ns__: *mut sockaddr_ns,
-    pub __sockaddr_un__: *mut SockaddrUn,
-    pub __sockaddr_x25__: *mut sockaddr_x25,
+pub union NetAddressArg {
+    pub __NetAddress__: NetAddress,
+    pub __NetAddress_at__: NetAddressAt,
+    pub __NetAddress_ax25__: NetAddressAx25,
+    pub __NetAddress_dl__: NetAddressDl,
+    pub __NetAddress_eon__: NetAddressEon,
+    pub __NetAddress_in__: NetAddress,
+    pub __NetAddress_in6__: NetAddress,
+    pub __NetAddress_inarp__: NetAddress_inarp,
+    pub __NetAddress_ipx__: NetAddress_ipx,
+    pub __NetAddress_iso__: NetAddress_iso,
+    pub __NetAddress_ns__: NetAddress_ns,
+    pub __NetAddress_un__: NetAddressUn,
+    pub __NetAddress_x25__: NetAddress_x25,
 }
 
 // pub type __clock_t = libc::c_long;
@@ -1733,27 +1730,27 @@ pub const SHUT_RD: u8 = 0;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct SockaddrUn {
+pub struct NetAddressUn {
     pub sun_family: SaFamily,
     pub sun_path: [i8; 108],
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union ConstSockaddrArg {
-    pub __sockaddr__: *const SockAddr,
-    pub __sockaddr_at__: *const SockaddrAt,
-    pub __sockaddr_ax25__: *const SockaddrAx25,
-    pub __sockaddr_dl__: *const SockaddrDl,
-    pub __sockaddr_eon__: *const SockaddrEon,
-    pub __sockaddr_in__: *const SockAddrIn,
-    pub __sockaddr_in6__: *const SockAddrIn6,
-    pub __sockaddr_inarp__: *const sockaddr_inarp,
-    pub __sockaddr_ipx__: *const sockaddr_ipx,
-    pub __sockaddr_iso__: *const sockaddr_iso,
-    pub __sockaddr_ns__: *const sockaddr_ns,
-    pub __sockaddr_un__: *const SockaddrUn,
-    pub __sockaddr_x25__: *const sockaddr_x25,
+pub union ConstNetAddressArg {
+    pub __NetAddress__: *const NetAddress,
+    pub __NetAddress_at__: *const NetAddressAt,
+    pub __NetAddress_ax25__: *const NetAddressAx25,
+    pub __NetAddress_dl__: *const NetAddressDl,
+    pub __NetAddress_eon__: *const NetAddressEon,
+    pub __NetAddress_in__: *const NetAddress,
+    pub __NetAddress_in6__: *const NetAddress,
+    pub __NetAddress_inarp__: *const NetAddress_inarp,
+    pub __NetAddress_ipx__: *const NetAddress_ipx,
+    pub __NetAddress_iso__: *const NetAddress_iso,
+    pub __NetAddress_ns__: *const NetAddress_ns,
+    pub __NetAddress_un__: *const NetAddressUn,
+    pub __NetAddress_x25__: *const NetAddress_x25,
 }
 
 pub const IPPROTO_MAX: i32 = 256;
@@ -1798,7 +1795,7 @@ enum Ethertype {
 #[repr(C)]
 pub union Sigval {
     pub sival_int: i32,
-    pub sival_ptr: *mut libc::c_void,
+    pub sival_ptr:Vec<u8>,
 }
 // pub type __sigval_t = Sigval;
 
@@ -2136,8 +2133,8 @@ pub struct IpHdr {
     pub ip_ttl: u8,
     pub ip_p: u8,
     pub ip_sum: u16,
-    pub ip_src: InAddr,
-    pub ip_dst: InAddr,
+    pub ip_src: NetAddress,
+    pub ip_dst: NetAddress,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2179,7 +2176,7 @@ pub struct C2rustUnnamed16 {
 #[repr(C)]
 pub union C2rustUnnamed17 {
     pub ih_pptr: u8,
-    pub ih_gwaddr: InAddr,
+    pub ih_gwaddr: NetAddress,
     pub ih_idseq: IhIdSeq,
     pub ih_void: u32,
     pub ih_pmtu: IhPmtu,
@@ -2497,16 +2494,16 @@ pub struct DhcpLease {
     pub hwaddr_len: i32,
     pub hwaddr_type: i32,
     pub hwaddr: [u8; 16],
-    pub addr: InAddr,
-    pub override_0: InAddr,
-    pub giaddr: InAddr,
+    pub addr: NetAddress,
+    pub override_0: NetAddress,
+    pub giaddr: NetAddress,
     pub extradata: Vec<u8>,
     pub extradata_len: u32,
     pub extradata_size: u32,
     pub last_interface: i32,
     pub new_interface: i32,
     pub new_prefixlen: i32,
-    pub addr6: In6Addr,
+    pub addr6: NetAddress,
     pub iaid: u32,
     pub slaac_address: SlaacAddress,
     pub vendorclass_count: i32,
@@ -2515,7 +2512,7 @@ pub struct DhcpLease {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SlaacAddress {
-    pub addr: In6Addr,
+    pub addr: NetAddress,
     pub ping_time: time::Instant,
     pub backoff: i32,
     // pub next: *mut slaac_address,
@@ -2829,10 +2826,10 @@ pub struct DhcpPacket {
     pub xid: u32,
     pub secs: u16,
     pub flags: u16,
-    pub ciaddr: InAddr,
-    pub yiaddr: InAddr,
-    pub siaddr: InAddr,
-    pub giaddr: InAddr,
+    pub ciaddr: NetAddress,
+    pub yiaddr: NetAddress,
+    pub siaddr: NetAddress,
+    pub giaddr: NetAddress,
     pub chaddr: [u8; 16],
     pub sname: [u8; 64],
     pub file: [u8; 128],
@@ -3103,40 +3100,40 @@ pub static FACILITYNAMES: [CODE; 23] = [
 //     return __wcstoul_internal(nptr, endptr, base, 0 as libc::c_int);
 // }
 
-pub fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
-    return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
-        (__bsx as libc::c_int & 0xff as libc::c_int) <<
-            8 as libc::c_int) as __uint16_t;
-}
+// pub fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+//     return (__bsx >> 8 & 0xff |
+//         (__bsx & 0xff) <<
+//             8) ;
+// }
 
-pub fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
-    return (__bsx & 0xff000000 as libc::c_uint) >> 24 as libc::c_int |
-        (__bsx & 0xff0000 as libc::c_uint) >> 8 as libc::c_int |
-        (__bsx & 0xff00 as libc::c_uint) << 8 as libc::c_int |
-        (__bsx & 0xff as libc::c_uint) << 24 as libc::c_int;
-}
+// pub fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+//     return (__bsx & 0xff000000) >> 24 |
+//         (__bsx & 0xff0000) >> 8 |
+//         (__bsx & 0xff00) << 8 |
+//         (__bsx & 0xff) << 24;
+// }
 
-pub fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
-    return ((__bsx as libc::c_ulonglong &
-        0xff00000000000000 as libc::c_ulonglong) >> 56 as libc::c_int
-        |
-        (__bsx as libc::c_ulonglong &
-            0xff000000000000 as libc::c_ulonglong) >>
-            40 as libc::c_int |
-        (__bsx as libc::c_ulonglong &
-            0xff0000000000 as libc::c_ulonglong) >> 24 as libc::c_int
-        |
-        (__bsx as libc::c_ulonglong &
-            0xff00000000 as libc::c_ulonglong) >> 8 as libc::c_int |
-        (__bsx as libc::c_ulonglong & 0xff000000 as libc::c_ulonglong)
-            << 8 as libc::c_int |
-        (__bsx as libc::c_ulonglong & 0xff0000 as libc::c_ulonglong)
-            << 24 as libc::c_int |
-        (__bsx as libc::c_ulonglong & 0xff00 as libc::c_ulonglong) <<
-            40 as libc::c_int |
-        (__bsx as libc::c_ulonglong & 0xff as libc::c_ulonglong) <<
-            56 as libc::c_int) as __uint64_t;
-}
+// pub fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+//     return ((__bsxlong &
+//         0xff00000000000000long) >> 56
+//         |
+//         (__bsxlong &
+//             0xff000000000000long) >>
+//             40 |
+//         (__bsxlong &
+//             0xff0000000000long) >> 24
+//         |
+//         (__bsxlong &
+//             0xff00000000long) >> 8 |
+//         (__bsxlong & 0xff000000long)
+//             << 8 |
+//         (__bsxlong & 0xff0000long)
+//             << 24 |
+//         (__bsxlong & 0xff00long) <<
+//             40 |
+//         (__bsxlong & 0xfflong) <<
+//             56) as __uint64_t;
+// }
 // #[inline]
 // unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
 //     return __x;
@@ -3390,57 +3387,61 @@ pub fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
 // }
 
 
-pub const SIGHUP: libc::c_int = 1;
-pub const SIGINT: libc::c_int = 2;
-pub const SIGQUIT: libc::c_int = 3;
-pub const SIGILL: libc::c_int = 4;
-pub const SIGTRAP: libc::c_int = 5;
-pub const SIGABRT: libc::c_int = 6;
-pub const SIGIOT: libc::c_int = 6;
-pub const SIGBUS: libc::c_int = 7;
-pub const SIGFPE: libc::c_int = 8;
-pub const SIGKILL: libc::c_int = 9;
-pub const SIGUSR1: libc::c_int = 10;
-pub const SIGSEGV: libc::c_int = 11;
-pub const SIGUSR2: libc::c_int = 12;
-pub const SIGPIPE: libc::c_int = 13;
-pub const SIGALRM: libc::c_int = 14;
-pub const SIGTERM: libc::c_int = 15;
-pub const SIGSTKFLT: libc::c_int = 16;
-pub const SIGCHLD: libc::c_int = 17;
-pub const SIGCONT: libc::c_int = 18;
-pub const SIGSTOP: libc::c_int = 19;
-pub const SIGTSTP: libc::c_int = 20;
-pub const SIGTTIN: libc::c_int = 21;
-pub const SIGTTOU: libc::c_int = 22;
-pub const SIGURG: libc::c_int = 23;
-pub const SIGXCPU: libc::c_int = 24;
-pub const SIGXFSZ: libc::c_int = 25;
-pub const SIGVTALRM: libc::c_int = 26;
-pub const SIGPROF: libc::c_int = 27;
-pub const SIGWINCH: libc::c_int = 28;
-pub const SIGIO: libc::c_int = 29;
-pub const SIGPWR: libc::c_int = 30;
-pub const SIGSYS: libc::c_int = 31;
-pub const SIGUNUSED: libc::c_int = 31;
+pub const SIGHUP: i32 = 1;
+pub const SIGINT: i32 = 2;
+pub const SIGQUIT: i32 = 3;
+pub const SIGILL: i32 = 4;
+pub const SIGTRAP: i32 = 5;
+pub const SIGABRT: i32 = 6;
+pub const SIGIOT: i32 = 6;
+pub const SIGBUS: i32 = 7;
+pub const SIGFPE: i32 = 8;
+pub const SIGKILL: i32 = 9;
+pub const SIGUSR1: i32 = 10;
+pub const SIGSEGV: i32 = 11;
+pub const SIGUSR2: i32 = 12;
+pub const SIGPIPE: i32 = 13;
+pub const SIGALRM: i32 = 14;
+pub const SIGTERM: i32 = 15;
+pub const SIGSTKFLT: i32 = 16;
+pub const SIGCHLD: i32 = 17;
+pub const SIGCONT: i32 = 18;
+pub const SIGSTOP: i32 = 19;
+pub const SIGTSTP: i32 = 20;
+pub const SIGTTIN: i32 = 21;
+pub const SIGTTOU: i32 = 22;
+pub const SIGURG: i32 = 23;
+pub const SIGXCPU: i32 = 24;
+pub const SIGXFSZ: i32 = 25;
+pub const SIGVTALRM: i32 = 26;
+pub const SIGPROF: i32 = 27;
+pub const SIGWINCH: i32 = 28;
+pub const SIGIO: i32 = 29;
+pub const SIGPWR: i32 = 30;
+pub const SIGSYS: i32 = 31;
+pub const SIGUNUSED: i32 = 31;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct IfaceParam {
-    pub current: *mut DhcpContext,
-    pub relay: *mut DhcpRelay,
-    pub relay_local: InAddr,
-    pub ind: libc::c_int,
+    pub current: DhcpContext,
+    pub relay: DhcpRelay,
+    pub relay_local: NetAddress,
+    pub ind: i32,
+    pub addr_match: i32,
+    pub fallback: [u8;16],
+    pub ll_addr: [u8;16],
+    pub ula_addr: [u8;16]
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct MatchParam {
-    pub ind: libc::c_int,
-    pub matched: libc::c_int,
-    pub netmask: InAddr,
-    pub broadcast: InAddr,
-    pub addr: InAddr,
+    pub ind: i32,
+    pub matched: i32,
+    pub netmask: NetAddress,
+    pub broadcast: NetAddress,
+    pub addr: NetAddress,
 }
 
 #[derive(Copy, Clone)]
@@ -3475,8 +3476,8 @@ pub struct Ifmap {
 #[repr(C)]
 pub struct InPktInfo {
     pub ipi_ifindex: u32,
-    pub ipi_spec_dst: InAddr,
-    pub ipi_addr: InAddr,
+    pub ipi_spec_dst: NetAddress,
+    pub ipi_addr: NetAddress,
 }
 
 #[derive(Copy, Clone, Default)]

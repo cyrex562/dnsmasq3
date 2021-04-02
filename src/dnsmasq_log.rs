@@ -1,6 +1,6 @@
 
 /* defaults in case we die() before we log_start() */
-use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, GidT, SockaddrUn, SaFamily, ConstSockaddrArg, SockAddr, socklen_t, SOCK_STREAM, time_t, pid_t, timespec, TimeT, SyscallSlongT};
+use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, GidT, NetAddressUn, SaFamily, ConstNetAddressArg, NetAddress, socklen_t, SOCK_STREAM, time::Instant, pid_t, timespec, TimeT, SyscallSlongT};
 use crate::slack::{log_entry, time};
 use crate::send_event;
 use crate::util::{safe_malloc, safe_strncpy};
@@ -8,137 +8,112 @@ use std::io::stderr;
 use std::env::args;
 use crate::poll::{poll_listen, poll_check};
 
-static mut log_fac: libc::c_int = (3 as libc::c_int) << 3 as libc::c_int;
-static mut log_stderr: libc::c_int = 0 as libc::c_int;
-static mut echo_stderr: libc::c_int = 0 as libc::c_int;
-static mut log_fd: libc::c_int = -(1 as libc::c_int);
-static mut log_to_file: libc::c_int = 0 as libc::c_int;
-static mut entries_alloced: libc::c_int = 0 as libc::c_int;
-static mut entries_lost: libc::c_int = 0 as libc::c_int;
-static mut connection_good: libc::c_int = 1 as libc::c_int;
-static mut max_logs: libc::c_int = 0 as libc::c_int;
-static mut connection_type: libc::c_int = SOCK_DGRAM as libc::c_int;
-static mut entries: *mut log_entry = 0 as *const log_entry as *mut log_entry;
+static mut log_fac: i32 = (3) << 3;
+static mut log_stderr: i32 = 0;
+static mut echo_stderr: i32 = 0;
+static mut log_fd: i32 = -(1);
+static mut log_to_file: i32 = 0;
+static mut entries_alloced: i32 = 0;
+static mut entries_lost: i32 = 0;
+static mut connection_good: i32 = 1;
+static mut max_logs: i32 = 0;
+static mut connection_type: i32 = SOCK_DGRAM;
+static mut entries: *mut log_entry = 0;
 static mut free_entries: *mut log_entry =
-    0 as *const log_entry as *mut log_entry;
+    0 p;
 #[no_mangle]
 pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
-                                   mut errfd: libc::c_int) -> libc::c_int {
-    let mut ret: libc::c_int = 0 as libc::c_int;
+                                   mut errfd: i32) -> i32 {
+    let mut ret: i32 = 0;
     echo_stderr =
-        ((*dnsmasq_daemon).options[(6 as libc::c_int as
-                                        libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                         as
-                                                                         libc::c_ulong).wrapping_mul(8
-                                                                                                         as
-                                                                                                         libc::c_int
-                                                                                                         as
-                                                                                                         libc::c_ulong))
-                                       as usize] &
-             (1 as libc::c_uint) <<
-                 (6 as libc::c_int as
-                      libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       as
-                                                       libc::c_ulong).wrapping_mul(8
-                                                                                       as
-                                                                                       libc::c_int
-                                                                                       as
-                                                                                       libc::c_ulong)))
-            as libc::c_int;
-    if (*dnsmasq_daemon).log_fac != -(1 as libc::c_int) {
+        ((*dnsmasq_daemon).options[(6 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                       ).wrapping_mul(8))
+                                       ] &
+             (1) <<
+                 (6 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                   ).wrapping_mul(8)))
+           ;
+    if (*dnsmasq_daemon).log_fac != -(1) {
         log_fac = (*dnsmasq_daemon).log_fac
-    } else if (*dnsmasq_daemon).options[(6 as libc::c_int as
-                                             libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                              as
-                                                                              libc::c_ulong).wrapping_mul(8
-                                                                                                              as
-                                                                                                              libc::c_int
-                                                                                                              as
-                                                                                                              libc::c_ulong))
-                                            as usize] &
-                  (1 as libc::c_uint) <<
-                      (6 as libc::c_int as
-                           libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                            as
-                                                            libc::c_ulong).wrapping_mul(8
-                                                                                            as
-                                                                                            libc::c_int
-                                                                                            as
-                                                                                            libc::c_ulong))
+    } else if (*dnsmasq_daemon).options[(6 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                                 ).wrapping_mul(8))
+                                            ] &
+                  (1) <<
+                      (6).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                             ).wrapping_mul(8))
                   != 0 {
-        log_fac = (16 as libc::c_int) << 3 as libc::c_int
+        log_fac = (16) << 3
     }
     if !(*dnsmasq_daemon).log_file.is_null() {
-        log_to_file = 1 as libc::c_int;
-        (*dnsmasq_daemon).max_logs = 0 as libc::c_int;
+        log_to_file = 1;
+        (*dnsmasq_daemon).max_logs = 0;
         if strcmp((*dnsmasq_daemon).log_file,
-                  b"-\x00" as *const u8 as *const libc::c_char) ==
-               0 as libc::c_int {
-            log_stderr = 1 as libc::c_int;
-            echo_stderr = 0 as libc::c_int;
-            log_fd = dup(2 as libc::c_int)
+                  b"-\x00" ) ==
+               0 {
+            log_stderr = 1;
+            echo_stderr = 0;
+            log_fd = dup(2)
         }
     }
     max_logs = (*dnsmasq_daemon).max_logs;
     if log_reopen((*dnsmasq_daemon).log_file) == 0 {
-        send_event(errfd, 17 as libc::c_int, *__errno_location(),
+        send_event(errfd, 17, *__errno_location(),
                    if !(*dnsmasq_daemon).log_file.is_null() {
-                       (*dnsmasq_daemon).log_file as *const libc::c_char
-                   } else { b"\x00" as *const u8 as *const libc::c_char } as
-                       *mut libc::c_char);
-        _exit(0 as libc::c_int);
+                       (*dnsmasq_daemon).log_file
+                   } else { b"\x00"  });
+        _exit(0);
     }
     /* if queuing is inhibited, make sure we allocate
      the one required buffer now. */
-    if max_logs == 0 as libc::c_int {
+    if max_logs == 0 {
         free_entries =
-            safe_malloc(::std::mem::size_of::<log_entry>() as libc::c_ulong)
-                as *mut log_entry;
-        (*free_entries).next = 0 as *mut log_entry;
-        entries_alloced = 1 as libc::c_int
+            safe_malloc(::std::mem::size_of::<log_entry>())
+                ;
+        (*free_entries).next = 0 ;
+        entries_alloced = 1
     }
     /* If we're running as root and going to change uid later,
      change the ownership here so that the file is always owned by
      the dnsmasq user. Then logrotate can just copy the owner.
      Failure of the chown call is OK, (for instance when started as non-root) */
     if log_to_file != 0 && log_stderr == 0 && !ent_pw.is_null() &&
-           (*ent_pw).pw_uid != 0 as libc::c_int as libc::c_uint &&
-           fchown(log_fd, (*ent_pw).pw_uid, -(1 as libc::c_int) as GidT) !=
-               0 as libc::c_int {
+           (*ent_pw).pw_uid != 0 &&
+           fchown(log_fd, (*ent_pw).pw_uid, -(1) ) !=
+               0 {
         ret = *__errno_location()
     }
     return ret;
 }
 #[no_mangle]
-pub unsafe extern "C" fn log_reopen(mut log_file: *mut libc::c_char)
- -> libc::c_int {
+pub unsafe extern "C" fn log_reopen(mut log_file: &mut String)
+ -> i32 {
     if log_stderr == 0 {
-        if log_fd != -(1 as libc::c_int) { close(log_fd); }
+        if log_fd != -(1) { close(log_fd); }
         /* NOTE: umask is set to 022 by the time this gets called */
         if !log_file.is_null() {
             log_fd =
                 open(log_file,
-                     0o1 as libc::c_int | 0o100 as libc::c_int |
-                         0o2000 as libc::c_int,
-                     0o400 as libc::c_int | 0o200 as libc::c_int |
-                         0o400 as libc::c_int >> 3 as libc::c_int)
+                     0o1 | 0o100 |
+                         0o2000,
+                     0o400 | 0o200 |
+                         0o400 >> 3)
         } else {
-            let mut flags: libc::c_int = 0;
+            let mut flags: i32 = 0;
             log_fd =
-                socket(1 as libc::c_int, connection_type, 0 as libc::c_int);
+                socket(1, connection_type, 0);
             /* if max_logs is zero, leave the socket blocking */
-            if log_fd != -(1 as libc::c_int) && max_logs != 0 as libc::c_int
+            if log_fd != -(1) && max_logs != 0
                    &&
                    {
-                       flags = fcntl(log_fd, 3 as libc::c_int);
-                       (flags) != -(1 as libc::c_int)
+                       flags = fcntl(log_fd, 3);
+                       (flags) != -(1)
                    } {
-                fcntl(log_fd, 4 as libc::c_int,
-                      flags | 0o4000 as libc::c_int);
+                fcntl(log_fd, 4,
+                      flags | 0o4000);
             }
         }
     }
-    return (log_fd != -(1 as libc::c_int)) as libc::c_int;
+    return (log_fd != -(1));
 }
 unsafe extern "C" fn free_entry() {
     let mut tmp: *mut log_entry = entries;
@@ -155,109 +130,102 @@ unsafe extern "C" fn log_write() {
 	 datagram connection, so treat the length as one less than reality 
 	 to elide the zero. If we're logging to a file, turn the zero into 
 	 a newline, and leave the length alone. */
-        let mut len_adjust: libc::c_int = 0 as libc::c_int;
+        let mut len_adjust: i32 = 0;
         if log_to_file != 0 {
             (*entries).payload[((*entries).offset + (*entries).length -
-                                    1 as libc::c_int) as usize] =
-                '\n' as i32 as libc::c_char
-        } else if connection_type == SOCK_DGRAM as libc::c_int {
-            len_adjust = 1 as libc::c_int
+                                    1) ] =
+                '\n'
+        } else if connection_type == SOCK_DGRAM {
+            len_adjust = 1
         }
         /* Avoid duplicates over a fork() */
         if (*entries).pid != getpid() {
             free_entry(); /* avoid wild recursion */
         } else {
             connection_good =
-                1 as
-                    libc::c_int; /* syslogd busy, go again when select() or poll() says so */
+                1 ; /* syslogd busy, go again when select() or poll() says so */
             rc =
                 write(log_fd,
                       (*entries).payload.as_mut_ptr().offset((*entries).offset
-                                                                 as isize) as
-                          *const libc::c_void,
-                      ((*entries).length - len_adjust) as usize);
-            if rc != -(1 as libc::c_int) as libc::c_long {
+                                                                ) ,
+                      ((*entries).length - len_adjust) );
+            if rc != -(1) {
                 (*entries).length =
-                    ((*entries).length as libc::c_long - rc) as libc::c_int;
+                    ((*entries).length - rc);
                 (*entries).offset =
-                    ((*entries).offset as libc::c_long + rc) as libc::c_int;
+                    ((*entries).offset + rc);
                 if (*entries).length == len_adjust {
                     free_entry();
-                    if entries_lost != 0 as libc::c_int {
-                        let mut e: libc::c_int = entries_lost;
-                        entries_lost = 0 as libc::c_int;
-                        my_syslog(4 as libc::c_int,
-                                  b"overflow: %d log entries lost\x00" as
-                                      *const u8 as *const libc::c_char, e);
+                    if entries_lost != 0 {
+                        let mut e: i32 = entries_lost;
+                        entries_lost = 0;
+                        my_syslog(4,
+                                  b"overflow: %d log entries lost\x00"                                *const u8, e);
                     }
                 }
             } else {
-                if *__errno_location() == 4 as libc::c_int { continue ; }
-                if *__errno_location() == 11 as libc::c_int ||
-                       *__errno_location() == 11 as libc::c_int {
+                if *__errno_location() == 4 { continue ; }
+                if *__errno_location() == 11 ||
+                       *__errno_location() == 11 {
                     return
                 }
-                if *__errno_location() == 105 as libc::c_int {
-                    connection_good = 0 as libc::c_int;
+                if *__errno_location() == 105 {
+                    connection_good = 0;
                     return
                 }
                 /* errors handling after this assumes sockets */
                 if log_to_file == 0 {
                     /* Once a stream socket hits EPIPE, we have to close and re-open
 	     (we ignore SIGPIPE) */
-                    if *__errno_location() == 32 as libc::c_int {
-                        if log_reopen(0 as *mut libc::c_char) != 0 {
+                    if *__errno_location() == 32 {
+                        if log_reopen(0 ) != 0 {
                             continue ;
                         }
-                    } else if *__errno_location() == 111 as libc::c_int ||
-                                  *__errno_location() == 107 as libc::c_int ||
-                                  *__errno_location() == 89 as libc::c_int ||
-                                  *__errno_location() == 104 as libc::c_int {
+                    } else if *__errno_location() == 111 ||
+                                  *__errno_location() == 107 ||
+                                  *__errno_location() == 89 ||
+                                  *__errno_location() == 104 {
                         /* socket went (syslogd down?), try and reconnect. If we fail,
 		 stop trying until the next call to my_syslog() 
 		 ECONNREFUSED -> connection went down
 		 ENOTCONN -> nobody listening
 		 (ECONNRESET, EDESTADDRREQ are *BSD equivalents) */
-                        let mut logaddr: SockaddrUn =
-                            SockaddrUn {sun_family: 0, sun_path: [0; 108],};
-                        logaddr.sun_family = 1 as libc::c_int as SaFamily;
+                        let mut logaddr: NetAddressUn =
+                            NetAddressUn {sun_family: 0, sun_path: [0; 108],};
+                        logaddr.sun_family = 1;
                         safe_strncpy(logaddr.sun_path.as_mut_ptr(),
-                                     b"/dev/log\x00" as *const u8 as
-                                         *const libc::c_char,
+                                     b"/dev/log\x00",
                                      ::std::mem::size_of::<[libc::c_char; 108]>()
-                                         as libc::c_ulong);
+                                        );
                         /* Got connection back? try again. */
                         if connect(log_fd,
-                                   ConstSockaddrArg {__sockaddr__:
-                                                            &mut logaddr as
-                                                                *mut SockaddrUn
-                                                                as
-                                                                *mut SockAddr,},
-                                   ::std::mem::size_of::<SockaddrUn>() as
-                                       libc::c_ulong as socklen_t) !=
-                               -(1 as libc::c_int) {
+                                   ConstNetAddressArg {__NetAddress__:
+                                                            &mut logaddr             NetAddressUn
+                                                                            NetAddress,},
+                                   ::std::mem::size_of::<NetAddressUn>()                          ) !=
+                               -(1) {
                             continue ;
                         }
                         /* errors from connect which mean we should keep trying */
-                        if *__errno_location() == 2 as libc::c_int ||
-                               *__errno_location() == 114 as libc::c_int ||
-                               *__errno_location() == 111 as libc::c_int ||
-                               *__errno_location() == 106 as libc::c_int ||
-                               *__errno_location() == 4 as libc::c_int ||
-                               *__errno_location() == 11 as libc::c_int ||
-                               *__errno_location() == 11 as libc::c_int {
+                        if *__errno_location() == 2 ||
+                               *__errno_location() == 114 ||
+                               *__errno_location() == 111 ||
+                               *__errno_location() == 106 ||
+                               *__errno_location() == 4 ||
+                               *__errno_location() == 11 ||
+                               *__errno_location() == 11 {
                             /* try again on next syslog() call */
-                            connection_good = 0 as libc::c_int;
+                            connection_good = 0;
                             return
                         }
                         /* try the other sort of socket... */
-                        if *__errno_location() == 91 as libc::c_int {
+                        if *__errno_location() == 91 {
                             connection_type =
                                 if connection_type ==
-                                       SOCK_DGRAM as libc::c_int {
-                                    SOCK_STREAM as libc::c_int
-                                } else { SOCK_DGRAM as libc::c_int };
-                            if log_reopen(0 as *mut libc::c_char) != 0 {
+                                       SOCK_DGRAM {
+                                    SOCK_STREAM
+                                } else { SOCK_DGRAM };
+                            if log_reopen(0 ) != 0 {
                                 continue ;
                             }
                         }
@@ -265,10 +233,9 @@ unsafe extern "C" fn log_write() {
                 }
                 /* give up - fall back to syslog() - this handles out-of-space
 	 when logging to a file, for instance. */
-                log_fd = -(1 as libc::c_int);
-                my_syslog(2 as libc::c_int,
-                          b"log failed: %s\x00" as *const u8 as
-                              *const libc::c_char,
+                log_fd = -(1);
+                my_syslog(2,
+                          b"log failed: %s\x00" ,
                           strerror(*__errno_location()));
                 return
             }
@@ -280,49 +247,46 @@ unsafe extern "C" fn log_write() {
    DNS, DHCP and TFTP services.
 */
 #[no_mangle]
-pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
+pub unsafe extern "C" fn my_syslog(mut priority: i32,
                                    mut format: *const libc::c_char,
                                    mut args: ...) {
     let mut ap: ::std::ffi::VaListImpl;
-    let mut entry: *mut log_entry = 0 as *mut log_entry;
-    let mut time_now: time_t = 0;
-    let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
+    let mut entry: *mut log_entry = 0 ;
+    let mut time_now: time::Instant = 0;
+    let mut p: &mut String = 0 ;
     let mut len: usize = 0;
     let mut pid: pid_t = getpid();
-    let mut func: *mut libc::c_char =
-        b"\x00" as *const u8 as *const libc::c_char as *mut libc::c_char;
-    if 0x3f8 as libc::c_int & priority ==
-           (1 as libc::c_int) << 3 as libc::c_int {
+    let mut func: &mut String =
+        b"\x00"  ;
+    if 0x3f8 & priority ==
+           (1) << 3 {
         func =
-            b"-tftp\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char
-    } else if 0x3f8 as libc::c_int & priority ==
-                  (3 as libc::c_int) << 3 as libc::c_int {
+            b"-tftp\x00"           &mut String
+    } else if 0x3f8 & priority ==
+                  (3) << 3 {
         func =
-            b"-dhcp\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char
-    } else if 0x3f8 as libc::c_int & priority ==
-                  (2 as libc::c_int) << 3 as libc::c_int {
+            b"-dhcp\x00"           &mut String
+    } else if 0x3f8 & priority ==
+                  (2) << 3 {
         func =
-            b"-script\x00" as *const u8 as *const libc::c_char as
-                *mut libc::c_char
+            b"-script\x00"           &mut String
     }
-    priority = priority & 0x7 as libc::c_int;
+    priority = priority & 0x7;
     if echo_stderr != 0 {
         fprintf(stderr,
-                b"dnsmasq%s: \x00" as *const u8 as *const libc::c_char, func);
+                b"dnsmasq%s: \x00" , func);
         ap = args.clone();
         vfprintf(stderr, format, ap.as_va_list());
         fputc('\n' as i32, stderr);
     }
-    if log_fd == -(1 as libc::c_int) {
+    if log_fd == -(1) {
         /* fall-back to syslog if we die during startup or 
 	 fail during running (always on Solaris). */
-        static mut isopen: libc::c_int = 0 as libc::c_int;
+        static mut isopen: i32 = 0;
         if isopen == 0 {
-            openlog(b"dnsmasq\x00" as *const u8 as *const libc::c_char,
-                    0x1 as libc::c_int, log_fac);
-            isopen = 1 as libc::c_int
+            openlog(b"dnsmasq\x00" ,
+                    0x1, log_fac);
+            isopen = 1
         }
         ap = args.clone();
         vsyslog(priority, format, ap.as_va_list());
@@ -334,8 +298,7 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
     } else if entries_alloced < max_logs &&
                   {
                       entry =
-                          malloc(::std::mem::size_of::<log_entry>() as
-                                     libc::c_ulong) as *mut log_entry;
+                          malloc(::std::mem::size_of::<log_entry>()                        ) ;
                       !entry.is_null()
                   } {
         entries_alloced += 1
@@ -344,11 +307,11 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
         entries_lost += 1
     } else {
         /* add to end of list, consumed from the start */
-        (*entry).next = 0 as *mut log_entry;
+        (*entry).next = 0 ;
         if entries.is_null() {
             entries = entry
         } else {
-            let mut tmp: *mut log_entry = 0 as *mut log_entry;
+            let mut tmp: *mut log_entry = 0 ;
             tmp = entries;
             while !(*tmp).next.is_null() { tmp = (*tmp).next }
             (*tmp).next = entry
@@ -358,63 +321,42 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
         if log_to_file == 0 {
             p =
                 p.offset(sprintf(p,
-                                 b"<%d>\x00" as *const u8 as
-                                     *const libc::c_char, priority | log_fac)
-                             as isize)
+                                 b"<%d>\x00"                                *const libc::c_char, priority | log_fac)
+                            )
         }
         /* Omit timestamp for default daemontools situation */
         if log_stderr == 0 ||
-               (*dnsmasq_daemon).options[(16 as libc::c_int as
-                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                               as
-                                                                               libc::c_ulong).wrapping_mul(8
-                                                                                                               as
-                                                                                                               libc::c_int
-                                                                                                               as
-                                                                                                               libc::c_ulong))
-                                             as usize] &
-                   (1 as libc::c_uint) <<
-                       (16 as libc::c_int as
-                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                             as
-                                                             libc::c_ulong).wrapping_mul(8
-                                                                                             as
-                                                                                             libc::c_int
-                                                                                             as
-                                                                                             libc::c_ulong))
+               (*dnsmasq_daemon).options[(16                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                             ] &
+                   (1) <<
+                       (16 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                               ).wrapping_mul(8         libc::c_int  ))
                    == 0 {
             p =
                 p.offset(sprintf(p,
-                                 b"%.15s \x00" as *const u8 as
-                                     *const libc::c_char,
-                                 ctime(&mut time_now).offset(4 as libc::c_int
-                                                                 as isize)) as
-                             isize)
+                                 b"%.15s \x00"                                *const libc::c_char,
+                                 ctime(&mut time_now).offset(4
+                                                                ))                       isize)
         } /* include zero-terminator */
         p =
             p.offset(sprintf(p,
-                             b"dnsmasq%s[%d]: \x00" as *const u8 as
-                                 *const libc::c_char, func, pid) as isize);
+                             b"dnsmasq%s[%d]: \x00"                            *const libc::c_char, func, pid));
         len =
-            p.wrapping_offset_from((*entry).payload.as_mut_ptr()) as
-                libc::c_long as usize;
+            p.wrapping_offset_from((*entry).payload.as_mut_ptr())          i32 ;
         ap = args.clone();
         len =
-            (len as
-                 libc::c_ulong).wrapping_add((vsnprintf(p,
-                                                        (1024 as libc::c_int
-                                                             as
-                                                             libc::c_ulong).wrapping_sub(len),
+            (len    ).wrapping_add((vsnprintf(p,
+                                                        (1024
+                                                               ).wrapping_sub(len),
                                                         format,
                                                         ap.as_va_list()) +
-                                                  1 as libc::c_int) as
-                                                 libc::c_ulong) as usize as
-                usize;
+                                                  1)                                    )           usize;
         (*entry).length =
-            if len > 1024 as libc::c_int as libc::c_ulong {
-                1024 as libc::c_int as libc::c_ulong
-            } else { len } as libc::c_int;
-        (*entry).offset = 0 as libc::c_int;
+            if len > 1024 {
+                1024
+            } else { len };
+        (*entry).offset = 0;
         (*entry).pid = pid
     }
     /* almost always, logging won't block, so try and write this now,
@@ -430,23 +372,22 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
      only occurs for the last 8 entries. Once the queue is full, we stop delaying
      to preserve performance.
   */
-    if !entries.is_null() && max_logs != 0 as libc::c_int {
-        let mut d: libc::c_int = 0; /* 1 ms */
-        d = 0 as libc::c_int;
+    if !entries.is_null() && max_logs != 0 {
+        let mut d: i32 = 0; /* 1 ms */
+        d = 0;
         entry = entries;
         while !entry.is_null() { entry = (*entry).next; d += 1 }
         if d == max_logs {
-            d = 0 as libc::c_int
-        } else if max_logs > 8 as libc::c_int {
-            d -= max_logs - 8 as libc::c_int
+            d = 0
+        } else if max_logs > 8 {
+            d -= max_logs - 8
         }
-        if d > 0 as libc::c_int {
+        if d > 0 {
             let mut waiter: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
-            waiter.tv_sec = 0 as libc::c_int as TimeT;
+            waiter.tv_sec = 0 ;
             waiter.tv_nsec =
-                ((1000000 as libc::c_int) << d - 1 as libc::c_int) as
-                    SyscallSlongT;
-            nanosleep(&mut waiter, 0 as *mut timespec);
+                ((1000000) << d - 1)              SyscallSlongT;
+            nanosleep(&mut waiter, 0);
             /* Have another go now */
             log_write();
         }
@@ -454,16 +395,16 @@ pub unsafe extern "C" fn my_syslog(mut priority: libc::c_int,
 }
 #[no_mangle]
 pub unsafe extern "C" fn set_log_writer() {
-    if !entries.is_null() && log_fd != -(1 as libc::c_int) &&
+    if !entries.is_null() && log_fd != -(1) &&
            connection_good != 0 {
-        poll_listen(log_fd, 0x4 as libc::c_int as libc::c_short);
+        poll_listen(log_fd, 0x4 );
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn check_log_writer(mut force: libc::c_int) {
-    if log_fd != -(1 as libc::c_int) &&
+pub unsafe extern "C" fn check_log_writer(mut force: i32) {
+    if log_fd != -(1) &&
            (force != 0 ||
-                poll_check(log_fd, 0x4 as libc::c_int as libc::c_short) != 0)
+                poll_check(log_fd, 0x4 ) != 0)
        {
         log_write();
     };
@@ -472,7 +413,7 @@ pub unsafe extern "C" fn check_log_writer(mut force: libc::c_int) {
 pub unsafe extern "C" fn flush_log() {
     /* write until queue empty, but don't loop forever if there's
    no connection to the syslog in existence */
-    while log_fd != -(1 as libc::c_int) {
+    while log_fd != -(1) {
         let mut waiter: timespec =
             timespec{tv_sec: 0, tv_nsec: 0,}; /* 1 ms */
         log_write(); /* print as well as log when we die.... */
@@ -480,27 +421,27 @@ pub unsafe extern "C" fn flush_log() {
             close(log_fd);
             break ;
         } else {
-            waiter.tv_sec = 0 as libc::c_int as TimeT;
-            waiter.tv_nsec = 1000000 as libc::c_int as SyscallSlongT;
-            nanosleep(&mut waiter, 0 as *mut timespec);
+            waiter.tv_sec = 0 ;
+            waiter.tv_nsec = 1000000;
+            nanosleep(&mut waiter, 0);
         }
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn die(mut message: *mut libc::c_char,
-                             mut arg1: *mut libc::c_char,
-                             mut exit_code: libc::c_int) -> ! {
-    let mut errmess: *mut libc::c_char = strerror(*__errno_location());
+pub unsafe extern "C" fn die(mut message: &mut String,
+                             mut arg1: &mut String,
+                             mut exit_code: i32) -> ! {
+    let mut errmess: &mut String = strerror(*__errno_location());
     if arg1.is_null() { arg1 = errmess }
     if log_stderr == 0 {
-        echo_stderr = 1 as libc::c_int;
+        echo_stderr = 1;
         fputc('\n' as i32, stderr);
         /* prettyfy  startup-script message */
     }
-    my_syslog(2 as libc::c_int, message, arg1, errmess);
-    echo_stderr = 0 as libc::c_int;
-    my_syslog(2 as libc::c_int,
-              b"FAILED to start up\x00" as *const u8 as *const libc::c_char);
+    my_syslog(2, message, arg1, errmess);
+    echo_stderr = 0;
+    my_syslog(2,
+              b"FAILED to start up\x00" );
     flush_log();
     exit(exit_code);
 }

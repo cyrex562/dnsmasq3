@@ -16,28 +16,28 @@
 */
 #[no_mangle]
 pub static mut metric_names: [*const libc::c_char; 20] =
-    [b"dns_cache_inserted\x00" as *const u8 as *const libc::c_char,
-     b"dns_cache_live_freed\x00" as *const u8 as *const libc::c_char,
-     b"dns_queries_forwarded\x00" as *const u8 as *const libc::c_char,
-     b"dns_auth_answered\x00" as *const u8 as *const libc::c_char,
-     b"dns_local_answered\x00" as *const u8 as *const libc::c_char,
-     b"bootp\x00" as *const u8 as *const libc::c_char,
-     b"pxe\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_ack\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_decline\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_discover\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_inform\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_nak\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_offer\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_release\x00" as *const u8 as *const libc::c_char,
-     b"dhcp_request\x00" as *const u8 as *const libc::c_char,
-     b"noanswer\x00" as *const u8 as *const libc::c_char,
-     b"leases_allocated_4\x00" as *const u8 as *const libc::c_char,
-     b"leases_pruned_4\x00" as *const u8 as *const libc::c_char,
-     b"leases_allocated_6\x00" as *const u8 as *const libc::c_char,
-     b"leases_pruned_6\x00" as *const u8 as *const libc::c_char];
+    [b"dns_cache_inserted\x00" ,
+     b"dns_cache_live_freed\x00" ,
+     b"dns_queries_forwarded\x00" ,
+     b"dns_auth_answered\x00" ,
+     b"dns_local_answered\x00" ,
+     b"bootp\x00" ,
+     b"pxe\x00" ,
+     b"dhcp_ack\x00" ,
+     b"dhcp_decline\x00" ,
+     b"dhcp_discover\x00" ,
+     b"dhcp_inform\x00" ,
+     b"dhcp_nak\x00" ,
+     b"dhcp_offer\x00" ,
+     b"dhcp_release\x00" ,
+     b"dhcp_request\x00" ,
+     b"noanswer\x00" ,
+     b"leases_allocated_4\x00" ,
+     b"leases_pruned_4\x00" ,
+     b"leases_allocated_6\x00" ,
+     b"leases_pruned_6\x00" ];
 #[no_mangle]
-pub unsafe extern "C" fn get_metric_name(mut i: libc::c_int)
+pub unsafe extern "C" fn get_metric_name(mut i: i32)
  -> *const libc::c_char {
-    return metric_names[i as usize];
+    return metric_names[i ];
 }

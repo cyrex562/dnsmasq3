@@ -29,7 +29,7 @@
 */
 use crate::util::{safe_malloc, whine_malloc};
 use crate::dnsmasq_log::{die, my_syslog};
-use crate::defines::{Resolvc, DnsmasqDaemon, Crec, HostsFile, DIR, stat, timespec, time_t};
+use crate::defines::{Resolvc, DnsmasqDaemon, Crec, HostsFile, DIR, stat, timespec, time::Instant};
 use crate::slack::{inotify_event, IN_NONBLOCK, IN_CLOEXEC, dirent};
 use crate::cache::read_hostsfile;
 use crate::option::option_read_dynfile;
@@ -37,112 +37,87 @@ use std::fs::read;
 use crate::dhcp_common::dhcp_update_configs;
 use crate::lease::{lease_update_from_configs, lease_update_file, lease_update_dns};
 
-static mut inotify_buffer: *mut libc::c_char =
-    0 as *const libc::c_char as *mut libc::c_char;
+static mut inotify_buffer: &mut String =
+    0 ;
 /* If path is a symbolic link, return the path it
    points to, made absolute if relative.
    If path doesn't exist or is not a symlink, return NULL.
    Return value is malloc'ed */
-unsafe extern "C" fn my_readlink(mut path: *mut libc::c_char)
- -> *mut libc::c_char {
+unsafe extern "C" fn my_readlink(mut path: &mut String)
+ -> &mut String {
     let mut rc: isize = 0;
-    let mut size: isize = 64 as libc::c_int as isize;
-    let mut buf: *mut libc::c_char = 0 as *mut libc::c_char;
+    let mut size: isize = 64;
+    let mut buf: &mut String = 0 ;
     loop  {
-        buf = safe_malloc(size as usize) as *mut libc::c_char;
-        rc = readlink(path, buf, size as usize);
-        if rc == -(1 as libc::c_int) as libc::c_long {
+        buf = safe_malloc(size ) ;
+        rc = readlink(path, buf, size );
+        if rc == -(1) {
             /* Not link or doesn't exist. */
-            if *__errno_location() == 22 as libc::c_int ||
-                   *__errno_location() == 2 as libc::c_int {
-                free(buf as *mut libc::c_void);
-                return 0 as *mut libc::c_char
+            if *__errno_location() == 22 ||
+                   *__errno_location() == 2 {
+                free(buf);
+                return 0
             } else {
-                die(b"cannot access path %s: %s\x00" as *const u8 as
-                        *const libc::c_char as *mut libc::c_char, path,
-                    5 as libc::c_int);
+                die(b"cannot access path %s: %s\x00"                   *const libc::c_char , path,
+                    5);
             }
         } else {
-            if rc < size - 1 as libc::c_int as libc::c_long {
-                let mut d: *mut libc::c_char = 0 as *mut libc::c_char;
-                *buf.offset(rc as isize) = 0 as libc::c_int as libc::c_char;
-                if *buf.offset(0 as libc::c_int as isize) as libc::c_int !=
+            if rc < size - 1 {
+                let mut d: &mut String = 0 ;
+                *buf.offset(rc) = 0;
+                if *buf.offset(0) !=
                        '/' as i32 &&
                        { d = strrchr(path, '/' as i32); !d.is_null() } {
                     /* Add path to relative link */
-                    let mut new_buf: *mut libc::c_char =
-                        safe_malloc((d.wrapping_offset_from(path) as
-                                         libc::c_long as
-                                         libc::c_ulong).wrapping_add(strlen(buf)).wrapping_add(2
-                                                                                                   as
-                                                                                                   libc::c_int
-                                                                                                   as
-                                                                                                   libc::c_ulong))
-                            as *mut libc::c_char;
-                    *d.offset(1 as libc::c_int as isize) =
-                        0 as libc::c_int as libc::c_char;
+                    let mut new_buf: &mut String =
+                        safe_malloc((d.wrapping_offset_from(path)                                   i32).wrapping_add(strlen(buf)).wrapping_add(2                     libc::c_int              ))
+                            ;
+                    *d.offset(1) =
+                        0;
                     strcpy(new_buf, path);
                     strcat(new_buf, buf);
-                    free(buf as *mut libc::c_void);
+                    free(buf);
                     buf = new_buf
                 }
                 return buf
             }
         }
         /* Buffer too small, increase and retry */
-        size += 64 as libc::c_int as libc::c_long;
-        free(buf as *mut libc::c_void);
+        size += 64;
+        free(buf);
     };
 }
 #[no_mangle]
 pub unsafe extern "C" fn inotify_dnsmasq_init() {
-    let mut res: *mut Resolvc = 0 as *mut Resolvc;
+    let mut res: *mut Resolvc = 0 ;
     inotify_buffer =
-        safe_malloc((::std::mem::size_of::<inotify_event>() as
-                         libc::c_ulong).wrapping_add(255 as libc::c_int as
-                                                         libc::c_ulong).wrapping_add(1
-                                                                                         as
-                                                                                         libc::c_int
-                                                                                         as
-                                                                                         libc::c_ulong))
-            as *mut libc::c_char;
+        safe_malloc((::std::mem::size_of::<inotify_event>()).wrapping_add(255      libc::c_ulong).wrapping_add(1 libc::c_int
+                                                                                                                       ))
+            ;
     (*dnsmasq_daemon).inotifyfd =
-        inotify_init1(IN_NONBLOCK as libc::c_int | IN_CLOEXEC as libc::c_int);
-    if (*dnsmasq_daemon).inotifyfd == -(1 as libc::c_int) {
-        die(b"failed to create inotify: %s\x00" as *const u8 as
-                *const libc::c_char as *mut libc::c_char,
-            0 as *mut libc::c_char, 5 as libc::c_int);
+        inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+    if (*dnsmasq_daemon).inotifyfd == -(1) {
+        die(b"failed to create inotify: %s\x00",
+            0 , 5);
     }
-    if (*dnsmasq_daemon).options[(8 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
-           (1 as libc::c_uint) <<
-               (8 as libc::c_int as
-                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                     as
-                                                     libc::c_ulong).wrapping_mul(8
-                                                                                     as
-                                                                                     libc::c_int
-                                                                                     as
-                                                                                     libc::c_ulong))
+    if (*dnsmasq_daemon).options[(8).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                     ] &
+           (1) <<
+               (8).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+                                                                                                                      libc::c_int
+                                                                                                               ))
            != 0 {
         return
     }
     res = (*dnsmasq_daemon).resolv_files;
     while !res.is_null() {
-        let mut d: *mut libc::c_char = 0 as *mut libc::c_char;
-        let mut new_path: *mut libc::c_char = 0 as *mut libc::c_char;
-        let mut path: *mut libc::c_char =
-            safe_malloc(strlen((*res).name).wrapping_add(1 as libc::c_int as
-                                                             libc::c_ulong))
-                as *mut libc::c_char;
-        let mut links: libc::c_int = 20 as libc::c_int;
+        let mut d: &mut String = 0 ;
+        let mut new_path: &mut String = 0 ;
+        let mut path: &mut String =
+            safe_malloc(strlen((*res).name).wrapping_add(1   ))
+                ;
+        let mut links: i32 = 20;
         strcpy(path, (*res).name);
         loop 
              /* Follow symlinks until we reach a non-symlink, or a non-existent file. */
@@ -153,50 +128,47 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
             }
             let fresh6 = links;
             links = links - 1;
-            if fresh6 == 0 as libc::c_int {
-                die(b"too many symlinks following %s\x00" as *const u8 as
-                        *const libc::c_char as *mut libc::c_char, (*res).name,
-                    5 as libc::c_int);
+            if fresh6 == 0 {
+                die(b"too many symlinks following %s\x00"                   *const libc::c_char , (*res).name,
+                    5);
             }
-            free(path as *mut libc::c_void);
+            free(path);
             path = new_path
         }
-        (*res).wd = -(1 as libc::c_int);
+        (*res).wd = -(1);
         d = strrchr(path, '/' as i32);
         if !d.is_null() {
-            *d = 0 as libc::c_int as libc::c_char;
+            *d = 0;
             (*res).wd =
                 inotify_add_watch((*dnsmasq_daemon).inotifyfd, path,
-                                  (0x8 as libc::c_int | 0x80 as libc::c_int)
-                                      as u32);
-            (*res).file = d.offset(1 as libc::c_int as isize);
-            *d = '/' as i32 as libc::c_char;
-            if (*res).wd == -(1 as libc::c_int) &&
-                   *__errno_location() == 2 as libc::c_int {
+                                  (0x8 | 0x80)
+                                     );
+            (*res).file = d.offset(1);
+            *d = '/' ;
+            if (*res).wd == -(1) &&
+                   *__errno_location() == 2 {
                 die(b"directory %s for resolv-file is missing, cannot poll\x00"
-                        as *const u8 as *const libc::c_char as
-                        *mut libc::c_char, (*res).name, 5 as libc::c_int);
+                                          &mut String, (*res).name, 5);
             }
         }
-        if (*res).wd == -(1 as libc::c_int) {
-            die(b"failed to create inotify for %s: %s\x00" as *const u8 as
-                    *const libc::c_char as *mut libc::c_char, (*res).name,
-                5 as libc::c_int);
+        if (*res).wd == -(1) {
+            die(b"failed to create inotify for %s: %s\x00"               *const libc::c_char , (*res).name,
+                5);
         }
         res = (*res).next
     };
 }
 /* initialisation for dynamic-dir. Set inotify watch for each directory, and read pre-existing files */
 #[no_mangle]
-pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
-                                             mut total_size: libc::c_int,
-                                             mut rhash: *mut *mut Crec,
-                                             mut revhashsz: libc::c_int) {
-    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
+pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
+                                             mut total_size: i32,
+                                             mut rhash: *mut Crec,
+                                             mut revhashsz: i32) {
+    let mut ah: *mut HostsFile = 0;
     ah = (*dnsmasq_daemon).dynamic_dirs;
     while !ah.is_null() {
-        let mut dir_stream: *mut DIR = 0 as *mut DIR;
-        let mut ent: *mut dirent = 0 as *mut dirent;
+        let mut dir_stream: *mut DIR = 0 ;
+        let mut ent: *mut dirent = 0 ent;
         let mut buf: stat =
             stat{st_dev: 0,
                  st_ino: 0,
@@ -214,33 +186,30 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
                  st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
                  __glibc_reserved: [0; 3],};
         if !((*ah).flags & flag == 0) {
-            if stat((*ah).fname, &mut buf) == -(1 as libc::c_int) ||
-                   !(buf.st_mode & 0o170000 as libc::c_int as libc::c_uint ==
-                         0o40000 as libc::c_int as libc::c_uint) {
-                my_syslog(3 as libc::c_int,
-                          b"bad dynamic directory %s: %s\x00" as *const u8 as
-                              *const libc::c_char, (*ah).fname,
+            if stat((*ah).fname, &mut buf) == -(1) ||
+                   !(buf.st_mode & 0o170000 ==
+                         0o40000) {
+                my_syslog(3,
+                          b"bad dynamic directory %s: %s\x00" , (*ah).fname,
                           strerror(*__errno_location()));
             } else {
-                if (*ah).flags & 4 as libc::c_int == 0 {
+                if (*ah).flags & 4 == 0 {
                     (*ah).wd =
                         inotify_add_watch((*dnsmasq_daemon).inotifyfd,
                                           (*ah).fname,
-                                          (0x8 as libc::c_int |
-                                               0x80 as libc::c_int) as
-                                              u32);
-                    (*ah).flags |= 4 as libc::c_int
+                                          (0x8 |
+                                               0x80)                                        u32);
+                    (*ah).flags |= 4
                 }
                 /* Read contents of dir _after_ calling add_watch, in the hope of avoiding
 	  a race which misses files being added as we start */
-                if (*ah).wd == -(1 as libc::c_int) ||
+                if (*ah).wd == -(1) ||
                        {
                            dir_stream = opendir((*ah).fname);
                            dir_stream.is_null()
                        } {
-                    my_syslog(3 as libc::c_int,
-                              b"failed to create inotify for %s: %s\x00" as
-                                  *const u8 as *const libc::c_char,
+                    my_syslog(3,
+                              b"failed to create inotify for %s: %s\x00"                            *const u8,
                               (*ah).fname, strerror(*__errno_location()));
                 } else {
                     loop  {
@@ -249,60 +218,49 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
                         let mut lendir: usize = strlen((*ah).fname);
                         let mut lenfile: usize =
                             strlen((*ent).d_name.as_mut_ptr());
-                        let mut path: *mut libc::c_char =
-                            0 as *mut libc::c_char;
+                        let mut path: &mut String =
+                            0 ;
                         /* ignore emacs backups and dotfiles */
-                        if lenfile == 0 as libc::c_int as libc::c_ulong ||
-                               (*ent).d_name[lenfile.wrapping_sub(1 as
-                                                                      libc::c_int
-                                                                      as
-                                                                      libc::c_ulong)
-                                                 as usize] as libc::c_int ==
+                        if lenfile == 0 ||
+                               (*ent).d_name[lenfile.wrapping_sub(1                   libc::c_int
+                                                                                 )
+                                                 ] ==
                                    '~' as i32 ||
-                               (*ent).d_name[0 as libc::c_int as usize] as
-                                   libc::c_int == '#' as i32 &&
-                                   (*ent).d_name[lenfile.wrapping_sub(1 as
-                                                                          libc::c_int
-                                                                          as
-                                                                          libc::c_ulong)
-                                                     as usize] as libc::c_int
+                               (*ent).d_name[0 ]                             libc::c_int == '#' as i32 &&
+                                   (*ent).d_name[lenfile.wrapping_sub(1                       libc::c_int
+                                                                                         )
+                                                     ]
                                        == '#' as i32 ||
-                               (*ent).d_name[0 as libc::c_int as usize] as
-                                   libc::c_int == '.' as i32 {
+                               (*ent).d_name[0 ]                             libc::c_int == '.' as i32 {
                             continue ;
                         }
                         path =
-                            whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2
-                                                                                       as
-                                                                                       libc::c_int
-                                                                                       as
-                                                                                       libc::c_ulong))
-                                as *mut libc::c_char;
+                            whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2))
+                                ;
                         if !path.is_null() {
                             strcpy(path, (*ah).fname);
                             strcat(path,
-                                   b"/\x00" as *const u8 as
-                                       *const libc::c_char);
+                                   b"/\x00"                                  *const libc::c_char);
                             strcat(path, (*ent).d_name.as_mut_ptr());
                             /* ignore non-regular files */
-                            if stat(path, &mut buf) != -(1 as libc::c_int) &&
+                            if stat(path, &mut buf) != -(1) &&
                                    buf.st_mode &
-                                       0o170000 as libc::c_int as libc::c_uint
+                                       0o170000
                                        ==
-                                       0o100000 as libc::c_int as libc::c_uint
+                                       0o100000
                                {
-                                if (*ah).flags & 8 as libc::c_int != 0 {
+                                if (*ah).flags & 8 != 0 {
                                     total_size =
                                         read_hostsfile(path, (*ah).index,
                                                        total_size, rhash,
                                                        revhashsz)
                                 } else if (*ah).flags &
-                                              (16 as libc::c_int |
-                                                   32 as libc::c_int) != 0 {
+                                              (16 |
+                                                   32) != 0 {
                                     option_read_dynfile(path, (*ah).flags);
                                 }
                             }
-                            free(path as *mut libc::c_void);
+                            free(path);
                         }
                     }
                     closedir(dir_stream);
@@ -313,71 +271,55 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: libc::c_int,
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn inotify_check(mut now: time_t) -> libc::c_int {
-    let mut hit: libc::c_int = 0 as libc::c_int;
-    let mut ah: *mut HostsFile = 0 as *mut HostsFile;
+pub unsafe extern "C" fn inotify_check(mut now: time::Instant) -> i32 {
+    let mut hit: i32 = 0;
+    let mut ah: *mut HostsFile = 0;
     loop  {
-        let mut rc: libc::c_int = 0;
-        let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-        let mut res: *mut Resolvc = 0 as *mut Resolvc;
-        let mut in_0: *mut inotify_event = 0 as *mut inotify_event;
+        let mut rc: i32 = 0;
+        let mut p: &mut String = 0 ;
+        let mut res: *mut Resolvc = 0 ;
+        let mut in_0: *mut inotify_event = 0 );
         loop  {
             rc =
                 read((*dnsmasq_daemon).inotifyfd,
-                     inotify_buffer as *mut libc::c_void,
-                     (::std::mem::size_of::<inotify_event>() as
-                          libc::c_ulong).wrapping_add(255 as libc::c_int as
-                                                          libc::c_ulong).wrapping_add(1
-                                                                                          as
-                                                                                          libc::c_int
-                                                                                          as
-                                                                                          libc::c_ulong))
-                    as libc::c_int;
-            if !(rc == -(1 as libc::c_int) &&
-                     *__errno_location() == 4 as libc::c_int) {
+                     inotify_buffer,
+                     (::std::mem::size_of::<inotify_event>()).wrapping_add(255).wrapping_add(1   libc::c_int
+                                                                                                                         ))
+                   ;
+            if !(rc == -(1) &&
+                     *__errno_location() == 4) {
                 break ;
             }
         }
-        if rc <= 0 as libc::c_int { break ; }
+        if rc <= 0 { break ; }
         p = inotify_buffer;
-        while rc as libc::c_long -
-                  p.wrapping_offset_from(inotify_buffer) as libc::c_long >=
-                  ::std::mem::size_of::<inotify_event>() as libc::c_ulong as
-                      libc::c_int as libc::c_long {
+        while rc -
+                  p.wrapping_offset_from(inotify_buffer) >=
+                  ::std::mem::size_of::<inotify_event>()  {
             let mut namelen: usize = 0;
-            in_0 = p as *mut inotify_event;
+            in_0 = p );
             /* ignore emacs backups and dotfiles */
-            if !((*in_0).len == 0 as libc::c_int as libc::c_uint ||
+            if !((*in_0).len == 0 ||
                      {
                          namelen = strlen((*in_0).name.as_mut_ptr());
-                         (namelen) == 0 as libc::c_int as libc::c_ulong
+                         (namelen) == 0
                      } ||
                      *(*in_0).name.as_mut_ptr().offset(namelen.wrapping_sub(1
-                                                                                as
-                                                                                libc::c_int
-                                                                                as
-                                                                                libc::c_ulong)
-                                                           as isize) as
-                         libc::c_int == '~' as i32 ||
-                     *(*in_0).name.as_mut_ptr().offset(0 as libc::c_int as
-                                                           isize) as
-                         libc::c_int == '#' as i32 &&
+                                                                                                            libc::c_int
+                                                                                                     )
+                                                          )  == '~' as i32 ||
+                     *(*in_0).name.as_mut_ptr().offset(0        isize)  == '#' as i32 &&
                          *(*in_0).name.as_mut_ptr().offset(namelen.wrapping_sub(1
-                                                                                    as
-                                                                                    libc::c_int
-                                                                                    as
-                                                                                    libc::c_ulong)
-                                                               as isize) as
-                             libc::c_int == '#' as i32 ||
-                     *(*in_0).name.as_mut_ptr().offset(0 as libc::c_int as
-                                                           isize) as
-                         libc::c_int == '.' as i32) {
+                                                                                                                    libc::c_int
+                                                                                                             )
+                                                              )                       libc::c_int == '#' as i32 ||
+                     *(*in_0).name.as_mut_ptr().offset(0        isize)  == '.' as i32) {
                 res = (*dnsmasq_daemon).resolv_files;
                 while !res.is_null() {
                     if (*res).wd == (*in_0).wd &&
                            strcmp((*res).file, (*in_0).name.as_mut_ptr()) ==
-                               0 as libc::c_int {
-                        hit = 1 as libc::c_int
+                               0 {
+                        hit = 1
                     }
                     res = (*res).next
                 }
@@ -385,63 +327,55 @@ pub unsafe extern "C" fn inotify_check(mut now: time_t) -> libc::c_int {
                 while !ah.is_null() {
                     if (*ah).wd == (*in_0).wd {
                         let mut lendir: usize = strlen((*ah).fname);
-                        let mut path: *mut libc::c_char =
-                            0 as *mut libc::c_char;
+                        let mut path: &mut String =
+                            0 ;
                         path =
-                            whine_malloc(lendir.wrapping_add((*in_0).len as
-                                                                 libc::c_ulong).wrapping_add(2
-                                                                                                 as
-                                                                                                 libc::c_int
-                                                                                                 as
-                                                                                                 libc::c_ulong))
-                                as *mut libc::c_char;
+                            whine_malloc(lendir.wrapping_add((*in_0).len       ).wrapping_add(2                 libc::c_int          ))
+                                ;
                         if !path.is_null() {
                             strcpy(path, (*ah).fname);
                             strcat(path,
-                                   b"/\x00" as *const u8 as
-                                       *const libc::c_char);
+                                   b"/\x00"                                  *const libc::c_char);
                             strcat(path, (*in_0).name.as_mut_ptr());
-                            my_syslog(6 as libc::c_int,
+                            my_syslog(6,
                                       b"inotify, new or changed file %s\x00"
-                                          as *const u8 as *const libc::c_char,
+                                          ,
                                       path);
-                            if (*ah).flags & 8 as libc::c_int != 0 {
+                            if (*ah).flags & 8 != 0 {
                                 read_hostsfile(path, (*ah).index,
-                                               0 as libc::c_int,
-                                               0 as *mut *mut Crec,
-                                               0 as libc::c_int);
+                                               0,
+                                               0,
+                                               0);
                                 if !(*dnsmasq_daemon).dhcp.is_null() ||
                                        (*dnsmasq_daemon).doing_dhcp6 != 0 {
                                     /* Propagate the consequences of loading a new dhcp-host */
                                     dhcp_update_configs((*dnsmasq_daemon).dhcp_conf);
                                     lease_update_from_configs();
                                     lease_update_file(now);
-                                    lease_update_dns(1 as libc::c_int);
+                                    lease_update_dns(1);
                                 }
-                            } else if (*ah).flags & 16 as libc::c_int != 0 {
+                            } else if (*ah).flags & 16 != 0 {
                                 if option_read_dynfile(path,
-                                                       16 as libc::c_int) != 0
+                                                       16) != 0
                                    {
                                     /* Propagate the consequences of loading a new dhcp-host */
                                     dhcp_update_configs((*dnsmasq_daemon).dhcp_conf);
                                     lease_update_from_configs();
                                     lease_update_file(now);
-                                    lease_update_dns(1 as libc::c_int);
+                                    lease_update_dns(1);
                                 }
-                            } else if (*ah).flags & 32 as libc::c_int != 0 {
-                                option_read_dynfile(path, 32 as libc::c_int);
+                            } else if (*ah).flags & 32 != 0 {
+                                option_read_dynfile(path, 32);
                             }
-                            free(path as *mut libc::c_void);
+                            free(path);
                         }
                     }
                     ah = (*ah).next
                 }
             }
             p =
-                p.offset((::std::mem::size_of::<inotify_event>() as
-                              libc::c_ulong).wrapping_add((*in_0).len as
-                                                              libc::c_ulong)
-                             as isize)
+                p.offset((::std::mem::size_of::<inotify_event>()).wrapping_add((*in_0).len    )
+                            )
         }
     }
     return hit;

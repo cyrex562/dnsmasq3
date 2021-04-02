@@ -14,57 +14,53 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{AddrList, AllAddr, InAddr, __bswap_32, InAddrT, AuthZone, DnsHeader, MySockAddr, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, __bswap_16, Iname, NameList};
-use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdomain, sockaddr_isequal};
+use crate::defines::{AddressListEntry, AuthZone, DnsHeader, DnsmasqDaemon, Crec, MxSrvRecord, TxtRecord, InterfaceName, NaPtr, Cname, Iname, NameListEntry, NetAddress};
+use crate::util::{is_same_net, is_same_net6, hostname_isequal, hostname_issubdomain, NetAddress_isequal};
 use crate::rfc1035::{skip_questions, extract_name, in_arpa_name_2_addr, add_resource_record};
 use crate::cache::{log_query, cache_find_by_addr, cache_get_name, record_source, querystr, cache_find_by_name, cache_find_non_terminal, cache_enumerate};
 use crate::dnsmasq_log::my_syslog;
-use crate::in6_addr::In6Addr;
+use std::time;
 
-pub fn find_addrlist(list: &mut Vec<AddrList>, flag: libc::c_int, addr_u: &mut AllAddr) -> Option<AddrList> {
-    for list_addr in list {
-        if list_addr.flags & 2 == 0 {
-            let mut netmask: InAddr = Default::default();
-            let mut addr: InAddr = addr_u.addr4;
-            if !(flag __b &
-                (1 __b) << 7 == 0) { netmask.s_addr = __bswap_32((!(0 as InAddrT)) << 32 - (*list).prefixlen);
-                if is_same_net(addr, (*list).addr.addr4, netmask) != 0 {
-                    return Some(list_addr.clone())
-                }
+pub fn find_addrlist(list: &Vec<AddressListEntry>, flag: u32, addr_u: &NetAddress) -> Option<AddressListEntry> {
+    for entry in list {
+        if list_addr.flags[2] == false {
+            let mut netmask: NetAddress = Default::default();
+            let mut address: NetAddress = addr_u.ip_address.clone();
+            if is_same_net(address, entry.addr.ip_address, netmask) {
+                return Some(entry.clone())
             }
-        } else if is_same_net6(&mut addr_u.addr6, &mut (*list).addr.addr6,
-                               (*list).prefixlen) != 0 {
-            return Some(list_addr.clone())
+        } else if is_ame_net6(&mut addr_u.ip_address, &mut entry.addr.ip_address, entry.prefixlen) {
+            return Seom(entry.clone())
         }
     }
     return None
 }
 
 
-pub fn find_subnet(mut zone: &mut AuthZone,
-                   mut flag: libc::c_int,
-                   mut addr_u: &mut AllAddr) -> Option<AddrList> {
+pub fn find_subnet(mut zone: &AuthZone,
+                   mut flag: u32,
+                   mut addr_u: &NetAddress) -> Option<AddressListEntry> {
     if zone.subnet.is_null() { return None }
-    return find_addrlist(zone.subnet, flag, addr_u);
+    return find_addrlist(&zone.subnet, flag, addr_u);
 }
-pub fn find_exclude(mut zone: &mut AuthZone,
-                    mut flag: libc::c_int,
-                    mut addr_u:&mut AllAddr)
-                    -> Option<AddrList> {
+pub fn find_exclude(mut zone: &AuthZone,
+                    mut flag: u32,
+                    mut addr_u: &NetAddress)
+                    -> Option<AddressListEntry> {
     if zone.exclude.is_null() { return None }
-    return find_addrlist(zone.exclude, flag, addr_u);
+    return find_addrlist(&zone.exclude, flag, addr_u);
 }
 
-pub fn filter_zone(mut zone: &mut AuthZone,
-                   mut flag: i32,
-                   mut addr_u: &mut AllAddr) -> bool {
+pub fn filter_zone(mut zone: &AuthZone,
+                   mut flag: u32,
+                   mut addr_u: &NetAddress) -> bool {
     if find_exclude(zone, flag, addr_u).is_some() { return false }
     /* No subnets specified, no filter */
     if zone.subnet.is_empty() { return true }
     return find_subnet(zone, flag, addr_u).is_some();
 }
 
-pub fn in_zone(mut zone: &mut AuthZone, mut name: &mut String, mut cut: &String) -> bool 
+pub fn in_zone(mut zone: &AuthZone, mut name: &String, mut cut: Option<&String>) -> bool
 {
     let mut namelen: usize = name.len();
     let mut domainlen: usize = zone.domain.len();
@@ -72,24 +68,27 @@ pub fn in_zone(mut zone: &mut AuthZone, mut name: &mut String, mut cut: &String)
     if namelen >= domainlen && hostname_isequal(&zone.domain, &name[domainlen..].to_string()) {
         if namelen == domainlen { return true }
         if name[domainlen] == '.' {
-            if !cut.is_empty() {
-                cut = &name[domainlen..].to_string();
+            if cut.is_some() {
+                let mut cut_val = cut.unwrap();
+                if cut_val.is_empty() == false {
+                    cut_val = &name[domainlen..].to_string();
+                }
             }
-            return true
+            true
         }
     }
-    return false;
+    false
 }
 
 pub fn answer_auth(
-    daemon: &mut DnsmasqDaemon,
+    mut daemon: &mut DnsmasqDaemon,
     mut header: &mut DnsHeader,
                        mut limit: &mut String,
-                       mut qlen: size_t, mut now: time_t,
-                       mut peer_addr: &mut MySockAddr,
-                       mut local_query: libc::c_int,
-                       mut do_bit: libc::c_int,
-                       mut have_pseudoheader: libc::c_int)
+                       mut qlen: usize, mut now: time::Instant,
+                       mut peer_addr: &mut NetAddress,
+                       mut local_query: i32,
+                       mut do_bit: i32,
+                       mut have_pseudoheader: i32)
                        -> usize {
     let mut name= daemon.namebuff.clone();
     let mut p: String;
@@ -110,15 +109,15 @@ pub fn answer_auth(
     let mut ns = 0;
     let mut axfr = 0;
     let mut zone: AuthZone;
-    let mut subnet: AddrList;
+    let mut subnet: AddressListEntry;
     let mut cut: String;
     let mut rec: MxSrvRecord;
     let mut move_0: MxSrvRecord;
-    let mut up: MxSrvRecord = 0;
+    let mut up: MxSrvRecord;
     let mut txt: TxtRecord;
     let mut intr: InterfaceName;
     let mut na: NaPtr;
-    let mut addr: AllAddr;
+    let mut addr: NetAddress;
     let mut a: Cname;
     let mut candidate: Cname;
     let mut wclen = 0;
@@ -126,58 +125,44 @@ pub fn answer_auth(
         return 0
     }
     /* determine end of question section (we put answers there) */
-    ansp = skip_questions(header, qlen); /* bad packet */
-    if ansp.is_null() { return 0 as size_t }
+    match skip_questions(header, qlen) {
+        Some(x) => ansp = x,
+        None() => return 0,
+    }; /* bad packet */
+
     /* now process each question, answers go in RRs after the question */
     p = header.offset(1);
     let mut current_block_247: u64;
     q = __bswap_16(header.qdcount);
     while q != 0 {
-        let mut flag: libc::c_uint = 0 __b;
-        let mut found: libc::c_int = 0;
-        let mut cname_wildcard: libc::c_int = 0;
+        let mut flag: u32 = 0;
+        let mut found: u32 = 0;
+        let mut cname_wildcard: u32 = 0;
         /* save pointer to name for copying into answers */
-        nameoffset =
-            p.wrapping_offset_from(header) as
-                libc::c_long;
+        nameoffset = p.wrapping_offset_from(header);
         /* now extract name as .-concatenated string into name */
-        if extract_name(header, qlen, &mut p, name, 1, 4) == 0 {
-            return 0 as size_t
+        if extract_name(header, qlen, &mut p, &mut name, 1, 4) == 0 {
+            return 0
         } /* bad packet */
-        let mut t_cp: *mut libc::c_uchar = p; /* must be bare name */
-        qtype =
-            (t_cp.offset(0) as u16)
-                << 8 |
-                t_cp.offset(1) as u16 as
-                    libc::c_int;
+        let mut t_cp: String = p; /* must be bare name */
+        qtype = (t_cp.offset(0)) << 8 | t_cp.offset(1) ;
         p = p.offset(2);
         let mut t_cp_0: String = p;
-        qclass =
-            (t_cp_0.offset(0) as u16 as
-                 libc::c_int) << 8 |
-                t_cp_0.offset(1) as u16 as
-                    libc::c_int;
+        qclass = (t_cp_0.offset(0) ) << 8 | t_cp_0.offset(1) ;
         p = p.offset(2);
         if qclass != 1 {
-            auth = 0
+            auth = false
         } else {
-            if (qtype == 12 || qtype == 6 ||
-                    qtype == 2) &&
-                   {
-                       flag =
-                           in_arpa_name_2_addr(name, &mut addr) as
-                               libc::c_uint;
-                       (flag) != 0
-                   } && local_query == 0 {
-                zone = daemon.auth_zones;
-                while !zone.is_null() {
-                    subnet =
-                        find_subnet(zone, flag, &mut addr);
-                    if !subnet.is_null() { break ; }
-                    zone = zone.next
+            if (qtype == 12 || qtype == 6 || qtype == 2) && in_arpa_name_2_addr(&mut name, &mut addr) != 0 && local_query == 0 {
+                for zone in daemon.auth_zones {
+                    match find_subnet(&zone, flag, &mut addr) {
+                        Some(_) => continue,
+                        None => break
+                    }
                 }
+
                 if zone.is_null() {
-                    auth = 0;
+                    auth = false;
                     current_block_247 = 17860125682698302841;
                 } else {
                     if qtype == 6 {
@@ -194,43 +179,30 @@ pub fn answer_auth(
                 17860125682698302841 => { }
                 _ => {
                     if qtype == 12 && flag != 0 {
-                        intr = None;
-                        if flag == (1 __b) << 7 {
-                            intr = daemon.int_names;
-                            while !intr.is_null() {
-                                let mut addrlist: AddrList;
-                                addrlist = intr.addr;
-                                while !addrlist.is_null() {
-                                    if (*addrlist).flags & 2 ==
-                                           0 &&
-                                           addr.addr4.s_addr ==
-                                               (*addrlist).addr.addr4.s_addr {
+                        // intr = None;
+                        if flag == 1 << 7 {
+                            for intr in daemon.int_names {
+                                for addr in intr.addresses {
+                                    if addr.flags & 2 == 0 && addr.addr4.s_addr == addr.addr.addr4.s_addr {
                                         break ;
                                     }
-                                    addrlist = (*addrlist).next
+                                    // addrlist = (*addrlist).next
                                 }
                                 if !addrlist.is_null() { break ; }
-                                while !intr.next.is_null() &&
-                                          strcmp(intr.intr,
-                                                 (*intr.next).intr) ==
-                                              0 {
-                                    intr = intr.next
-                                }
-                                intr = intr.next
+                                // for intr in
+                                // while !intr.next.is_null() &&
+                                //           strcmp(intr.intr, (*intr.next).intr) == 0 {
+                                //     // intr = intr.next
+                                // }
+                                // intr = intr.next
                             }
-                        } else if flag ==
-                                      (1 __b) << 8
-                         {
-                            intr = daemon.int_names;
-                            while !intr.is_null() {
-                                let mut addrlist_0: AddrList;
-                                addrlist_0 = intr.addr;
-                                while !addrlist_0.is_null() {
-                                    if addrlist_0.flags & 2
-                                           != 0 &&
-                                           ({
-                                                let mut __a: In6Addr = addr.addr6.clone();
-                                                let mut __b: In6Addr = addrlist_0.addr.addr6.clone();
+                        } else if flag == 1 << 8 {
+                            for intr in daemon.int_names {
+                                let mut addrlist_0: AddressListEntry;
+                                for addrlist_0 in intr.addresses {
+                                    if addrlist_0.flags & 2 != 0 && ({
+                                                let mut __a: NetAddress = addr.addr6.clone();
+                                                let mut __b: NetAddress = addrlist_0.addr.addr6.clone();
                                                 (__a.__in6_u.__u6_addr32[0]
                                                      ==
                                                      __b.__in6_u.__u6_addr32[0]
@@ -250,418 +222,248 @@ pub fn answer_auth(
                                             }) != false {
                                         break ;
                                     }
-                                    addrlist_0 = addrlist_0.next
+                                    // addrlist_0 = addrlist_0.next
                                 }
                                 if !addrlist_0.is_null() { break ; }
-                                while !intr.next.is_null() &&
-                                          strcmp(intr.intr, (*intr.next).intr) ==
-                                              0 {
-                                    intr = intr.next
-                                }
-                                intr = intr.next
+                                // while !intr.next.is_null() && strcmp(intr.intr, (*intr.next).intr) ==
+                                //               0 {
+                                //     intr = intr.next
+                                // }
+                                // intr = intr.next
                             }
                         }
                         if !intr.is_null() {
                             if local_query != 0 ||
-                                   in_zone(zone, intr.name, 0) != false {
+                                   in_zone(&zone, &intr.name, None) != false {
                                 found = 1;
-                                log_query(flag | (1 __b) << 2 | (1 __b) << 13,
-                                          intr.name,
-                                &mut addr,
-                                          0 as *mut libc::c_char);
+                                log_query(&mut daemon,flag | (1 << 2) | (1 << 13), &intr.name, &mut addr, None );
                                 if add_resource_record(header,
                                                        limit,
-                                                       &mut trunc,
+                                                       trunc,
                                                        nameoffset,
                                                        &mut ansp,
                                                        daemon.auth_ttl,
                                                        0,
                                                        12,
                                                        1,
-                                                       b"d\x00",
-                                                       intr.name) != 0 {
+                                                       &format!("{}", intr.name)) != 0 {
                                     anscount += 1
                                 }
                             }
                         }
-                        crecp =
-                            cache_find_by_addr(0 as *mut Crec, &mut addr, now,
-                                               flag);
+                        crecp = cache_find_by_addr(None, &mut addr, now, flag);
                         if !crecp.is_null() {
                             loop  {
-                                strcpy(name, cache_get_name(crecp));
-                                if (*crecp).flags &
-                                       (1 __b) << 4
-                                       != 0 &&
-                                       daemon.options[(20 as
-                                                                      libc::c_int
-                                                                      as
-                                                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                       as
-                                                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                                                       as
-                                                                                                                                       libc::c_int
-                                                                                                                                       as
-                                                                                                                                       libc::c_ulong))
-                                                                     as usize]
-                                           &
-                                           (1 __b) <<
-                                               (20 as
-                                                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                     as
-                                                                                     libc::c_ulong).wrapping_mul(8
-                                                                                                                     as
-                                                                                                                     libc::c_int
-                                                                                                                     as
-                                                                                                                     libc::c_ulong))
-                                           == 0 {
-                                    let mut p_0: *mut libc::c_char =
-                                        strchr(name, '.' as i32);
-                                    if !p_0.is_null() {
-                                        *p_0 =
-                                            0 as libc::c_char
+                                name = cache_get_name(crecp);
+                                if crecp.flags & (1 << 4) != 0 && daemon.options[20] == false {
+                                    // let mut p_0: String = strchr(name, '.' as i32);
+                                    let mut p_0: String = String::new();
+                                    let idx = name.find(".");
+                                    if idx.is_none() {
+                                        p_0 = String::new();
+                                    } else {
+                                        p_0 = name[idx..].to_string();
                                     }
                                     /* add  external domain */
                                     if !zone.is_null() {
-                                        strcat(name,
-                                               b".\x00" as *const u8 as
-                                                   *const libc::c_char);
-                                        strcat(name, zone.domain);
+                                        name = name + "." + zone.domain.as_str();
                                     }
-                                    log_query(flag |
-                                                  (1 __b) <<
-                                                      4 |
-                                                  (1 __b) <<
-                                                      2, name,
-                                              &mut addr,
-                                              record_source((*crecp).uid));
+                                    log_query(daemon, flag | (1 << 4) | (1 << 2), &name,
+                                              &mut addr, Some(record_source(crecp.uid)));
                                     found = 1;
-                                    if add_resource_record(header, limit,
-                                                           &mut trunc as
-                                                               *mut libc::c_int,
-                                                           nameoffset,
-                                                           &mut ansp as
-                                                               *mut *mut libc::c_uchar,
-                                                           daemon.auth_ttl,
-                                                           0 as
-                                                               *mut libc::c_int,
-                                                           12
-                                                               as
-                                                               libc::c_ushort,
-                                                           1 as
-                                                               libc::c_ushort,
-                                                           b"d\x00" as
-                                                               *const u8 as
-                                                               *const libc::c_char
-                                                               as
-                                                               *mut libc::c_char,
-                                                           name) != 0 {
+                                    if add_resource_record(header, limit, trunc, nameoffset, &mut ansp, daemon.auth_ttl, 0 , 12 , 1 , &name) != 0 {
                                         anscount += 1
                                     }
-                                } else if (*crecp).flags &
-                                              ((1 __b) <<
-                                                   4 |
-                                                   (1 __b) <<
-                                                       6) != 0
-                                              &&
-                                              (local_query != 0 ||
-                                                   in_zone(zone, name,
-                                                           0 as
-                                                               *mut *mut libc::c_char)
-                                                       != 0) {
-                                    log_query((*crecp).flags &
-                                                  !((1 __b) <<
-                                                        3),
-                                              name, &mut addr,
-                                              record_source((*crecp).uid));
+                                } else if crecp.flags & (1 << 4) | (1 << 6) != 0
+                                              && (local_query != 0 || in_zone(&zone, &name, None ) != false) {
+                                    log_query(daemon, crecp.flags & !(1<< 3), &name, &mut addr,
+                                              Some(record_source(crecp.uid)));
                                     found = 1;
                                     if add_resource_record(header, limit,
-                                                           &mut trunc as
-                                                               *mut libc::c_int,
+                                                           trunc ,
                                                            nameoffset,
-                                                           &mut ansp as
-                                                               *mut *mut libc::c_uchar,
+                                                           &mut ansp ,
                                                            daemon.auth_ttl,
-                                                           0 as
-                                                               *mut libc::c_int,
-                                                           12
-                                                               as
-                                                               libc::c_ushort,
-                                                           1 as
-                                                               libc::c_ushort,
-                                                           b"d\x00" as
-                                                               *const u8 as
-                                                               *const libc::c_char
-                                                               as
-                                                               *mut libc::c_char,
-                                                           name) != 0 {
+                                                           0 ,
+                                                           12,
+                                                           1,
+                                                           &name) != 0 {
                                         anscount += 1
                                     }
                                 }
-                                crecp =
-                                    cache_find_by_addr(crecp, &mut addr, now,
-                                                       flag);
+                                crecp = cache_find_by_addr(crecp, &mut addr, now, flag);
                                 if crecp.is_null() { break ; }
                             }
                         }
                         if found != 0 {
                             nxdomain = 0
                         } else {
-                            log_query(flag |
-                                          (1 __b) <<
-                                              5 |
-                                          (1 __b) <<
-                                              10 |
-                                          (1 __b) <<
-                                              2 |
-                                          (if auth != 0 {
-                                               ((1 __b)) <<
-                                                   21
-                                           } else {
-                                               0 as
-                                                   libc::c_uint
-                                           }), 0 as *mut libc::c_char,
-                                      &mut addr, 0 as *mut libc::c_char);
+                            // log_query(daemon, flag | ( 1 << 5) | ( 1 << 10) | (1 << 2) |
+                            //               (if auth != false {
+                            //                    1 << 21
+                            //                } else {
+                            //                    0
+                            //                }), &format!("addr: {}", addr));
                         }
                     } else {
                         loop  {
                             if found != 0 {
                                 /* NS and SOA .arpa requests have set found above. */
-                                cut = 0 as *mut libc::c_char
+                                cut = String::new()
                             } else {
-                                zone = daemon.auth_zones;
-                                while !zone.is_null() {
-                                    if in_zone(zone, name, &mut cut) != 0 {
-                                        break ;
+                                for zone in daemon.auth_zones {
+                                    if in_zone(&zone, &name, Some(&cut)) != false {
+                                        break;
                                     }
-                                    zone = zone.next
                                 }
+
                                 if zone.is_null() {
-                                    auth = 0;
+                                    auth = false;
                                     break ;
                                 }
                             }
-                            rec = daemon.mxnames;
-                            while !rec.is_null() {
-                                if (*rec).issrv == 0 &&
+                            for rec in daemon.mxnames {
+                                if rec.issrv == 0 &&
                                        {
-                                           rc =
-                                               hostname_issubdomain(name,
-                                                                    (*rec).name);
+                                           rc = hostname_issubdomain(&name, &rec.name);
                                            (rc) != 0
                                        } {
                                     nxdomain = 0;
-                                    if rc == 2 &&
-                                           qtype == 15 {
+                                    if rc == 2 && qtype == 15 {
                                         found = 1;
-                                        log_query((1 __b) <<
-                                                      13 |
-                                                      (1 __b) <<
-                                                          17,
-                                                  name, 0 as *mut AllAddr,
-                                                  b"<MX>\x00" as *const u8 as
-                                                      *const libc::c_char as
-                                                      *mut libc::c_char);
+                                        // log_query((1 __b) <<
+                                        //               13 |
+                                        //               (1 __b) <<
+                                        //                   17,
+                                        //           name, 0 ,
+                                        //           b"<MX>\x00" );
                                         if add_resource_record(header, limit,
-                                                               &mut trunc as
-                                                                   *mut libc::c_int,
+                                                               trunc ,
                                                                nameoffset,
-                                                               &mut ansp as
-                                                                   *mut *mut libc::c_uchar,
+                                                               &mut ansp ,
                                                                daemon.auth_ttl,
-                                                               0 as
-                                                                   *mut libc::c_int,
-                                                               15 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               1 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               b"sd\x00" as
-                                                                   *const u8
-                                                                   as
-                                                                   *const libc::c_char
-                                                                   as
-                                                                   *mut libc::c_char,
-                                                               (*rec).weight,
-                                                               (*rec).target)
-                                               != 0 {
+                                                               0 ,
+                                                               15 ,
+                                                               1 ,
+                                                               &format!("{}{}", rec.weight, rec.target)) != 0 {
                                             anscount += 1
                                         }
                                     }
                                 }
-                                rec = (*rec).next
+                                // rec = rec.next
                             }
-                            move_0 = 0 as *mut MxSrvRecord;
-                            up = &mut daemon.mxnames;
-                            rec = daemon.mxnames;
+                            move_0 = Default::default();
+                            // up = daemon.mxnames;
+                            // rec = daemon.mxnames;
                             while !rec.is_null() {
-                                if (*rec).issrv != 0 &&
+                                if rec.issrv != 0 &&
                                        {
-                                           rc =
-                                               hostname_issubdomain(name,
-                                                                    (*rec).name);
+                                           rc = hostname_issubdomain(&name, &rec.name);
                                            (rc) != 0
                                        } {
                                     nxdomain = 0;
-                                    if rc == 2 &&
-                                           qtype == 33 {
+                                    if rc == 2 && qtype == 33 {
                                         found = 1;
-                                        log_query((1 __b) <<
-                                                      13 |
-                                                      (1 __b) <<
-                                                          17,
-                                                  name, 0 as *mut AllAddr,
-                                                  b"<SRV>\x00" as *const u8 as
-                                                      *const libc::c_char as
-                                                      *mut libc::c_char);
+                                        // log_query((1 __b) <<
+                                        //               13 |
+                                        //               (1 __b) <<
+                                        //                   17,
+                                        //           name, 0 ,
+                                        //           b"<SRV>\x00" );
                                         if add_resource_record(header, limit,
-                                                               &mut trunc as
-                                                                   *mut libc::c_int,
+                                                               trunc ,
                                                                nameoffset,
-                                                               &mut ansp as
-                                                                   *mut *mut libc::c_uchar,
+                                                               &mut ansp ,
                                                                daemon.auth_ttl,
-                                                               0 as
-                                                                   *mut libc::c_int,
-                                                               33 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               1 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               b"sssd\x00" as
-                                                                   *const u8
-                                                                   as
-                                                                   *const libc::c_char
-                                                                   as
-                                                                   *mut libc::c_char,
-                                                               (*rec).priority,
-                                                               (*rec).weight,
-                                                               (*rec).srvport,
-                                                               (*rec).target)
+                                                               0 ,
+                                                               33 ,
+                                                               1 ,
+                                                               &format!("{}{}{}{}", rec.priority,
+                                                                       rec.weight,
+                                                                       rec.srvport,
+                                                                       rec.target)                                                               )
                                                != 0 {
                                             anscount += 1
                                         }
                                     }
                                     /* unlink first SRV record found */
                                     if move_0.is_null() {
-                                        move_0 = rec;
-                                        *up = (*rec).next
-                                    } else { up = &mut (*rec).next }
-                                } else { up = &mut (*rec).next }
-                                rec = (*rec).next
+                                        // move_0 = rec;
+                                        // *up = rec.next
+                                    } else { 
+                                        // up = &mut rec.next 
+                                    }
+                                } else { 
+                                    // up = &mut rec.next 
+                                }
+                                // rec = rec.next
                             }
                             /* put first SRV record back at the end. */
                             if !move_0.is_null() {
                                 *up = move_0; /* inhibits auth section */
-                                (*move_0).next = 0 as *mut MxSrvRecord
+                                (*move_0).next = 0
                             }
                             txt = daemon.rr;
                             while !txt.is_null() {
-                                rc = hostname_issubdomain(name, (*txt).name);
+                                rc = hostname_issubdomain(&name, &txt.name);
                                 if rc != 0 {
                                     nxdomain = 0;
-                                    if rc == 2 &&
-                                           (*txt).class ==
-                                               qtype {
+                                    if rc == 2 && txt.class == qtype {
                                         found = 1;
-                                        log_query((1 __b) <<
-                                                      13 |
-                                                      (1 __b) <<
-                                                          17,
-                                                  name, 0 as *mut AllAddr,
-                                                  querystr(0 as
-                                                               *mut libc::c_char,
-                                                           (*txt).class));
+                                        // log_query((1 __b) <<
+                                        //               13 |
+                                        //               (1 __b) <<
+                                        //                   17,
+                                        //           name, 0 ,
+                                        //           querystr(0 ,
+                                        //                    txt.class));
                                         if add_resource_record(header, limit,
-                                                               &mut trunc as
-                                                                   *mut libc::c_int,
+                                                               trunc ,
                                                                nameoffset,
-                                                               &mut ansp as
-                                                                   *mut *mut libc::c_uchar,
+                                                               &mut ansp ,
                                                                daemon.auth_ttl,
-                                                               0 as
-                                                                   *mut libc::c_int,
-                                                               (*txt).class,
-                                                               1 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               b"t\x00" as
-                                                                   *const u8
-                                                                   as
-                                                                   *const libc::c_char
-                                                                   as
-                                                                   *mut libc::c_char,
-                                                               (*txt).len as
-                                                                   libc::c_int,
-                                                               (*txt).txt) !=
-                                               0 {
+                                                               0 ,
+                                                               txt.class,
+                                                               1 ,
+                                                               &format!("{}{}", txt.len, txt.txt)) != 0 {
                                             anscount += 1
                                         }
                                     }
                                 }
-                                txt = (*txt).next
+                                // txt = txt.next
                             }
                             txt = daemon.txt;
                             while !txt.is_null() {
-                                if (*txt).class ==
-                                       1 &&
-                                       {
-                                           rc =
-                                               hostname_issubdomain(name,
-                                                                    (*txt).name);
+                                if txt.class == 1 && {
+                                           rc = hostname_issubdomain(&name, &txt.name);
                                            (rc) != 0
                                        } {
                                     nxdomain = 0;
-                                    if rc == 2 &&
-                                           qtype == 16 {
+                                    if rc == 2 && qtype == 16 {
                                         found = 1;
-                                        log_query((1 __b) <<
-                                                      13 |
-                                                      (1 __b) <<
-                                                          17,
-                                                  name, 0 as *mut AllAddr,
-                                                  b"<TXT>\x00" as *const u8 as
-                                                      *const libc::c_char as
-                                                      *mut libc::c_char);
+                                        // log_query((1 __b) <<
+                                        //               13 |
+                                        //               (1 __b) <<
+                                        //                   17,
+                                        //           name, 0 ,
+                                        //           b"<TXT>\x00" );
                                         if add_resource_record(header, limit,
-                                                               &mut trunc as
-                                                                   *mut libc::c_int,
+                                                               trunc ,
                                                                nameoffset,
-                                                               &mut ansp as
-                                                                   *mut *mut libc::c_uchar,
+                                                               &mut ansp ,
                                                                daemon.auth_ttl,
-                                                               0 as
-                                                                   *mut libc::c_int,
-                                                               16 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               1 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               b"t\x00" as
-                                                                   *const u8
-                                                                   as
-                                                                   *const libc::c_char
-                                                                   as
-                                                                   *mut libc::c_char,
-                                                               (*txt).len as
-                                                                   libc::c_int,
-                                                               (*txt).txt) !=
+                                                               0 ,
+                                                               16 ,
+                                                               1 ,
+                                                               &format!("{}{}",
+                                                               txt.len ,
+                                                               txt.txt)) !=
                                                0 {
                                             anscount += 1
                                         }
                                     }
                                 }
-                                txt = (*txt).next
+                                txt = txt.next
                             }
                             na = daemon.naptr;
                             while !na.is_null() {
@@ -675,34 +477,18 @@ pub fn answer_auth(
                                                       13 |
                                                       (1 __b) <<
                                                           17,
-                                                  name, 0 as *mut AllAddr,
-                                                  b"<NAPTR>\x00" as *const u8
-                                                      as *const libc::c_char
-                                                      as *mut libc::c_char);
+                                                  name, 0 ,
+                                                  b"<NAPTR>\x00" );
                                         if add_resource_record(header, limit,
-                                                               &mut trunc as
-                                                                   *mut libc::c_int,
+                                                               &mut trunc ,
                                                                nameoffset,
-                                                               &mut ansp as
-                                                                   *mut *mut libc::c_uchar,
+                                                               &mut ansp ,
                                                                daemon.auth_ttl,
-                                                               0 as
-                                                                   *mut libc::c_int,
-                                                               35 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
-                                                               1 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ushort,
+                                                               0 ,
+                                                               35 ,
+                                                               1 ,
                                                                b"sszzzd\x00"
-                                                                   as
-                                                                   *const u8
-                                                                   as
-                                                                   *const libc::c_char
-                                                                   as
-                                                                   *mut libc::c_char,
+                                                                   ,
                                                                (*na).order,
                                                                (*na).pref,
                                                                (*na).flags,
@@ -726,11 +512,11 @@ pub fn answer_auth(
                             while !intr.is_null() {
                                 rc = hostname_issubdomain(name, intr.name);
                                 if rc != 0 {
-                                    let mut addrlist_1: *mut AddrList =
-                                        0 as *mut AddrList;
+                                    let mut addrlist_1: *mut AddressListEntry =
+                                        0 ;
                                     nxdomain = 0;
                                     if rc == 2 && flag != 0 {
-                                        addrlist_1 = intr.addr;
+                                        addrlist_1 = intr.addresses;
                                         while !addrlist_1.is_null() {
                                             if (if (*addrlist_1).flags &
                                                        2 != 0 {
@@ -739,74 +525,52 @@ pub fn answer_auth(
                                                    == qtype &&
                                                    (local_query != 0 ||
                                                         filter_zone(zone,
-                                                                    flag as
-                                                                        libc::c_int,
+                                                                    flag ,
                                                                     &mut (*addrlist_1).addr)
                                                             != 0) {
                                                 if !((*addrlist_1).flags &
                                                          4 !=
                                                          0) {
                                                     found = 1;
-                                                    log_query((1 as
-                                                                   libc::c_uint)
+                                                    log_query((1 )
                                                                   <<
-                                                                  3 as
-                                                                      libc::c_int
+                                                                  3
                                                                   |
-                                                                  (1 as
-                                                                       libc::c_uint)
+                                                                  (1 )
                                                                       <<
-                                                                      13 as
-                                                                          libc::c_int
+                                                                      13
                                                                   | flag,
                                                               name,
                                                               &mut (*addrlist_1).addr,
-                                                              0 as
-                                                                  *mut libc::c_char);
+                                                              0 );
                                                     if add_resource_record(header,
                                                                            limit,
                                                                            &mut trunc
-                                                                               as
-                                                                               *mut libc::c_int,
+                                                                               ,
                                                                            nameoffset,
                                                                            &mut ansp
-                                                                               as
-                                                                               *mut *mut libc::c_uchar,
+                                                                               ,
                                                                            daemon.auth_ttl,
                                                                            0
-                                                                               as
-                                                                               *mut libc::c_int,
+                                                                               ,
                                                                            qtype
-                                                                               as
-                                                                               libc::c_ushort,
+                                                                               ,
                                                                            1
-                                                                               as
-                                                                               libc::c_int
-                                                                               as
-                                                                               libc::c_ushort,
+                                                                               ,
                                                                            if qtype
                                                                                   ==
                                                                                   1
-                                                                                      as
-                                                                                      libc::c_int
+
                                                                               {
                                                                                b"4\x00"
-                                                                                   as
-                                                                                   *const u8
-                                                                                   as
-                                                                                   *const libc::c_char
+
                                                                            } else {
                                                                                b"6\x00"
-                                                                                   as
-                                                                                   *const u8
-                                                                                   as
-                                                                                   *const libc::c_char
+
                                                                            }
-                                                                               as
-                                                                               *mut libc::c_char,
+                                                                               ,
                                                                            &mut (*addrlist_1).addr
-                                                                               as
-                                                                               *mut AllAddr)
+                                                                               )
                                                            != 0 {
                                                         anscount += 1
                                                     }
@@ -829,26 +593,22 @@ pub fn answer_auth(
                                                   (1 __b) <<
                                                       21,
                                               zone.domain,
-                                              0 as *mut AllAddr,
-                                              b"<SOA>\x00" as *const u8 as
-                                                  *const libc::c_char as
-                                                  *mut libc::c_char);
+                                              0 ,
+                                              b"<SOA>\x00" );
                                 } else if qtype == 252 {
-                                    let mut peers: *mut Iname =
-                                        0 as *mut Iname;
-                                    if (*peer_addr).sa.sa_family as
-                                           libc::c_int == 2 {
+                                    let mut peers: Iname;
+                                    if (*peer_addr).sa.sa_family  == 2 {
                                         (*peer_addr).in_0.sin_port =
-                                            0 as in_port_t
+                                            0 =
                                     } else {
                                         (*peer_addr).in6.sin6_port =
-                                            0 as in_port_t;
+                                            0 ;
                                         (*peer_addr).in6.sin6_scope_id =
-                                            0 as u32
+                                            0
                                     }
                                     peers = daemon.auth_peers;
                                     while !peers.is_null() {
-                                        if sockaddr_isequal(peer_addr,
+                                        if NetAddress_isequal(peer_addr,
                                                             &mut (*peers).addr)
                                                != 0 {
                                             break ;
@@ -862,31 +622,25 @@ pub fn answer_auth(
                                            ||
                                            !daemon.auth_peers.is_null()
                                                && peers.is_null() {
-                                        if (*peer_addr).sa.sa_family as
-                                               libc::c_int == 2
+                                        if (*peer_addr).sa.sa_family                                         libc::c_int == 2
                                            {
                                             inet_ntop(2,
                                                       &mut (*peer_addr).in_0.sin_addr
-                                                          as *mut InAddr as
-                                                          *const libc::c_void,
+                                                          ,
                                                       daemon.addrbuff,
-                                                      46 as
-                                                          socklen_t); /* inhibits auth section */
+                                                      46       socklen_t); /* inhibits auth section */
                                         } else {
                                             inet_ntop(10,
                                                       &mut (*peer_addr).in6.sin6_addr
-                                                          as *mut In6Addr as
-                                                          *const libc::c_void,
+                                                          ,
                                                       daemon.addrbuff,
-                                                      46 as
-                                                          socklen_t); /* ensure we include NS records! */
+                                                      46       socklen_t); /* ensure we include NS records! */
                                         } /* inhibits auth section */
                                         my_syslog(4,
                                                   b"ignoring zone transfer request from %s\x00"
-                                                      as *const u8 as
-                                                      *const libc::c_char,
+                                                      ,
                                                   daemon.addrbuff); /* remove domain part */
-                                        return 0 as size_t
+                                        return 0
                                     }
                                     auth = 1;
                                     soa = 1;
@@ -899,10 +653,8 @@ pub fn answer_auth(
                                                   (1 __b) <<
                                                       21,
                                               zone.domain,
-                                              0 as *mut AllAddr,
-                                              b"<AXFR>\x00" as *const u8 as
-                                                  *const libc::c_char as
-                                                  *mut libc::c_char);
+                                              0 ,
+                                              b"<AXFR>\x00" );
                                 } else if qtype == 2 {
                                     auth = 1;
                                     ns = 1;
@@ -912,116 +664,80 @@ pub fn answer_auth(
                                                   (1 __b) <<
                                                       21,
                                               zone.domain,
-                                              0 as *mut AllAddr,
-                                              b"<NS>\x00" as *const u8 as
-                                                  *const libc::c_char as
-                                                  *mut libc::c_char);
+                                              0 ,
+                                              b"<NS>\x00" );
                                 }
                             }
-                            if daemon.options[(20 as
-                                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                               as
-                                                                                               libc::c_ulong).wrapping_mul(8
-                                                                                                                               as
-                                                                                                                               libc::c_int
-                                                                                                                               as
-                                                                                                                               libc::c_ulong))
-                                                             as usize] &
+                            if daemon.options[(20    libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                                                            ).wrapping_mul(8                                                                      libc::c_int                                                               ))
+                                                             ] &
                                    (1 __b) <<
-                                       (20 as
-                                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                             as
-                                                                             libc::c_ulong).wrapping_mul(8
-                                                                                                             as
-                                                                                                             libc::c_int
-                                                                                                             as
-                                                                                                             libc::c_ulong))
+                                       (20).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
                                    == 0 && !cut.is_null() {
-                                *cut = 0 as libc::c_char;
+                                *cut = 0;
                                 if strchr(name, '.' as i32).is_null() &&
                                        {
                                            crecp =
-                                               cache_find_by_name(0 as
-                                                                      *mut Crec,
+                                               cache_find_by_name(0            Crec,
                                                                   name, now,
-                                                                  (1 as
-                                                                       libc::c_uint)
+                                                                  (1             libc::c_uint)
                                                                       <<
-                                                                      7 as
-                                                                          libc::c_int
+                                                                      7                libc::c_int
                                                                       |
-                                                                      (1 as
-                                                                           libc::c_uint)
+                                                                      (1                 libc::c_uint)
                                                                           <<
-                                                                          8 as
-                                                                              libc::c_int);
+                                                                          8                    libc::c_int);
                                            !crecp.is_null()
                                        } {
-                                    if (*crecp).flags &
+                                    if crecp.flags &
                                            (1 __b) <<
                                                4 != 0 {
                                         loop  {
                                             nxdomain = 0;
-                                            if (*crecp).flags & flag != 0 &&
+                                            if crecp.flags & flag != 0 &&
                                                    (local_query != 0 ||
                                                         filter_zone(zone,
-                                                                    flag as
-                                                                        libc::c_int,
-                                                                    &mut (*crecp).addr)
+                                                                    flag              libc::c_int,
+                                                                    &mut crecp.addr)
                                                             != 0) {
                                                 /* restore domain part */
                                                 *cut =
-                                                    '.' as i32 as
-                                                        libc::c_char; /* restore domain part */
-                                                log_query((*crecp).flags,
+                                                    '.' as i32     libc::c_char; /* restore domain part */
+                                                log_query(crecp.flags,
                                                           name,
-                                                          &mut (*crecp).addr,
-                                                          record_source((*crecp).uid)); /* remove domain part */
+                                                          &mut crecp.addr,
+                                                          record_source(crecp.uid)); /* remove domain part */
                                                 *cut =
-                                                    0 as
-                                                        libc::c_char;
+                                                    0     libc::c_char;
                                                 found = 1;
                                                 if add_resource_record(header,
                                                                        limit,
                                                                        &mut trunc
-                                                                           as
-                                                                           *mut libc::c_int,
+                                                                                           ,
                                                                        nameoffset,
                                                                        &mut ansp
-                                                                           as
-                                                                           *mut *mut libc::c_uchar,
+                                                                                           ,
                                                                        daemon.auth_ttl,
-                                                                       0 as
-                                                                           *mut libc::c_int,
+                                                                       0                 ,
                                                                        qtype
-                                                                           as
-                                                                           libc::c_ushort,
-                                                                       1 as
-                                                                           libc::c_int
-                                                                           as
-                                                                           libc::c_ushort,
+                                                                                        ,
+                                                                       1                 libc::c_int
+                                                                                        ,
                                                                        if qtype
                                                                               ==
                                                                               1
-                                                                                  as
-                                                                                  libc::c_int
+                                                                                                         libc::c_int
                                                                           {
                                                                            b"4\x00"
-                                                                               as
-                                                                               *const u8
-                                                                               as
-                                                                               *const libc::c_char
+                                                                                                   *const u8
+                                                                                                   *const libc::c_char
                                                                        } else {
                                                                            b"6\x00"
-                                                                               as
-                                                                               *const u8
-                                                                               as
-                                                                               *const libc::c_char
-                                                                       } as
-                                                                           *mut libc::c_char,
-                                                                       &mut (*crecp).addr
-                                                                           as
-                                                                           *mut AllAddr)
+                                                                                                   *const u8
+                                                                                                   *const libc::c_char
+                                                                       }                 &mut String,
+                                                                       &mut crecp.addr
+                                                                                       )
                                                        != 0 {
                                                     anscount += 1
                                                 }
@@ -1029,111 +745,78 @@ pub fn answer_auth(
                                             crecp =
                                                 cache_find_by_name(crecp,
                                                                    name, now,
-                                                                   (1 as
-                                                                        libc::c_uint)
+                                                                   (1              libc::c_uint)
                                                                        <<
-                                                                       7 as
-                                                                           libc::c_int
+                                                                       7                 libc::c_int
                                                                        |
-                                                                       (1 as
-                                                                            libc::c_uint)
+                                                                       (1                  libc::c_uint)
                                                                            <<
                                                                            8
-                                                                               as
-                                                                               libc::c_int);
+                                                                                                   libc::c_int);
                                             if crecp.is_null() { break ; }
                                         }
                                     }
                                 }
-                                *cut = '.' as i32 as libc::c_char
+                                *cut = '.'
                             }
                             crecp =
-                                cache_find_by_name(0 as *mut Crec, name, now,
+                                cache_find_by_name(0 , name, now,
                                                    (1 __b) <<
                                                        7 |
                                                        (1 __b) <<
                                                            8);
                             if !crecp.is_null() {
-                                if (*crecp).flags &
+                                if crecp.flags &
                                        (1 __b) << 6
                                        != 0 ||
-                                       (*crecp).flags &
+                                       crecp.flags &
                                            (1 __b) <<
                                                4 != 0 &&
-                                           daemon.options[(20 as
-                                                                          libc::c_int
-                                                                          as
-                                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           as
-                                                                                                           libc::c_ulong).wrapping_mul(8
-                                                                                                                                           as
-                                                                                                                                           libc::c_int
-                                                                                                                                           as
-                                                                                                                                           libc::c_ulong))
-                                                                         as
-                                                                         usize]
+                                           daemon.options[(20                libc::c_int
+                                                                                  ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                       ).wrapping_mul(8                                                                                              libc::c_int                                                                                       ))
+                                                                                       usize]
                                                &
                                                (1 __b) <<
-                                                   (20 as
-                                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                         as
-                                                                                         libc::c_ulong).wrapping_mul(8
-                                                                                                                         as
-                                                                                                                         libc::c_int
-                                                                                                                         as
-                                                                                                                         libc::c_ulong))
+                                                   (20     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                                                                ).wrapping_mul(8                                                          libc::c_int                                                   ))
                                                != 0 {
                                     loop  {
                                         nxdomain = 0;
-                                        if (*crecp).flags & flag != 0 &&
+                                        if crecp.flags & flag != 0 &&
                                                (local_query != 0 ||
                                                     filter_zone(zone,
-                                                                flag as
-                                                                    libc::c_int,
-                                                                &mut (*crecp).addr)
+                                                                flag          libc::c_int,
+                                                                &mut crecp.addr)
                                                         != 0) {
-                                            log_query((*crecp).flags, name,
-                                                      &mut (*crecp).addr,
-                                                      record_source((*crecp).uid));
+                                            log_query(crecp.flags, name,
+                                                      &mut crecp.addr,
+                                                      record_source(crecp.uid));
                                             found = 1;
                                             if add_resource_record(header,
                                                                    limit,
                                                                    &mut trunc
-                                                                       as
-                                                                       *mut libc::c_int,
+                                                                                   ,
                                                                    nameoffset,
                                                                    &mut ansp
-                                                                       as
-                                                                       *mut *mut libc::c_uchar,
+                                                                                   ,
                                                                    daemon.auth_ttl,
-                                                                   0 as
-                                                                       *mut libc::c_int,
-                                                                   qtype as
-                                                                       libc::c_ushort,
-                                                                   1 as
-                                                                       libc::c_int
-                                                                       as
-                                                                       libc::c_ushort,
+                                                                   0             ,
+                                                                   qtype          ,
+                                                                   1             libc::c_int
+                                                                                ,
                                                                    if qtype ==
-                                                                          1 as
-                                                                              libc::c_int
+                                                                          1                    libc::c_int
                                                                       {
                                                                        b"4\x00"
-                                                                           as
-                                                                           *const u8
-                                                                           as
-                                                                           *const libc::c_char
+                                                                                           *const u8
+                                                                                           *const libc::c_char
                                                                    } else {
                                                                        b"6\x00"
-                                                                           as
-                                                                           *const u8
-                                                                           as
-                                                                           *const libc::c_char
-                                                                   } as
-                                                                       *mut libc::c_char,
-                                                                   &mut (*crecp).addr
-                                                                       as
-                                                                       *mut AllAddr)
+                                                                                           *const u8
+                                                                                           *const libc::c_char
+                                                                   }             &mut String,
+                                                                   &mut crecp.addr
+                                                                               )
                                                    != 0 {
                                                 anscount += 1
                                             }
@@ -1141,17 +824,13 @@ pub fn answer_auth(
                                         crecp =
                                             cache_find_by_name(crecp, name,
                                                                now,
-                                                               (1 as
-                                                                    libc::c_uint)
+                                                               (1          libc::c_uint)
                                                                    <<
-                                                                   7 as
-                                                                       libc::c_int
+                                                                   7             libc::c_int
                                                                    |
-                                                                   (1 as
-                                                                        libc::c_uint)
+                                                                   (1              libc::c_uint)
                                                                        <<
-                                                                       8 as
-                                                                           libc::c_int);
+                                                                       8                 libc::c_int);
                                         if crecp.is_null() { break ; }
                                     }
                                 }
@@ -1165,31 +844,26 @@ pub fn answer_auth(
 	     but return a longer (better) match to b.simon.
 	  */
                             wclen = 0 __b;
-                            candidate = 0 as *mut Cname;
+                            candidate = 0 ;
                             a = daemon.cnames;
                             while !a.is_null() {
-                                if *(*a).alias.offset(0 as
-                                                          isize) as
-                                       libc::c_int == '*' as i32 {
-                                    let mut test: *mut libc::c_char = name;
+                                if *(*a).alias.offset(0       isize)                                 libc::c_int == '*' as i32 {
+                                    let mut test: &mut String = name;
                                     loop  {
                                         test =
-                                            strchr(test.offset(1 as
-                                                                   libc::c_int
+                                            strchr(test.offset(1         libc::c_int
                                                                   ),
                                                    '.' as i32);
                                         if test.is_null() { break ; }
                                         if !(hostname_isequal(test,
                                                               &mut *(*a).alias.offset(1
-                                                                                          as
-                                                                                          libc::c_int
-                                                                                          as
-                                                                                          isize))
+                                                                                                                         libc::c_int
+                                                                                   ))
                                                  != 0) {
                                             continue ;
                                         }
                                         if strlen(test) >
-                                               wclen as libc::c_ulong &&
+                                               wclen &&
                                                cname_wildcard == 0 {
                                             wclen =
                                                 strlen(test) __b;
@@ -1201,7 +875,7 @@ pub fn answer_auth(
                                 } else if hostname_isequal((*a).alias, name)
                                               != 0 &&
                                               strlen((*a).alias) >
-                                                  wclen as libc::c_ulong {
+                                                  wclen {
                                     /* Simple case, no wildcard */
                                     wclen =
                                         strlen((*a).alias) __b;
@@ -1214,34 +888,25 @@ pub fn answer_auth(
                                               13 |
                                               (1 __b) <<
                                                   11, name,
-                                          0 as *mut AllAddr,
-                                          0 as *mut libc::c_char);
+                                          0 ,
+                                          0 );
                                 strcpy(name, (*candidate).target);
                                 if strchr(name, '.' as i32).is_null() {
                                     strcat(name,
-                                           b".\x00" as *const u8 as
-                                               *const libc::c_char);
+                                           b".\x00" );
                                     strcat(name, zone.domain);
                                 }
                                 found = 1;
                                 if add_resource_record(header, limit,
-                                                       &mut trunc as
-                                                           *mut libc::c_int,
+                                                       &mut trunc ,
                                                        nameoffset,
-                                                       &mut ansp as
-                                                           *mut *mut libc::c_uchar,
+                                                       &mut ansp ,
                                                        daemon.auth_ttl,
-                                                       &mut nameoffset as
-                                                           *mut libc::c_int,
-                                                       5 as
-                                                           libc::c_ushort,
-                                                       1 as
-                                                           libc::c_ushort,
-                                                       b"d\x00" as *const u8
-                                                           as
-                                                           *const libc::c_char
-                                                           as
-                                                           *mut libc::c_char,
+                                                       &mut nameoffset
+                                                           ,
+                                                       5 ,
+                                                       1 ,
+                                                       b"d\x00" ,
                                                        name) != 0 {
                                     anscount += 1
                                 }
@@ -1256,15 +921,14 @@ pub fn answer_auth(
                                                    ((1 __b)) <<
                                                        10
                                                } else {
-                                                   0 as
-                                                       libc::c_uint
+                                                   0
                                                }) |
                                               (1 __b) <<
                                                   3 |
                                               (1 __b) <<
                                                   21, name,
-                                          0 as *mut AllAddr,
-                                          0 as *mut libc::c_char);
+                                          0 ,
+                                          0 );
                                 break ;
                             }
                         }
@@ -1276,9 +940,9 @@ pub fn answer_auth(
     }
     /* Add auth section */
     if auth != 0 && !zone.is_null() {
-        let mut authname: *mut libc::c_char = 0 as *mut libc::c_char;
-        let mut newoffset: libc::c_int = 0;
-        let mut offset: libc::c_int = 0;
+        let mut authname: &mut String = 0 ;
+        let mut newoffset: i32 = 0;
+        let mut offset: i32 = 0;
         if subnet.is_null() {
             authname = zone.domain
         } else {
@@ -1288,50 +952,40 @@ pub fn answer_auth(
                 let mut a_0: InAddrT =
                     __bswap_32((*subnet).addr.addr4.s_addr) >>
                         8;
-                let mut p_1: *mut libc::c_char = name;
+                let mut p_1: &mut String = name;
                 if (*subnet).prefixlen >= 24 {
                     p_1 =
                         p_1.offset(sprintf(p_1,
-                                           b"%u.\x00" as *const u8 as
-                                               *const libc::c_char,
+                                           b"%u.\x00" ,
                                            a_0 &
-                                               0xff as
-                                                   libc::c_uint))
+                                               0xff ))
                 }
                 a_0 = a_0 >> 8;
                 if (*subnet).prefixlen >= 16 {
                     p_1 =
                         p_1.offset(sprintf(p_1,
-                                           b"%u.\x00" as *const u8 as
-                                               *const libc::c_char,
+                                           b"%u.\x00" ,
                                            a_0 &
-                                               0xff as
-                                                   libc::c_uint))
+                                               0xff ))
                 }
                 a_0 = a_0 >> 8;
                 p_1 =
                     p_1.offset(sprintf(p_1,
-                                       b"%u.in-addr.arpa\x00" as *const u8 as
-                                           *const libc::c_char,
+                                       b"%u.in-addr.arpa\x00" ,
                                        a_0 &
-                                           0xff as
-                                               libc::c_uint))
+                                           0xff ))
             } else {
-                let mut p_2: *mut libc::c_char = name;
-                let mut i: libc::c_int = 0;
+                let mut p_2: &mut String = name;
+                let mut i: i32 = 0;
                 i = (*subnet).prefixlen - 1;
                 while i >= 0 {
-                    let mut dig: libc::c_int =
-                        *(&mut (*subnet).addr.addr6 as *mut In6Addr as
-                              *mut libc::c_uchar).offset((i >>
-                                                              3 as
-                                                                  libc::c_int)
-                                                            ) as
-                            libc::c_int;
+                    let mut dig: i32 =
+                        *(&mut (*subnet).addr.addr6).offset((i >>
+                                                              3 )
+                                                            )                      libc::c_int;
                     p_2 =
                         p_2.offset(sprintf(p_2,
-                                           b"%.1x.\x00" as *const u8 as
-                                               *const libc::c_char,
+                                           b"%.1x.\x00" ,
                                            if i >> 2 &
                                                   1 != 0 {
                                                (dig) & 15
@@ -1342,26 +996,22 @@ pub fn answer_auth(
                 }
                 p_2 =
                     p_2.offset(sprintf(p_2,
-                                       b"ip6.arpa\x00" as *const u8 as
-                                           *const libc::c_char))
+                                       b"ip6.arpa\x00" ))
             }
         }
         /* handle NS and SOA in auth section or for explicit queries */
         newoffset =
-            ansp.wrapping_offset_from(header) as
-                libc::c_long;
+            ansp.wrapping_offset_from(header) ;
         if (anscount == 0 && ns == 0 || soa != 0) &&
                add_resource_record(header, limit,
-                                   &mut trunc as *mut libc::c_int,
+                                   &mut trunc,
                                    0,
-                                   &mut ansp as *mut *mut libc::c_uchar,
+                                   &mut ansp,
                                    daemon.auth_ttl,
-                                   0 as *mut libc::c_int,
-                                   6 as libc::c_ushort,
-                                   1 as libc::c_ushort,
-                                   b"ddlllll\x00" as *const u8 as
-                                       *const libc::c_char as
-                                       *mut libc::c_char, authname,
+                                   0,
+                                   6 ,
+                                   1 ,
+                                   b"ddlllll\x00", authname,
                                    daemon.authserver,
                                    daemon.hostmaster,
                                    daemon.soa_sn,
@@ -1373,26 +1023,23 @@ pub fn answer_auth(
             if soa != 0 { anscount += 1 } else { authcount += 1 }
         }
         if anscount != 0 || ns != 0 {
-            let mut secondary: *mut NameList = 0 as *mut NameList;
+            let mut secondary: NameListEntry = 0 ;
             /* Only include the machine running dnsmasq if it's acting as an auth server */
             if !daemon.authinterface.is_null() {
                 newoffset =
-                    ansp.wrapping_offset_from(header) as
-                        libc::c_long;
+                    ansp.wrapping_offset_from(header);
                 if add_resource_record(header, limit,
-                                       &mut trunc as *mut libc::c_int,
+                                       &mut trunc,
                                        -offset,
-                                       &mut ansp as *mut *mut libc::c_uchar,
+                                       &mut ansp,
                                        daemon.auth_ttl,
-                                       0 as *mut libc::c_int,
-                                       2 as libc::c_ushort,
-                                       1 as libc::c_ushort,
-                                       b"d\x00" as *const u8 as
-                                           *const libc::c_char as
-                                           *mut libc::c_char,
+                                       0,
+                                       2,
+                                       1,
+                                       b"d\x00",
                                        if offset == 0 {
                                            authname
-                                       } else { 0 as *mut libc::c_char },
+                                       } else { 0  },
                                        daemon.authserver) != 0 {
                     if offset == 0 { offset = newoffset }
                     if ns != 0 { anscount += 1 } else { authcount += 1 }
@@ -1402,17 +1049,14 @@ pub fn answer_auth(
                 secondary = daemon.secondary_forward_server;
                 while !secondary.is_null() {
                     if add_resource_record(header, limit,
-                                           &mut trunc as *mut libc::c_int,
+                                           &mut trunc,
                                            offset,
-                                           &mut ansp as
-                                               *mut *mut libc::c_uchar,
+                                           &mut ansp,
                                            daemon.auth_ttl,
-                                           0 as *mut libc::c_int,
-                                           2 as libc::c_ushort,
-                                           1 as libc::c_ushort,
-                                           b"d\x00" as *const u8 as
-                                               *const libc::c_char as
-                                               *mut libc::c_char,
+                                           0,
+                                           2 ,
+                                           1 ,
+                                           b"d\x00",
                                            (*secondary).name) != 0 {
                         if ns != 0 { anscount += 1 } else { authcount += 1 }
                     }
@@ -1423,237 +1067,199 @@ pub fn answer_auth(
         if axfr != 0 {
             rec = daemon.mxnames;
             while !rec.is_null() {
-                if in_zone(zone, (*rec).name, &mut cut) != 0 {
+                if in_zone(zone, rec.name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_char
+                        *cut = 0
                     }
-                    if (*rec).issrv != 0 {
+                    if rec.issrv != 0 {
                         if add_resource_record(header, limit,
-                                               &mut trunc as *mut libc::c_int,
+                                               &mut trunc,
                                                -axfroffset,
-                                               &mut ansp as
-                                                   *mut *mut libc::c_uchar,
+                                               &mut ansp,
                                                daemon.auth_ttl,
-                                               0 as *mut libc::c_int,
-                                               33 as
-                                                   libc::c_ushort,
-                                               1 as
-                                                   libc::c_ushort,
-                                               b"sssd\x00" as *const u8 as
-                                                   *const libc::c_char as
-                                                   *mut libc::c_char,
+                                               0,
+                                               33libc::c_ushort,
+                                               1libc::c_ushort,
+                                               b"sssd\x00",
                                                if !cut.is_null() {
-                                                   (*rec).name
+                                                   rec.name
                                                } else {
-                                                   0 as *mut libc::c_char
-                                               }, (*rec).priority,
-                                               (*rec).weight, (*rec).srvport,
-                                               (*rec).target) != 0 {
+                                                   0
+                                               }, rec.priority,
+                                               rec.weight, rec.srvport,
+                                               rec.target) != 0 {
                             anscount += 1
                         }
                     } else if add_resource_record(header, limit,
-                                                  &mut trunc as
-                                                      *mut libc::c_int,
+                                                  &mut trunc   ,
                                                   -axfroffset,
-                                                  &mut ansp as
-                                                      *mut *mut libc::c_uchar,
+                                                  &mut ansp   ,
                                                   daemon.auth_ttl,
-                                                  0 as *mut libc::c_int,
-                                                  15 as
-                                                      libc::c_ushort,
-                                                  1 as
-                                                      libc::c_ushort,
-                                                  b"sd\x00" as *const u8 as
-                                                      *const libc::c_char as
-                                                      *mut libc::c_char,
+                                                  0,
+                                                  15,
+                                                  1,
+                                                  b"sd\x00",
                                                   if !cut.is_null() {
-                                                      (*rec).name
+                                                      rec.name
                                                   } else {
-                                                      0 as *mut libc::c_char
-                                                  }, (*rec).weight,
-                                                  (*rec).target) != 0 {
+                                                      0
+                                                  }, rec.weight,
+                                                  rec.target) != 0 {
                         anscount += 1
                     }
                     /* restore config data */
-                    if !cut.is_null() { *cut = '.' as i32 as libc::c_char }
+                    if !cut.is_null() { *cut = '.'  }
                 }
-                rec = (*rec).next
+                rec = rec.next
             }
             txt = daemon.rr;
             while !txt.is_null() {
-                if in_zone(zone, (*txt).name, &mut cut) != 0 {
+                if in_zone(zone, txt.name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_char
+                        *cut = 0
                     }
                     if add_resource_record(header, limit,
-                                           &mut trunc as *mut libc::c_int,
+                                           &mut trunc,
                                            -axfroffset,
-                                           &mut ansp as
-                                               *mut *mut libc::c_uchar,
+                                           &mut ansp,
                                            daemon.auth_ttl,
-                                           0 as *mut libc::c_int,
-                                           (*txt).class,
-                                           1 as libc::c_ushort,
-                                           b"t\x00" as *const u8 as
-                                               *const libc::c_char as
-                                               *mut libc::c_char,
+                                           0,
+                                           txt.class,
+                                           1 ,
+                                           b"t\x00",
                                            if !cut.is_null() {
-                                               (*txt).name
-                                           } else { 0 as *mut libc::c_char },
-                                           (*txt).len,
-                                           (*txt).txt) != 0 {
+                                               txt.name
+                                           } else { 0  },
+                                           txt.len,
+                                           txt.txt) != 0 {
                         anscount += 1
                     }
                     /* restore config data */
-                    if !cut.is_null() { *cut = '.' as i32 as libc::c_char }
+                    if !cut.is_null() { *cut = '.'  }
                 }
-                txt = (*txt).next
+                txt = txt.next
             }
             txt = daemon.txt;
             while !txt.is_null() {
-                if (*txt).class == 1 &&
-                       in_zone(zone, (*txt).name, &mut cut) != 0 {
+                if txt.class == 1 &&
+                       in_zone(zone, txt.name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_char
+                        *cut = 0
                     }
                     if add_resource_record(header, limit,
-                                           &mut trunc as *mut libc::c_int,
+                                           &mut trunc,
                                            -axfroffset,
-                                           &mut ansp as
-                                               *mut *mut libc::c_uchar,
+                                           &mut ansp,
                                            daemon.auth_ttl,
-                                           0 as *mut libc::c_int,
-                                           16 as
-                                               libc::c_ushort,
-                                           1 as libc::c_ushort,
-                                           b"t\x00" as *const u8 as
-                                               *const libc::c_char as
-                                               *mut libc::c_char,
+                                           0,
+                                           16,
+                                           1 ,
+                                           b"t\x00" ,
                                            if !cut.is_null() {
-                                               (*txt).name
-                                           } else { 0 as *mut libc::c_char },
-                                           (*txt).len,
-                                           (*txt).txt) != 0 {
+                                               txt.name
+                                           } else { 0  },
+                                           txt.len,
+                                           txt.txt) != 0 {
                         anscount += 1
                     }
                     /* restore config data */
-                    if !cut.is_null() { *cut = '.' as i32 as libc::c_char }
+                    if !cut.is_null() { *cut = '.'  }
                 }
-                txt = (*txt).next
+                txt = txt.next
             }
             na = daemon.naptr;
             while !na.is_null() {
                 if in_zone(zone, (*na).name, &mut cut) != 0 {
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_char
+                        *cut = 0
                     }
                     if add_resource_record(header, limit,
-                                           &mut trunc as *mut libc::c_int,
+                                           &mut trunc,
                                            -axfroffset,
-                                           &mut ansp as
-                                               *mut *mut libc::c_uchar,
+                                           &mut ansp,
                                            daemon.auth_ttl,
-                                           0 as *mut libc::c_int,
-                                           35 as
-                                               libc::c_ushort,
-                                           1 as libc::c_ushort,
-                                           b"sszzzd\x00" as *const u8 as
-                                               *const libc::c_char as
-                                               *mut libc::c_char,
+                                           0,
+                                           35,
+                                           1 ,
+                                           b"sszzzd\x00",
                                            if !cut.is_null() {
                                                (*na).name
-                                           } else { 0 as *mut libc::c_char },
+                                           } else { 0  },
                                            (*na).order, (*na).pref,
                                            (*na).flags, (*na).services,
                                            (*na).regexp, (*na).replace) != 0 {
                         anscount += 1
                     }
                     /* restore config data */
-                    if !cut.is_null() { *cut = '.' as i32 as libc::c_char }
+                    if !cut.is_null() { *cut = '.'  }
                 }
                 na = (*na).next
             }
             intr = daemon.int_names;
             while !intr.is_null() {
                 if in_zone(zone, intr.name, &mut cut) != 0 {
-                    let mut addrlist_2: *mut AddrList = 0 as *mut AddrList;
+                    let mut addrlist_2: *mut AddressListEntry = 0 ;
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_char
+                        *cut = 0
                     }
-                    addrlist_2 = intr.addr;
+                    addrlist_2 = intr.addresses;
                     while !addrlist_2.is_null() {
                         if (*addrlist_2).flags & 2 == 0 &&
                                (local_query != 0 ||
                                     filter_zone(zone,
                                                 ((1 __b) <<
-                                                     7) as
-                                                    libc::c_int,
+                                                     7) ,
                                                 &mut (*addrlist_2).addr) != 0)
                                &&
                                add_resource_record(header, limit,
-                                                   &mut trunc as
-                                                       *mut libc::c_int,
+                                                   &mut trunc ,
                                                    -axfroffset,
-                                                   &mut ansp as
-                                                       *mut *mut libc::c_uchar,
+                                                   &mut ansp ,
                                                    daemon.auth_ttl,
-                                                   0 as *mut libc::c_int,
-                                                   1 as
-                                                       libc::c_ushort,
-                                                   1 as
-                                                       libc::c_ushort,
-                                                   b"4\x00" as *const u8 as
-                                                       *const libc::c_char as
-                                                       *mut libc::c_char,
+                                                   0 ,
+                                                   1,
+                                                   1,
+                                                   b"4\x00",
                                                    (if !cut.is_null() {
                                                         intr.name
                                                     } else {
-                                                        0 as *mut libc::c_char
+                                                        0
                                                     }),
-                                                   &mut (*addrlist_2).addr as
-                                                       *mut AllAddr) != 0 {
+                                                   &mut (*addrlist_2).addr) != 0 {
                             anscount += 1
                         }
                         addrlist_2 = (*addrlist_2).next
                     }
-                    addrlist_2 = intr.addr;
+                    addrlist_2 = intr.addresses;
                     while !addrlist_2.is_null() {
                         if (*addrlist_2).flags & 2 != 0 &&
                                (local_query != 0 ||
                                     filter_zone(zone,
                                                 ((1 __b) <<
-                                                     8) as
-                                                    libc::c_int,
+                                                     8),
                                                 &mut (*addrlist_2).addr) != 0)
                                &&
                                add_resource_record(header, limit,
-                                                   &mut trunc as
-                                                       *mut libc::c_int,
+                                                   &mut trunc,
                                                    -axfroffset,
-                                                   &mut ansp as
-                                                       *mut *mut libc::c_uchar,
+                                                   &mut ansp,
                                                    daemon.auth_ttl,
-                                                   0 as *mut libc::c_int,
-                                                   28 as
-                                                       libc::c_ushort,
-                                                   1 as
-                                                       libc::c_ushort,
-                                                   b"6\x00" as *const u8 as
-                                                       *const libc::c_char as
-                                                       *mut libc::c_char,
+                                                   0,
+                                                   28,
+                                                   1,
+                                                   b"6\x00" ,
                                                    (if !cut.is_null() {
                                                         intr.name
                                                     } else {
-                                                        0 as *mut libc::c_char
+                                                        0
                                                     }),
-                                                   &mut (*addrlist_2).addr as
-                                                       *mut AllAddr) != 0 {
+                                                   &mut (*addrlist_2).addr) != 0 {
                             anscount += 1
                         }
                         addrlist_2 = (*addrlist_2).next
                     }
                     /* restore config data */
-                    if !cut.is_null() { *cut = '.' as i32 as libc::c_char }
+                    if !cut.is_null() { *cut = '.'  }
                 }
                 intr = intr.next
             }
@@ -1661,29 +1267,25 @@ pub fn answer_auth(
             while !a.is_null() {
                 if in_zone(zone, (*a).alias, &mut cut) != 0 {
                     strcpy(name, (*a).target);
-                    if strchr(name, '.' as i32).is_null() {
+                    if strchr(name, '.').is_null() {
                         strcat(name,
-                               b".\x00" as *const u8 as *const libc::c_char);
+                               b".\x00" );
                         strcat(name, zone.domain);
                     }
                     if !cut.is_null() {
-                        *cut = 0 as libc::c_char
+                        *cut = 0
                     }
                     if add_resource_record(header, limit,
-                                           &mut trunc as *mut libc::c_int,
+                                           &mut trunc,
                                            -axfroffset,
-                                           &mut ansp as
-                                               *mut *mut libc::c_uchar,
+                                           &mut ansp,
                                            daemon.auth_ttl,
-                                           0 as *mut libc::c_int,
-                                           5 as libc::c_ushort,
-                                           1 as libc::c_ushort,
-                                           b"d\x00" as *const u8 as
-                                               *const libc::c_char as
-                                               *mut libc::c_char,
+                                           0,
+                                           5 ,
+                                           1 ,
+                                           b"d\x00",
                                            if !cut.is_null() {
-                                               (*a).alias
-                                           } else { 0 as *mut libc::c_char },
+                                               (*a).ali                                    } else { 0  },
                                            name) != 0 {
                         anscount += 1
                     }
@@ -1694,167 +1296,121 @@ pub fn answer_auth(
             loop  {
                 crecp = cache_enumerate(0);
                 if crecp.is_null() { break ; }
-                if (*crecp).flags &
+                if crecp.flags &
                        ((1 __b) << 7 |
                             (1 __b) << 8) != 0 &&
-                       (*crecp).flags &
+                       crecp.flags &
                            ((1 __b) << 5 |
                                 (1 __b) << 10) == 0
                        &&
-                       (*crecp).flags &
+                       crecp.flags &
                            (1 __b) << 3 != 0 {
-                    if (*crecp).flags &
+                    if crecp.flags &
                            (1 __b) << 4 != 0 &&
-                           daemon.options[(20 as
-                                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           as
-                                                                                           libc::c_ulong).wrapping_mul(8
-                                                                                                                           as
-                                                                                                                           libc::c_int
-                                                                                                                           as
-                                                                                                                           libc::c_ulong))
-                                                         as usize] &
+                           daemon.options[(20).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                                                    ).wrapping_mul(8
+                                                                                                                           ))
+                                                         ] &
                                (1 __b) <<
-                                   (20 as
-                                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                         as
-                                                                         libc::c_ulong).wrapping_mul(8
-                                                                                                         as
-                                                                                                         libc::c_int
-                                                                                                         as
-                                                                                                         libc::c_ulong))
+                                   (20 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                                                ).wrapping_mul(8                          libc::c_int                   ))
                                == 0 {
-                        let mut cache_name: *mut libc::c_char =
+                        let mut cache_name: &mut String =
                             cache_get_name(crecp);
                         if strchr(cache_name, '.' as i32).is_null() &&
                                (local_query != 0 ||
                                     filter_zone(zone,
-                                                ((*crecp).flags &
+                                                (crecp.flags &
                                                      ((1 __b) <<
                                                           8 |
                                                           (1 __b)
                                                               <<
-                                                              7 as
-                                                                  libc::c_int))
+                                                              7        libc::c_int))
                                                    ,
-                                                &mut (*crecp).addr) != 0) &&
+                                                &mut crecp.addr) != 0) &&
                                add_resource_record(header, limit,
-                                                   &mut trunc as
-                                                       *mut libc::c_int,
+                                                   &mut trunc    ,
                                                    -axfroffset,
-                                                   &mut ansp as
-                                                       *mut *mut libc::c_uchar,
+                                                   &mut ansp    ,
                                                    daemon.auth_ttl,
-                                                   0 as *mut libc::c_int,
-                                                   (if (*crecp).flags &
+                                                   0,
+                                                   (if crecp.flags &
                                                            (1 __b)
                                                                <<
-                                                               8 as
-                                                                   libc::c_int
+                                                               8         libc::c_int
                                                            != 0 {
                                                         28
                                                     } else {
                                                         1
-                                                    }) as libc::c_ushort,
-                                                   1 as
-                                                       libc::c_ushort,
-                                                   (if (*crecp).flags &
+                                                    }) ,
+                                                   1 ,
+                                                   (if crecp.flags &
                                                            (1 __b)
                                                                <<
-                                                               7 as
-                                                                   libc::c_int
+                                                               7         libc::c_int
                                                            != 0 {
-                                                        b"4\x00" as *const u8
-                                                            as
-                                                            *const libc::c_char
+                                                        b"4\x00"
                                                     } else {
-                                                        b"6\x00" as *const u8
-                                                            as
-                                                            *const libc::c_char
-                                                    }) as *mut libc::c_char,
+                                                        b"6\x00"
+                                                    }) ,
                                                    cache_name,
-                                                   &mut (*crecp).addr as
-                                                       *mut AllAddr) != 0 {
+                                                   &mut crecp.addr) != 0 {
                             anscount += 1
                         }
                     }
-                    if (*crecp).flags &
+                    if crecp.flags &
                            (1 __b) << 6 != 0 ||
-                           (*crecp).flags &
+                           crecp.flags &
                                (1 __b) << 4 != 0 &&
-                               daemon.options[(20 as
-                                                              libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                               as
-                                                                                               libc::c_ulong).wrapping_mul(8
-                                                                                                                               as
-                                                                                                                               libc::c_int
-                                                                                                                               as
-                                                                                                                               libc::c_ulong))
-                                                             as usize] &
+                               daemon.options[(20).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))] &
                                    (1 __b) <<
-                                       (20 as
-                                            libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                             as
-                                                                             libc::c_ulong).wrapping_mul(8
-                                                                                                             as
-                                                                                                             libc::c_int
-                                                                                                             as
-                                                                                                             libc::c_ulong))
+                                       (20).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
                                    != 0 {
                         strcpy(name, cache_get_name(crecp));
                         if in_zone(zone, name, &mut cut) != 0 &&
                                (local_query != 0 ||
                                     filter_zone(zone,
-                                                ((*crecp).flags &
+                                                (crecp.flags &
                                                      ((1 __b) <<
                                                           8 |
                                                           (1 __b)
                                                               <<
-                                                              7 as
-                                                                  libc::c_int))
+                                                              7        libc::c_int))
                                                    ,
-                                                &mut (*crecp).addr) != 0) {
+                                                &mut crecp.addr) != 0) {
                             if !cut.is_null() {
-                                *cut = 0 as libc::c_char
+                                *cut = 0
                             }
                             if add_resource_record(header, limit,
-                                                   &mut trunc as
-                                                       *mut libc::c_int,
+                                                   &mut trunc    ,
                                                    -axfroffset,
-                                                   &mut ansp as
-                                                       *mut *mut libc::c_uchar,
+                                                   &mut ansp    ,
                                                    daemon.auth_ttl,
-                                                   0 as *mut libc::c_int,
-                                                   if (*crecp).flags &
+                                                   0,
+                                                   if crecp.flags &
                                                           (1 __b)
                                                               <<
                                                               8
                                                           != 0 {
                                                        28
                                                    } else { 1 }
-                                                       as libc::c_ushort,
-                                                   1 as
-                                                       libc::c_ushort,
-                                                   if (*crecp).flags &
+                                                       ,
+                                                   1 ,
+                                                   if crecp.flags &
                                                           (1 __b)
                                                               <<
                                                               7
                                                           != 0 {
-                                                       b"4\x00" as *const u8
-                                                           as
-                                                           *const libc::c_char
+                                                       b"4\x00"
                                                    } else {
-                                                       b"6\x00" as *const u8
-                                                           as
-                                                           *const libc::c_char
-                                                   } as *mut libc::c_char,
+                                                       b"6\x00"
+                                                   } ,
                                                    if !cut.is_null() {
                                                        name
                                                    } else {
-                                                       0 as *mut libc::c_char
+                                                       0
                                                    },
-                                                   &mut (*crecp).addr as
-                                                       *mut AllAddr) != 0 {
+                                                   &mut crecp.addr) != 0 {
                                 anscount += 1
                             }
                         }
@@ -1863,15 +1419,13 @@ pub fn answer_auth(
             }
             /* repeat SOA as last record */
             if add_resource_record(header, limit,
-                                   &mut trunc as *mut libc::c_int, axfroffset,
-                                   &mut ansp as *mut *mut libc::c_uchar,
+                                   &mut trunc, axfroffset,
+                                   &mut ansp,
                                    daemon.auth_ttl,
-                                   0 as *mut libc::c_int,
-                                   6 as libc::c_ushort,
-                                   1 as libc::c_ushort,
-                                   b"ddlllll\x00" as *const u8 as
-                                       *const libc::c_char as
-                                       *mut libc::c_char,
+                                   0,
+                                   6 ,
+                                   1 ,
+                                   b"ddlllll\x00",
                                    daemon.authserver,
                                    daemon.hostmaster,
                                    daemon.soa_sn,
@@ -1920,21 +1474,19 @@ pub fn answer_auth(
             (header.hb4 & !(0xf) |
                  0) as u8
     }
-    header.ancount = __bswap_16(anscount as u16);
-    header.nscount = __bswap_16(authcount as u16);
-    header.arcount = __bswap_16(0 as u16);
+    header.ancount = __bswap_16(anscount);
+    header.nscount = __bswap_16(authcount);
+    header.arcount = __bswap_16(0);
     /* Advertise our packet size limit in our reply */
     if have_pseudoheader != 0 {
         return add_pseudoheader(header,
-                                ansp.wrapping_offset_from(header as
-                                                              *mut libc::c_uchar)
-                                    as libc::c_long as size_t,
+                                ansp.wrapping_offset_from(header    mut Vec<u8>)
+                                    ,
                                 limit,
                                 daemon.edns_pktsz,
                                 0, 0,
-                                0 as size_t, do_bit,
+                                0 , do_bit,
                                 0)
     }
-    return ansp.wrapping_offset_from(header) as
-               libc::c_long as size_t;
+    return ansp.wrapping_offset_from(header)  ;
 }

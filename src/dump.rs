@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{stat, timespec, DnsmasqDaemon, size_t, MySockAddr, IpHdr, InAddr, C2RustUnnamed, In6Addr, __bswap_16, IPPROTO_UDP};
+use crate::defines::{stat, timespec, DnsmasqDaemon, size_t, NetAddress, IpHdr, NetAddress, C2RustUnnamed, In6Addr, __bswap_16, IPPROTO_UDP};
 use std::fs::File;
 use crate::util::read_write;
 use std::io::{Error, Seek};
@@ -55,7 +55,7 @@ pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
     if daemon.dump_file.exists() == false {
         /* doesn't exist, create and add header */
         header.magic_number =
-            0xa1b2c3d4 as libc::c_uint; /* slop for IP/UDP headers */
+            0xa1b2c3d4; /* slop for IP/UDP headers */
         header.version_major = 2; /* DLT_RAW http://www.tcpdump.org/linktypes.html */
         header.version_minor = 4;
         header.thiszone = 0;
@@ -68,17 +68,17 @@ pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
         // file.set_permissions()
         daemon.dumpfd = file;
         read_write(daemon.dumpfd,
-                   &mut header as *mut pcap_hdr_s as *mut libc::c_void
-                       as *mut libc::c_uchar,
-                   ::std::mem::size_of::<pcap_hdr_s>() as libc::c_ulong
-                       as libc::c_int, 0 as libc::c_int)?;
+                   &mut header
+                      ,
+                   ::std::mem::size_of::<pcap_hdr_s>()
+                      , 0)?;
     } else {
         daemon.dumpfd = File::open(&daemon.dump_file)?;
         read_write(daemon.dumpfd,
-                   &mut header as *mut pcap_hdr_s as *mut libc::c_void
-                       as *mut libc::c_uchar,
-                   ::std::mem::size_of::<pcap_hdr_s>() as libc::c_ulong
-                       as libc::c_int, 1 as libc::c_int)?;
+                   &mut header
+                      ,
+                   ::std::mem::size_of::<pcap_hdr_s>()
+                      , 1)?;
     }
 
     if header.magic_number != 0xa1b2c3d4 {
@@ -86,11 +86,9 @@ pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
     } else {
         /* count existing records */
         while read_write(daemon.dumpfd,
-                         &mut pcap_header as *mut pcaprec_hdr_s as
-                             *mut libc::c_void as *mut libc::c_uchar,
-                         ::std::mem::size_of::<pcaprec_hdr_s>() as
-                             libc::c_ulong as libc::c_int,
-                         1 as libc::c_int) != 0 {
+                         &mut pcap_header ,
+                         ::std::mem::size_of::<pcaprec_hdr_s>(),
+                         1) != 0 {
             daemon.dumpfd.seek(pcap_header.incl_len, 1)?;
             packet_count = packet_count.wrapping_add(1)
         }
@@ -98,11 +96,11 @@ pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
-                                     mut packet: *mut libc::c_void,
-                                     mut len: size_t,
-                                     mut src: *mut MySockAddr,
-                                     mut dst: *mut MySockAddr) {
+pub unsafe extern "C" fn dump_packet(mut mask: i32,
+                                     mut packet:Vec<u8>,
+                                     mut len: usize,
+                                     mut src: NetAddress,
+                                     mut dst: NetAddress) {
     let mut ip: IpHdr =
         IpHdr {ip_hl_ip_v: [0; 1],
            ip_tos: 0,
@@ -112,131 +110,89 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
            ip_ttl: 0,
            ip_p: 0,
            ip_sum: 0,
-           ip_src: InAddr {s_addr: 0,},
-           ip_dst: InAddr {s_addr: 0,},};
-    let mut ip6: ip6_hdr =
-        ip6_hdr{ip6_ctlun:
-                    C2RustUnnamed_1{ip6_un1:
-                                        ip6_hdrctl{ip6_un1_flow: 0,
-                                                   ip6_un1_plen: 0,
-                                                   ip6_un1_nxt: 0,
-                                                   ip6_un1_hlim: 0,},},
-                ip6_src:
-                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},
-                ip6_dst:
-                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},},};
-    let mut family: libc::c_int = 0;
-    let mut udp: udphdr =
-        udphdr{uh_sport: 0, uh_dport: 0, uh_ulen: 0, uh_sum: 0,};
+           ip_src: NetAddress {s_addr: 0,},
+           ip_dst: NetAddress {s_addr: 0,},};
+    let mut ip6: Ip6Hdr = Default::default();
+    let mut family: i32 = 0;
+    let mut udp: UdpHdr = Default::default();
     let mut pcap_header: pcaprec_hdr_s =
         pcaprec_hdr_s{ts_sec: 0, ts_usec: 0, incl_len: 0, orig_len: 0,};
     let mut time: ti
     meval = timeval{tv_sec: 0, tv_usec: 0,};
     let mut i: u32 = 0;
     let mut sum: u32 = 0;
-    let mut iphdr: *mut libc::c_void = 0 as *mut libc::c_void;
-    let mut ipsz: size_t = 0;
-    let mut rc: libc::c_int = 0;
-    if daemon.dumpfd == -(1 as libc::c_int) ||
+    let mut iphdr:Vec<u8> = 0;
+    let mut ipsz: usize = 0;
+    let mut rc: i32 = 0;
+    if daemon.dumpfd == -(1) ||
            mask & daemon.dump_mask == 0 {
         return
     }
     /* So wireshark can Id the packet. */
-    udp.uh_dport = __bswap_16(53 as libc::c_int as u16);
+    udp.uh_dport = __bswap_16(53);
     udp.uh_sport = udp.uh_dport;
     if !src.is_null() {
-        family = (*src).sa.sa_family as libc::c_int
-    } else { family = (*dst).sa.sa_family as libc::c_int }
-    if family == 10 as libc::c_int {
-        iphdr = &mut ip6 as *mut ip6_hdr as *mut libc::c_void;
-        ipsz = ::std::mem::size_of::<ip6_hdr>() as libc::c_ulong;
-        memset(&mut ip6 as *mut ip6_hdr as *mut libc::c_void,
-               0 as libc::c_int,
-               ::std::mem::size_of::<ip6_hdr>() as libc::c_ulong);
+        family = (*src).sa.sa_family
+    } else { family = (*dst).sa.sa_family }
+    if family == 10 {
+        iphdr = &mut ip6 ;
+        ipsz = ::std::mem::size_of::<ip6_hdr>();
+        ip6 = Default::default();
         ip6.ip6_ctlun.ip6_un2_vfc =
-            ((6 as libc::c_int) << 4 as libc::c_int) as u8;
+            ((6) << 4) as u8;
         ip6.ip6_ctlun.ip6_un1.ip6_un1_plen =
-            __bswap_16((::std::mem::size_of::<udphdr>() as
-                            libc::c_ulong).wrapping_add(len) as u16);
+            __bswap_16((::std::mem::size_of::<udphdr>() ).wrapping_add(len));
         ip6.ip6_ctlun.ip6_un1.ip6_un1_nxt =
-            IPPROTO_UDP as libc::c_int as u8;
-        ip6.ip6_ctlun.ip6_un1.ip6_un1_hlim = 64 as libc::c_int as u8;
+            IPPROTO_UDP as u8;
+        ip6.ip6_ctlun.ip6_un1.ip6_un1_hlim = 64 as u8;
         if !src.is_null() {
-            memcpy(&mut ip6.ip6_src as *mut In6Addr as *mut libc::c_void,
-                   &mut (*src).in6.sin6_addr as *mut In6Addr as
-                       *const libc::c_void,
-                   16 as libc::c_int as libc::c_ulong);
+            memcpy(&mut ip6.ip6_src,
+                   &mut (*src).in6.sin6_addr ,
+                   16);
             udp.uh_sport = (*src).in6.sin6_port
         }
         if !dst.is_null() {
-            memcpy(&mut ip6.ip6_dst as *mut In6Addr as *mut libc::c_void,
-                   &mut (*dst).in6.sin6_addr as *mut In6Addr as
-                       *const libc::c_void,
-                   16 as libc::c_int as libc::c_ulong);
+            memcpy(&mut ip6.ip6_dst,
+                   &mut (*dst).in6.sin6_addr ,
+                   16);
             udp.uh_dport = (*dst).in6.sin6_port
         }
         /* start UDP checksum */
-        sum = 0 as libc::c_int as u32;
-        i = 0 as libc::c_int as u32;
-        while i < 16 as libc::c_int as libc::c_uint {
+        sum = 0;
+        i = 0;
+        while i < 16 {
             sum =
-                (sum as
-                     libc::c_uint).wrapping_add((ip6.ip6_src.__in6_u.__u6_addr8[i
-                                                                                    as
-                                                                                    usize]
-                                                     as libc::c_int +
-                                                     ((ip6.ip6_src.__in6_u.__u6_addr8[i.wrapping_add(1
-                                                                                                         as
-                                                                                                         libc::c_int
-                                                                                                         as
-                                                                                                         libc::c_uint)
-                                                                                          as
-                                                                                          usize]
-                                                           as libc::c_int) <<
-                                                          8 as libc::c_int))
-                                                    as libc::c_uint) as u32
-                    as u32;
+                (sum               libc::c_uint).wrapping_add((ip6.ip6_src.__in6_u.__u6_addr8[i
+                                                                                                                    usize]
+                                                     +
+                                                     ((ip6.ip6_src.__in6_u.__u6_addr8[i.wrapping_add(1                                 libc::c_int                                 libc::c_uint)   usize]
+                                                          ) <<
+                                                          8))
+                                                   )
+                   ;
             sum =
-                (sum as
-                     libc::c_uint).wrapping_add((ip6.ip6_dst.__in6_u.__u6_addr8[i
-                                                                                    as
-                                                                                    usize]
-                                                     as libc::c_int +
-                                                     ((ip6.ip6_dst.__in6_u.__u6_addr8[i.wrapping_add(1
-                                                                                                         as
-                                                                                                         libc::c_int
-                                                                                                         as
-                                                                                                         libc::c_uint)
-                                                                                          as
-                                                                                          usize]
-                                                           as libc::c_int) <<
-                                                          8 as libc::c_int))
-                                                    as libc::c_uint) as u32
-                    as u32;
+                (sum               libc::c_uint).wrapping_add((ip6.ip6_dst.__in6_u.__u6_addr8[i
+                                                                                                                    usize]
+                                                     +
+                                                     ((ip6.ip6_dst.__in6_u.__u6_addr8[i.wrapping_add(1                                 libc::c_int                                 libc::c_uint)   usize]
+                                                          ) <<
+                                                          8))
+                                                   )
+                   ;
             i =
-                (i as
-                     libc::c_uint).wrapping_add(2 as libc::c_int as
-                                                    libc::c_uint) as u32 as
-                    u32
+                (i               libc::c_uint).wrapping_add(2 libc::c_uint)              u32
         }
     } else {
-        iphdr = &mut ip as *mut IpHdr as *mut libc::c_void;
-        ipsz = ::std::mem::size_of::<IpHdr>() as libc::c_ulong;
-        memset(&mut ip as *mut IpHdr as *mut libc::c_void, 0 as libc::c_int,
-               ::std::mem::size_of::<IpHdr>() as libc::c_ulong);
-        ip.set_ip_v(4 as libc::c_int as libc::c_uint);
-        ip.set_ip_hl((::std::mem::size_of::<IpHdr>() as
-                          libc::c_ulong).wrapping_div(4 as libc::c_int as
-                                                          libc::c_ulong) as
-                         libc::c_uint);
+        iphdr = &mut ip;
+        ipsz = ::std::mem::size_of::<IpHdr>();
+        ip.set_ip_v(4);
+        ip.set_ip_hl((::std::mem::size_of::<IpHdr>()).wrapping_div(4));
         ip.ip_len =
-            __bswap_16((::std::mem::size_of::<IpHdr>() as
-                            libc::c_ulong).wrapping_add(::std::mem::size_of::<udphdr>()
-                                                            as
-                                                            libc::c_ulong).wrapping_add(len)
-                           as u16);
-        ip.ip_ttl = 64 as libc::c_int as u8;
-        ip.ip_p = IPPROTO_UDP as libc::c_int as u8;
+            __bswap_16((::std::mem::size_of::<IpHdr>() ).wrapping_add(::std::mem::size_of::<udphdr>()
+                                                             ).wrapping_add(len)
+                          );
+        ip.ip_ttl = 64 as u8;
+        ip.ip_p = IPPROTO_UDP as u8;
         if !src.is_null() {
             ip.ip_src = (*src).in_0.sin_addr;
             udp.uh_sport = (*src).in_0.sin_port
@@ -245,147 +201,105 @@ pub unsafe extern "C" fn dump_packet(mut mask: libc::c_int,
             ip.ip_dst = (*dst).in_0.sin_addr;
             udp.uh_dport = (*dst).in_0.sin_port
         }
-        ip.ip_sum = 0 as libc::c_int as libc::c_ushort;
-        sum = 0 as libc::c_int as u32;
-        i = 0 as libc::c_int as u32;
-        while (i as libc::c_ulong) <
-                  (::std::mem::size_of::<IpHdr>() as
-                       libc::c_ulong).wrapping_div(2 as libc::c_int as
-                                                       libc::c_ulong) {
+        ip.ip_sum = 0 ;
+        sum = 0;
+        i = 0;
+        while (i) <
+                  (::std::mem::size_of::<IpHdr>() ).wrapping_div(2    libc::c_ulong) {
             sum =
-                (sum as
-                     libc::c_uint).wrapping_add(*(&mut ip as *mut IpHdr as
-                                                      *mut u16).offset(i as
-                                                                             isize)
-                                                    as libc::c_uint) as u32
-                    as u32;
+                (sum               libc::c_uint).wrapping_add(*(&mut ip   *mut u16).offset(i                          isize)
+                                                   )
+                   ;
             i = i.wrapping_add(1)
         }
-        while sum >> 16 as libc::c_int != 0 {
+        while sum >> 16 != 0 {
             sum =
                 (sum &
-                     0xffff as libc::c_int as
-                         libc::c_uint).wrapping_add(sum >> 16 as libc::c_int)
+                     0xffff).wrapping_add(sum >> 16)
         }
         ip.ip_sum =
-            if sum == 0xffff as libc::c_int as libc::c_uint {
+            if sum == 0xffff {
                 sum
-            } else { !sum } as libc::c_ushort;
+            } else { !sum } ;
         /* start UDP checksum */
         sum =
             ip.ip_src.s_addr &
-                0xffff as libc::c_int as
-                    libc::c_uint; /* for checksum, in case length is odd. */
+                0xffff              libc::c_uint; /* for checksum, in case length is odd. */
         sum =
-            (sum as
-                 libc::c_uint).wrapping_add(ip.ip_src.s_addr >>
-                                                16 as libc::c_int &
-                                                0xffff as libc::c_int as
-                                                    libc::c_uint) as u32 as
-                u32;
+            (sum           libc::c_uint).wrapping_add(ip.ip_src.s_addr >>
+                                                16 &
+                                                0xffff libc::c_uint)          u32;
         sum =
-            (sum as
-                 libc::c_uint).wrapping_add(ip.ip_dst.s_addr &
-                                                0xffff as libc::c_int as
-                                                    libc::c_uint) as u32 as
-                u32;
+            (sum           libc::c_uint).wrapping_add(ip.ip_dst.s_addr &
+                                                0xffff libc::c_uint)          u32;
         sum =
-            (sum as
-                 libc::c_uint).wrapping_add(ip.ip_dst.s_addr >>
-                                                16 as libc::c_int &
-                                                0xffff as libc::c_int as
-                                                    libc::c_uint) as u32 as
-                u32
+            (sum           libc::c_uint).wrapping_add(ip.ip_dst.s_addr >>
+                                                16 &
+                                                0xffff libc::c_uint)          u32
     }
-    if len & 1 as libc::c_int as libc::c_ulong != 0 {
-        *(packet as *mut libc::c_uchar).offset(len as isize) =
-            0 as libc::c_int as libc::c_uchar
+    if len & 1 != 0 {
+        *(packet).offset(len) =
+            0
     }
-    udp.uh_sum = 0 as libc::c_int as u16;
+    udp.uh_sum = 0;
     udp.uh_ulen =
-        __bswap_16((::std::mem::size_of::<udphdr>() as
-                        libc::c_ulong).wrapping_add(len) as u16);
+        __bswap_16((::std::mem::size_of::<udphdr>() )).wrapping_add(len));
     sum =
-        (sum as
-             libc::c_uint).wrapping_add(__bswap_16(IPPROTO_UDP as libc::c_int
-                                                       as u16) as
-                                            libc::c_uint) as u32 as u32;
+        (sum       libc::c_uint).wrapping_add(__bswap_16(IPPROTO_UDP
+                                                      )                                      libc::c_uint);
     sum =
-        (sum as
-             libc::c_uint).wrapping_add(__bswap_16((::std::mem::size_of::<udphdr>()
-                                                        as
-                                                        libc::c_ulong).wrapping_add(len)
-                                                       as u16) as
-                                            libc::c_uint) as u32 as u32;
-    i = 0 as libc::c_int as u32;
-    while (i as libc::c_ulong) <
-              (::std::mem::size_of::<udphdr>() as
-                   libc::c_ulong).wrapping_div(2 as libc::c_int as
-                                                   libc::c_ulong) {
+        (sum       libc::c_uint).wrapping_add(__bswap_16((::std::mem::size_of::<udphdr>()
+                                                     ).wrapping_add(len)
+                                                      )                                      libc::c_uint);
+    i = 0;
+    while (i) <
+              (::std::mem::size_of::<udphdr>()).wrapping_div(2libc::c_ulong) {
         sum =
-            (sum as
-                 libc::c_uint).wrapping_add(*(&mut udp as *mut udphdr as
-                                                  *mut u16).offset(i as
-                                                                         isize)
-                                                as libc::c_uint) as u32 as
-                u32;
+            (sum           libc::c_uint).wrapping_add(*(&mut udp                                            *mut u16).offset(i                      isize)
+                                               )          u32;
         i = i.wrapping_add(1)
     }
-    i = 0 as libc::c_int as u32;
-    while (i as libc::c_ulong) <
-              len.wrapping_add(1 as libc::c_int as
-                                   libc::c_ulong).wrapping_div(2 as
-                                                                   libc::c_int
-                                                                   as
-                                                                   libc::c_ulong)
+    i = 0;
+    while (i) <
+              len.wrapping_add(1).wrapping_div(2                libc::c_int
+                                                                           )
           {
         sum =
-            (sum as
-                 libc::c_uint).wrapping_add(*(packet as
-                                                  *mut u16).offset(i as
-                                                                         isize)
-                                                as libc::c_uint) as u32 as
-                u32;
+            (sum           libc::c_uint).wrapping_add(*(packet                                            *mut u16).offset(i                      isize)
+                                               )          u32;
         i = i.wrapping_add(1)
     }
-    while sum >> 16 as libc::c_int != 0 {
+    while sum >> 16 != 0 {
         sum =
             (sum &
-                 0xffff as libc::c_int as
-                     libc::c_uint).wrapping_add(sum >> 16 as libc::c_int)
+                 0xffff               libc::c_uint).wrapping_add(sum >> 16)
     }
     udp.uh_sum =
-        if sum == 0xffff as libc::c_int as libc::c_uint { sum } else { !sum }
-            as u16;
-    rc = gettimeofday(&mut time, 0 as *mut libc::c_void);
-    pcap_header.ts_sec = time.tv_sec as u32;
-    pcap_header.ts_usec = time.tv_usec as u32;
+        if sum == 0xffff { sum } else { !sum }
+           ;
+    rc = gettimeofday(&mut time, 0);
+    pcap_header.ts_sec = time.tv_sec;
+    pcap_header.ts_usec = time.tv_usec;
     pcap_header.orig_len =
-        ipsz.wrapping_add(::std::mem::size_of::<udphdr>() as
-                              libc::c_ulong).wrapping_add(len) as u32;
+        ipsz.wrapping_add(::std::mem::size_of::<udphdr>()).wrapping_add(len);
     pcap_header.incl_len = pcap_header.orig_len;
-    if rc == -(1 as libc::c_int) ||
+    if rc == -(1) ||
            read_write(daemon.dumpfd,
-                      &mut pcap_header as *mut pcaprec_hdr_s as
-                          *mut libc::c_void as *mut libc::c_uchar,
-                      ::std::mem::size_of::<pcaprec_hdr_s>() as libc::c_ulong
-                          as libc::c_int, 0 as libc::c_int) == 0 ||
-           read_write(daemon.dumpfd, iphdr as *mut libc::c_uchar,
-                      ipsz as libc::c_int, 0 as libc::c_int) == 0 ||
+                      &mut pcap_header,
+                      ::std::mem::size_of::<pcaprec_hdr_s>()
+                         , 0) == 0 ||
+           read_write(daemon.dumpfd, iphdr,
+                      ipsz, 0) == 0 ||
            read_write(daemon.dumpfd,
-                      &mut udp as *mut udphdr as *mut libc::c_void as
-                          *mut libc::c_uchar,
-                      ::std::mem::size_of::<udphdr>() as libc::c_ulong as
-                          libc::c_int, 0 as libc::c_int) == 0 ||
-           read_write(daemon.dumpfd, packet as *mut libc::c_uchar,
-                      len as libc::c_int, 0 as libc::c_int) == 0 {
-        my_syslog(3 as libc::c_int,
-                  b"failed to write packet dump\x00" as *const u8 as
-                      *const libc::c_char);
+                      &mut udp,
+                      ::std::mem::size_of::<udphdr>(), 0) == 0 ||
+           read_write(daemon.dumpfd, packet,
+                      len, 0) == 0 {
+        my_syslog(3,
+                  b"failed to write packet dump\x00");
     } else {
         packet_count = packet_count.wrapping_add(1);
-        my_syslog(6 as libc::c_int,
-                  b"dumping UDP packet %u mask 0x%04x\x00" as *const u8 as
-                      *const libc::c_char, packet_count, mask);
+        my_syslog(6,
+                  b"dumping UDP packet %u mask 0x%04x\x00", packet_count, mask);
     };
 }

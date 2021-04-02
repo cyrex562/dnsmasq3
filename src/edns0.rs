@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsHeader, size_t, __bswap_16, MySockAddr, time_t, DnsmasqDaemon, In6Addr, InAddr};
+use crate::defines::{DnsHeader, size_t, __bswap_16, NetAddress, time::Instant, DnsmasqDaemon, In6Addr, NetAddress};
 use crate::rfc1035::{skip_name, skip_questions, skip_section};
 use crate::util::{whine_malloc, print_mac};
 use crate::rrfilter::rrfilter;
@@ -22,119 +22,108 @@ use crate::arp::find_mac;
 use crate::slack::subnet_opt;
 
 #[no_mangle]
-pub unsafe extern "C" fn find_pseudoheader(mut header: *mut DnsHeader,
-                                           mut plen: size_t,
+pub unsafe extern "C" fn find_pseudoheader(mut header: DnsHeader,
+                                           mut plen: usize,
                                            mut len: *mut size_t,
-                                           mut p: *mut *mut libc::c_uchar,
-                                           mut is_sign: *mut libc::c_int,
-                                           mut is_last: *mut libc::c_int)
-                                           -> *mut libc::c_uchar {
+                                           mut p: ,
+                                           mut is_sign: ,
+                                           mut is_last: )
+                                           -> mut Vec<u8> {
     /* See if packet has an RFC2671 pseudoheader, and if so return a pointer to it. 
      also return length of pseudoheader in *len and pointer to the UDP size in *p
      Finally, check to see if a packet is signed. If it is we cannot change a single bit before
      forwarding. We look for TSIG in the addition section, and TKEY queries (for GSS-TSIG) */
-    let mut i: libc::c_int = 0; /* TTL */
-    let mut arcount: libc::c_int =
-        __bswap_16((*header).arcount) as libc::c_int;
-    let mut ansp: *mut libc::c_uchar =
-        header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
-    let mut rdlen: libc::c_ushort = 0;
-    let mut type_0: libc::c_ushort = 0;
-    let mut class: libc::c_ushort = 0;
-    let mut ret: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
+    let mut i: i32 = 0; /* TTL */
+    let mut arcount: i32 =
+        __bswap_16((*header).arcount);
+    let mut ansp: mut Vec<u8> =
+        header.offset(1);
+    let mut rdlen: u16 = 0;
+    let mut type_0: u16 = 0;
+    let mut class: u16 = 0;
+    let mut ret: mut Vec<u8> = 0;
     if !is_sign.is_null() {
-        *is_sign = 0 as libc::c_int;
-        if ((*header).hb3 as libc::c_int & 0x78 as libc::c_int) >>
-               3 as libc::c_int == 0 as libc::c_int {
-            i = __bswap_16((*header).qdcount) as libc::c_int;
-            while i != 0 as libc::c_int {
-                ansp = skip_name(ansp, header, plen, 4 as libc::c_int);
-                if ansp.is_null() { return 0 as *mut libc::c_uchar }
-                let mut t_cp: *mut libc::c_uchar = ansp;
+        *is_sign = 0;
+        if ((*header).hb3 & 0x78) >>
+               3 == 0 {
+            i = __bswap_16((*header).qdcount);
+            while i != 0 {
+                ansp = skip_name(ansp, header, plen, 4);
+                if ansp.is_null() { return 0 }
+                let mut t_cp: mut Vec<u8> = ansp;
                 type_0 =
-                    ((*t_cp.offset(0 as libc::c_int as isize) as u16 as
-                          libc::c_int) << 8 as libc::c_int |
-                         *t_cp.offset(1 as libc::c_int as isize) as u16 as
-                             libc::c_int) as libc::c_ushort;
-                ansp = ansp.offset(2 as libc::c_int as isize);
-                let mut t_cp_0: *mut libc::c_uchar = ansp;
+                    ((*t_cp.offset(0)) << 8 |
+                         *t_cp.offset(1)                       libc::c_int) ;
+                ansp = ansp.offset(2);
+                let mut t_cp_0: mut Vec<u8> = ansp;
                 class =
-                    ((*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
-                          libc::c_int) << 8 as libc::c_int |
-                         *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
-                             libc::c_int) as libc::c_ushort;
-                ansp = ansp.offset(2 as libc::c_int as isize);
-                if class as libc::c_int == 1 as libc::c_int &&
-                       type_0 as libc::c_int == 249 as libc::c_int {
-                    *is_sign = 1 as libc::c_int
+                    ((*t_cp_0.offset(0)) << 8 |
+                         *t_cp_0.offset(1)                       libc::c_int) ;
+                ansp = ansp.offset(2);
+                if class == 1 &&
+                       type_0 == 249 {
+                    *is_sign = 1
                 }
                 i -= 1
             }
         }
     } else {
         ansp = skip_questions(header, plen);
-        if ansp.is_null() { return 0 as *mut libc::c_uchar }
+        if ansp.is_null() { return 0 }
     }
-    if arcount == 0 as libc::c_int { return 0 as *mut libc::c_uchar }
+    if arcount == 0 { return 0 }
     ansp =
         skip_section(ansp,
-                     __bswap_16((*header).ancount) as libc::c_int +
-                         __bswap_16((*header).nscount) as libc::c_int, header,
+                     __bswap_16((*header).ancount) +
+                         __bswap_16((*header).nscount), header,
                      plen);
-    if ansp.is_null() { return 0 as *mut libc::c_uchar }
-    i = 0 as libc::c_int;
+    if ansp.is_null() { return 0 }
+    i = 0;
     while i < arcount {
-        let mut save: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-        let mut start: *mut libc::c_uchar = ansp;
-        ansp = skip_name(ansp, header, plen, 10 as libc::c_int);
-        if ansp.is_null() { return 0 as *mut libc::c_uchar }
-        let mut t_cp_1: *mut libc::c_uchar = ansp;
+        let mut save: mut Vec<u8> = 0;
+        let mut start: mut Vec<u8> = ansp;
+        ansp = skip_name(ansp, header, plen, 10);
+        if ansp.is_null() { return 0 }
+        let mut t_cp_1: mut Vec<u8> = ansp;
         type_0 =
-            ((*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
-                  libc::c_int) << 8 as libc::c_int |
-                 *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
-                     libc::c_int) as libc::c_ushort;
-        ansp = ansp.offset(2 as libc::c_int as isize);
+            ((*t_cp_1.offset(0) ) << 8 |
+                 *t_cp_1.offset(1) ) ;
+        ansp = ansp.offset(2);
         save = ansp;
-        let mut t_cp_2: *mut libc::c_uchar = ansp;
+        let mut t_cp_2: mut Vec<u8> = ansp;
         class =
-            ((*t_cp_2.offset(0 as libc::c_int as isize) as u16 as
-                  libc::c_int) << 8 as libc::c_int |
-                 *t_cp_2.offset(1 as libc::c_int as isize) as u16 as
-                     libc::c_int) as libc::c_ushort;
-        ansp = ansp.offset(2 as libc::c_int as isize);
-        ansp = ansp.offset(4 as libc::c_int as isize);
-        let mut t_cp_3: *mut libc::c_uchar = ansp;
+            ((*t_cp_2.offset(0) ) << 8 |
+                 *t_cp_2.offset(1) ) ;
+        ansp = ansp.offset(2);
+        ansp = ansp.offset(4);
+        let mut t_cp_3: mut Vec<u8> = ansp;
         rdlen =
-            ((*t_cp_3.offset(0 as libc::c_int as isize) as u16 as
-                  libc::c_int) << 8 as libc::c_int |
-                 *t_cp_3.offset(1 as libc::c_int as isize) as u16 as
-                     libc::c_int) as libc::c_ushort;
-        ansp = ansp.offset(2 as libc::c_int as isize);
-        if if !((ansp.wrapping_offset_from(header as *mut libc::c_uchar) as
-                     libc::c_long + rdlen as libc::c_long) as size_t <= plen)
+            ((*t_cp_3.offset(0) ) << 8 |
+                 *t_cp_3.offset(1) ) ;
+        ansp = ansp.offset(2);
+        if if !((ansp.wrapping_offset_from(header)               i32 + rdlen)  <= plen)
               {
-               0 as libc::c_int
+               0
            } else {
-               ansp = ansp.offset(rdlen as libc::c_int as isize);
-               1 as libc::c_int
+               ansp = ansp.offset(rdlen);
+               1
            } == 0 {
-            return 0 as *mut libc::c_uchar
+            return 0
         }
-        if type_0 as libc::c_int == 41 as libc::c_int {
+        if type_0 == 41 {
             if !len.is_null() {
                 *len =
-                    ansp.wrapping_offset_from(start) as libc::c_long as size_t
+                    ansp.wrapping_offset_from(start)
             }
             if !p.is_null() { *p = save }
             if !is_last.is_null() {
-                *is_last = (i == arcount - 1 as libc::c_int) as libc::c_int
+                *is_last = (i == arcount - 1)
             }
             ret = start
-        } else if !is_sign.is_null() && i == arcount - 1 as libc::c_int &&
-                      class as libc::c_int == 255 as libc::c_int &&
-                      type_0 as libc::c_int == 250 as libc::c_int {
-            *is_sign = 1 as libc::c_int
+        } else if !is_sign.is_null() && i == arcount - 1 &&
+                      class == 255 &&
+                      type_0 == 250 {
+            *is_sign = 1
         }
         i += 1
     }
@@ -142,152 +131,135 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: *mut DnsHeader,
 }
 /* replace == 2 ->delete existing option only. */
 #[no_mangle]
-pub unsafe extern "C" fn add_pseudoheader(mut header: *mut DnsHeader,
-                                          mut plen: size_t,
-                                          mut limit: *mut libc::c_uchar,
-                                          mut udp_sz: libc::c_ushort,
-                                          mut optno: libc::c_int,
-                                          mut opt: *mut libc::c_uchar,
-                                          mut optlen: size_t,
-                                          mut set_do: libc::c_int,
-                                          mut replace: libc::c_int)
+pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
+                                          mut plen: usize,
+                                          mut limit: mut Vec<u8>,
+                                          mut udp_sz: u16,
+                                          mut optno: i32,
+                                          mut opt: mut Vec<u8>,
+                                          mut optlen: usize,
+                                          mut set_do: i32,
+                                          mut replace: i32)
                                           -> size_t {
-    let mut lenp: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut datap: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut udp_len: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut buff: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut rdlen: libc::c_int = 0 as libc::c_int;
-    let mut is_sign: libc::c_int = 0;
-    let mut is_last: libc::c_int = 0;
-    let mut flags: libc::c_ushort =
-        if set_do != 0 { 0x8000 as libc::c_int } else { 0 as libc::c_int } as
-            libc::c_ushort;
-    let mut rcode: libc::c_ushort = 0 as libc::c_int as libc::c_ushort;
+    let mut lenp: mut Vec<u8> = 0;
+    let mut datap: mut Vec<u8> = 0;
+    let mut p: mut Vec<u8> = 0;
+    let mut udp_len: mut Vec<u8> = 0;
+    let mut buff: mut Vec<u8> = 0;
+    let mut rdlen: i32 = 0;
+    let mut is_sign: i32 = 0;
+    let mut is_last: i32 = 0;
+    let mut flags: u16 =
+        if set_do != 0 { 0x8000 } else { 0 } ;
+    let mut rcode: u16 = 0 ;
     p =
-        find_pseudoheader(header, plen, 0 as *mut size_t, &mut udp_len,
+        find_pseudoheader(header, plen, 0 , &mut udp_len,
                           &mut is_sign, &mut is_last);
     if is_sign != 0 { return plen }
     if !p.is_null() {
         /* Existing header */
-        let mut i: libc::c_int = 0; /* bad packet */
-        let mut code: libc::c_ushort = 0;
-        let mut len: libc::c_ushort = 0;
+        let mut i: i32 = 0; /* bad packet */
+        let mut code: u16 = 0;
+        let mut len: u16 = 0;
         p = udp_len;
-        let mut t_cp: *mut libc::c_uchar = p;
+        let mut t_cp: mut Vec<u8> = p;
         udp_sz =
-            ((*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int)
-                 << 8 as libc::c_int |
-                 *t_cp.offset(1 as libc::c_int as isize) as u16 as
-                     libc::c_int) as libc::c_ushort;
-        p = p.offset(2 as libc::c_int as isize);
-        let mut t_cp_0: *mut libc::c_uchar = p;
+            ((*t_cp.offset(0))
+                 << 8 |
+                 *t_cp.offset(1) ) ;
+        p = p.offset(2);
+        let mut t_cp_0: mut Vec<u8> = p;
         rcode =
-            ((*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
-                  libc::c_int) << 8 as libc::c_int |
-                 *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
-                     libc::c_int) as libc::c_ushort;
-        p = p.offset(2 as libc::c_int as isize);
-        let mut t_cp_1: *mut libc::c_uchar = p;
+            ((*t_cp_0.offset(0) ) << 8 |
+                 *t_cp_0.offset(1) ) ;
+        p = p.offset(2);
+        let mut t_cp_1: mut Vec<u8> = p;
         flags =
-            ((*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
-                  libc::c_int) << 8 as libc::c_int |
-                 *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
-                     libc::c_int) as libc::c_ushort;
-        p = p.offset(2 as libc::c_int as isize);
+            ((*t_cp_1.offset(0) ) << 8 |
+                 *t_cp_1.offset(1) ) ;
+        p = p.offset(2);
         if set_do != 0 {
-            p = p.offset(-(2 as libc::c_int as isize));
+            p = p.offset(-(2));
             flags =
-                (flags as libc::c_int | 0x8000 as libc::c_int) as
-                    libc::c_ushort;
+                (flags | 0x8000) ;
             let mut t_s: u16 = flags;
-            let mut t_cp_2: *mut libc::c_uchar = p;
+            let mut t_cp_2: mut Vec<u8> = p;
             let fresh6 = t_cp_2;
             t_cp_2 = t_cp_2.offset(1);
             *fresh6 =
-                (t_s as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-            *t_cp_2 = t_s as libc::c_uchar;
-            p = p.offset(2 as libc::c_int as isize)
+                (t_s >> 8);
+            *t_cp_2 = t_s;
+            p = p.offset(2)
         }
         lenp = p;
-        let mut t_cp_3: *mut libc::c_uchar = p;
+        let mut t_cp_3: mut Vec<u8> = p;
         rdlen =
-            (*t_cp_3.offset(0 as libc::c_int as isize) as u16 as
-                 libc::c_int) << 8 as libc::c_int |
-                *t_cp_3.offset(1 as libc::c_int as isize) as u16 as
-                    libc::c_int;
-        p = p.offset(2 as libc::c_int as isize);
-        if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as
-                  libc::c_long + rdlen as libc::c_long) as size_t <= plen) {
+            (*t_cp_3.offset(0) ) << 8 |
+                *t_cp_3.offset(1) ;
+        p = p.offset(2);
+        if !((p.wrapping_offset_from(header)  + rdlen)  <= plen) {
             return plen
         }
         datap = p;
         /* no option to add */
-        if optno == 0 as libc::c_int { return plen }
+        if optno == 0 { return plen }
         /* check if option already there */
-        i = 0 as libc::c_int;
-        while (i + 4 as libc::c_int) < rdlen {
-            let mut t_cp_4: *mut libc::c_uchar = p;
+        i = 0;
+        while (i + 4) < rdlen {
+            let mut t_cp_4: mut Vec<u8> = p;
             code =
-                ((*t_cp_4.offset(0 as libc::c_int as isize) as u16 as
-                      libc::c_int) << 8 as libc::c_int |
-                     *t_cp_4.offset(1 as libc::c_int as isize) as u16 as
-                         libc::c_int) as libc::c_ushort;
-            p = p.offset(2 as libc::c_int as isize);
-            let mut t_cp_5: *mut libc::c_uchar = p;
+                ((*t_cp_4.offset(0) ) << 8 |
+                     *t_cp_4.offset(1) ) ;
+            p = p.offset(2);
+            let mut t_cp_5: mut Vec<u8> = p;
             len =
-                ((*t_cp_5.offset(0 as libc::c_int as isize) as u16 as
-                      libc::c_int) << 8 as libc::c_int |
-                     *t_cp_5.offset(1 as libc::c_int as isize) as u16 as
-                         libc::c_int) as libc::c_ushort;
-            p = p.offset(2 as libc::c_int as isize);
+                ((*t_cp_5.offset(0) ) << 8 |
+                     *t_cp_5.offset(1) ) ;
+            p = p.offset(2);
             /* malformed option, delete the whole OPT RR and start again. */
-            if i + 4 as libc::c_int + len as libc::c_int > rdlen {
-                rdlen = 0 as libc::c_int;
-                is_last = 0 as libc::c_int;
+            if i + 4 + len > rdlen {
+                rdlen = 0;
+                is_last = 0;
                 break ;
-            } else if code as libc::c_int == optno {
-                if replace == 0 as libc::c_int { return plen }
+            } else if code == optno {
+                if replace == 0 { return plen }
                 /* delete option if we're to replace it. */
-                p = p.offset(-(4 as libc::c_int as isize));
-                rdlen -= len as libc::c_int + 4 as libc::c_int;
-                memmove(p as *mut libc::c_void,
-                        p.offset(len as libc::c_int as
-                                     isize).offset(4 as libc::c_int as isize)
-                            as *const libc::c_void,
-                        (rdlen - i) as libc::c_ulong);
-                let mut t_s_0: u16 = rdlen as u16;
-                let mut t_cp_6: *mut libc::c_uchar = lenp;
+                p = p.offset(-(4));
+                rdlen -= len + 4;
+                memmove(p,
+                        p.offset(len ).offset(4)
+                           ,
+                        (rdlen - i));
+                let mut t_s_0: u16 = rdlen;
+                let mut t_cp_6: mut Vec<u8> = lenp;
                 let fresh7 = t_cp_6;
                 t_cp_6 = t_cp_6.offset(1);
                 *fresh7 =
-                    (t_s_0 as libc::c_int >> 8 as libc::c_int) as
-                        libc::c_uchar;
-                *t_cp_6 = t_s_0 as libc::c_uchar;
-                lenp = lenp.offset(2 as libc::c_int as isize);
-                lenp = lenp.offset(-(2 as libc::c_int as isize))
+                    (t_s_0 >> 8) ;
+                *t_cp_6 = t_s_0;
+                lenp = lenp.offset(2);
+                lenp = lenp.offset(-(2))
             } else {
-                p = p.offset(len as libc::c_int as isize);
-                i += len as libc::c_int + 4 as libc::c_int
+                p = p.offset(len);
+                i += len + 4
             }
         }
         /* If we're going to extend the RR, it has to be the last RR in the packet */
         if is_last == 0 {
             /* First, take a copy of the options. */
-            if rdlen != 0 as libc::c_int &&
+            if rdlen != 0 &&
                    {
                        buff =
-                           whine_malloc(rdlen as size_t) as
-                               *mut libc::c_uchar;
+                           whine_malloc(rdlen );
                        !buff.is_null()
                    } {
-                memcpy(buff as *mut libc::c_void,
-                       datap as *const libc::c_void, rdlen as libc::c_ulong);
+                memcpy(buff,
+                       datap, rdlen);
             }
             /* now, delete OPT RR */
-            plen = rrfilter(header, plen, 0 as libc::c_int);
+            plen = rrfilter(header, plen, 0);
             /* Now, force addition of a new one */
-            p = 0 as *mut libc::c_uchar
+            p = 0
         }
     }
     if p.is_null() {
@@ -297,512 +269,434 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: *mut DnsHeader,
                {
                    p =
                        skip_section(p,
-                                    __bswap_16((*header).ancount) as
-                                        libc::c_int +
-                                        __bswap_16((*header).nscount) as
-                                            libc::c_int +
-                                        __bswap_16((*header).arcount) as
-                                            libc::c_int, header, plen);
+                                    __bswap_16((*header).ancount)  +
+                                        __bswap_16((*header).nscount)  +
+                                        __bswap_16((*header).arcount) , header, plen);
                    p.is_null()
                } {
-            free(buff as *mut libc::c_void);
+            free(buff);
             return plen
         }
-        if p.offset(11 as libc::c_int as isize) > limit {
-            free(buff as *mut libc::c_void);
+        if p.offset(11) > limit {
+            free(buff);
             return plen
             /* Too big */
         } /* empty name */
         let fresh8 = p;
         p = p.offset(1);
-        *fresh8 = 0 as libc::c_int as libc::c_uchar;
-        let mut t_s_1: u16 = 41 as libc::c_int as u16;
-        let mut t_cp_7: *mut libc::c_uchar = p;
+        *fresh8 = 0;
+        let mut t_s_1: u16 = 41;
+        let mut t_cp_7: mut Vec<u8> = p;
         let fresh9 = t_cp_7;
         t_cp_7 = t_cp_7.offset(1);
-        *fresh9 = (t_s_1 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_7 = t_s_1 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
+        *fresh9 = (t_s_1 >> 8);
+        *t_cp_7 = t_s_1;
+        p = p.offset(2);
         let mut t_s_2: u16 = udp_sz;
-        let mut t_cp_8: *mut libc::c_uchar = p;
+        let mut t_cp_8: mut Vec<u8> = p;
         let fresh10 = t_cp_8;
         t_cp_8 = t_cp_8.offset(1);
         *fresh10 =
-            (t_s_2 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_8 = t_s_2 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
+            (t_s_2 >> 8);
+        *t_cp_8 = t_s_2;
+        p = p.offset(2);
         /* max packet length, 512 if not given in EDNS0 header */
         let mut t_s_3: u16 = rcode;
-        let mut t_cp_9: *mut libc::c_uchar = p;
+        let mut t_cp_9: mut Vec<u8> = p;
         let fresh11 = t_cp_9;
         t_cp_9 = t_cp_9.offset(1);
         *fresh11 =
-            (t_s_3 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_9 = t_s_3 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
+            (t_s_3 >> 8);
+        *t_cp_9 = t_s_3;
+        p = p.offset(2);
         /* extended RCODE and version */
         let mut t_s_4: u16 = flags;
-        let mut t_cp_10: *mut libc::c_uchar = p;
+        let mut t_cp_10: mut Vec<u8> = p;
         let fresh12 = t_cp_10;
         t_cp_10 = t_cp_10.offset(1);
         *fresh12 =
-            (t_s_4 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_10 = t_s_4 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
+            (t_s_4 >> 8);
+        *t_cp_10 = t_s_4;
+        p = p.offset(2);
         /* DO flag */
         lenp = p;
-        let mut t_s_5: u16 = rdlen as u16;
-        let mut t_cp_11: *mut libc::c_uchar = p;
+        let mut t_s_5: u16 = rdlen;
+        let mut t_cp_11: mut Vec<u8> = p;
         let fresh13 = t_cp_11;
         t_cp_11 = t_cp_11.offset(1);
         *fresh13 =
-            (t_s_5 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_11 = t_s_5 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
+            (t_s_5 >> 8);
+        *t_cp_11 = t_s_5;
+        p = p.offset(2);
         /* RDLEN */
         datap = p;
         /* Copy back any options */
         if !buff.is_null() {
-            if p.offset(rdlen as isize) > limit {
-                free(buff as *mut libc::c_void);
+            if p.offset(rdlen) > limit {
+                free(buff);
                 return plen
                 /* Too big */
             }
-            memcpy(p as *mut libc::c_void, buff as *const libc::c_void,
-                   rdlen as libc::c_ulong);
-            free(buff as *mut libc::c_void);
-            p = p.offset(rdlen as isize)
+            memcpy(p, buff,
+                   rdlen);
+            free(buff);
+            p = p.offset(rdlen)
         }
         /* Only bump arcount if RR is going to fit */
-        if optlen as isize <=
-               limit.wrapping_offset_from(p.offset(4 as libc::c_int as isize))
-                   as libc::c_long {
+        if optlen <=
+               limit.wrapping_offset_from(p.offset(4))
+                   {
             (*header).arcount =
-                __bswap_16((__bswap_16((*header).arcount) as libc::c_int +
-                                1 as libc::c_int) as u16)
+                __bswap_16((__bswap_16((*header).arcount) +
+                                1))
         }
     } /* Too big */
-    if optlen as isize >
-           limit.wrapping_offset_from(p.offset(4 as libc::c_int as isize)) as
-               libc::c_long {
+    if optlen >
+           limit.wrapping_offset_from(p.offset(4))  {
         return plen
     }
     /* Add new option */
-    if optno != 0 as libc::c_int && replace != 2 as libc::c_int {
-        if p.offset(4 as libc::c_int as isize) > limit {
+    if optno != 0 && replace != 2 {
+        if p.offset(4) > limit {
             return plen
         } /* Too big */
-        let mut t_s_6: u16 = optno as u16; /* Too big */
-        let mut t_cp_12: *mut libc::c_uchar =
+        let mut t_s_6: u16 = optno; /* Too big */
+        let mut t_cp_12: mut Vec<u8> =
             p; /* can't get mac address, just delete any incoming. */
         let fresh14 = t_cp_12; /* handle 6 byte MACs */
         t_cp_12 = t_cp_12.offset(1);
         *fresh14 =
-            (t_s_6 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_12 = t_s_6 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
-        let mut t_s_7: u16 = optlen as u16;
-        let mut t_cp_13: *mut libc::c_uchar = p;
+            (t_s_6 >> 8);
+        *t_cp_12 = t_s_6;
+        p = p.offset(2);
+        let mut t_s_7: u16 = optlen;
+        let mut t_cp_13: mut Vec<u8> = p;
         let fresh15 = t_cp_13;
         t_cp_13 = t_cp_13.offset(1);
         *fresh15 =
-            (t_s_7 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_13 = t_s_7 as libc::c_uchar;
-        p = p.offset(2 as libc::c_int as isize);
-        if p.offset(optlen as isize) > limit { return plen }
-        memcpy(p as *mut libc::c_void, opt as *const libc::c_void, optlen);
-        p = p.offset(optlen as isize);
+            (t_s_7 >> 8);
+        *t_cp_13 = t_s_7;
+        p = p.offset(2);
+        if p.offset(optlen) > limit { return plen }
+        memcpy(p, opt, optlen);
+        p = p.offset(optlen);
         let mut t_s_8: u16 =
-            p.wrapping_offset_from(datap) as libc::c_long as u16;
-        let mut t_cp_14: *mut libc::c_uchar = lenp;
+            p.wrapping_offset_from(datap);
+        let mut t_cp_14: mut Vec<u8> = lenp;
         let fresh16 = t_cp_14;
         t_cp_14 = t_cp_14.offset(1);
         *fresh16 =
-            (t_s_8 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-        *t_cp_14 = t_s_8 as libc::c_uchar;
-        lenp = lenp.offset(2 as libc::c_int as isize)
+            (t_s_8 >> 8);
+        *t_cp_14 = t_s_8;
+        lenp = lenp.offset(2)
     }
-    return p.wrapping_offset_from(header as *mut libc::c_uchar) as
-               libc::c_long as size_t;
+    return p.wrapping_offset_from(header)  ;
 }
 #[no_mangle]
-pub unsafe extern "C" fn add_do_bit(mut header: *mut DnsHeader,
-                                    mut plen: size_t,
-                                    mut limit: *mut libc::c_uchar) -> size_t {
+pub unsafe extern "C" fn add_do_bit(mut header: DnsHeader,
+                                    mut plen: usize,
+                                    mut limit: mut Vec<u8>) -> size_t {
     return add_pseudoheader(header, plen, limit,
-                            512 as libc::c_int as libc::c_ushort,
-                            0 as libc::c_int, 0 as *mut libc::c_uchar,
-                            0 as libc::c_int as size_t, 1 as libc::c_int,
-                            0 as libc::c_int);
+                            512 ,
+                            0, 0,
+                            0 , 1,
+                            0);
 }
 unsafe extern "C" fn char64(mut c: libc::c_uchar) -> libc::c_uchar {
     return (*::std::mem::transmute::<&[u8; 65],
-                                     &[libc::c_char; 65]>(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\x00"))[(c
-                                                                                                                                         as
-                                                                                                                                         libc::c_int
-                                                                                                                                         &
-                                                                                                                                         0x3f
-                                                                                                                                             as
-                                                                                                                                             libc::c_int)
-                                                                                                                                        as
-                                                                                                                                        usize]
-               as libc::c_uchar;
+                                     &[libc::c_char; 65]>(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\x00"))[(c                                                                                                 libc::c_int            &            0x3f                                                                                                         libc::c_int)                                                                                               usize]
+              ;
 }
-unsafe extern "C" fn encoder(mut in_0: *mut libc::c_uchar,
-                             mut out: *mut libc::c_char) {
-    *out.offset(0 as libc::c_int as isize) =
-        char64((*in_0.offset(0 as libc::c_int as isize) as libc::c_int >>
-                    2 as libc::c_int) as libc::c_uchar) as libc::c_char;
-    *out.offset(1 as libc::c_int as isize) =
-        char64(((*in_0.offset(0 as libc::c_int as isize) as libc::c_int) <<
-                    4 as libc::c_int |
-                    *in_0.offset(1 as libc::c_int as isize) as libc::c_int >>
-                        4 as libc::c_int) as libc::c_uchar) as libc::c_char;
-    *out.offset(2 as libc::c_int as isize) =
-        char64(((*in_0.offset(1 as libc::c_int as isize) as libc::c_int) <<
-                    2 as libc::c_int |
-                    *in_0.offset(2 as libc::c_int as isize) as libc::c_int >>
-                        6 as libc::c_int) as libc::c_uchar) as libc::c_char;
-    *out.offset(3 as libc::c_int as isize) =
-        char64(*in_0.offset(2 as libc::c_int as isize)) as libc::c_char;
+unsafe extern "C" fn encoder(mut in_0: mut Vec<u8>,
+                             mut out: &mut String) {
+    *out.offset(0) =
+        char64((*in_0.offset(0) >>
+                    2));
+    *out.offset(1) =
+        char64(((*in_0.offset(0)) <<
+                    4 |
+                    *in_0.offset(1) >>
+                        4));
+    *out.offset(2) =
+        char64(((*in_0.offset(1)) <<
+                    2 |
+                    *in_0.offset(2) >>
+                        6));
+    *out.offset(3) =
+        char64(*in_0.offset(2));
 }
-unsafe extern "C" fn add_dns_client(mut header: *mut DnsHeader,
-                                    mut plen: size_t,
-                                    mut limit: *mut libc::c_uchar,
-                                    mut l3: *mut MySockAddr, mut now: time_t,
-                                    mut cacheablep: *mut libc::c_int)
+unsafe extern "C" fn add_dns_client(mut header: DnsHeader,
+                                    mut plen: usize,
+                                    mut limit: mut Vec<u8>,
+                                    mut l3: NetAddress, mut now: time::Instant,
+                                    mut cacheablep: )
                                     -> size_t {
-    let mut maclen: libc::c_int = 0;
-    let mut replace: libc::c_int = 2 as libc::c_int;
+    let mut maclen: i32 = 0;
+    let mut replace: i32 = 2;
     let mut mac: [libc::c_uchar; 16] = [0; 16];
     let mut encode: [libc::c_char; 18] = [0; 18];
-    maclen = find_mac(l3, mac.as_mut_ptr(), 1 as libc::c_int, now);
-    if maclen == 6 as libc::c_int {
-        replace = 1 as libc::c_int;
-        *cacheablep = 0 as libc::c_int;
-        if (*dnsmasq_daemon).options[(55 as libc::c_int as
-                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                           as
-                                                                           libc::c_ulong).wrapping_mul(8
-                                                                                                           as
-                                                                                                           libc::c_int
-                                                                                                           as
-                                                                                                           libc::c_ulong))
-                                         as usize] &
-               (1 as libc::c_uint) <<
-                   (55 as libc::c_int as
-                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                         as
-                                                         libc::c_ulong).wrapping_mul(8
-                                                                                         as
-                                                                                         libc::c_int
-                                                                                         as
-                                                                                         libc::c_ulong))
+    maclen = find_mac(l3, mac.as_mut_ptr(), 1, now);
+    if maclen == 6 {
+        replace = 1;
+        *cacheablep = 0;
+        if (*dnsmasq_daemon).options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                         ] &
+               (1) <<
+                   (55 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                       ).wrapping_mul(8 libc::c_int
+                                                                                                                       ))
                != 0 {
             print_mac(encode.as_mut_ptr(), mac.as_mut_ptr(), maclen);
         } else {
             encoder(mac.as_mut_ptr(), encode.as_mut_ptr());
-            encoder(mac.as_mut_ptr().offset(3 as libc::c_int as isize),
-                    encode.as_mut_ptr().offset(4 as libc::c_int as isize));
-            encode[8 as libc::c_int as usize] =
-                0 as libc::c_int as libc::c_char
+            encoder(mac.as_mut_ptr().offset(3),
+                    encode.as_mut_ptr().offset(4));
+            encode[8 ] =
+                0
         }
     }
     return add_pseudoheader(header, plen, limit,
-                            512 as libc::c_int as libc::c_ushort,
-                            65073 as libc::c_int,
-                            encode.as_mut_ptr() as *mut libc::c_uchar,
-                            strlen(encode.as_mut_ptr()), 0 as libc::c_int,
+                            512 ,
+                            65073,
+                            encode.as_mut_ptr(),
+                            strlen(encode.as_mut_ptr()), 0,
                             replace);
 }
-unsafe extern "C" fn add_mac(mut header: *mut DnsHeader, mut plen: size_t,
-                             mut limit: *mut libc::c_uchar,
-                             mut l3: *mut MySockAddr, mut now: time_t,
-                             mut cacheablep: *mut libc::c_int) -> size_t {
-    let mut maclen: libc::c_int = 0;
+unsafe extern "C" fn add_mac(mut header: DnsHeader, mut plen: usize,
+                             mut limit: mut Vec<u8>,
+                             mut l3: NetAddress, mut now: time::Instant,
+                             mut cacheablep: ) -> size_t {
+    let mut maclen: i32 = 0;
     let mut mac: [libc::c_uchar; 16] = [0; 16];
-    maclen = find_mac(l3, mac.as_mut_ptr(), 1 as libc::c_int, now);
-    if maclen != 0 as libc::c_int {
-        *cacheablep = 0 as libc::c_int;
+    maclen = find_mac(l3, mac.as_mut_ptr(), 1, now);
+    if maclen != 0 {
+        *cacheablep = 0;
         plen =
             add_pseudoheader(header, plen, limit,
-                             512 as libc::c_int as libc::c_ushort,
-                             65001 as libc::c_int, mac.as_mut_ptr(),
-                             maclen as size_t, 0 as libc::c_int,
-                             0 as libc::c_int)
+                             512 ,
+                             65001, mac.as_mut_ptr(),
+                             maclen , 0,
+                             0)
     }
     return plen;
 }
-unsafe extern "C" fn get_addrp(mut addr: *mut MySockAddr,
-                               family: libc::c_short) -> *mut libc::c_void {
-    if family as libc::c_int == 10 as libc::c_int {
-        return &mut (*addr).in6.sin6_addr as *mut In6Addr as
-                   *mut libc::c_void
+unsafe extern "C" fn get_addrp(mut addr: NetAddress,
+                               family: libc::c_short) ->Vec<u8> {
+    if family == 10 {
+        return &mut addr.in6.sin6_addr            Vec<u8>
     }
-    return &mut (*addr).in_0.sin_addr as *mut InAddr as *mut libc::c_void;
+    return &mut addr.in_0.sin_addr;
 }
 unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
-                                     mut source: *mut MySockAddr,
-                                     mut cacheablep: *mut libc::c_int)
+                                     mut source: NetAddress,
+                                     mut cacheablep: )
                                      -> size_t {
     /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
-    let mut len: libc::c_int = 0;
-    let mut addrp: *mut libc::c_void = 0 as *mut libc::c_void;
-    let mut sa_family: libc::c_int = (*source).sa.sa_family as libc::c_int;
-    let mut cacheable: libc::c_int = 0 as libc::c_int;
-    (*opt).source_netmask = 0 as libc::c_int as u8;
-    (*opt).scope_netmask = 0 as libc::c_int as u8;
-    if (*source).sa.sa_family as libc::c_int == 10 as libc::c_int &&
+    let mut len: i32 = 0;
+    let mut addrp:Vec<u8> = 0;
+    let mut sa_family: i32 = (*source).sa.sa_family;
+    let mut cacheable: i32 = 0;
+    (*opt).source_netmask = 0 as u8;
+    (*opt).scope_netmask = 0 as u8;
+    if (*source).sa.sa_family == 10 &&
            !(*dnsmasq_daemon).add_subnet6.is_null() {
         (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet6).mask as u8;
         if (*(*dnsmasq_daemon).add_subnet6).addr_used != 0 {
             sa_family =
-                (*(*dnsmasq_daemon).add_subnet6).addr.sa.sa_family as
-                    libc::c_int;
+                (*(*dnsmasq_daemon).add_subnet6).addr.sa.sa_family ;
             addrp =
                 get_addrp(&mut (*(*dnsmasq_daemon).add_subnet6).addr,
-                          sa_family as libc::c_short);
-            cacheable = 1 as libc::c_int
+                          sa_family );
+            cacheable = 1
         } else {
             addrp =
-                &mut (*source).in6.sin6_addr as *mut In6Addr as
-                    *mut libc::c_void
+                &mut (*source).in6.sin6_addr             Vec<u8>
         }
     }
-    if (*source).sa.sa_family as libc::c_int == 2 as libc::c_int &&
+    if (*source).sa.sa_family == 2 &&
            !(*dnsmasq_daemon).add_subnet4.is_null() {
         (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet4).mask as u8;
         if (*(*dnsmasq_daemon).add_subnet4).addr_used != 0 {
             sa_family =
-                (*(*dnsmasq_daemon).add_subnet4).addr.sa.sa_family as
-                    libc::c_int;
+                (*(*dnsmasq_daemon).add_subnet4).addr.sa.sa_family ;
             addrp =
                 get_addrp(&mut (*(*dnsmasq_daemon).add_subnet4).addr,
-                          sa_family as libc::c_short);
-            cacheable = 1 as libc::c_int
+                          sa_family );
+            cacheable = 1
             /* Address is constant */
         } else {
             addrp =
-                &mut (*source).in_0.sin_addr as *mut InAddr as
-                    *mut libc::c_void
+                &mut (*source).in_0.sin_addr             Vec<u8>
         }
     } /* No address ever supplied. */
     (*opt).family =
-        __bswap_16(if sa_family == 10 as libc::c_int {
-                       2 as libc::c_int
-                   } else { 1 as libc::c_int } as u16);
+        __bswap_16(if sa_family == 10 {
+                       2
+                   } else { 1 });
     if !addrp.is_null() &&
-           (*opt).source_netmask as libc::c_int != 0 as libc::c_int {
+           (*opt).source_netmask != 0 {
         len =
-            ((*opt).source_netmask as libc::c_int - 1 as libc::c_int >>
-                 3 as libc::c_int) + 1 as libc::c_int;
-        memcpy((*opt).addr.as_mut_ptr() as *mut libc::c_void, addrp,
-               len as libc::c_ulong);
-        if (*opt).source_netmask as libc::c_int & 7 as libc::c_int != 0 {
-            (*opt).addr[(len - 1 as libc::c_int) as usize] =
-                ((*opt).addr[(len - 1 as libc::c_int) as usize] as libc::c_int
+            ((*opt).source_netmask - 1 >>
+                 3) + 1;
+        memcpy((*opt).addr.as_mut_ptr(), addrp,
+               len);
+        if (*opt).source_netmask & 7 != 0 {
+            (*opt).addr[(len - 1) ] =
+                ((*opt).addr[(len - 1) ]
                      &
-                     (0xff as libc::c_int) <<
-                         8 as libc::c_int -
-                             ((*opt).source_netmask as libc::c_int &
-                                  7 as libc::c_int)) as u8
+                     (0xff) <<
+                         8 -
+                             ((*opt).source_netmask &
+                                  7)) as u8
         }
-    } else { cacheable = 1 as libc::c_int; len = 0 as libc::c_int }
+    } else { cacheable = 1; len = 0 }
     if !cacheablep.is_null() { *cacheablep = cacheable }
-    return (len + 4 as libc::c_int) as size_t;
+    return (len + 4) ;
 }
-unsafe extern "C" fn add_source_addr(mut header: *mut DnsHeader,
-                                     mut plen: size_t,
-                                     mut limit: *mut libc::c_uchar,
-                                     mut source: *mut MySockAddr,
-                                     mut cacheable: *mut libc::c_int)
+unsafe extern "C" fn add_source_addr(mut header: DnsHeader,
+                                     mut plen: usize,
+                                     mut limit: mut Vec<u8>,
+                                     mut source: NetAddress,
+                                     mut cacheable: )
                                      -> size_t {
     /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
-    let mut len: libc::c_int = 0;
+    let mut len: i32 = 0;
     let mut opt: subnet_opt =
         subnet_opt{family: 0,
                    source_netmask: 0,
                    scope_netmask: 0,
                    addr: [0; 16],};
-    len = calc_subnet_opt(&mut opt, source, cacheable) as libc::c_int;
+    len = calc_subnet_opt(&mut opt, source, cacheable);
     return add_pseudoheader(header, plen, limit,
-                            512 as libc::c_int as libc::c_ushort,
-                            8 as libc::c_int,
-                            &mut opt as *mut subnet_opt as *mut libc::c_uchar,
-                            len as size_t, 0 as libc::c_int,
-                            0 as libc::c_int);
+                            512 ,
+                            8,
+                            &mut opt ,
+                            len , 0,
+                            0);
 }
 #[no_mangle]
-pub unsafe extern "C" fn check_source(mut header: *mut DnsHeader,
-                                      mut plen: size_t,
-                                      mut pseudoheader: *mut libc::c_uchar,
-                                      mut peer: *mut MySockAddr)
-                                      -> libc::c_int {
+pub unsafe extern "C" fn check_source(mut header: DnsHeader,
+                                      mut plen: usize,
+                                      mut pseudoheader: mut Vec<u8>,
+                                      mut peer: NetAddress)
+                                      -> i32 {
     /* Section 9.2, Check that subnet option in reply matches. */
-    let mut len: libc::c_int = 0; /* skip UDP length and RCODE */
-    let mut calc_len: libc::c_int = 0; /* bad packet */
+    let mut len: i32 = 0; /* skip UDP length and RCODE */
+    let mut calc_len: i32 = 0; /* bad packet */
     let mut opt: subnet_opt =
         subnet_opt{family: 0,
                    source_netmask: 0,
                    scope_netmask: 0,
                    addr: [0; 16],};
-    let mut p: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
-    let mut code: libc::c_int = 0;
-    let mut i: libc::c_int = 0;
-    let mut rdlen: libc::c_int = 0;
+    let mut p: mut Vec<u8> = 0;
+    let mut code: i32 = 0;
+    let mut i: i32 = 0;
+    let mut rdlen: i32 = 0;
     calc_len =
-        calc_subnet_opt(&mut opt, peer, 0 as *mut libc::c_int) as libc::c_int;
-    p = skip_name(pseudoheader, header, plen, 10 as libc::c_int);
-    if p.is_null() { return 1 as libc::c_int }
-    p = p.offset(8 as libc::c_int as isize);
-    let mut t_cp: *mut libc::c_uchar = p;
+        calc_subnet_opt(&mut opt, peer, 0);
+    p = skip_name(pseudoheader, header, plen, 10);
+    if p.is_null() { return 1 }
+    p = p.offset(8);
+    let mut t_cp: mut Vec<u8> = p;
     rdlen =
-        (*t_cp.offset(0 as libc::c_int as isize) as u16 as libc::c_int) <<
-            8 as libc::c_int |
-            *t_cp.offset(1 as libc::c_int as isize) as u16 as libc::c_int;
-    p = p.offset(2 as libc::c_int as isize);
-    if !((p.wrapping_offset_from(header as *mut libc::c_uchar) as libc::c_long
-              + rdlen as libc::c_long) as size_t <= plen) {
-        return 1 as libc::c_int
+        (*t_cp.offset(0)) <<
+            8 |
+            *t_cp.offset(1);
+    p = p.offset(2);
+    if !((p.wrapping_offset_from(header)
+              + rdlen)  <= plen) {
+        return 1
     }
     /* check if option there */
-    i = 0 as libc::c_int;
-    while (i + 4 as libc::c_int) < rdlen {
-        let mut t_cp_0: *mut libc::c_uchar = p;
+    i = 0;
+    while (i + 4) < rdlen {
+        let mut t_cp_0: mut Vec<u8> = p;
         code =
-            (*t_cp_0.offset(0 as libc::c_int as isize) as u16 as
-                 libc::c_int) << 8 as libc::c_int |
-                *t_cp_0.offset(1 as libc::c_int as isize) as u16 as
-                    libc::c_int;
-        p = p.offset(2 as libc::c_int as isize);
-        let mut t_cp_1: *mut libc::c_uchar = p;
+            (*t_cp_0.offset(0) ) << 8 |
+                *t_cp_0.offset(1) ;
+        p = p.offset(2);
+        let mut t_cp_1: mut Vec<u8> = p;
         len =
-            (*t_cp_1.offset(0 as libc::c_int as isize) as u16 as
-                 libc::c_int) << 8 as libc::c_int |
-                *t_cp_1.offset(1 as libc::c_int as isize) as u16 as
-                    libc::c_int;
-        p = p.offset(2 as libc::c_int as isize);
-        if code == 8 as libc::c_int {
+            (*t_cp_1.offset(0) ) << 8 |
+                *t_cp_1.offset(1) ;
+        p = p.offset(2);
+        if code == 8 {
             /* make sure this doesn't mismatch. */
-            opt.scope_netmask = *p.offset(3 as libc::c_int as isize);
+            opt.scope_netmask = *p.offset(3);
             if len != calc_len ||
-                   memcmp(p as *const libc::c_void,
-                          &mut opt as *mut subnet_opt as *const libc::c_void,
-                          len as libc::c_ulong) != 0 as libc::c_int {
-                return 0 as libc::c_int
+                   memcmp(p,
+                          &mut opt ,
+                          len) != 0 {
+                return 0
             }
         }
-        p = p.offset(len as isize);
-        i += len + 4 as libc::c_int
+        p = p.offset(len);
+        i += len + 4
     }
-    return 1 as libc::c_int;
+    return 1;
 }
 /* Set *check_subnet if we add a client subnet option, which needs to checked 
    in the reply. Set *cacheable to zero if we add an option which the answer
    may depend on. */
 #[no_mangle]
-pub unsafe extern "C" fn add_edns0_config(mut header: *mut DnsHeader,
-                                          mut plen: size_t,
-                                          mut limit: *mut libc::c_uchar,
-                                          mut source: *mut MySockAddr,
-                                          mut now: time_t,
-                                          mut check_subnet: *mut libc::c_int,
-                                          mut cacheable: *mut libc::c_int)
+pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
+                                          mut plen: usize,
+                                          mut limit: mut Vec<u8>,
+                                          mut source: NetAddress,
+                                          mut now: time::Instant,
+                                          mut check_subnet: ,
+                                          mut cacheable: )
                                           -> size_t {
-    *check_subnet = 0 as libc::c_int;
-    *cacheable = 1 as libc::c_int;
-    if (*dnsmasq_daemon).options[(32 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
-           (1 as libc::c_uint) <<
-               (32 as libc::c_int as
-                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                     as
-                                                     libc::c_ulong).wrapping_mul(8
-                                                                                     as
-                                                                                     libc::c_int
-                                                                                     as
-                                                                                     libc::c_ulong))
+    *check_subnet = 0;
+    *cacheable = 1;
+    if (*dnsmasq_daemon).options[(32).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                     ] &
+           (1) <<
+               (32).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+                                                                                                                      libc::c_int
+                                                                                                               ))
            != 0 {
         plen = add_mac(header, plen, limit, source, now, cacheable)
     }
-    if (*dnsmasq_daemon).options[(54 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
-           (1 as libc::c_uint) <<
-               (54 as libc::c_int as
-                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                     as
-                                                     libc::c_ulong).wrapping_mul(8
-                                                                                     as
-                                                                                     libc::c_int
-                                                                                     as
-                                                                                     libc::c_ulong))
+    if (*dnsmasq_daemon).options[(54).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                     ] &
+           (1) <<
+               (54).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+                                                                                                                      libc::c_int
+                                                                                                               ))
            != 0 ||
-           (*dnsmasq_daemon).options[(55 as libc::c_int as
-                                          libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                           as
-                                                                           libc::c_ulong).wrapping_mul(8
-                                                                                                           as
-                                                                                                           libc::c_int
-                                                                                                           as
-                                                                                                           libc::c_ulong))
-                                         as usize] &
-               (1 as libc::c_uint) <<
-                   (55 as libc::c_int as
-                        libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                         as
-                                                         libc::c_ulong).wrapping_mul(8
-                                                                                         as
-                                                                                         libc::c_int
-                                                                                         as
-                                                                                         libc::c_ulong))
+           (*dnsmasq_daemon).options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                         ] &
+               (1) <<
+                   (55 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
+                                                       ).wrapping_mul(8 libc::c_int
+                                                                                                                       ))
                != 0 {
         plen = add_dns_client(header, plen, limit, source, now, cacheable)
     }
     if !(*dnsmasq_daemon).dns_client_id.is_null() {
         plen =
             add_pseudoheader(header, plen, limit,
-                             512 as libc::c_int as libc::c_ushort,
-                             65074 as libc::c_int,
-                             (*dnsmasq_daemon).dns_client_id as
-                                 *mut libc::c_uchar,
+                             512 ,
+                             65074,
+                             (*dnsmasq_daemon).dns_client_id                           mut Vec<u8>,
                              strlen((*dnsmasq_daemon).dns_client_id),
-                             0 as libc::c_int, 1 as libc::c_int)
+                             0, 1)
     }
-    if (*dnsmasq_daemon).options[(41 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
-           (1 as libc::c_uint) <<
-               (41 as libc::c_int as
-                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                     as
-                                                     libc::c_ulong).wrapping_mul(8
-                                                                                     as
-                                                                                     libc::c_int
-                                                                                     as
-                                                                                     libc::c_ulong))
+    if (*dnsmasq_daemon).options[(41).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                     ] &
+           (1) <<
+               (41).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+                                                                                                                      libc::c_int
+                                                                                                               ))
            != 0 {
         plen = add_source_addr(header, plen, limit, source, cacheable);
-        *check_subnet = 1 as libc::c_int
+        *check_subnet = 1
     }
     return plen;
 }

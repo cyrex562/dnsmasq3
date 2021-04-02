@@ -1,29 +1,18 @@
-use crate::defines::{Server, DnsmasqDaemon, RandFd, ConstSockaddrArg, socklen_t, DnsHeader, __bswap_16, _ISXDIGIT};
+use crate::defines::{Server, DnsmasqDaemon, RandFd, ConstNetAddressArg, socklen_t, DnsHeader, __bswap_16, _ISXDIGIT};
 use crate::forward::{allocate_rfd, free_rfd};
 use crate::util::{retry_send, sa_len, rand16};
 use crate::network::check_servers;
 
 #[no_mangle]
 pub unsafe extern "C" fn loop_send_probes() {
-    let mut serv: *mut Server = 0 as *mut Server;
-    if (*dnsmasq_daemon).options[(50 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
-           (1 as libc::c_uint) <<
-               (50 as libc::c_int as
-                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                     as
-                                                     libc::c_ulong).wrapping_mul(8
-                                                                                     as
-                                                                                     libc::c_int
-                                                                                     as
-                                                                                     libc::c_ulong))
+    let mut serv: Server = 0;
+    if (*dnsmasq_daemon).options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                     ] &
+           (1) <<
+               (50).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+                                                                                                                      libc::c_int
+                                                                                                               ))
            == 0 {
         return
     }
@@ -33,17 +22,17 @@ pub unsafe extern "C" fn loop_send_probes() {
     serv = (*dnsmasq_daemon).servers;
     while !serv.is_null() {
         if (*serv).flags &
-               (4 as libc::c_int | 2 as libc::c_int | 1024 as libc::c_int |
-                    2048 as libc::c_int | 8 as libc::c_int | 32 as libc::c_int
-                    | 8192 as libc::c_int) == 0 {
+               (4 | 2 | 1024 |
+                    2048 | 8 | 32
+                    | 8192) == 0 {
             let mut len: isize = loop_make_probe((*serv).uid);
-            let mut fd: libc::c_int = 0;
-            let mut rfd: *mut RandFd = 0 as *mut RandFd;
+            let mut fd: i32 = 0;
+            let mut rfd: *mut RandFd = 0 ;
             if !(*serv).sfd.is_null() {
                 fd = (*(*serv).sfd).fd;
                 current_block_7 = 2868539653012386629;
             } else {
-                rfd = allocate_rfd((*serv).addr.sa.sa_family as libc::c_int);
+                rfd = allocate_rfd((*serv).addr.sa.sa_family);
                 if rfd.is_null() {
                     current_block_7 = 12517898123489920830;
                 } else {
@@ -55,13 +44,11 @@ pub unsafe extern "C" fn loop_send_probes() {
                 12517898123489920830 => { }
                 _ => {
                     while retry_send(sendto(fd,
-                                            (*dnsmasq_daemon).packet as
-                                                *const libc::c_void,
-                                            len as usize, 0 as libc::c_int,
-                                            ConstSockaddrArg {__sockaddr__:
+                                            (*dnsmasq_daemon).packet ,
+                                            len , 0,
+                                            ConstNetAddressArg {__NetAddress__:
                                                                      &mut (*serv).addr.sa,},
-                                            sa_len(&mut (*serv).addr) as
-                                                socklen_t)) != 0 {
+                                            sa_len(&mut (*serv).addr)                                          socklen_t)) != 0 {
                     }
                     free_rfd(rfd);
                 }
@@ -86,118 +73,100 @@ pub unsafe extern "C" fn loop_send_probes() {
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
-    let mut header: *mut DnsHeader =
-        (*dnsmasq_daemon).packet as *mut DnsHeader;
-    let mut p: *mut libc::c_uchar =
-        header.offset(1 as libc::c_int as isize) as *mut libc::c_uchar;
+    let mut header: DnsHeader =
+        (*dnsmasq_daemon).packet ;
+    let mut p: mut Vec<u8> =
+        header.offset(1);
     /* packet buffer overwritten */
-    (*dnsmasq_daemon).srv_save = 0 as *mut Server; /* Add terminating zero */
+    (*dnsmasq_daemon).srv_save = 0; /* Add terminating zero */
     (*header).id = rand16(); /* log new state */
-    (*header).arcount = __bswap_16(0 as libc::c_int as u16);
+    (*header).arcount = __bswap_16(0);
     (*header).nscount = (*header).arcount;
     (*header).ancount = (*header).nscount;
-    (*header).qdcount = __bswap_16(1 as libc::c_int as u16);
-    (*header).hb3 = 0x1 as libc::c_int as u8;
-    (*header).hb4 = 0 as libc::c_int as u8;
+    (*header).qdcount = __bswap_16(1);
+    (*header).hb3 = 0x1 as u8;
+    (*header).hb4 = 0 as u8;
     (*header).hb3 =
-        ((*header).hb3 as libc::c_int & !(0x78 as libc::c_int) |
-             0 as libc::c_int) as u8;
+        ((*header).hb3 & !(0x78) |
+             0) as u8;
     let fresh6 = p;
     p = p.offset(1);
-    *fresh6 = 8 as libc::c_int as libc::c_uchar;
-    sprintf(p as *mut libc::c_char,
-            b"%.8x\x00" as *const u8 as *const libc::c_char, uid);
-    p = p.offset(8 as libc::c_int as isize);
+    *fresh6 = 8;
+    sprintf(p ,
+            b"%.8x\x00" , uid);
+    p = p.offset(8);
     let fresh7 = p;
     p = p.offset(1);
     *fresh7 =
-        strlen(b"test\x00" as *const u8 as *const libc::c_char) as
-            libc::c_uchar;
-    strcpy(p as *mut libc::c_char,
-           b"test\x00" as *const u8 as *const libc::c_char);
+        strlen(b"test\x00" )      libc::c_uchar;
+    strcpy(p ,
+           b"test\x00" );
     p =
-        p.offset(strlen(b"test\x00" as *const u8 as
-                            *const libc::c_char).wrapping_add(1 as libc::c_int
-                                                                  as
-                                                                  libc::c_ulong)
-                     as isize);
-    let mut t_s: u16 = 16 as libc::c_int as u16;
-    let mut t_cp: *mut libc::c_uchar = p;
+        p.offset(strlen(b"test\x00" ).wrapping_add(1
+                                                                         )
+                    );
+    let mut t_s: u16 = 16;
+    let mut t_cp: mut Vec<u8> = p;
     let fresh8 = t_cp;
     t_cp = t_cp.offset(1);
-    *fresh8 = (t_s as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-    *t_cp = t_s as libc::c_uchar;
-    p = p.offset(2 as libc::c_int as isize);
-    let mut t_s_0: u16 = 1 as libc::c_int as u16;
-    let mut t_cp_0: *mut libc::c_uchar = p;
+    *fresh8 = (t_s >> 8);
+    *t_cp = t_s;
+    p = p.offset(2);
+    let mut t_s_0: u16 = 1;
+    let mut t_cp_0: mut Vec<u8> = p;
     let fresh9 = t_cp_0;
     t_cp_0 = t_cp_0.offset(1);
-    *fresh9 = (t_s_0 as libc::c_int >> 8 as libc::c_int) as libc::c_uchar;
-    *t_cp_0 = t_s_0 as libc::c_uchar;
-    p = p.offset(2 as libc::c_int as isize);
-    return p.wrapping_offset_from(header as *mut libc::c_uchar) as
-               libc::c_long;
+    *fresh9 = (t_s_0 >> 8);
+    *t_cp_0 = t_s_0;
+    p = p.offset(2);
+    return p.wrapping_offset_from(header) ;
 }
 #[no_mangle]
-pub unsafe extern "C" fn detect_loop(mut query: *mut libc::c_char,
-                                     mut type_0: libc::c_int) -> libc::c_int {
-    let mut i: libc::c_int = 0;
+pub unsafe extern "C" fn detect_loop(mut query: &mut String,
+                                     mut type_0: i32) -> i32 {
+    let mut i: i32 = 0;
     let mut uid: u32 = 0;
-    let mut serv: *mut Server = 0 as *mut Server;
-    if (*dnsmasq_daemon).options[(50 as libc::c_int as
-                                      libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                       as
-                                                                       libc::c_ulong).wrapping_mul(8
-                                                                                                       as
-                                                                                                       libc::c_int
-                                                                                                       as
-                                                                                                       libc::c_ulong))
-                                     as usize] &
-           (1 as libc::c_uint) <<
-               (50 as libc::c_int as
-                    libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                     as
-                                                     libc::c_ulong).wrapping_mul(8
-                                                                                     as
-                                                                                     libc::c_int
-                                                                                     as
-                                                                                     libc::c_ulong))
+    let mut serv: Server = 0;
+    if (*dnsmasq_daemon).options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                     ] &
+           (1) <<
+               (50).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+                                                                                                                      libc::c_int
+                                                                                                               ))
            == 0 {
-        return 0 as libc::c_int
+        return 0
     }
-    if type_0 != 16 as libc::c_int ||
-           strlen(b"test\x00" as *const u8 as
-                      *const libc::c_char).wrapping_add(9 as libc::c_int as
-                                                            libc::c_ulong) !=
+    if type_0 != 16 ||
+           strlen(b"test\x00").wrapping_add(9  ) !=
                strlen(query) ||
-           strstr(query, b"test\x00" as *const u8 as *const libc::c_char) !=
-               query.offset(9 as libc::c_int as isize) {
-        return 0 as libc::c_int
+           strstr(query, b"test\x00" ) !=
+               query.offset(9) {
+        return 0
     }
-    i = 0 as libc::c_int;
-    while i < 8 as libc::c_int {
-        if *(*__ctype_b_loc()).offset(*query.offset(i as isize) as libc::c_int
-                                          as isize) as libc::c_int &
-               _ISXDIGIT as libc::c_int as libc::c_ushort as libc::c_int == 0
+    i = 0;
+    while i < 8 {
+        if *(*__ctype_b_loc()).offset(*query.offset(i)
+                                         ) &
+               _ISXDIGIT  == 0
            {
-            return 0 as libc::c_int
+            return 0
         }
         i += 1
     }
     uid =
-        strtol(query, 0 as *mut *mut libc::c_char, 16 as libc::c_int) as
-            u32;
+        strtol(query, 0 , 16)      u32;
     serv = (*dnsmasq_daemon).servers;
     while !serv.is_null() {
         if (*serv).flags &
-               (4 as libc::c_int | 2 as libc::c_int | 1024 as libc::c_int |
-                    2048 as libc::c_int | 8 as libc::c_int | 32 as libc::c_int
-                    | 8192 as libc::c_int) == 0 && uid == (*serv).uid {
-            (*serv).flags |= 8192 as libc::c_int;
+               (4 | 2 | 1024 |
+                    2048 | 8 | 32
+                    | 8192) == 0 && uid == (*serv).uid {
+            (*serv).flags |= 8192;
             check_servers();
-            return 1 as libc::c_int
+            return 1
         }
         serv = (*serv).next
     }
-    return 0 as libc::c_int;
+    return 0;
 }
