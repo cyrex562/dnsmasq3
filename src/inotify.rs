@@ -27,7 +27,7 @@
    all specified resolv-files must exist at start-up, even if the actual
    files don't. 
 */
-use crate::util::{safe_malloc, whine_malloc};
+
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::defines::{Resolvc, DnsmasqDaemon, Crec, HostsFile, DIR, stat, timespec, time::Instant};
 use crate::slack::{inotify_event, IN_NONBLOCK, IN_CLOEXEC, dirent};
@@ -49,7 +49,7 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
     let mut size: isize = 64;
     let mut buf: &mut String = 0 ;
     loop  {
-        buf = safe_malloc(size ) ;
+        // buf = safe_malloc(size ) ;
         rc = readlink(path, buf, size );
         if rc == -(1) {
             /* Not link or doesn't exist. */
@@ -58,7 +58,7 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
                 free(buf);
                 return 0
             } else {
-                die(b"cannot access path %s: %s\x00"                   *const libc::c_char , path,
+                die("cannot access path %s: %s"                   *const libc::c_char , path,
                     5);
             }
         } else {
@@ -70,8 +70,8 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
                        { d = strrchr(path, '/' as i32); !d.is_null() } {
                     /* Add path to relative link */
                     let mut new_buf: &mut String =
-                        safe_malloc((d.wrapping_offset_from(path)                                   i32).wrapping_add(strlen(buf)).wrapping_add(2                     libc::c_int              ))
-                            ;
+                        // safe_malloc((d.wrapping_offset_from(path)                                   i32).wrapping_add(strlen(buf)).wrapping_add(2                     libc::c_int              ))
+                        //     ;
                     *d.offset(1) =
                         0;
                     strcpy(new_buf, path);
@@ -89,18 +89,18 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
 }
 #[no_mangle]
 pub unsafe extern "C" fn inotify_dnsmasq_init() {
-    let mut res: *mut Resolvc = 0 ;
-    inotify_buffer =
-        safe_malloc((::std::mem::size_of::<inotify_event>()).wrapping_add(255      libc::c_ulong).wrapping_add(1 libc::c_int
-                                                                                                                       ))
-            ;
-    (*dnsmasq_daemon).inotifyfd =
+    let mut res: Resolvc = 0 ;
+    // inotify_buffer =
+        // safe_malloc((::std::mem::size_of::<inotify_event>()).wrapping_add(255      libc::c_ulong).wrapping_add(1 libc::c_int
+        //                                                                                                                ))
+        //     ;
+    dnsmasq_daemon.inotifyfd =
         inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-    if (*dnsmasq_daemon).inotifyfd == -(1) {
-        die(b"failed to create inotify: %s\x00",
+    if dnsmasq_daemon.inotifyfd == -(1) {
+        die("failed to create inotify: %s",
             0 , 5);
     }
-    if (*dnsmasq_daemon).options[(8).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.options[(8).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
            (1) <<
@@ -110,15 +110,15 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
            != 0 {
         return
     }
-    res = (*dnsmasq_daemon).resolv_files;
+    res = dnsmasq_daemon.resolv_files;
     while !res.is_null() {
         let mut d: &mut String = 0 ;
         let mut new_path: &mut String = 0 ;
-        let mut path: &mut String =
-            safe_malloc(strlen((*res).name).wrapping_add(1   ))
-                ;
+        // let mut path: &mut String =
+        //     safe_malloc(strlen(res.name).wrapping_add(1   ))
+        //         ;
         let mut links: i32 = 20;
-        strcpy(path, (*res).name);
+        strcpy(path, res.name);
         loop 
              /* Follow symlinks until we reach a non-symlink, or a non-existent file. */
              {
@@ -129,46 +129,46 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
             let fresh6 = links;
             links = links - 1;
             if fresh6 == 0 {
-                die(b"too many symlinks following %s\x00"                   *const libc::c_char , (*res).name,
+                die("too many symlinks following %s"                   *const libc::c_char , res.name,
                     5);
             }
             free(path);
             path = new_path
         }
-        (*res).wd = -(1);
+        res.wd = -(1);
         d = strrchr(path, '/' as i32);
         if !d.is_null() {
             *d = 0;
-            (*res).wd =
-                inotify_add_watch((*dnsmasq_daemon).inotifyfd, path,
+            res.wd =
+                inotify_add_watch(dnsmasq_daemon.inotifyfd, path,
                                   (0x8 | 0x80)
                                      );
-            (*res).file = d.offset(1);
+            res.file = d.offset(1);
             *d = '/' ;
-            if (*res).wd == -(1) &&
+            if res.wd == -(1) &&
                    *__errno_location() == 2 {
-                die(b"directory %s for resolv-file is missing, cannot poll\x00"
-                                          &mut String, (*res).name, 5);
+                die("directory %s for resolv-file is missing, cannot poll"
+                                          &mut String, res.name, 5);
             }
         }
-        if (*res).wd == -(1) {
-            die(b"failed to create inotify for %s: %s\x00"               *const libc::c_char , (*res).name,
+        if res.wd == -(1) {
+            die("failed to create inotify for %s: %s"               *const libc::c_char , res.name,
                 5);
         }
-        res = (*res).next
+        res = res.next
     };
 }
 /* initialisation for dynamic-dir. Set inotify watch for each directory, and read pre-existing files */
 #[no_mangle]
 pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
                                              mut total_size: i32,
-                                             mut rhash: *mut Crec,
+                                             mut rhash: &mut Crec,
                                              mut revhashsz: i32) {
-    let mut ah: *mut HostsFile = 0;
-    ah = (*dnsmasq_daemon).dynamic_dirs;
+    let mut ah: HostsFile = 0;
+    ah = dnsmasq_daemon.dynamic_dirs;
     while !ah.is_null() {
-        let mut dir_stream: *mut DIR = 0 ;
-        let mut ent: *mut dirent = 0 ent;
+        let mut dir_stream: DIR = 0 ;
+        let mut ent: dirent = 0 ent;
         let mut buf: stat =
             stat{st_dev: 0,
                  st_ino: 0,
@@ -185,63 +185,63 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
                  st_mtim: timespec{tv_sec: 0, tv_nsec: 0,},
                  st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
                  __glibc_reserved: [0; 3],};
-        if !((*ah).flags & flag == 0) {
-            if stat((*ah).fname, &mut buf) == -(1) ||
+        if !(ah.flags & flag == 0) {
+            if stat(ah.fname, &mut buf) == -(1) ||
                    !(buf.st_mode & 0o170000 ==
                          0o40000) {
                 my_syslog(3,
-                          b"bad dynamic directory %s: %s\x00" , (*ah).fname,
+                          "bad dynamic directory %s: %s" , ah.fname,
                           strerror(*__errno_location()));
             } else {
-                if (*ah).flags & 4 == 0 {
-                    (*ah).wd =
-                        inotify_add_watch((*dnsmasq_daemon).inotifyfd,
-                                          (*ah).fname,
+                if ah.flags & 4 == 0 {
+                    ah.wd =
+                        inotify_add_watch(dnsmasq_daemon.inotifyfd,
+                                          ah.fname,
                                           (0x8 |
                                                0x80)                                        u32);
-                    (*ah).flags |= 4
+                    ah.flags |= 4
                 }
                 /* Read contents of dir _after_ calling add_watch, in the hope of avoiding
 	  a race which misses files being added as we start */
-                if (*ah).wd == -(1) ||
+                if ah.wd == -(1) ||
                        {
-                           dir_stream = opendir((*ah).fname);
+                           dir_stream = opendir(ah.fname);
                            dir_stream.is_null()
                        } {
                     my_syslog(3,
-                              b"failed to create inotify for %s: %s\x00"                            *const u8,
-                              (*ah).fname, strerror(*__errno_location()));
+                              "failed to create inotify for %s: %s"                            *const u8,
+                              ah.fname, strerror(*__errno_location()));
                 } else {
                     loop  {
                         ent = readdir(dir_stream);
                         if ent.is_null() { break ; }
-                        let mut lendir: usize = strlen((*ah).fname);
+                        let mut lendir: usize = strlen(ah.fname);
                         let mut lenfile: usize =
-                            strlen((*ent).d_name.as_mut_ptr());
+                            strlen(ent.d_name.as_mut_ptr());
                         let mut path: &mut String =
                             0 ;
                         /* ignore emacs backups and dotfiles */
                         if lenfile == 0 ||
-                               (*ent).d_name[lenfile.wrapping_sub(1                   libc::c_int
+                               ent.d_name[lenfile.wrapping_sub(1                   libc::c_int
                                                                                  )
                                                  ] ==
                                    '~' as i32 ||
-                               (*ent).d_name[0 ]                             libc::c_int == '#' as i32 &&
-                                   (*ent).d_name[lenfile.wrapping_sub(1                       libc::c_int
+                               ent.d_name[0 ]                             libc::c_int == '#' as i32 &&
+                                   ent.d_name[lenfile.wrapping_sub(1                       libc::c_int
                                                                                          )
                                                      ]
                                        == '#' as i32 ||
-                               (*ent).d_name[0 ]                             libc::c_int == '.' as i32 {
+                               ent.d_name[0 ]                             libc::c_int == '.' as i32 {
                             continue ;
                         }
-                        path =
-                            whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2))
-                                ;
+                        // path =
+                        //     whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2))
+                        //         ;
                         if !path.is_null() {
-                            strcpy(path, (*ah).fname);
+                            strcpy(path, ah.fname);
                             strcat(path,
-                                   b"/\x00"                                  *const libc::c_char);
-                            strcat(path, (*ent).d_name.as_mut_ptr());
+                                   "/"                                  *const libc::c_char);
+                            strcat(path, ent.d_name.as_mut_ptr());
                             /* ignore non-regular files */
                             if stat(path, &mut buf) != -(1) &&
                                    buf.st_mode &
@@ -249,15 +249,15 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
                                        ==
                                        0o100000
                                {
-                                if (*ah).flags & 8 != 0 {
+                                if ah.flags & 8 != 0 {
                                     total_size =
-                                        read_hostsfile(path, (*ah).index,
+                                        read_hostsfile(path, ah.index,
                                                        total_size, rhash,
                                                        revhashsz)
-                                } else if (*ah).flags &
+                                } else if ah.flags &
                                               (16 |
                                                    32) != 0 {
-                                    option_read_dynfile(path, (*ah).flags);
+                                    option_read_dynfile(path, ah.flags);
                                 }
                             }
                             free(path);
@@ -267,21 +267,21 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
                 }
             }
         }
-        ah = (*ah).next
+        ah = ah.next
     };
 }
 #[no_mangle]
 pub unsafe extern "C" fn inotify_check(mut now: time::Instant) -> i32 {
     let mut hit: i32 = 0;
-    let mut ah: *mut HostsFile = 0;
+    let mut ah: HostsFile = 0;
     loop  {
         let mut rc: i32 = 0;
         let mut p: &mut String = 0 ;
-        let mut res: *mut Resolvc = 0 ;
-        let mut in_0: *mut inotify_event = 0 );
+        let mut res: Resolvc = 0 ;
+        let mut in_0: inotify_event = 0 );
         loop  {
             rc =
-                read((*dnsmasq_daemon).inotifyfd,
+                read(dnsmasq_daemon.inotifyfd,
                      inotify_buffer,
                      (::std::mem::size_of::<inotify_event>()).wrapping_add(255).wrapping_add(1   libc::c_int
                                                                                                                          ))
@@ -299,82 +299,82 @@ pub unsafe extern "C" fn inotify_check(mut now: time::Instant) -> i32 {
             let mut namelen: usize = 0;
             in_0 = p );
             /* ignore emacs backups and dotfiles */
-            if !((*in_0).len == 0 ||
+            if !(in_0.len == 0 ||
                      {
-                         namelen = strlen((*in_0).name.as_mut_ptr());
+                         namelen = strlen(in_0.name.as_mut_ptr());
                          (namelen) == 0
                      } ||
-                     *(*in_0).name.as_mut_ptr().offset(namelen.wrapping_sub(1
+                     *in_0.name.as_mut_ptr().offset(namelen.wrapping_sub(1
                                                                                                             libc::c_int
                                                                                                      )
                                                           )  == '~' as i32 ||
-                     *(*in_0).name.as_mut_ptr().offset(0        isize)  == '#' as i32 &&
-                         *(*in_0).name.as_mut_ptr().offset(namelen.wrapping_sub(1
+                     *in_0.name.as_mut_ptr().offset(0        isize)  == '#' as i32 &&
+                         *in_0.name.as_mut_ptr().offset(namelen.wrapping_sub(1
                                                                                                                     libc::c_int
                                                                                                              )
                                                               )                       libc::c_int == '#' as i32 ||
-                     *(*in_0).name.as_mut_ptr().offset(0        isize)  == '.' as i32) {
-                res = (*dnsmasq_daemon).resolv_files;
+                     *in_0.name.as_mut_ptr().offset(0        isize)  == '.' as i32) {
+                res = dnsmasq_daemon.resolv_files;
                 while !res.is_null() {
-                    if (*res).wd == (*in_0).wd &&
-                           strcmp((*res).file, (*in_0).name.as_mut_ptr()) ==
+                    if res.wd == in_0.wd &&
+                           strcmp(res.file, in_0.name.as_mut_ptr()) ==
                                0 {
                         hit = 1
                     }
-                    res = (*res).next
+                    res = res.next
                 }
-                ah = (*dnsmasq_daemon).dynamic_dirs;
+                ah = dnsmasq_daemon.dynamic_dirs;
                 while !ah.is_null() {
-                    if (*ah).wd == (*in_0).wd {
-                        let mut lendir: usize = strlen((*ah).fname);
+                    if ah.wd == in_0.wd {
+                        let mut lendir: usize = strlen(ah.fname);
                         let mut path: &mut String =
                             0 ;
-                        path =
-                            whine_malloc(lendir.wrapping_add((*in_0).len       ).wrapping_add(2                 libc::c_int          ))
-                                ;
+                        // path =
+                        //     whine_malloc(lendir.wrapping_add(in_0.len       ).wrapping_add(2                 libc::c_int          ))
+                        //         ;
                         if !path.is_null() {
-                            strcpy(path, (*ah).fname);
+                            strcpy(path, ah.fname);
                             strcat(path,
-                                   b"/\x00"                                  *const libc::c_char);
-                            strcat(path, (*in_0).name.as_mut_ptr());
+                                   "/"                                  *const libc::c_char);
+                            strcat(path, in_0.name.as_mut_ptr());
                             my_syslog(6,
-                                      b"inotify, new or changed file %s\x00"
+                                      "inotify, new or changed file %s"
                                           ,
                                       path);
-                            if (*ah).flags & 8 != 0 {
-                                read_hostsfile(path, (*ah).index,
+                            if ah.flags & 8 != 0 {
+                                read_hostsfile(path, ah.index,
                                                0,
                                                0,
                                                0);
-                                if !(*dnsmasq_daemon).dhcp.is_null() ||
-                                       (*dnsmasq_daemon).doing_dhcp6 != 0 {
+                                if !dnsmasq_daemon.dhcp.is_null() ||
+                                       dnsmasq_daemon.doing_dhcp6 != 0 {
                                     /* Propagate the consequences of loading a new dhcp-host */
-                                    dhcp_update_configs((*dnsmasq_daemon).dhcp_conf);
+                                    dhcp_update_configs(dnsmasq_daemon.dhcp_conf);
                                     lease_update_from_configs();
                                     lease_update_file(now);
                                     lease_update_dns(1);
                                 }
-                            } else if (*ah).flags & 16 != 0 {
+                            } else if ah.flags & 16 != 0 {
                                 if option_read_dynfile(path,
                                                        16) != 0
                                    {
                                     /* Propagate the consequences of loading a new dhcp-host */
-                                    dhcp_update_configs((*dnsmasq_daemon).dhcp_conf);
+                                    dhcp_update_configs(dnsmasq_daemon.dhcp_conf);
                                     lease_update_from_configs();
                                     lease_update_file(now);
                                     lease_update_dns(1);
                                 }
-                            } else if (*ah).flags & 32 != 0 {
+                            } else if ah.flags & 32 != 0 {
                                 option_read_dynfile(path, 32);
                             }
                             free(path);
                         }
                     }
-                    ah = (*ah).next
+                    ah = ah.next
                 }
             }
             p =
-                p.offset((::std::mem::size_of::<inotify_event>()).wrapping_add((*in_0).len    )
+                p.offset((::std::mem::size_of::<inotify_event>()).wrapping_add(in_0.len    )
                             )
         }
     }

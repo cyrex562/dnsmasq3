@@ -35,16 +35,15 @@
 
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
-use crate::slack::{pollfd, nfds_t};
 use crate::util::whine_malloc;
 
-static mut pollfds: *mut pollfd = 0 ;
-static mut nfds: nfds_t = 0;
-static mut arrsize: nfds_t = 0 as nfds_t;
+// static mut pollfds: pollfd = 0 ;
+// static mut nfds: nfds_t = 0;
+// static mut arrsize: nfds_t = 0 as nfds_t;
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry
    to the left of which a new record should be inserted. */
-unsafe extern "C" fn fd_search(mut fd: i32) -> nfds_t {
+ fn fd_search(mut fd: i32) -> nfds_t {
     let mut left: nfds_t = 0;
     let mut right: nfds_t = 0;
     let mut mid: nfds_t = 0;
@@ -59,21 +58,20 @@ unsafe extern "C" fn fd_search(mut fd: i32) -> nfds_t {
                        left
                    } else { right }
         }
-        mid =
-            left.wrapping_add(right).wrapping_div(2   libc::c_ulong);
+        mid = left.wrapping_add(right).wrapping_div(2 );
         if (*pollfds.offset(mid)).fd > fd {
             right = mid
         } else { left = mid }
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn poll_reset() { nfds = 0 as nfds_t; }
-#[no_mangle]
-pub unsafe extern "C" fn do_poll(mut timeout: i32) -> i32 {
+
+pub  fn poll_reset() { nfds = 0 as nfds_t; }
+
+pub  fn do_poll(mut timeout: i32) -> i32 {
     return poll(pollfds, nfds, timeout);
 }
-#[no_mangle]
-pub unsafe extern "C" fn poll_check(mut fd: i32,
+
+pub  fn poll_check(mut fd: i32,
                                     mut event: libc::c_short) -> i32 {
     let mut i: nfds_t = fd_search(fd);
     if i < nfds && (*pollfds.offset(i)).fd == fd {
@@ -82,8 +80,8 @@ pub unsafe extern "C" fn poll_check(mut fd: i32,
     }
     return 0;
 }
-#[no_mangle]
-pub unsafe extern "C" fn poll_listen(mut fd: i32,
+
+pub  fn poll_listen(mut fd: i32,
                                      mut event: libc::c_short) {
     let mut i: nfds_t = fd_search(fd);
     if i < nfds && (*pollfds.offset(i)).fd == fd {
@@ -92,13 +90,13 @@ pub unsafe extern "C" fn poll_listen(mut fd: i32,
             (*fresh6 | event)
     } else {
         if arrsize != nfds {
-            memmove(&mut *pollfds.offset(i.wrapping_add(1  ) )                  Vec<u8>,
-                    &mut *pollfds.offset(i)
-                    nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                         ));
+            // memmove(&mut *pollfds.offset(i.wrapping_add(1)),
+            //         &mut *pollfds.offset(i),
+            //         nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
+            //                                              ));
         } else {
             /* Array too small, extend. */
-            let mut new: *mut pollfd = 0 ;
+            let mut new: pollfd = 0 ;
             arrsize =
                 if arrsize == 0 {
                     64
@@ -107,7 +105,7 @@ pub unsafe extern "C" fn poll_listen(mut fd: i32,
                 };
             new =
                 whine_malloc(arrsize.wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                     ))              *mut pollfd;
+                                                     ))              pollfd;
             if new.is_null() { return }
             if !pollfds.is_null() {
                 memcpy(new,

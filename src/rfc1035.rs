@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use crate::defines::{DnsHeader, DnsmasqDaemon, Doctor, Crec, MxSrvRecord, TxtRecord, InterfaceName, PtrRecord, NaPtr, BogusAddr, AddressListEntry, Server, NetAddress};
-use crate::util::{hostname_isequal, is_same_net, hostname_issubdomain, do_rfc1035_name};
+use crate::util::{hostname_isequal, is_same_net4, hostname_issubdomain, do_rfc1035_name};
 use crate::dnsmasq_log::my_syslog;
 use crate::cache::{cache_start_insert, cache_insert, next_uid, log_query, cache_end_insert, cache_find_non_terminal, cache_find_by_name, cache_get_cname_target, record_source, cache_make_stat, querystr, cache_find_by_addr, cache_get_name};
 use crate::blockdata::{blockdata_alloc, blockdata_retrieve};
@@ -23,6 +23,7 @@ use crate::ipset::add_to_ipset;
 use std::env::args;
 use crate::network::enumerate_interfaces;
 use crate::edns0::add_pseudoheader;
+use std::time;
 
 
 pub fn extract_name(mut header: &DnsHeader,
@@ -32,8 +33,8 @@ pub fn extract_name(mut header: &DnsHeader,
                     mut is_extract: i32,
                     mut extrabytes: i32)
                     -> i32 {
-    let mut cp: String = (*name).clone();
-    let mut p: String = (*pp).clone();
+    let mut cp: String = name.clone();
+    let mut p: String = pp.clone();
     let mut p1: String;
     let mut j: u32 = 0;
     let mut l: u32 = 0;
@@ -54,11 +55,12 @@ pub fn extract_name(mut header: &DnsHeader,
             /* label types 0x40 and 0x80 not supported */
             /* end marker */
             /* check that there are the correct no. of bytes after the name */
-            if !(((if !p1.is_null() {
+            if !((if !p1.is_null() {
                        p1
                    } else {
                        p
-                   }).wrapping_offset_from(header)                i32 + extrabytes)  <=
+                   }).wrapping_offset_from(header)
+            i32 + extrabytes)  <=
                      plen) {
                 return 0
             }
@@ -150,7 +152,7 @@ pub fn extract_name(mut header: &DnsHeader,
                           {
                               let fresh10 = cp;
                               cp = cp.offset(1);
-                              (*fresh10) != '.' as i32
+                              fresh10 != '.' as i32
                           } {
                 retvalue = 2
             }
@@ -183,7 +185,7 @@ pub fn in_arpa_name_2_addr(mut namein: &mut String, mut addrp: &mut NetAddress)
     }
     cp1.clear();
     if j < 3 { return 0 }
-    if hostname_isequal(&lastchunk, b"arpa\x00") && hostname_isequal(penchunk, b"in-addr\x00") {
+    if hostname_isequal(&lastchunk, "arpa\x00") && hostname_isequal(penchunk, b"in-addr") {
         /* IP v4 */
       /* address arrives as a name of the form
 	 www.xxx.yyy.zzz.in-addr.arpa
@@ -217,12 +219,12 @@ pub fn in_arpa_name_2_addr(mut namein: &mut String, mut addrp: &mut NetAddress)
         return ((1) << 7)
     } else {
         if hostname_isequal(penchunk,
-                            b"ip6\x00" ) !=
+                            "ip6" ) !=
                0 &&
                (hostname_isequal(lastchunk,
-                                 b"int\x00"                                *const libc::c_char) != 0 ||
+                                 "int"                                *const libc::c_char) != 0 ||
                     hostname_isequal(lastchunk,
-                                     b"arpa\x00") != 0) {
+                                     "arpa") != 0) {
             /* IP v6:
          Address arrives as 0.1.2.3.4.5.6.7.8.9.a.b.c.d.e.f.ip6.[int|arpa]
     	 or \[xfedcba9876543210fedcba9876543210/128].ip6.[int|arpa]
@@ -354,7 +356,7 @@ pub fn skip_name(mut ansp: &mut String, mut header: &mut DnsHeader, mut plen: us
     if !((ansp.wrapping_offset_from(header)        i32 + extrabytes)  <= plen) {
         return None
     }
-    return Some((*ansp).clone());
+    return Some(ansp.clone());
 }
 
 pub fn skip_questions(mut header: &DnsHeader, mut plen: usize) -> Option<String> {
@@ -382,7 +384,7 @@ pub fn skip_section(mut ansp: &mut String, mut count: usize mut header: &mut Dns
         };
         *ansp = ansp[8..].to_string();
 
-        let mut t_cp: String = (*ansp).clone();
+        let mut t_cp: String = ansp.clone();
         rdlen = t_cp[0] << 8 | t_cp[1];
         *ansp = ansp[2..].to_string();
         if if !((ansp.wrapping_offset_from(header) + rdlen) <= plen)
@@ -394,7 +396,7 @@ pub fn skip_section(mut ansp: &mut String, mut count: usize mut header: &mut Dns
         }
         i += 1
     }
-    return Some((*ansp).clone());
+    return Some(ansp.clone());
 }
 
 pub fn resize_packet(mut header: &mut DnsHeader, mut plen: usize,
@@ -447,32 +449,32 @@ pub fn private_net(mut addr: NetAddress,
                     0xffffffff);
     /* 255.255.255.255/32 (broadcast)*/
 }
-fn private_net6(mut a: *mut In6Addr) -> i32 {
+fn private_net6(mut a: &mut In6Addr) -> i32 {
     return (({
                  let mut __a: *const In6Addr = a ;
-                 ((*__a).__in6_u.__u6_addr32[0 ] ==
+                 (__a.__in6_u.__u6_addr32[0 ] ==
                       0 &&
-                      (*__a).__in6_u.__u6_addr32[1 ] ==
+                      __a.__in6_u.__u6_addr32[1 ] ==
                           0 &&
-                      (*__a).__in6_u.__u6_addr32[2 ] ==
+                      __a.__in6_u.__u6_addr32[2 ] ==
                           0 &&
-                      (*__a).__in6_u.__u6_addr32[3 ] ==
+                      __a.__in6_u.__u6_addr32[3 ] ==
                           0)
              }) != 0 ||
                 ({
                      let mut __a: *const In6Addr = a ;
-                     ((*__a).__in6_u.__u6_addr32[0 ] ==
+                     (__a.__in6_u.__u6_addr32[0 ] ==
                           0 &&
-                          (*__a).__in6_u.__u6_addr32[1      usize] ==
+                          __a.__in6_u.__u6_addr32[1      usize] ==
                               0 &&
-                          (*__a).__in6_u.__u6_addr32[2      usize] ==
+                          __a.__in6_u.__u6_addr32[2      usize] ==
                               0 &&
-                          (*__a).__in6_u.__u6_addr32[3      usize] ==
+                          __a.__in6_u.__u6_addr32[3      usize] ==
                               __bswap_32(1))
                  }) != 0 ||
                 ({
                      let mut __a: *const In6Addr = a ;
-                     ((*__a).__in6_u.__u6_addr32[0 ] &
+                     (__a.__in6_u.__u6_addr32[0 ] &
                           __bswap_32(0xffc00000) ==
                           __bswap_32(0xfe800000))
                  }) != 0 ||
@@ -482,27 +484,18 @@ fn private_net6(mut a: *mut In6Addr) -> i32 {
                     __bswap_32(0x20010db8)) ;
     /* RFC 6303 4.6 */
 }
-fn do_doctor(mut p: mut Vec<u8>,
-                               mut count: i32,
-                               mut header: DnsHeader, mut qlen: usize,
-                               mut name: &mut String,
-                               mut doctored: )
-                               -> mut Vec<u8> {
+
+pub fn do_doctor(mut p: &mut Vec<u8>, mut count: i32, mut header: &DnsHeader, mut qlen: usize,
+                               mut name: &String,
+                               mut doctored: bool) -> Option<Vec<u8>> {
     let mut i: i32 = 0; /* bad packet */
     let mut qtype: i32 = 0;
     let mut qclass: i32 = 0;
     let mut rdlen: i32 = 0;
     i = count;
     while i != 0 {
-        if !name.is_null() &&
-               (*dnsmasq_daemon).options[(2                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
-                                             ] &
-                   (1) <<
-                       (2 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
-                   != 0 {
-            if extract_name(header, qlen, &mut p, name, 1,
+        if !name.is_null() && dnsmasq_daemon.options[2] != 0 {
+            if extract_name(header, qlen, &mut String::from_utf8((*p).clone()).unwrap(), name, 1,
                             10) == 0 {
                 return 0
             }
@@ -510,57 +503,55 @@ fn do_doctor(mut p: mut Vec<u8>,
             p = skip_name(p, header, qlen, 10);
             if p.is_null() { return 0 }
         }
-        let mut t_cp: mut Vec<u8> = p;
+        let mut t_cp: Vec<u8> = p;
         qtype =
             (*t_cp.offset(0))
                 << 8 |
                 *t_cp.offset(1) ;
         p = p.offset(2);
-        let mut t_cp_0: mut Vec<u8> = p;
+        let mut t_cp_0: Vec<u8> = p;
         qclass =
             (*t_cp_0.offset(0) ) << 8 |
                 *t_cp_0.offset(1) ;
         p = p.offset(2);
         /* bad packet */
         p = p.offset(4); /* ttl */
-        let mut t_cp_1: mut Vec<u8> = p;
+        let mut t_cp_1: Vec<u8> = p;
         rdlen =
             (*t_cp_1.offset(0) ) << 8 |
                 *t_cp_1.offset(1) ;
         p = p.offset(2);
         if qclass == 1 && qtype == 1 {
-            let mut doctor: *mut Doctor = 0 ;
-            let mut addr: NetAddress = NetAddress {s_addr: 0,};
-            if !((p.wrapping_offset_from(header)                i32 + 4)               size_t <= qlen) {
-                return 0
+            let mut doctor: Doctor = 0 ;
+            let mut addr: NetAddress = Default::default();
+            if !((p.wrapping_offset_from(header) + 4) <= qlen) {
+                return None
             }
             /* alignment */
-            memcpy(&mut addr,
-                   p,
-                   4);
+            memcpy(&mut addr, p, 4);
             let mut current_block_28: u64;
-            doctor = (*dnsmasq_daemon).doctors;
+            doctor = dnsmasq_daemon.doctors;
             while !doctor.is_null() {
-                if (*doctor).end.s_addr == 0 {
-                    if is_same_net((*doctor).in_0, addr, (*doctor).mask) == 0
+                if doctor.end.s_addr == 0 {
+                    if is_same_net(doctor.in_0, addr, doctor.mask) == 0
                        {
                         current_block_28 = 6669252993407410313;
                     } else { current_block_28 = 11636175345244025579; }
-                } else if __bswap_32((*doctor).in_0.s_addr) >
+                } else if __bswap_32(doctor.in_0.s_addr) >
                               __bswap_32(addr.s_addr) ||
-                              __bswap_32((*doctor).end.s_addr) <
+                              __bswap_32(doctor.end.s_addr) <
                                   __bswap_32(addr.s_addr) {
                     current_block_28 = 6669252993407410313;
                 } else { current_block_28 = 11636175345244025579; }
                 match current_block_28 {
-                    6669252993407410313 => { doctor = (*doctor).next }
+                    6669252993407410313 => { doctor = doctor.next }
                     _ => {
-                        addr.s_addr &= !(*doctor).mask.s_addr;
+                        addr.s_addr &= !doctor.mask.s_addr;
                         addr.s_addr |=
-                            (*doctor).out.s_addr & (*doctor).mask.s_addr;
+                            doctor.out.s_addr & doctor.mask.s_addr;
                         /* Since we munged the data, the server it came from is no longer authoritative */
-                        (*header).hb3 =
-                            ((*header).hb3 &
+                        header.hb3 =
+                            (header.hb3 &
                                  !(0x4))                          u8; /* bad packet */
                         *doctored = 1;
                         memcpy(p,
@@ -571,7 +562,7 @@ fn do_doctor(mut p: mut Vec<u8>,
                 }
             }
         } else if qtype == 16 && !name.is_null() &&
-                      (*dnsmasq_daemon).options[(2  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                      dnsmasq_daemon.options[(2  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                                  ).wrapping_mul(8                                                           libc::c_int                                                    ))
                                                     ] &
                           (1) <<
@@ -605,10 +596,10 @@ fn do_doctor(mut p: mut Vec<u8>,
                 }
                 *p2 = 0;
                 my_syslog(6,
-                          b"reply %s is %s\x00" , name, p1);
+                          "reply %s is %s" , name, p1);
                 /* restore */
-                memmove(p1.offset(1)                     Vec<u8>, p1,
-                        i_0);
+                // memmove(p1.offset(1), p1, i_0);
+                p1 = p1[1..1+i_0].to_string();
                 *p1 = len;
                 p1 =
                     p1.offset(len.wrapping_add(1libc::c_uint))
@@ -624,31 +615,23 @@ fn do_doctor(mut p: mut Vec<u8>,
     }
     return p;
 }
-fn find_soa(mut header: DnsHeader, mut qlen: usize,
-                              mut name: &mut String,
-                              mut doctored: ) -> i32 {
-    let mut p: mut Vec<u8> = 0;
+fn find_soa(mut header: &DnsHeader, mut qlen: usize, mut name: &String, mut doctored: bool) -> i32 {
+    let mut p: Vec<u8>;
     let mut qtype: i32 = 0;
     let mut qclass: i32 = 0;
     let mut rdlen: i32 = 0;
     let mut ttl: u32 = 0;
-    let mut minttl: u32 =
-        (9223372036854775807 as
-      ).wrapping_mul(2 ).wrapping_add(1                   );
+    let mut minttl: u32 = (9223372036854775807).wrapping_mul(2).wrapping_add(1);
     let mut i: i32 = 0;
     let mut found_soa: i32 = 0;
     /* first move to NS section and find TTL from any SOA section */
     p = skip_questions(header, qlen); /* bad packet */
-    if p.is_null() ||
-           {
-               p =
-                   do_doctor(p, __bswap_16((*header).ancount),
-                             header, qlen, name, doctored); /* bad packet */
+    if p.is_null() || { p = do_doctor(p, header.ancount.to_be() as i32, &header, qlen, name,  doctored); /* bad packet */
                p.is_null()
            } {
         return 0
     }
-    i = __bswap_16((*header).nscount);
+    i = __bswap_16(header.nscount);
     while i != 0 {
         p = skip_name(p, header, qlen, 10);
         if p.is_null() { return 0 }
@@ -714,11 +697,11 @@ fn find_soa(mut header: DnsHeader, mut qlen: usize,
         i -= 1
     }
     /* rewrite addresses in additional section too */
-    if do_doctor(p, __bswap_16((*header).arcount), header,
+    if do_doctor(p, __bswap_16(header.arcount), header,
                  qlen, 0 , doctored).is_null() {
         return 0
     }
-    if found_soa == 0 { minttl = (*dnsmasq_daemon).neg_ttl }
+    if found_soa == 0 { minttl = dnsmasq_daemon.neg_ttl }
     return minttl;
 }
 /* Note that the following code can create CNAME chains that don't point to a real record,
@@ -728,19 +711,18 @@ fn find_soa(mut header: DnsHeader, mut qlen: usize,
 
 pub fn extract_addresses(mut header: DnsHeader,
                                            mut qlen: usize,
-                                           mut name: &mut String,
+                                           mut name: &String,
                                            mut now: time::Instant,
                                            mut ipsets: String,
-                                           mut is_sign: i32,
-                                           mut check_rebind: i32,
-                                           mut no_cache_dnssec: i32,
-                                           mut secure: i32,
-                                           mut doctored: )
-                                           -> i32 {
-    let mut p: mut Vec<u8> = 0;
-    let mut p1: mut Vec<u8> = 0;
-    let mut endrr: mut Vec<u8> = 0;
-    let mut namep: mut Vec<u8> = 0;
+                                           mut is_sign: bool,
+                                           mut check_rebind: bool,
+                                           mut no_cache_dnssec: bool,
+                                           mut secure: bool,
+                                           mut doctored: bool) -> i32 {
+    let mut p: Vec<u8>;
+    let mut p1: Vec<u8>;
+    let mut endrr: Vec<u8>;
+    let mut namep: Vec<u8>;
     let mut i: i32 = 0;
     let mut j: i32 = 0;
     let mut qtype: i32 = 0;
@@ -751,27 +733,13 @@ pub fn extract_addresses(mut header: DnsHeader,
     let mut res: i32 = 0;
     let mut searched_soa: i32 = 0;
     let mut ttl: u32 = 0;
-    let mut addr: NetAddress = NetAddress {addr4: NetAddress {s_addr: 0,},};
+    let mut addr: NetAddress;
     let mut ipsets_cur: String = 0 ;
     cache_start_insert();
     /* find_soa is needed for dns_doctor and logging side-effects, so don't call it lazily if there are any. */
-    if !(*dnsmasq_daemon).doctors.is_null() ||
-           (*dnsmasq_daemon).options[(2 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
-                                         ] &
-               (1) <<
-                   (2 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
-                                                                                                                       ))
-               != 0 ||
-           (*dnsmasq_daemon).options[(45 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
-                                         ] &
-               (1) <<
-                   (45 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
-                                                                                                                       ))
-               != 0 {
+    if !dnsmasq_daemon.doctors.is_null() ||
+           dnsmasq_daemon.options[2] != 0 ||
+           dnsmasq_daemon.options[45] != 0 {
         searched_soa = 1;
         ttl = find_soa(header, qlen, name, doctored);
         if *doctored != 0 { if secure != 0 { return 0 } }
@@ -780,13 +748,13 @@ pub fn extract_addresses(mut header: DnsHeader,
     p =
         header.offset(1)      mut Vec<u8>; /* bad packet */
     let mut current_block_206: u64;
-    i = __bswap_16((*header).qdcount);
+    i = __bswap_16(header.qdcount);
     while i != 0 {
         let mut found: i32 = 0;
         let mut cname_count: i32 = 10;
         let mut cpp: Crec = 0 ;
         let mut flags: i32 =
-            if (*header).hb4 & 0xf ==
+            if header.hb4 & 0xf ==
                    3 {
                 ((1)) << 10
             } else { 0 };
@@ -826,7 +794,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                 j = 0;
                                 loop  {
                                     if !(j <
-                                             __bswap_16((*header).ancount)                                           libc::c_int) {
+                                             __bswap_16(header.ancount)                                           libc::c_int) {
                                         break 'c_14031 ;
                                     }
                                     let mut secflag: i32 =
@@ -873,14 +841,14 @@ pub fn extract_addresses(mut header: DnsHeader,
                                              *t_cp_3.offset(3
                                                                )                                           u32_0);
                                     p1 = p1.offset(4);
-                                    if (*dnsmasq_daemon).max_ttl !=
+                                    if dnsmasq_daemon.max_ttl !=
                                            0
-                                           && attl > (*dnsmasq_daemon).max_ttl
+                                           && attl > dnsmasq_daemon.max_ttl
                                            && is_sign == 0 {
                                         p1 =
                                             p1.offset(-(4         isize));
                                         let mut t_l: u32_0 =
-                                            (*dnsmasq_daemon).max_ttl                                          u32_0;
+                                            dnsmasq_daemon.max_ttl                                          u32_0;
                                         let mut t_cp_4: mut Vec<u8> =
                                             p1;
                                         let fresh15 = t_cp_4;
@@ -953,7 +921,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                             }
                     }
                     if found == 0 &&
-                           (*dnsmasq_daemon).options[(11).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                           dnsmasq_daemon.options[(11).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                                            ).wrapping_mul(8
                                                                                                                            ))
                                                          ] &
@@ -1018,7 +986,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                 j = 0;
                                 loop  {
                                     if !(j <
-                                             __bswap_16((*header).ancount)                                           libc::c_int) {
+                                             __bswap_16(header.ancount)                                           libc::c_int) {
                                         break 'c_10467 ;
                                     }
                                     let mut secflag_0: i32 =
@@ -1058,14 +1026,14 @@ pub fn extract_addresses(mut header: DnsHeader,
                                              *t_cp_8.offset(3
                                                                )                                           u32_0);
                                     p1 = p1.offset(4);
-                                    if (*dnsmasq_daemon).max_ttl !=
+                                    if dnsmasq_daemon.max_ttl !=
                                            0
-                                           && attl > (*dnsmasq_daemon).max_ttl
+                                           && attl > dnsmasq_daemon.max_ttl
                                            && is_sign == 0 {
                                         p1 =
                                             p1.offset(-(4         isize));
                                         let mut t_l_0: u32_0 =
-                                            (*dnsmasq_daemon).max_ttl                                          u32_0;
+                                            dnsmasq_daemon.max_ttl                                          u32_0;
                                         let mut t_cp_9: mut Vec<u8> =
                                             p1;
                                         let fresh19 = t_cp_9;
@@ -1119,16 +1087,16 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                  |
                                                                  secflag_0                  libc::c_uint);
                                             if !newc.is_null() {
-                                                (*newc).addr.cname.target.cache
+                                                newc.addr.cname.target.cache
                                                     = 0 ;
-                                                (*newc).addr.cname.is_name_ptr
+                                                newc.addr.cname.is_name_ptr
                                                     = 0;
                                                 if !cpp.is_null() {
                                                     next_uid(newc);
                                                     (cpp).addr.cname.target.cache
                                                         = newc;
                                                     (cpp).addr.cname.uid =
-                                                        (*newc).uid
+                                                        newc.uid
                                                 }
                                             }
                                             cpp = newc;
@@ -1210,14 +1178,8 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                     return 0
                                                 }
                                                 addr.srv.targetlen =
-                                                    strlen(name).wrapping_add(1
-                                                                                                                libc::c_int
-                                                                                                         )
-                                                        ;
-                                                addr.srv.target =
-                                                    blockdata_alloc(name,
-                                                                    addr.srv.targetlen
-                                                                                            size_t);
+                                                    strlen(name).wrapping_add(1);
+                                                addr.srv.target = blockdata_alloc(name, addr.srv.targetlen);
                                                 if addr.srv.target.is_null() {
                                                     return 0
                                                 }
@@ -1249,7 +1211,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                7                libc::c_int
                                                            != 0 &&
                                                            private_net(addr.addr4,
-                                                                       ((*dnsmasq_daemon).options[(25                             libc::c_int                      ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                                                                                        ).wrapping_mul(8                                                                                                                                                               libc::c_int                                                                                                                                                        ))                           usize]
+                                                                       (dnsmasq_daemon.options[(25                             libc::c_int                      ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                                                                                        ).wrapping_mul(8                                                                                                                                                               libc::c_int                                                                                                                                                        ))                           usize]
                                                                             &
                                                                             (1
                                                                                                               libc::c_uint)
@@ -1273,19 +1235,19 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                 let mut __a:
                                                                         *const In6Addr =
                                                                     &mut addr.addr6
-                                                                                            *mut In6Addr
+                                                                                            &mut In6Addr
                                                                                             *const In6Addr;
-                                                                ((*__a).__in6_u.__u6_addr32[0               libc::c_int               usize]
+                                                                (__a.__in6_u.__u6_addr32[0               libc::c_int               usize]
                                                                      ==
                                                                      0                      libc::c_int
                                                                                               libc::c_uint
                                                                      &&
-                                                                     (*__a).__in6_u.__u6_addr32[1                       libc::c_int                       usize]
+                                                                     __a.__in6_u.__u6_addr32[1                       libc::c_int                       usize]
                                                                          ==
                                                                          0                          libc::c_int
                                                                                                       libc::c_uint
                                                                      &&
-                                                                     (*__a).__in6_u.__u6_addr32[2                       libc::c_int                       usize]
+                                                                     __a.__in6_u.__u6_addr32[2                       libc::c_int                       usize]
                                                                          ==
                                                                          __bswap_32(0xffff
                                                                                                                             libc::c_int
@@ -1298,10 +1260,10 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                             0,};
                                                             v4.s_addr =
                                                                 *(&mut addr.addr6
-                                                                                        *mut In6Addr
+                                                                                        &mut In6Addr
                                                                                         *const u32).offset(3                   libc::c_int                   isize);
                                                             if private_net(v4,
-                                                                           ((*dnsmasq_daemon).options[(25                                     libc::c_int                              ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                                                                                                ).wrapping_mul(8                                                                                                                                                                       libc::c_int                                                                                                                                                                ))                                   usize]
+                                                                           (dnsmasq_daemon.options[(25                                     libc::c_int                              ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                                                                                                ).wrapping_mul(8                                                                                                                                                                       libc::c_int                                                                                                                                                                ))                                   usize]
                                                                                 &
                                                                                 (1
                                                                                                                       libc::c_uint)
@@ -1320,9 +1282,9 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                 let mut __a:
                                                                         *const In6Addr =
                                                                     &mut addr.addr6
-                                                                                            *mut In6Addr
+                                                                                            &mut In6Addr
                                                                                             *const In6Addr;
-                                                                ((*__a).__in6_u.__u6_addr32[0               libc::c_int               usize]
+                                                                (__a.__in6_u.__u6_addr32[0               libc::c_int               usize]
                                                                      &
                                                                      __bswap_32(0xffc00000
                                                                                                                     libc::c_uint)
@@ -1335,9 +1297,9 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                     let mut __a:
                                                                             *const In6Addr =
                                                                         &mut addr.addr6
-                                                                                                    *mut In6Addr
+                                                                                                    &mut In6Addr
                                                                                                     *const In6Addr;
-                                                                    ((*__a).__in6_u.__u6_addr32[0                       libc::c_int                       usize]
+                                                                    (__a.__in6_u.__u6_addr32[0                       libc::c_int                       usize]
                                                                          &
                                                                          __bswap_32(0xffc00000
                                                                                                                             libc::c_uint)
@@ -1350,7 +1312,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                         }
                                                         /* Check for the IPv6 loopback address (::1) when
 				     option rebind-localhost-ok is NOT set */
-                                                        if (*dnsmasq_daemon).options[(25   libc::c_int
+                                                        if dnsmasq_daemon.options[(25   libc::c_int
                                                                                                                          ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                                                              ).wrapping_mul(8                                                                                                                                     libc::c_int                                                                                                                              )) usize]
                                                                &
                                                                (1                 libc::c_uint)
@@ -1362,26 +1324,26 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                     let mut __a:
                                                                             *const In6Addr =
                                                                         &mut addr.addr6
-                                                                                                    *mut In6Addr
+                                                                                                    &mut In6Addr
                                                                                                     *const In6Addr;
-                                                                    ((*__a).__in6_u.__u6_addr32[0                       libc::c_int                       usize]
+                                                                    (__a.__in6_u.__u6_addr32[0                       libc::c_int                       usize]
                                                                          ==
                                                                          0                          libc::c_int
                                                                                                       libc::c_uint
                                                                          &&
-                                                                         (*__a).__in6_u.__u6_addr32[1                               libc::c_int                               usize]
+                                                                         __a.__in6_u.__u6_addr32[1                               libc::c_int                               usize]
                                                                              ==
                                                                              0
                                                                                                               libc::c_int
                                                                                                               libc::c_uint
                                                                          &&
-                                                                         (*__a).__in6_u.__u6_addr32[2                               libc::c_int                               usize]
+                                                                         __a.__in6_u.__u6_addr32[2                               libc::c_int                               usize]
                                                                              ==
                                                                              0
                                                                                                               libc::c_int
                                                                                                               libc::c_uint
                                                                          &&
-                                                                         (*__a).__in6_u.__u6_addr32[3                               libc::c_int                               usize]
+                                                                         __a.__in6_u.__u6_addr32[3                               libc::c_int                               usize]
                                                                              ==
                                                                              __bswap_32(1       libc::c_int       u32))
                                                                                             libc::c_int
@@ -1401,28 +1363,28 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                                     8                     libc::c_int)
                                                            != 0 {
                                                     ipsets_cur = ipsets;
-                                                    while !(*ipsets_cur).is_null()
+                                                    while !ipsets_cur.is_null()
                                                           {
-                                                        log_query(flags                   libc::c_uint
-                                                                      &
-                                                                      ((1                         libc::c_uint)
-                                                                           <<
-                                                                           7
-                                                                                                          libc::c_int
-                                                                           |
-                                                                           (1
-                                                                                                            libc::c_uint)
-                                                                               <<
-                                                                               8
-                                                                                                                  libc::c_int)
-                                                                      |
-                                                                      (1                        libc::c_uint)
-                                                                          <<
-                                                                          26
-                                                                                                        libc::c_int,
-                                                                  name,
-                                                                  &mut addr,
-                                                                  *ipsets_cur);
+                                                        // log_query(flags                   libc::c_uint
+                                                        //               &
+                                                        //               ((1                         libc::c_uint)
+                                                        //                    <<
+                                                        //                    7
+                                                        //                                                   libc::c_int
+                                                        //                    |
+                                                        //                    (1
+                                                        //                                                     libc::c_uint)
+                                                        //                        <<
+                                                        //                        8
+                                                        //                                                           libc::c_int)
+                                                        //               |
+                                                        //               (1                        libc::c_uint)
+                                                        //                   <<
+                                                        //                   26
+                                                        //                                                 libc::c_int,
+                                                        //           name,
+                                                        //           &mut addr,
+                                                        //           *ipsets_cur);
                                                         let fresh23 =
                                                             ipsets_cur;
                                                         ipsets_cur =
@@ -1452,7 +1414,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                                 (cpp).addr.cname.target.cache
                                                     = newc;
                                                 (cpp).addr.cname.uid =
-                                                    (*newc).uid
+                                                    newc.uid
                                             }
                                             cpp = 0
                                         }
@@ -1468,7 +1430,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                 }
                             }
                         if found == 0 &&
-                               (*dnsmasq_daemon).options[(11    ).wrapping_div((::std::mem::size_of::<libc::c_uint>()      ).wrapping_mul(8                                                                             libc::c_int                                                                      ))
+                               dnsmasq_daemon.options[(11    ).wrapping_div((::std::mem::size_of::<libc::c_uint>()      ).wrapping_mul(8                                                                             libc::c_int                                                                      ))
                                                              ] &
                                    (1) <<
                                        (11).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
@@ -1505,7 +1467,7 @@ pub fn extract_addresses(mut header: DnsHeader,
                                 if !newc.is_null() && !cpp.is_null() {
                                     next_uid(newc);
                                     (cpp).addr.cname.target.cache = newc;
-                                    (cpp).addr.cname.uid = (*newc).uid
+                                    (cpp).addr.cname.uid = newc.uid
                                 }
                             }
                         }
@@ -1519,9 +1481,9 @@ pub fn extract_addresses(mut header: DnsHeader,
      Don't cache replies from non-recursive nameservers, since we may get a 
      reply containing a CNAME but not its target, even though the target 
      does exist. */
-    if (*header).hb3 & 0x2 == 0 &&
-           (*header).hb4 & 0x10 == 0 &&
-           (*header).hb4 & 0x80 != 0 &&
+    if header.hb3 & 0x2 == 0 &&
+           header.hb4 & 0x10 == 0 &&
+           header.hb4 & 0x80 != 0 &&
            no_cache_dnssec == 0 {
         cache_end_insert();
     }
@@ -1533,15 +1495,15 @@ pub fn extract_addresses(mut header: DnsHeader,
 pub fn extract_request(mut header: DnsHeader,
                                          mut qlen: usize,
                                          mut name: &mut String,
-                                         mut typep: *mut u16)
+                                         mut typep: &mut u16)
                                          -> libc::c_uint {
     let mut p: mut Vec<u8> =
         header.offset(1)      mut Vec<u8>; /* must be exactly one query. */
     let mut qtype: i32 = 0; /* bad packet */
     let mut qclass: i32 = 0;
     if !typep.is_null() { *typep = 0  }
-    if __bswap_16((*header).qdcount) != 1 ||
-           ((*header).hb3 & 0x78) >>
+    if __bswap_16(header.qdcount) != 1 ||
+           (header.hb3 & 0x78) >>
                3 != 0 {
         return 0
     }
@@ -1593,46 +1555,46 @@ pub fn setup_reply(mut header: DnsHeader,
     p = skip_questions(header, qlen);
     if p.is_null() { return 0  }
     /* clear authoritative and truncated flags, set QR flag */
-    (*header).hb3 =
-        ((*header).hb3 &
+    header.hb3 =
+        (header.hb3 &
              !(0x4 | 0x2) | 0x80)
             as u8;
     /* clear AD flag, set RA flag */
-    (*header).hb4 =
-        ((*header).hb4 & !(0x20) |
+    header.hb4 =
+        (header.hb4 & !(0x20) |
              0x80)      u8; /* no answers unless changed below */
-    (*header).nscount =
+    header.nscount =
         __bswap_16(0); /* empty domain */
-    (*header).arcount = __bswap_16(0);
-    (*header).ancount = __bswap_16(0);
+    header.arcount = __bswap_16(0);
+    header.ancount = __bswap_16(0);
     if flags == (1) << 20 {
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  0) as u8
     } else if flags == (1) << 10 {
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  3) as u8
     } else if flags == (1) << 28 {
         let mut a: NetAddress = NetAddress {addr4: NetAddress {s_addr: 0,},};
         a.log.rcode = 2 ;
-        log_query((1) << 13 |
-                      (1) << 29,
-                  b"error\x00"                 &mut String, &mut a, 0 );
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        // log_query((1) << 13 |
+        //               (1) << 29,
+        //           "error"                 &mut String, &mut a, 0 );
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  2) as u8
     } else if flags &
                   ((1) << 7 |
                        (1) << 8) != 0 {
         if flags & (1) << 7 != 0 {
             /* we know the address */
-            (*header).hb4 =
-                ((*header).hb4 & !(0xf) |
+            header.hb4 =
+                (header.hb4 & !(0xf) |
                      0) as u8;
-            (*header).ancount = __bswap_16(1);
-            (*header).hb3 =
-                ((*header).hb3 | 0x4) as u8;
+            header.ancount = __bswap_16(1);
+            header.hb3 =
+                (header.hb3 | 0x4) as u8;
             add_resource_record(header, 0 ,
                                 0,
                                 ::std::mem::size_of::<DnsHeader>() ,
@@ -1640,18 +1602,18 @@ pub fn setup_reply(mut header: DnsHeader,
                                 0,
                                 1 ,
                                 1 ,
-                                b"4\x00"
+                                "4"
                                     , addrp);
         }
         if flags & (1) << 8 != 0 {
-            (*header).hb4 =
-                ((*header).hb4 & !(0xf) |
+            header.hb4 =
+                (header.hb4 & !(0xf) |
                      0) as u8;
-            (*header).ancount =
-                __bswap_16((__bswap_16((*header).ancount) +
+            header.ancount =
+                __bswap_16((__bswap_16(header.ancount) +
                                 1));
-            (*header).hb3 =
-                ((*header).hb3 | 0x4) as u8;
+            header.hb3 =
+                (header.hb3 | 0x4) as u8;
             add_resource_record(header, 0 ,
                                 0,
                                 ::std::mem::size_of::<DnsHeader>() ,
@@ -1659,18 +1621,18 @@ pub fn setup_reply(mut header: DnsHeader,
                                 0,
                                 28 ,
                                 1 ,
-                                b"6\x00"
+                                "6"
                                     , addrp);
         }
     } else {
         /* nowhere to forward to */
         let mut a_0: NetAddress = NetAddress {addr4: NetAddress {s_addr: 0,},};
         a_0.log.rcode = 5 ;
-        log_query((1) << 13 |
-                      (1) << 29,
-                  b"error\x00"                 &mut String, &mut a_0, 0 );
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        // log_query((1) << 13 |
+        //               (1) << 29,
+        //           "error"                 &mut String, &mut a_0, 0 );
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  5) as u8
     }
     return p.wrapping_offset_from(header)  ;
@@ -1680,45 +1642,45 @@ pub fn setup_reply(mut header: DnsHeader,
 pub fn check_for_local_domain(mut name: &mut String,
                                                 mut now: time::Instant)
  -> i32 {
-    let mut mx: *mut MxSrvRecord = 0 ;
-    let mut txt: *mut TxtRecord = 0 ;
-    let mut intr: *mut InterfaceName = ;
-    let mut ptr: *mut PtrRecord = 0 ;
-    let mut naptr: *mut NaPtr = 0 ;
-    naptr = (*dnsmasq_daemon).naptr;
+    let mut mx: MxSrvRecord = 0 ;
+    let mut txt: TxtRecord = 0 ;
+    let mut intr: InterfaceName = ;
+    let mut ptr: PtrRecord = 0 ;
+    let mut naptr: NaPtr = 0 ;
+    naptr = dnsmasq_daemon.naptr;
     while !naptr.is_null() {
-        if hostname_issubdomain(name, (*naptr).name) != 0 {
+        if hostname_issubdomain(name, naptr.name) != 0 {
             return 1
         }
-        naptr = (*naptr).next
+        naptr = naptr.next
     }
-    mx = (*dnsmasq_daemon).mxnames;
+    mx = dnsmasq_daemon.mxnames;
     while !mx.is_null() {
-        if hostname_issubdomain(name, (*mx).name) != 0 {
+        if hostname_issubdomain(name, mx.name) != 0 {
             return 1
         }
-        mx = (*mx).next
+        mx = mx.next
     }
-    txt = (*dnsmasq_daemon).txt;
+    txt = dnsmasq_daemon.txt;
     while !txt.is_null() {
-        if hostname_issubdomain(name, (*txt).name) != 0 {
+        if hostname_issubdomain(name, txt.name) != 0 {
             return 1
         }
-        txt = (*txt).next
+        txt = txt.next
     }
-    intr = (*dnsmasq_daemon).int_names;
+    intr = dnsmasq_daemon.int_names;
     while !intr.is_null() {
-        if hostname_issubdomain(name, (*intr).name) != 0 {
+        if hostname_issubdomain(name, intr.name) != 0 {
             return 1
         }
-        intr = (*intr).next
+        intr = intr.next
     }
-    ptr = (*dnsmasq_daemon).ptr;
+    ptr = dnsmasq_daemon.ptr;
     while !ptr.is_null() {
-        if hostname_issubdomain(name, (*ptr).name) != 0 {
+        if hostname_issubdomain(name, ptr.name) != 0 {
             return 1
         }
-        ptr = (*ptr).next
+        ptr = ptr.next
     }
     if cache_find_non_terminal(name, now) != 0 { return 1 }
     return 0;
@@ -1743,7 +1705,7 @@ pub fn check_for_bogus_wildcard(mut header: DnsHeader,
     /* skip over questions */
     p = skip_questions(header, qlen); /* bad packet */
     if p.is_null() { return 0 } /* bad packet */
-    i = __bswap_16((*header).ancount);
+    i = __bswap_16(header.ancount);
     while i != 0 {
         if extract_name(header, qlen, &mut p, name, 1,
                         10) == 0 {
@@ -1781,7 +1743,7 @@ pub fn check_for_bogus_wildcard(mut header: DnsHeader,
             }
             baddrp = baddr;
             while !baddrp.is_null() {
-                if memcmp(&mut (*baddrp).addr       p,
+                if memcmp(&mut baddrp.addr       p,
                           4) ==
                        0 {
                     /* Found a bogus address. Insert that info here, since there no SOA record
@@ -1797,7 +1759,7 @@ pub fn check_for_bogus_wildcard(mut header: DnsHeader,
                     cache_end_insert();
                     return 1
                 }
-                baddrp = (*baddrp).next
+                baddrp = baddrp.next
             }
         }
         if if !((p.wrapping_offset_from(header)               i32 + rdlen)  <= qlen)
@@ -1825,7 +1787,7 @@ pub fn check_for_ignored_address(mut header:
     /* skip over questions */
     p = skip_questions(header, qlen); /* bad packet */
     if p.is_null() { return 0 } /* bad packet */
-    i = __bswap_16((*header).ancount); /* TTL */
+    i = __bswap_16(header.ancount); /* TTL */
     while i != 0 {
         p =
             skip_name(p, header, qlen,
@@ -1854,12 +1816,12 @@ pub fn check_for_ignored_address(mut header:
             }
             baddrp = baddr;
             while !baddrp.is_null() {
-                if memcmp(&mut (*baddrp).addr       p,
+                if memcmp(&mut baddrp.addr       p,
                           4) ==
                        0 {
                     return 1
                 }
-                baddrp = (*baddrp).next
+                baddrp = baddrp.next
             }
         }
         if if !((p.wrapping_offset_from(header)               i32 + rdlen)  <= qlen)
@@ -1876,10 +1838,10 @@ pub fn check_for_ignored_address(mut header:
 pub fn add_resource_record(mut header: &DnsHeader,
                                              mut limit: &mut String,
                                              mut truncp: i32,
-                                             mut nameoffset: i32,
+                                             mut nameoffset: isize,
                                              mut pp: &mut String,
                                              mut ttl: u32,
-                                             mut offset: usize,
+                                             mut offset: isize,
                                              mut type_0: u16,
                                              mut class: u16,
                                              mut format: &String) -> i32 {
@@ -2187,9 +2149,9 @@ fn crec_ttl(mut crecp: Crec, mut now: time::Instant)
      before the lease expires, unless configured otherwise. */
     if crecp.flags & (1) << 4 != 0 {
         let mut conf_ttl: i32 =
-            if (*dnsmasq_daemon).use_dhcp_ttl != 0 {
-                (*dnsmasq_daemon).dhcp_ttl
-            } else { (*dnsmasq_daemon).local_ttl };
+            if dnsmasq_daemon.use_dhcp_ttl != 0 {
+                dnsmasq_daemon.dhcp_ttl
+            } else { dnsmasq_daemon.local_ttl };
         /* Apply ceiling of actual lease length to configured TTL. */
         if crecp.flags & (1) << 0 == 0 &&
                crecp.ttd - now < conf_ttl {
@@ -2202,14 +2164,14 @@ fn crec_ttl(mut crecp: Crec, mut now: time::Instant)
         return crecp.ttd
     }
     /* Return the Max TTL value if it is lower than the actual TTL */
-    if (*dnsmasq_daemon).max_ttl == 0 ||
+    if dnsmasq_daemon.max_ttl == 0 ||
            ((crecp.ttd - now)) <
-               (*dnsmasq_daemon).max_ttl {
+               dnsmasq_daemon.max_ttl {
         return (crecp.ttd - now)
-    } else { return (*dnsmasq_daemon).max_ttl };
+    } else { return dnsmasq_daemon.max_ttl };
 }
 fn cache_validated(mut crecp: *const Crec) -> i32 {
-    return ((*dnsmasq_daemon).options[(45                              ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    return (dnsmasq_daemon.options[(45                              ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                              ).wrapping_mul(8                                       libc::c_int                                ))
                                           ] &
                 (1) <<
@@ -2232,7 +2194,7 @@ pub fn answer_request(mut header: DnsHeader,
                                         mut do_bit: i32,
                                         mut have_pseudoheader: i32)
                                         -> size_t {
-    let mut name: &mut String = (*dnsmasq_daemon).namebuff;
+    let mut name: &mut String = dnsmasq_daemon.namebuff;
     let mut p: mut Vec<u8> = 0;
     let mut ansp: mut Vec<u8> = 0;
     let mut qtype: u32 = 0;
@@ -2251,29 +2213,29 @@ pub fn answer_request(mut header: DnsHeader,
     let mut auth: i32 = 1;
     let mut trunc: i32 = 0;
     let mut sec_data: i32 = 1;
-    let mut rec: *mut MxSrvRecord = 0 ;
+    let mut rec: MxSrvRecord = 0 ;
     let mut len: usize = 0;
     let mut rd_bit: i32 =
-        (*header).hb3 & 0x1;
+        header.hb3 & 0x1;
     /* never answer queries with RD unset, to avoid cache snooping. */
-    if __bswap_16((*header).ancount) != 0 ||
-           __bswap_16((*header).nscount) != 0 ||
-           __bswap_16((*header).qdcount) == 0 ||
-           ((*header).hb3 & 0x78) >>
+    if __bswap_16(header.ancount) != 0 ||
+           __bswap_16(header.nscount) != 0 ||
+           __bswap_16(header.qdcount) == 0 ||
+           (header.hb3 & 0x78) >>
                3 != 0 {
         return 0
     }
     /* Don't return AD set if checking disabled. */
-    if (*header).hb4 & 0x10 != 0 {
+    if header.hb4 & 0x10 != 0 {
         sec_data = 0
     }
     /* If there is an  additional data section then it will be overwritten by
      partial replies, so we have to do a dry run to see if we can answer
      the query. */
-    if __bswap_16((*header).arcount) != 0 {
+    if __bswap_16(header.arcount) != 0 {
         dryrun = 1
     } /* bad packet */
-    rec = (*dnsmasq_daemon).mxnames;
+    rec = dnsmasq_daemon.mxnames;
     while !rec.is_null() {
         rec.offset = 0;
         rec = rec.next
@@ -2286,7 +2248,7 @@ pub fn answer_request(mut header: DnsHeader,
         /* now process each question, answers go in RRs after the question */
         p =
             header.offset(1)          mut Vec<u8>; /* catch loops */
-        q = __bswap_16((*header).qdcount);
+        q = __bswap_16(header.qdcount);
         while q != 0 {
             let mut count: i32 = 255;
             /* save pointer to name for copying into answers */
@@ -2340,8 +2302,8 @@ pub fn answer_request(mut header: DnsHeader,
                         sec_data = 0
                     }
                     if dryrun == 0 {
-                        log_query(crecp.flags, name, 0 ,
-                                  record_source(crecp.uid));
+                        // log_query(crecp.flags, name, 0 ,
+                        //           record_source(crecp.uid));
                         if add_resource_record(header, limit,
                                                &mut trunc,
                                                nameoffset,
@@ -2350,7 +2312,7 @@ pub fn answer_request(mut header: DnsHeader,
                                                &mut nameoffset,
                                                5libc::c_ushort,
                                                1libc::c_ushort,
-                                               b"d\x00",
+                                               "d",
                                                cname_target) != 0 {
                             anscount += 1
                         }
@@ -2360,31 +2322,31 @@ pub fn answer_request(mut header: DnsHeader,
             }
             if qtype == 16 ||
                    qtype == 255 {
-                let mut t: *mut TxtRecord = 0 ;
-                t = (*dnsmasq_daemon).txt;
+                let mut t: TxtRecord = 0 ;
+                t = dnsmasq_daemon.txt;
                 while !t.is_null() {
-                    if (*t).class == qclass &&
-                           hostname_isequal(name, (*t).name) != 0 {
+                    if t.class == qclass &&
+                           hostname_isequal(name, t.name) != 0 {
                         ans = 1;
                         sec_data = 0;
                         if dryrun == 0 {
                             let mut ttl: u32 =
-                                (*dnsmasq_daemon).local_ttl;
+                                dnsmasq_daemon.local_ttl;
                             let mut ok: i32 = 1;
                             /* Dynamically generate stat record */
-                            if (*t).stat != 0 {
+                            if t.stat != 0 {
                                 ttl = 0;
                                 if cache_make_stat(t) == 0 {
                                     ok = 0
                                 }
                             }
                             if ok != 0 {
-                                log_query((1) <<
-                                              13 |
-                                              (1) <<
-                                                  17, name,
-                                          0 ,
-                                          b"<TXT>\x00"                                         *const libc::c_char                                        &mut String);
+                                // log_query((1) <<
+                                //               13 |
+                                //               (1) <<
+                                //                   17, name,
+                                //           0 ,
+                                //           "<TXT>"                                         *const libc::c_char                                        &mut String);
                                 if add_resource_record(header, limit,
                                                        &mut trunc        ,
                                                        nameoffset,
@@ -2392,23 +2354,23 @@ pub fn answer_request(mut header: DnsHeader,
                                                        ttl,
                                                        0,
                                                        16     ,
-                                                       (*t).class,
-                                                       b"t\x00"                                     *const libc::c_char
+                                                       t.class,
+                                                       "t"                                     *const libc::c_char
                                                                   &mut String,
-                                                       (*t).len        libc::c_int,
-                                                       (*t).txt) != 0 {
+                                                       t.len        libc::c_int,
+                                                       t.txt) != 0 {
                                     anscount += 1
                                 }
                             }
                         }
                     }
-                    t = (*t).next
+                    t = t.next
                 }
             }
             if qclass == 3 {
                 /* don't forward *.bind and *.server chaos queries - always reply with NOTIMP */
-                if hostname_issubdomain(b"bind\x00"                                       *const libc::c_char                                      &mut String, name) != 0 ||
-                       hostname_issubdomain(b"server\x00"                                           *const libc::c_char                                          &mut String, name) != 0
+                if hostname_issubdomain("bind"                                       *const libc::c_char                                      &mut String, name) != 0 ||
+                       hostname_issubdomain("server"                                           *const libc::c_char                                          &mut String, name) != 0
                    {
                     if ans == 0 {
                         notimp = 1;
@@ -2416,11 +2378,11 @@ pub fn answer_request(mut header: DnsHeader,
                         if dryrun == 0 {
                             addr.log.rcode =
                                 4 ;
-                            log_query((1) << 13
-                                          |
-                                          (1) <<
-                                              29, name,
-                                      &mut addr, 0 );
+                            // log_query((1) << 13
+                            //               |
+                            //               (1) <<
+                            //                   29, name,
+                            //           &mut addr, 0 );
                         }
                         ans = 1;
                         sec_data = 0
@@ -2428,161 +2390,161 @@ pub fn answer_request(mut header: DnsHeader,
                 }
             }
             if qclass == 1 {
-                let mut t_0: *mut TxtRecord = 0 ;
-                t_0 = (*dnsmasq_daemon).rr;
+                let mut t_0: TxtRecord = 0 ;
+                t_0 = dnsmasq_daemon.rr;
                 while !t_0.is_null() {
-                    if ((*t_0).class == qtype ||
+                    if (t_0.class == qtype ||
                             qtype == 255) &&
-                           hostname_isequal(name, (*t_0).name) != 0 {
+                           hostname_isequal(name, t_0.name) != 0 {
                         ans = 1;
                         sec_data = 0;
                         if dryrun == 0 {
-                            log_query((1) << 13
-                                          |
-                                          (1) <<
-                                              17, name,
-                                      0 ,
-                                      querystr(0 ,
-                                               (*t_0).class));
+                            // log_query((1) << 13
+                            //               |
+                            //               (1) <<
+                            //                   17, name,
+                            //           0 ,
+                            //           querystr(0 ,
+                            //                    t_0.class));
                             if add_resource_record(header, limit,
                                                    &mut trunc    ,
                                                    nameoffset,
                                                    &mut ansp    ,
-                                                   (*dnsmasq_daemon).local_ttl,
+                                                   dnsmasq_daemon.local_ttl,
                                                    0,
-                                                   (*t_0).class,
+                                                   t_0.class,
                                                    1 ,
-                                                   b"t\x00"     *const libc::c_char    &mut String,
-                                                   (*t_0).len,
-                                                   (*t_0).txt) != 0 {
+                                                   "t"     *const libc::c_char    &mut String,
+                                                   t_0.len,
+                                                   t_0.txt) != 0 {
                                 anscount += 1
                             }
                         }
                     }
-                    t_0 = (*t_0).next
+                    t_0 = t_0.next
                 }
                 if qtype == 12 ||
                        qtype == 255 {
                     /* see if it's w.z.y.z.in-addr.arpa format */
                     let mut is_arpa: i32 =
                         in_arpa_name_2_addr(name, &mut addr);
-                    let mut ptr: *mut PtrRecord = 0 ;
-                    let mut intr: *mut InterfaceName =
+                    let mut ptr: PtrRecord = 0 ;
+                    let mut intr: InterfaceName =
                         ;
-                    ptr = (*dnsmasq_daemon).ptr;
+                    ptr = dnsmasq_daemon.ptr;
                     while !ptr.is_null() {
-                        if hostname_isequal(name, (*ptr).name) != 0 {
+                        if hostname_isequal(name, ptr.name) != 0 {
                             break ;
                         }
-                        ptr = (*ptr).next
+                        ptr = ptr.next
                     }
                     if is_arpa ==
                            (1) << 7 {
-                        intr = (*dnsmasq_daemon).int_names;
+                        intr = dnsmasq_daemon.int_names;
                         while !intr.is_null() {
-                            let mut addrlist: *mut AddressListEntry =
+                            let mut addrlist: AddressListEntry =
                                 0 ;
-                            addrlist = (*intr).addresses;
+                            addrlist = intr.addresses;
                             while !addrlist.is_null() {
-                                if (*addrlist).flags & 2 == 0
+                                if addrlist.flags & 2 == 0
                                        &&
                                        addr.addr4.s_addr ==
-                                           (*addrlist).addr.addr4.s_addr {
+                                           addrlist.addr.addr4.s_addr {
                                     break ;
                                 }
-                                addrlist = (*addrlist).next
+                                addrlist = addrlist.next
                             }
                             if !addrlist.is_null() { break ; }
-                            while !(*intr).next.is_null() &&
-                                      strcmp((*intr).intr,
-                                             (*(*intr).next).intr) ==
+                            while !intr.next.is_null() &&
+                                      strcmp(intr.intr,
+                                             (*intr.next).intr) ==
                                           0 {
-                                intr = (*intr).next
+                                intr = intr.next
                             }
-                            intr = (*intr).next
+                            intr = intr.next
                         }
                     } else if is_arpa ==
                                   (1) << 8 {
-                        intr = (*dnsmasq_daemon).int_names;
+                        intr = dnsmasq_daemon.int_names;
                         while !intr.is_null() {
-                            let mut addrlist_0: *mut AddressListEntry =
+                            let mut addrlist_0: AddressListEntry =
                                 0 ;
-                            addrlist_0 = (*intr).addresses;
+                            addrlist_0 = intr.addresses;
                             while !addrlist_0.is_null() {
-                                if (*addrlist_0).flags & 2 != 0
+                                if addrlist_0.flags & 2 != 0
                                        &&
                                        ({
                                             let mut __a: *const In6Addr =
-                                                &mut addr.addr6 *mut In6Addr *const In6Addr;
+                                                &mut addr.addr6 &mut In6Addr *const In6Addr;
                                             let mut __b: *const In6Addr =
-                                                &mut (*addrlist_0).addr.addr6
+                                                &mut addrlist_0.addr.addr6
                                                     *const In6Addr;
-                                            ((*__a).__in6_u.__u6_addr32[0                         libc::c_int
+                                            (__a.__in6_u.__u6_addr32[0                         libc::c_int
                                                                                                     usize]
                                                  ==
-                                                 (*__b).__in6_u.__u6_addr32[0
+                                                 __b.__in6_u.__u6_addr32[0
                                                                                                             libc::c_int
                                                                                                             usize]
                                                  &&
-                                                 (*__a).__in6_u.__u6_addr32[1
+                                                 __a.__in6_u.__u6_addr32[1
                                                                                                             libc::c_int
                                                                                                             usize]
                                                      ==
-                                                     (*__b).__in6_u.__u6_addr32[1
+                                                     __b.__in6_u.__u6_addr32[1
                                                                                                                     libc::c_int
                                                                                                                     usize]
                                                  &&
-                                                 (*__a).__in6_u.__u6_addr32[2
+                                                 __a.__in6_u.__u6_addr32[2
                                                                                                             libc::c_int
                                                                                                             usize]
                                                      ==
-                                                     (*__b).__in6_u.__u6_addr32[2
+                                                     __b.__in6_u.__u6_addr32[2
                                                                                                                     libc::c_int
                                                                                                                     usize]
                                                  &&
-                                                 (*__a).__in6_u.__u6_addr32[3
+                                                 __a.__in6_u.__u6_addr32[3
                                                                                                             libc::c_int
                                                                                                             usize]
                                                      ==
-                                                     (*__b).__in6_u.__u6_addr32[3
+                                                     __b.__in6_u.__u6_addr32[3
                                                                                                                     libc::c_int
                                                                                                                     usize])
 
                                         }) != 0 {
                                     break ;
                                 }
-                                addrlist_0 = (*addrlist_0).next
+                                addrlist_0 = addrlist_0.next
                             }
                             if !addrlist_0.is_null() { break ; }
-                            while !(*intr).next.is_null() &&
-                                      strcmp((*intr).intr,
-                                             (*(*intr).next).intr) ==
+                            while !intr.next.is_null() &&
+                                      strcmp(intr.intr,
+                                             (*intr.next).intr) ==
                                           0 {
-                                intr = (*intr).next
+                                intr = intr.next
                             }
-                            intr = (*intr).next
+                            intr = intr.next
                         }
                     }
                     if !intr.is_null() {
                         sec_data = 0;
                         ans = 1;
                         if dryrun == 0 {
-                            log_query(is_arpa |
-                                          (1) <<
-                                              2 |
-                                          (1) <<
-                                              13, (*intr).name,
-                                      &mut addr, 0 );
+                            // log_query(is_arpa |
+                            //               (1) <<
+                            //                   2 |
+                            //               (1) <<
+                            //                   13, intr.name,
+                            //           &mut addr, 0 );
                             if add_resource_record(header, limit,
                                                    &mut trunc    ,
                                                    nameoffset,
                                                    &mut ansp    ,
-                                                   (*dnsmasq_daemon).local_ttl,
+                                                   dnsmasq_daemon.local_ttl,
                                                    0,
                                                    12 ,
                                                    1 ,
-                                                   b"d\x00"     *const libc::c_char    &mut String,
-                                                   (*intr).name) != 0 {
+                                                   "d"     *const libc::c_char    &mut String,
+                                                   intr.name) != 0 {
                                 anscount += 1
                             }
                         }
@@ -2590,30 +2552,30 @@ pub fn answer_request(mut header: DnsHeader,
                         ans = 1;
                         sec_data = 0;
                         if dryrun == 0 {
-                            log_query((1) << 13
-                                          |
-                                          (1) <<
-                                              17, name,
-                                      0 ,
-                                      b"<PTR>\x00"                                     *const libc::c_char                                    &mut String);
-                            ptr = (*dnsmasq_daemon).ptr;
+                            // log_query((1) << 13
+                            //               |
+                            //               (1) <<
+                            //                   17, name,
+                            //           0 ,
+                            //           "<PTR>"                                     *const libc::c_char                                    &mut String);
+                            ptr = dnsmasq_daemon.ptr;
                             while !ptr.is_null() {
-                                if hostname_isequal(name, (*ptr).name) != 0 &&
+                                if hostname_isequal(name, ptr.name) != 0 &&
                                        add_resource_record(header, limit,
                                                            &mut trunc            ,
                                                            nameoffset,
                                                            &mut ansp            ,
-                                                           (*dnsmasq_daemon).local_ttl,
+                                                           dnsmasq_daemon.local_ttl,
                                                            0            ,
                                                            12
                                                                        ,
                                                            1         ,
-                                                           b"d\x00"            *const u8            *const libc::c_char
+                                                           "d"            *const u8            *const libc::c_char
                                                                           &mut String,
-                                                           (*ptr).ptr) != 0 {
+                                                           ptr.ptr) != 0 {
                                     anscount += 1
                                 }
-                                ptr = (*ptr).next
+                                ptr = ptr.next
                             }
                         }
                     } else {
@@ -2661,12 +2623,12 @@ pub fn answer_request(mut header: DnsHeader,
                                                 nxdomain = 1
                                             }
                                             if dryrun == 0 {
-                                                log_query(crecp.flags &
-                                                              !((1                  libc::c_uint)
-                                                                    <<
-                                                                    3                     libc::c_int),
-                                                          name, &mut addr,
-                                                          0           &mut String);
+                                                // log_query(crecp.flags &
+                                                //               !((1                  libc::c_uint)
+                                                //                     <<
+                                                //                     3                     libc::c_int),
+                                                //           name, &mut addr,
+                                                //           0           &mut String);
                                             }
                                         } else {
                                             if crecp.flags &
@@ -2678,13 +2640,13 @@ pub fn answer_request(mut header: DnsHeader,
                                                 auth = 0
                                             }
                                             if dryrun == 0 {
-                                                log_query(crecp.flags &
-                                                              !((1                  libc::c_uint)
-                                                                    <<
-                                                                    3                     libc::c_int),
-                                                          cache_get_name(crecp),
-                                                          &mut addr,
-                                                          record_source(crecp.uid));
+                                                // log_query(crecp.flags &
+                                                //               !((1                  libc::c_uint)
+                                                //                     <<
+                                                //                     3                     libc::c_int),
+                                                //           cache_get_name(crecp),
+                                                //           &mut addr,
+                                                //           record_source(crecp.uid));
                                                 if add_resource_record(header,
                                                                        limit,
                                                                        &mut trunc
@@ -2699,7 +2661,7 @@ pub fn answer_request(mut header: DnsHeader,
                                                                                                ,
                                                                        1                        libc::c_int
                                                                                                ,
-                                                                       b"d\x00"
+                                                                       "d"
                                                                                                   *const u8
                                                                                                   *const libc::c_char
                                                                                                   &mut String,
@@ -2722,27 +2684,27 @@ pub fn answer_request(mut header: DnsHeader,
                             ans = 1;
                             sec_data = 0;
                             if dryrun == 0 {
-                                log_query((1) <<
-                                              13 |
-                                              (1) <<
-                                                  2 |
-                                              is_arpa, name,
-                                          &mut addr, 0 );
+                                // log_query((1) <<
+                                //               13 |
+                                //               (1) <<
+                                //                   2 |
+                                //               is_arpa, name,
+                                //           &mut addr, 0 );
                                 if add_resource_record(header, limit,
                                                        &mut trunc        ,
                                                        nameoffset,
                                                        &mut ansp        ,
-                                                       (*dnsmasq_daemon).local_ttl,
+                                                       dnsmasq_daemon.local_ttl,
                                                        0,
                                                        12     ,
                                                        1     ,
-                                                       b"d\x00"                                     *const libc::c_char
+                                                       "d"                                     *const libc::c_char
                                                                   &mut String,
                                                        name) != 0 {
                                     anscount += 1
                                 }
                             }
-                        } else if (*dnsmasq_daemon).options[(0
+                        } else if dnsmasq_daemon.options[(0
                                                                        ).wrapping_div((::std::mem::size_of::<libc::c_uint>()            ).wrapping_mul(8                                                                                   libc::c_int                                                                            ))] &
                                       (1) <<
                                           (0).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
@@ -2765,23 +2727,23 @@ pub fn answer_request(mut header: DnsHeader,
                             let mut nameend: &mut String =
                                 name.offset(namelen);
                             /* see if have rev-server set */
-                            serv = (*dnsmasq_daemon).servers;
+                            serv = dnsmasq_daemon.servers;
                             while !serv.is_null() {
                                 let mut domainlen: u32 = 0;
                                 let mut matchstart: &mut String =
                                     0 ;
-                                if !((*serv).flags &
+                                if !(serv.flags &
                                          (8 | 2)
                                          != 8) {
                                     domainlen =
-                                        strlen((*serv).domain)                                      libc::c_uint;
+                                        strlen(serv.domain)                                      libc::c_uint;
                                     if !(domainlen ==
                                              0
                                              || domainlen > namelen) {
                                         matchstart =
                                             nameend.offset(-(domainlen              isize));
                                         if hostname_isequal(matchstart,
-                                                            (*serv).domain) !=
+                                                            serv.domain) !=
                                                0 &&
                                                (namelen == domainlen ||
                                                     *matchstart.offset(-(1                          libc::c_int
@@ -2792,7 +2754,7 @@ pub fn answer_request(mut header: DnsHeader,
                                         }
                                     }
                                 }
-                                serv = (*serv).next
+                                serv = serv.next
                             }
                             /* if no configured server, not in cache, enabled and private IPV4 address, return NXDOMAIN */
                             if serv.is_null() {
@@ -2800,17 +2762,17 @@ pub fn answer_request(mut header: DnsHeader,
                                 sec_data = 0;
                                 nxdomain = 1;
                                 if dryrun == 0 {
-                                    log_query((1) <<
-                                                  13 |
-                                                  (1) <<
-                                                      2 |
-                                                  is_arpa |
-                                                  (1) <<
-                                                      5 |
-                                                  (1) <<
-                                                      10, name,
-                                              &mut addr,
-                                              0 );
+                                    // log_query((1) <<
+                                    //               13 |
+                                    //               (1) <<
+                                    //                   2 |
+                                    //               is_arpa |
+                                    //               (1) <<
+                                    //                   5 |
+                                    //               (1) <<
+                                    //                   10, name,
+                                    //           &mut addr,
+                                    //           0 );
                                 }
                             }
                         }
@@ -2824,20 +2786,20 @@ pub fn answer_request(mut header: DnsHeader,
                                (1) << 8 {
                             28
                         } else { 1 } ;
-                    let mut intr_0: *mut InterfaceName =
+                    let mut intr_0: InterfaceName =
                         ;
                     if !(qtype != type_0 &&
                              qtype != 255) {
                         /* interface name stuff */
-                        intr_0 = (*dnsmasq_daemon).int_names;
+                        intr_0 = dnsmasq_daemon.int_names;
                         while !intr_0.is_null() {
-                            if hostname_isequal(name, (*intr_0).name) != 0 {
+                            if hostname_isequal(name, intr_0.name) != 0 {
                                 break ;
                             }
-                            intr_0 = (*intr_0).next
+                            intr_0 = intr_0.next
                         }
                         if !intr_0.is_null() {
-                            let mut addrlist_1: *mut AddressListEntry =
+                            let mut addrlist_1: AddressListEntry =
                                 0 ;
                             let mut gotit: i32 = 0;
                             let mut localise: i32 = 0;
@@ -2846,7 +2808,7 @@ pub fn answer_request(mut header: DnsHeader,
 		     the query, is so we'll filter other answers. */
                             if local_addr.s_addr !=
                                    0 &&
-                                   (*dnsmasq_daemon).options[(18               libc::c_int
+                                   dnsmasq_daemon.options[(18               libc::c_int
                                                                          ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                     libc::c_int                                                                              ))
                                                                  ] &
                                        (1) <<
@@ -2854,46 +2816,46 @@ pub fn answer_request(mut header: DnsHeader,
                                                                                                        ).wrapping_mul(8                                                 libc::c_int                                          ))
                                        != 0 &&
                                    type_0 == 1 {
-                                intr_0 = (*dnsmasq_daemon).int_names;
+                                intr_0 = dnsmasq_daemon.int_names;
                                 while !intr_0.is_null() {
-                                    if hostname_isequal(name, (*intr_0).name)
+                                    if hostname_isequal(name, intr_0.name)
                                            != 0 {
-                                        addrlist_1 = (*intr_0).addresses;
+                                        addrlist_1 = intr_0.addresses;
                                         while !addrlist_1.is_null() {
-                                            if (*addrlist_1).flags &
+                                            if addrlist_1.flags &
                                                    2 == 0 &&
-                                                   is_same_net((*addrlist_1).addr.addr4,
-                                                               local_addr,
-                                                               local_netmask)
+                                                   is_same_net4(addrlist_1.addr.addr4,
+                                                                local_addr,
+                                                                local_netmask)
                                                        != 0 {
                                                 localise = 1;
                                                 break ;
                                             } else {
                                                 addrlist_1 =
-                                                    (*addrlist_1).next
+                                                    addrlist_1.next
                                             }
                                         }
                                     }
-                                    intr_0 = (*intr_0).next
+                                    intr_0 = intr_0.next
                                 }
                             }
-                            intr_0 = (*dnsmasq_daemon).int_names;
+                            intr_0 = dnsmasq_daemon.int_names;
                             while !intr_0.is_null() {
-                                if hostname_isequal(name, (*intr_0).name) != 0
+                                if hostname_isequal(name, intr_0.name) != 0
                                    {
-                                    addrlist_1 = (*intr_0).addresses;
+                                    addrlist_1 = intr_0.addresses;
                                     while !addrlist_1.is_null() {
-                                        if (if (*addrlist_1).flags &
+                                        if (if addrlist_1.flags &
                                                    2 != 0 {
                                                 28
                                             } else { 1 }) ==
                                                type_0 {
                                             if !(localise != 0 &&
-                                                     is_same_net((*addrlist_1).addr.addr4,
-                                                                 local_addr,
-                                                                 local_netmask)
+                                                     is_same_net4(addrlist_1.addr.addr4,
+                                                                  local_addr,
+                                                                  local_netmask)
                                                          == 0) {
-                                                if !((*addrlist_1).flags &
+                                                if !(addrlist_1.flags &
                                                          4 !=
                                                          0) {
                                                     ans = 1;
@@ -2902,19 +2864,19 @@ pub fn answer_request(mut header: DnsHeader,
                                                     if dryrun == 0 {
                                                         gotit =
                                                             1;
-                                                        log_query((1                    libc::c_uint)
-                                                                      <<
-                                                                      3                       libc::c_int
-                                                                      |
-                                                                      (1                        libc::c_uint)
-                                                                          <<
-                                                                          13
-                                                                                                        libc::c_int
-                                                                      |
-                                                                      flag                       libc::c_uint,
-                                                                  name,
-                                                                  &mut (*addrlist_1).addr,
-                                                                  0                   &mut String);
+                                                        // log_query((1                    libc::c_uint)
+                                                        //               <<
+                                                        //               3                       libc::c_int
+                                                        //               |
+                                                        //               (1                        libc::c_uint)
+                                                        //                   <<
+                                                        //                   13
+                                                        //                                                 libc::c_int
+                                                        //               |
+                                                        //               flag                       libc::c_uint,
+                                                        //           name,
+                                                        //           &mut addrlist_1.addr,
+                                                        //           0                   &mut String);
                                                         if add_resource_record(header,
                                                                                limit,
                                                                                &mut trunc
@@ -2922,7 +2884,7 @@ pub fn answer_request(mut header: DnsHeader,
                                                                                nameoffset,
                                                                                &mut ansp
                                                                                                                   ,
-                                                                               (*dnsmasq_daemon).local_ttl,
+                                                                               dnsmasq_daemon.local_ttl,
                                                                                0
                                                                                                                   ,
                                                                                type_0,
@@ -2934,16 +2896,16 @@ pub fn answer_request(mut header: DnsHeader,
                                                                                       ==
                                                                                       1   libc::c_int
                                                                                   {
-                                                                                   b"4\x00"
+                                                                                   "4"
                                                                                                                           *const u8
                                                                                                                           *const libc::c_char
                                                                                } else {
-                                                                                   b"6\x00"
+                                                                                   "6"
                                                                                                                           *const u8
                                                                                                                           *const libc::c_char
                                                                                }
                                                                                                                   &mut String,
-                                                                               &mut (*addrlist_1).addr
+                                                                               &mut addrlist_1.addr
                                                                                                               )
                                                                != 0 {
                                                             anscount += 1
@@ -2952,21 +2914,21 @@ pub fn answer_request(mut header: DnsHeader,
                                                 }
                                             }
                                         }
-                                        addrlist_1 = (*addrlist_1).next
+                                        addrlist_1 = addrlist_1.next
                                     }
                                 }
-                                intr_0 = (*intr_0).next
+                                intr_0 = intr_0.next
                             }
                             if dryrun == 0 && gotit == 0 {
-                                log_query((1) <<
-                                              3 |
-                                              (1) <<
-                                                  13 |
-                                              flag |
-                                              (1) <<
-                                                  5, name,
-                                          0 ,
-                                          0 );
+                                // log_query((1) <<
+                                //               3 |
+                                //               (1) <<
+                                //                   13 |
+                                //               flag |
+                                //               (1) <<
+                                //                   5, name,
+                                //           0 ,
+                                //           0 );
                             }
                         } else {
                             crecp =
@@ -2987,7 +2949,7 @@ pub fn answer_request(mut header: DnsHeader,
 		     the query, is so we'll filter other answers. */
                                 if local_addr.s_addr !=
                                        0 &&
-                                       (*dnsmasq_daemon).options[(18                   libc::c_int
+                                       dnsmasq_daemon.options[(18                   libc::c_int
                                                                                  ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                      ).wrapping_mul(8                                                                                             libc::c_int                                                                                      ))
                                                                      ]
                                            &
@@ -3003,9 +2965,9 @@ pub fn answer_request(mut header: DnsHeader,
                                         if crecp.flags &
                                                (1) <<
                                                    6 != 0 &&
-                                               is_same_net(crecp.addr.addr4,
-                                                           local_addr,
-                                                           local_netmask) != 0
+                                               is_same_net4(crecp.addr.addr4,
+                                                            local_addr,
+                                                            local_netmask) != 0
                                            {
                                             localise_0 = 1;
                                             break ;
@@ -3062,10 +3024,10 @@ pub fn answer_request(mut header: DnsHeader,
                                                 nxdomain = 1
                                             }
                                             if dryrun == 0 {
-                                                log_query(crecp.flags,
-                                                          name,
-                                                          0 ,
-                                                          0           &mut String);
+                                                // log_query(crecp.flags,
+                                                //           name,
+                                                //           0 ,
+                                                //           0           &mut String);
                                             }
                                         } else if !(localise_0 != 0 &&
                                                         crecp.flags &
@@ -3073,9 +3035,9 @@ pub fn answer_request(mut header: DnsHeader,
                                                                 <<
                                                                 6                 libc::c_int
                                                             != 0 &&
-                                                        is_same_net(crecp.addr.addr4,
-                                                                    local_addr,
-                                                                    local_netmask)
+                                                        is_same_net4(crecp.addr.addr4,
+                                                                     local_addr,
+                                                                     local_netmask)
                                                             == 0) {
                                             if crecp.flags &
                                                    ((1) <<
@@ -3087,13 +3049,13 @@ pub fn answer_request(mut header: DnsHeader,
                                             }
                                             ans = 1;
                                             if dryrun == 0 {
-                                                log_query(crecp.flags &
-                                                              !((1                  libc::c_uint)
-                                                                    <<
-                                                                    2                     libc::c_int),
-                                                          name,
-                                                          &mut crecp.addr,
-                                                          record_source(crecp.uid));
+                                                // log_query(crecp.flags &
+                                                //               !((1                  libc::c_uint)
+                                                //                     <<
+                                                //                     2                     libc::c_int),
+                                                //           name,
+                                                //           &mut crecp.addr,
+                                                //           record_source(crecp.uid));
                                                 if add_resource_record(header,
                                                                        limit,
                                                                        &mut trunc
@@ -3113,11 +3075,11 @@ pub fn answer_request(mut header: DnsHeader,
                                                                               1
                                                                                                                 libc::c_int
                                                                           {
-                                                                           b"4\x00"
+                                                                           "4"
                                                                                                           *const u8
                                                                                                           *const libc::c_char
                                                                        } else {
-                                                                           b"6\x00"
+                                                                           "6"
                                                                                                           *const u8
                                                                                                           *const libc::c_char
                                                                        }                        &mut String,
@@ -3141,18 +3103,18 @@ pub fn answer_request(mut header: DnsHeader,
                                 ans = 1;
                                 sec_data = 0;
                                 if dryrun == 0 {
-                                    log_query((1) <<
-                                                  3 |
-                                                  (1) <<
-                                                      13 |
-                                                  flag, name,
-                                              &mut addr,
-                                              0 );
+                                    // log_query((1) <<
+                                    //               3 |
+                                    //               (1) <<
+                                    //                   13 |
+                                    //               flag, name,
+                                    //           &mut addr,
+                                    //           0 );
                                     if add_resource_record(header, limit,
                                                            &mut trunc            ,
                                                            nameoffset,
                                                            &mut ansp            ,
-                                                           (*dnsmasq_daemon).local_ttl,
+                                                           dnsmasq_daemon.local_ttl,
                                                            0            ,
                                                            type_0,
                                                            1         ,
@@ -3160,10 +3122,10 @@ pub fn answer_request(mut header: DnsHeader,
                                                                   ==
                                                                   1                   libc::c_int
                                                               {
-                                                               b"4\x00"                *const u8
+                                                               "4"                *const u8
                                                                                   *const libc::c_char
                                                            } else {
-                                                               b"6\x00"                *const u8
+                                                               "6"                *const u8
                                                                                   *const libc::c_char
                                                            }            &mut String,
                                                            &mut addr        )
@@ -3183,7 +3145,7 @@ pub fn answer_request(mut header: DnsHeader,
                 if qtype == 15 ||
                        qtype == 255 {
                     let mut found: i32 = 0;
-                    rec = (*dnsmasq_daemon).mxnames;
+                    rec = dnsmasq_daemon.mxnames;
                     while !rec.is_null() {
                         if rec.issrv == 0 &&
                                hostname_isequal(name, rec.name) != 0 {
@@ -3192,21 +3154,21 @@ pub fn answer_request(mut header: DnsHeader,
                             sec_data = 0;
                             if dryrun == 0 {
                                 let mut offset: i32 = 0;
-                                log_query((1) <<
-                                              13 |
-                                              (1) <<
-                                                  17, name,
-                                          0 ,
-                                          b"<MX>\x00"                                         *const libc::c_char                                        &mut String);
+                                // log_query((1) <<
+                                //               13 |
+                                //               (1) <<
+                                //                   17, name,
+                                //           0 ,
+                                //           "<MX>"                                         *const libc::c_char                                        &mut String);
                                 if add_resource_record(header, limit,
                                                        &mut trunc        ,
                                                        nameoffset,
                                                        &mut ansp        ,
-                                                       (*dnsmasq_daemon).local_ttl,
+                                                       dnsmasq_daemon.local_ttl,
                                                        &mut offset        ,
                                                        15     ,
                                                        1     ,
-                                                       b"sd\x00"                                     *const libc::c_char
+                                                       "sd"                                     *const libc::c_char
                                                                   &mut String,
                                                        rec.weight,
                                                        rec.target) != 0 {
@@ -3220,13 +3182,13 @@ pub fn answer_request(mut header: DnsHeader,
                         rec = rec.next
                     }
                     if found == 0 &&
-                           ((*dnsmasq_daemon).options[(3 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8                                                                       libc::c_int                                                                ))
+                           (dnsmasq_daemon.options[(3 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8                                                                       libc::c_int                                                                ))
                                                           ] &
                                 (1) <<
                                     (3).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                                          ).wrapping_mul(8                                   libc::c_int                            ))
                                 != 0 ||
-                                (*dnsmasq_daemon).options[(10
+                                dnsmasq_daemon.options[(10
                                                                    ).wrapping_div((::std::mem::size_of::<libc::c_uint>()        ).wrapping_mul(8                                                                               libc::c_int                                                                        ))
                                                               ] &
                                     (1) <<
@@ -3244,23 +3206,23 @@ pub fn answer_request(mut header: DnsHeader,
                         ans = 1;
                         sec_data = 0;
                         if dryrun == 0 {
-                            log_query((1) << 13
-                                          |
-                                          (1) <<
-                                              17, name,
-                                      0 ,
-                                      b"<MX>\x00"                                     *const libc::c_char                                    &mut String);
+                            // log_query((1) << 13
+                            //               |
+                            //               (1) <<
+                            //                   17, name,
+                            //           0 ,
+                            //           "<MX>"                                     *const libc::c_char                                    &mut String);
                             if add_resource_record(header, limit,
                                                    &mut trunc    ,
                                                    nameoffset,
                                                    &mut ansp    ,
-                                                   (*dnsmasq_daemon).local_ttl,
+                                                   dnsmasq_daemon.local_ttl,
                                                    0,
                                                    15 ,
                                                    1 ,
-                                                   b"sd\x00"     *const libc::c_char    &mut String,
+                                                   "sd"     *const libc::c_char    &mut String,
                                                    1,
-                                                   if (*dnsmasq_daemon).options[(3
+                                                   if dnsmasq_daemon.options[(3
                                                                                                                       libc::c_int
                                                                                                                ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                                                    ).wrapping_mul(8                                                                                                                           libc::c_int                                                                                                                    ))
                                                                                                                     usize]
@@ -3272,7 +3234,7 @@ pub fn answer_request(mut header: DnsHeader,
                                                           != 0 {
                                                        name
                                                    } else {
-                                                       (*dnsmasq_daemon).mxtarget
+                                                       dnsmasq_daemon.mxtarget
                                                    }) != 0 {
                                 anscount += 1
                             }
@@ -3282,11 +3244,11 @@ pub fn answer_request(mut header: DnsHeader,
                 if qtype == 33 ||
                        qtype == 255 {
                     let mut found_0: i32 = 0;
-                    let mut move_0: *mut MxSrvRecord =
+                    let mut move_0: MxSrvRecord =
                         0 ;
-                    let mut up: *mut *mut MxSrvRecord =
-                        &mut (*dnsmasq_daemon).mxnames;
-                    rec = (*dnsmasq_daemon).mxnames;
+                    let mut up: &mut MxSrvRecord =
+                        &mut dnsmasq_daemon.mxnames;
+                    rec = dnsmasq_daemon.mxnames;
                     while !rec.is_null() {
                         if rec.issrv != 0 &&
                                hostname_isequal(name, rec.name) != 0 {
@@ -3295,21 +3257,21 @@ pub fn answer_request(mut header: DnsHeader,
                             sec_data = 0;
                             if dryrun == 0 {
                                 let mut offset_0: i32 = 0;
-                                log_query((1) <<
-                                              13 |
-                                              (1) <<
-                                                  17, name,
-                                          0 ,
-                                          b"<SRV>\x00"                                         *const libc::c_char                                        &mut String);
+                                // log_query((1) <<
+                                //               13 |
+                                //               (1) <<
+                                //                   17, name,
+                                //           0 ,
+                                //           "<SRV>"                                         *const libc::c_char                                        &mut String);
                                 if add_resource_record(header, limit,
                                                        &mut trunc        ,
                                                        nameoffset,
                                                        &mut ansp        ,
-                                                       (*dnsmasq_daemon).local_ttl,
+                                                       dnsmasq_daemon.local_ttl,
                                                        &mut offset_0        ,
                                                        33     ,
                                                        1     ,
-                                                       b"sssd\x00"        *const u8        *const libc::c_char
+                                                       "sssd"        *const u8        *const libc::c_char
                                                                   &mut String,
                                                        rec.priority,
                                                        rec.weight,
@@ -3335,7 +3297,7 @@ pub fn answer_request(mut header: DnsHeader,
                     /* put first SRV record back at the end. */
                     if !move_0.is_null() {
                         *up = move_0;
-                        (*move_0).next = 0
+                        move_0.next = 0
                     }
                     if found_0 == 0 {
                         crecp =
@@ -3351,7 +3313,7 @@ pub fn answer_request(mut header: DnsHeader,
                                                     }));
                         if !crecp.is_null() && rd_bit != 0 &&
                                (do_bit == 0 ||
-                                    (*dnsmasq_daemon).options[(45                libc::c_int
+                                    dnsmasq_daemon.options[(45                libc::c_int
                                                                            ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                ).wrapping_mul(8                                                                                       libc::c_int                                                                                ))
                                                                   ] &
                                         (1) <<
@@ -3379,9 +3341,9 @@ pub fn answer_request(mut header: DnsHeader,
                                         nxdomain = 1
                                     }
                                     if dryrun == 0 {
-                                        log_query(crecp.flags, name,
-                                                  0 ,
-                                                  0 );
+                                        // log_query(crecp.flags, name,
+                                        //           0 ,
+                                        //           0 );
                                     }
                                 } else if dryrun == 0 {
                                     let mut target: &mut String =
@@ -3390,9 +3352,9 @@ pub fn answer_request(mut header: DnsHeader,
                                                                ,
                                                            0           Vec<u8>)
                                             ;
-                                    log_query(crecp.flags, name,
-                                              0 ,
-                                              0 );
+                                    // log_query(crecp.flags, name,
+                                    //           0 ,
+                                    //           0 );
                                     if add_resource_record(header, limit,
                                                            &mut trunc            ,
                                                            nameoffset,
@@ -3403,7 +3365,7 @@ pub fn answer_request(mut header: DnsHeader,
                                                            33
                                                                        ,
                                                            1         ,
-                                                           b"sssd\x00"            *const u8            *const libc::c_char
+                                                           "sssd"            *const u8            *const libc::c_char
                                                                           &mut String,
                                                            crecp.addr.srv.priority
                                                               ,
@@ -3424,7 +3386,7 @@ pub fn answer_request(mut header: DnsHeader,
                         }
                     }
                     if found_0 == 0 &&
-                           (*dnsmasq_daemon).options[(1).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                           dnsmasq_daemon.options[(1).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                                            ).wrapping_mul(8
                                                                                                                            ))
                                                          ] &
@@ -3438,51 +3400,51 @@ pub fn answer_request(mut header: DnsHeader,
                         ans = 1;
                         sec_data = 0;
                         if dryrun == 0 {
-                            log_query((1) << 13
-                                          |
-                                          (1) <<
-                                              5, name,
-                                      0 ,
-                                      0 );
+                            // log_query((1) << 13
+                            //               |
+                            //               (1) <<
+                            //                   5, name,
+                            //           0 ,
+                            //           0 );
                         }
                     }
                 }
                 if qtype == 35 ||
                        qtype == 255 {
-                    let mut na: *mut NaPtr = 0 ;
-                    na = (*dnsmasq_daemon).naptr;
+                    let mut na: NaPtr = 0 ;
+                    na = dnsmasq_daemon.naptr;
                     while !na.is_null() {
-                        if hostname_isequal(name, (*na).name) != 0 {
+                        if hostname_isequal(name, na.name) != 0 {
                             ans = 1;
                             sec_data = 0;
                             if dryrun == 0 {
-                                log_query((1) <<
-                                              13 |
-                                              (1) <<
-                                                  17, name,
-                                          0 ,
-                                          b"<NAPTR>\x00"                                         *const libc::c_char                                        &mut String);
+                                // log_query((1) <<
+                                //               13 |
+                                //               (1) <<
+                                //                   17, name,
+                                //           0 ,
+                                //           "<NAPTR>"                                         *const libc::c_char                                        &mut String);
                                 if add_resource_record(header, limit,
                                                        &mut trunc        ,
                                                        nameoffset,
                                                        &mut ansp        ,
-                                                       (*dnsmasq_daemon).local_ttl,
+                                                       dnsmasq_daemon.local_ttl,
                                                        0,
                                                        35     ,
                                                        1     ,
-                                                       b"sszzzd\x00"        *const u8        *const libc::c_char
+                                                       "sszzzd"        *const u8        *const libc::c_char
                                                                   &mut String,
-                                                       (*na).order,
-                                                       (*na).pref,
-                                                       (*na).flags,
-                                                       (*na).services,
-                                                       (*na).regexp,
-                                                       (*na).replace) != 0 {
+                                                       na.order,
+                                                       na.pref,
+                                                       na.flags,
+                                                       na.services,
+                                                       na.regexp,
+                                                       na.replace) != 0 {
                                     anscount += 1
                                 }
                             }
                         }
-                        na = (*na).next
+                        na = na.next
                     }
                 }
                 if qtype == 253 {
@@ -3491,7 +3453,7 @@ pub fn answer_request(mut header: DnsHeader,
                     sec_data = 0
                 }
                 if qtype == 6 &&
-                       (*dnsmasq_daemon).options[(1   libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                       dnsmasq_daemon.options[(1   libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                                    ).wrapping_mul(8                                                             libc::c_int                                                      ))
                                                      ] &
                            (1) <<
@@ -3501,9 +3463,9 @@ pub fn answer_request(mut header: DnsHeader,
                     ans = 1;
                     sec_data = 0;
                     if dryrun == 0 {
-                        log_query((1) << 13 |
-                                      (1) << 5,
-                                  name, &mut addr, 0 );
+                        // log_query((1) << 13 |
+                        //               (1) << 5,
+                        //           name, &mut addr, 0 );
                     }
                 }
             }
@@ -3514,18 +3476,18 @@ pub fn answer_request(mut header: DnsHeader,
         dryrun = 0
     }
     /* create an additional data section, for stuff in SRV and MX record replies. */
-    rec = (*dnsmasq_daemon).mxnames;
+    rec = dnsmasq_daemon.mxnames;
     while !rec.is_null() {
         if rec.offset != 0 {
             /* squash dupes */
-            let mut tmp: *mut MxSrvRecord = 0 ;
+            let mut tmp: MxSrvRecord = 0 ;
             tmp = rec.next;
             while !tmp.is_null() {
-                if (*tmp).offset != 0 &&
-                       hostname_isequal(rec.target, (*tmp).target) != 0 {
-                    (*tmp).offset = 0
+                if tmp.offset != 0 &&
+                       hostname_isequal(rec.target, tmp.target) != 0 {
+                    tmp.offset = 0
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
             crecp = 0 ;
             loop  {
@@ -3555,9 +3517,9 @@ pub fn answer_request(mut header: DnsHeader,
                                        if crecp.flags &
                                               (1) <<
                                                   7 != 0 {
-                                           b"4\x00"
+                                           "4"
                                        } else {
-                                           b"6\x00"
+                                           "6"
                                        } ,
                                        &mut crecp.addr ) !=
                        0 {
@@ -3569,56 +3531,56 @@ pub fn answer_request(mut header: DnsHeader,
     }
     /* done all questions, set up header and return length of result */
   /* clear authoritative and truncated flags, set QR flag */
-    (*header).hb3 =
-        ((*header).hb3 &
+    header.hb3 =
+        (header.hb3 &
              !(0x4 | 0x2) | 0x80)
             as u8;
     /* set RA flag */
-    (*header).hb4 =
-        ((*header).hb4 | 0x80) as u8;
+    header.hb4 =
+        (header.hb4 | 0x80) as u8;
     /* authoritative - only hosts and DHCP derived names. */
     if auth != 0 {
-        (*header).hb3 =
-            ((*header).hb3 | 0x4) as u8
+        header.hb3 =
+            (header.hb3 | 0x4) as u8
     }
     /* truncation */
     if trunc != 0 {
-        (*header).hb3 =
-            ((*header).hb3 | 0x2) as u8
+        header.hb3 =
+            (header.hb3 | 0x2) as u8
     } /* no error */
     if nxdomain != 0 {
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  3) as u8
     } else if notimp != 0 {
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  4) as u8
     } else {
-        (*header).hb4 =
-            ((*header).hb4 & !(0xf) |
+        header.hb4 =
+            (header.hb4 & !(0xf) |
                  0) as u8
     }
-    (*header).ancount = __bswap_16(anscount);
-    (*header).nscount = __bswap_16(0);
-    (*header).arcount = __bswap_16(addncount);
+    header.ancount = __bswap_16(anscount);
+    header.nscount = __bswap_16(0);
+    header.arcount = __bswap_16(addncount);
     len =
         ansp.wrapping_offset_from(header)      i32 ;
     /* Advertise our packet size limit in our reply */
     if have_pseudoheader != 0 {
         len =
             add_pseudoheader(header, len, limit,
-                             (*dnsmasq_daemon).edns_pktsz, 0,
+                             dnsmasq_daemon.edns_pktsz, 0,
                              0,
                              0 , do_bit,
                              0)
     }
     if ad_reqd != 0 && sec_data != 0 {
-        (*header).hb4 =
-            ((*header).hb4 | 0x20) as u8
+        header.hb4 =
+            (header.hb4 | 0x20) as u8
     } else {
-        (*header).hb4 =
-            ((*header).hb4 & !(0x20)) as u8
+        header.hb4 =
+            (header.hb4 & !(0x20)) as u8
     }
     return len;
 }

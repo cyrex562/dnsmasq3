@@ -40,7 +40,7 @@ pub struct ra_param {
     pub first: i32,
     pub adv_router: i32,
     pub if_name: &mut String,
-    pub tags: *mut DhcpNetId,
+    pub tags: &mut DhcpNetId,
     pub link_local: In6Addr,
     pub link_global: In6Addr,
     pub ula: In6Addr,
@@ -55,7 +55,7 @@ pub struct ra_param {
 #[repr(C)]
 pub union C2RustUnnamed_10 {
     pub c: mut Vec<u8>,
-    pub p: *mut in6_pktinfo,
+    pub p: &mut in6_pktinfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -67,7 +67,7 @@ pub union C2RustUnnamed_11 {
 #[repr(C)]
 pub struct AliasParam {
     pub iface: i32,
-    pub bridge: *mut DhcpBridge,
+    pub bridge: &mut DhcpBridge,
     pub num_alias_ifs: i32,
     pub max_alias_ifs: i32,
     pub alias_ifs: ,
@@ -135,7 +135,7 @@ pub fn ra_init(mut now: time::Instant) {
                       &mut filter ,
                       ::std::mem::size_of::<icmp6_filter>()
                          ) == -(1) {
-        die(b"cannot create ICMPv6 socket: %s\x00",
+        die("cannot create ICMPv6 socket: %s",
             0 , 2);
     }
     daemon.icmp6fd = fd;
@@ -174,7 +174,7 @@ pub fn icmp6_packet(mut now: time::Instant) {
     let mut interface: [libc::c_char; 17] = [0; 17];
     let mut sz: ssize_t = 0;
     let mut if_index: i32 = 0;
-    let mut cmptr: *mut CmsgHdr = 0;
+    let mut cmptr: CmsgHdr = 0;
     let mut msg: MsgHdr =
         MsgHdr {msg_name: 0,
                msg_namelen: 0,
@@ -198,7 +198,7 @@ pub fn icmp6_packet(mut now: time::Instant) {
                                       C2RustUnnamed{__u6_addr8: [0; 16],},},
                      sin6_scope_id: 0,};
     let mut packet: mut Vec<u8> = 0;
-    let mut tmp: *mut Iname = 0;
+    let mut tmp: Iname = 0;
     /* Note: use outpacket for input buffer */
     msg.msg_control = control_u.control6.as_mut_ptr();
     msg.msg_controllen =
@@ -221,11 +221,11 @@ pub fn icmp6_packet(mut now: time::Instant) {
             msg.msg_control
         } else { 0 };
     while !cmptr.is_null() {
-        if (*cmptr).cmsg_level == IPPROTO_IPV6 &&
-               (*cmptr).cmsg_type == daemon.v6pktinfo {
+        if cmptr.cmsg_level == IPPROTO_IPV6 &&
+               cmptr.cmsg_type == daemon.v6pktinfo {
             let mut p: C2RustUnnamed_10 =
                 C2RustUnnamed_10{c: 0,};
-            p.c = (*cmptr).__cmsg_data.as_mut_ptr();
+            p.c = cmptr.__cmsg_data.as_mut_ptr();
             if_index = (*p.p).ipi6_ifindex
         }
         cmptr = __cmsg_nxthdr(&mut msg, cmptr)
@@ -240,11 +240,11 @@ pub fn icmp6_packet(mut now: time::Instant) {
     }
     tmp = daemon.dhcp_except;
     while !tmp.is_null() {
-        if !(*tmp).name.is_null() &&
-               wildcard_match((*tmp).name, interface.as_mut_ptr()) != 0 {
+        if !tmp.name.is_null() &&
+               wildcard_match(tmp.name, interface.as_mut_ptr()) != 0 {
             return
         }
-        tmp = (*tmp).next
+        tmp = tmp.next
     }
     if *packet.offset(1) !=
            0 {
@@ -256,9 +256,9 @@ pub fn icmp6_packet(mut now: time::Instant) {
     } else if *packet.offset(0) ==
                   133 {
         let mut mac: &mut String =
-            b"\x00"  ;
-        let mut bridge: *mut DhcpBridge = 0;
-        let mut alias: *mut DhcpBridge = 0;
+            ""  ;
+        let mut bridge: DhcpBridge = 0;
+        let mut alias: DhcpBridge = 0;
         /* look for link-layer address option for logging */
         if sz >= 16 &&
                *packet.offset(8) ==
@@ -287,7 +287,7 @@ pub fn icmp6_packet(mut now: time::Instant) {
                == 0 {
             my_syslog((3) << 3 |
                           6,
-                      b"RTR-SOLICIT(%s) %s\x00", interface.as_mut_ptr(), mac);
+                      "RTR-SOLICIT(%s) %s", interface.as_mut_ptr(), mac);
         }
         /* If the incoming interface is an alias of some other one (as
          specified by the --bridge-interface option), send an RA using
@@ -295,24 +295,24 @@ pub fn icmp6_packet(mut now: time::Instant) {
         bridge = daemon.bridges;
         while !bridge.is_null() {
             let mut bridge_index: i32 =
-                if_nametoindex((*bridge).iface.as_mut_ptr());
+                if_nametoindex(bridge.iface.as_mut_ptr());
             if bridge_index != 0 {
-                alias = (*bridge).alias;
+                alias = bridge.alias;
                 while !alias.is_null() {
-                    if wildcard_matchn((*alias).iface.as_mut_ptr(),
+                    if wildcard_matchn(alias.iface.as_mut_ptr(),
                                        interface.as_mut_ptr(),
                                        16) != 0 {
                         /* Send an RA on if_index with information from
 		       bridge_index. */
                         send_ra_alias(now, bridge_index,
-                                      (*bridge).iface.as_mut_ptr(),
+                                      bridge.iface.as_mut_ptr(),
                                       0, if_index);
                         break ;
-                    } else { alias = (*alias).next }
+                    } else { alias = alias.next }
                 }
                 if !alias.is_null() { break ; }
             }
-            bridge = (*bridge).next
+            bridge = bridge.next
         }
         /* If the incoming interface wasn't an alias, send an RA using
 	 the context of the incoming interface. */
@@ -322,13 +322,13 @@ pub fn icmp6_packet(mut now: time::Instant) {
                     if ({
                             let mut __a: *const In6Addr =
                                 &mut from.sin6_addr;
-                            ((*__a).__in6_u.__u6_addr32[0         usize] ==
+                            (__a.__in6_u.__u6_addr32[0         usize] ==
                                  0 &&
-                                 (*__a).__in6_u.__u6_addr32[1] ==
+                                 __a.__in6_u.__u6_addr32[1] ==
                                      0 &&
-                                 (*__a).__in6_u.__u6_addr32[2] ==
+                                 __a.__in6_u.__u6_addr32[2] ==
                                      0 &&
-                                 (*__a).__in6_u.__u6_addr32[3] ==
+                                 __a.__in6_u.__u6_addr32[3] ==
                                      0)                          libc::c_int
                         }) == 0 {
                         &mut from.sin6_addr
@@ -338,9 +338,9 @@ pub fn icmp6_packet(mut now: time::Instant) {
 }
 fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                    mut iface_name: &mut String,
-                                   mut dest: *mut In6Addr,
+                                   mut dest: &mut In6Addr,
                                    mut send_iface: i32) {
-    let mut ra: *mut ra_packet = 0 ;
+    let mut ra: ra_packet = 0 ;
     let mut parm: ra_param =
         ra_param{now: 0,
                  ind: 0,
@@ -371,16 +371,16 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                      sin6_scope_id: 0,};
     let mut context: DhcpContext = 0;
     let mut tmp: DhcpContext = 0;
-    let mut up: *mut DhcpContext = 0 ;
+    let mut up: DhcpContext = 0 ;
     let mut iface_id: DhcpNetId =
         DhcpNetId {net: 0 , next: 0 ,};
-    let mut opt_cfg: *mut DhcpOpt = 0 ;
-    let mut ra_param: *mut RaInterface = find_iface_param(iface_name);
+    let mut opt_cfg: DhcpOpt = 0 ;
+    let mut ra_param: RaInterface = find_iface_param(iface_name);
     let mut done_dns: i32 = 0;
     let mut old_prefix: i32 = 0;
     let mut mtu: i32 = 0;
     let mut min_pref_time: u32 = 0;
-    let mut f: *mut FILE = 0 ;
+    let mut f: FILE = 0 ;
     parm.ind = iface;
     parm.managed = 0;
     parm.other = 0;
@@ -396,15 +396,15 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     parm.prio = calc_prio(ra_param);
     reset_counter();
     ra =
-        expand(::std::mem::size_of::<ra_packet>())      *mut ra_packet;
+        expand(::std::mem::size_of::<ra_packet>())      ra_packet;
     if ra.is_null() { return }
-    (*ra).type_0 = 134 as u8;
-    (*ra).code = 0 as u8;
-    (*ra).hop_limit = hop_limit as u8;
-    (*ra).flags = parm.prio as u8;
-    (*ra).lifetime = __bswap_16(calc_lifetime(ra_param) );
-    (*ra).reachable_time = 0;
-    (*ra).retrans_time = 0;
+    ra.type_0 = 134 as u8;
+    ra.code = 0 as u8;
+    ra.hop_limit = hop_limit as u8;
+    ra.flags = parm.prio as u8;
+    ra.lifetime = __bswap_16(calc_lifetime(ra_param) );
+    ra.reachable_time = 0;
+    ra.retrans_time = 0;
     /* set tag with name == interface */
     iface_id.net = iface_name;
     iface_id.next = 0 ;
@@ -422,7 +422,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     if iface_enumerate(10,
                        &mut parm ,
                        ::std::mem::transmute::<Option<fn(_:
-                                                                               *mut In6Addr,
+                                                                               &mut In6Addr,
                                                                            _:
                                                                                libc::c_int,
                                                                            _:
@@ -442,7 +442,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                                           ->
                                                               libc::c_int>>(Some(add_prefixes
                                                                                                                       fn(_:
-                                                                                                              *mut In6Addr,
+                                                                                                              &mut In6Addr,
                                                                                                           _:
                                                                                                               libc::c_int,
                                                                                                           _:
@@ -501,7 +501,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                 *up = context.next;
                 free(context);
             } else {
-                let mut opt: *mut prefix_opt = 0 ;
+                let mut opt: prefix_opt = 0 ;
                 let mut local: In6Addr = context.start6;
                 let mut do_slaac: i32 = 0;
                 old_prefix = 1;
@@ -540,13 +540,13 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                 opt =
                     expand(::std::mem::size_of::<prefix_opt>()) ;
                 if !opt.is_null() {
-                    (*opt).type_0 = 3 as u8;
-                    (*opt).len = 4 as u8;
-                    (*opt).prefix_len = context.prefix as u8;
+                    opt.type_0 = 3 as u8;
+                    opt.len = 4 as u8;
+                    opt.prefix_len = context.prefix as u8;
                     /* don't do RA for non-ra-only unless --enable-ra is set */
                     /* autonomous only if we're not doing dhcp, set
                      "on-link" unless "off-link" was specified */
-                    (*opt).flags =
+                    opt.flags =
                         ((if do_slaac != 0 {
                               0x40
                           } else { 0 }) |
@@ -555,12 +555,12 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                      != 0 {
                                   0
                               } else { 0x80 })) as u8;
-                    (*opt).valid_lifetime =
+                    opt.valid_lifetime =
                         __bswap_32(context.saved_valid.wrapping_sub(old));
-                    (*opt).preferred_lifetime =
+                    opt.preferred_lifetime =
                         __bswap_32(0 );
-                    (*opt).reserved = 0;
-                    (*opt).prefix = local;
+                    opt.reserved = 0;
+                    opt.prefix = local;
                     inet_ntop(10,
                               &mut local
                               daemon.addrbuff,
@@ -574,7 +574,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                            == 0 {
                         my_syslog((3) << 3 |
                                       6,
-                                  b"RTR-ADVERT(%s) %s old prefix\x00"                                *const u8,
+                                  "RTR-ADVERT(%s) %s old prefix"                                *const u8,
                                   iface_name, daemon.addrbuff);
                     }
                 }
@@ -585,7 +585,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     }
     /* If we're advertising only old prefixes, set router lifetime to zero. */
     if old_prefix != 0 && parm.found_context.is_null() {
-        (*ra).lifetime = __bswap_16(0 )
+        ra.lifetime = __bswap_16(0 )
     }
     /* No prefixes to advertise. */
     if old_prefix == 0 && parm.found_context.is_null() { return }
@@ -600,20 +600,20 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     }
     /* Set the MTU from ra_param if any, an MTU of 0 mean automatic for linux, */
   /* an MTU of -1 prevents the option from being sent. */
-    if !ra_param.is_null() { mtu = (*ra_param).mtu }
+    if !ra_param.is_null() { mtu = ra_param.mtu }
     /* Note that IPv6 MTU is not necessarily the same as the IPv4 MTU
      available from SIOCGIFMTU */
     if mtu == 0 {
         let mut mtu_name: &mut String =
             if !ra_param.is_null() {
-                (*ra_param).mtu_name
+                ra_param.mtu_name
             } else { 0  };
         sprintf(daemon.namebuff,
-                b"/proc/sys/net/ipv6/conf/%s/mtu\x00"               *const libc::c_char,
+                "/proc/sys/net/ipv6/conf/%s/mtu"               *const libc::c_char,
                 if !mtu_name.is_null() { mtu_name } else { iface_name });
         f =
             fopen(daemon.namebuff,
-                  b"r\x00" );
+                  "r" );
         if !f.is_null() {
             if !fgets(daemon.namebuff, 1025,
                       f).is_null() {
@@ -664,31 +664,31 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     while !opt_cfg.is_null() {
         let mut i: i32 = 0;
         /* netids match and not encapsulated? */
-        if !((*opt_cfg).flags & 4096 == 0) {
-            if (*opt_cfg).opt == 23 {
-                let mut a: *mut In6Addr = 0;
+        if !(opt_cfg.flags & 4096 == 0) {
+            if opt_cfg.opt == 23 {
+                let mut a: In6Addr = 0;
                 let mut len: i32 = 0;
                 done_dns = 1;
-                if (*opt_cfg).len == 0 {
+                if opt_cfg.len == 0 {
                     current_block_145 = 5265702136860997526;
                 } else {
                     /* reduce len for any addresses we can't substitute */
-                    a = (*opt_cfg).val;
-                    len = (*opt_cfg).len;
+                    a = opt_cfg.val;
+                    len = opt_cfg.len;
                     i = 0;
-                    while i < (*opt_cfg).len {
+                    while i < opt_cfg.len {
                         if ({
                                 let mut __a: *const In6Addr =
                                     a ;
-                                ((*__a).__in6_u.__u6_addr32[0] ==
+                                (__a.__in6_u.__u6_addr32[0] ==
                                      0 &&
-                                     (*__a).__in6_u.__u6_addr32[1       ]
+                                     __a.__in6_u.__u6_addr32[1       ]
                                          == 0
                                      &&
-                                     (*__a).__in6_u.__u6_addr32[2       ]
+                                     __a.__in6_u.__u6_addr32[2       ]
                                          == 0
                                      &&
-                                     (*__a).__in6_u.__u6_addr32[3       ]
+                                     __a.__in6_u.__u6_addr32[3       ]
                                          == 0)
 
                             }) != 0 &&
@@ -733,26 +733,26 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                            1));
                         put_opt6_short(0);
                         put_opt6_long(min_pref_time);
-                        a = (*opt_cfg).val;
+                        a = opt_cfg.val;
                         i = 0;
-                        while i < (*opt_cfg).len {
+                        while i < opt_cfg.len {
                             if ({
                                     let mut __a: *const In6Addr =
                                         a ;
-                                    ((*__a).__in6_u.__u6_addr32[0       ]
+                                    (__a.__in6_u.__u6_addr32[0       ]
                                          == 0
                                          &&
-                                         (*__a).__in6_u.__u6_addr32[1                     libc::c_int
+                                         __a.__in6_u.__u6_addr32[1                     libc::c_int
                                                                                             usize]
                                              ==
                                              0
                                          &&
-                                         (*__a).__in6_u.__u6_addr32[2                     libc::c_int
+                                         __a.__in6_u.__u6_addr32[2                     libc::c_int
                                                                                             usize]
                                              ==
                                              0
                                          &&
-                                         (*__a).__in6_u.__u6_addr32[3                     libc::c_int
+                                         __a.__in6_u.__u6_addr32[3                     libc::c_int
                                                                                             usize]
                                              ==
                                              0)
@@ -760,7 +760,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                 }) != 0 {
                                 if parm.glob_pref_time !=
                                        0 {
-                                    put_opt6(&mut parm.link_global                                           *mut In6Addr                                          Vec<u8>,
+                                    put_opt6(&mut parm.link_global                                           &mut In6Addr                                          Vec<u8>,
                                              16 );
                                 }
                             } else if *(a                                      *const u32).offset(0                     libc::c_int
@@ -808,7 +808,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                              {
                                 if parm.link_pref_time !=
                                        0 {
-                                    put_opt6(&mut parm.link_local                                           *mut In6Addr                                          Vec<u8>,
+                                    put_opt6(&mut parm.link_local                                           &mut In6Addr                                          Vec<u8>,
                                              16 );
                                 }
                             } else {
@@ -825,19 +825,19 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
             match current_block_145 {
                 5265702136860997526 => { }
                 _ => {
-                    if (*opt_cfg).opt == 24 &&
-                           (*opt_cfg).len != 0 {
+                    if opt_cfg.opt == 24 &&
+                           opt_cfg.len != 0 {
                         let mut len_0: i32 =
-                            ((*opt_cfg).len + 7) /
+                            (opt_cfg.len + 7) /
                                 8;
                         put_opt6_char(31);
                         put_opt6_char((len_0 + 1)                                    libc::c_uint);
                         put_opt6_short(0);
                         put_opt6_long(min_pref_time);
-                        put_opt6((*opt_cfg).val,
-                                 (*opt_cfg).len );
+                        put_opt6(opt_cfg.val,
+                                 opt_cfg.len );
                         /* pad */
-                        i = (*opt_cfg).len;
+                        i = opt_cfg.len;
                         while i < len_0 * 8 {
                             put_opt6_char(0);
                             i += 1
@@ -846,7 +846,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                 }
             }
         }
-        opt_cfg = (*opt_cfg).next
+        opt_cfg = opt_cfg.next
     }
     if daemon.port == 53 && done_dns == 0 &&
            parm.link_pref_time != 0 {
@@ -860,12 +860,12 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     }
     /* set managed bits unless we're providing only RA on this link */
     if parm.managed != 0 {
-        (*ra).flags =
-            ((*ra).flags | 0x80) as u8
+        ra.flags =
+            (ra.flags | 0x80) as u8
     } /* M flag, managed, */
     if parm.other != 0 {
-        (*ra).flags =
-            ((*ra).flags | 0x40) as u8
+        ra.flags =
+            (ra.flags | 0x40) as u8
     } /* O flag, other */
     /* decide where we're sending */
     addr.sin6_family = 10;
@@ -874,7 +874,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
         addr.sin6_addr = *dest;
         if ({
                 let mut __a: *const In6Addr = dest ;
-                ((*__a).__in6_u.__u6_addr32[0 ] &
+                (__a.__in6_u.__u6_addr32[0 ] &
                      __bswap_32(0xffc00000) ==
                      __bswap_32(0xfe800000))
             }) != 0 ||
@@ -886,7 +886,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
         }
     } else {
         inet_pton(10,
-                  b"FF02::1\x00" ,
+                  "FF02::1" ,
                   &mut addr.sin6_addr);
         setsockopt(daemon.icmp6fd, IPPROTO_IPV6,
                    17,
@@ -904,12 +904,12 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
 }
 fn send_ra(mut now: time::Instant, mut iface: i32,
                              mut iface_name: &mut String,
-                             mut dest: *mut In6Addr) {
+                             mut dest: &mut In6Addr) {
     /* Send an RA on the same interface that the RA content is based
      on. */
     send_ra_alias(now, iface, iface_name, dest, iface);
 }
-fn add_prefixes(mut local: *mut In6Addr,
+fn add_prefixes(mut local: &mut In6Addr,
                                   mut prefix: i32,
                                   mut scope: i32,
                                   mut if_index: i32,
@@ -918,32 +918,32 @@ fn add_prefixes(mut local: *mut In6Addr,
                                   mut valid: u32,
                                   mut vparam:Vec<u8>)
                                   -> i32 {
-    let mut param: *mut ra_param = vparam ;
+    let mut param: ra_param = vparam ;
     /* warning */
-    if if_index == (*param).ind {
+    if if_index == param.ind {
         if ({
                 let mut __a: *const In6Addr = local ;
-                ((*__a).__in6_u.__u6_addr32[0 ] &
+                (__a.__in6_u.__u6_addr32[0 ] &
                      __bswap_32(0xffc00000) ==
                      __bswap_32(0xfe800000))
             }) != 0 {
             /* Can there be more than one LL address?
 	     Select the one with the longest preferred time 
 	     if there is. */
-            if preferred > (*param).link_pref_time {
-                (*param).link_pref_time = preferred;
-                (*param).link_local = *local
+            if preferred > param.link_pref_time {
+                param.link_pref_time = preferred;
+                param.link_local = *local
             }
         } else if ({
                        let mut __a: *const In6Addr =
                            local ;
-                       ((*__a).__in6_u.__u6_addr32[0 ]
+                       (__a.__in6_u.__u6_addr32[0 ]
                             == 0 &&
-                            (*__a).__in6_u.__u6_addr32[1        usize] ==
+                            __a.__in6_u.__u6_addr32[1        usize] ==
                                 0 &&
-                            (*__a).__in6_u.__u6_addr32[2        usize] ==
+                            __a.__in6_u.__u6_addr32[2        usize] ==
                                 0 &&
-                            (*__a).__in6_u.__u6_addr32[3        usize] ==
+                            __a.__in6_u.__u6_addr32[3        usize] ==
                                 __bswap_32(1 ))                     libc::c_int
                    }) == 0 &&
                       !(*(local                        *const u8).offset(0      isize)
@@ -973,11 +973,11 @@ fn add_prefixes(mut local: *mut In6Addr,
                         do_slaac = 1;
                         if context.flags &
                                (1) << 8 != 0 {
-                            (*param).other = 1;
+                            param.other = 1;
                             if context.flags &
                                    (1) << 7 ==
                                    0 {
-                                (*param).managed = 1
+                                param.managed = 1
                             }
                         }
                         current_block_43 = 7056779235015430508;
@@ -989,8 +989,8 @@ fn add_prefixes(mut local: *mut In6Addr,
                                   == 0 {
                         current_block_43 = 10599921512955367680;
                     } else {
-                        (*param).managed = 1;
-                        (*param).other = 1;
+                        param.managed = 1;
+                        param.other = 1;
                         current_block_43 = 7056779235015430508;
                     }
                     match current_block_43 {
@@ -1004,7 +1004,7 @@ fn add_prefixes(mut local: *mut In6Addr,
                                    (1) << 4 !=
                                    0 {
                                 adv_router = 1;
-                                (*param).adv_router = 1;
+                                param.adv_router = 1;
                                 real_prefix = context.prefix
                             }
                             /* find floor time, don't reduce below 3 * RA interval.
@@ -1015,10 +1015,10 @@ fn add_prefixes(mut local: *mut In6Addr,
                                    0 && time > context.lease_time {
                                 time = context.lease_time;
                                 if time <
-                                       (3                                      libc::c_uint).wrapping_mul((*param).adv_interval)
+                                       (3                                      libc::c_uint).wrapping_mul(param.adv_interval)
                                    {
                                     time =
-                                        (3                                       libc::c_uint).wrapping_mul((*param).adv_interval)
+                                        (3                                       libc::c_uint).wrapping_mul(param.adv_interval)
                                 }
                             }
                             if context.flags &
@@ -1035,8 +1035,8 @@ fn add_prefixes(mut local: *mut In6Addr,
                             if context.netid.next ==
                                    &mut context.netid  &&
                                    !context.netid.net.is_null() {
-                                context.netid.next = (*param).tags;
-                                (*param).tags = &mut context.netid
+                                context.netid.next = param.tags;
+                                param.tags = &mut context.netid
                             }
                             /* subsequent prefixes on the same interface 
 		   and subsequent instances of this prefix don't need timers.
@@ -1045,7 +1045,7 @@ fn add_prefixes(mut local: *mut In6Addr,
                             if context.flags &
                                    (1) << 5 ==
                                    0 {
-                                if (*param).first == 0 {
+                                if param.first == 0 {
                                     context.ra_time =
                                         0
                                 }
@@ -1059,10 +1059,10 @@ fn add_prefixes(mut local: *mut In6Addr,
                                          (1) <<
                                              18)
                             }
-                            (*param).first = 0;
+                            param.first = 0;
                             /* found_context is the _last_ one we found, so if there's 
 		   more than one, it's not the first. */
-                            (*param).found_context = context
+                            param.found_context = context
                         }
                     }
                 }
@@ -1079,16 +1079,16 @@ fn add_prefixes(mut local: *mut In6Addr,
             if *(local ).offset(0) &
                    __bswap_32(0xff000000) ==
                    __bswap_32(0xfd000000) {
-                if preferred > (*param).ula_pref_time {
-                    (*param).ula_pref_time = preferred;
-                    (*param).ula = *local
+                if preferred > param.ula_pref_time {
+                    param.ula_pref_time = preferred;
+                    param.ula = *local
                 }
-            } else if preferred > (*param).glob_pref_time {
-                (*param).glob_pref_time = preferred;
-                (*param).link_global = *local
+            } else if preferred > param.glob_pref_time {
+                param.glob_pref_time = preferred;
+                param.link_global = *local
             }
             if real_prefix != 0 {
-                let mut opt: *mut prefix_opt = 0 ;
+                let mut opt: prefix_opt = 0 ;
                 opt =
                     expand(::std::mem::size_of::<prefix_opt>()) ;
                 if !opt.is_null() {
@@ -1106,29 +1106,29 @@ fn add_prefixes(mut local: *mut In6Addr,
                                                                                                                         libc::c_ulonglong)
                                            }));
                     }
-                    (*opt).type_0 = 3 as u8;
-                    (*opt).len = 4 as u8;
-                    (*opt).prefix_len = real_prefix as u8;
+                    opt.type_0 = 3 as u8;
+                    opt.len = 4 as u8;
+                    opt.prefix_len = real_prefix as u8;
                     /* autonomous only if we're not doing dhcp, set
                      "on-link" unless "off-link" was specified */
-                    (*opt).flags =
+                    opt.flags =
                         if off_link != 0 {
                             0
                         } else { 0x80 } as u8;
                     if do_slaac != 0 {
-                        (*opt).flags =
-                            ((*opt).flags |
+                        opt.flags =
+                            (opt.flags |
                                  0x40) as u8
                     }
                     if adv_router != 0 {
-                        (*opt).flags =
-                            ((*opt).flags |
+                        opt.flags =
+                            (opt.flags |
                                  0x20) as u8
                     }
-                    (*opt).valid_lifetime = __bswap_32(valid);
-                    (*opt).preferred_lifetime = __bswap_32(preferred);
-                    (*opt).reserved = 0;
-                    (*opt).prefix = *local;
+                    opt.valid_lifetime = __bswap_32(valid);
+                    opt.preferred_lifetime = __bswap_32(preferred);
+                    opt.reserved = 0;
+                    opt.prefix = *local;
                     inet_ntop(10, local,
                               daemon.addrbuff,
                               46);
@@ -1141,7 +1141,7 @@ fn add_prefixes(mut local: *mut In6Addr,
                            == 0 {
                         my_syslog((3) << 3 |
                                       6,
-                                  b"RTR-ADVERT(%s) %s\x00", (*param).if_name,
+                                  "RTR-ADVERT(%s) %s", param.if_name,
                                   daemon.addrbuff);
                     }
                 }
@@ -1208,7 +1208,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
         } else if iface_enumerate(10,
                                   &mut param                                Vec<u8>,
                                   ::std::mem::transmute::<Option<fn(_:
-                                                                                          *mut In6Addr,
+                                                                                          &mut In6Addr,
                                                                                       _:
                                                                                           libc::c_int,
                                                                                       _:
@@ -1228,7 +1228,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                                           Option<fn()
                                                                      ->
                                                                          libc::c_int>>(Some(iface_search               fn(_:
-                                                                                                                         *mut In6Addr,
+                                                                                                                         &mut In6Addr,
                                                                                                                      _:
                                                                                                                          libc::c_int,
                                                                                                                      _:
@@ -1257,15 +1257,15 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                iface_check(1, 0 ,
                            param.name.as_mut_ptr(), 0) !=
                    0 {
-            let mut tmp: *mut Iname = 0;
+            let mut tmp: Iname = 0;
             tmp = daemon.dhcp_except;
             while !tmp.is_null() {
-                if !(*tmp).name.is_null() &&
-                       wildcard_match((*tmp).name, param.name.as_mut_ptr()) !=
+                if !tmp.name.is_null() &&
+                       wildcard_match(tmp.name, param.name.as_mut_ptr()) !=
                            0 {
                     break ;
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
             if tmp.is_null() {
                 send_ra(now, param.iface, param.name.as_mut_ptr(),
@@ -1306,7 +1306,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                                                                                               libc::c_int)));
                         my_syslog((3) << 3 |
                                       6,
-                                  b"RTR-ADVERT(%s) %s => %d alias(es)\x00"                                *const u8,
+                                  "RTR-ADVERT(%s) %s => %d alias(es)"                                *const u8,
                                   param.name.as_mut_ptr(),
                                   daemon.addrbuff,
                                   aparam.num_alias_ifs);
@@ -1345,7 +1345,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                 my_syslog((3) <<
                                               3 |
                                               6,
-                                          b"RTR-ADVERT(%s) %s => i/f %d\x00"
+                                          "RTR-ADVERT(%s) %s => i/f %d"
                                                                                       *const libc::c_char,
                                           param.name.as_mut_ptr(),
                                           daemon.addrbuff,
@@ -1379,28 +1379,28 @@ fn send_ra_to_aliases(mut index: i32,
                                         mut maclen: usize,
                                         mut parm:Vec<u8>)
  -> i32 {
-    let mut aparam: *mut AliasParam = parm ;
+    let mut aparam: AliasParam = parm ;
     let mut ifrn_name: [libc::c_char; 16] = [0; 16];
-    let mut alias: *mut DhcpBridge = 0;
+    let mut alias: DhcpBridge = 0;
     if !if_indextoname(index,
                        ifrn_name.as_mut_ptr()).is_null() {
-        alias = (*(*aparam).bridge).alias;
+        alias = (*aparam.bridge).alias;
         while !alias.is_null() {
-            if wildcard_matchn((*alias).iface.as_mut_ptr(),
+            if wildcard_matchn(alias.iface.as_mut_ptr(),
                                ifrn_name.as_mut_ptr(), 16) != 0
                {
-                if !(*aparam).alias_ifs.is_null() &&
-                       (*aparam).num_alias_ifs < (*aparam).max_alias_ifs {
-                    *(*aparam).alias_ifs.offset((*aparam).num_alias_ifs isize) = index
+                if !aparam.alias_ifs.is_null() &&
+                       aparam.num_alias_ifs < aparam.max_alias_ifs {
+                    *aparam.alias_ifs.offset(aparam.num_alias_ifs isize) = index
                 }
-                (*aparam).num_alias_ifs += 1
+                aparam.num_alias_ifs += 1
             }
-            alias = (*alias).next
+            alias = alias.next
         }
     }
     return 1;
 }
-fn iface_search(mut local: *mut In6Addr,
+fn iface_search(mut local: &mut In6Addr,
                                   mut prefix: i32,
                                   mut scope: i32,
                                   mut if_index: i32,
@@ -1409,24 +1409,24 @@ fn iface_search(mut local: *mut In6Addr,
                                   mut valid: i32,
                                   mut vparam:Vec<u8>)
                                   -> i32 {
-    let mut param: *mut SearchParam = vparam ;
+    let mut param: SearchParam = vparam ;
     let mut context: DhcpContext = 0;
-    let mut tmp: *mut Iname = 0;
+    let mut tmp: Iname = 0;
     /* ignore interfaces we're not doing DHCP on. */
     if indextoname(daemon.icmp6fd, if_index,
-                   (*param).name.as_mut_ptr()) == 0 ||
+                   param.name.as_mut_ptr()) == 0 ||
            iface_check(1, 0 ,
-                       (*param).name.as_mut_ptr(), 0) == 0
+                       param.name.as_mut_ptr(), 0) == 0
        {
         return 1
     }
     tmp = daemon.dhcp_except;
     while !tmp.is_null() {
-        if !(*tmp).name.is_null() &&
-               wildcard_match((*tmp).name, (*param).name.as_mut_ptr()) != 0 {
+        if !tmp.name.is_null() &&
+               wildcard_match(tmp.name, param.name.as_mut_ptr()) != 0 {
             return 1
         }
-        tmp = (*tmp).next
+        tmp = tmp.next
     }
     context = daemon.dhcp6;
     while !context.is_null() {
@@ -1438,12 +1438,12 @@ fn iface_search(mut local: *mut In6Addr,
                    != 0 &&
                is_same_net6(local, &mut context.end6, context.prefix) !=
                    0 && context.ra_time != 0
-               && difftime(context.ra_time, (*param).now) <= 0.0f64 {
+               && difftime(context.ra_time, param.now) <= 0.0f64 {
             /* found an interface that's overdue for RA determine new 
 	   timeout value and arrange for RA to be sent unless interface is
 	   still doing DAD.*/
-            if flags & 1 == 0 { (*param).iface = if_index }
-            new_timeout(context, (*param).name.as_mut_ptr(), (*param).now);
+            if flags & 1 == 0 { param.iface = if_index }
+            new_timeout(context, param.name.as_mut_ptr(), param.now);
             /* found, abort */
             context = context.next;
             while !context.is_null() {
@@ -1488,35 +1488,35 @@ fn new_timeout(mut context: DhcpContext,
     };
 }
 fn find_iface_param(mut iface: &mut String)
- -> *mut RaInterface {
-    let mut ra: *mut RaInterface = 0 ;
+ -> RaInterface {
+    let mut ra: RaInterface = 0 ;
     ra = daemon.ra_interfaces;
     while !ra.is_null() {
-        if wildcard_match((*ra).name, iface) != 0 { return ra }
-        ra = (*ra).next
+        if wildcard_match(ra.name, iface) != 0 { return ra }
+        ra = ra.next
     }
     return 0 ;
 }
-fn calc_interval(mut ra: *mut RaInterface)
+fn calc_interval(mut ra: &mut RaInterface)
  -> libc::c_uint {
     let mut interval: i32 = 600;
-    if !ra.is_null() && (*ra).interval != 0 {
-        interval = (*ra).interval;
+    if !ra.is_null() && ra.interval != 0 {
+        interval = ra.interval;
         if interval > 1800 {
             interval = 1800
         } else if interval < 4 { interval = 4 }
     }
     return interval;
 }
-fn calc_lifetime(mut ra: *mut RaInterface)
+fn calc_lifetime(mut ra: &mut RaInterface)
  -> libc::c_uint {
     let mut lifetime: i32 = 0;
     let mut interval: i32 = calc_interval(ra);
-    if ra.is_null() || (*ra).lifetime == -(1) {
+    if ra.is_null() || ra.lifetime == -(1) {
         /* not specified */
         lifetime = 3 * interval
     } else {
-        lifetime = (*ra).lifetime;
+        lifetime = ra.lifetime;
         if lifetime < interval && lifetime != 0 {
             lifetime = interval
         } else if lifetime > 9000 {
@@ -1525,7 +1525,7 @@ fn calc_lifetime(mut ra: *mut RaInterface)
     }
     return lifetime;
 }
-fn calc_prio(mut ra: *mut RaInterface) -> libc::c_uint {
-    if !ra.is_null() { return (*ra).prio }
+fn calc_prio(mut ra: &mut RaInterface) -> libc::c_uint {
+    if !ra.is_null() { return ra.prio }
     return 0;
 }

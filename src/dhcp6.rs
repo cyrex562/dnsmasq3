@@ -20,7 +20,7 @@ use crate::network::{fix_fd, set_ipv6pktinfo, indextoname, iface_check};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{recv_dhcp_packet, match_netid, dhcp_context_to_string};
 use crate::rfc3315::{relay_reply6, relay_upstream6, dhcp6_reply};
-use crate::util::{retry_send, wildcard_match, wildcard_matchn, is_same_net6, rand64, addr6part, setaddr6part, safe_malloc, whine_malloc, zero_array_1};
+use crate::util::{retry_send, wildcard_match, wildcard_matchn, is_same_net6, rand64, addr6part, setaddr6part, zero_array_1};
 use crate::outpacket::save_counter;
 use crate::netlink::iface_enumerate;
 use crate::lease::{lease_prune, lease_update_file, lease_update_dns, lease_find_max_addr6, lease6_find_by_addr, lease_update_slaac};
@@ -55,7 +55,7 @@ pub unsafe extern "C" fn dhcp6_init() {
                       &mut oneopt,
                       ::std::mem::size_of::<libc::c_int>()) == -(1) || fix_fd(fd) == 0
            || set_ipv6pktinfo(fd) == 0 {
-        die(b"cannot create DHCPv6 socket: %s\x00",
+        die("cannot create DHCPv6 socket: %s",
             0 , 2);
     }
     /* When bind-interfaces is set, there might be more than one dnsmasq
@@ -63,12 +63,12 @@ pub unsafe extern "C" fn dhcp6_init() {
      Need to set REUSEADDR|REUSEPORT to make this possible.
      Handle the case that REUSEPORT is defined, but the kernel doesn't 
      support it. This handles the introduction of REUSEPORT on Linux. */
-    if (*dnsmasq_daemon).options[(13).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
+    if dnsmasq_daemon.options[(13).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
                                      ] &
            (1) <<
                (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
            != 0 ||
-           (*dnsmasq_daemon).options[(39 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8                                     libc::c_int                              ))
+           dnsmasq_daemon.options[(39 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8                                     libc::c_int                              ))
                                          ] &
                (1) <<
                    (39 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn dhcp6_init() {
                            ::std::mem::size_of::<libc::c_int>())
         }
         if rc == -(1) {
-            die(b"failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: %s\x00"
+            die("failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: %s"
                      ,
                 0 , 2);
         }
@@ -105,15 +105,15 @@ pub unsafe extern "C" fn dhcp6_init() {
             ConstNetAddressArg {__NetAddress__:
                                      &mut saddr6                                   NetAddress,},
             ::std::mem::size_of::<NetAddress>() ) != 0 {
-        die(b"failed to bind DHCPv6 server socket: %s\x00",
+        die("failed to bind DHCPv6 server socket: %s",
             0 , 2);
     }
-    (*dnsmasq_daemon).dhcp6fd = fd;
+    dnsmasq_daemon.dhcp6fd = fd;
 }
 #[no_mangle]
 pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
     let mut context: DhcpContext = 0;
-    let mut relay: *mut DhcpRelay = 0;
+    let mut relay: DhcpRelay = 0;
     let mut parm: IfaceParam =
         IfaceParam {current: 0,
                     relay: 0,
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                                      C2RustUnnamed{__u6_addr8: [0; 16],},},
                     ind: 0,
                     addr_match: 0,};
-    let mut cmptr: *mut CmsgHdr = 0;
+    let mut cmptr: CmsgHdr = 0;
     let mut msg: MsgHdr =
         MsgHdr {msg_name: 0,
                msg_namelen: 0,
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                   DigitalSignature {ifru_addr:
                                       NetAddress {sa_family: 0,
                                                sa_data: [0; 14],},},};
-    let mut tmp: *mut Iname = 0;
+    let mut tmp: Iname = 0;
     let mut port: u16 = 0;
     let mut dst_addr: NetAddress = NetAddress{ _type: AddressType::Ipv6Address, value: [0;16]};
     msg.msg_control = control_u.control6.as_mut_ptr();
@@ -172,9 +172,9 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
     msg.msg_name = &mut from6;
     msg.msg_namelen =
         ::std::mem::size_of::<NetAddress>();
-    msg.msg_iov = &mut (*dnsmasq_daemon).dhcp_packet;
+    msg.msg_iov = &mut dnsmasq_daemon.dhcp_packet;
     msg.msg_iovlen = 1 ;
-    sz = recv_dhcp_packet((*dnsmasq_daemon).dhcp6fd, &mut msg);
+    sz = recv_dhcp_packet(dnsmasq_daemon.dhcp6fd, &mut msg);
     if sz == -(1) { return }
     cmptr =
         if msg.msg_controllen >=
@@ -182,25 +182,25 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
             msg.msg_control
         } else { 0 };
     while !cmptr.is_null() {
-        if (*cmptr).cmsg_level == IPPROTO_IPV6 &&
-               (*cmptr).cmsg_type == (*dnsmasq_daemon).v6pktinfo {
+        if cmptr.cmsg_level == IPPROTO_IPV6 &&
+               cmptr.cmsg_type == dnsmasq_daemon.v6pktinfo {
             let mut p: C2rustUnnamed12 =
                 C2rustUnnamed12 {c: 0,};
-            p.c = (*cmptr).__cmsg_data.as_mut_ptr();
+            p.c = cmptr.__cmsg_data.as_mut_ptr();
             if_index = (*p.p).ipi6_ifindex;
             dst_addr = (*p.p).ipi6_addr
         }
         cmptr = __cmsg_nxthdr(&mut msg, cmptr)
     }
-    if indextoname((*dnsmasq_daemon).dhcp6fd, if_index,
+    if indextoname(dnsmasq_daemon.dhcp6fd, if_index,
                    ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) == 0 {
         return
     }
     port = relay_reply6(&mut from, sz, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
     if port != 0 {
         from.sin6_port = __bswap_16(port);
-        while retry_send(sendto((*dnsmasq_daemon).dhcp6fd,
-                                (*dnsmasq_daemon).outpacket.iov_base,
+        while retry_send(sendto(dnsmasq_daemon.dhcp6fd,
+                                dnsmasq_daemon.outpacket.iov_base,
                                 save_counter(-(1)) ,
                                 0,
                                 ConstNetAddressArg {__NetAddress__:
@@ -209,25 +209,25 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                                 ::std::mem::size_of::<NetAddress>()                       )) != 0 {
         }
     } else {
-        let mut bridge: *mut DhcpBridge = 0;
-        let mut alias: *mut DhcpBridge = 0;
-        tmp = (*dnsmasq_daemon).if_except;
+        let mut bridge: DhcpBridge = 0;
+        let mut alias: DhcpBridge = 0;
+        tmp = dnsmasq_daemon.if_except;
         while !tmp.is_null() {
-            if !(*tmp).name.is_null() &&
-                   wildcard_match((*tmp).name,
+            if !tmp.name.is_null() &&
+                   wildcard_match(tmp.name,
                                   ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) != 0 {
                 return
             }
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
-        tmp = (*dnsmasq_daemon).dhcp_except;
+        tmp = dnsmasq_daemon.dhcp_except;
         while !tmp.is_null() {
-            if !(*tmp).name.is_null() &&
-                   wildcard_match((*tmp).name,
+            if !tmp.name.is_null() &&
+                   wildcard_match(tmp.name,
                                   ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) != 0 {
                 return
             }
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
         parm.current = Default::default();
         parm.relay = Default::default();
@@ -242,62 +242,62 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
          --bridge-interface option), change parm.ind so that we look
          for DHCPv6 contexts associated with the aliased interface
          instead of with the aliasing one. */
-        bridge = (*dnsmasq_daemon).bridges;
+        bridge = dnsmasq_daemon.bridges;
         while !bridge.is_null() {
-            alias = (*bridge).alias;
+            alias = bridge.alias;
             while !alias.is_null() {
-                if wildcard_matchn((*alias).iface.as_mut_ptr(),
+                if wildcard_matchn(alias.iface.as_mut_ptr(),
                                    ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                                    16) != 0 {
                     parm.ind =
-                        if_nametoindex((*bridge).iface.as_mut_ptr())                      libc::c_int;
+                        if_nametoindex(bridge.iface.as_mut_ptr())                      libc::c_int;
                     if parm.ind == 0 {
                         my_syslog((3) << 3 |
                                       4,
-                                  b"unknown interface %s in bridge-interface\x00"
+                                  "unknown interface %s in bridge-interface"
                                       ,
-                                  (*bridge).iface.as_mut_ptr());
+                                  bridge.iface.as_mut_ptr());
                         return
                     }
                     break ;
-                } else { alias = (*alias).next }
+                } else { alias = alias.next }
             }
             if !alias.is_null() { break ; }
-            bridge = (*bridge).next
+            bridge = bridge.next
         }
-        context = (*dnsmasq_daemon).dhcp6;
+        context = dnsmasq_daemon.dhcp6;
         while !context.is_null() {
             if ({
                     let mut __a: *const In6Addr =
-                        &mut (*context).start6                      *const In6Addr;
-                    ((*__a).__in6_u.__u6_addr32[0 ] ==
+                        &mut context.start6                      *const In6Addr;
+                    (__a.__in6_u.__u6_addr32[0 ] ==
                          0 &&
-                         (*__a).__in6_u.__u6_addr32[1 ]
+                         __a.__in6_u.__u6_addr32[1 ]
                              == 0 &&
-                         (*__a).__in6_u.__u6_addr32[2 ]
+                         __a.__in6_u.__u6_addr32[2 ]
                              == 0 &&
-                         (*__a).__in6_u.__u6_addr32[3 ]
+                         __a.__in6_u.__u6_addr32[3 ]
                              == 0)
-                }) != 0 && (*context).prefix == 0 {
+                }) != 0 && context.prefix == 0 {
                 /* wildcard context for DHCP-stateless only */
                 parm.current = context;
-                (*context).current = 0
+                context.current = 0
             } else {
                 /* unlinked contexts are marked by context->current == context */
-                (*context).current = context;
+                context.current = context;
 
             }
-            context = (*context).next
+            context = context.next
         }
-        relay = (*dnsmasq_daemon).relay6;
+        relay = dnsmasq_daemon.relay6;
         while !relay.is_null() {
-            (*relay).current = relay;
-            relay = (*relay).next
+            relay.current = relay;
+            relay = relay.next
         }
         if iface_enumerate(10,
                            &mut parm,
                            ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                                   *mut In6Addr,
+                                                                                   &mut In6Addr,
                                                                                _:
                                                                                    libc::c_int,
                                                                                _:
@@ -316,7 +316,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                                                    Option<unsafe extern "C" fn()
                                                               ->
                                                                   libc::c_int>>(Some(complete_context6 unsafe extern "C" fn(_:
-                                                                                                                  *mut In6Addr,
+                                                                                                                  &mut In6Addr,
                                                                                                               _:
                                                                                                                   libc::c_int,
                                                                                                               _:
@@ -336,17 +336,17 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                == 0 {
             return
         }
-        if !(*dnsmasq_daemon).if_names.is_null() ||
-               !(*dnsmasq_daemon).if_addrs.is_null() {
-            tmp = (*dnsmasq_daemon).if_names;
+        if !dnsmasq_daemon.if_names.is_null() ||
+               !dnsmasq_daemon.if_addrs.is_null() {
+            tmp = dnsmasq_daemon.if_names;
             while !tmp.is_null() {
-                if !(*tmp).name.is_null() &&
-                       wildcard_match((*tmp).name,
+                if !tmp.name.is_null() &&
+                       wildcard_match(tmp.name,
                                       ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) !=
                            0 {
                     break ;
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
             if tmp.is_null() && parm.addr_match == 0 { return }
         }
@@ -356,25 +356,25 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
             let mut all_servers: In6Addr =
                 In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
             inet_pton(10,
-                      b"FF05::1:3\x00" ,
+                      "FF05::1:3" ,
                       &mut all_servers);
             if ({
                     let mut __a: *const In6Addr =
                         &mut dst_addr ;
                     let mut __b: *const In6Addr =
                         &mut all_servers ;
-                    ((*__a).__in6_u.__u6_addr32[0 ] ==
-                         (*__b).__in6_u.__u6_addr32[0 ]
+                    (__a.__in6_u.__u6_addr32[0 ] ==
+                         __b.__in6_u.__u6_addr32[0 ]
                          &&
-                         (*__a).__in6_u.__u6_addr32[1 ]
+                         __a.__in6_u.__u6_addr32[1 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[1         usize] &&
-                         (*__a).__in6_u.__u6_addr32[2 ]
+                             __b.__in6_u.__u6_addr32[1         usize] &&
+                         __a.__in6_u.__u6_addr32[2 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[2         usize] &&
-                         (*__a).__in6_u.__u6_addr32[3 ]
+                             __b.__in6_u.__u6_addr32[2         usize] &&
+                         __a.__in6_u.__u6_addr32[3 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[3         usize])
+                             __b.__in6_u.__u6_addr32[3         usize])
                 }) == 0 {
                 relay_upstream6(parm.relay, sz, &mut from.sin6_addr,
                                 from.sin6_scope_id, now);
@@ -382,7 +382,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
             return
         }
         /* May have configured relay, but not DHCP server */
-        if (*dnsmasq_daemon).doing_dhcp6 == 0 {
+        if dnsmasq_daemon.doing_dhcp6 == 0 {
             return
         } /* lose any expired leases */
         lease_prune(0, now);
@@ -398,8 +398,8 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
 	 server port to a relay. */
         if port != 0 {
             from.sin6_port = __bswap_16(port);
-            while retry_send(sendto((*dnsmasq_daemon).dhcp6fd,
-                                    (*dnsmasq_daemon).outpacket.iov_base,
+            while retry_send(sendto(dnsmasq_daemon.dhcp6fd,
+                                    dnsmasq_daemon.outpacket.iov_base,
                                     save_counter(-(1))                                  usize, 0,
                                     ConstNetAddressArg {__NetAddress__:
                                                              &mut from              NetAddress
@@ -414,11 +414,11 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn get_client_mac(mut client: *mut In6Addr,
+pub unsafe extern "C" fn get_client_mac(mut client: &mut In6Addr,
                                         mut iface: i32,
                                         mut mac: mut Vec<u8>,
-                                        mut maclenp: *mut libc::c_uint,
-                                        mut mactypep: *mut libc::c_uint,
+                                        mut maclenp: &mut libc::c_uint,
+                                        mut mactypep: &mut libc::c_uint,
                                         mut now: time::Instant) {
     /* Receiving a packet from a host does not populate the neighbour
      cache, so we send a neighbour discovery request if we can't 
@@ -451,7 +451,7 @@ pub unsafe extern "C" fn get_client_mac(mut client: *mut In6Addr,
         let mut ts: timespec = timespec{tv_sec: 0, tv_nsec: 0,};
         maclen = find_mac(&mut addr, mac, 0, now);
         if maclen != 0 { break ; }
-        sendto((*dnsmasq_daemon).icmp6fd,
+        sendto(dnsmasq_daemon.icmp6fd,
                &mut neigh ,
                ::std::mem::size_of::<neigh_packet>(),
                0,
@@ -465,7 +465,7 @@ pub unsafe extern "C" fn get_client_mac(mut client: *mut In6Addr,
     *maclenp = maclen;
     *mactypep = 1;
 }
-unsafe extern "C" fn complete_context6(mut local: *mut In6Addr,
+unsafe extern "C" fn complete_context6(mut local: &mut In6Addr,
                                        mut prefix: i32,
                                        mut scope: i32,
                                        mut if_index: i32,
@@ -475,38 +475,38 @@ unsafe extern "C" fn complete_context6(mut local: *mut In6Addr,
                                        mut vparam:Vec<u8>)
                                        -> i32 {
     let mut context: DhcpContext = 0;
-    let mut share: *mut SharedNetwork = 0 ;
-    let mut relay: *mut DhcpRelay = 0;
-    let mut param: *mut IfaceParam = vparam;
-    let mut tmp: *mut Iname = 0;
+    let mut share: SharedNetwork = 0 ;
+    let mut relay: DhcpRelay = 0;
+    let mut param: IfaceParam = vparam;
+    let mut tmp: Iname = 0;
     /* warning */
-    if if_index != (*param).ind { return 1 }
+    if if_index != param.ind { return 1 }
     if ({
             let mut __a: *const In6Addr = local ;
-            ((*__a).__in6_u.__u6_addr32[0 ] &
+            (__a.__in6_u.__u6_addr32[0 ] &
                  __bswap_32(0xffc00000) ==
                  __bswap_32(0xfe800000))
         }) != 0 {
-        (*param).ll_addr = *local
+        param.ll_addr = *local
     } else if *(local ).offset(0) &
                   __bswap_32(0xff000000) ==
                   __bswap_32(0xfd000000) {
-        (*param).ula_addr = *local
+        param.ula_addr = *local
     }
     if ({
             let mut __a: *const In6Addr = local ;
-            ((*__a).__in6_u.__u6_addr32[0 ] ==
+            (__a.__in6_u.__u6_addr32[0 ] ==
                  0 &&
-                 (*__a).__in6_u.__u6_addr32[1 ] ==
+                 __a.__in6_u.__u6_addr32[1 ] ==
                      0 &&
-                 (*__a).__in6_u.__u6_addr32[2 ] ==
+                 __a.__in6_u.__u6_addr32[2 ] ==
                      0 &&
-                 (*__a).__in6_u.__u6_addr32[3 ] ==
+                 __a.__in6_u.__u6_addr32[3 ] ==
                      __bswap_32(1))
         }) != 0 ||
            ({
                 let mut __a: *const In6Addr = local ;
-                ((*__a).__in6_u.__u6_addr32[0 ] &
+                (__a.__in6_u.__u6_addr32[0 ] &
                      __bswap_32(0xffc00000) ==
                      __bswap_32(0xfe800000))
             }) != 0 ||
@@ -515,117 +515,117 @@ unsafe extern "C" fn complete_context6(mut local: *mut In6Addr,
     }
     /* if we have --listen-address config, see if the 
      arrival interface has a matching address. */
-    tmp = (*dnsmasq_daemon).if_addrs;
+    tmp = dnsmasq_daemon.if_addrs;
     while !tmp.is_null() {
-        if (*tmp).addr.sa.sa_family == 10 &&
+        if tmp.addr.sa.sa_family == 10 &&
                ({
                     let mut __a: *const In6Addr =
-                        &mut (*tmp).addr.in6.sin6_addr                      *const In6Addr;
+                        &mut tmp.addr.in6.sin6_addr                      *const In6Addr;
                     let mut __b: *const In6Addr = local ;
-                    ((*__a).__in6_u.__u6_addr32[0 ] ==
-                         (*__b).__in6_u.__u6_addr32[0 ]
+                    (__a.__in6_u.__u6_addr32[0 ] ==
+                         __b.__in6_u.__u6_addr32[0 ]
                          &&
-                         (*__a).__in6_u.__u6_addr32[1 ]
+                         __a.__in6_u.__u6_addr32[1 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[1         usize] &&
-                         (*__a).__in6_u.__u6_addr32[2 ]
+                             __b.__in6_u.__u6_addr32[1         usize] &&
+                         __a.__in6_u.__u6_addr32[2 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[2         usize] &&
-                         (*__a).__in6_u.__u6_addr32[3 ]
+                             __b.__in6_u.__u6_addr32[2         usize] &&
+                         __a.__in6_u.__u6_addr32[3 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[3         usize])
+                             __b.__in6_u.__u6_addr32[3         usize])
                 }) != 0 {
-            (*param).addr_match = 1
+            param.addr_match = 1
         }
-        tmp = (*tmp).next
+        tmp = tmp.next
     }
     /* Determine a globally address on the arrival interface, even
      if we have no matching dhcp-context, because we're only
      allocating on remote subnets via relays. This
      is used as a default for the DNS server option. */
-    (*param).fallback = *local;
-    context = (*dnsmasq_daemon).dhcp6;
+    param.fallback = *local;
+    context = dnsmasq_daemon.dhcp6;
     while !context.is_null() {
-        if (*context).flags &
+        if context.flags &
                (1) << 8 != 0 &&
-               (*context).flags &
+               context.flags &
                    ((1) << 10 |
                         (1) << 16) == 0 &&
-               prefix <= (*context).prefix && (*context).current == context {
-            if is_same_net6(local, &mut (*context).start6, (*context).prefix)
+               prefix <= context.prefix && context.current == context {
+            if is_same_net6(local, &mut context.start6, context.prefix)
                    != 0 &&
-                   is_same_net6(local, &mut (*context).end6,
-                                (*context).prefix) != 0 {
+                   is_same_net6(local, &mut context.end6,
+                                context.prefix) != 0 {
                 let mut tmp_0: DhcpContext = 0;
-                let mut up: *mut DhcpContext =
+                let mut up: DhcpContext =
                     0 ;
                 /* use interface values only for constructed contexts */
-                if (*context).flags &
+                if context.flags &
                        (1) << 11 == 0 {
                     valid = 0xffffffff;
                     preferred = valid
                 } else if flags & 2 != 0 {
                     preferred = 0
                 }
-                if (*context).flags &
+                if context.flags &
                        (1) << 9 != 0 {
                     preferred = 0
                 }
                 /* order chain, longest preferred time first */
-                up = &mut (*param).current;
-                tmp_0 = (*param).current;
+                up = &mut param.current;
+                tmp_0 = param.current;
                 while !tmp_0.is_null() {
-                    if (*tmp_0).preferred <= preferred { break ; }
-                    up = &mut (*tmp_0).current;
-                    tmp_0 = (*tmp_0).current
+                    if tmp_0.preferred <= preferred { break ; }
+                    up = &mut tmp_0.current;
+                    tmp_0 = tmp_0.current
                 }
-                (*context).current = *up;
+                context.current = *up;
                 *up = context;
-                (*context).local6 = *local;
-                (*context).preferred = preferred;
-                (*context).valid = valid
+                context.local6 = *local;
+                context.preferred = preferred;
+                context.valid = valid
             } else {
                 let mut current_block_37: u64;
-                share = (*dnsmasq_daemon).shared_networks;
+                share = dnsmasq_daemon.shared_networks;
                 while !share.is_null() {
                     /* IPv4 shared_address - ignore */
-                    if !((*share).shared_addr.s_addr !=
+                    if !(share.shared_addr.s_addr !=
                              0) {
-                        if (*share).if_index != 0 {
-                            if (*share).if_index != if_index {
+                        if share.if_index != 0 {
+                            if share.if_index != if_index {
                                 current_block_37 = 11385396242402735691;
                             } else {
                                 current_block_37 = 18435049525520518667;
                             }
                         } else if ({
                                        let mut __a: *const In6Addr =
-                                           &mut (*share).match_addr6                                         *mut In6Addr                                         *const In6Addr;
+                                           &mut share.match_addr6                                         &mut In6Addr                                         *const In6Addr;
                                        let mut __b: *const In6Addr =
                                            local ;
-                                       ((*__a).__in6_u.__u6_addr32[0                    libc::c_int
+                                       (__a.__in6_u.__u6_addr32[0                    libc::c_int
                                                                                           usize]
                                             ==
-                                            (*__b).__in6_u.__u6_addr32[0                        libc::c_int
+                                            __b.__in6_u.__u6_addr32[0                        libc::c_int
                                                                                                   usize]
                                             &&
-                                            (*__a).__in6_u.__u6_addr32[1                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[1                        libc::c_int
                                                                                                   usize]
                                                 ==
-                                                (*__b).__in6_u.__u6_addr32[1
+                                                __b.__in6_u.__u6_addr32[1
                                                                                                           libc::c_int
                                                                                                           usize]
                                             &&
-                                            (*__a).__in6_u.__u6_addr32[2                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[2                        libc::c_int
                                                                                                   usize]
                                                 ==
-                                                (*__b).__in6_u.__u6_addr32[2
+                                                __b.__in6_u.__u6_addr32[2
                                                                                                           libc::c_int
                                                                                                           usize]
                                             &&
-                                            (*__a).__in6_u.__u6_addr32[3                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[3                        libc::c_int
                                                                                                   usize]
                                                 ==
-                                                (*__b).__in6_u.__u6_addr32[3
+                                                __b.__in6_u.__u6_addr32[3
                                                                                                           libc::c_int
                                                                                                           usize])
 
@@ -635,117 +635,117 @@ unsafe extern "C" fn complete_context6(mut local: *mut In6Addr,
                         match current_block_37 {
                             11385396242402735691 => { }
                             _ => {
-                                if is_same_net6(&mut (*share).shared_addr6,
-                                                &mut (*context).start6,
-                                                (*context).prefix) != 0 &&
-                                       is_same_net6(&mut (*share).shared_addr6,
-                                                    &mut (*context).end6,
-                                                    (*context).prefix) != 0 {
-                                    (*context).current = (*param).current;
-                                    (*param).current = context;
-                                    (*context).local6 = *local;
-                                    (*context).preferred =
-                                        if (*context).flags &
+                                if is_same_net6(&mut share.shared_addr6,
+                                                &mut context.start6,
+                                                context.prefix) != 0 &&
+                                       is_same_net6(&mut share.shared_addr6,
+                                                    &mut context.end6,
+                                                    context.prefix) != 0 {
+                                    context.current = param.current;
+                                    param.current = context;
+                                    context.local6 = *local;
+                                    context.preferred =
+                                        if context.flags &
                                                (1) <<
                                                    9 != 0 {
                                             0
                                         } else { 0xffffffff };
-                                    (*context).valid =
+                                    context.valid =
                                         0xffffffff
                                 }
                             }
                         }
                     }
-                    share = (*share).next
+                    share = share.next
                 }
             }
         }
-        context = (*context).next
+        context = context.next
     }
-    relay = (*dnsmasq_daemon).relay6;
+    relay = dnsmasq_daemon.relay6;
     while !relay.is_null() {
         if ({
                 let mut __a: *const In6Addr = local ;
                 let mut __b: *const In6Addr =
-                    &mut (*relay).local.addr6 ;
-                ((*__a).__in6_u.__u6_addr32[0 ] ==
-                     (*__b).__in6_u.__u6_addr32[0 ] &&
-                     (*__a).__in6_u.__u6_addr32[1 ] ==
-                         (*__b).__in6_u.__u6_addr32[1 ]
+                    &mut relay.local.addr6 ;
+                (__a.__in6_u.__u6_addr32[0 ] ==
+                     __b.__in6_u.__u6_addr32[0 ] &&
+                     __a.__in6_u.__u6_addr32[1 ] ==
+                         __b.__in6_u.__u6_addr32[1 ]
                      &&
-                     (*__a).__in6_u.__u6_addr32[2 ] ==
-                         (*__b).__in6_u.__u6_addr32[2 ]
+                     __a.__in6_u.__u6_addr32[2 ] ==
+                         __b.__in6_u.__u6_addr32[2 ]
                      &&
-                     (*__a).__in6_u.__u6_addr32[3 ] ==
-                         (*__b).__in6_u.__u6_addr32[3     usize])
-            }) != 0 && (*relay).current == relay &&
+                     __a.__in6_u.__u6_addr32[3 ] ==
+                         __b.__in6_u.__u6_addr32[3     usize])
+            }) != 0 && relay.current == relay &&
                (({
                      let mut __a: *const In6Addr =
-                         &mut (*param).relay_local                       *const In6Addr;
-                     ((*__a).__in6_u.__u6_addr32[0 ] ==
+                         &mut param.relay_local                       *const In6Addr;
+                     (__a.__in6_u.__u6_addr32[0 ] ==
                           0 &&
-                          (*__a).__in6_u.__u6_addr32[1      usize] ==
+                          __a.__in6_u.__u6_addr32[1      usize] ==
                               0 &&
-                          (*__a).__in6_u.__u6_addr32[2      usize] ==
+                          __a.__in6_u.__u6_addr32[2      usize] ==
                               0 &&
-                          (*__a).__in6_u.__u6_addr32[3      usize] ==
+                          __a.__in6_u.__u6_addr32[3      usize] ==
                               0)
                  }) != 0 ||
                     ({
                          let mut __a: *const In6Addr =
                              local ;
                          let mut __b: *const In6Addr =
-                             &mut (*param).relay_local                           *const In6Addr;
-                         ((*__a).__in6_u.__u6_addr32[0      usize] ==
-                              (*__b).__in6_u.__u6_addr32[0          usize] &&
-                              (*__a).__in6_u.__u6_addr32[1          usize] ==
-                                  (*__b).__in6_u.__u6_addr32[1
+                             &mut param.relay_local                           *const In6Addr;
+                         (__a.__in6_u.__u6_addr32[0      usize] ==
+                              __b.__in6_u.__u6_addr32[0          usize] &&
+                              __a.__in6_u.__u6_addr32[1          usize] ==
+                                  __b.__in6_u.__u6_addr32[1
                                                                  ] &&
-                              (*__a).__in6_u.__u6_addr32[2          usize] ==
-                                  (*__b).__in6_u.__u6_addr32[2
+                              __a.__in6_u.__u6_addr32[2          usize] ==
+                                  __b.__in6_u.__u6_addr32[2
                                                                  ] &&
-                              (*__a).__in6_u.__u6_addr32[3          usize] ==
-                                  (*__b).__in6_u.__u6_addr32[3
+                              __a.__in6_u.__u6_addr32[3          usize] ==
+                                  __b.__in6_u.__u6_addr32[3
                                                                  ])                       libc::c_int
                      }) != 0) {
-            (*relay).current = (*param).relay;
-            (*param).relay = relay;
-            (*param).relay_local = *local
+            relay.current = param.relay;
+            param.relay = relay;
+            param.relay_local = *local
         }
-        relay = (*relay).next
+        relay = relay.next
     }
     return 1;
 }
 #[no_mangle]
 pub unsafe extern "C" fn config_find_by_address6(mut configs:
-                                                     *mut DhcpConfig,
-                                                 mut net: *mut In6Addr,
+                                                     &mut DhcpConfig,
+                                                 mut net: &mut In6Addr,
                                                  mut prefix: i32,
-                                                 mut addr: *mut In6Addr)
-                                                 -> *mut DhcpConfig {
-    let mut config: *mut DhcpConfig = 0;
+                                                 mut addr: &mut In6Addr)
+                                                 -> DhcpConfig {
+    let mut config: DhcpConfig = 0;
     config = configs;
     while !config.is_null() {
-        if (*config).flags & 4096 != 0 {
-            let mut addr_list: *mut AddressListEntry = 0 ;
-            addr_list = (*config).addr6;
+        if config.flags & 4096 != 0 {
+            let mut addr_list: AddressListEntry = 0 ;
+            addr_list = config.addr6;
             while !addr_list.is_null() {
                 if (net.is_null() ||
-                        is_same_net6(&mut (*addr_list).addr.addr6, net,
+                        is_same_net6(&mut addr_list.addr.addr6, net,
                                      prefix) != 0 ||
-                        (*addr_list).flags & 16 != 0 &&
+                        addr_list.flags & 16 != 0 &&
                             prefix == 64) &&
-                       is_same_net6(&mut (*addr_list).addr.addr6, addr,
-                                    (if (*addr_list).flags & 8
+                       is_same_net6(&mut addr_list.addr.addr6, addr,
+                                    (if addr_list.flags & 8
                                             != 0 {
-                                         (*addr_list).prefixlen
+                                         addr_list.prefixlen
                                      } else { 128 })) != 0 {
                     return config
                 }
-                addr_list = (*addr_list).next
+                addr_list = addr_list.next
             }
         }
-        config = (*config).next
+        config = config.next
     }
     return 0;
 }
@@ -756,9 +756,9 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
                                            mut temp_addr: i32,
                                            mut iaid: u32,
                                            mut serial: i32,
-                                           mut netids: *mut DhcpNetId,
+                                           mut netids: &mut DhcpNetId,
                                            mut plain_range: i32,
-                                           mut ans: *mut In6Addr)
+                                           mut ans: &mut In6Addr)
                                            -> DhcpContext {
     /* Find a free address: exclude anything in use and anything allocated to
      a particular hwaddr/clientid/hostname in our configuration.
@@ -797,14 +797,14 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
           } else { 0 } != 0 {
         c = context;
         while !c.is_null() {
-            if !((*c).flags &
+            if !(c.flags &
                      ((1) << 9 |
                           (1) << 0 |
                           (1) << 7 |
                           (1) << 15) != 0) {
-                if !(match_netid((*c).filter, netids, pass) == 0) {
+                if !(match_netid(c.filter, netids, pass) == 0) {
                     if temp_addr == 0 &&
-                           (*dnsmasq_daemon).options[(34).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                           dnsmasq_daemon.options[(34).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                                            ).wrapping_mul(8
                                                                                                                            ))
                                                          ] &
@@ -818,21 +818,21 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
 		 address after it has rjected it. */
                         start =
                             lease_find_max_addr6(c).wrapping_add(1                  libc::c_int
-                                                                                      libc::c_ulonglong).wrapping_add(serial                                 libc::c_ulonglong).wrapping_add((*c).addr_epoch                                                                                                         libc::c_ulonglong);
-                        if (*c).addr_epoch != 0 {
-                            (*c).addr_epoch = (*c).addr_epoch.wrapping_sub(1)
+                                                                                      libc::c_ulonglong).wrapping_add(serial                                 libc::c_ulonglong).wrapping_add(c.addr_epoch                                                                                                         libc::c_ulonglong);
+                        if c.addr_epoch != 0 {
+                            c.addr_epoch = c.addr_epoch.wrapping_sub(1)
                         }
                     } else {
                         let mut range: u64 =
-                            (1)long).wrapping_add(addr6part(&mut (*c).end6)).wrapping_sub(addr6part(&mut (*c).start6));
+                            (1)long).wrapping_add(addr6part(&mut c.end6)).wrapping_sub(addr6part(&mut c.start6));
                         let mut offset: u64 =
-                            j.wrapping_add((*c).addr_epochlong);
+                            j.wrapping_add(c.addr_epochlong);
                         /* don't divide by zero if range is whole 2^64 */
                         if range != 0long {
                             offset = offset.wrapping_rem(range)
                         }
                         start =
-                            addr6part(&mut (*c).start6).wrapping_add(offset)
+                            addr6part(&mut c.start6).wrapping_add(offset)
                     }
                     /* iterate until we find a free address. */
                     addr = start;
@@ -840,33 +840,33 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
                         /* eliminate addresses in use by the server. */
                         d = context;
                         while !d.is_null() {
-                            if addr == addr6part(&mut (*d).local6) { break ; }
-                            d = (*d).current
+                            if addr == addr6part(&mut d.local6) { break ; }
+                            d = d.current
                         }
-                        *ans = (*c).start6;
+                        *ans = c.start6;
                         setaddr6part(ans, addr);
                         if d.is_null() &&
-                               lease6_find_by_addr(&mut (*c).start6,
-                                                   (*c).prefix,
+                               lease6_find_by_addr(&mut c.start6,
+                                                   c.prefix,
                                                    addr).is_null() &&
-                               config_find_by_address6((*dnsmasq_daemon).dhcp_conf,
-                                                       &mut (*c).start6,
-                                                       (*c).prefix,
+                               config_find_by_address6(dnsmasq_daemon.dhcp_conf,
+                                                       &mut c.start6,
+                                                       c.prefix,
                                                        ans).is_null() {
                             return c
                         }
                         addr = addr.wrapping_add(1);
                         if addr ==
-                               addr6part(&mut (*c).end6).wrapping_add(1                       libc::c_int
+                               addr6part(&mut c.end6).wrapping_add(1                       libc::c_int
                                                                                                 libc::c_ulonglong)
                            {
-                            addr = addr6part(&mut (*c).start6)
+                            addr = addr6part(&mut c.start6)
                         }
                         if !(addr != start) { break ; }
                     }
                 }
             }
-            c = (*c).current
+            c = c.current
         }
         pass += 1
     }
@@ -875,8 +875,8 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
 /* can dynamically allocate addr */
 #[no_mangle]
 pub unsafe extern "C" fn address6_available(mut context: DhcpContext,
-                                            mut taddr: *mut In6Addr,
-                                            mut netids: *mut DhcpNetId,
+                                            mut taddr: &mut In6Addr,
+                                            mut netids: &mut DhcpNetId,
                                             mut plain_range: i32)
                                             -> DhcpContext {
     let mut start: u64 = 0;
@@ -885,50 +885,50 @@ pub unsafe extern "C" fn address6_available(mut context: DhcpContext,
     let mut tmp: DhcpContext = 0;
     tmp = context;
     while !tmp.is_null() {
-        start = addr6part(&mut (*tmp).start6);
-        end = addr6part(&mut (*tmp).end6);
-        if (*tmp).flags &
+        start = addr6part(&mut tmp.start6);
+        end = addr6part(&mut tmp.end6);
+        if tmp.flags &
                ((1) << 0 |
                     (1) << 7) == 0 &&
-               is_same_net6(&mut (*tmp).start6, taddr, (*tmp).prefix) != 0 &&
-               is_same_net6(&mut (*tmp).end6, taddr, (*tmp).prefix) != 0 &&
+               is_same_net6(&mut tmp.start6, taddr, tmp.prefix) != 0 &&
+               is_same_net6(&mut tmp.end6, taddr, tmp.prefix) != 0 &&
                addr >= start && addr <= end &&
-               match_netid((*tmp).filter, netids, plain_range) != 0 {
+               match_netid(tmp.filter, netids, plain_range) != 0 {
             return tmp
         }
-        tmp = (*tmp).current
+        tmp = tmp.current
     }
     return 0;
 }
 /* address OK if configured */
 #[no_mangle]
 pub unsafe extern "C" fn address6_valid(mut context: DhcpContext,
-                                        mut taddr: *mut In6Addr,
-                                        mut netids: *mut DhcpNetId,
+                                        mut taddr: &mut In6Addr,
+                                        mut netids: &mut DhcpNetId,
                                         mut plain_range: i32)
                                         -> DhcpContext {
     let mut tmp: DhcpContext = 0;
     tmp = context;
     while !tmp.is_null() {
-        if is_same_net6(&mut (*tmp).start6, taddr, (*tmp).prefix) != 0 &&
-               match_netid((*tmp).filter, netids, plain_range) != 0 {
+        if is_same_net6(&mut tmp.start6, taddr, tmp.prefix) != 0 &&
+               match_netid(tmp.filter, netids, plain_range) != 0 {
             return tmp
         }
-        tmp = (*tmp).current
+        tmp = tmp.current
     }
     return 0;
 }
 #[no_mangle]
 pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
-    if !(*dnsmasq_daemon).duid_config.is_null() {
+    if !dnsmasq_daemon.duid_config.is_null() {
         let mut p: mut Vec<u8> = 0;
         p =
-            safe_malloc((*dnsmasq_daemon).duid_config_len.wrapping_add(6                        libc::c_int
+            safe_malloc(dnsmasq_daemon.duid_config_len.wrapping_add(6                        libc::c_int
                                                                                                   libc::c_uint)
                             );
-        (*dnsmasq_daemon).duid = p;
-        (*dnsmasq_daemon).duid_len =
-            (*dnsmasq_daemon).duid_config_len.wrapping_add(6            libc::c_uint)
+        dnsmasq_daemon.duid = p;
+        dnsmasq_daemon.duid_len =
+            dnsmasq_daemon.duid_config_len.wrapping_add(6            libc::c_uint)
                ;
         let mut t_s: u16 = 2;
         let mut t_cp: mut Vec<u8> = p;
@@ -938,7 +938,7 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
         *t_cp = t_s;
         p = p.offset(2);
         /* DUID_EN */
-        let mut t_l: u32 = (*dnsmasq_daemon).duid_enterprise;
+        let mut t_l: u32 = dnsmasq_daemon.duid_enterprise;
         let mut t_cp_0: mut Vec<u8> = p;
         let fresh7 = t_cp_0;
         t_cp_0 = t_cp_0.offset(1);
@@ -952,20 +952,20 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
         *t_cp_0 = t_l;
         p = p.offset(4);
         memcpy(p,
-               (*dnsmasq_daemon).duid_config,
-               (*dnsmasq_daemon).duid_config_len);
+               dnsmasq_daemon.duid_config,
+               dnsmasq_daemon.duid_config_len);
     } else {
         let mut newnow: time::Instant = 0;
         /* If we have no persistent lease database, or a non-stable RTC, use DUID_LL (newnow == 0) */
         /* rebase epoch to 1/1/2000 */
-        if (*dnsmasq_daemon).options[(22 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+        if dnsmasq_daemon.options[(22 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                            ).wrapping_mul(8                                     libc::c_int                              ))
                                          ] &
                (1) <<
                    (22 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                        ).wrapping_mul(8 libc::c_int
                                                                                                                        ))
-               == 0 || !(*dnsmasq_daemon).lease_change_command.is_null() {
+               == 0 || !dnsmasq_daemon.lease_change_command.is_null() {
             newnow = now - 946684800
         }
         iface_enumerate(1,
@@ -996,8 +996,8 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
                                                                                                               Vec<u8>)
                                                                                           ->
                                                                                               libc::c_int)));
-        if (*dnsmasq_daemon).duid.is_null() {
-            die(b"Cannot create DHCPv6 server DUID: %s\x00"               *const libc::c_char ,
+        if dnsmasq_daemon.duid.is_null() {
+            die("Cannot create DHCPv6 server DUID: %s"               *const libc::c_char ,
                 0 , 5);
         }
     };
@@ -1017,10 +1017,10 @@ unsafe extern "C" fn make_duid1(mut index: i32,
         return 1
     }
     if newnow == 0 {
-        p =
-            safe_malloc(maclen.wrapping_add(4                                   ))          mut Vec<u8>;
-        (*dnsmasq_daemon).duid = p;
-        (*dnsmasq_daemon).duid_len =
+        // p =
+        //     safe_malloc(maclen.wrapping_add(4                                   ))          mut Vec<u8>;
+        dnsmasq_daemon.duid = p;
+        dnsmasq_daemon.duid_len =
             maclen.wrapping_add(4) ;
         let mut t_s: u16 = 3;
         let mut t_cp: mut Vec<u8> = p;
@@ -1039,10 +1039,10 @@ unsafe extern "C" fn make_duid1(mut index: i32,
         *t_cp_0 = t_s_0;
         p = p.offset(2)
     } else {
-        p =
-            safe_malloc(maclen.wrapping_add(8                                   ))          mut Vec<u8>;
-        (*dnsmasq_daemon).duid = p;
-        (*dnsmasq_daemon).duid_len =
+        // p =
+        //     safe_malloc(maclen.wrapping_add(8                                   ))          mut Vec<u8>;
+        dnsmasq_daemon.duid = p;
+        dnsmasq_daemon.duid_len =
             maclen.wrapping_add(8) ;
         let mut t_s_1: u16 = 1;
         let mut t_cp_1: mut Vec<u8> = p;
@@ -1079,7 +1079,7 @@ unsafe extern "C" fn make_duid1(mut index: i32,
     memcpy(p, mac, maclen);
     return 0;
 }
-unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
+unsafe extern "C" fn construct_worker(mut local: &mut In6Addr,
                                       mut prefix: i32,
                                       mut scope: i32,
                                       mut if_index: i32,
@@ -1095,22 +1095,22 @@ unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
         In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
     let mut template: DhcpContext = 0;
     let mut context: DhcpContext = 0;
-    let mut tmp: *mut Iname = 0;
-    let mut param: *mut Cparam = vparam ;
+    let mut tmp: Iname = 0;
+    let mut param: Cparam = vparam ;
     if ({
             let mut __a: *const In6Addr = local ;
-            ((*__a).__in6_u.__u6_addr32[0 ] ==
+            (__a.__in6_u.__u6_addr32[0 ] ==
                  0 &&
-                 (*__a).__in6_u.__u6_addr32[1 ] ==
+                 __a.__in6_u.__u6_addr32[1 ] ==
                      0 &&
-                 (*__a).__in6_u.__u6_addr32[2 ] ==
+                 __a.__in6_u.__u6_addr32[2 ] ==
                      0 &&
-                 (*__a).__in6_u.__u6_addr32[3 ] ==
+                 __a.__in6_u.__u6_addr32[3 ] ==
                      __bswap_32(1))
         }) != 0 ||
            ({
                 let mut __a: *const In6Addr = local ;
-                ((*__a).__in6_u.__u6_addr32[0 ] &
+                (__a.__in6_u.__u6_addr32[0 ] &
                      __bswap_32(0xffc00000) ==
                      __bswap_32(0xfe800000))
             }) != 0 ||
@@ -1122,94 +1122,94 @@ unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
     /* DUID_LLT */
     /* address type */
     /* Ignore interfaces where we're not doing RA/DHCP6 */
-    if indextoname((*dnsmasq_daemon).icmp6fd, if_index,
+    if indextoname(dnsmasq_daemon.icmp6fd, if_index,
                    ifrn_name.as_mut_ptr()) == 0 ||
            iface_check(1, 0 ,
                        ifrn_name.as_mut_ptr(), 0) == 0 {
         return 1
     }
-    tmp = (*dnsmasq_daemon).dhcp_except;
+    tmp = dnsmasq_daemon.dhcp_except;
     while !tmp.is_null() {
-        if !(*tmp).name.is_null() &&
-               wildcard_match((*tmp).name, ifrn_name.as_mut_ptr()) != 0 {
+        if !tmp.name.is_null() &&
+               wildcard_match(tmp.name, ifrn_name.as_mut_ptr()) != 0 {
             return 1
         }
-        tmp = (*tmp).next
+        tmp = tmp.next
     }
-    template = (*dnsmasq_daemon).dhcp6;
+    template = dnsmasq_daemon.dhcp6;
     while !template.is_null() {
-        if (*template).flags &
+        if template.flags &
                ((1) << 10 |
                     (1) << 11) == 0 {
             /* non-template entries, just fill in interface and local addresses */
-            if prefix <= (*template).prefix &&
-                   is_same_net6(local, &mut (*template).start6,
-                                (*template).prefix) != 0 &&
-                   is_same_net6(local, &mut (*template).end6,
-                                (*template).prefix) != 0 {
+            if prefix <= template.prefix &&
+                   is_same_net6(local, &mut template.start6,
+                                template.prefix) != 0 &&
+                   is_same_net6(local, &mut template.end6,
+                                template.prefix) != 0 {
                 /* First time found, do fast RA. */
-                if (*template).if_index == 0 {
-                    ra_start_unsolicited((*param).now, template);
-                    (*param).newone = 1
+                if template.if_index == 0 {
+                    ra_start_unsolicited(param.now, template);
+                    param.newone = 1
                 }
-                (*template).if_index = if_index;
-                (*template).local6 = *local
+                template.if_index = if_index;
+                template.local6 = *local
             }
-        } else if wildcard_match((*template).template_interface,
+        } else if wildcard_match(template.template_interface,
                                  ifrn_name.as_mut_ptr()) != 0 &&
-                      (*template).prefix >= prefix {
+                      template.prefix >= prefix {
             start6 = *local;
-            setaddr6part(&mut start6, addr6part(&mut (*template).start6));
+            setaddr6part(&mut start6, addr6part(&mut template.start6));
             end6 = *local;
-            setaddr6part(&mut end6, addr6part(&mut (*template).end6));
-            context = (*dnsmasq_daemon).dhcp6;
+            setaddr6part(&mut end6, addr6part(&mut template.end6));
+            context = dnsmasq_daemon.dhcp6;
             while !context.is_null() {
-                if (*context).flags &
+                if context.flags &
                        (1) << 10 == 0 &&
                        ({
                             let mut __a: *const In6Addr =
                                 &mut start6;
                             let mut __b: *const In6Addr =
-                                &mut (*context).start6;
-                            ((*__a).__in6_u.__u6_addr32[0         usize] ==
-                                 (*__b).__in6_u.__u6_addr32[0] &&
-                                 (*__a).__in6_u.__u6_addr32[1] ==
-                                     (*__b).__in6_u.__u6_addr32[1       ]
+                                &mut context.start6;
+                            (__a.__in6_u.__u6_addr32[0         usize] ==
+                                 __b.__in6_u.__u6_addr32[0] &&
+                                 __a.__in6_u.__u6_addr32[1] ==
+                                     __b.__in6_u.__u6_addr32[1       ]
                                  &&
-                                 (*__a).__in6_u.__u6_addr32[2] ==
-                                     (*__b).__in6_u.__u6_addr32[2       ]
+                                 __a.__in6_u.__u6_addr32[2] ==
+                                     __b.__in6_u.__u6_addr32[2       ]
                                  &&
-                                 (*__a).__in6_u.__u6_addr32[3] ==
-                                     (*__b).__in6_u.__u6_addr32[3       ])
+                                 __a.__in6_u.__u6_addr32[3] ==
+                                     __b.__in6_u.__u6_addr32[3       ])
 
                         }) != 0 &&
                        ({
                             let mut __a: *const In6Addr =
                                 &mut end6 ;
                             let mut __b: *const In6Addr =
-                                &mut (*context).end6;
-                            ((*__a).__in6_u.__u6_addr32[0         usize] ==
-                                 (*__b).__in6_u.__u6_addr32[0] &&
-                                 (*__a).__in6_u.__u6_addr32[1] ==
-                                     (*__b).__in6_u.__u6_addr32[1       ]
+                                &mut context.end6;
+                            (__a.__in6_u.__u6_addr32[0         usize] ==
+                                 __b.__in6_u.__u6_addr32[0] &&
+                                 __a.__in6_u.__u6_addr32[1] ==
+                                     __b.__in6_u.__u6_addr32[1       ]
                                  &&
-                                 (*__a).__in6_u.__u6_addr32[2] ==
-                                     (*__b).__in6_u.__u6_addr32[2       ]
+                                 __a.__in6_u.__u6_addr32[2] ==
+                                     __b.__in6_u.__u6_addr32[2       ]
                                  &&
-                                 (*__a).__in6_u.__u6_addr32[3] ==
-                                     (*__b).__in6_u.__u6_addr32[3       ])
+                                 __a.__in6_u.__u6_addr32[3] ==
+                                     __b.__in6_u.__u6_addr32[3       ])
 
                         }) != 0 {
                     /* If there's an absolute address context covering this address
 		 then don't construct one as well. */
-                    if (*context).flags &
+                    if context.flags &
                            (1) << 11 == 0 {
                         break ;
                     }
-                    if (*context).if_index == if_index {
-                        let mut cflags: i32 = (*context).flags;
-                        (*context).flags =
-                            ((*context).flags &
+                    if context.if_index == if_index {
+                        let mut cflags: i32 = context.flags;
+                        context.flags =
+                            (context.flags &
                                  !((1) << 12 |
                                        (1) <<
                                            16));
@@ -1218,54 +1218,55 @@ unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
                             /* address went, now it's back, and on the same interface */
                             dhcp_context_to_string(10, context);
                             /* fast RAs for a while */
-                            ra_start_unsolicited((*param).now, context);
-                            (*param).newone = 1;
+                            ra_start_unsolicited(param.now, context);
+                            param.newone = 1;
                             /* Add address to name again */
-                            if (*context).flags &
+                            if context.flags &
                                    (1) << 6 !=
                                    0 {
-                                (*param).newname = 1
+                                param.newname = 1
                             }
                         }
                         break ;
                     }
                 }
-                context = (*context).next
+                context = context.next
             }
             if context.is_null() &&
                    {
-                       context =
-                           whine_malloc(::std::mem::size_of::<DhcpContext>()
-                                           )                         DhcpContext;
-                       !context.is_null()
+                       // context =
+                       //     whine_malloc(::std::mem::size_of::<DhcpContext>()
+                       //                     )                         DhcpContext;
+                       // !context.is_null()
+                       true
                    } {
                 *context = *template;
-                (*context).start6 = start6;
-                (*context).end6 = end6;
-                (*context).flags =
-                    ((*context).flags &
+                context.start6 = start6;
+                context.end6 = end6;
+                context.flags =
+                    (context.flags &
                          !((1) << 10)) ;
-                (*context).flags =
-                    ((*context).flags |
+                context.flags =
+                    (context.flags |
                          (1) << 11) ;
-                (*context).if_index = if_index;
-                (*context).local6 = *local;
-                (*context).saved_valid = 0;
-                (*context).next = (*dnsmasq_daemon).dhcp6;
-                (*dnsmasq_daemon).dhcp6 = context;
-                ra_start_unsolicited((*param).now, context);
+                context.if_index = if_index;
+                context.local6 = *local;
+                context.saved_valid = 0;
+                context.next = dnsmasq_daemon.dhcp6;
+                dnsmasq_daemon.dhcp6 = context;
+                ra_start_unsolicited(param.now, context);
                 /* we created a new one, need to call
 	       lease_update_file to get periodic functions called */
-                (*param).newone = 1;
+                param.newone = 1;
                 /* Will need to add new putative SLAAC addresses to existing leases */
-                if (*context).flags &
+                if context.flags &
                        (1) << 6 != 0 {
-                    (*param).newname = 1
+                    param.newname = 1
                 }
                 dhcp_context_to_string(10, context);
             }
         }
-        template = (*template).next
+        template = template.next
     }
     return 1;
 }
@@ -1273,25 +1274,25 @@ unsafe extern "C" fn construct_worker(mut local: *mut In6Addr,
 pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
     let mut context: DhcpContext = 0;
     let mut tmp: DhcpContext = 0;
-    let mut up: *mut DhcpContext = 0 ;
+    let mut up: DhcpContext = 0 ;
     let mut param: Cparam = Cparam {now: 0, newone: 0, newname: 0,};
     param.newone = 0;
     param.newname = 0;
     param.now = now;
-    context = (*dnsmasq_daemon).dhcp6;
+    context = dnsmasq_daemon.dhcp6;
     while !context.is_null() {
-        if (*context).flags &
+        if context.flags &
                (1) << 11 != 0 {
-            (*context).flags =
-                ((*context).flags |
+            context.flags =
+                (context.flags |
                      (1) << 12)
         }
-        context = (*context).next
+        context = context.next
     }
     iface_enumerate(10,
                     &mut param ,
                     ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                            *mut In6Addr,
+                                                                            &mut In6Addr,
                                                                         _:
                                                                             libc::c_int,
                                                                         _:
@@ -1311,7 +1312,7 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
                                                        ->
                                                            libc::c_int>>(Some(construct_worker
                                                                                                                 unsafe extern "C" fn(_:
-                                                                                                           *mut In6Addr,
+                                                                                                           &mut In6Addr,
                                                                                                        _:
                                                                                                            libc::c_int,
                                                                                                        _:
@@ -1328,17 +1329,17 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
                                                                                                           Vec<u8>)
                                                                                                        ->
                                                                                           libc::c_int)));
-    up = &mut (*dnsmasq_daemon).dhcp6;
-    context = (*dnsmasq_daemon).dhcp6;
+    up = &mut dnsmasq_daemon.dhcp6;
+    context = dnsmasq_daemon.dhcp6;
     while !context.is_null() {
-        tmp = (*context).next;
-        if (*context).flags &
+        tmp = context.next;
+        if context.flags &
                (1) << 12 != 0 &&
-               (*context).flags &
+               context.flags &
                    (1) << 16 == 0 {
-            if (*context).flags &
+            if context.flags &
                    (1) << 13 != 0 ||
-                   (*dnsmasq_daemon).options[(37 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+                   dnsmasq_daemon.options[(37 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                            ).wrapping_mul(8                                                     libc::c_int                                              ))
                                                  ] &
                        (1) <<
@@ -1346,40 +1347,40 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
                                                                        ).wrapping_mul(8                 libc::c_int          ))
                        != 0 {
                 /* previously constructed context has gone. advertise it's demise */
-                (*context).flags =
-                    ((*context).flags |
+                context.flags =
+                    (context.flags |
                          (1) << 16) ;
-                (*context).address_lost_time = now;
+                context.address_lost_time = now;
                 /* Apply same ceiling of configured lease time as in radv.c */
-                if (*context).saved_valid > (*context).lease_time {
-                    (*context).saved_valid = (*context).lease_time
+                if context.saved_valid > context.lease_time {
+                    context.saved_valid = context.lease_time
                 }
                 /* maximum time is 2 hours, from RFC */
-                if (*context).saved_valid >
+                if context.saved_valid >
                        7200 {
                     /* 2 hours */
-                    (*context).saved_valid =
+                    context.saved_valid =
                         7200
                 } /* include deletion */
                 ra_start_unsolicited(now, context);
                 param.newone = 1;
-                if (*context).flags &
+                if context.flags &
                        (1) << 6 != 0 {
                     param.newname = 1
                 }
                 dhcp_context_to_string(10, context);
-                up = &mut (*context).next
+                up = &mut context.next
             } else {
                 /* we were never doing RA for this, so free now */
-                *up = (*context).next;
+                *up = context.next;
                 free(context);
             }
-        } else { up = &mut (*context).next }
+        } else { up = &mut context.next }
         context = tmp
     }
     if param.newone != 0 {
-        if !(*dnsmasq_daemon).dhcp.is_null() ||
-               (*dnsmasq_daemon).doing_dhcp6 != 0 {
+        if !dnsmasq_daemon.dhcp.is_null() ||
+               dnsmasq_daemon.doing_dhcp6 != 0 {
             if param.newname != 0 { lease_update_slaac(now); }
             lease_update_file(now);
         } else {

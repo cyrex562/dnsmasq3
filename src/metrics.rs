@@ -16,26 +16,26 @@
 */
 #[no_mangle]
 pub static mut metric_names: [*const libc::c_char; 20] =
-    [b"dns_cache_inserted\x00" ,
-     b"dns_cache_live_freed\x00" ,
-     b"dns_queries_forwarded\x00" ,
-     b"dns_auth_answered\x00" ,
-     b"dns_local_answered\x00" ,
-     b"bootp\x00" ,
-     b"pxe\x00" ,
-     b"dhcp_ack\x00" ,
-     b"dhcp_decline\x00" ,
-     b"dhcp_discover\x00" ,
-     b"dhcp_inform\x00" ,
-     b"dhcp_nak\x00" ,
-     b"dhcp_offer\x00" ,
-     b"dhcp_release\x00" ,
-     b"dhcp_request\x00" ,
-     b"noanswer\x00" ,
-     b"leases_allocated_4\x00" ,
-     b"leases_pruned_4\x00" ,
-     b"leases_allocated_6\x00" ,
-     b"leases_pruned_6\x00" ];
+    ["dns_cache_inserted" ,
+     "dns_cache_live_freed" ,
+     "dns_queries_forwarded" ,
+     "dns_auth_answered" ,
+     "dns_local_answered" ,
+     "bootp" ,
+     "pxe" ,
+     "dhcp_ack" ,
+     "dhcp_decline" ,
+     "dhcp_discover" ,
+     "dhcp_inform" ,
+     "dhcp_nak" ,
+     "dhcp_offer" ,
+     "dhcp_release" ,
+     "dhcp_request" ,
+     "noanswer" ,
+     "leases_allocated_4" ,
+     "leases_pruned_4" ,
+     "leases_allocated_6" ,
+     "leases_pruned_6" ];
 #[no_mangle]
 pub unsafe extern "C" fn get_metric_name(mut i: i32)
  -> *const libc::c_char {

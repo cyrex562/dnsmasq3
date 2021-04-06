@@ -16,7 +16,7 @@
 */
 use crate::defines::{DnsHeader, size_t, __bswap_16, NetAddress, time::Instant, DnsmasqDaemon, In6Addr, NetAddress};
 use crate::rfc1035::{skip_name, skip_questions, skip_section};
-use crate::util::{whine_malloc, print_mac};
+use crate::util::{print_mac};
 use crate::rrfilter::rrfilter;
 use crate::arp::find_mac;
 use crate::slack::subnet_opt;
@@ -24,7 +24,7 @@ use crate::slack::subnet_opt;
 #[no_mangle]
 pub unsafe extern "C" fn find_pseudoheader(mut header: DnsHeader,
                                            mut plen: usize,
-                                           mut len: *mut size_t,
+                                           mut len: &mut size_t,
                                            mut p: ,
                                            mut is_sign: ,
                                            mut is_last: )
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: DnsHeader,
      forwarding. We look for TSIG in the addition section, and TKEY queries (for GSS-TSIG) */
     let mut i: i32 = 0; /* TTL */
     let mut arcount: i32 =
-        __bswap_16((*header).arcount);
+        __bswap_16(header.arcount);
     let mut ansp: mut Vec<u8> =
         header.offset(1);
     let mut rdlen: u16 = 0;
@@ -44,9 +44,9 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: DnsHeader,
     let mut ret: mut Vec<u8> = 0;
     if !is_sign.is_null() {
         *is_sign = 0;
-        if ((*header).hb3 & 0x78) >>
+        if (header.hb3 & 0x78) >>
                3 == 0 {
-            i = __bswap_16((*header).qdcount);
+            i = __bswap_16(header.qdcount);
             while i != 0 {
                 ansp = skip_name(ansp, header, plen, 4);
                 if ansp.is_null() { return 0 }
@@ -74,8 +74,8 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: DnsHeader,
     if arcount == 0 { return 0 }
     ansp =
         skip_section(ansp,
-                     __bswap_16((*header).ancount) +
-                         __bswap_16((*header).nscount), header,
+                     __bswap_16(header.ancount) +
+                         __bswap_16(header.nscount), header,
                      plen);
     if ansp.is_null() { return 0 }
     i = 0;
@@ -226,10 +226,9 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
                 /* delete option if we're to replace it. */
                 p = p.offset(-(4));
                 rdlen -= len + 4;
-                memmove(p,
-                        p.offset(len ).offset(4)
-                           ,
-                        (rdlen - i));
+
+                p_copy = p.clone[len+4..len+4+rdlen-i].to_string();
+                p = p_copy;
                 let mut t_s_0: u16 = rdlen;
                 let mut t_cp_6: mut Vec<u8> = lenp;
                 let fresh7 = t_cp_6;
@@ -249,9 +248,10 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
             /* First, take a copy of the options. */
             if rdlen != 0 &&
                    {
-                       buff =
-                           whine_malloc(rdlen );
-                       !buff.is_null()
+                       // buff =
+                       //     whine_malloc(rdlen );
+                       // !buff.is_null()
+                       true
                    } {
                 memcpy(buff,
                        datap, rdlen);
@@ -269,9 +269,9 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
                {
                    p =
                        skip_section(p,
-                                    __bswap_16((*header).ancount)  +
-                                        __bswap_16((*header).nscount)  +
-                                        __bswap_16((*header).arcount) , header, plen);
+                                    __bswap_16(header.ancount)  +
+                                        __bswap_16(header.nscount)  +
+                                        __bswap_16(header.arcount) , header, plen);
                    p.is_null()
                } {
             free(buff);
@@ -346,8 +346,8 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
         if optlen <=
                limit.wrapping_offset_from(p.offset(4))
                    {
-            (*header).arcount =
-                __bswap_16((__bswap_16((*header).arcount) +
+            header.arcount =
+                __bswap_16((__bswap_16(header.arcount) +
                                 1))
         }
     } /* Too big */
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn add_do_bit(mut header: DnsHeader,
 }
 unsafe extern "C" fn char64(mut c: libc::c_uchar) -> libc::c_uchar {
     return (*::std::mem::transmute::<&[u8; 65],
-                                     &[libc::c_char; 65]>(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\x00"))[(c                                                                                                 libc::c_int            &            0x3f                                                                                                         libc::c_int)                                                                                               usize]
+                                     &[libc::c_char; 65]>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))[(c                                                                                                 libc::c_int            &            0x3f                                                                                                         libc::c_int)                                                                                               usize]
               ;
 }
 unsafe extern "C" fn encoder(mut in_0: mut Vec<u8>,
@@ -439,7 +439,7 @@ unsafe extern "C" fn add_dns_client(mut header: DnsHeader,
     if maclen == 6 {
         replace = 1;
         *cacheablep = 0;
-        if (*dnsmasq_daemon).options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+        if dnsmasq_daemon.options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                            ).wrapping_mul(8                                     libc::c_int                              ))
                                          ] &
                (1) <<
@@ -488,66 +488,66 @@ unsafe extern "C" fn get_addrp(mut addr: NetAddress,
     }
     return &mut addr.in_0.sin_addr;
 }
-unsafe extern "C" fn calc_subnet_opt(mut opt: *mut subnet_opt,
+unsafe extern "C" fn calc_subnet_opt(mut opt: &mut subnet_opt,
                                      mut source: NetAddress,
                                      mut cacheablep: )
                                      -> size_t {
     /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
     let mut len: i32 = 0;
     let mut addrp:Vec<u8> = 0;
-    let mut sa_family: i32 = (*source).sa.sa_family;
+    let mut sa_family: i32 = source.sa.sa_family;
     let mut cacheable: i32 = 0;
-    (*opt).source_netmask = 0 as u8;
-    (*opt).scope_netmask = 0 as u8;
-    if (*source).sa.sa_family == 10 &&
-           !(*dnsmasq_daemon).add_subnet6.is_null() {
-        (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet6).mask as u8;
-        if (*(*dnsmasq_daemon).add_subnet6).addr_used != 0 {
+    opt.source_netmask = 0 as u8;
+    opt.scope_netmask = 0 as u8;
+    if source.sa.sa_family == 10 &&
+           !dnsmasq_daemon.add_subnet6.is_null() {
+        opt.source_netmask = (*dnsmasq_daemon.add_subnet6).mask as u8;
+        if (*dnsmasq_daemon.add_subnet6).addr_used != 0 {
             sa_family =
-                (*(*dnsmasq_daemon).add_subnet6).addr.sa.sa_family ;
+                (*dnsmasq_daemon.add_subnet6).addr.sa.sa_family ;
             addrp =
-                get_addrp(&mut (*(*dnsmasq_daemon).add_subnet6).addr,
+                get_addrp(&mut (*dnsmasq_daemon.add_subnet6).addr,
                           sa_family );
             cacheable = 1
         } else {
             addrp =
-                &mut (*source).in6.sin6_addr             Vec<u8>
+                &mut source.in6.sin6_addr             Vec<u8>
         }
     }
-    if (*source).sa.sa_family == 2 &&
-           !(*dnsmasq_daemon).add_subnet4.is_null() {
-        (*opt).source_netmask = (*(*dnsmasq_daemon).add_subnet4).mask as u8;
-        if (*(*dnsmasq_daemon).add_subnet4).addr_used != 0 {
+    if source.sa.sa_family == 2 &&
+           !dnsmasq_daemon.add_subnet4.is_null() {
+        opt.source_netmask = (*dnsmasq_daemon.add_subnet4).mask as u8;
+        if (*dnsmasq_daemon.add_subnet4).addr_used != 0 {
             sa_family =
-                (*(*dnsmasq_daemon).add_subnet4).addr.sa.sa_family ;
+                (*dnsmasq_daemon.add_subnet4).addr.sa.sa_family ;
             addrp =
-                get_addrp(&mut (*(*dnsmasq_daemon).add_subnet4).addr,
+                get_addrp(&mut (*dnsmasq_daemon.add_subnet4).addr,
                           sa_family );
             cacheable = 1
             /* Address is constant */
         } else {
             addrp =
-                &mut (*source).in_0.sin_addr             Vec<u8>
+                &mut source.in_0.sin_addr             Vec<u8>
         }
     } /* No address ever supplied. */
-    (*opt).family =
+    opt.family =
         __bswap_16(if sa_family == 10 {
                        2
                    } else { 1 });
     if !addrp.is_null() &&
-           (*opt).source_netmask != 0 {
+           opt.source_netmask != 0 {
         len =
-            ((*opt).source_netmask - 1 >>
+            (opt.source_netmask - 1 >>
                  3) + 1;
-        memcpy((*opt).addr.as_mut_ptr(), addrp,
+        memcpy(opt.addr.as_mut_ptr(), addrp,
                len);
-        if (*opt).source_netmask & 7 != 0 {
-            (*opt).addr[(len - 1) ] =
-                ((*opt).addr[(len - 1) ]
+        if opt.source_netmask & 7 != 0 {
+            opt.addr[(len - 1) ] =
+                (opt.addr[(len - 1) ]
                      &
                      (0xff) <<
                          8 -
-                             ((*opt).source_netmask &
+                             (opt.source_netmask &
                                   7)) as u8
         }
     } else { cacheable = 1; len = 0 }
@@ -650,7 +650,7 @@ pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
                                           -> size_t {
     *check_subnet = 0;
     *cacheable = 1;
-    if (*dnsmasq_daemon).options[(32).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.options[(32).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
            (1) <<
@@ -660,7 +660,7 @@ pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
            != 0 {
         plen = add_mac(header, plen, limit, source, now, cacheable)
     }
-    if (*dnsmasq_daemon).options[(54).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.options[(54).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
            (1) <<
@@ -668,7 +668,7 @@ pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
                                                                                                                       libc::c_int
                                                                                                                ))
            != 0 ||
-           (*dnsmasq_daemon).options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+           dnsmasq_daemon.options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                            ).wrapping_mul(8                                     libc::c_int                              ))
                                          ] &
                (1) <<
@@ -678,16 +678,16 @@ pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
                != 0 {
         plen = add_dns_client(header, plen, limit, source, now, cacheable)
     }
-    if !(*dnsmasq_daemon).dns_client_id.is_null() {
+    if !dnsmasq_daemon.dns_client_id.is_null() {
         plen =
             add_pseudoheader(header, plen, limit,
                              512 ,
                              65074,
-                             (*dnsmasq_daemon).dns_client_id                           mut Vec<u8>,
-                             strlen((*dnsmasq_daemon).dns_client_id),
+                             dnsmasq_daemon.dns_client_id                           mut Vec<u8>,
+                             strlen(dnsmasq_daemon.dns_client_id),
                              0, 1)
     }
-    if (*dnsmasq_daemon).options[(41).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.options[(41).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
            (1) <<

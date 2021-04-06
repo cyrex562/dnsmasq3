@@ -6,7 +6,7 @@ use crate::network::check_servers;
 #[no_mangle]
 pub unsafe extern "C" fn loop_send_probes() {
     let mut serv: Server = 0;
-    if (*dnsmasq_daemon).options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
            (1) <<
@@ -19,24 +19,24 @@ pub unsafe extern "C" fn loop_send_probes() {
     let mut current_block_7: u64;
     /* Loop through all upstream servers not for particular domains, and send a query to that server which is
       identifiable, via the uid. If we see that query back again, then the server is looping, and we should not use it. */
-    serv = (*dnsmasq_daemon).servers;
+    serv = dnsmasq_daemon.servers;
     while !serv.is_null() {
-        if (*serv).flags &
+        if serv.flags &
                (4 | 2 | 1024 |
                     2048 | 8 | 32
                     | 8192) == 0 {
-            let mut len: isize = loop_make_probe((*serv).uid);
+            let mut len: isize = loop_make_probe(serv.uid);
             let mut fd: i32 = 0;
-            let mut rfd: *mut RandFd = 0 ;
-            if !(*serv).sfd.is_null() {
-                fd = (*(*serv).sfd).fd;
+            let mut rfd: RandFd = 0 ;
+            if !serv.sfd.is_null() {
+                fd = (*serv.sfd).fd;
                 current_block_7 = 2868539653012386629;
             } else {
-                rfd = allocate_rfd((*serv).addr.sa.sa_family);
+                rfd = allocate_rfd(serv.addr.sa.sa_family);
                 if rfd.is_null() {
                     current_block_7 = 12517898123489920830;
                 } else {
-                    fd = (*rfd).fd;
+                    fd = rfd.fd;
                     current_block_7 = 2868539653012386629;
                 }
             }
@@ -44,17 +44,17 @@ pub unsafe extern "C" fn loop_send_probes() {
                 12517898123489920830 => { }
                 _ => {
                     while retry_send(sendto(fd,
-                                            (*dnsmasq_daemon).packet ,
+                                            dnsmasq_daemon.packet ,
                                             len , 0,
                                             ConstNetAddressArg {__NetAddress__:
-                                                                     &mut (*serv).addr.sa,},
-                                            sa_len(&mut (*serv).addr)                                          socklen_t)) != 0 {
+                                                                     &mut serv.addr.sa,},
+                                            sa_len(&mut serv.addr)                                          socklen_t)) != 0 {
                     }
                     free_rfd(rfd);
                 }
             }
         }
-        serv = (*serv).next
+        serv = serv.next
     };
 }
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
@@ -74,35 +74,35 @@ pub unsafe extern "C" fn loop_send_probes() {
 */
 unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
     let mut header: DnsHeader =
-        (*dnsmasq_daemon).packet ;
+        dnsmasq_daemon.packet ;
     let mut p: mut Vec<u8> =
         header.offset(1);
     /* packet buffer overwritten */
-    (*dnsmasq_daemon).srv_save = 0; /* Add terminating zero */
-    (*header).id = rand16(); /* log new state */
-    (*header).arcount = __bswap_16(0);
-    (*header).nscount = (*header).arcount;
-    (*header).ancount = (*header).nscount;
-    (*header).qdcount = __bswap_16(1);
-    (*header).hb3 = 0x1 as u8;
-    (*header).hb4 = 0 as u8;
-    (*header).hb3 =
-        ((*header).hb3 & !(0x78) |
+    dnsmasq_daemon.srv_save = 0; /* Add terminating zero */
+    header.id = rand16(); /* log new state */
+    header.arcount = __bswap_16(0);
+    header.nscount = header.arcount;
+    header.ancount = header.nscount;
+    header.qdcount = __bswap_16(1);
+    header.hb3 = 0x1 as u8;
+    header.hb4 = 0 as u8;
+    header.hb3 =
+        (header.hb3 & !(0x78) |
              0) as u8;
     let fresh6 = p;
     p = p.offset(1);
     *fresh6 = 8;
     sprintf(p ,
-            b"%.8x\x00" , uid);
+            "%.8x" , uid);
     p = p.offset(8);
     let fresh7 = p;
     p = p.offset(1);
     *fresh7 =
-        strlen(b"test\x00" )      libc::c_uchar;
+        strlen("test" )      libc::c_uchar;
     strcpy(p ,
-           b"test\x00" );
+           "test" );
     p =
-        p.offset(strlen(b"test\x00" ).wrapping_add(1
+        p.offset(strlen("test" ).wrapping_add(1
                                                                          )
                     );
     let mut t_s: u16 = 16;
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn detect_loop(mut query: &mut String,
     let mut i: i32 = 0;
     let mut uid: u32 = 0;
     let mut serv: Server = 0;
-    if (*dnsmasq_daemon).options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
            (1) <<
@@ -138,9 +138,9 @@ pub unsafe extern "C" fn detect_loop(mut query: &mut String,
         return 0
     }
     if type_0 != 16 ||
-           strlen(b"test\x00").wrapping_add(9  ) !=
+           strlen("test").wrapping_add(9  ) !=
                strlen(query) ||
-           strstr(query, b"test\x00" ) !=
+           strstr(query, "test" ) !=
                query.offset(9) {
         return 0
     }
@@ -156,17 +156,17 @@ pub unsafe extern "C" fn detect_loop(mut query: &mut String,
     }
     uid =
         strtol(query, 0 , 16)      u32;
-    serv = (*dnsmasq_daemon).servers;
+    serv = dnsmasq_daemon.servers;
     while !serv.is_null() {
-        if (*serv).flags &
+        if serv.flags &
                (4 | 2 | 1024 |
                     2048 | 8 | 32
-                    | 8192) == 0 && uid == (*serv).uid {
-            (*serv).flags |= 8192;
+                    | 8192) == 0 && uid == serv.uid {
+            serv.flags |= 8192;
             check_servers();
             return 1
         }
-        serv = (*serv).next
+        serv = serv.next
     }
     return 0;
 }

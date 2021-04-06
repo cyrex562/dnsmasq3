@@ -1,7 +1,7 @@
 use crate::defines::{DnsmasqDaemon, uid_t, gid_t, pid_t, Sigaction, C2rustUnnamed10, __sigset_t, C2rustUnnamed12, __sighandler_t, size_t, NetAddress, In6Addr, C2RustUnnamed, socklen_t, FILE, DhcpLease, time::Instant, off_t, NetAddress, ssize_t};
 use crate::network::{fix_fd, indextoname};
 use crate::send_event;
-use crate::util::{close_fds, read_write, legal_hostname, whine_malloc};
+use crate::util::{close_fds, read_write, legal_hostname};
 use crate::slack::script_data;
 use std::fmt::write;
 use socket2::Socket;
@@ -119,51 +119,52 @@ pub fn create_helper(mut event_fd: i32,
             (data.flags & (64  | 32 ) != 0) ;
         if data.action == 1  {
             action_str =
-                b"del\x00"  )
+                "del"  )
         } else if data.action == 4  {
             action_str =
-                b"add\x00"  )
+                "add"  )
         } else if data.action == 3  ||
                       data.action == 2  {
             action_str =
-                b"old\x00"  )
+                "old"  )
         } else if data.action == 5  {
             action_str =
-                b"tftp\x00"  );
+                "tftp"  );
             is6 = (data.flags != 2 ) 
         } else if data.action == 6  {
             action_str =
-                b"arp-add\x00"  );
+                "arp-add"  );
             is6 = (data.flags != 2 ) 
         } else {
             if !(data.action == 7 ) { continue ; }
             action_str =
-                b"arp-del\x00"  );
+                "arp-del"  );
             is6 = (data.flags != 2 ) ;
             data.action = 6 
         }
         /* stringify MAC into dhcp_buff */
         p = daemon.dhcp_buff;
         if data.hwaddr_type != 1  || data.hwaddr_len == 0  {
-            p = p.offset(sprintf(p, b"%.2x-\x00" , data.hwaddr_type) )
+            p = p.offset(sprintf(p, "%.2x-" , data.hwaddr_type) )
         }
         i = 0 ;
         while i < data.hwaddr_len && i < 16  {
-            p = p.offset(sprintf(p, b"%.2x\x00" , data.hwaddr[i ] ) );
+            p = p.offset(sprintf(p, "%.2x" , data.hwaddr[i ] ) );
             if i != data.hwaddr_len - 1  {
                 p =
-                    p.offset(sprintf(p, b":\x00" ) )
+                    p.offset(sprintf(p, ":" ) )
             }
             i += 1
         }
         /* supplied data may just exceed normal buffer (unlikely) */
         if data.hostname_len + data.ed_len + data.clid_len > 1025  &&
                {
-                   buf_0 =
-                       malloc((data.hostname_len + data.ed_len +
-                                   data.clid_len))                     mut Vec<u8>;
-                   alloc_buff = buf_0;
-                   alloc_buff.is_null()
+                   // buf_0 =
+                   //     malloc((data.hostname_len + data.ed_len +
+                   //                 data.clid_len))                     mut Vec<u8>;
+                   // alloc_buff = buf_0;
+                   // alloc_buff.is_null()
+                   false
                } {
             continue ;
         }
@@ -176,21 +177,21 @@ pub fn create_helper(mut event_fd: i32,
         p = daemon.packet;
         i = 0 ;
         while i < data.clid_len {
-            p = p.offset(sprintf(p, b"%.2x\x00" , *buf_0.offset(i ) ) );
+            p = p.offset(sprintf(p, "%.2x" , *buf_0.offset(i ) ) );
             if i != data.clid_len - 1  {
-                p = p.offset(sprintf(p, b":\x00" ) )
+                p = p.offset(sprintf(p, ":" ) )
             }
             i += 1
         }
         if is6 != 0 {
             /* or IAID and server DUID for IPv6 */
-            sprintf(daemon.dhcp_buff3, b"%s%u\x00" , if data.flags & 64  != 0 { b"T\x00"  } else { b"\x00"  }, data.iaid);
+            sprintf(daemon.dhcp_buff3, "%s%u\x00" , if data.flags & 64  != 0 { b"T\x00"  } else { b""  }, data.iaid);
             p = daemon.dhcp_packet.iov_base ;
             i = 0 ;
             while i < daemon.duid_len {
-                p = p.offset(sprintf(p, b"%.2x\x00" , *daemon.duid.offset(i as  isize) ) );
+                p = p.offset(sprintf(p, "%.2x" , *daemon.duid.offset(i as  isize) ) );
                 if i != daemon.duid_len - 1  {
-                    p = p.offset(sprintf(p, b":\x00" ) )
+                    p = p.offset(sprintf(p, ":" ) )
                 }
                 i += 1
             }
@@ -230,7 +231,7 @@ pub fn create_helper(mut event_fd: i32,
             sprintf(if is6 != 0 {
                         daemon.packet
                     } else { daemon.dhcp_buff },
-                    b"%lu\x00" ,
+                    "%lu" ,
                     data.file_len);
         }
         /* no script, just lua */
@@ -257,12 +258,12 @@ pub fn create_helper(mut event_fd: i32,
             }
         } else if pid != 0  {
             if daemon.options[6] == 0 {
-                let mut fp: *mut FILE = 0 ;
+                let mut fp: FILE = 0 ;
                 close(pipeout[1  ]);
                 /* wait for child to complete */
                 /* Read lines sent to stdout/err by the script and pass them back to be logged */
                 fp = fdopen(pipeout[0  ],
-                           b"r\x00" );
+                           "r" );
                 if fp.is_null() {
                     close(pipeout[0  ]);
                 } else {
@@ -314,73 +315,73 @@ pub fn create_helper(mut event_fd: i32,
                 close(pipeout[1]);
             }
             if data.action != 5  && data.action != 6  {
-                my_setenv(b"DNSMASQ_IAID\x00" , if is6 != 0 {
+                my_setenv("DNSMASQ_IAID" , if is6 != 0 {
                               daemon.dhcp_buff3
                           } else { 0  }, &mut err);
-                my_setenv(b"DNSMASQ_SERVER_DUID\x00" ,
+                my_setenv("DNSMASQ_SERVER_DUID" ,
                           if is6 != 0 {
                               daemon.dhcp_packet.iov_base
                           } else { 0 }                        *const libc::c_char, &mut err);
-                my_setenv(b"DNSMASQ_MAC\x00" ,
+                my_setenv("DNSMASQ_MAC" ,
                           if is6 != 0 && data.hwaddr_len != 0  {
                               daemon.dhcp_buff
                           } else { 0  }, &mut err);
-                my_setenv(b"DNSMASQ_CLIENT_ID\x00" ,
+                my_setenv("DNSMASQ_CLIENT_ID" ,
                           if is6 == 0 && data.clid_len != 0  {
                               daemon.packet
                           } else { 0  }, &mut err);
-                my_setenv(b"DNSMASQ_INTERFACE\x00" , if strlen(data.interface.as_mut_ptr()) != 0  { data.interface.as_mut_ptr() } else { 0  }, &mut err);
-                sprintf(daemon.dhcp_buff2, b"%lu\x00" , data.expires);
-                my_setenv(b"DNSMASQ_LEASE_EXPIRES\x00" , daemon.dhcp_buff2, &mut err);
-                my_setenv(b"DNSMASQ_DOMAIN\x00" , domain, &mut err);
+                my_setenv("DNSMASQ_INTERFACE" , if strlen(data.interface.as_mut_ptr()) != 0  { data.interface.as_mut_ptr() } else { 0  }, &mut err);
+                sprintf(daemon.dhcp_buff2, "%lu" , data.expires);
+                my_setenv("DNSMASQ_LEASE_EXPIRES" , daemon.dhcp_buff2, &mut err);
+                my_setenv("DNSMASQ_DOMAIN" , domain, &mut err);
                 end = extradata.offset(data.ed_len );
                 buf_0 = extradata;
                 if is6 == 0 {
-                    buf_0 = grab_extradata(buf_0, end, b"DNSMASQ_VENDOR_CLASS\x00"  , &mut err)
+                    buf_0 = grab_extradata(buf_0, end, "DNSMASQ_VENDOR_CLASS"  , &mut err)
                 } else if data.vendorclass_count != 0  {
-                    buf_0 = grab_extradata(buf_0, end, b"DNSMASQ_VENDOR_CLASS_ID\x00"  , &mut err);
+                    buf_0 = grab_extradata(buf_0, end, "DNSMASQ_VENDOR_CLASS_ID"  , &mut err);
                     i = 0 ;
                     while i < data.vendorclass_count - 1  {
-                        sprintf(daemon.dhcp_buff2, b"DNSMASQ_VENDOR_CLASS%i\x00" , i);
+                        sprintf(daemon.dhcp_buff2, "DNSMASQ_VENDOR_CLASS%i" , i);
                         buf_0 = grab_extradata(buf_0, end, daemon.dhcp_buff2, &mut err);
                         i += 1
                     }
                 }
                 buf_0 =
                     grab_extradata(buf_0, end,
-                                   b"DNSMASQ_SUPPLIED_HOSTNAME\x00"                                 *const u8                                 &mut String, &mut err);
+                                   "DNSMASQ_SUPPLIED_HOSTNAME"                                 *const u8                                 &mut String, &mut err);
                 if is6 == 0 {
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_CPEWAN_OUI\x00"                                                  &mut String, &mut err);
+                                       "DNSMASQ_CPEWAN_OUI"                                                  &mut String, &mut err);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_CPEWAN_SERIAL\x00"                                     *const u8                                     &mut String, &mut err);
+                                       "DNSMASQ_CPEWAN_SERIAL"                                     *const u8                                     &mut String, &mut err);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_CPEWAN_CLASS\x00"                                     *const u8                                     &mut String, &mut err);
+                                       "DNSMASQ_CPEWAN_CLASS"                                     *const u8                                     &mut String, &mut err);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_CIRCUIT_ID\x00"                                                  &mut String, &mut err);
+                                       "DNSMASQ_CIRCUIT_ID"                                                  &mut String, &mut err);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_SUBSCRIBER_ID\x00"                                     *const u8                                     &mut String, &mut err);
+                                       "DNSMASQ_SUBSCRIBER_ID"                                     *const u8                                     &mut String, &mut err);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_REMOTE_ID\x00"                                                  &mut String, &mut err);
+                                       "DNSMASQ_REMOTE_ID"                                                  &mut String, &mut err);
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_REQUESTED_OPTIONS\x00"                                     *const u8                                     &mut String, &mut err)
+                                       "DNSMASQ_REQUESTED_OPTIONS"                                     *const u8                                     &mut String, &mut err)
                 }
                 buf_0 =
                     grab_extradata(buf_0, end,
-                                   b"DNSMASQ_TAGS\x00", &mut err);
+                                   "DNSMASQ_TAGS", &mut err);
                 if is6 != 0 {
                     buf_0 =
                         grab_extradata(buf_0, end,
-                                       b"DNSMASQ_RELAY_ADDRESS\x00"                                     *const u8                                     &mut String, &mut err)
+                                       "DNSMASQ_RELAY_ADDRESS"                                     *const u8                                     &mut String, &mut err)
                 } else {
-                    my_setenv(b"DNSMASQ_RELAY_ADDRESS\x00",
+                    my_setenv("DNSMASQ_RELAY_ADDRESS",
                               if data.giaddr.s_addr !=
                                      0  {
                                   inet_ntoa(data.giaddr)
@@ -389,7 +390,7 @@ pub fn create_helper(mut event_fd: i32,
                 i = 0 ;
                 while !buf_0.is_null() {
                     sprintf(daemon.dhcp_buff2,
-                            b"DNSMASQ_USER_CLASS%i\x00"                           *const libc::c_char, i);
+                            "DNSMASQ_USER_CLASS%i"                           *const libc::c_char, i);
                     buf_0 =
                         grab_extradata(buf_0, end,
                                        daemon.dhcp_buff2,
@@ -397,29 +398,29 @@ pub fn create_helper(mut event_fd: i32,
                     i += 1
                 }
                 sprintf(daemon.dhcp_buff2,
-                        b"%u\x00" ,
+                        "%u" ,
                         data.remaining_time);
-                my_setenv(b"DNSMASQ_TIME_REMAINING\x00" ,
+                my_setenv("DNSMASQ_TIME_REMAINING" ,
                           if data.action != 1  &&
                                  data.remaining_time !=
                                      0  {
                               daemon.dhcp_buff2
                           } else { 0  }, &mut err);
-                my_setenv(b"DNSMASQ_OLD_HOSTNAME\x00" ,
+                my_setenv("DNSMASQ_OLD_HOSTNAME" ,
                           if data.action == 2  {
                               hostname
                           } else { 0  }, &mut err);
                 if data.action == 2  {
                     hostname = 0
                 }
-                my_setenv(b"DNSMASQ_LOG_DHCP\x00" ,
+                my_setenv("DNSMASQ_LOG_DHCP" ,
                           if daemon.options[(28   ).wrapping_div((::std::mem::size_of::<libc::c_uint>()  ).wrapping_mul(8                                                                         libc::c_int                                                                  ))
                                                            ] &
                                  (1) <<
                                      (28  ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                                            ).wrapping_mul(8                                     libc::c_int                              ))
                                  != 0 {
-                              b"1\x00"
+                              "1"
                           } else { 0 }, &mut err);
             }
             /* we need to have the event_fd around if exec fails */
@@ -519,14 +520,14 @@ fn grab_extradata(mut buf_0: mut Vec<u8>,
 }
 fn buff_alloc(mut size: usize) {
     if size > buf_size {
-        let mut new: *mut script_data = 0 );
+        let mut new: script_data = 0 );
         /* start with reasonable size, will almost never need extending. */
         if size <
                (::std::mem::size_of::<script_data>()).wrapping_add(200  libc::c_ulong) {
             size =
                 (::std::mem::size_of::<script_data>()        ).wrapping_add(200   libc::c_ulong)
         }
-        new = whine_malloc(size) );
+        // new = whine_malloc(size) );
         if new.is_null() { return }
         if !buf.is_null() { free(buf); }
         buf = new;
@@ -547,9 +548,9 @@ pub fn queue_script(mut action: i32,
     if daemon.dhcp.is_null() { fd = daemon.dhcp6fd }
     /* no script */
     if daemon.helperfd == -(1 ) { return }
-    if !(*lease).extradata.is_null() { ed_len = (*lease).extradata_len }
-    if !(*lease).clid.is_null() {
-        clid_len = (*lease).clid_len
+    if !lease.extradata.is_null() { ed_len = lease.extradata_len }
+    if !lease.clid.is_null() {
+        clid_len = lease.clid_len
     }
     if !hostname.is_null() {
         hostname_len =
@@ -558,34 +559,34 @@ pub fn queue_script(mut action: i32,
     }
     buff_alloc((::std::mem::size_of::<script_data>()).wrapping_add(clid_len libc::c_ulong).wrapping_add(ed_len
                                                                                                              ).wrapping_add(hostname_len                                                ));
-    (*buf).action = action;
-    (*buf).flags = (*lease).flags;
-    (*buf).vendorclass_count = (*lease).vendorclass_count;
-    (*buf).addr6 = (*lease).addr6;
-    (*buf).iaid = (*lease).iaid;
-    (*buf).hwaddr_len = (*lease).hwaddr_len;
-    (*buf).hwaddr_type = (*lease).hwaddr_type;
-    (*buf).clid_len = clid_len ;
-    (*buf).ed_len = ed_len ;
-    (*buf).hostname_len = hostname_len ;
-    (*buf).addr = (*lease).addr;
-    (*buf).giaddr = (*lease).giaddr;
-    memcpy((*buf).hwaddr.as_mut_ptr(),
-           (*lease).hwaddr.as_mut_ptr(),
+    buf.action = action;
+    buf.flags = lease.flags;
+    buf.vendorclass_count = lease.vendorclass_count;
+    buf.addr6 = lease.addr6;
+    buf.iaid = lease.iaid;
+    buf.hwaddr_len = lease.hwaddr_len;
+    buf.hwaddr_type = lease.hwaddr_type;
+    buf.clid_len = clid_len ;
+    buf.ed_len = ed_len ;
+    buf.hostname_len = hostname_len ;
+    buf.addr = lease.addr;
+    buf.giaddr = lease.giaddr;
+    memcpy(buf.hwaddr.as_mut_ptr(),
+           lease.hwaddr.as_mut_ptr(),
            16 );
-    if indextoname(fd, (*lease).last_interface, (*buf).interface.as_mut_ptr())
+    if indextoname(fd, lease.last_interface, buf.interface.as_mut_ptr())
            == 0 {
-        (*buf).interface[0  ] =
+        buf.interface[0  ] =
             0
     }
-    (*buf).expires = (*lease).expires;
-    if (*lease).expires != 0  {
-        (*buf).remaining_time =
-            difftime((*lease).expires, now)
-    } else { (*buf).remaining_time = 0  }
+    buf.expires = lease.expires;
+    if lease.expires != 0  {
+        buf.remaining_time =
+            difftime(lease.expires, now)
+    } else { buf.remaining_time = 0  }
     p = buf.offset(1  );
     if clid_len != 0  {
-        memcpy(p, (*lease).clid,
+        memcpy(p, lease.clid,
                clid_len);
         p = p.offset(clid_len )
     }
@@ -596,7 +597,7 @@ pub fn queue_script(mut action: i32,
     }
     if ed_len != 0  {
         memcpy(p,
-               (*lease).extradata,
+               lease.extradata,
                ed_len);
         p = p.offset(ed_len )
     }
@@ -609,13 +610,13 @@ pub fn queue_tftp(mut file_len: off_t, mut filename: &mut String, mut peer: &mut
     let mut filename_len: u32 = 0;
     /* no script */
     if daemon.helperfd == -(1 ) { return }
-    (*buf).action = 5 ;
-    (*buf).hostname_len = filename_len ;
-    (*buf).file_len = file_len;
-    (*buf).flags = (*peer).sa.sa_family ;
-    if (*buf).flags == 2  {
-        (*buf).addr = (*peer).in_0.sin_addr
-    } else { (*buf).addr6 = (*peer).in6.sin6_addr }
+    buf.action = 5 ;
+    buf.hostname_len = filename_len ;
+    buf.file_len = file_len;
+    buf.flags = peer.sa.sa_family ;
+    if buf.flags == 2  {
+        buf.addr = peer.in_0.sin_addr
+    } else { buf.addr6 = peer.in6.sin6_addr }
     memcpy(buf.offset(1  )        Vec<u8>, filename,
            filename_len);
     bytes_in_buf =
@@ -631,14 +632,14 @@ pub fn queue_arp(daemon: &mut DnsmasqDaemon,
     /* no script */
     if daemon.helperfd == -(1 ) { return }
     buff_alloc(::std::mem::size_of::<script_data>());
-    (*buf).action = action;
-    (*buf).hwaddr_len = maclen;
-    (*buf).hwaddr_type = 1 ;
-    (*buf).flags = family;
-    if (*buf).flags == 2  {
-        (*buf).addr = addr.addr4
-    } else { (*buf).addr6 = addr.addr6 }
-    memcpy((*buf).hwaddr.as_mut_ptr(),
+    buf.action = action;
+    buf.hwaddr_len = maclen;
+    buf.hwaddr_type = 1 ;
+    buf.flags = family;
+    if buf.flags == 2  {
+        buf.addr = addr.addr4
+    } else { buf.addr6 = addr.addr6 }
+    memcpy(buf.hwaddr.as_mut_ptr(),
            mac, maclen);
     bytes_in_buf = ::std::mem::size_of::<script_data>();
 }
@@ -655,9 +656,7 @@ pub fn helper_write() {
               bytes_in_buf);
     if rc != -(1 ) {
         if bytes_in_buf != rc  {
-            memmove(buf,
-                    buf.offset(rc ),
-                    bytes_in_buf.wrapping_sub(rc));
+            buf = buf[rc..rc+bytes_in_buf.wrapping_sub(rc)].to_string();
         }
         bytes_in_buf =
             (bytes_in_buf).wrapping_sub(rc)

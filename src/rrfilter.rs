@@ -145,9 +145,9 @@ unsafe extern "C" fn check_rrs(mut p: mut Vec<u8>,
     let mut pp: mut Vec<u8> = 0;
     i = 0;
     while i <
-              __bswap_16((*header).ancount) +
-                  __bswap_16((*header).nscount) +
-                  __bswap_16((*header).arcount) {
+              __bswap_16(header.ancount) +
+                  __bswap_16(header.nscount) +
+                  __bswap_16(header.arcount) {
         pp = p;
         p = skip_name(p, header, plen, 10);
         if p.is_null() { return 0 }
@@ -180,13 +180,13 @@ unsafe extern "C" fn check_rrs(mut p: mut Vec<u8>,
                 return 0
             }
             if class == 1 {
-                let mut d: *mut u16 = 0 ;
+                let mut d: u16 = 0 ;
                 pp = p;
                 d = rrfilter_desc(type_0);
                 while *d !=
                           -(1) {
                     if *d != 0 {
-                        pp = pp.offset(*d)
+                        pp = pp.offsetd
                     } else if check_name(&mut pp, header, plen, fixup, rrs,
                                          rr_count) == 0 {
                         return 0
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
     let mut chop_an: i32 = 0;
     let mut chop_ns: i32 = 0;
     let mut chop_ar: i32 = 0;
-    if __bswap_16((*header).qdcount) != 1 ||
+    if __bswap_16(header.qdcount) != 1 ||
            { p = skip_name(p, header, plen, 4); p.is_null() } {
         return plen
     }
@@ -248,9 +248,9 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
     chop_ar = 0;
     i = 0;
     while i <
-              __bswap_16((*header).ancount) +
-                  __bswap_16((*header).nscount) +
-                  __bswap_16((*header).arcount) {
+              __bswap_16(header.ancount) +
+                  __bswap_16(header.nscount) +
+                  __bswap_16(header.arcount) {
         let mut pstart: mut Vec<u8> = p;
         let mut type_0: i32 = 0;
         let mut class: i32 = 0;
@@ -279,14 +279,14 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
             return plen
         }
         /* Don't remove the answer. */
-        if !(i < __bswap_16((*header).ancount) &&
+        if !(i < __bswap_16(header.ancount) &&
                  type_0 == qtype && class == qclass) {
             if mode == 0 {
                 /* EDNS */
                 /* EDNS mode, remove T_OPT from additional section only */
                 if i <
-                       __bswap_16((*header).nscount) +
-                           __bswap_16((*header).ancount) ||
+                       __bswap_16(header.nscount) +
+                           __bswap_16(header.ancount) ||
                        type_0 != 41 {
                     current_block_36 = 2979737022853876585;
                 } else { current_block_36 = 10692455896603418738; }
@@ -310,12 +310,12 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
                     rr_found = rr_found + 1;
                     let ref mut fresh16 = *rrs.offset(fresh15);
                     *fresh16 = p;
-                    if i < __bswap_16((*header).ancount) {
+                    if i < __bswap_16(header.ancount) {
                         chop_an += 1
                     } else if i <
-                                  __bswap_16((*header).nscount)
+                                  __bswap_16(header.nscount)
                                       +
-                                      __bswap_16((*header).ancount)                                    libc::c_int {
+                                      __bswap_16(header.ancount)                                    libc::c_int {
                         chop_ns += 1
                     } else { chop_ar += 1 }
                 }
@@ -355,8 +355,8 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
             if i != rr_found - 1 {
                 *rrs.offset((i + 1))
             } else { (header).offset(plen) };
-        memmove(p, start,
-                end.wrapping_offset_from(start));
+        // memmove(p, start, end.wrapping_offset_from(start));
+        p = start[0..end.wrapping_offset_from(start)].to_vec();
         p =
             p.offset(end.wrapping_offset_from(start) ));
         i += 2
@@ -364,18 +364,18 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
     plen =
         p.wrapping_offset_from(header)
             ;
-    (*header).ancount =
-        __bswap_16((__bswap_16((*header).ancount) - chop_an)                 u16);
-    (*header).nscount =
-        __bswap_16((__bswap_16((*header).nscount) - chop_ns)                 u16);
-    (*header).arcount =
-        __bswap_16((__bswap_16((*header).arcount) - chop_ar)                 u16);
+    header.ancount =
+        __bswap_16((__bswap_16(header.ancount) - chop_an)                 u16);
+    header.nscount =
+        __bswap_16((__bswap_16(header.nscount) - chop_ns)                 u16);
+    header.arcount =
+        __bswap_16((__bswap_16(header.arcount) - chop_ar)                 u16);
     return plen;
 }
 /* This is used in the DNSSEC code too, hence it's exported */
 #[no_mangle]
 pub unsafe extern "C" fn rrfilter_desc(mut type_0: i32)
- -> *mut u16 {
+ -> u16 {
     /* List of RRtypes which include domains in the data.
      0 -> domain
      integer -> no. of plain bytes
@@ -422,7 +422,7 @@ pub unsafe extern "C" fn rrfilter_desc(mut type_0: i32)
          39, 0,
          -(1), 0,
          -(1)];
-    let mut p: *mut u16 = rr_desc.as_mut_ptr();
+    let mut p: u16 = rr_desc.as_mut_ptr();
     while *p != type_0 && *p != 0
           {
         loop  {
@@ -438,7 +438,7 @@ pub unsafe extern "C" fn rrfilter_desc(mut type_0: i32)
 }
 #[no_mangle]
 pub unsafe extern "C" fn expand_workspace(mut wkspc:
-                                              *mut ,
+                                              ,
                                           mut szp: ,
                                           mut new: i32)
  -> i32 {
@@ -452,11 +452,11 @@ pub unsafe extern "C" fn expand_workspace(mut wkspc:
                                                          ))
             as ;
     if p.is_null() { return 0 }
-    if old != 0 && !(*wkspc).is_null() {
+    if old != 0 && !wkspc.is_null() {
         memcpy(p, *wkspc,
                (old).wrapping_mul(::std::mem::size_of::<mut Vec<u8>>()
                                                    ));
-        free(*wkspc);
+        freewkspc;
     }
     *wkspc = p;
     *szp = new;

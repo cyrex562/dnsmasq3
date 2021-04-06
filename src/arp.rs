@@ -3,8 +3,8 @@ use crate::helper::queue_arp;
 use crate::in6_addr::In6Addr;
 use std::time;
 
-// static mut arps: *mut arp_record = 0 as *const arp_record as *mut arp_record;
-// static mut old: *mut arp_record = 0 as *const arp_record as *mut arp_record;
+// static mut arps: arp_record = 0 as *const arp_record as *mut arp_record;
+// static mut old: arp_record = 0 as *const arp_record as *mut arp_record;
 
 pub fn filter_mac<T>(
     mut family: u32,
@@ -12,7 +12,7 @@ pub fn filter_mac<T>(
     mut mac: &String,
     arps: &mut Vec<ArpRecord>,
 ) -> i32 {
-    // let mut arp: *mut arp_record = 0 as *mut arp_record;
+    // let mut arp: arp_record = 0 as *mut arp_record;
     // let mut arp: arp_record = Default::default();
     if maclen > 16 {
         return 1;

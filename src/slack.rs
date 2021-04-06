@@ -2,18 +2,18 @@ use crate::defines::{__caddr_t, C2RustUnnamed_1A, Ifmap, InPktInfo};
 
 extern "C" {
     #[no_mangle]
-    fn cache_enumerate(init: i32) -> *mut crec;
+    fn cache_enumerate(init: i32) -> crec;
 
 
     #[no_mangle]
-    fn add_resource_record(header: *mut dns_header, limit: &mut String,
+    fn add_resource_record(header: &mut dns_header, limit: &mut String,
                            truncp: , nameoffset: i32,
                            pp: , ttl: u32,
                            offset: , type_0: u16,
                            class: u16, format: &mut String,
                            _: ...) -> i32;
     #[no_mangle]
-    fn in_arpa_name_2_addr(namein: &mut String, addrp: *mut all_addr)
+    fn in_arpa_name_2_addr(namein: &mut String, addrp:  &mut all_addr)
                            -> i32;
 
 
@@ -69,8 +69,8 @@ pub struct _IO_FILE {
     pub _IO_save_base: &mut String,
     pub _IO_backup_base: &mut String,
     pub _IO_save_end: &mut String,
-    pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE,
+    pub _markers: &mut _IO_marker,
+    pub _chain: &mut _IO_FILE,
     pub _fileno: i32,
     pub _flags2: i32,
     pub _old_offset: __off_t,
@@ -79,9 +79,9 @@ pub struct _IO_FILE {
     pub _shortbuf: [libc::c_char; 1],
     pub _lock:Vec<u8>,
     pub _offset: __off64_t,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
-    pub _freeres_list: *mut _IO_FILE,
+    pub _codecvt: &mut _IO_codecvt,
+    pub _wide_data: &mut _IO_wide_data,
+    pub _freeres_list: &mut _IO_FILE,
     pub _freeres_buf:Vec<u8>,
     pub __pad5: usize,
     pub _mode: i32,
@@ -128,7 +128,7 @@ pub struct iname {
     pub name: &mut String,
     pub addr: NetAddress,
     pub used: i32,
-    pub next: *mut iname,
+    pub next: &mut iname,
 }
 
 
@@ -167,7 +167,7 @@ pub struct iname {
 
 #[inline]
 unsafe extern "C" fn stat(mut __path: *const libc::c_char,
-                          mut __statbuf: *mut stat) -> i32 {
+                          mut __statbuf: &mut stat) -> i32 {
     return __xstat(1, __path, __statbuf);
 }
 
@@ -188,14 +188,14 @@ unsafe extern "C" fn stat(mut __path: *const libc::c_char,
 
 #[inline]
 unsafe extern "C" fn getline(mut __lineptr: String,
-                             mut __n: *mut size_t, mut __stream: *mut FILE)
+                             mut __n: &mut size_t, mut __stream: &mut FILE)
                              -> __ssize_t {
     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
 }
 
 #[inline]
-unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) -> i32 {
-    return ((*__stream)._flags & 0x20 != 0)  libc::c_int;
+unsafe extern "C" fn ferror_unlocked(mut __stream: &mut FILE) -> i32 {
+    return (__stream._flags & 0x20 != 0)  libc::c_int;
 }
 
 
@@ -236,7 +236,7 @@ unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
 
 #[inline]
 unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
+                               mut endptr: &mut __gwchar_t.
                                mut base: i32) -> intmax_t {
     return __wcstol_internal(nptr, endptr, base, 0);
 }
@@ -333,7 +333,7 @@ pub struct listener {
     pub tftpfd: i32,
     pub used: i32,
     pub addr: NetAddress,
-    pub iface: *mut irec,
+    pub iface: &mut irec,
     pub next: Listener,
 }
 
@@ -375,7 +375,7 @@ pub struct listener {
 
 #[inline]
 unsafe extern "C" fn fstat64(mut __fd: i32,
-                             mut __statbuf: *mut stat64) -> i32 {
+                             mut __statbuf: &mut stat64) -> i32 {
     return __fxstat64(1, __fd, __statbuf);
 }
 
@@ -438,14 +438,14 @@ extern "C" {
     fn open(__file: *const libc::c_char, __oflag: i32, _: ...)
             -> i32;
     #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const u16;
+    fn __ctype_b_loc() -> u16;
 
 
     #[no_mangle]
-    fn time(__timer: *mut time::Instant) -> time::Instant;
+    fn time(__timer: &mut time::Instant) -> time::Instant;
     #[no_mangle]
     fn nanosleep(__requested_time: *const timespec,
-                 __remaining: *mut timespec) -> i32;
+                 __remaining:  &mut timespec)  -> i32;
     #[no_mangle]
     fn __errno_location() -> ;
 
@@ -453,13 +453,13 @@ extern "C" {
 
 
     #[no_mangle]
-    fn opendir(__name: *const libc::c_char) -> *mut DIR;
+    fn opendir(__name: *const libc::c_char) -> DIR;
     #[no_mangle]
-    fn closedir(__dirp: *mut DIR) -> i32;
+    fn closedir(__dirp:  &mut DIR)  -> i32;
     #[no_mangle]
-    fn readdir(__dirp: *mut DIR) -> *mut dirent;
+    fn readdir(__dirp:  &mut DIR)  -> dirent;
     #[no_mangle]
-    fn dirfd(__dirp: *mut DIR) -> i32;
+    fn dirfd(__dirp:  &mut DIR)  -> i32;
     #[no_mangle]
     fn die(message: &mut String, arg1: &mut String,
            exit_code: i32) -> !;
@@ -467,7 +467,7 @@ extern "C" {
     #[no_mangle]
     fn fix_fd(fd: i32) -> i32;
     #[no_mangle]
-    fn uname(__name: *mut utsname) -> i32;
+    fn uname(__name:  &mut utsname)  -> i32;
 }
 
 
@@ -572,13 +572,13 @@ extern "C" {
 
 #[inline]
 unsafe extern "C" fn fputc_unlocked(mut __c: i32,
-                                    mut __stream: *mut FILE) -> i32 {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end)  libc::c_int != 0 {
+                                    mut __stream: &mut FILE) -> i32 {
+    return if (__stream._IO_write_ptr >= __stream._IO_write_end)  libc::c_int != 0 {
         __overflow(__stream, __c)
     } else {
-        let fresh3 = (*__stream)._IO_write_ptr;
-        (*__stream)._IO_write_ptr =
-            (*__stream)._IO_write_ptr.offset(1);
+        let fresh3 = __stream._IO_write_ptr;
+        __stream._IO_write_ptr =
+            __stream._IO_write_ptr.offset(1);
         *fresh3 = __c;
         *fresh3
     };
@@ -590,7 +590,7 @@ unsafe extern "C" fn fputc_unlocked(mut __c: i32,
 #[inline]
 unsafe extern "C" fn fstatat(mut __fd: i32,
                              mut __filename: *const libc::c_char,
-                             mut __statbuf: *mut stat,
+                             mut __statbuf: &mut stat,
                              mut __flag: i32) -> i32 {
     return __fxstatat(1, __fd, __filename, __statbuf, __flag);
 }
@@ -607,7 +607,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
+    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> FILE;
 
 
     #[no_mangle]
@@ -641,7 +641,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn ungetc(__c: i32, __stream: *mut FILE) -> i32;
+    fn ungetc(__c: i32, __stream:  &mut FILE)  -> i32;
 
 
 
@@ -649,7 +649,7 @@ extern "C" {
     #[no_mangle]
     fn free(__ptr:Vec<u8>);
     #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const u16;
+    fn __ctype_b_loc() -> u16;
 
 
     #[no_mangle]
@@ -672,28 +672,28 @@ extern "C" {
                         -> i32;
 
     #[no_mangle]
-    fn blockdata_free(blocks: *mut blockdata);
+    fn blockdata_free(blocks:  &mut blockdata) ;
     #[no_mangle]
     fn read_write(fd: i32, packet: mut Vec<u8>,
                   size: i32, rw: i32) -> i32;
     #[no_mangle]
-    fn blockdata_write(block: *mut blockdata, len: usize, fd: i32);
+    fn blockdata_write(block: &mut blockdata, len: usize, fd: i32);
     #[no_mangle]
-    fn blockdata_read(fd: i32, len: usize) -> *mut blockdata;
+    fn blockdata_read(fd: i32, len: usize) -> blockdata;
     #[no_mangle]
     fn set_dynamic_inotify(flag: i32, total_size: i32,
-                           rhash: *mut *mut crec, revhashsz: i32);
+                           rhash: &mutcrec, revhashsz: i32);
     #[no_mangle]
     fn canonicalise(in_0: &mut String, nomem: )
                     -> &mut String;
     #[no_mangle]
-    fn get_domain6(addr: *mut in6_addr) -> &mut String;
+    fn get_domain6(addr:  &mut in6_addr)  -> &mut String;
     #[no_mangle]
     fn get_domain(addr: in_addr) -> &mut String;
     #[no_mangle]
-    fn expand_filelist(list: *mut hostsfile) -> *mut hostsfile;
+    fn expand_filelist(list:  &mut hostsfile)  -> hostsfile;
     #[no_mangle]
-    fn blockdata_retrieve(block: *mut blockdata, len: usize,
+    fn blockdata_retrieve(block: &mut blockdata, len: usize,
                           data:Vec<u8>) ->Vec<u8>;
 
     #[no_mangle]
@@ -792,7 +792,7 @@ pub struct irec {
     pub found: i32,
     pub label: i32,
     pub name: &mut String,
-    pub next: *mut irec,
+    pub next: &mut irec,
 }
 
 
@@ -846,7 +846,7 @@ pub struct C2RustUnnamed_101 {
 #[inline]
 unsafe extern "C" fn fstatat64(mut __fd: i32,
                                mut __filename: *const libc::c_char,
-                               mut __statbuf: *mut stat64,
+                               mut __statbuf: &mut stat64,
                                mut __flag: i32) -> i32 {
     return __fxstatat64(1, __fd, __filename, __statbuf,
                         __flag);
@@ -897,14 +897,14 @@ extern "C" {
     fn if_nametoindex(__ifname: *const libc::c_char) -> libc::c_uint;
 
     #[no_mangle]
-    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
+    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> FILE;
 
 
 
 
 
     #[no_mangle]
-    fn fgets(__s: &mut String, __n: i32, __stream: *mut FILE)
+    fn fgets(__s: &mut String, __n: i32, __stream:  &mut FILE)
              -> &mut String;
 
 
@@ -913,7 +913,7 @@ extern "C" {
     #[no_mangle]
     fn free(__ptr:Vec<u8>);
     #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const u16;
+    fn __ctype_b_loc() -> u16;
 
 
     #[no_mangle]
@@ -945,7 +945,7 @@ extern "C" {
     fn retry_send(rc: ssize_t) -> i32;
     #[no_mangle]
     fn parse_hex(in_0: &mut String, out: mut Vec<u8>,
-                 maxlen: i32, wildcard_mask: *mut libc::c_uint,
+                 maxlen: i32, wildcard_mask: &mut libc::c_uint,
                  mac_type: ) -> i32;
     #[no_mangle]
     fn wildcard_match(wildcard: *const libc::c_char,
@@ -961,12 +961,12 @@ extern "C" {
     #[no_mangle]
     fn send_from(fd: i32, nowild: i32,
                  packet: &mut String, len: usize, to: NetAddress,
-                 source: *mut all_addr, iface: u32) -> i32;
+                 source: &mut all_addr, iface: u32) -> i32;
     #[no_mangle]
     fn indextoname(fd: i32, index: i32,
                    name: &mut String) -> i32;
     #[no_mangle]
-    fn iface_check(family: i32, addr: *mut all_addr,
+    fn iface_check(family: i32, addr: &mut all_addr,
                    name: &mut String, auth: )
                    -> i32;
     #[no_mangle]
@@ -976,29 +976,29 @@ extern "C" {
     #[no_mangle]
     fn lease_update_file(now: time::Instant);
     #[no_mangle]
-    fn dhcp_reply(context: *mut dhcp_context, iface_name: &mut String,
+    fn dhcp_reply(context: &mut dhcp_context, iface_name: &mut String,
                   int_index: i32, sz: usize, now: time::Instant,
                   unicast_dest: i32, loopback: i32,
                   is_inform: , pxe: i32,
                   fallback: in_addr, recvtime: time::Instant) -> size_t;
     #[no_mangle]
-    fn lease_prune(target: *mut dhcp_lease, now: time::Instant);
+    fn lease_prune(target: &mut dhcp_lease, now: time::Instant);
     #[no_mangle]
     fn iface_enumerate(family: i32, parm:Vec<u8>,
                        callback:
                        Option<unsafe extern "C" fn() -> i32>)
                        -> i32;
     #[no_mangle]
-    fn recv_dhcp_packet(fd: i32, msg: *mut msghdr) -> ssize_t;
+    fn recv_dhcp_packet(fd: i32, msg:  &mut msghdr)  -> ssize_t;
     #[no_mangle]
-    fn match_netid(check: *mut dhcp_netid, pool: *mut dhcp_netid,
+    fn match_netid(check: &mut dhcp_netid, pool: &mut dhcp_netid,
                    tagnotneeded: i32) -> i32;
     #[no_mangle]
     fn icmp_ping(addr: in_addr) -> i32;
     #[no_mangle]
-    fn lease_find_by_addr(addr: in_addr) -> *mut dhcp_lease;
+    fn lease_find_by_addr(addr: in_addr) -> dhcp_lease;
     #[no_mangle]
-    fn lease_find_max_addr(context: *mut dhcp_context) -> in_addr;
+    fn lease_find_max_addr(context:  &mut dhcp_context)  -> in_addr;
     #[no_mangle]
     fn strip_hostname(hostname: &mut String) -> &mut String;
 }
@@ -1092,7 +1092,7 @@ pub struct arpreq {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_102 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 
@@ -1216,7 +1216,7 @@ extern "C" {
 
     #[no_mangle]
     fn nanosleep(__requested_time: *const timespec,
-                 __remaining: *mut timespec) -> i32;
+                 __remaining:  &mut timespec)  -> i32;
     #[no_mangle]
     fn __errno_location() -> ;
 
@@ -1232,9 +1232,9 @@ extern "C" {
     fn whine_malloc(size: usize) ->Vec<u8>;
 
     #[no_mangle]
-    fn addr6part(addr: *mut in6_addr) -> u64_0;
+    fn addr6part(addr:  &mut in6_addr)  -> u64_0;
     #[no_mangle]
-    fn setaddr6part(addr: *mut in6_addr, host: u64_0);
+    fn setaddr6part(addr: &mut in6_addr, host: u64_0);
     #[no_mangle]
     fn retry_send(rc: ssize_t) -> i32;
     #[no_mangle]
@@ -1252,7 +1252,7 @@ extern "C" {
     fn indextoname(fd: i32, index: i32,
                    name: &mut String) -> i32;
     #[no_mangle]
-    fn iface_check(family: i32, addr: *mut all_addr,
+    fn iface_check(family: i32, addr: &mut all_addr,
                    name: &mut String, auth: )
                    -> i32;
     #[no_mangle]
@@ -1264,14 +1264,14 @@ extern "C" {
     #[no_mangle]
     fn lease_update_dns(force: i32);
     #[no_mangle]
-    fn lease6_find_by_addr(net: *mut in6_addr, prefix: i32,
-                           addr: u64_0) -> *mut dhcp_lease;
+    fn lease6_find_by_addr(net: &mut in6_addr, prefix: i32,
+                           addr: u64_0) -> dhcp_lease;
     #[no_mangle]
-    fn lease_find_max_addr6(context: *mut dhcp_context) -> u64_0;
+    fn lease_find_max_addr6(context:  &mut dhcp_context)  -> u64_0;
     #[no_mangle]
     fn lease_update_slaac(now: time::Instant);
     #[no_mangle]
-    fn lease_prune(target: *mut dhcp_lease, now: time::Instant);
+    fn lease_prune(target: &mut dhcp_lease, now: time::Instant);
     #[no_mangle]
     fn send_alarm(event: time::Instant, now: time::Instant);
     #[no_mangle]
@@ -1282,29 +1282,29 @@ extern "C" {
     #[no_mangle]
     fn save_counter(newval: i32) -> i32;
     #[no_mangle]
-    fn dhcp6_reply(context: *mut dhcp_context, interface: i32,
-                   iface_name: &mut String, fallback: *mut in6_addr,
-                   ll_addr: *mut in6_addr, ula_addr: *mut in6_addr,
-                   sz: usize, client_addr: *mut in6_addr, now: time::Instant)
+    fn dhcp6_reply(context: &mut dhcp_context, interface: i32,
+                   iface_name: &mut String, fallback: &mut in6_addr,
+                   ll_addr: &mut in6_addr, ula_addr: &mut in6_addr,
+                   sz: usize, client_addr: &mut in6_addr, now: time::Instant)
                    -> u16;
     #[no_mangle]
-    fn relay_upstream6(relay: *mut dhcp_relay, sz: ssize_t,
-                       peer_address: *mut in6_addr, scope_id: u32_0,
+    fn relay_upstream6(relay: &mut dhcp_relay, sz: ssize_t,
+                       peer_address: &mut in6_addr, scope_id: u32_0,
                        now: time::Instant);
     #[no_mangle]
     fn relay_reply6(peer: NetAddress_in6, sz: ssize_t,
                     arrival_interface: &mut String) -> u16;
     #[no_mangle]
-    fn recv_dhcp_packet(fd: i32, msg: *mut msghdr) -> ssize_t;
+    fn recv_dhcp_packet(fd: i32, msg:  &mut msghdr)  -> ssize_t;
     #[no_mangle]
-    fn match_netid(check: *mut dhcp_netid, pool: *mut dhcp_netid,
+    fn match_netid(check: &mut dhcp_netid, pool: &mut dhcp_netid,
                    tagnotneeded: i32) -> i32;
     #[no_mangle]
     fn periodic_ra(now: time::Instant) -> time::Instant;
     #[no_mangle]
-    fn log_context(family: i32, context: *mut dhcp_context);
+    fn log_context(family: i32, context:  &mut dhcp_context) ;
     #[no_mangle]
-    fn ra_start_unsolicited(now: time::Instant, context: *mut dhcp_context);
+    fn ra_start_unsolicited(now: time::Instant, context:  &mut dhcp_context) ;
     #[no_mangle]
     fn find_mac(addr: NetAddress, mac: mut Vec<u8>,
                 lazy: i32, now: time::Instant) -> i32;
@@ -1395,7 +1395,7 @@ pub struct C2RustUnnamed_41 {
 #[repr(C)]
 pub union C2RustUnnamed_103 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -1478,11 +1478,11 @@ extern "C" {
 
 
     #[no_mangle]
-    fn addr6part(addr: *mut in6_addr) -> u64_0;
+    fn addr6part(addr:  &mut in6_addr)  -> u64_0;
 
 
     #[no_mangle]
-    fn setaddr6part(addr: *mut in6_addr, host: u64_0);
+    fn setaddr6part(addr: &mut in6_addr, host: u64_0);
 }
 
 
@@ -1585,30 +1585,30 @@ pub struct randfd {
 
 #[inline]
 unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
-                           mut __statbuf: *mut stat) -> i32 {
+                           mut __statbuf: &mut stat) -> i32 {
     return __lxstat(1, __path, __statbuf);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn is_name_synthetic(mut flags: i32,
                                            mut name: &mut String,
-                                           mut addr: *mut all_addr)
+                                           mut addr: &mut all_addr)
                                            -> i32 {
     let mut p: &mut String = 0 ;
-    let mut c: *mut cond_domain = 0 ;
+    let mut c: cond_domain = 0 ;
     let mut prot: i32 =
         if flags & (1) << 8 !=
             0 {
             10
         } else { 2 };
     let mut current_block_57: u64;
-    c = (*dnsmasq_daemon).synth_domains;
+    c = dnsmasq_daemon.synth_domains;
     while !c.is_null() {
         let mut found: i32 = 0;
         let mut tail: &mut String = 0 ;
         let mut pref: &mut String = 0 ;
         tail = name;
-        pref = (*c).prefix;
+        pref = c.prefix;
         while *tail != 0 && !pref.is_null() &&
             *pref != 0 {
             let mut c1: u32 = *pref;
@@ -1628,7 +1628,7 @@ pub unsafe extern "C" fn is_name_synthetic(mut flags: i32,
             pref = pref.offset(1)
         }
         if !(!pref.is_null() && *pref != 0) {
-            if (*c).indexed != 0 {
+            if c.indexed != 0 {
                 p = tail;
                 while *p != 0 {
                     let mut c_0: libc::c_char = *p;
@@ -1642,29 +1642,29 @@ pub unsafe extern "C" fn is_name_synthetic(mut flags: i32,
                     current_block_57 = 14916268686031723178;
                 } else {
                     *p = 0;
-                    if hostname_isequal((*c).domain,
+                    if hostname_isequal(c.domain,
                                         p.offset(1))
                         != 0 {
                         if prot == 2 {
                             let mut index: u32 =
                                 atoi(tail);
-                            if (*c).is6 == 0 &&
+                            if c.is6 == 0 &&
                                 index <=
-                                    __bswap_32((*c).end.s_addr).wrapping_sub(__bswap_32((*c).start.s_addr))
+                                    __bswap_32(c.end.s_addr).wrapping_sub(__bswap_32(c.start.s_addr))
                             {
                                 addr.addr4.s_addr =
-                                    __bswap_32(__bswap_32((*c).start.s_addr).wrapping_add(index));
+                                    __bswap_32(__bswap_32(c.start.s_addr).wrapping_add(index));
                                 found = 1
                             }
                         } else {
                             let mut index_0: u64_0 = atoll(tail) as u64_0;
-                            if (*c).is6 != 0 &&
+                            if c.is6 != 0 &&
                                 index_0 <=
-                                    addr6part(&mut (*c).end6).wrapping_sub(addr6part(&mut (*c).start6))
+                                    addr6part(&mut c.end6).wrapping_sub(addr6part(&mut c.start6))
                             {
                                 let mut start: u64_0 =
-                                    addr6part(&mut (*c).start6);
-                                addr.addr6 = (*c).start6;
+                                    addr6part(&mut c.start6);
+                                addr.addr6 = c.start6;
                                 setaddr6part(&mut addr.addr6,
                                              start.wrapping_add(index_0));
                                 found = 1
@@ -1697,10 +1697,10 @@ pub unsafe extern "C" fn is_name_synthetic(mut flags: i32,
                     *p = 0;
                     if prot == 10 &&
                         strstr(tail,
-                               b"--ffff-\x00"                              *const libc::c_char) == tail {
+                               "--ffff-"                              *const libc::c_char) == tail {
                         /* special hack for v4-mapped. */
                         memcpy(tail,
-                               b"::ffff:\x00"                              *const libc::c_char,
+                               "::ffff:"                              *const libc::c_char,
                                7);
                         p = tail.offset(7);
                         while *p != 0 {
@@ -1721,28 +1721,28 @@ pub unsafe extern "C" fn is_name_synthetic(mut flags: i32,
                             p = p.offset(1)
                         }
                     }
-                    if hostname_isequal((*c).domain,
+                    if hostname_isequal(c.domain,
                                         p.offset(1))
                         != 0 &&
                         inet_pton(prot, tail, addr) !=
                             0 {
                         if prot == 2 {
-                            if (*c).is6 == 0 &&
+                            if c.is6 == 0 &&
                                 __bswap_32(addr.addr4.s_addr) >=
-                                    __bswap_32((*c).start.s_addr) &&
+                                    __bswap_32(c.start.s_addr) &&
                                 __bswap_32(addr.addr4.s_addr) <=
-                                    __bswap_32((*c).end.s_addr) {
+                                    __bswap_32(c.end.s_addr) {
                                 found = 1
                             }
                         } else {
                             let mut addrpart: u64_0 =
                                 addr6part(&mut addr.addr6);
-                            if (*c).is6 != 0 &&
+                            if c.is6 != 0 &&
                                 is_same_net6(&mut addr.addr6,
-                                             &mut (*c).start6,
+                                             &mut c.start6,
                                              64) != 0 &&
-                                addrpart >= addr6part(&mut (*c).start6) &&
-                                addrpart <= addr6part(&mut (*c).end6) {
+                                addrpart >= addr6part(&mut c.start6) &&
+                                addrpart <= addr6part(&mut c.end6) {
                                 found = 1
                             }
                         }
@@ -1767,37 +1767,37 @@ pub unsafe extern "C" fn is_name_synthetic(mut flags: i32,
                 }
             }
         }
-        c = (*c).next
+        c = c.next
     }
     return 0;
 }
 #[no_mangle]
 pub unsafe extern "C" fn is_rev_synth(mut flag: i32,
-                                      mut addr: *mut all_addr,
+                                      mut addr: &mut all_addr,
                                       mut name: &mut String)
                                       -> i32 {
-    let mut c: *mut cond_domain = 0 ;
+    let mut c: cond_domain = 0 ;
     if flag & (1) << 7 != 0 &&
         {
             c =
                 search_domain(addr.addr4,
-                              (*dnsmasq_daemon).synth_domains);
+                              dnsmasq_daemon.synth_domains);
             !c.is_null()
         } {
         let mut p: &mut String = 0 ;
         *name = 0;
-        if (*c).indexed != 0 {
+        if c.indexed != 0 {
             let mut index: u32 =
-                __bswap_32(addr.addr4.s_addr).wrapping_sub(__bswap_32((*c).start.s_addr));
+                __bswap_32(addr.addr4.s_addr).wrapping_sub(__bswap_32(c.start.s_addr));
             snprintf(name, 1025,
-                     b"%s%u\x00" ,
-                     if !(*c).prefix.is_null() {
-                         (*c).prefix
-                     } else { b"\x00"  },
+                     "%s%u" ,
+                     if !c.prefix.is_null() {
+                         c.prefix
+                     } else { ""  },
                      index);
         } else {
-            if !(*c).prefix.is_null() {
-                strncpy(name, (*c).prefix,
+            if !c.prefix.is_null() {
+                strncpy(name, c.prefix,
                         (1025 - 46) );
             }
             inet_ntop(2,
@@ -1812,32 +1812,32 @@ pub unsafe extern "C" fn is_rev_synth(mut flag: i32,
                 p = p.offset(1)
             }
         }
-        strncat(name, b".\x00" ,
+        strncat(name, "." ,
                 1025);
-        strncat(name, (*c).domain, 1025);
+        strncat(name, c.domain, 1025);
         return 1
     }
     if flag & (1) << 8 != 0 &&
         {
             c =
                 search_domain6(&mut addr.addr6,
-                               (*dnsmasq_daemon).synth_domains);
+                               dnsmasq_daemon.synth_domains);
             !c.is_null()
         } {
         let mut p_0: &mut String = 0 ;
         *name = 0;
-        if (*c).indexed != 0 {
+        if c.indexed != 0 {
             let mut index_0: u64_0 =
-                addr6part(&mut addr.addr6).wrapping_sub(addr6part(&mut (*c).start6));
+                addr6part(&mut addr.addr6).wrapping_sub(addr6part(&mut c.start6));
             snprintf(name, 1025,
-                     b"%s%llu\x00" ,
-                     if !(*c).prefix.is_null() {
-                         (*c).prefix
-                     } else { b"\x00"  },
+                     "%s%llu" ,
+                     if !c.prefix.is_null() {
+                         c.prefix
+                     } else { ""  },
                      index_0);
         } else {
-            if !(*c).prefix.is_null() {
-                strncpy(name, (*c).prefix,
+            if !c.prefix.is_null() {
+                strncpy(name, c.prefix,
                         (1025 - 46) );
             }
             inet_ntop(10,
@@ -1846,7 +1846,7 @@ pub unsafe extern "C" fn is_rev_synth(mut flag: i32,
                       46);
             /* IPv6 presentation address can start with ":", but valid domain names
 	      cannot start with "-" so prepend a zero in that case. */
-            if (*c).prefix.is_null() && *name == ':' as i32 {
+            if c.prefix.is_null() && *name == ':' as i32 {
                 *name = '0' ;
                 inet_ntop(10,
                           &mut addr.addr6
@@ -1863,9 +1863,9 @@ pub unsafe extern "C" fn is_rev_synth(mut flag: i32,
                 p_0 = p_0.offset(1)
             }
         }
-        strncat(name, b".\x00" ,
+        strncat(name, "." ,
                 1025);
-        strncat(name, (*c).domain, 1025);
+        strncat(name, c.domain, 1025);
         return 1
     }
     return 0;
@@ -1884,7 +1884,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn gettimeofday(__tv: *mut timeval, __tz:Vec<u8>)
+    fn gettimeofday(__tv: &mut timeval, __tz:Vec<u8>)
                     -> i32;
     #[no_mangle]
     fn memcpy(_:Vec<u8>, _: *const libc::c_void, _: u32)
@@ -2117,7 +2117,7 @@ pub struct udphdr {
 
 #[inline]
 unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
-                             mut __statbuf: *mut stat64) -> i32 {
+                             mut __statbuf: &mut stat64) -> i32 {
     return __lxstat64(1, __path, __statbuf);
 }
 
@@ -2151,7 +2151,7 @@ extern "C" {
     fn find_mac(addr: NetAddress, mac: mut Vec<u8>,
                 lazy: i32, now: time::Instant) -> i32;
     #[no_mangle]
-    fn rrfilter(header: *mut dns_header, plen: usize, mode: i32)
+    fn rrfilter(header: &mut dns_header, plen: usize, mode: i32)
                 -> size_t;
 
 
@@ -2161,14 +2161,14 @@ extern "C" {
 
 
     #[no_mangle]
-    fn skip_name(ansp: mut Vec<u8>, header: *mut dns_header,
+    fn skip_name(ansp: mut Vec<u8>, header: &mut dns_header,
                  plen: usize, extrabytes: i32) -> mut Vec<u8>;
     #[no_mangle]
-    fn skip_questions(header: *mut dns_header, plen: usize)
+    fn skip_questions(header: &mut dns_header, plen: usize)
                       -> mut Vec<u8>;
     #[no_mangle]
     fn skip_section(ansp: mut Vec<u8>, count: i32,
-                    header: *mut dns_header, plen: usize)
+                    header: &mut dns_header, plen: usize)
                     -> mut Vec<u8>;
     #[no_mangle]
     fn whine_malloc(size: usize) ->Vec<u8>;
@@ -2311,7 +2311,7 @@ extern "C" {
                __len: socklen_t) -> i32;
     #[no_mangle]
     fn getpeername(__fd: i32, __addr: __NetAddress_ARG,
-                   __len: *mut socklen_t) -> i32;
+                   __len:  &mut socklen_t)  -> i32;
     #[no_mangle]
     fn sendto(__fd: i32, __buf: *const libc::c_void, __n: usize,
               __flags: i32, __addr: __CONST_NetAddress_ARG,
@@ -2319,12 +2319,12 @@ extern "C" {
     #[no_mangle]
     fn recvfrom(__fd: i32, __buf:Vec<u8>, __n: usize,
                 __flags: i32, __addr: __NetAddress_ARG,
-                __addr_len: *mut socklen_t) -> ssize_t;
+                __addr_len:  &mut socklen_t)  -> ssize_t;
     #[no_mangle]
     fn sendmsg(__fd: i32, __message: *const msghdr,
                __flags: i32) -> ssize_t;
     #[no_mangle]
-    fn recvmsg(__fd: i32, __message: *mut msghdr,
+    fn recvmsg(__fd: i32, __message: &mut msghdr,
                __flags: i32) -> ssize_t;
 
 
@@ -2364,23 +2364,23 @@ extern "C" {
     fn check_for_local_domain(name: &mut String, now: time::Instant)
                               -> i32;
     #[no_mangle]
-    fn resize_packet(header: *mut dns_header, plen: usize,
+    fn resize_packet(header: &mut dns_header, plen: usize,
                      pheader: mut Vec<u8>, hlen: usize) -> size_t;
     #[no_mangle]
-    fn answer_auth(header: *mut dns_header, limit: &mut String,
+    fn answer_auth(header: &mut dns_header, limit: &mut String,
                    qlen: usize, now: time::Instant, peer_addr: NetAddress,
                    local_query: i32, do_bit: i32,
                    have_pseudoheader: i32) -> size_t;
     #[no_mangle]
-    fn in_zone(zone: *mut auth_zone, name: &mut String,
+    fn in_zone(zone: &mut auth_zone, name: &mut String,
                cut: String) -> i32;
     #[no_mangle]
-    fn check_for_bogus_wildcard(header: *mut dns_header, qlen: usize,
+    fn check_for_bogus_wildcard(header: &mut dns_header, qlen: usize,
                                 name: &mut String,
-                                baddr: *mut bogus_addr, now: time::Instant)
+                                baddr: &mut bogus_addr, now: time::Instant)
                                 -> i32;
     #[no_mangle]
-    fn hash_questions(header: *mut dns_header, plen: usize,
+    fn hash_questions(header: &mut dns_header, plen: usize,
                       name: &mut String) -> mut Vec<u8>;
     #[no_mangle]
     fn rand16() -> u16;
@@ -2404,25 +2404,25 @@ extern "C" {
     #[no_mangle]
     fn check_log_writer(force: i32);
     #[no_mangle]
-    fn answer_request(header: *mut dns_header, limit: &mut String,
+    fn answer_request(header: &mut dns_header, limit: &mut String,
                       qlen: usize, local_addr: in_addr,
                       local_netmask: in_addr, now: time::Instant,
                       ad_reqd: i32, do_bit: i32,
                       have_pseudoheader: i32) -> size_t;
     #[no_mangle]
-    fn extract_addresses(header: *mut dns_header, qlen: usize,
+    fn extract_addresses(header: &mut dns_header, qlen: usize,
                          name: &mut String, now: time::Instant,
                          ipsets: String, is_sign: i32,
                          check_rebind: i32,
                          no_cache_dnssec: i32, secure: i32,
                          doctored: ) -> i32;
     #[no_mangle]
-    fn setup_reply(header: *mut dns_header, qlen: usize,
-                   addrp: *mut all_addr, flags: u32,
+    fn setup_reply(header: &mut dns_header, qlen: usize,
+                   addrp: &mut all_addr, flags: u32,
                    ttl: u32) -> size_t;
     #[no_mangle]
-    fn extract_request(header: *mut dns_header, qlen: usize,
-                       name: &mut String, typep: *mut u16)
+    fn extract_request(header: &mut dns_header, qlen: usize,
+                       name: &mut String, typep:  &mut u16)
                        -> libc::c_uint;
 
 
@@ -2430,19 +2430,19 @@ extern "C" {
     #[no_mangle]
     fn random_sock(family: i32) -> i32;
     #[no_mangle]
-    fn check_for_ignored_address(header: *mut dns_header, qlen: usize,
-                                 baddr: *mut bogus_addr) -> i32;
+    fn check_for_ignored_address(header: &mut dns_header, qlen: usize,
+                                 baddr:  &mut bogus_addr)  -> i32;
     #[no_mangle]
     fn enumerate_interfaces(reset: i32) -> i32;
     #[no_mangle]
     fn label_exception(index: i32, family: i32,
-                       addr: *mut all_addr) -> i32;
+                       addr:  &mut all_addr)  -> i32;
     #[no_mangle]
     fn loopback_exception(fd: i32, family: i32,
-                          addr: *mut all_addr, name: &mut String)
+                          addr: &mut all_addr, name: &mut String)
                           -> i32;
     #[no_mangle]
-    fn iface_check(family: i32, addr: *mut all_addr,
+    fn iface_check(family: i32, addr: &mut all_addr,
                    name: &mut String, auth: )
                    -> i32;
     #[no_mangle]
@@ -2456,24 +2456,24 @@ extern "C" {
     fn detect_loop(query: &mut String, type_0: i32)
                    -> i32;
     #[no_mangle]
-    fn find_pseudoheader(header: *mut dns_header, plen: usize,
-                         len: *mut size_t, p: ,
+    fn find_pseudoheader(header: &mut dns_header, plen: usize,
+                         len: &mut size_t, p: ,
                          is_sign: , is_last: )
                          -> mut Vec<u8>;
     #[no_mangle]
-    fn add_do_bit(header: *mut dns_header, plen: usize,
+    fn add_do_bit(header: &mut dns_header, plen: usize,
                   limit: mut Vec<u8>) -> size_t;
     #[no_mangle]
-    fn add_edns0_config(header: *mut dns_header, plen: usize,
+    fn add_edns0_config(header: &mut dns_header, plen: usize,
                         limit: mut Vec<u8>, source: NetAddress,
                         now: time::Instant, check_subnet: ,
                         cacheable: ) -> size_t;
 
     #[no_mangle]
-    fn rrfilter(header: *mut dns_header, plen: usize, mode: i32)
+    fn rrfilter(header: &mut dns_header, plen: usize, mode: i32)
                 -> size_t;
     #[no_mangle]
-    fn check_source(header: *mut dns_header, plen: usize,
+    fn check_source(header: &mut dns_header, plen: usize,
                     pseudoheader: mut Vec<u8>, peer: NetAddress)
                     -> i32;
     #[no_mangle]
@@ -2630,7 +2630,7 @@ pub struct C2RustUnnamed_51 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_61 {
-    pub target: *mut blockdata,
+    pub target: &mut blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -2640,7 +2640,7 @@ pub struct C2RustUnnamed_61 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_71 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: libc::c_uchar,
@@ -2649,7 +2649,7 @@ pub struct C2RustUnnamed_71 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_81 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -2665,15 +2665,15 @@ pub struct C2RustUnnamed_91 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_104 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct crec2 {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
+    pub next: &mut crec,
+    pub prev: &mut crec,
+    pub hash_next: &mut crec,
     pub addr: all_addr,
     pub ttd: time::Instant,
     pub uid: u32,
@@ -2684,7 +2684,7 @@ pub struct crec2 {
 #[repr(C)]
 pub union C2RustUnnamed_113 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -2706,8 +2706,8 @@ pub struct interface_name {
     pub name: &mut String,
     pub intr: &mut String,
     pub family: i32,
-    pub addr: *mut addrlist,
-    pub next: *mut interface_name,
+    pub addr: &mut addrlist,
+    pub next: &mut interface_name,
 }
 
 
@@ -2736,8 +2736,8 @@ pub struct dhcp_opt2 {
     pub flags: i32,
     pub u: C2RustUnnamed_12,
     pub val: mut Vec<u8>,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_opt,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_opt,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2775,13 +2775,13 @@ pub union C2RustUnnamed_131 {
 #[repr(C)]
 pub union C2RustUnnamed_141 {
     pub c: mut Vec<u8>,
-    pub p: *mut in6_pktinfo,
+    pub p: &mut in6_pktinfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_151 {
     pub c: mut Vec<u8>,
-    pub p: *mut InPktInfo,
+    pub p: &mut InPktInfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2795,7 +2795,7 @@ pub union C2RustUnnamed_161 {
 
 #[inline]
 unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
-                            mut __statbuf: *mut stat64) -> i32 {
+                            mut __statbuf: &mut stat64) -> i32 {
     return __xstat64(1, __path, __statbuf);
 }
 
@@ -2825,7 +2825,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn extract_name(header: *mut dns_header, plen: usize,
+    fn extract_name(header: &mut dns_header, plen: usize,
                     pp: , name: &mut String,
                     isExtract: i32, extrabytes: i32)
                     -> i32;
@@ -2852,13 +2852,13 @@ extern "C" {
 
 
     #[no_mangle]
-    fn fdopen(__fd: i32, __modes: *const libc::c_char) -> *mut FILE;
+    fn fdopen(__fd: i32, __modes: *const libc::c_char) -> FILE;
 
 
 
 
     #[no_mangle]
-    fn fgets(__s: &mut String, __n: i32, __stream: *mut FILE)
+    fn fgets(__s: &mut String, __n: i32, __stream:  &mut FILE)
              -> &mut String;
 
     #[no_mangle]
@@ -2868,10 +2868,10 @@ extern "C" {
 
 
     #[no_mangle]
-    fn sigemptyset(__set: *mut sigset_t) -> i32;
+    fn sigemptyset(__set:  &mut sigset_t)  -> i32;
     #[no_mangle]
     fn sigaction(__sig: i32, __act: *const sigaction,
-                 __oact: *mut sigaction) -> i32;
+                 __oact:  &mut sigaction)  -> i32;
     #[no_mangle]
     fn wait(__stat_loc: ) -> __pid_t;
     #[no_mangle]
@@ -3101,7 +3101,7 @@ pub struct sigaction {
 pub union C2RustUnnamed_105 {
     pub sa_handler: __sighandler_t,
     pub sa_sigaction: Option<unsafe extern "C" fn(_: i32,
-                                                  _: *mut siginfo_t,
+                                                  _: &mut siginfo_t,
                                                   _:Vec<u8>)
                                                   -> ()>,
 }
@@ -3130,7 +3130,7 @@ pub struct C2RustUnnamed_1199 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_1299 {
-    pub target: *mut blockdata,
+    pub target: &mut blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -3140,7 +3140,7 @@ pub struct C2RustUnnamed_1299 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_132 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: libc::c_uchar,
@@ -3149,7 +3149,7 @@ pub struct C2RustUnnamed_132 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_1499 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -3165,15 +3165,15 @@ pub struct C2RustUnnamed_159 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_16 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct crec3 {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
+    pub next: &mut crec,
+    pub prev: &mut crec,
+    pub hash_next: &mut crec,
     pub addr: all_addr,
     pub ttd: time::Instant,
     pub uid: u32,
@@ -3184,7 +3184,7 @@ pub struct crec3 {
 #[repr(C)]
 pub union C2RustUnnamed_17 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -3203,7 +3203,7 @@ pub union C2RustUnnamed_17 {
 #[repr(C)]
 pub struct name_list {
     pub name: &mut String,
-    pub next: *mut name_list,
+    pub next: &mut name_list,
 }
 
 
@@ -3235,8 +3235,8 @@ pub struct dhcp_opt3 {
     pub flags: i32,
     pub u: C2RustUnnamed_18,
     pub val: mut Vec<u8>,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_opt,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_opt,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -3326,7 +3326,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn dhcp_update_configs(configs: *mut dhcp_config);
+    fn dhcp_update_configs(configs:  &mut dhcp_config) ;
     #[no_mangle]
     fn lease_update_from_configs();
 
@@ -3338,15 +3338,15 @@ extern "C" {
 
 
     #[no_mangle]
-    fn opendir(__name: *const libc::c_char) -> *mut DIR;
+    fn opendir(__name: *const libc::c_char) -> DIR;
     #[no_mangle]
-    fn closedir(__dirp: *mut DIR) -> i32;
+    fn closedir(__dirp:  &mut DIR)  -> i32;
     #[no_mangle]
-    fn readdir(__dirp: *mut DIR) -> *mut dirent;
+    fn readdir(__dirp:  &mut DIR)  -> dirent;
 
     #[no_mangle]
     fn read_hostsfile(filename: &mut String, index: u32,
-                      cache_size: i32, rhash: *mut *mut crec,
+                      cache_size: i32, rhash: &mut crec,
                       hashsz: i32) -> i32;
     #[no_mangle]
     fn safe_malloc(size: usize) ->Vec<u8>;
@@ -3424,10 +3424,10 @@ pub type DIR = __dirstream;
 pub struct host_record {
     pub ttl: i32,
     pub flags: i32,
-    pub names: *mut name_list,
+    pub names: &mut name_list,
     pub addr: in_addr,
     pub addr6: in6_addr,
-    pub next: *mut host_record,
+    pub next: &mut host_record,
 }
 
 
@@ -3516,7 +3516,7 @@ extern "C" {
     #[no_mangle]
     fn getsockopt(__fd: i32, __level: i32,
                   __optname: i32, __optval:Vec<u8>,
-                  __optlen: *mut socklen_t) -> i32;
+                  __optlen:  &mut socklen_t)  -> i32;
     #[no_mangle]
     fn setsockopt(__fd: i32, __level: i32,
                   __optname: i32, __optval: *const libc::c_void,
@@ -3595,7 +3595,7 @@ pub type __be16 = __u16;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_39 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: libc::c_uchar,
@@ -3609,7 +3609,7 @@ pub struct C2RustUnnamed_39 {
 #[repr(C)]
 pub union C2RustUnnamed_79 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -3627,7 +3627,7 @@ pub union C2RustUnnamed_79 {
 pub struct auth_name_list {
     pub name: &mut String,
     pub flags: i32,
-    pub next: *mut auth_name_list,
+    pub next: &mut auth_name_list,
 }
 
 
@@ -3659,8 +3659,8 @@ pub struct dhcp_opt4 {
     pub flags: i32,
     pub u: C2RustUnnamed_8,
     pub val: mut Vec<u8>,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_opt,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_opt,
 }
 
 
@@ -3797,27 +3797,27 @@ extern "C" {
 
 
     #[no_mangle]
-    fn fflush(__stream: *mut FILE) -> i32;
+    fn fflush(__stream:  &mut FILE)  -> i32;
     #[no_mangle]
-    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
-
-
-    #[no_mangle]
-    fn fscanf(_: *mut FILE, _: *const libc::c_char, _: ...) -> i32;
-
-
-
+    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> FILE;
 
 
     #[no_mangle]
-    fn rewind(__stream: *mut FILE);
+    fn fscanf(_: &mut FILE, _: *const libc::c_char, _: ...) -> i32;
+
+
+
+
+
     #[no_mangle]
-    fn ferror(__stream: *mut FILE) -> i32;
+    fn rewind(__stream:  &mut FILE) ;
     #[no_mangle]
-    fn fileno(__stream: *mut FILE) -> i32;
+    fn ferror(__stream:  &mut FILE)  -> i32;
+    #[no_mangle]
+    fn fileno(__stream:  &mut FILE)  -> i32;
     #[no_mangle]
     fn popen(__command: *const libc::c_char, __modes: *const libc::c_char)
-             -> *mut FILE;
+             -> FILE;
 
 
 
@@ -3839,15 +3839,15 @@ extern "C" {
 
     #[no_mangle]
     fn cache_add_dhcp_entry(host_name: &mut String, prot: i32,
-                            host_address: *mut all_addr, ttd: time::Instant);
+                            host_address: &mut all_addr, ttd: time::Instant);
     #[no_mangle]
     fn cache_unhash_dhcp();
     #[no_mangle]
-    fn pclose(__stream: *mut FILE) -> i32;
+    fn pclose(__stream:  &mut FILE)  -> i32;
     #[no_mangle]
     fn get_domain(addr: in_addr) -> &mut String;
     #[no_mangle]
-    fn get_domain6(addr: *mut in6_addr) -> &mut String;
+    fn get_domain6(addr:  &mut in6_addr)  -> &mut String;
     #[no_mangle]
     fn safe_malloc(size: usize) ->Vec<u8>;
     #[no_mangle]
@@ -3858,10 +3858,10 @@ extern "C" {
 
 
     #[no_mangle]
-    fn addr6part(addr: *mut in6_addr) -> u64_0;
+    fn addr6part(addr:  &mut in6_addr)  -> u64_0;
     #[no_mangle]
     fn parse_hex(in_0: &mut String, out: mut Vec<u8>,
-                 maxlen: i32, wildcard_mask: *mut libc::c_uint,
+                 maxlen: i32, wildcard_mask: &mut libc::c_uint,
                  mac_type: ) -> i32;
     #[no_mangle]
     fn die(message: &mut String, arg1: &mut String,
@@ -3874,24 +3874,24 @@ extern "C" {
     #[no_mangle]
     fn periodic_ra(now: time::Instant) -> time::Instant;
     #[no_mangle]
-    fn periodic_slaac(now: time::Instant, leases_0: *mut dhcp_lease) -> time::Instant;
+    fn periodic_slaac(now: time::Instant, leases_0:  &mut dhcp_lease)  -> time::Instant;
     #[no_mangle]
-    fn slaac_add_addrs(lease: *mut dhcp_lease, now: time::Instant,
+    fn slaac_add_addrs(lease: &mut dhcp_lease, now: time::Instant,
                        force: i32);
     #[no_mangle]
-    fn slaac_ping_reply(sender: *mut in6_addr, packet: mut Vec<u8>,
+    fn slaac_ping_reply(sender: &mut in6_addr, packet: mut Vec<u8>,
                         interface: &mut String,
-                        leases_0: *mut dhcp_lease);
+                        leases_0:  &mut dhcp_lease) ;
     #[no_mangle]
     fn make_duid(now: time::Instant);
     #[no_mangle]
-    fn find_config(configs: *mut dhcp_config, context: *mut dhcp_context,
+    fn find_config(configs: &mut dhcp_config, context: &mut dhcp_context,
                    clid: mut Vec<u8>, clid_len: i32,
                    hwaddr: mut Vec<u8>, hw_len: i32,
                    hw_type: i32, hostname: &mut String,
-                   filter: *mut dhcp_netid) -> *mut dhcp_config;
+                   filter:  &mut dhcp_netid)  -> dhcp_config;
     #[no_mangle]
-    fn queue_script(action: i32, lease: *mut dhcp_lease,
+    fn queue_script(action: i32, lease: &mut dhcp_lease,
                     hostname: &mut String, now: time::Instant);
     #[no_mangle]
     fn iface_enumerate(family: i32, parm:Vec<u8>,
@@ -3943,7 +3943,7 @@ pub struct C2RustUnnamed_198 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_298 {
-    pub target: *mut blockdata,
+    pub target: &mut blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -3952,7 +3952,7 @@ pub struct C2RustUnnamed_298 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct blockdata {
-    pub next: *mut blockdata,
+    pub next: &mut blockdata,
     pub key: [libc::c_uchar; 40],
 }
 
@@ -3962,9 +3962,9 @@ pub struct blockdata {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct crec99 {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
+    pub next: &mut crec,
+    pub prev: &mut crec,
+    pub hash_next: &mut crec,
     pub addr: all_addr,
     pub ttd: time::Instant,
     pub uid: u32,
@@ -3985,10 +3985,10 @@ pub struct crec99 {
 #[repr(C)]
 pub struct auth_zone {
     pub domain: &mut String,
-    pub interface_names: *mut auth_name_list,
-    pub subnet: *mut addrlist,
-    pub exclude: *mut addrlist,
-    pub next: *mut auth_zone,
+    pub interface_names: &mut auth_name_list,
+    pub subnet: &mut addrlist,
+    pub exclude: &mut addrlist,
+    pub next: &mut auth_zone,
 }
 
 
@@ -4022,14 +4022,14 @@ pub struct dhcp_config {
     pub clid: mut Vec<u8>,
     pub hostname: &mut String,
     pub domain: &mut String,
-    pub netid: *mut dhcp_netid_list,
-    pub filter: *mut dhcp_netid,
-    pub addr6: *mut addrlist,
+    pub netid: &mut dhcp_netid_list,
+    pub filter: &mut dhcp_netid,
+    pub addr6: &mut addrlist,
     pub addr: in_addr,
     pub decline_time: time::Instant,
     pub lease_time: u32,
-    pub hwaddr: *mut hwaddr_config,
-    pub next: *mut dhcp_config,
+    pub hwaddr: &mut hwaddr_config,
+    pub next: &mut dhcp_config,
 }
 
 
@@ -4050,7 +4050,7 @@ pub struct ra_interface {
     pub lifetime: i32,
     pub prio: i32,
     pub mtu: i32,
-    pub next: *mut ra_interface,
+    pub next: &mut ra_interface,
 }
 
 extern "C" {
@@ -4059,9 +4059,9 @@ extern "C" {
 
 
     #[no_mangle]
-    static mut stderr: *mut FILE;
+    static mut stderr: FILE;
     #[no_mangle]
-    fn fprintf(_: *mut FILE, _: *const libc::c_char, _: ...) -> i32;
+    fn fprintf(_: &mut FILE, _: *const libc::c_char, _: ...) -> i32;
 
 
     #[no_mangle]
@@ -4070,7 +4070,7 @@ extern "C" {
                  -> i32;
 
     #[no_mangle]
-    fn fputc(__c: i32, __stream: *mut FILE) -> i32;
+    fn fputc(__c: i32, __stream:  &mut FILE)  -> i32;
 
 
     #[no_mangle]
@@ -4116,12 +4116,12 @@ extern "C" {
 
 
     #[no_mangle]
-    fn time(__timer: *mut time::Instant) -> time::Instant;
+    fn time(__timer: &mut time::Instant) -> time::Instant;
     #[no_mangle]
     fn ctime(__timer: *const time::Instant) -> &mut String;
     #[no_mangle]
     fn nanosleep(__requested_time: *const timespec,
-                 __remaining: *mut timespec) -> i32;
+                 __remaining:  &mut timespec)  -> i32;
     #[no_mangle]
     fn __errno_location() -> ;
 
@@ -4193,7 +4193,7 @@ pub struct passwd {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_197 {
-    pub target: *mut blockdata,
+    pub target: &mut blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -4204,7 +4204,7 @@ pub struct C2RustUnnamed_197 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_398 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -4229,7 +4229,7 @@ pub struct addrlist {
     pub flags: i32,
     pub prefixlen: i32,
     pub decline_time: time::Instant,
-    pub next: *mut addrlist,
+    pub next: &mut addrlist,
 }
 
 
@@ -4260,7 +4260,7 @@ pub struct hwaddr_config {
     pub hwaddr_type: i32,
     pub hwaddr: [libc::c_uchar; 16],
     pub wildcard_mask: u32,
-    pub next: *mut hwaddr_config,
+    pub next: &mut hwaddr_config,
 }
 
 
@@ -4283,7 +4283,7 @@ pub struct cond_domain {
     pub end6: in6_addr,
     pub is6: i32,
     pub indexed: i32,
-    pub next: *mut cond_domain,
+    pub next: &mut cond_domain,
 }
 
 
@@ -4301,7 +4301,7 @@ pub struct log_entry {
     pub offset: i32,
     pub length: i32,
     pub pid: pid_t,
-    pub next: *mut log_entry,
+    pub next: &mut log_entry,
     pub payload: [libc::c_char; 1024],
 }
 
@@ -4333,7 +4333,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const u16;
+    fn __ctype_b_loc() -> u16;
 
 
 
@@ -4348,9 +4348,9 @@ extern "C" {
     #[no_mangle]
     fn retry_send(rc: ssize_t) -> i32;
     #[no_mangle]
-    fn allocate_rfd(family: i32) -> *mut randfd;
+    fn allocate_rfd(family: i32) -> randfd;
     #[no_mangle]
-    fn free_rfd(rfd: *mut randfd);
+    fn free_rfd(rfd:  &mut randfd) ;
     #[no_mangle]
     fn check_servers();
 }
@@ -4389,7 +4389,7 @@ extern "C" {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_698 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 
@@ -4408,8 +4408,8 @@ pub struct cname {
     pub flag: i32,
     pub alias: &mut String,
     pub target: &mut String,
-    pub next: *mut cname,
-    pub targetp: *mut cname,
+    pub next: &mut cname,
+    pub targetp: &mut cname,
 }
 
 
@@ -4437,8 +4437,8 @@ pub struct cname {
 #[repr(C)]
 pub struct delay_config {
     pub delay: i32,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut delay_config,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut delay_config,
 }
 
 
@@ -4454,19 +4454,19 @@ pub struct delay_config {
 #[repr(C)]
 pub struct dhcp_bridge {
     pub iface: [libc::c_char; 16],
-    pub alias: *mut dhcp_bridge,
-    pub next: *mut dhcp_bridge,
+    pub alias: &mut dhcp_bridge,
+    pub next: &mut dhcp_bridge,
 }
 
 
 
 #[inline]
 unsafe extern "C" fn putchar_unlocked(mut __c: i32) -> i32 {
-    return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end)  libc::c_int != 0 {
+    return if (stdout._IO_write_ptr >= stdout._IO_write_end)  libc::c_int != 0 {
         __overflow(stdout, __c)
     } else {
-        let fresh5 = (*stdout)._IO_write_ptr;
-        (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
+        let fresh5 = stdout._IO_write_ptr;
+        stdout._IO_write_ptr = stdout._IO_write_ptr.offset(1);
         *fresh5 = __c;
         *fresh5
     };
@@ -4495,13 +4495,13 @@ extern "C" {
             -> i32;
     #[no_mangle]
     fn getsockname(__fd: i32, __addr: __NetAddress_ARG,
-                   __len: *mut socklen_t) -> i32;
+                   __len:  &mut socklen_t)  -> i32;
     #[no_mangle]
     fn sendto(__fd: i32, __buf: *const libc::c_void, __n: usize,
               __flags: i32, __addr: __CONST_NetAddress_ARG,
               __addr_len: socklen_t) -> ssize_t;
     #[no_mangle]
-    fn recvmsg(__fd: i32, __message: *mut msghdr,
+    fn recvmsg(__fd: i32, __message: &mut msghdr,
                __flags: i32) -> ssize_t;
     #[no_mangle]
     fn setsockopt(__fd: i32, __level: i32,
@@ -4542,7 +4542,7 @@ extern "C" {
     #[no_mangle]
     fn retry_send(rc: ssize_t) -> i32;
     #[no_mangle]
-    fn expand_buf(iov_0: *mut iovec, size: usize) -> i32;
+    fn expand_buf(iov_0: &mut iovec, size: usize) -> i32;
     #[no_mangle]
     fn die(message: &mut String, arg1: &mut String,
            exit_code: i32) -> !;
@@ -4638,7 +4638,7 @@ pub type __s32 = libc::c_int;
 pub struct ptr_record {
     pub name: &mut String,
     pub ptr: &mut String,
-    pub next: *mut ptr_record,
+    pub next: &mut ptr_record,
 }
 
 
@@ -4665,9 +4665,9 @@ pub struct ptr_record {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct tag_if {
-    pub set: *mut dhcp_netid_list,
-    pub tag: *mut dhcp_netid,
-    pub next: *mut tag_if,
+    pub set: &mut dhcp_netid_list,
+    pub tag: &mut dhcp_netid,
+    pub next: &mut tag_if,
 }
 
 
@@ -4687,7 +4687,7 @@ pub struct dhcp_mac {
     pub hwaddr_type: i32,
     pub hwaddr: [libc::c_uchar; 16],
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_mac,
+    pub next: &mut dhcp_mac,
 }
 
 
@@ -4705,22 +4705,22 @@ pub struct dhcp_mac {
 pub struct dnsmasq_daemon {
     pub options: [libc::c_uint; 2],
     pub default_resolv: resolvc,
-    pub resolv_files: *mut resolvc,
+    pub resolv_files: &mut resolvc,
     pub last_resolv: time::Instant,
     pub servers_file: &mut String,
-    pub mxnames: *mut mx_srv_record,
-    pub naptr: *mut naptr,
-    pub txt: *mut txt_record,
-    pub rr: *mut txt_record,
-    pub ptr: *mut ptr_record,
-    pub host_records: *mut host_record,
-    pub host_records_tail: *mut host_record,
-    pub cnames: *mut cname,
-    pub auth_zones: *mut auth_zone,
-    pub int_names: *mut interface_name,
+    pub mxnames: &mut mx_srv_record,
+    pub naptr: &mut naptr,
+    pub txt: &mut txt_record,
+    pub rr: &mut txt_record,
+    pub ptr: &mut ptr_record,
+    pub host_records: &mut host_record,
+    pub host_records_tail: &mut host_record,
+    pub cnames: &mut cname,
+    pub auth_zones: &mut auth_zone,
+    pub int_names: &mut interface_name,
     pub mxtarget: &mut String,
-    pub add_subnet4: *mut mysubnet,
-    pub add_subnet6: *mut mysubnet,
+    pub add_subnet4: &mut mysubnet,
+    pub add_subnet6: &mut mysubnet,
     pub lease_file: &mut String,
     pub username: &mut String,
     pub groupname: &mut String,
@@ -4728,23 +4728,23 @@ pub struct dnsmasq_daemon {
     pub luascript: &mut String,
     pub authserver: &mut String,
     pub hostmaster: &mut String,
-    pub authinterface: *mut iname,
-    pub secondary_forward_server: *mut name_list,
+    pub authinterface: &mut iname,
+    pub secondary_forward_server: &mut name_list,
     pub group_set: i32,
     pub osport: i32,
     pub domain_suffix: &mut String,
-    pub cond_domain: *mut cond_domain,
-    pub synth_domains: *mut cond_domain,
+    pub cond_domain: &mut cond_domain,
+    pub synth_domains: &mut cond_domain,
     pub runfile: &mut String,
     pub lease_change_command: &mut String,
-    pub if_names: *mut iname,
-    pub if_addrs: *mut iname,
-    pub if_except: *mut iname,
-    pub dhcp_except: *mut iname,
-    pub auth_peers: *mut iname,
-    pub tftp_interfaces: *mut iname,
-    pub bogus_addr: *mut bogus_addr,
-    pub ignore_addr: *mut bogus_addr,
+    pub if_names: &mut iname,
+    pub if_addrs: &mut iname,
+    pub if_except: &mut iname,
+    pub dhcp_except: &mut iname,
+    pub auth_peers: &mut iname,
+    pub tftp_interfaces: &mut iname,
+    pub bogus_addr: &mut bogus_addr,
+    pub ignore_addr: &mut bogus_addr,
     pub servers: Server,
     pub ipsets: IpSets,
     pub log_fac: i32,
@@ -4765,38 +4765,38 @@ pub struct dnsmasq_daemon {
     pub dhcp_ttl: u32,
     pub use_dhcp_ttl: u32,
     pub dns_client_id: &mut String,
-    pub addn_hosts: *mut hostsfile,
-    pub dhcp: *mut dhcp_context,
-    pub dhcp6: *mut dhcp_context,
-    pub ra_interfaces: *mut ra_interface,
-    pub dhcp_conf: *mut dhcp_config,
-    pub dhcp_opts: *mut dhcp_opt,
-    pub dhcp_match: *mut dhcp_opt,
-    pub dhcp_opts6: *mut dhcp_opt,
-    pub dhcp_match6: *mut dhcp_opt,
-    pub dhcp_name_match: *mut dhcp_match_name,
-    pub dhcp_pxe_vendors: *mut dhcp_pxe_vendor,
-    pub dhcp_vendors: *mut dhcp_vendor,
-    pub dhcp_macs: *mut dhcp_mac,
-    pub boot_config: *mut dhcp_boot,
-    pub pxe_services: *mut pxe_service,
-    pub tag_if: *mut tag_if,
-    pub override_relays: *mut addr_list,
-    pub relay4: *mut dhcp_relay,
-    pub relay6: *mut dhcp_relay,
-    pub delay_conf: *mut delay_config,
+    pub addn_hosts: &mut hostsfile,
+    pub dhcp: &mut dhcp_context,
+    pub dhcp6: &mut dhcp_context,
+    pub ra_interfaces: &mut ra_interface,
+    pub dhcp_conf: &mut dhcp_config,
+    pub dhcp_opts: &mut dhcp_opt,
+    pub dhcp_match: &mut dhcp_opt,
+    pub dhcp_opts6: &mut dhcp_opt,
+    pub dhcp_match6: &mut dhcp_opt,
+    pub dhcp_name_match: &mut dhcp_match_name,
+    pub dhcp_pxe_vendors: &mut dhcp_pxe_vendor,
+    pub dhcp_vendors: &mut dhcp_vendor,
+    pub dhcp_macs: &mut dhcp_mac,
+    pub boot_config: &mut dhcp_boot,
+    pub pxe_services: &mut pxe_service,
+    pub tag_if: &mut tag_if,
+    pub override_relays: &mut addr_list,
+    pub relay4: &mut dhcp_relay,
+    pub relay6: &mut dhcp_relay,
+    pub delay_conf: &mut delay_config,
     pub override_0: i32,
     pub enable_pxe: i32,
     pub doing_ra: i32,
     pub doing_dhcp6: i32,
-    pub dhcp_ignore: *mut dhcp_netid_list,
-    pub dhcp_ignore_names: *mut dhcp_netid_list,
-    pub dhcp_gen_names: *mut dhcp_netid_list,
-    pub force_broadcast: *mut dhcp_netid_list,
-    pub bootp_dynamic: *mut dhcp_netid_list,
-    pub dhcp_hosts_file: *mut hostsfile,
-    pub dhcp_opts_file: *mut hostsfile,
-    pub dynamic_dirs: *mut hostsfile,
+    pub dhcp_ignore: &mut dhcp_netid_list,
+    pub dhcp_ignore_names: &mut dhcp_netid_list,
+    pub dhcp_gen_names: &mut dhcp_netid_list,
+    pub force_broadcast: &mut dhcp_netid_list,
+    pub bootp_dynamic: &mut dhcp_netid_list,
+    pub dhcp_hosts_file: &mut hostsfile,
+    pub dhcp_opts_file: &mut hostsfile,
+    pub dynamic_dirs: &mut hostsfile,
     pub dhcp_max: i32,
     pub tftp_max: i32,
     pub tftp_mtu: i32,
@@ -4805,10 +4805,10 @@ pub struct dnsmasq_daemon {
     pub start_tftp_port: i32,
     pub end_tftp_port: i32,
     pub min_leasetime: u32,
-    pub doctors: *mut doctor,
+    pub doctors: &mut doctor,
     pub edns_pktsz: u16,
     pub tftp_prefix: &mut String,
-    pub if_prefix: *mut tftp_prefix,
+    pub if_prefix: &mut tftp_prefix,
     pub duid_enterprise: u32,
     pub duid_config_len: u32,
     pub duid_config: mut Vec<u8>,
@@ -4824,24 +4824,24 @@ pub struct dnsmasq_daemon {
     pub packet: &mut String,
     pub packet_buff_sz: i32,
     pub namebuff: &mut String,
-    pub frec_list: *mut frec,
-    pub free_frec_src: *mut frec_src,
+    pub frec_list: &mut frec,
+    pub free_frec_src: &mut frec_src,
     pub frec_src_count: i32,
     pub sfds:ServerFd,
-    pub interfaces: *mut irec,
+    pub interfaces: &mut irec,
     pub listeners: Listener,
     pub last_server: Server,
     pub forwardtime: time::Instant,
     pub forwardcount: i32,
     pub srv_save: Server,
     pub packet_len: usize,
-    pub rfd_save: *mut randfd,
+    pub rfd_save: &mut randfd,
     pub tcp_pids: [pid_t; 20],
     pub tcp_pipes: [libc::c_int; 20],
     pub pipe_to_parent: i32,
     pub randomsocks: [randfd; 64],
     pub v6pktinfo: i32,
-    pub interface_addrs: *mut addrlist,
+    pub interface_addrs: &mut addrlist,
     pub log_id: i32,
     pub log_display_id: i32,
     pub log_source_addr: NetAddress,
@@ -4855,18 +4855,18 @@ pub struct dnsmasq_daemon {
     pub dhcp_buff: &mut String,
     pub dhcp_buff2: &mut String,
     pub dhcp_buff3: &mut String,
-    pub ping_results: *mut ping_result,
-    pub lease_stream: *mut FILE,
-    pub bridges: *mut dhcp_bridge,
-    pub shared_networks: *mut shared_network,
+    pub ping_results: &mut ping_result,
+    pub lease_stream: &mut FILE,
+    pub bridges: &mut dhcp_bridge,
+    pub shared_networks: &mut shared_network,
     pub duid_len: i32,
     pub duid: mut Vec<u8>,
     pub outpacket: iovec,
     pub dhcp6fd: i32,
     pub icmp6fd: i32,
     pub dbus:Vec<u8>,
-    pub tftp_trans: *mut tftp_transfer,
-    pub tftp_done_trans: *mut tftp_transfer,
+    pub tftp_trans: &mut tftp_transfer,
+    pub tftp_done_trans: &mut tftp_transfer,
     pub addrbuff: &mut String,
     pub addrbuff2: &mut String,
     pub dumpfd: i32,
@@ -5152,15 +5152,15 @@ extern "C" {
 
 
     #[no_mangle]
-    fn fclose(__stream: *mut FILE) -> i32;
+    fn fclose(__stream:  &mut FILE)  -> i32;
     #[no_mangle]
-    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
+    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> FILE;
 
 
 
 
     #[no_mangle]
-    fn fgets(__s: &mut String, __n: i32, __stream: *mut FILE)
+    fn fgets(__s: &mut String, __n: i32, __stream:  &mut FILE)
              -> &mut String;
 
     #[no_mangle]
@@ -5172,7 +5172,7 @@ extern "C" {
     #[no_mangle]
     fn getsockopt(__fd: i32, __level: i32,
                   __optname: i32, __optval:Vec<u8>,
-                  __optlen: *mut socklen_t) -> i32;
+                  __optlen:  &mut socklen_t)  -> i32;
     #[no_mangle]
     fn setsockopt(__fd: i32, __level: i32,
                   __optname: i32, __optval: *const libc::c_void,
@@ -5393,7 +5393,7 @@ pub struct C2RustUnnamed_44 {
 #[repr(C)]
 pub union C2RustUnnamed_106 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -5409,7 +5409,7 @@ pub struct txt_record {
     pub class: u16,
     pub len: u16,
     pub stat: i32,
-    pub next: *mut txt_record,
+    pub next: &mut txt_record,
 }
 
 
@@ -5436,8 +5436,8 @@ pub struct txt_record {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dhcp_netid_list {
-    pub list: *mut dhcp_netid,
-    pub next: *mut dhcp_netid_list,
+    pub list: &mut dhcp_netid,
+    pub next: &mut dhcp_netid_list,
 }
 
 
@@ -5453,7 +5453,7 @@ pub struct dhcp_netid_list {
 #[repr(C)]
 pub struct dhcp_pxe_vendor {
     pub data: &mut String,
-    pub next: *mut dhcp_pxe_vendor,
+    pub next: &mut dhcp_pxe_vendor,
 }
 
 
@@ -5473,27 +5473,27 @@ pub struct dhcp_relay {
     pub server: all_addr,
     pub interface: &mut String,
     pub iface_index: i32,
-    pub current: *mut dhcp_relay,
-    pub next: *mut dhcp_relay,
+    pub current: &mut dhcp_relay,
+    pub next: &mut dhcp_relay,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct iface_param {
-    pub spare: *mut addrlist,
+    pub spare: &mut addrlist,
     pub fd: i32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_128 {
     pub c: mut Vec<u8>,
-    pub p: *mut in6_pktinfo,
+    pub p: &mut in6_pktinfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_134 {
     pub c: mut Vec<u8>,
-    pub p: *mut InPktInfo,
+    pub p: &mut InPktInfo,
 }
 
 
@@ -5544,7 +5544,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn expand_buf(iov: *mut iovec, size: usize) -> i32;
+    fn expand_buf(iov: &mut iovec, size: usize) -> i32;
 }
 
 
@@ -5588,7 +5588,7 @@ pub struct C2RustUnnamed_099 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_296 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: libc::c_uchar,
@@ -5605,15 +5605,15 @@ pub struct C2RustUnnamed_45 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_598 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct crec98 {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
+    pub next: &mut crec,
+    pub prev: &mut crec,
+    pub hash_next: &mut crec,
     pub addr: all_addr,
     pub ttd: time::Instant,
     pub uid: u32,
@@ -5624,7 +5624,7 @@ pub struct crec98 {
 #[repr(C)]
 pub union C2RustUnnamed_697 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -5641,7 +5641,7 @@ pub struct naptr {
     pub flags: &mut String,
     pub order: u32,
     pub pref: u32,
-    pub next: *mut naptr,
+    pub next: &mut naptr,
 }
 
 
@@ -5669,7 +5669,7 @@ pub struct naptr {
 #[repr(C)]
 pub struct dhcp_netid {
     pub net: &mut String,
-    pub next: *mut dhcp_netid,
+    pub next: &mut dhcp_netid,
 }
 
 
@@ -5684,8 +5684,8 @@ pub struct dhcp_opt99 {
     pub flags: i32,
     pub u: C2RustUnnamed_7,
     pub val: mut Vec<u8>,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_opt,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_opt,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -5705,7 +5705,7 @@ pub struct dhcp_vendor {
     pub enterprise: u32,
     pub data: &mut String,
     pub netid: dhcp_netid,
-    pub next: *mut dhcp_vendor,
+    pub next: &mut dhcp_vendor,
 }
 
 
@@ -5724,7 +5724,7 @@ pub struct tftp_prefix {
     pub interface: &mut String,
     pub prefix: &mut String,
     pub missing: i32,
-    pub next: *mut tftp_prefix,
+    pub next: &mut tftp_prefix,
 }
 
 
@@ -5748,8 +5748,8 @@ pub struct tftp_prefix {
 
 
 #[inline]
-unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) -> i32 {
-    return ((*__stream)._flags & 0x10 != 0)  libc::c_int;
+unsafe extern "C" fn feof_unlocked(mut __stream: &mut FILE) -> i32 {
+    return (__stream._flags & 0x10 != 0)  libc::c_int;
 }
 
 #[inline]
@@ -5787,7 +5787,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn poll(__fds: *mut pollfd, __nfds: nfds_t, __timeout: i32)
+    fn poll(__fds: &mut pollfd, __nfds: nfds_t, __timeout: i32)
             -> i32;
     #[no_mangle]
     fn memcpy(_:Vec<u8>, _: *const libc::c_void, _: u32)
@@ -5856,13 +5856,13 @@ unsafe extern "C" fn putchar(mut __c: i32) -> i32 {
 
 #[inline]
 unsafe extern "C" fn putc_unlocked(mut __c: i32,
-                                   mut __stream: *mut FILE) -> i32 {
-    return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end)  libc::c_int != 0 {
+                                   mut __stream: &mut FILE) -> i32 {
+    return if (__stream._IO_write_ptr >= __stream._IO_write_end)  libc::c_int != 0 {
         __overflow(__stream, __c)
     } else {
-        let fresh4 = (*__stream)._IO_write_ptr;
-        (*__stream)._IO_write_ptr =
-            (*__stream)._IO_write_ptr.offset(1);
+        let fresh4 = __stream._IO_write_ptr;
+        __stream._IO_write_ptr =
+            __stream._IO_write_ptr.offset(1);
         *fresh4 = __c;
         *fresh4
     };
@@ -5880,13 +5880,13 @@ extern "C" {
 
 
     #[no_mangle]
-    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
+    fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> FILE;
 
 
 
 
     #[no_mangle]
-    fn fgets(__s: &mut String, __n: i32, __stream: *mut FILE)
+    fn fgets(__s: &mut String, __n: i32, __stream:  &mut FILE)
              -> &mut String;
 
     #[no_mangle]
@@ -5932,13 +5932,13 @@ extern "C" {
     fn whine_malloc(size: usize) ->Vec<u8>;
 
     #[no_mangle]
-    fn addr6part(addr: *mut in6_addr) -> u64_0;
+    fn addr6part(addr:  &mut in6_addr)  -> u64_0;
     #[no_mangle]
-    fn setaddr6part(addr: *mut in6_addr, host: u64_0);
+    fn setaddr6part(addr: &mut in6_addr, host: u64_0);
     #[no_mangle]
     fn retry_send(rc: ssize_t) -> i32;
     #[no_mangle]
-    fn expand_buf(iov: *mut iovec, size: usize) -> i32;
+    fn expand_buf(iov: &mut iovec, size: usize) -> i32;
     #[no_mangle]
     fn print_mac(buff: &mut String, mac: mut Vec<u8>,
                  len: i32) -> &mut String;
@@ -5957,7 +5957,7 @@ extern "C" {
     fn indextoname(fd: i32, index: i32,
                    name: &mut String) -> i32;
     #[no_mangle]
-    fn iface_check(family: i32, addr: *mut all_addr,
+    fn iface_check(family: i32, addr: &mut all_addr,
                    name: &mut String, auth: )
                    -> i32;
     #[no_mangle]
@@ -5965,7 +5965,7 @@ extern "C" {
     #[no_mangle]
     fn set_ipv6pktinfo(fd: i32) -> i32;
     #[no_mangle]
-    fn lease_ping_reply(sender: *mut in6_addr, packet: mut Vec<u8>,
+    fn lease_ping_reply(sender: &mut in6_addr, packet: mut Vec<u8>,
                         interface: &mut String);
     #[no_mangle]
     fn iface_enumerate(family: i32, parm:Vec<u8>,
@@ -5973,10 +5973,10 @@ extern "C" {
                        Option<unsafe extern "C" fn() -> i32>)
                        -> i32;
     #[no_mangle]
-    fn recv_dhcp_packet(fd: i32, msg: *mut msghdr) -> ssize_t;
+    fn recv_dhcp_packet(fd: i32, msg:  &mut msghdr)  -> ssize_t;
     #[no_mangle]
-    fn option_filter(tags: *mut dhcp_netid, context_tags: *mut dhcp_netid,
-                     opts: *mut dhcp_opt) -> *mut dhcp_netid;
+    fn option_filter(tags: &mut dhcp_netid, context_tags: &mut dhcp_netid,
+                     opts:  &mut dhcp_opt)  -> dhcp_netid;
     #[no_mangle]
     fn reset_counter();
     #[no_mangle]
@@ -5998,7 +5998,7 @@ extern "C" {
     #[no_mangle]
     fn getsockopt(__fd: i32, __level: i32,
                   __optname: i32, __optval:Vec<u8>,
-                  __optlen: *mut socklen_t) -> i32;
+                  __optlen:  &mut socklen_t)  -> i32;
     #[no_mangle]
     fn sendto(__fd: i32, __buf: *const libc::c_void, __n: usize,
               __flags: i32, __addr: __CONST_NetAddress_ARG,
@@ -6093,7 +6093,7 @@ pub struct mx_srv_record {
     pub priority: i32,
     pub weight: i32,
     pub offset: u32,
-    pub next: *mut mx_srv_record,
+    pub next: &mut mx_srv_record,
 }
 
 
@@ -6126,7 +6126,7 @@ pub struct frec_src {
     pub log_id: u32,
     pub fd: i32,
     pub orig_id: u16,
-    pub next: *mut frec_src,
+    pub next: &mut frec_src,
 }
 
 
@@ -6147,8 +6147,8 @@ pub struct pxe_service {
     pub basename: &mut String,
     pub sname: &mut String,
     pub server: in_addr,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut pxe_service,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut pxe_service,
 }
 
 
@@ -6165,7 +6165,7 @@ pub struct pxe_service {
 #[repr(C)]
 pub struct addr_list {
     pub addr: in_addr,
-    pub next: *mut addr_list,
+    pub next: &mut addr_list,
 }
 
 
@@ -6209,7 +6209,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const u16;
+    fn __ctype_b_loc() -> u16;
 
 
 
@@ -6218,10 +6218,10 @@ extern "C" {
 
 
     #[no_mangle]
-    fn next_uid(crecp: *mut crec);
-    #[no_mangle]
-    fn log_query(flags: u32, name: &mut String,
-                 addr: *mut all_addr, arg: &mut String);
+    fn next_uid(crecp:  &mut crec) ;
+    // #[no_mangle]
+    // fn log_query(flags: u32, name: &mut String,
+    //              addr: &mut all_addr, arg: &mut String);
     #[no_mangle]
     fn record_source(index: u32) -> &mut String;
     #[no_mangle]
@@ -6231,36 +6231,36 @@ extern "C" {
     fn cache_find_non_terminal(name: &mut String, now: time::Instant)
                                -> i32;
     #[no_mangle]
-    fn cache_find_by_addr(crecp: *mut crec, addr: *mut all_addr, now: time::Instant,
-                          prot: u32) -> *mut crec;
+    fn cache_find_by_addr(crecp: &mut crec, addr: &mut all_addr, now: time::Instant,
+                          prot: u32) -> crec;
     #[no_mangle]
-    fn cache_find_by_name(crecp: *mut crec, name: &mut String,
-                          now: time::Instant, prot: u32) -> *mut crec;
+    fn cache_find_by_name(crecp: &mut crec, name: &mut String,
+                          now: time::Instant, prot: u32) -> crec;
     #[no_mangle]
     fn cache_end_insert();
     #[no_mangle]
     fn cache_start_insert();
     #[no_mangle]
-    fn cache_insert(name: &mut String, addr: *mut all_addr,
+    fn cache_insert(name: &mut String, addr: &mut all_addr,
                     class: u16, now: time::Instant, ttl: u32,
-                    flags: u32) -> *mut crec;
+                    flags: u32) -> crec;
     #[no_mangle]
-    fn cache_make_stat(t: *mut txt_record) -> i32;
+    fn cache_make_stat(t:  &mut txt_record)  -> i32;
     #[no_mangle]
-    fn cache_get_name(crecp: *mut crec) -> &mut String;
+    fn cache_get_name(crecp:  &mut crec)  -> &mut String;
     #[no_mangle]
-    fn cache_get_cname_target(crecp: *mut crec) -> &mut String;
+    fn cache_get_cname_target(crecp:  &mut crec)  -> &mut String;
     #[no_mangle]
     fn blockdata_alloc(data: &mut String, len: usize)
-                       -> *mut blockdata;
+                       -> blockdata;
     #[no_mangle]
-    fn blockdata_retrieve(block: *mut blockdata, len: usize,
+    fn blockdata_retrieve(block: &mut blockdata, len: usize,
                           data:Vec<u8>) ->Vec<u8>;
     #[no_mangle]
     fn is_name_synthetic(flags: i32, name: &mut String,
-                         addr: *mut all_addr) -> i32;
+                         addr:  &mut all_addr)  -> i32;
     #[no_mangle]
-    fn is_rev_synth(flag: i32, addr: *mut all_addr,
+    fn is_rev_synth(flag: i32, addr: &mut all_addr,
                     name: &mut String) -> i32;
     #[no_mangle]
     fn do_rfc1035_name(p: mut Vec<u8>, sval: &mut String,
@@ -6273,7 +6273,7 @@ extern "C" {
                     flags: i32, remove: i32) -> i32;
 
     #[no_mangle]
-    fn add_pseudoheader(header: *mut dns_header, plen: usize,
+    fn add_pseudoheader(header: &mut dns_header, plen: usize,
                         limit: mut Vec<u8>, udp_sz: u16,
                         optno: i32, opt: mut Vec<u8>,
                         optlen: usize, set_do: i32,
@@ -6357,7 +6357,7 @@ pub struct doctor {
     pub end: in_addr,
     pub out: in_addr,
     pub mask: in_addr,
-    pub next: *mut doctor,
+    pub next: &mut doctor,
 }
 
 
@@ -6386,14 +6386,14 @@ pub struct doctor {
 pub struct frec {
     pub frec_src: frec_src,
     pub sentto: Server,
-    pub rfd4: *mut randfd,
-    pub rfd6: *mut randfd,
+    pub rfd4: &mut randfd,
+    pub rfd6: &mut randfd,
     pub new_id: u16,
     pub forwardall: i32,
     pub flags: i32,
     pub time: time::Instant,
     pub hash: [mut Vec<u8>; 32],
-    pub next: *mut frec,
+    pub next: &mut frec,
 }
 
 
@@ -6410,8 +6410,8 @@ pub struct frec {
 pub struct dhcp_match_name {
     pub name: &mut String,
     pub wildcard: i32,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_match_name,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_match_name,
 }
 
 
@@ -6441,8 +6441,8 @@ pub struct tftp_transfer {
     pub opt_transize: libc::c_char,
     pub netascii: libc::c_char,
     pub carrylf: libc::c_char,
-    pub file: *mut tftp_file,
-    pub next: *mut tftp_transfer,
+    pub file: &mut tftp_file,
+    pub next: &mut tftp_transfer,
 }
 
 
@@ -6496,7 +6496,7 @@ fn prettyprint_time(buf: &mut String, t: u32);
 fn memcmp_masked(a: mut Vec<u8>, b: mut Vec<u8>,
                  len: i32, mask: u32) -> i32;
 #[no_mangle]
-fn expand_buf(iov: *mut iovec, size: usize) -> i32;
+fn expand_buf(iov: &mut iovec, size: usize) -> i32;
 #[no_mangle]
 fn print_mac(buff: &mut String, mac: mut Vec<u8>,
              len: i32) -> &mut String;
@@ -6510,64 +6510,64 @@ fn option_string(prot: i32, opt: u32,
 #[no_mangle]
 fn enumerate_interfaces(reset: i32) -> i32;
 #[no_mangle]
-fn address_available(context: *mut dhcp_context, taddr: in_addr,
-                     netids: *mut dhcp_netid) -> *mut dhcp_context;
+fn address_available(context: &mut dhcp_context, taddr: in_addr,
+                     netids:  &mut dhcp_netid)  -> dhcp_context;
 #[no_mangle]
-fn narrow_context(context: *mut dhcp_context, taddr: in_addr,
-                  netids: *mut dhcp_netid) -> *mut dhcp_context;
+fn narrow_context(context: &mut dhcp_context, taddr: in_addr,
+                  netids:  &mut dhcp_netid)  -> dhcp_context;
 #[no_mangle]
 fn do_icmp_ping(now: time::Instant, addr: in_addr, hash: u32,
-                loopback: i32) -> *mut ping_result;
+                loopback: i32) -> ping_result;
 #[no_mangle]
-fn address_allocate(context: *mut dhcp_context, addrp: *mut in_addr,
+fn address_allocate(context: &mut dhcp_context, addrp: &mut in_addr,
                     hwaddr: mut Vec<u8>, hw_len: i32,
-                    netids: *mut dhcp_netid, now: time::Instant,
+                    netids: &mut dhcp_netid, now: time::Instant,
                     loopback: i32) -> i32;
 #[no_mangle]
-fn config_find_by_address(configs: *mut dhcp_config, addr: in_addr)
-                          -> *mut dhcp_config;
+fn config_find_by_address(configs: &mut dhcp_config, addr: in_addr)
+                          -> dhcp_config;
 #[no_mangle]
 fn host_from_dns(addr: in_addr) -> &mut String;
 #[no_mangle]
-fn lease4_allocate(addr: in_addr) -> *mut dhcp_lease;
+fn lease4_allocate(addr: in_addr) -> dhcp_lease;
 #[no_mangle]
-fn lease_set_hwaddr(lease: *mut dhcp_lease, hwaddr: *const libc::c_uchar,
+fn lease_set_hwaddr(lease: &mut dhcp_lease, hwaddr: *const libc::c_uchar,
                     clid: *const libc::c_uchar, hw_len: i32,
                     hw_type: i32, clid_len: i32,
                     now: time::Instant, force: i32);
 #[no_mangle]
-fn lease_set_hostname(lease: *mut dhcp_lease, name: *const libc::c_char,
+fn lease_set_hostname(lease: &mut dhcp_lease, name: *const libc::c_char,
                       auth: i32, domain: &mut String,
                       config_domain: &mut String);
 #[no_mangle]
-fn lease_set_expires(lease: *mut dhcp_lease, len: u32,
+fn lease_set_expires(lease: &mut dhcp_lease, len: u32,
                      now: time::Instant);
 #[no_mangle]
-fn lease_set_interface(lease: *mut dhcp_lease, interface: i32,
+fn lease_set_interface(lease: &mut dhcp_lease, interface: i32,
                        now: time::Instant);
 #[no_mangle]
 fn lease_find_by_client(hwaddr: mut Vec<u8>, hw_len: i32,
                         hw_type: i32, clid: mut Vec<u8>,
-                        clid_len: i32) -> *mut dhcp_lease;
+                        clid_len: i32) -> dhcp_lease;
 #[no_mangle]
-fn lease_find_by_addr(addr: in_addr) -> *mut dhcp_lease;
+fn lease_find_by_addr(addr: in_addr) -> dhcp_lease;
 #[no_mangle]
-fn lease_prune(target: *mut dhcp_lease, now: time::Instant);
+fn lease_prune(target: &mut dhcp_lease, now: time::Instant);
 #[no_mangle]
-fn lease_add_extradata(lease: *mut dhcp_lease, data: mut Vec<u8>,
+fn lease_add_extradata(lease: &mut dhcp_lease, data: mut Vec<u8>,
                        len: u32, delim: i32);
 #[no_mangle]
-fn match_netid(check: *mut dhcp_netid, pool: *mut dhcp_netid,
+fn match_netid(check: &mut dhcp_netid, pool: &mut dhcp_netid,
                tagnotneeded: i32) -> i32;
 #[no_mangle]
-fn option_filter(tags: *mut dhcp_netid, context_tags: *mut dhcp_netid,
-                 opts: *mut dhcp_opt) -> *mut dhcp_netid;
+fn option_filter(tags: &mut dhcp_netid, context_tags: &mut dhcp_netid,
+                 opts:  &mut dhcp_opt)  -> dhcp_netid;
 #[no_mangle]
-fn log_tags(netid: *mut dhcp_netid, xid: u32_0);
+fn log_tags(netid: &mut dhcp_netid, xid: u32_0);
 #[no_mangle]
-fn run_tag_if(tags: *mut dhcp_netid) -> *mut dhcp_netid;
+fn run_tag_if(tags:  &mut dhcp_netid)  -> dhcp_netid;
 #[no_mangle]
-fn config_has_mac(config: *mut dhcp_config, hwaddr: mut Vec<u8>,
+fn config_has_mac(config: &mut dhcp_config, hwaddr: mut Vec<u8>,
                   len: i32, type_0: i32) -> i32;
 #[no_mangle]
 fn delay_dhcp(start: time::Instant, sec: i32, fd: i32,
@@ -6576,15 +6576,15 @@ fn delay_dhcp(start: time::Instant, sec: i32, fd: i32,
 fn strtod(_: *const libc::c_char, _: String)
           -> libc::c_double;
 #[no_mangle]
-fn find_config(configs: *mut dhcp_config, context: *mut dhcp_context,
+fn find_config(configs: &mut dhcp_config, context: &mut dhcp_context,
                clid: mut Vec<u8>, clid_len: i32,
                hwaddr: mut Vec<u8>, hw_len: i32,
                hw_type: i32, hostname: &mut String,
-               filter: *mut dhcp_netid) -> *mut dhcp_config;
+               filter:  &mut dhcp_netid)  -> dhcp_config;
 #[no_mangle]
 fn strip_hostname(hostname: &mut String) -> &mut String;
 #[no_mangle]
-fn match_bytes(o: *mut dhcp_opt, p: mut Vec<u8>, len: i32)
+fn match_bytes(o: &mut dhcp_opt, p: mut Vec<u8>, len: i32)
                -> i32;
 #[no_mangle]
 fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i32;
@@ -6672,7 +6672,7 @@ pub struct C2RustUnnamed_295 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_395 {
-    pub target: *mut blockdata,
+    pub target: &mut blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -6682,7 +6682,7 @@ pub struct C2RustUnnamed_395 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_46 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: libc::c_uchar,
@@ -6691,7 +6691,7 @@ pub struct C2RustUnnamed_46 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_595 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -6707,15 +6707,15 @@ pub struct C2RustUnnamed_695 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_795 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct crec95 {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
+    pub next: &mut crec,
+    pub prev: &mut crec,
+    pub hash_next: &mut crec,
     pub addr: all_addr,
     pub ttd: time::Instant,
     pub uid: u32,
@@ -6726,7 +6726,7 @@ pub struct crec95 {
 #[repr(C)]
 pub union C2RustUnnamed_895 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -6734,7 +6734,7 @@ pub union C2RustUnnamed_895 {
 #[repr(C)]
 pub struct bogus_addr {
     pub addr: in_addr,
-    pub next: *mut bogus_addr,
+    pub next: &mut bogus_addr,
 }
 
 
@@ -6761,7 +6761,7 @@ pub struct bogus_addr {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct hostsfile {
-    pub next: *mut hostsfile,
+    pub next: &mut hostsfile,
     pub flags: i32,
     pub fname: &mut String,
     pub wd: i32,
@@ -6785,8 +6785,8 @@ pub struct dhcp_opt96 {
     pub flags: i32,
     pub u: C2RustUnnamed_9,
     pub val: mut Vec<u8>,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_opt,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_opt,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -6802,8 +6802,8 @@ pub struct dhcp_boot {
     pub sname: &mut String,
     pub tftp_sname: &mut String,
     pub next_server: in_addr,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_boot,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_boot,
 }
 
 
@@ -6878,28 +6878,28 @@ extern "C" {
     #[no_mangle]
     fn reset_counter();
     #[no_mangle]
-    fn match_bytes(o: *mut dhcp_opt, p: mut Vec<u8>, len: i32)
+    fn match_bytes(o: &mut dhcp_opt, p: mut Vec<u8>, len: i32)
                    -> i32;
     #[no_mangle]
     fn strip_hostname(hostname: &mut String) -> &mut String;
     #[no_mangle]
-    fn find_config(configs: *mut dhcp_config, context: *mut dhcp_context,
+    fn find_config(configs: &mut dhcp_config, context: &mut dhcp_context,
                    clid: mut Vec<u8>, clid_len: i32,
                    hwaddr: mut Vec<u8>, hw_len: i32,
                    hw_type: i32, hostname: &mut String,
-                   filter: *mut dhcp_netid) -> *mut dhcp_config;
+                   filter:  &mut dhcp_netid)  -> dhcp_config;
     #[no_mangle]
     fn put_opt6_char(val: u32);
     #[no_mangle]
-    fn run_tag_if(tags: *mut dhcp_netid) -> *mut dhcp_netid;
+    fn run_tag_if(tags:  &mut dhcp_netid)  -> dhcp_netid;
     #[no_mangle]
-    fn match_netid(check: *mut dhcp_netid, pool: *mut dhcp_netid,
+    fn match_netid(check: &mut dhcp_netid, pool: &mut dhcp_netid,
                    tagnotneeded: i32) -> i32;
     #[no_mangle]
     fn expand(headroom: usize) ->Vec<u8>;
     #[no_mangle]
-    fn option_filter(tags: *mut dhcp_netid, context_tags: *mut dhcp_netid,
-                     opts: *mut dhcp_opt) -> *mut dhcp_netid;
+    fn option_filter(tags: &mut dhcp_netid, context_tags: &mut dhcp_netid,
+                     opts:  &mut dhcp_opt)  -> dhcp_netid;
     #[no_mangle]
     fn put_opt6_long(val: u32);
     #[no_mangle]
@@ -6907,7 +6907,7 @@ extern "C" {
     #[no_mangle]
     fn put_opt6_string(s: &mut String);
     #[no_mangle]
-    fn log_tags(netid: *mut dhcp_netid, xid: u32_0);
+    fn log_tags(netid: &mut dhcp_netid, xid: u32_0);
     #[no_mangle]
     fn save_counter(newval: i32) -> i32;
     #[no_mangle]
@@ -6926,7 +6926,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn get_domain6(addr: *mut in6_addr) -> &mut String;
+    fn get_domain6(addr:  &mut in6_addr)  -> &mut String;
     #[no_mangle]
     fn rand16() -> u16;
     #[no_mangle]
@@ -6938,12 +6938,12 @@ extern "C" {
     fn hostname_isequal(a: *const libc::c_char, b: *const libc::c_char)
                         -> i32;
     #[no_mangle]
-    fn is_same_net6(a: *mut in6_addr, b: *mut in6_addr,
+    fn is_same_net6(a: &mut in6_addr, b: &mut in6_addr,
                     prefixlen: i32) -> i32;
     #[no_mangle]
-    fn addr6part(addr: *mut in6_addr) -> u64_0;
+    fn addr6part(addr:  &mut in6_addr)  -> u64_0;
     #[no_mangle]
-    fn setaddr6part(addr: *mut in6_addr, host: u64_0);
+    fn setaddr6part(addr: &mut in6_addr, host: u64_0);
     #[no_mangle]
     fn prettyprint_time(buf: &mut String, t: u32);
     #[no_mangle]
@@ -6964,63 +6964,63 @@ extern "C" {
     #[no_mangle]
     fn send_from(fd: i32, nowild: i32,
                  packet: &mut String, len: usize, to: NetAddress,
-                 source: *mut all_addr, iface: u32) -> i32;
+                 source: &mut all_addr, iface: u32) -> i32;
     #[no_mangle]
-    fn lease6_allocate(addrp: *mut in6_addr, lease_type: i32)
-                       -> *mut dhcp_lease;
+    fn lease6_allocate(addrp: &mut in6_addr, lease_type: i32)
+                       -> dhcp_lease;
     #[no_mangle]
     fn lease6_find(clid: mut Vec<u8>, clid_len: i32,
                    lease_type: i32, iaid: u32,
-                   addr: *mut in6_addr) -> *mut dhcp_lease;
+                   addr:  &mut in6_addr)  -> dhcp_lease;
     #[no_mangle]
     fn lease6_reset();
     #[no_mangle]
-    fn lease6_find_by_client(first: *mut dhcp_lease, lease_type: i32,
+    fn lease6_find_by_client(first: &mut dhcp_lease, lease_type: i32,
                              clid: mut Vec<u8>, clid_len: i32,
-                             iaid: u32) -> *mut dhcp_lease;
+                             iaid: u32) -> dhcp_lease;
     #[no_mangle]
-    fn lease6_find_by_addr(net: *mut in6_addr, prefix: i32,
-                           addr: u64_0) -> *mut dhcp_lease;
+    fn lease6_find_by_addr(net: &mut in6_addr, prefix: i32,
+                           addr: u64_0) -> dhcp_lease;
     #[no_mangle]
-    fn lease_set_iaid(lease: *mut dhcp_lease, iaid: u32);
+    fn lease_set_iaid(lease: &mut dhcp_lease, iaid: u32);
     #[no_mangle]
-    fn lease_set_hwaddr(lease: *mut dhcp_lease, hwaddr: *const libc::c_uchar,
+    fn lease_set_hwaddr(lease: &mut dhcp_lease, hwaddr: *const libc::c_uchar,
                         clid: *const libc::c_uchar, hw_len: i32,
                         hw_type: i32, clid_len: i32,
                         now: time::Instant, force: i32);
     #[no_mangle]
-    fn lease_set_hostname(lease: *mut dhcp_lease, name: *const libc::c_char,
+    fn lease_set_hostname(lease: &mut dhcp_lease, name: *const libc::c_char,
                           auth: i32, domain: &mut String,
                           config_domain: &mut String);
     #[no_mangle]
-    fn lease_set_expires(lease: *mut dhcp_lease, len: u32,
+    fn lease_set_expires(lease: &mut dhcp_lease, len: u32,
                          now: time::Instant);
     #[no_mangle]
-    fn lease_set_interface(lease: *mut dhcp_lease, interface: i32,
+    fn lease_set_interface(lease: &mut dhcp_lease, interface: i32,
                            now: time::Instant);
     #[no_mangle]
-    fn lease_prune(target: *mut dhcp_lease, now: time::Instant);
+    fn lease_prune(target: &mut dhcp_lease, now: time::Instant);
     #[no_mangle]
-    fn lease_add_extradata(lease: *mut dhcp_lease, data: mut Vec<u8>,
+    fn lease_add_extradata(lease: &mut dhcp_lease, data: mut Vec<u8>,
                            len: u32, delim: i32);
     #[no_mangle]
-    fn address6_allocate(context: *mut dhcp_context, clid: mut Vec<u8>,
+    fn address6_allocate(context: &mut dhcp_context, clid: mut Vec<u8>,
                          clid_len: i32, temp_addr: i32,
                          iaid: u32, serial: i32,
-                         netids: *mut dhcp_netid, plain_range: i32,
-                         ans: *mut in6_addr) -> *mut dhcp_context;
+                         netids: &mut dhcp_netid, plain_range: i32,
+                         ans:  &mut in6_addr)  -> dhcp_context;
     #[no_mangle]
-    fn address6_available(context: *mut dhcp_context, taddr: *mut in6_addr,
-                          netids: *mut dhcp_netid, plain_range: i32)
-                          -> *mut dhcp_context;
+    fn address6_available(context: &mut dhcp_context, taddr: &mut in6_addr,
+                          netids: &mut dhcp_netid, plain_range: i32)
+                          -> dhcp_context;
     #[no_mangle]
-    fn address6_valid(context: *mut dhcp_context, taddr: *mut in6_addr,
-                      netids: *mut dhcp_netid, plain_range: i32)
-                      -> *mut dhcp_context;
+    fn address6_valid(context: &mut dhcp_context, taddr: &mut in6_addr,
+                      netids: &mut dhcp_netid, plain_range: i32)
+                      -> dhcp_context;
     #[no_mangle]
-    fn get_client_mac(client: *mut in6_addr, iface: i32,
-                      mac: mut Vec<u8>, maclenp: *mut libc::c_uint,
-                      mactypep: *mut libc::c_uint, now: time::Instant);
+    fn get_client_mac(client: &mut in6_addr, iface: i32,
+                      mac: mut Vec<u8>, maclenp: &mut libc::c_uint,
+                      mactypep: &mut libc::c_uint, now: time::Instant);
 
 
 
@@ -7054,7 +7054,7 @@ pub type u64_0 = libc::c_ulonglong;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_47 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -7068,7 +7068,7 @@ pub struct C2RustUnnamed_47 {
 #[repr(C)]
 pub union bigname {
     pub name: [libc::c_char; 1025],
-    pub next: *mut bigname,
+    pub next: &mut bigname,
 }
 
 
@@ -7095,7 +7095,7 @@ pub union bigname {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct resolvc {
-    pub next: *mut resolvc,
+    pub next: &mut resolvc,
     pub is_default: i32,
     pub logged: i32,
     pub mtime: time::Instant,
@@ -7139,7 +7139,7 @@ pub struct ping_result {
     pub addr: in_addr,
     pub time: time::Instant,
     pub hash: u32,
-    pub next: *mut ping_result,
+    pub next: &mut ping_result,
 }
 
 
@@ -7180,7 +7180,7 @@ extern "C" {
 
 
     #[no_mangle]
-    fn skip_name(ansp: mut Vec<u8>, header: *mut dns_header,
+    fn skip_name(ansp: mut Vec<u8>, header: &mut dns_header,
                  plen: usize, extrabytes: i32) -> mut Vec<u8>;
     #[no_mangle]
     fn whine_malloc(size: usize) ->Vec<u8>;
@@ -7270,7 +7270,7 @@ extern "C" {
     #[no_mangle]
     fn expand(headroom: usize) ->Vec<u8>;
     #[no_mangle]
-    fn ra_start_unsolicited(now: time::Instant, context: *mut dhcp_context);
+    fn ra_start_unsolicited(now: time::Instant, context:  &mut dhcp_context) ;
 }
 
 
@@ -7379,7 +7379,7 @@ pub struct shared_network {
     pub shared_addr: in_addr,
     pub match_addr6: in6_addr,
     pub shared_addr6: in6_addr,
-    pub next: *mut shared_network,
+    pub next: &mut shared_network,
 }
 
 
@@ -7396,39 +7396,39 @@ unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
 }
 
 #[inline]
-unsafe extern "C" fn fstat(mut __fd: i32, mut __statbuf: *mut stat)
+unsafe extern "C" fn fstat(mut __fd: i32, mut __statbuf: &mut stat)
                            -> i32 {
     return __fxstat(1, __fd, __statbuf);
 }
 
 #[inline]
-unsafe extern "C" fn getc_unlocked2(mut __fp: *mut FILE) -> i32 {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end)  i32 != 0 {
+unsafe extern "C" fn getc_unlocked2(mut __fp: &mut FILE) -> i32 {
+    return if (__fp._IO_read_ptr >= __fp._IO_read_end)  i32 != 0 {
         __uflow(__fp)
     } else {
-        let fresh0 = (*__fp)._IO_read_ptr;
-        (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+        let fresh0 = __fp._IO_read_ptr;
+        __fp._IO_read_ptr = __fp._IO_read_ptr.offset(1);
         *(fresh0)
     };
 }
 #[inline]
 unsafe extern "C" fn getchar_unlocked2() -> i32 {
-    return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end)
+    return if (stdin._IO_read_ptr >= stdin._IO_read_end)
         != 0 {
         __uflow(stdin)
     } else {
-        let fresh1 = (*stdin)._IO_read_ptr;
-        (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+        let fresh1 = stdin._IO_read_ptr;
+        stdin._IO_read_ptr = stdin._IO_read_ptr.offset(1);
         *(fresh1)
     };
 }
 #[inline]
-unsafe extern "C" fn fgetc_unlocked2(mut __fp: *mut FILE) -> i32 {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end)  i32 != 0 {
+unsafe extern "C" fn fgetc_unlocked2(mut __fp: &mut FILE) -> i32 {
+    return if (__fp._IO_read_ptr >= __fp._IO_read_end)  i32 != 0 {
         __uflow(__fp)
     } else {
-        let fresh2 = (*__fp)._IO_read_ptr;
-        (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+        let fresh2 = __fp._IO_read_ptr;
+        __fp._IO_read_ptr = __fp._IO_read_ptr.offset(1);
         *(fresh2)
     };
 }
@@ -7439,39 +7439,39 @@ unsafe extern "C" fn fgetc_unlocked2(mut __fp: *mut FILE) -> i32 {
 
 
 #[inline]
-unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) -> i32 {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end)  i32 != 0 {
+unsafe extern "C" fn fgetc_unlocked(mut __fp: &mut FILE) -> i32 {
+    return if (__fp._IO_read_ptr >= __fp._IO_read_end)  i32 != 0 {
         __uflow(__fp)
     } else {
-        let fresh0 = (*__fp)._IO_read_ptr;
-        (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+        let fresh0 = __fp._IO_read_ptr;
+        __fp._IO_read_ptr = __fp._IO_read_ptr.offset(1);
         *(fresh0)
     };
 }
 #[inline]
-unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> i32 {
-    return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end)  i32 != 0 {
+unsafe extern "C" fn getc_unlocked(mut __fp: &mut FILE) -> i32 {
+    return if (__fp._IO_read_ptr >= __fp._IO_read_end)  i32 != 0 {
         __uflow(__fp)
     } else {
-        let fresh1 = (*__fp)._IO_read_ptr;
-        (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+        let fresh1 = __fp._IO_read_ptr;
+        __fp._IO_read_ptr = __fp._IO_read_ptr.offset(1);
         *(fresh1)
     };
 }
 #[inline]
 unsafe extern "C" fn getchar_unlocked() -> i32 {
-    return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end)
+    return if (stdin._IO_read_ptr >= stdin._IO_read_end)
         != 0 {
         __uflow(stdin)
     } else {
-        let fresh2 = (*stdin)._IO_read_ptr;
-        (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+        let fresh2 = stdin._IO_read_ptr;
+        stdin._IO_read_ptr = stdin._IO_read_ptr.offset(1);
         *(fresh2)
     };
 }
 #[inline]
 unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
-                               mut endptr: *mut *mut __gwchar_t,
+                               mut endptr: &mut __gwchar_t.
                                mut base: i32) -> uintmax_t {
     return __wcstoul_internal(nptr, endptr, base, 0);
 }
@@ -7514,14 +7514,14 @@ unsafe extern "C" fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
 
 
 #[inline]
-unsafe extern "C" fn __cmsg_nxthdr2(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>()
+unsafe extern "C" fn __cmsg_nxthdr2(mut __mhdr: &mut msghdr,
+                                   mut __cmsg: &mut cmsghdr) -> cmsghdr {
+    if __cmsg.cmsg_len < ::std::mem::size_of::<cmsghdr>()
     {
         return 0
     }
     __cmsg =
-        (__cmsg      mut Vec<u8>).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+        (__cmsg      mut Vec<u8>).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
             as
      ).wrapping_sub(1
 
@@ -7534,9 +7534,9 @@ unsafe extern "C" fn __cmsg_nxthdr2(mut __mhdr: *mut msghdr,
                   ))
            );
     if __cmsg.offset(1) >
-        ((*__mhdr).msg_control      mut Vec<u8>).offset((*__mhdr).msg_controllen)
+        (__mhdr.msg_control      mut Vec<u8>).offset(__mhdr.msg_controllen)
         ||
-        (__cmsg      mut Vec<u8>).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+        (__cmsg      mut Vec<u8>).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
             as
      ).wrapping_sub(1
 
@@ -7548,7 +7548,7 @@ unsafe extern "C" fn __cmsg_nxthdr2(mut __mhdr: *mut msghdr,
 
                   ))
            ) >
-            ((*__mhdr).msg_control          mut Vec<u8>).offset((*__mhdr).msg_controllen          isize) {
+            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen          isize) {
         return 0
     }
     return __cmsg;
@@ -7558,25 +7558,25 @@ extern "C" {
 
 
     #[no_mangle]
-    static mut stdin: *mut FILE;
+    static mut stdin: FILE;
     #[no_mangle]
-    static mut stdout: *mut FILE;
+    static mut stdout: FILE;
     #[no_mangle]
     fn sprintf(_: &mut String, _: *const libc::c_char, _: ...)
                -> i32;
     #[no_mangle]
-    fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
+    fn vfprintf(_: &mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
                 -> i32;
     #[no_mangle]
     fn snprintf(_: &mut String, _: u32,
                 _: *const libc::c_char, _: ...) -> i32;
     #[no_mangle]
-    fn getc(__stream: *mut FILE) -> i32;
+    fn getc(__stream:  &mut FILE)  -> i32;
     #[no_mangle]
-    fn putc(__c: i32, __stream: *mut FILE) -> i32;
+    fn putc(__c: i32, __stream:  &mut FILE)  -> i32;
     #[no_mangle]
-    fn __getdelim(__lineptr: String, __n: *mut size_t,
-                  __delimiter: i32, __stream: *mut FILE) -> __ssize_t;
+    fn __getdelim(__lineptr: String, __n: &mut size_t,
+                  __delimiter: i32, __stream:  &mut FILE)  -> __ssize_t;
     #[no_mangle]
     fn socket(__domain: i32, __type: i32,
               __protocol: i32) -> i32;
@@ -7585,12 +7585,12 @@ extern "C" {
             -> i32;
     #[no_mangle]
     fn getsockname(__fd: i32, __addr: __NetAddress_ARG,
-                   __len: *mut socklen_t) -> i32;
+                   __len:  &mut socklen_t)  -> i32;
     #[no_mangle]
     fn recv(__fd: i32, __buf:Vec<u8>, __n: usize,
             __flags: i32) -> ssize_t;
     #[no_mangle]
-    fn recvmsg(__fd: i32, __message: *mut msghdr,
+    fn recvmsg(__fd: i32, __message: &mut msghdr,
                __flags: i32) -> ssize_t;
     #[no_mangle]
     fn setsockopt(__fd: i32, __level: i32,
@@ -7598,37 +7598,37 @@ extern "C" {
                   __optlen: socklen_t) -> i32;
     #[no_mangle]
     fn __xstat(__ver: i32, __filename: *const libc::c_char,
-               __stat_buf: *mut stat) -> i32;
+               __stat_buf:  &mut stat)  -> i32;
     #[no_mangle]
     fn __fxstat(__ver: i32, __fildes: i32,
-                __stat_buf: *mut stat) -> i32;
+                __stat_buf:  &mut stat)  -> i32;
     #[no_mangle]
     fn __xstat64(__ver: i32, __filename: *const libc::c_char,
-                 __stat_buf: *mut stat64) -> i32;
+                 __stat_buf:  &mut stat64)  -> i32;
     #[no_mangle]
     fn __fxstat64(__ver: i32, __fildes: i32,
-                  __stat_buf: *mut stat64) -> i32;
+                  __stat_buf:  &mut stat64)  -> i32;
     #[no_mangle]
     fn __fxstatat(__ver: i32, __fildes: i32,
-                  __filename: *const libc::c_char, __stat_buf: *mut stat,
+                  __filename: *const libc::c_char, __stat_buf: &mut stat,
                   __flag: i32) -> i32;
     #[no_mangle]
     fn __fxstatat64(__ver: i32, __fildes: i32,
-                    __filename: *const libc::c_char, __stat_buf: *mut stat64,
+                    __filename: *const libc::c_char, __stat_buf: &mut stat64,
                     __flag: i32) -> i32;
     #[no_mangle]
     fn __lxstat(__ver: i32, __filename: *const libc::c_char,
-                __stat_buf: *mut stat) -> i32;
+                __stat_buf:  &mut stat)  -> i32;
     #[no_mangle]
     fn __lxstat64(__ver: i32, __filename: *const libc::c_char,
-                  __stat_buf: *mut stat64) -> i32;
+                  __stat_buf:  &mut stat64)  -> i32;
     #[no_mangle]
     fn __xmknod(__ver: i32, __path: *const libc::c_char,
-                __mode: __mode_t, __dev: *mut __dev_t) -> i32;
+                __mode: __mode_t, __dev:  &mut __dev_t)  -> i32;
     #[no_mangle]
     fn __xmknodat(__ver: i32, __fd: i32,
                   __path: *const libc::c_char, __mode: __mode_t,
-                  __dev: *mut __dev_t) -> i32;
+                  __dev:  &mut __dev_t)  -> i32;
     #[no_mangle]
     fn ioctl(__fd: i32, __request: u32, _: ...)
              -> i32;
@@ -7664,9 +7664,9 @@ extern "C" {
     #[no_mangle]
     fn geteuid() -> __uid_t;
     #[no_mangle]
-    fn __uflow(_: *mut FILE) -> i32;
+    fn __uflow(_:  &mut FILE)  -> i32;
     #[no_mangle]
-    fn __overflow(_: *mut FILE, _: i32) -> i32;
+    fn __overflow(_: &mut FILE, _: i32) -> i32;
     #[no_mangle]
     fn strtod(_: *const libc::c_char, _: String)
               -> libc::c_double;
@@ -7682,11 +7682,11 @@ extern "C" {
     fn open(__file: *const libc::c_char, __oflag: i32, _: ...)
             -> i32;
     #[no_mangle]
-    fn __ctype_b_loc() -> *mut *const u16;
+    fn __ctype_b_loc() -> u16;
     #[no_mangle]
-    fn __ctype_tolower_loc() -> *mut *const __int32_t;
+    fn __ctype_tolower_loc() -> __int32_t;
     #[no_mangle]
-    fn __ctype_toupper_loc() -> *mut *const __int32_t;
+    fn __ctype_toupper_loc() -> __int32_t;
     #[no_mangle]
     fn difftime(__time1: time::Instant, __time0: time::Instant) -> libc::c_double;
     #[no_mangle]
@@ -7703,14 +7703,14 @@ extern "C" {
                           -> libc::c_ulong;
     #[no_mangle]
     fn __wcstol_internal(__nptr: *const __gwchar_t,
-                         __endptr: *mut *mut __gwchar_t, __base: i32,
+                         __endptr: &mut__gwchar_t, __base: i32,
                          __group: i32) -> i32;
     #[no_mangle]
     fn __wcstoul_internal(__nptr: *const __gwchar_t,
-                          __endptr: *mut *mut __gwchar_t, __base: i32,
+                          __endptr: &mut__gwchar_t, __base: i32,
                           __group: i32) -> libc::c_ulong;
     #[no_mangle]
-    static mut dnsmasq_daemon: *mut dnsmasq_daemon;
+    static mut dnsmasq_daemon: dnsmasq_daemon;
     #[no_mangle]
     fn safe_strncpy(dest: &mut String, src: *const libc::c_char,
                     size: usize);
@@ -7735,27 +7735,27 @@ extern "C" {
     #[no_mangle]
     fn send_from(fd: i32, nowild: i32,
                  packet: &mut String, len: usize, to: NetAddress,
-                 source: *mut all_addr, iface: u32) -> i32;
+                 source: &mut all_addr, iface: u32) -> i32;
     #[no_mangle]
     fn indextoname(fd: i32, index: i32,
                    name: &mut String) -> i32;
     #[no_mangle]
     fn enumerate_interfaces(reset: i32) -> i32;
     #[no_mangle]
-    fn iface_check(family: i32, addr: *mut all_addr,
+    fn iface_check(family: i32, addr: &mut all_addr,
                    name: &mut String, auth: )
                    -> i32;
     #[no_mangle]
     fn loopback_exception(fd: i32, family: i32,
-                          addr: *mut all_addr, name: &mut String)
+                          addr: &mut all_addr, name: &mut String)
                           -> i32;
     #[no_mangle]
     fn label_exception(index: i32, family: i32,
-                       addr: *mut all_addr) -> i32;
+                       addr:  &mut all_addr)  -> i32;
     #[no_mangle]
     fn fix_fd(fd: i32) -> i32;
     #[no_mangle]
-    fn lease_find_by_addr(addr: in_addr) -> *mut dhcp_lease;
+    fn lease_find_by_addr(addr: in_addr) -> dhcp_lease;
     #[no_mangle]
     fn queue_tftp(file_len: off_t, filename: &mut String,
                   peer: NetAddress);
@@ -7822,7 +7822,7 @@ pub struct NetAddress {
 pub struct msghdr {
     pub msg_name:Vec<u8>,
     pub msg_namelen: socklen_t,
-    pub msg_iov: *mut iovec,
+    pub msg_iov: &mut iovec,
     pub msg_iovlen: usize,
     pub msg_control:Vec<u8>,
     pub msg_controllen: usize,
@@ -8038,7 +8038,7 @@ pub struct C2RustUnnamed_48 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_5 {
-    pub target: *mut blockdata,
+    pub target: &mut blockdata,
     pub targetlen: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -8048,7 +8048,7 @@ pub struct C2RustUnnamed_5 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_6 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: libc::c_uchar,
@@ -8057,7 +8057,7 @@ pub struct C2RustUnnamed_6 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_7 {
-    pub keydata: *mut blockdata,
+    pub keydata: &mut blockdata,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -8073,15 +8073,15 @@ pub struct C2RustUnnamed_8 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_9 {
-    pub cache: *mut crec,
+    pub cache: &mut crec,
     pub name: &mut String,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct crec {
-    pub next: *mut crec,
-    pub prev: *mut crec,
-    pub hash_next: *mut crec,
+    pub next: &mut crec,
+    pub prev: &mut crec,
+    pub hash_next: &mut crec,
     pub addr: all_addr,
     pub ttd: time::Instant,
     pub uid: u32,
@@ -8092,7 +8092,7 @@ pub struct crec {
 #[repr(C)]
 pub union C2RustUnnamed_107 {
     pub sname: [libc::c_char; 50],
-    pub bname: *mut bigname,
+    pub bname: &mut bigname,
     pub namep: &mut String,
 }
 
@@ -8146,9 +8146,9 @@ pub struct dhcp_lease {
     pub new_prefixlen: i32,
     pub addr6: in6_addr,
     pub iaid: u32,
-    pub slaac_address: *mut slaac_address,
+    pub slaac_address: &mut slaac_address,
     pub vendorclass_count: i32,
-    pub next: *mut dhcp_lease,
+    pub next: &mut dhcp_lease,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -8156,7 +8156,7 @@ pub struct slaac_address {
     pub addr: in6_addr,
     pub ping_time: time::Instant,
     pub backoff: i32,
-    pub next: *mut slaac_address,
+    pub next: &mut slaac_address,
 }
 
 
@@ -8172,8 +8172,8 @@ pub struct dhcp_opt {
     pub flags: i32,
     pub u: C2RustUnnamed_11,
     pub val: mut Vec<u8>,
-    pub netid: *mut dhcp_netid,
-    pub next: *mut dhcp_opt,
+    pub netid: &mut dhcp_netid,
+    pub next: &mut dhcp_opt,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -8216,9 +8216,9 @@ pub struct dhcp_context {
     pub template_interface: &mut String,
     pub flags: i32,
     pub netid: dhcp_netid,
-    pub filter: *mut dhcp_netid,
-    pub next: *mut dhcp_context,
-    pub current: *mut dhcp_context,
+    pub filter: &mut dhcp_netid,
+    pub next: &mut dhcp_context,
+    pub current: &mut dhcp_context,
 }
 
 
@@ -8258,13 +8258,13 @@ pub struct ack {
 #[repr(C)]
 pub union C2RustUnnamed_12 {
     pub c: mut Vec<u8>,
-    pub p: *mut in6_pktinfo,
+    pub p: &mut in6_pktinfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_135 {
     pub c: mut Vec<u8>,
-    pub p: *mut InPktInfo,
+    pub p: &mut InPktInfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -8274,14 +8274,14 @@ pub union C2RustUnnamed_14 {
     pub control: [libc::c_char; 32],
 }
 #[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
-                                   mut __cmsg: *mut cmsghdr) -> *mut cmsghdr {
-    if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>()
+unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut msghdr,
+                                   mut __cmsg: &mut cmsghdr) -> cmsghdr {
+    if __cmsg.cmsg_len < ::std::mem::size_of::<cmsghdr>()
     {
         return 0
     } /* may be zero to use ephemeral port */
     __cmsg =
-        (__cmsg      mut Vec<u8>).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+        (__cmsg      mut Vec<u8>).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
             as
      ).wrapping_sub(1
 
@@ -8294,9 +8294,9 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
                   ))
            );
     if __cmsg.offset(1) >
-        ((*__mhdr).msg_control      mut Vec<u8>).offset((*__mhdr).msg_controllen)
+        (__mhdr.msg_control      mut Vec<u8>).offset(__mhdr.msg_controllen)
         ||
-        (__cmsg      mut Vec<u8>).offset(((*__cmsg).cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+        (__cmsg      mut Vec<u8>).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
             as
      ).wrapping_sub(1
 
@@ -8308,7 +8308,7 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: *mut msghdr,
 
                   ))
            ) >
-            ((*__mhdr).msg_control          mut Vec<u8>).offset((*__mhdr).msg_controllen          isize) {
+            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen          isize) {
         return 0
     }
     return __cmsg;

@@ -17,50 +17,50 @@
 use crate::defines::{NetAddress, CondDomain, __bswap_32, DnsmasqDaemon, In6Addr};
 use crate::util::{addr6part, is_same_net6};
 
-unsafe extern "C" fn search_domain(mut addr: NetAddress, mut c: *mut CondDomain)
-                                   -> *mut CondDomain {
+unsafe extern "C" fn search_domain(mut addr: NetAddress, mut c: &mut CondDomain)
+                                   -> {
     while !c.is_null() {
-        if (*c).is6 == 0 &&
-               __bswap_32(addr.s_addr) >= __bswap_32((*c).start.s_addr) &&
-               __bswap_32(addr.s_addr) <= __bswap_32((*c).end.s_addr) {
+        if c.is6 == 0 &&
+               __bswap_32(addr.s_addr) >= __bswap_32(c.start.s_addr) &&
+               __bswap_32(addr.s_addr) <= __bswap_32(c.end.s_addr) {
             return c
         }
-        c = (*c).next
+        c = c.next
     }
     return 0 ;
 }
 #[no_mangle]
 pub unsafe extern "C" fn get_domain(mut addr: NetAddress) -> &mut String {
-    let mut c: *mut CondDomain = 0 ;
-    c = search_domain(addr, (*dnsmasq_daemon).cond_domain);
-    if !c.is_null() { return (*c).domain }
-    return (*dnsmasq_daemon).domain_suffix;
+    let mut c: CondDomain = 0 ;
+    c = search_domain(addr, dnsmasq_daemon.cond_domain);
+    if !c.is_null() { return c.domain }
+    return dnsmasq_daemon.domain_suffix;
 }
-unsafe extern "C" fn search_domain6(mut addr: *mut In6Addr,
-                                    mut c: *mut CondDomain)
-                                    -> *mut CondDomain {
+unsafe extern "C" fn search_domain6(mut addr: &mut In6Addr,
+                                    mut c: &mut CondDomain)
+                                    -> {
     let mut addrpart: u64 = addr6part(addr);
     while !c.is_null() {
-        if (*c).is6 != 0 &&
-               is_same_net6(addr, &mut (*c).start6, 64) != 0 &&
-               addrpart >= addr6part(&mut (*c).start6) &&
-               addrpart <= addr6part(&mut (*c).end6) {
+        if c.is6 != 0 &&
+               is_same_net6(addr, &mut c.start6, 64) != 0 &&
+               addrpart >= addr6part(&mut c.start6) &&
+               addrpart <= addr6part(&mut c.end6) {
             return c
         }
-        c = (*c).next
+        c = c.next
     }
     return 0 ;
 }
 #[no_mangle]
-pub unsafe extern "C" fn get_domain6(mut addr: *mut In6Addr)
+pub unsafe extern "C" fn get_domain6(mut addr: &mut In6Addr)
  -> &mut String {
-    let mut c: *mut CondDomain = 0 ;
+    let mut c: CondDomain = 0 ;
     if !addr.is_null() &&
            {
-               c = search_domain6(addr, (*dnsmasq_daemon).cond_domain);
+               c = search_domain6(addr, dnsmasq_daemon.cond_domain);
                !c.is_null()
            } {
-        return (*c).domain
+        return c.domain
     }
-    return (*dnsmasq_daemon).domain_suffix;
+    return dnsmasq_daemon.domain_suffix;
 }

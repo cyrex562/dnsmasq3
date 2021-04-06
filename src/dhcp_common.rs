@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddressListEntry, Crec, NetAddress, DhcpOptTblEntry, NetAddress, _ISPRINT, DhcpRelay};
-use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net, hostname_isequal,  prettyprint_time, print_mac, setaddr6part};
+use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net4, hostname_isequal, prettyprint_time, print_mac, setaddr6part};
 use libc::recvmsg;
 use socket2::Socket;
 use std::io;
@@ -49,7 +49,7 @@ pub fn recv_dhcp_packet(daemon: &mut DnsmasqDaemon, socket: UdpSocket, packet_bu
 }
 
 pub fn run_tag_if(mut tags: &mut DhcpNetId)
- -> *mut DhcpNetId {
+ -> DhcpNetId {
     let mut exprs: TagIf;
     let mut list: DhcpNetIdList;
     exprs = daemon.tag_if;
@@ -79,139 +79,136 @@ pub fn run_tag_if(mut tags: &mut DhcpNetId)
     return tags;
 }
 
-pub fn option_filter(mut tags: *mut DhcpNetId,
-                                       mut context_tags: *mut DhcpNetId,
-                                       mut opts: *mut DhcpOpt)
-                                       -> *mut DhcpNetId {
-    let mut tagif: *mut DhcpNetId = run_tag_if(tags);
-    let mut opt: *mut DhcpOpt = 0 ;
-    let mut tmp: *mut DhcpOpt = 0 ;
+pub fn option_filter(mut tags: &mut DhcpNetId,
+                                       mut context_tags: &mut DhcpNetId,
+                                       mut opts: &mut DhcpOpt)
+                                       -> DhcpNetId {
+    let mut tagif: DhcpNetId = run_tag_if(tags);
+    let mut opt: DhcpOpt = 0 ;
+    let mut tmp: DhcpOpt = 0 ;
     /* flag options which are valid with the current tag set (sans context tags) */
     opt = opts;
     while !opt.is_null() {
-        (*opt).flags &= !(4096 );
-        if (*opt).flags &
+        opt.flags &= !(4096 );
+        if opt.flags &
                (4  | 256  | 2048 )
-               == 0 && match_netid((*opt).netid, tagif, 0 ) != 0
+               == 0 && match_netid(opt.netid, tagif, 0 ) != 0
            {
-            (*opt).flags |= 4096 
+            opt.flags |= 4096
         }
-        opt = (*opt).next
+        opt = opt.next
     }
     /* now flag options which are valid, including the context tags,
      otherwise valid options are inhibited if we found a higher priority one above */
     if !context_tags.is_null() {
-        let mut last_tag: *mut DhcpNetId = 0 ;
+        let mut last_tag: DhcpNetId = 0 ;
         last_tag = context_tags;
-        while !(*last_tag).next.is_null() { last_tag = (*last_tag).next }
-        (*last_tag).next = tags;
+        while !last_tag.next.is_null() { last_tag = last_tag.next }
+        last_tag.next = tags;
         tagif = run_tag_if(context_tags);
         /* reset stuff with tag:!<tag> which now matches. */
         opt = opts;
         while !opt.is_null() {
-            if (*opt).flags &
+            if opt.flags &
                    (4  | 256  |
                         2048 ) == 0 &&
-                   (*opt).flags & 4096  != 0 &&
-                   match_netid((*opt).netid, tagif, 0 ) == 0 {
-                (*opt).flags &= !(4096 )
+                   opt.flags & 4096  != 0 &&
+                   match_netid(opt.netid, tagif, 0 ) == 0 {
+                opt.flags &= !(4096 )
             }
-            opt = (*opt).next
+            opt = opt.next
         }
         opt = opts;
         while !opt.is_null() {
-            if (*opt).flags &
+            if opt.flags &
                    (4  | 256  |
                         2048  | 4096 ) == 0 &&
-                   match_netid((*opt).netid, tagif, 0 ) != 0 {
-                let mut tmp_0: *mut DhcpOpt = 0 ;
+                   match_netid(opt.netid, tagif, 0 ) != 0 {
+                let mut tmp_0: DhcpOpt = 0 ;
                 tmp_0 = opts;
                 while !tmp_0.is_null() {
-                    if (*tmp_0).opt == (*opt).opt && !(*opt).netid.is_null()
-                           && (*tmp_0).flags & 4096  != 0 {
+                    if tmp_0.opt == opt.opt && !opt.netid.is_null()
+                           && tmp_0.flags & 4096  != 0 {
                         break ;
                     }
-                    tmp_0 = (*tmp_0).next
+                    tmp_0 = tmp_0.next
                 }
-                if tmp_0.is_null() { (*opt).flags |= 4096  }
+                if tmp_0.is_null() { opt.flags |= 4096  }
             }
-            opt = (*opt).next
+            opt = opt.next
         }
     }
     /* now flag untagged options which are not overridden by tagged ones */
     opt = opts;
     while !opt.is_null() {
-        if (*opt).flags &
+        if opt.flags &
                (4  | 256  | 2048  |
-                    4096 ) == 0 && (*opt).netid.is_null() {
+                    4096 ) == 0 && opt.netid.is_null() {
             tmp = opts;
             while !tmp.is_null() {
-                if (*tmp).opt == (*opt).opt &&
-                       (*tmp).flags & 4096  != 0 {
+                if tmp.opt == opt.opt &&
+                       tmp.flags & 4096  != 0 {
                     break ;
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
             if tmp.is_null() {
-                (*opt).flags |= 4096 
-            } else if (*tmp).netid.is_null() {
+                opt.flags |= 4096
+            } else if tmp.netid.is_null() {
                 my_syslog((3 ) << 3  |
                               4 ,
-                          "Ignoring duplicate dhcp-option %d"                        *const u8 , (*tmp).opt);
+                          "Ignoring duplicate dhcp-option %d"                        *const u8 , tmp.opt);
             }
         }
-        opt = (*opt).next
+        opt = opt.next
     }
     /* Finally, eliminate duplicate options later in the chain, and therefore earlier in the config file. */
     opt = opts;
     while !opt.is_null() {
-        if (*opt).flags & 4096  != 0 {
-            tmp = (*opt).next;
+        if opt.flags & 4096  != 0 {
+            tmp = opt.next;
             while !tmp.is_null() {
-                if (*tmp).opt == (*opt).opt {
-                    (*tmp).flags &= !(4096 )
+                if tmp.opt == opt.opt {
+                    tmp.flags &= !(4096 )
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
         }
-        opt = (*opt).next
+        opt = opt.next
     }
     return tagif;
 }
 /* Is every member of check matched by a member of pool? 
    If tagnotneeded, untagged is OK */
 
-pub fn match_netid(mut check: *mut DhcpNetId,
-                                     mut pool: *mut DhcpNetId,
-                                     mut tagnotneeded: i32)
-                                     -> i32 {
-    let mut tmp1: *mut DhcpNetId = 0 ;
-    if check.is_null() && tagnotneeded == 0 { return 0  }
+pub fn match_netid(mut check: Vec<DhcpNetId>, mut pool: &mut DhcpNetId, mut tagnotneeded: bool) -> i32 {
+    let mut tmp1: DhcpNetId;
+    if check.is_null() && !tagnotneeded { return 0  }
     while !check.is_null() {
         /* '#' for not is for backwards compat. */
-        if *(*check).net.offset(0 )  !=
+        if *check.net.offset(0 )  !=
                '!' as i32 &&
-               *(*check).net.offset(0 )
+               *check.net.offset(0 )
                    != '#' as i32 {
             tmp1 = pool;
             while !tmp1.is_null() {
-                if strcmp((*check).net, (*tmp1).net) == 0  {
+                if strcmp(check.net, tmp1.net) == 0  {
                     break ;
                 }
-                tmp1 = (*tmp1).next
+                tmp1 = tmp1.next
             }
             if tmp1.is_null() { return 0  }
         } else {
             tmp1 = pool;
             while !tmp1.is_null() {
-                if strcmp((*check).net.offset(1 ),
-                          (*tmp1).net) == 0  {
+                if strcmp(check.net.offset(1 ),
+                          tmp1.net) == 0  {
                     return 0 
                 }
-                tmp1 = (*tmp1).next
+                tmp1 = tmp1.next
             }
         }
-        check = (*check).next
+        check = check.next
     }
     return 1 ;
 }
@@ -230,7 +227,7 @@ pub fn strip_hostname(mut hostname: &mut String)
     return 0 ;
 }
 
-pub fn log_tags(mut netid: *mut DhcpNetId,
+pub fn log_tags(mut netid: &mut DhcpNetId,
                                   mut xid: u32) {
     if !netid.is_null() &&
            daemon.options[(28  ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -245,23 +242,23 @@ pub fn log_tags(mut netid: *mut DhcpNetId,
         *s = 0 ;
         while !netid.is_null() {
             /* kill dupes. */
-            let mut n: *mut DhcpNetId = 0 ;
-            n = (*netid).next;
+            let mut n: DhcpNetId = 0 ;
+            n = netid.next;
             while !n.is_null() {
-                if strcmp((*netid).net, (*n).net) == 0  {
+                if strcmp(netid.net, n.net) == 0  {
                     break ;
                 }
-                n = (*n).next
+                n = n.next
             }
             if n.is_null() {
-                strncat(s, (*netid).net,
+                strncat(s, netid.net,
                         ((1025  - 1 )).wrapping_sub(strlen(s)));
-                if !(*netid).next.is_null() {
+                if !netid.next.is_null() {
                     strncat(s, ", " ,
                             ((1025  - 1 ))).wrapping_sub(strlen(s)));
                 }
             }
-            netid = (*netid).next
+            netid = netid.next
         }
         my_syslog((3 ) << 3  | 6 ,
                   "%u tags: %s" , xid,
@@ -269,98 +266,98 @@ pub fn log_tags(mut netid: *mut DhcpNetId,
     };
 }
 
-pub fn match_bytes(mut o: *mut DhcpOpt,
+pub fn match_bytes(mut o: &mut DhcpOpt,
                                      mut p: mut Vec<u8>,
                                      mut len: i32) -> i32 {
     let mut i: i32 = 0;
-    if (*o).len > len { return 0  }
-    if (*o).len == 0  { return 1  }
-    if (*o).flags & 512  != 0 {
-        if memcmp_masked((*o).val, p, (*o).len, (*o).u.wildcard_mask) != 0 {
+    if o.len > len { return 0  }
+    if o.len == 0  { return 1  }
+    if o.flags & 512  != 0 {
+        if memcmp_masked(o.val, p, o.len, o.u.wildcard_mask) != 0 {
             return 1 
         }
     } else {
         i = 0 ;
-        while i <= len - (*o).len {
-            if memcmp((*o).val,
+        while i <= len - o.len {
+            if memcmp(o.val,
                       p.offset(i),
-                      (*o).len) == 0  {
+                      o.len) == 0  {
                 return 1 
             }
-            if (*o).flags & 2  != 0 {
+            if o.flags & 2  != 0 {
                 i += 1
-            } else { i += (*o).len }
+            } else { i += o.len }
         }
     }
     return 0 ;
 }
 
-pub fn config_has_mac(mut config: *mut DhcpConfig,
+pub fn config_has_mac(mut config: &mut DhcpConfig,
                                         mut hwaddr: mut Vec<u8>,
                                         mut len: i32,
                                         mut type_0: i32)
                                         -> i32 {
-    let mut conf_addr: *mut HwaddrConfig = 0;
-    conf_addr = (*config).hwaddr;
+    let mut conf_addr: HwaddrConfig = 0;
+    conf_addr = config.hwaddr;
     while !conf_addr.is_null() {
-        if (*conf_addr).wildcard_mask == 0  &&
-               (*conf_addr).hwaddr_len == len &&
-               ((*conf_addr).hwaddr_type == type_0 ||
-                    (*conf_addr).hwaddr_type == 0 ) &&
-               memcmp((*conf_addr).hwaddr.as_mut_ptr(),
+        if conf_addr.wildcard_mask == 0  &&
+               conf_addr.hwaddr_len == len &&
+               (conf_addr.hwaddr_type == type_0 ||
+                    conf_addr.hwaddr_type == 0 ) &&
+               memcmp(conf_addr.hwaddr.as_mut_ptr(),
                       hwaddr, len) ==
                    0  {
             return 1 
         }
-        conf_addr = (*conf_addr).next
+        conf_addr = conf_addr.next
     }
     return 0 ;
 }
 unsafe extern "C" fn is_config_in_context(mut context: DhcpContext,
-                                          mut config: *mut DhcpConfig)
+                                          mut config: &mut DhcpConfig)
                                           -> i32 {
     if context.is_null() {
         /* called via find_config() from lease_update_from_configs() */
         return 1 
     }
-    if (*context).flags &
+    if context.flags &
            (1) << 17  != 0 {
-        let mut addr_list: *mut AddressListEntry = 0 ;
-        if (*config).flags & 4096  == 0 {
+        let mut addr_list: AddressListEntry = 0 ;
+        if config.flags & 4096  == 0 {
             return 1 
         }
         while !context.is_null() {
-            addr_list = (*config).addr6;
+            addr_list = config.addr6;
             while !addr_list.is_null() {
-                if (*addr_list).flags & 16  != 0 &&
-                       (*context).prefix == 64  {
+                if addr_list.flags & 16  != 0 &&
+                       context.prefix == 64  {
                     return 1 
                 }
-                if is_same_net6(&mut (*addr_list).addr.addr6,
-                                &mut (*context).start6, (*context).prefix) !=
+                if is_same_net6(&mut addr_list.addr.addr6,
+                                &mut context.start6, context.prefix) !=
                        0 {
                     return 1 
                 }
-                addr_list = (*addr_list).next
+                addr_list = addr_list.next
             }
-            context = (*context).current
+            context = context.current
         }
     } else {
-        if (*config).flags & 32  == 0 {
+        if config.flags & 32  == 0 {
             return 1 
         }
         while !context.is_null() {
-            if (*config).flags & 32  != 0 &&
-                   is_same_net((*config).addr, (*context).start,
-                               (*context).netmask) != 0 {
+            if config.flags & 32  != 0 &&
+                   is_same_net4(config.addr, context.start,
+                                context.netmask) != 0 {
                 return 1 
             }
-            context = (*context).current
+            context = context.current
         }
     }
     return 0 ;
 }
-unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
+unsafe extern "C" fn find_config_match(mut configs: &mut DhcpConfig,
                                        mut context: DhcpContext,
                                        mut clid: mut Vec<u8>,
                                        mut clid_len: i32,
@@ -368,24 +365,24 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
                                        mut hw_len: i32,
                                        mut hw_type: i32,
                                        mut hostname: &mut String,
-                                       mut tags: *mut DhcpNetId,
+                                       mut tags: &mut DhcpNetId,
                                        mut tag_not_needed: i32)
-                                       -> *mut DhcpConfig {
+                                       -> DhcpConfig {
     let mut count: i32 = 0;
     let mut new: i32 = 0;
-    let mut config: *mut DhcpConfig = 0;
-    let mut candidate: *mut DhcpConfig = 0;
-    let mut conf_addr: *mut HwaddrConfig = 0;
+    let mut config: DhcpConfig = 0;
+    let mut candidate: DhcpConfig = 0;
+    let mut conf_addr: HwaddrConfig = 0;
     if !clid.is_null() {
         config = configs;
         while !config.is_null() {
-            if (*config).flags & 2  != 0 {
-                if (*config).clid_len == clid_len &&
-                       memcmp((*config).clid,
+            if config.flags & 2  != 0 {
+                if config.clid_len == clid_len &&
+                       memcmp(config.clid,
                               clid,
                               clid_len) == 0
                        && is_config_in_context(context, config) != 0 &&
-                       match_netid((*config).filter, tags, tag_not_needed) !=
+                       match_netid(config.filter, tags, tag_not_needed) !=
                            0 {
                     return config
                 }
@@ -393,21 +390,21 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
 	     cope with that here. This is IPv4 only. context==NULL implies IPv4, 
 	     see lease_update_from_configs() */
                 if (context.is_null() ||
-                        (*context).flags &
+                        context.flags &
                             (1) << 17  == 0) &&
                        *clid  == 0  &&
-                       (*config).clid_len == clid_len - 1  &&
-                       memcmp((*config).clid,
+                       config.clid_len == clid_len - 1  &&
+                       memcmp(config.clid,
                               clid.offset(1 )
                               (clid_len - 1 ))
                            == 0  &&
                        is_config_in_context(context, config) != 0 &&
-                       match_netid((*config).filter, tags, tag_not_needed) !=
+                       match_netid(config.filter, tags, tag_not_needed) !=
                            0 {
                     return config
                 }
             }
-            config = (*config).next
+            config = config.next
         }
     }
     if !hwaddr.is_null() {
@@ -415,22 +412,22 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
         while !config.is_null() {
             if config_has_mac(config, hwaddr, hw_len, hw_type) != 0 &&
                    is_config_in_context(context, config) != 0 &&
-                   match_netid((*config).filter, tags, tag_not_needed) != 0 {
+                   match_netid(config.filter, tags, tag_not_needed) != 0 {
                 return config
             }
-            config = (*config).next
+            config = config.next
         }
     }
     if !hostname.is_null() && !context.is_null() {
         config = configs;
         while !config.is_null() {
-            if (*config).flags & 16  != 0 &&
-                   hostname_isequal((*config).hostname, hostname) != 0 &&
+            if config.flags & 16  != 0 &&
+                   hostname_isequal(config.hostname, hostname) != 0 &&
                    is_config_in_context(context, config) != 0 &&
-                   match_netid((*config).filter, tags, tag_not_needed) != 0 {
+                   match_netid(config.filter, tags, tag_not_needed) != 0 {
                 return config
             }
-            config = (*config).next
+            config = config.next
         }
     }
     if hwaddr.is_null() { return 0 }
@@ -440,34 +437,34 @@ unsafe extern "C" fn find_config_match(mut configs: *mut DhcpConfig,
     config = configs;
     while !config.is_null() {
         if is_config_in_context(context, config) != 0 &&
-               match_netid((*config).filter, tags, tag_not_needed) != 0 {
-            conf_addr = (*config).hwaddr;
+               match_netid(config.filter, tags, tag_not_needed) != 0 {
+            conf_addr = config.hwaddr;
             while !conf_addr.is_null() {
-                if (*conf_addr).wildcard_mask !=
+                if conf_addr.wildcard_mask !=
                        0  &&
-                       (*conf_addr).hwaddr_len == hw_len &&
-                       ((*conf_addr).hwaddr_type == hw_type ||
-                            (*conf_addr).hwaddr_type == 0 ) &&
+                       conf_addr.hwaddr_len == hw_len &&
+                       (conf_addr.hwaddr_type == hw_type ||
+                            conf_addr.hwaddr_type == 0 ) &&
                        {
                            new =
-                               memcmp_masked((*conf_addr).hwaddr.as_mut_ptr(),
+                               memcmp_masked(conf_addr.hwaddr.as_mut_ptr(),
                                              hwaddr, hw_len,
-                                             (*conf_addr).wildcard_mask);
+                                             conf_addr.wildcard_mask);
                            (new) > count
                        } {
                     count = new;
                     candidate = config
                 }
-                conf_addr = (*conf_addr).next
+                conf_addr = conf_addr.next
             }
         }
-        config = (*config).next
+        config = config.next
     }
     return candidate;
 }
 /* Find tagged configs first. */
 
-pub fn find_config(mut configs: *mut DhcpConfig,
+pub fn find_config(mut configs: &mut DhcpConfig,
                                      mut context: DhcpContext,
                                      mut clid: mut Vec<u8>,
                                      mut clid_len: i32,
@@ -475,9 +472,9 @@ pub fn find_config(mut configs: *mut DhcpConfig,
                                      mut hw_len: i32,
                                      mut hw_type: i32,
                                      mut hostname: &mut String,
-                                     mut tags: *mut DhcpNetId)
-                                     -> *mut DhcpConfig {
-    let mut ret: *mut DhcpConfig =
+                                     mut tags: &mut DhcpNetId)
+                                     -> DhcpConfig {
+    let mut ret: DhcpConfig =
         find_config_match(configs, context, clid, clid_len, hwaddr, hw_len,
                           hw_type, hostname, tags, 0 );
     if ret.is_null() {
@@ -489,28 +486,28 @@ pub fn find_config(mut configs: *mut DhcpConfig,
     return ret;
 }
 
-pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
+pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
     /* Some people like to keep all static IP addresses in /etc/hosts.
      This goes through /etc/hosts and sets static addresses for any DHCP config
      records which don't have an address and whose name matches. 
      We take care to maintain the invariant that any IP address can appear
      in at most one dhcp-host. Since /etc/hosts can be re-read by SIGHUP, 
      restore the status-quo ante first. */
-    let mut config: *mut DhcpConfig = 0;
-    let mut conf_tmp: *mut DhcpConfig = 0;
+    let mut config: DhcpConfig = 0;
+    let mut conf_tmp: DhcpConfig = 0;
     let mut crec: Crec = 0 ;
     let mut prot: i32 = 2 ;
     config = configs;
     while !config.is_null() {
-        if (*config).flags & 512  != 0 {
-            (*config).flags &=
+        if config.flags & 512  != 0 {
+            config.flags &=
                 !(32  | 512 )
         }
-        if (*config).flags & 16384  != 0 {
-            (*config).flags &=
+        if config.flags & 16384  != 0 {
+            config.flags &=
                 !(4096  | 16384 )
         }
-        config = (*config).next
+        config = config.next
     }
     loop  {
         if daemon.port != 0  {
@@ -525,29 +522,29 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                     cacheflags =
                         ((1) << 8 )                      libc::c_int
                 }
-                if (*config).flags & conflags == 0 &&
-                       (*config).flags & 16  !=
+                if config.flags & conflags == 0 &&
+                       config.flags & 16  !=
                            0 &&
                        {
                            crec =
                                cache_find_by_name(0 ,
-                                                  (*config).hostname,
+                                                  config.hostname,
                                                   0 ,
                                                   cacheflags);
                            !crec.is_null()
                        } &&
-                       (*crec).flags & (1) << 6
+                       crec.flags & (1) << 6
                            != 0 {
-                    if !cache_find_by_name(crec, (*config).hostname,
+                    if !cache_find_by_name(crec, config.hostname,
                                            0 ,
                                            cacheflags                                         libc::c_uint).is_null() {
                         /* use primary (first) address */
                         while !crec.is_null() &&
-                                  (*crec).flags &
+                                  crec.flags &
                                       (1) << 2
                                       == 0 {
                             crec =
-                                cache_find_by_name(crec, (*config).hostname,
+                                cache_find_by_name(crec, config.hostname,
                                                    0 ,
                                                    cacheflags)
                         } /* should be never */
@@ -555,14 +552,14 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                             current_block_27 = 3640593987805443782;
                         } else {
                             inet_ntop(prot,
-                                      &mut (*crec).addr
+                                      &mut crec.addr
                                       daemon.addrbuff,
                                       46 );
                             my_syslog((3 ) << 3  |
                                           4 ,
                                       "%s has more than one address in hostsfile, using %s for DHCP"
                                           ,
-                                      (*config).hostname,
+                                      config.hostname,
                                       daemon.addrbuff);
                             current_block_27 = 1109700713171191020;
                         }
@@ -574,55 +571,55 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                    {
                                        conf_tmp =
                                            config_find_by_address(configs,
-                                                                  (*crec).addr.addr4);
+                                                                  crec.addr.addr4);
                                        (conf_tmp.is_null()) ||
                                            conf_tmp == config
                                    } {
-                                (*config).addr = (*crec).addr.addr4;
-                                (*config).flags |=
+                                config.addr = crec.addr.addr4;
+                                config.flags |=
                                     (32  | 512 )
 
                             } else if prot == 10  &&
                                           {
                                               conf_tmp =
                                                   config_find_by_address6(configs,
-                                                                          0                           *mut In6Addr,
+                                                                          0                           &mut In6Addr,
                                                                           0                           libc::c_int,
-                                                                          &mut (*crec).addr.addr6);
+                                                                          &mut crec.addr.addr6);
                                               (conf_tmp.is_null()) ||
                                                   conf_tmp == config
                                           } {
                                 /* host must have exactly one address if comming from /etc/hosts. */
-                                if (*config).addr6.is_null() &&
+                                if config.addr6.is_null() &&
                                        {
-                                           (*config).addr6 =
+                                           config.addr6 =
                                                whine_m
                                            alloc(::std::mem::size_of::<AddressListEntry>()
                                                                      )
                                                    ;
-                                           !(*config).addr6.is_null()
+                                           !config.addr6.is_null()
                                        } {
-                                    (*(*config).addr6).next =
+                                    (*config.addr6).next =
                                         0 ;
-                                    (*(*config).addr6).flags =
+                                    (*config.addr6).flags =
                                         0 
                                 }
-                                if !(*config).addr6.is_null() &&
-                                       (*(*config).addr6).next.is_null() &&
-                                       (*(*config).addr6).flags &
+                                if !config.addr6.is_null() &&
+                                       (*config.addr6).next.is_null() &&
+                                       (*config.addr6).flags &
                                            (16  |
                                                 8 ) == 0 {
-                                    memcpy(&mut (*(*config).addr6).addr.addr6
+                                    memcpy(&mut (*config.addr6).addr.addr6
                                                                                       Vec<u8>,
-                                           &mut (*crec).addr.addr6                                         *mut In6Addr
+                                           &mut crec.addr.addr6                                         &mut In6Addr
                                            16 );
-                                    (*config).flags |=
+                                    config.flags |=
                                         (4096  |
                                              16384 )                                      libc::c_uint
                                 }
                             } else {
                                 inet_ntop(prot,
-                                          &mut (*crec).addr
+                                          &mut crec.addr
                                              ,
                                           daemon.addrbuff,
                                           46 );
@@ -632,12 +629,12 @@ pub fn dhcp_update_configs(mut configs: *mut DhcpConfig) {
                                           "duplicate IP address %s (%s) in dhcp-config directive"
                                                                                      *const libc::c_char,
                                           daemon.addrbuff,
-                                          (*config).hostname);
+                                          config.hostname);
                             }
                         }
                     }
                 }
-                config = (*config).next
+                config = config.next
             }
         }
         if !(prot == 2 ) { break ; }
@@ -662,12 +659,12 @@ pub fn whichdevice(daemon: &mut DnsmasqDaemon) -> Option<String> {
     // if daemon.if_names.is_null() { return 0 as *mut libc::c_char }
     if_tmp = daemon.if_names;
     while !if_tmp.is_null() {
-        if !(*if_tmp).name.is_null() &&
-               ((*if_tmp).used == 0 ||
-                    !strchr((*if_tmp).name, '*' as i32).is_null()) {
+        if !if_tmp.name.is_null() &&
+               (if_tmp.used == 0 ||
+                    !strchr(if_tmp.name, '*' as i32).is_null()) {
             return None;
         }
-        if_tmp = (*if_tmp).next
+        if_tmp = if_tmp.next
     }
     found = 0;
     iface = daemon.interfaces;
@@ -675,7 +672,7 @@ pub fn whichdevice(daemon: &mut DnsmasqDaemon) -> Option<String> {
         if iface.dhcp_ok != 0 {
             if found.is_null() {
                 found = iface
-            } else if strcmp((*found).name, iface.name) != 0 
+            } else if strcmp(found.name, iface.name) != 0
              {
                 return None;
             }
@@ -683,7 +680,7 @@ pub fn whichdevice(daemon: &mut DnsmasqDaemon) -> Option<String> {
         }
         iface = iface.next
     }
-    if !found.is_null() { return (*found).name }
+    if !found.is_null() { return found.name }
     return None;
 }
 

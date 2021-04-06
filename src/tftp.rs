@@ -41,17 +41,17 @@ pub  fn tftp_request(mut listen: Listener,
     let mut is_err: i32 = 1;
     let mut if_index: i32 = 0;
     let mut mtu: i32 = 0;
-    let mut tmp: *mut Iname = 0;
-    let mut transfer: *mut TftpTransfer = 0 ;
-    let mut up: *mut *mut TftpTransfer = 0 ;
+    let mut tmp: Iname = 0;
+    let mut transfer: TftpTransfer = 0 ;
+    let mut up: TftpTransfer;
     let mut port: i32 = daemon.start_tftp_port;
     let mut mtuflag: i32 = 0;
     let mut namebuff: [libc::c_char; 16] = [0; 16];
     let mut name: &mut String = 0 ;
     let mut prefix: &mut String = daemon.tftp_prefix;
-    let mut pref: *mut TftpPrefix = 0 ;
+    let mut pref: TftpPrefix = 0 ;
     let mut addra: NetAddress = NetAddress {addr4: NetAddress {s_addr: 0,},};
-    let mut family: i32 = (*listen).addr.sa.sa_family;
+    let mut family: i32 = listen.addr.sa.sa_family;
     /* Can always get recvd interface for IPv6 */
     let mut check_dest: i32 =
         (daemon.options[(13 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -80,14 +80,14 @@ pub  fn tftp_request(mut listen: Listener,
     iov.iov_len = daemon.packet_buff_sz ;
     /* we overwrote the buffer... */
     daemon.srv_save = 0;
-    len = recvmsg((*listen).tftpfd, &mut msg, 0);
+    len = recvmsg(listen.tftpfd, &mut msg, 0);
     if len < 2 { return }
     /* Can always get recvd interface for IPv6 */
     if check_dest == 0 {
-        if !(*listen).iface.is_null() {
-            addr = (*(*listen).iface).addr;
-            name = (*(*listen).iface).name;
-            mtu = (*(*listen).iface).mtu;
+        if !listen.iface.is_null() {
+            addr = (*listen.iface).addr;
+            name = (*listen.iface).name;
+            mtu = (*listen.iface).mtu;
             if daemon.tftp_mtu != 0 &&
                    daemon.tftp_mtu < mtu {
                 mtu = daemon.tftp_mtu
@@ -97,7 +97,7 @@ pub  fn tftp_request(mut listen: Listener,
 	     ask the kernel what the socket is bound to */
             let mut tcp_len: socklen_t =
                 ::std::mem::size_of::<NetAddress>()              socklen_t;
-            if getsockname((*listen).tftpfd,
+            if getsockname(listen.tftpfd,
                            NetAddressArg {__NetAddress__:
                                               &mut addr                                             NetAddress,},
                            &mut tcp_len) == -(1) {
@@ -105,7 +105,7 @@ pub  fn tftp_request(mut listen: Listener,
             }
         }
     } else {
-        let mut cmptr: *mut CmsgHdr = 0;
+        let mut cmptr: CmsgHdr = 0;
         if msg.msg_controllen <
                ::std::mem::size_of::<CmsgHdr>() {
             return
@@ -118,11 +118,11 @@ pub  fn tftp_request(mut listen: Listener,
                     msg.msg_control
                 } else { 0 };
             while !cmptr.is_null() {
-                if (*cmptr).cmsg_level == IPPROTO_IP &&
-                       (*cmptr).cmsg_type == 8 {
+                if cmptr.cmsg_level == IPPROTO_IP &&
+                       cmptr.cmsg_type == 8 {
                     let mut p_0: C2RustUnnamed_13 =
                         C2RustUnnamed_13{c: 0,};
-                    p_0.c = (*cmptr).__cmsg_data.as_mut_ptr();
+                    p_0.c = cmptr.__cmsg_data.as_mut_ptr();
                     addr.in_0.sin_addr = (*p_0.p).ipi_spec_dst;
                     if_index = (*p_0.p).ipi_ifindex
                 }
@@ -136,18 +136,18 @@ pub  fn tftp_request(mut listen: Listener,
                     msg.msg_control
                 } else { 0 };
             while !cmptr.is_null() {
-                if (*cmptr).cmsg_level == IPPROTO_IPV6 &&
-                       (*cmptr).cmsg_type == daemon.v6pktinfo {
+                if cmptr.cmsg_level == IPPROTO_IPV6 &&
+                       cmptr.cmsg_type == daemon.v6pktinfo {
                     let mut p_1: C2rustUnnamed12 =
                         C2rustUnnamed12 {c: 0,};
-                    p_1.c = (*cmptr).__cmsg_data.as_mut_ptr();
+                    p_1.c = cmptr.__cmsg_data.as_mut_ptr();
                     addr.in6.sin6_addr = (*p_1.p).ipi6_addr;
                     if_index = (*p_1.p).ipi6_ifindex
                 }
                 cmptr = __cmsg_nxthdr(&mut msg, cmptr)
             }
         }
-        if indextoname((*listen).tftpfd, if_index, namebuff.as_mut_ptr()) == 0
+        if indextoname(listen.tftpfd, if_index, namebuff.as_mut_ptr()) == 0
            {
             return
         }
@@ -158,11 +158,11 @@ pub  fn tftp_request(mut listen: Listener,
             /* dedicated tftp interface list */
             tmp = daemon.tftp_interfaces;
             while !tmp.is_null() {
-                if !(*tmp).name.is_null() &&
-                       wildcard_match((*tmp).name, name) != 0 {
+                if !tmp.name.is_null() &&
+                       wildcard_match(tmp.name, name) != 0 {
                     break ;
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
             if tmp.is_null() { return }
         } else {
@@ -178,7 +178,7 @@ pub  fn tftp_request(mut listen: Listener,
                        == 0 {
                     enumerate_interfaces(0);
                 }
-                if loopback_exception((*listen).tftpfd, family, &mut addra,
+                if loopback_exception(listen.tftpfd, family, &mut addra,
                                       name) == 0 &&
                        label_exception(if_index, family, &mut addra) == 0 {
                     return
@@ -187,16 +187,16 @@ pub  fn tftp_request(mut listen: Listener,
             /* allowed interfaces are the same as for DHCP */
             tmp = daemon.dhcp_except;
             while !tmp.is_null() {
-                if !(*tmp).name.is_null() &&
-                       wildcard_match((*tmp).name, name) != 0 {
+                if !tmp.name.is_null() &&
+                       wildcard_match(tmp.name, name) != 0 {
                     return
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
         }
         safe_strncpy(ifr.ifr_ifrn.ifrn_name.as_mut_ptr(), name,
                      16 );
-        if ioctl((*listen).tftpfd, 0x8921,
+        if ioctl(listen.tftpfd, 0x8921,
                  &mut ifr) != -(1) {
             mtu = ifr.ifr_ifru.ifru_mtu;
             if daemon.tftp_mtu != 0 &&
@@ -243,10 +243,10 @@ pub  fn tftp_request(mut listen: Listener,
         /* check for per-interface prefix */
         pref = daemon.if_prefix;
         while !pref.is_null() {
-            if strcmp((*pref).interface, name) == 0 {
-                prefix = (*pref).prefix
+            if strcmp(pref.interface, name) == 0 {
+                prefix = pref.prefix
             }
-            pref = (*pref).next
+            pref = pref.next
         }
     }
     if family == 2 {
@@ -273,7 +273,7 @@ pub  fn tftp_request(mut listen: Listener,
                                                                                                                       libc::c_int
                                                                                                                ))
            != 0 {
-        transfer.sockfd = (*listen).tftpfd
+        transfer.sockfd = listen.tftpfd
     } else {
         transfer.sockfd =
             socket(family, SOCK_DGRAM, 0);
@@ -327,7 +327,7 @@ pub  fn tftp_request(mut listen: Listener,
             } else {
                 my_syslog((1) << 3 |
                               3,
-                          b"unable to get free port for TFTP\x00");
+                          "unable to get free port for TFTP");
             }
         }
         free_transfer(transfer);
@@ -339,19 +339,19 @@ pub  fn tftp_request(mut listen: Listener,
            1 ||
            { filename = next(&mut p, end); filename.is_null() } ||
            { mode = next(&mut p, end); mode.is_null() } ||
-           strcasecmp(mode, b"octet\x00" )
+           strcasecmp(mode, "octet" )
                != 0 &&
                strcasecmp(mode,
-                          b"netascii\x00" )
+                          "netascii" )
                    != 0 {
         len =
             tftp_err(4, packet,
-                     b"unsupported request from %s\x00"                    *const libc::c_char ,
+                     "unsupported request from %s"                    *const libc::c_char ,
                      daemon.addrbuff);
         is_err = 1
     } else {
         if strcasecmp(mode,
-                      b"netascii\x00" ) ==
+                      "netascii" ) ==
                0 {
             transfer.netascii = 1
         }
@@ -359,7 +359,7 @@ pub  fn tftp_request(mut listen: Listener,
             opt = next(&mut p, end);
             if opt.is_null() { break ; }
             if strcasecmp(opt,
-                          b"blksize\x00" )
+                          "blksize" )
                    == 0 {
                 opt = next(&mut p, end);
                 if !opt.is_null() &&
@@ -399,7 +399,7 @@ pub  fn tftp_request(mut listen: Listener,
                     transfer.block = 0
                 }
             } else if strcasecmp(opt,
-                                 b"tsize\x00"                                *const libc::c_char) == 0
+                                 "tsize"                                *const libc::c_char) == 0
                           && !next(&mut p, end).is_null() &&
                           transfer.netascii == 0 {
                 transfer.opt_transize = 1;
@@ -433,7 +433,7 @@ pub  fn tftp_request(mut listen: Listener,
                                          *(*__ctype_tolower_loc()).offset(__c
                                                                   )
                                      }
-                             } else { __res = tolower(*p) }
+                             } else { __res = tolowerp }
                          } else {
                              __res =
                                  *(*__ctype_tolower_loc()).offset(*p                   libc::c_int
@@ -445,7 +445,7 @@ pub  fn tftp_request(mut listen: Listener,
             p = p.offset(1)
         }
         strcpy(daemon.namebuff,
-               b"/\x00" );
+               "/" );
         if !prefix.is_null() {
             if *prefix.offset(0) ==
                    '/' as i32 {
@@ -457,7 +457,7 @@ pub  fn tftp_request(mut listen: Listener,
             if *prefix.offset(strlen(prefix).wrapping_sub(1    )
                                  ) != '/' as i32 {
                 strncat(daemon.namebuff,
-                        b"/\x00" ,
+                        "/" ,
                         ((1025 - 1)).wrapping_sub(strlen(daemon.namebuff)));
             }
             if daemon.options[(29                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -488,7 +488,7 @@ pub  fn tftp_request(mut listen: Listener,
                         daemon.addrbuff,
                         ((1025 - 1)).wrapping_sub(strlen(daemon.namebuff)));
                 strncat(daemon.namebuff,
-                        b"/\x00" ,
+                        "/" ,
                         ((1025 - 1)).wrapping_sub(strlen(daemon.namebuff)));
                 /* remove unique-directory if it doesn't exist */
                 if stat(daemon.namebuff, &mut statbuf) ==
@@ -515,9 +515,9 @@ pub  fn tftp_request(mut listen: Listener,
                     let mut lease: DhcpLease =
                         lease_find_by_addr(peer.in_0.sin_addr);
                     if !lease.is_null() &&
-                           (*lease).hwaddr_type == 1 &&
-                           (*lease).hwaddr_len == 6 {
-                        macaddr = (*lease).hwaddr.as_mut_ptr()
+                           lease.hwaddr_type == 1 &&
+                           lease.hwaddr_len == 6 {
+                        macaddr = lease.hwaddr.as_mut_ptr()
                     }
                 }
                 /* If no luck, try to find in ARP table. This only works if client is in same (V)LAN */
@@ -547,7 +547,7 @@ pub  fn tftp_request(mut listen: Listener,
                              __glibc_reserved: [0; 3],};
                     snprintf(daemon.namebuff.offset(oldlen_0                isize),
                              ((1025 - 1)                     ).wrapping_sub(oldlen_0),
-                             b"%.2x-%.2x-%.2x-%.2x-%.2x-%.2x/\x00"                           *const u8,
+                             "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x/"                           *const u8,
                              *macaddr.offset(0)                           libc::c_int,
                              *macaddr.offset(1)                           libc::c_int,
                              *macaddr.offset(2)                           libc::c_int,
@@ -605,14 +605,14 @@ pub  fn tftp_request(mut listen: Listener,
         daemon.tftp_trans = transfer
     };
 }
- fn check_tftp_fileperm(mut len: *mut isize,
+ fn check_tftp_fileperm(mut len: &mut isize,
                                          mut prefix: &mut String)
- -> *mut TftpFile {
+ -> TftpFile {
     let mut current_block: u64;
     let mut packet: &mut String = daemon.packet;
     let mut namebuff: &mut String = daemon.namebuff;
-    let mut file: *mut TftpFile = 0 ;
-    let mut t: *mut TftpTransfer = 0 ;
+    let mut file: TftpFile = 0 ;
+    let mut t: TftpTransfer = 0 ;
     let mut uid: uid_t = geteuid();
     let mut statbuf: stat =
         stat{st_dev: 0,
@@ -634,13 +634,13 @@ pub  fn tftp_request(mut listen: Listener,
     /* trick to ban moving out of the subtree */
     if !(!prefix.is_null() &&
              !strstr(namebuff,
-                     b"/../\x00"                    *const libc::c_char).is_null()) {
+                     "/../"                    *const libc::c_char).is_null()) {
         fd = open(namebuff, 0);
         if fd == -(1) {
             if *__errno_location() == 2 {
                 *len =
                     tftp_err(1, packet,
-                             b"file %s not found\x00"                            *const libc::c_char ,
+                             "file %s not found"                            *const libc::c_char ,
                              namebuff);
                 return 0
             } else if *__errno_location() == 13 {
@@ -677,15 +677,15 @@ pub  fn tftp_request(mut listen: Listener,
      this keeps error messages sane. */
                     t = daemon.tftp_trans;
                     while !t.is_null() {
-                        if (*(*t).file).dev == statbuf.st_dev &&
-                               (*(*t).file).inode == statbuf.st_ino &&
-                               strcmp((*(*t).file).filename.as_mut_ptr(),
+                        if (*t.file).dev == statbuf.st_dev &&
+                               (*t.file).inode == statbuf.st_ino &&
+                               strcmp((*t.file).filename.as_mut_ptr(),
                                       namebuff) == 0 {
                             close(fd);
-                            (*(*t).file).refcount += 1;
-                            return (*t).file
+                            (*t.file).refcount += 1;
+                            return t.file
                         }
-                        t = (*t).next
+                        t = t.next
                     }
                     file =
                         whine_malloc((::std::mem::size_of::<TftpFile>() ).wrapping_add(strlen(namebuff)).wrapping_add(1))
@@ -693,12 +693,12 @@ pub  fn tftp_request(mut listen: Listener,
                     if file.is_null() {
                         *__errno_location() = 12
                     } else {
-                        (*file).fd = fd;
-                        (*file).size = statbuf.st_size;
-                        (*file).dev = statbuf.st_dev;
-                        (*file).inode = statbuf.st_ino;
-                        (*file).refcount = 1;
-                        strcpy((*file).filename.as_mut_ptr(), namebuff);
+                        file.fd = fd;
+                        file.size = statbuf.st_size;
+                        file.dev = statbuf.st_dev;
+                        file.inode = statbuf.st_ino;
+                        file.refcount = 1;
+                        strcpy(file.filename.as_mut_ptr(), namebuff);
                         return file
                     }
                     current_block = 9018216499526184084;
@@ -717,15 +717,15 @@ pub  fn tftp_request(mut listen: Listener,
     *__errno_location() = 13;
     *len =
         tftp_err(2, packet,
-                 b"cannot access %s: %s\x00"                *const libc::c_char , namebuff);
+                 "cannot access %s: %s"                *const libc::c_char , namebuff);
     if fd != -(1) { close(fd); }
     return 0 ;
 }
 #[no_mangle]
 pub  fn check_tftp_listeners(mut now: time::Instant) {
-    let mut transfer: *mut TftpTransfer = 0 ;
-    let mut tmp: *mut TftpTransfer = 0 ;
-    let mut up: *mut *mut TftpTransfer = 0 ;
+    let mut transfer: TftpTransfer = 0 ;
+    let mut tmp: TftpTransfer = 0 ;
+    let mut up: TftpTransfer;
     /* In single port mode, all packets come via port 69 and tftp_request() */
     if daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
@@ -808,9 +808,9 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
                 my_syslog((1) << 3 |
                               6,
                           if endcon != 0 {
-                              b"failed sending %s to %s\x00"
+                              "failed sending %s to %s"
                           } else {
-                              b"sent %s to %s\x00"
+                              "sent %s to %s"
                           }, daemon.namebuff,
                           daemon.addrbuff);
                 /* unlink */
@@ -849,9 +849,9 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
 */
 /* packet in daemon->packet as this is called. */
  fn handle_tftp(mut now: time::Instant,
-                                 mut transfer: *mut TftpTransfer,
+                                 mut transfer: &mut TftpTransfer,
                                  mut len: isize) {
-    let mut mess: *mut ack = daemon.packet ;
+    let mut mess: ack = daemon.packet ;
     if len >= ::std::mem::size_of::<ack>() {
         if __bswap_16(mess.op) == 4 &&
                __bswap_16(mess.block) ==
@@ -878,11 +878,11 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
             /* Sanitise error message */
             if err.is_null() {
                 err =
-                    b"\x00"                   &mut String
+                    ""                   &mut String
             } else { sanitise(err); }
             my_syslog((1) << 3 |
                           3,
-                      b"error %d %s received from %s\x00",
+                      "error %d %s received from %s",
                       __bswap_16(mess.block), err,
                       daemon.addrbuff);
             /* Got err, ensure we take abort */
@@ -891,7 +891,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         }
     };
 }
- fn free_transfer(mut transfer: *mut TftpTransfer) {
+ fn free_transfer(mut transfer: &mut TftpTransfer) {
     if daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
@@ -922,7 +922,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         return 0
     }
     *p =
-        (*p).offset(len.wrapping_add(1)                  isize);
+        p.offset(len.wrapping_add(1)                  isize);
     return ret;
 }
  fn sanitise(mut buf: &mut String) {
@@ -931,7 +931,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
     r = buf;
     q = r;
     while *r != 0 {
-        if *(*__ctype_b_loc()).offset(*r)  &
+        if *(*__ctype_b_loc()).offsetr  &
                _ISPRINT  != 0 {
             let fresh7 = q;
             q = q.offset(1);
@@ -943,7 +943,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
 }
 /* limit to make packet < 512 bytes and definitely smaller than buffer */
  fn tftp_err(mut err: i32, mut packet: &mut String, mut message: &mut String, mut file: &mut String) -> isize {
-    let mut mess: *mut errmess = packet ; /* include terminating zero */
+    let mut mess: errmess = packet ; /* include terminating zero */
     let mut len: isize = 0;
     let mut ret: isize = 4;
     let mut errstr: &mut String = strerror(*__errno_location());
@@ -960,7 +960,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
             (len) + 1
         } else { 500 };
     my_syslog((1) << 3 | 3,
-              b"%s\x00" ,
+              "%s" ,
               mess.message.as_mut_ptr());
     return ret;
 }
@@ -969,11 +969,11 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
     /* May have >1 refs to file, so potentially mangle a copy of the name */
     strcpy(daemon.namebuff, file);
     return tftp_err(0, packet,
-                    b"cannot read %s: %s\x00"                   *const libc::c_char ,
+                    "cannot read %s: %s"                   *const libc::c_char ,
                     daemon.namebuff);
 }
 /* return -1 for error, zero for done. */
- fn get_block(mut packet: &mut String, mut transfer: *mut TftpTransfer) -> isize {
+ fn get_block(mut packet: &mut String, mut transfer: &mut TftpTransfer) -> isize {
     if transfer.block == 0 {
         /* send OACK */
         let mut p: &mut String = 0 ;
@@ -983,29 +983,29 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         if transfer.opt_blocksize != 0 {
             p =
                 p.offset((sprintf(p,
-                                  b"blksize\x00") + 1)
+                                  "blksize") + 1)
                             );
             p =
                 p.offset((sprintf(p,
-                                  b"%u\x00",
+                                  "%u",
                                   transfer.blocksize) + 1)
                             )
         }
         if transfer.opt_transize != 0 {
             p =
                 p.offset((sprintf(p,
-                                  b"tsize\x00") + 1)
+                                  "tsize") + 1)
                             );
             p =
                 p.offset((sprintf(p,
-                                  b"%u\x00",
+                                  "%u",
                                   (*transfer.file).size) +
                               1))
         }
         return p.wrapping_offset_from(packet)
     } else {
         /* send data packet */
-        let mut mess_0: *mut datamess =
+        let mut mess_0: datamess =
             packet ; /* finished */
         let mut size: usize =
             ((*transfer.file).size - transfer.offset) ;
@@ -1015,11 +1015,11 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         if size > transfer.blocksize {
             size = transfer.blocksize
         }
-        (*mess_0).op = __bswap_16(3);
-        (*mess_0).block = __bswap_16(transfer.block );
+        mess_0.op = __bswap_16(3);
+        mess_0.block = __bswap_16(transfer.block );
         if lseek((*transfer.file).fd, transfer.offset, 0)
                == -(1) as off_t ||
-               read_write((*transfer.file).fd, (*mess_0).data.as_mut_ptr(),
+               read_write((*transfer.file).fd, mess_0.data.as_mut_ptr(),
                           size, 1) == 0 {
             return -(1)
         }
@@ -1032,7 +1032,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
             i = 0 ;
             newcarrylf = 0;
             while i < size {
-                if *(*mess_0).data.as_mut_ptr().offset(i) == '\n' as i32 &&
+                if *mess_0.data.as_mut_ptr().offset(i) == '\n' as i32 &&
                        (i != 0 ||
                             transfer.carrylf == 0) {
                     transfer.expansion =
@@ -1044,16 +1044,16 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
                         newcarrylf = 1
                     }
                     /* make space and insert CR */
-                    memmove(&mut *(*mess_0).data.as_mut_ptr().offset(i.wrapping_add(1
+                    memmove(&mut *mess_0.data.as_mut_ptr().offset(i.wrapping_add(1
                                                                                                                             libc::c_int
                                                                                                                      )
                                                         )
                                ,
-                            &mut *(*mess_0).data.as_mut_ptr().offset(i                      isize)
+                            &mut *mess_0.data.as_mut_ptr().offset(i                      isize)
                                ,
                             size.wrapping_sub(i.wrapping_add(1
                                                                        )));
-                    *(*mess_0).data.as_mut_ptr().offset(i) =
+                    *mess_0.data.as_mut_ptr().offset(i) =
                         '\r' as i32;
                     i = i.wrapping_add(1)
                 }
@@ -1066,7 +1066,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
 }
 #[no_mangle]
 pub  fn do_tftp_script_run() -> i32 {
-    let mut transfer: *mut TftpTransfer = 0 ;
+    let mut transfer: TftpTransfer = 0 ;
     transfer = daemon.tftp_done_trans;
     if !transfer.is_null() {
         daemon.tftp_done_trans = transfer.next;

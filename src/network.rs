@@ -16,7 +16,7 @@
 */
 use crate::slack::{ifreq, IFF_LOOPBACK, uint32_t, ipv6_mreq};
 use crate::defines::{DigitalSignature, NetAddress, C2rustUnnamed1a, IfReq, NetAddress, Iname, DnsmasqDaemon, In6Addr, Irec, IfaceParam, NetAddress, NetAddress, AddressListEntry, __bswap_32, InterfaceName, AuthZone, AuthNameList, InAddrT, SaFamily, __bswap_16, __uint16_t, Listener, SOCK_DGRAM, socklen_t, IPPROTO_IPV6, ConstNetAddressArg, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr, iovec, Server, C2RustUnnamed_13, C2rustUnnamed12, in_port_t, C2RustUnnamed, ServerFd, time::Instant, NetAddress, AddressType};
-use crate::util::{safe_strncpy, wildcard_match, whine_malloc, NetAddress_isequal, prettyprint_addr, sa_len, safe_malloc, rand16, hostname_isequal, rand32, netaddr_isequal};
+use crate::util::{safe_strncpy, wildcard_match, NetAddress_isequal, prettyprint_addr, sa_len, rand16, hostname_isequal, rand32, netaddr_isequal};
 use crate::dnsmasq_log::{my_syslog, die};
 use crate::netlink::iface_enumerate;
 use crate::rfc1035::private_net;
@@ -53,7 +53,7 @@ pub fn iface_check(mut family: i32,
                                      mut name: &mut String,
                                      mut auth: )
                                      -> i32 {
-    let mut tmp: *mut Iname = 0;
+    let mut tmp: Iname = 0;
     let mut ret: i32 = 1;
     let mut match_addr: i32 = 0;
     /* Note: have to check all and not bail out early, so that we set the
@@ -66,115 +66,115 @@ pub fn iface_check(mut family: i32,
         ret = 0;
         tmp = daemon.if_names;
         while !tmp.is_null() {
-            if !(*tmp).name.is_null() &&
-                   wildcard_match((*tmp).name, name) != 0 {
-                (*tmp).used = 1;
-                ret = (*tmp).used
+            if !tmp.name.is_null() &&
+                   wildcard_match(tmp.name, name) != 0 {
+                tmp.used = 1;
+                ret = tmp.used
             }
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
         if !addr.is_null() {
             tmp = daemon.if_addrs;
             while !tmp.is_null() {
-                if (*tmp).addr.sa.sa_family == family {
+                if tmp.addr.sa.sa_family == family {
                     if family == 2 &&
-                           (*tmp).addr.in_0.sin_addr.s_addr ==
+                           tmp.addr.in_0.sin_addr.s_addr ==
                                addr.addr4.s_addr {
-                        (*tmp).used = 1;
-                        match_addr = (*tmp).used;
+                        tmp.used = 1;
+                        match_addr = tmp.used;
                         ret = match_addr
                     } else if family == 10 &&
                                   ({
                                        let mut __a: *const In6Addr =
-                                           &mut (*tmp).addr.in6.sin6_addr                                         *mut In6Addr                                         *const In6Addr;
+                                           &mut tmp.addr.in6.sin6_addr                                         &mut In6Addr                                         *const In6Addr;
                                        let mut __b: *const In6Addr =
                                            &mut addr.addr6
                                                ;
-                                       ((*__a).__in6_u.__u6_addr32[0                    libc::c_int
+                                       (__a.__in6_u.__u6_addr32[0                    libc::c_int
                                                                                           usize]
                                             ==
-                                            (*__b).__in6_u.__u6_addr32[0                        libc::c_int
+                                            __b.__in6_u.__u6_addr32[0                        libc::c_int
                                                                                                   usize]
                                             &&
-                                            (*__a).__in6_u.__u6_addr32[1                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[1                        libc::c_int
                                                                                                   usize]
                                                 ==
-                                                (*__b).__in6_u.__u6_addr32[1
+                                                __b.__in6_u.__u6_addr32[1
                                                                                                           libc::c_int
                                                                                                           usize]
                                             &&
-                                            (*__a).__in6_u.__u6_addr32[2                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[2                        libc::c_int
                                                                                                   usize]
                                                 ==
-                                                (*__b).__in6_u.__u6_addr32[2
+                                                __b.__in6_u.__u6_addr32[2
                                                                                                           libc::c_int
                                                                                                           usize]
                                             &&
-                                            (*__a).__in6_u.__u6_addr32[3                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[3                        libc::c_int
                                                                                                   usize]
                                                 ==
-                                                (*__b).__in6_u.__u6_addr32[3
+                                                __b.__in6_u.__u6_addr32[3
                                                                                                           libc::c_int
                                                                                                           usize])
 
                                    }) != 0 {
-                        (*tmp).used = 1;
-                        match_addr = (*tmp).used;
+                        tmp.used = 1;
+                        match_addr = tmp.used;
                         ret = match_addr
                     }
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
         }
     }
     if match_addr == 0 {
         tmp = daemon.if_except;
         while !tmp.is_null() {
-            if !(*tmp).name.is_null() &&
-                   wildcard_match((*tmp).name, name) != 0 {
+            if !tmp.name.is_null() &&
+                   wildcard_match(tmp.name, name) != 0 {
                 ret = 0
             }
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
     }
     tmp = daemon.authinterface;
     while !tmp.is_null() {
-        if !(*tmp).name.is_null() {
-            if strcmp((*tmp).name, name) == 0 &&
-                   ((*tmp).addr.sa.sa_family ==
+        if !tmp.name.is_null() {
+            if strcmp(tmp.name, name) == 0 &&
+                   (tmp.addr.sa.sa_family ==
                         0 ||
-                        (*tmp).addr.sa.sa_family == family) {
+                        tmp.addr.sa.sa_family == family) {
                 break ;
             }
         } else {
             if !addr.is_null() &&
-                   (*tmp).addr.sa.sa_family == 2
+                   tmp.addr.sa.sa_family == 2
                    && family == 2 &&
-                   (*tmp).addr.in_0.sin_addr.s_addr == addr.addr4.s_addr {
+                   tmp.addr.in_0.sin_addr.s_addr == addr.addr4.s_addr {
                 break ;
             }
             if !addr.is_null() &&
-                   (*tmp).addr.sa.sa_family ==
+                   tmp.addr.sa.sa_family ==
                        10 && family == 10 &&
                    ({
                         let mut __a: *const In6Addr =
-                            &mut (*tmp).addr.in6.sin6_addr                          *const In6Addr;
+                            &mut tmp.addr.in6.sin6_addr                          *const In6Addr;
                         let mut __b: *const In6Addr =
                             &mut addr.addr6                          *const In6Addr;
-                        ((*__a).__in6_u.__u6_addr32[0 ]
+                        (__a.__in6_u.__u6_addr32[0 ]
                              ==
-                             (*__b).__in6_u.__u6_addr32[0         usize] &&
-                             (*__a).__in6_u.__u6_addr32[1         usize] ==
-                                 (*__b).__in6_u.__u6_addr32[1] &&
-                             (*__a).__in6_u.__u6_addr32[2         usize] ==
-                                 (*__b).__in6_u.__u6_addr32[2] &&
-                             (*__a).__in6_u.__u6_addr32[3         usize] ==
-                                 (*__b).__in6_u.__u6_addr32[3])                      libc::c_int
+                             __b.__in6_u.__u6_addr32[0         usize] &&
+                             __a.__in6_u.__u6_addr32[1         usize] ==
+                                 __b.__in6_u.__u6_addr32[1] &&
+                             __a.__in6_u.__u6_addr32[2         usize] ==
+                                 __b.__in6_u.__u6_addr32[2] &&
+                             __a.__in6_u.__u6_addr32[3         usize] ==
+                                 __b.__in6_u.__u6_addr32[3])                      libc::c_int
                     }) != 0 {
                 break ;
             }
         }
-        tmp = (*tmp).next
+        tmp = tmp.next
     }
     if !tmp.is_null() && !auth.is_null() {
         *auth = 1;
@@ -206,7 +206,7 @@ pub fn loopback_exception(mut fd: i32,
                                                sa_data: [0; 14],},
                       digest: 0
                   },};
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     safe_strncpy(ifr.ifr_ifrn.ifrn_name.as_mut_ptr(), name,
                  16 );
     if ioctl(fd, 0x8913,
@@ -215,44 +215,44 @@ pub fn loopback_exception(mut fd: i32,
                IFF_LOOPBACK != 0 {
         iface = daemon.interfaces;
         while !iface.is_null() {
-            if (*iface).addr.sa.sa_family == family {
+            if iface.addr.sa.sa_family == family {
                 if family == 2 {
-                    if (*iface).addr.in_0.sin_addr.s_addr ==
+                    if iface.addr.in_0.sin_addr.s_addr ==
                            addr.addr4.s_addr {
                         return 1
                     }
                 } else if ({
                                let mut __a: *const In6Addr =
-                                   &mut (*iface).addr.in6.sin6_addr                                 *mut In6Addr ;
+                                   &mut iface.addr.in6.sin6_addr                                 &mut In6Addr ;
                                let mut __b: *const In6Addr =
                                    &mut addr.addr6                                 *const In6Addr;
-                               ((*__a).__in6_u.__u6_addr32[0            usize] ==
-                                    (*__b).__in6_u.__u6_addr32[0                libc::c_int
+                               (__a.__in6_u.__u6_addr32[0            usize] ==
+                                    __b.__in6_u.__u6_addr32[0                libc::c_int
                                                                    ]
                                     &&
-                                    (*__a).__in6_u.__u6_addr32[1                libc::c_int
+                                    __a.__in6_u.__u6_addr32[1                libc::c_int
                                                                    ]
                                         ==
-                                        (*__b).__in6_u.__u6_addr32[1                    libc::c_int
+                                        __b.__in6_u.__u6_addr32[1                    libc::c_int
                                                                                           usize]
                                     &&
-                                    (*__a).__in6_u.__u6_addr32[2                libc::c_int
+                                    __a.__in6_u.__u6_addr32[2                libc::c_int
                                                                    ]
                                         ==
-                                        (*__b).__in6_u.__u6_addr32[2                    libc::c_int
+                                        __b.__in6_u.__u6_addr32[2                    libc::c_int
                                                                                           usize]
                                     &&
-                                    (*__a).__in6_u.__u6_addr32[3                libc::c_int
+                                    __a.__in6_u.__u6_addr32[3                libc::c_int
                                                                    ]
                                         ==
-                                        (*__b).__in6_u.__u6_addr32[3                    libc::c_int
+                                        __b.__in6_u.__u6_addr32[3                    libc::c_int
                                                                                           usize])
 
                            }) != 0 {
                     return 1
                 }
             }
-            iface = (*iface).next
+            iface = iface.next
         }
     }
     return 0;
@@ -266,21 +266,21 @@ pub fn label_exception(mut index: i32,
                                          mut family: i32,
                                          mut addr: &mut NetAddress)
  -> i32 {
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     /* labels only supported on IPv4 addresses. */
     if family != 2 { return 0 }
     iface = daemon.interfaces;
     while !iface.is_null() {
-        if (*iface).index == index &&
-               (*iface).addr.sa.sa_family == 2
-               && (*iface).addr.in_0.sin_addr.s_addr == addr.addr4.s_addr {
+        if iface.index == index &&
+               iface.addr.sa.sa_family == 2
+               && iface.addr.in_0.sin_addr.s_addr == addr.addr4.s_addr {
             return 1
         }
-        iface = (*iface).next
+        iface = iface.next
     }
     return 0;
 }
-fn iface_allowed(mut param: *mut IfaceParam,
+fn iface_allowed(mut param: &mut IfaceParam,
                                    mut if_index: i32,
                                    mut label: &mut String,
                                    mut addr: NetAddress,
@@ -288,7 +288,7 @@ fn iface_allowed(mut param: *mut IfaceParam,
                                    mut prefixlen: i32,
                                    mut iface_flags: i32)
                                    -> i32 {
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     let mut mtu: i32 = 0;
     let mut loopback: i32 = 0;
     let mut ifr: IfReq =
@@ -308,17 +308,17 @@ fn iface_allowed(mut param: *mut IfaceParam,
     let mut dhcp_ok: i32 = 1;
     let mut auth_dns: i32 = 0;
     let mut is_label: i32 = 0;
-    let mut tmp: *mut Iname = 0;
-    if indextoname((*param).fd, if_index, ifr.ifr_ifrn.ifrn_name.as_mut_ptr())
+    let mut tmp: Iname = 0;
+    if indextoname(param.fd, if_index, ifr.ifr_ifrn.ifrn_name.as_mut_ptr())
            == 0 ||
-           ioctl((*param).fd, 0x8913,
+           ioctl(param.fd, 0x8913,
                  &mut ifr) == -(1) {
         return 0
     }
     loopback =
         ifr.ifr_ifru.ifru_flags & IFF_LOOPBACK;
     if loopback != 0 { dhcp_ok = 0 }
-    if ioctl((*param).fd, 0x8921,
+    if ioctl(param.fd, 0x8921,
              &mut ifr) != -(1) {
         mtu = ifr.ifr_ifru.ifru_mtu
     }
@@ -334,24 +334,24 @@ fn iface_allowed(mut param: *mut IfaceParam,
                                                                                                                       libc::c_int
                                                                                                                ))
            != 0 {
-        let mut al: *mut AddressListEntry = 0 ;
-        if !(*param).spare.is_null() {
-            al = (*param).spare;
-            (*param).spare = (*al).next
+        let mut al: AddressListEntry = 0 ;
+        if !param.spare.is_null() {
+            al = param.spare;
+            param.spare = al.next
         } else {
             al =
                 whine_malloc(::std::mem::size_of::<AddressListEntry>()))
         }
         if !al.is_null() {
-            (*al).next = daemon.interface_addrs;
+            al.next = daemon.interface_addrs;
             daemon.interface_addrs = al;
-            (*al).prefixlen = prefixlen;
+            al.prefixlen = prefixlen;
             if addr.sa.sa_family == 2 {
-                (*al).addr.addr4 = addr.in_0.sin_addr;
-                (*al).flags = 0
+                al.addr.addr4 = addr.in_0.sin_addr;
+                al.flags = 0
             } else {
-                (*al).addr.addr6 = addr.in6.sin6_addr;
-                (*al).flags = 2
+                al.addr.addr6 = addr.in6.sin6_addr;
+                al.flags = 2
             }
         }
     }
@@ -359,128 +359,128 @@ fn iface_allowed(mut param: *mut IfaceParam,
            ({
                 let mut __a: *const In6Addr =
                     &mut addr.in6.sin6_addr ;
-                ((*__a).__in6_u.__u6_addr32[0 ] &
+                (__a.__in6_u.__u6_addr32[0 ] &
                      __bswap_32(0xffc00000) ==
                      __bswap_32(0xfe800000))
             }) == 0 {
-        let mut int_name: *mut InterfaceName = ;
-        let mut al_0: *mut AddressListEntry = 0 ;
-        let mut zone: *mut AuthZone = 0 ;
-        let mut name: *mut AuthNameList = 0 ;
+        let mut int_name: InterfaceName = ;
+        let mut al_0: AddressListEntry = 0 ;
+        let mut zone: AuthZone = 0 ;
+        let mut name: AuthNameList = 0 ;
         /* Find subnets in auth_zones */
         zone = daemon.auth_zones;
         while !zone.is_null() {
-            name = (*zone).interface_names;
+            name = zone.interface_names;
             while !name.is_null() {
-                if wildcard_match((*name).name, label) != 0 {
+                if wildcard_match(name.name, label) != 0 {
                     if addr.sa.sa_family == 2
-                           && (*name).flags & 2 != 0 {
-                        if !(*param).spare.is_null() {
-                            al_0 = (*param).spare;
-                            (*param).spare = (*al_0).next
+                           && name.flags & 2 != 0 {
+                        if !param.spare.is_null() {
+                            al_0 = param.spare;
+                            param.spare = al_0.next
                         } else {
                             al_0 =
                                 whine_malloc(::std::mem::size_of::<AddressListEntry>()
                                                 )
                         }
                         if !al_0.is_null() {
-                            (*al_0).next = (*zone).subnet;
-                            (*zone).subnet = al_0;
-                            (*al_0).prefixlen = prefixlen;
-                            (*al_0).addr.addr4 = addr.in_0.sin_addr;
-                            (*al_0).flags = 0
+                            al_0.next = zone.subnet;
+                            zone.subnet = al_0;
+                            al_0.prefixlen = prefixlen;
+                            al_0.addr.addr4 = addr.in_0.sin_addr;
+                            al_0.flags = 0
                         }
                     }
                     if addr.sa.sa_family ==
                            10 &&
-                           (*name).flags & 1 != 0 {
-                        if !(*param).spare.is_null() {
-                            al_0 = (*param).spare;
-                            (*param).spare = (*al_0).next
+                           name.flags & 1 != 0 {
+                        if !param.spare.is_null() {
+                            al_0 = param.spare;
+                            param.spare = al_0.next
                         } else {
                             al_0 =
                                 whine_malloc(::std::mem::size_of::<AddressListEntry>()
                                                 )
                         }
                         if !al_0.is_null() {
-                            (*al_0).next = (*zone).subnet;
-                            (*zone).subnet = al_0;
-                            (*al_0).prefixlen = prefixlen;
-                            (*al_0).addr.addr6 = addr.in6.sin6_addr;
-                            (*al_0).flags = 2
+                            al_0.next = zone.subnet;
+                            zone.subnet = al_0;
+                            al_0.prefixlen = prefixlen;
+                            al_0.addr.addr6 = addr.in6.sin6_addr;
+                            al_0.flags = 2
                         }
                     }
                 }
-                name = (*name).next
+                name = name.next
             }
-            zone = (*zone).next
+            zone = zone.next
         }
         /* Update addresses from interface_names. These are a set independent
 	 of the set we're listening on. */
         int_name = daemon.int_names;
         while !int_name.is_null() {
-            if strncmp(label, (*int_name).intr,
+            if strncmp(label, int_name.intr,
                        16) == 0
                    &&
-                   (addr.sa.sa_family == (*int_name).family
-                        || (*int_name).family == 0) {
-                if !(*param).spare.is_null() {
-                    al_0 = (*param).spare;
-                    (*param).spare = (*al_0).next
+                   (addr.sa.sa_family == int_name.family
+                        || int_name.family == 0) {
+                if !param.spare.is_null() {
+                    al_0 = param.spare;
+                    param.spare = al_0.next
                 } else {
                     al_0 =
                         whine_malloc(::std::mem::size_of::<AddressListEntry>())
                 }
                 if !al_0.is_null() {
-                    (*al_0).next = (*int_name).addresses;
-                    (*int_name).addresses = al_0;
+                    al_0.next = int_name.addresses;
+                    int_name.addresses = al_0;
                     if addr.sa.sa_family == 2
                        {
-                        (*al_0).addr.addr4 = addr.in_0.sin_addr;
-                        (*al_0).flags = 0
+                        al_0.addr.addr4 = addr.in_0.sin_addr;
+                        al_0.flags = 0
                     } else {
-                        (*al_0).addr.addr6 = addr.in6.sin6_addr;
-                        (*al_0).flags = 2;
+                        al_0.addr.addr6 = addr.in6.sin6_addr;
+                        al_0.flags = 2;
                         /* Privacy addresses and addresses still undergoing DAD and deprecated addresses
 		       don't appear in forward queries, but will in reverse ones. */
                         if iface_flags & 4 == 0 ||
                                iface_flags &
                                    (2 | 1) != 0
                            {
-                            (*al_0).flags |= 4
+                            al_0.flags |= 4
                         }
                     }
                 }
             }
-            int_name = (*int_name).next
+            int_name = int_name.next
         }
     }
     /* check whether the interface IP has been added already 
      we call this routine multiple times. */
     iface = daemon.interfaces; /* for garbage collection */
     while !iface.is_null() {
-        if NetAddress_isequal(&mut (*iface).addr, addr) != 0 &&
-               (*iface).index == if_index {
-            (*iface).dad =
+        if NetAddress_isequal(&mut iface.addr, addr) != 0 &&
+               iface.index == if_index {
+            iface.dad =
                 (iface_flags & 1 != 0);
-            (*iface).found = 1;
-            (*iface).netmask = netmask;
+            iface.found = 1;
+            iface.netmask = netmask;
             return 1
         }
-        iface = (*iface).next
+        iface = iface.next
     }
     /* If we are restricting the set of interfaces to use, make
      sure that loopback interfaces are in that set. */
     if !daemon.if_names.is_null() && loopback != 0 {
-        let mut lo: *mut Iname = 0;
+        let mut lo: Iname = 0;
         lo = daemon.if_names;
         while !lo.is_null() {
-            if !(*lo).name.is_null() &&
-                   strcmp((*lo).name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) ==
+            if !lo.name.is_null() &&
+                   strcmp(lo.name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) ==
                        0 {
                 break ;
             }
-            lo = (*lo).next
+            lo = lo.next
         }
         if lo.is_null() &&
                {
@@ -488,14 +488,14 @@ fn iface_allowed(mut param: *mut IfaceParam,
                        whine_malloc(::std::mem::size_of::<Iname>() );
                    !lo.is_null()
                } {
-            (*lo).name =
+            lo.name =
                 whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1   libc::c_int
                                                                                                                          ))
                     ;
-            if !(*lo).name.is_null() {
-                strcpy((*lo).name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
-                (*lo).used = 1;
-                (*lo).next = daemon.if_names;
+            if !lo.name.is_null() {
+                strcpy(lo.name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
+                lo.used = 1;
+                lo.next = daemon.if_names;
                 daemon.if_names = lo
             } else { free(lo); }
         }
@@ -517,13 +517,13 @@ fn iface_allowed(mut param: *mut IfaceParam,
     } else {
         tmp = daemon.dhcp_except;
         while !tmp.is_null() {
-            if !(*tmp).name.is_null() &&
-                   wildcard_match((*tmp).name,
+            if !tmp.name.is_null() &&
+                   wildcard_match(tmp.name,
                                   ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) != 0 {
                 tftp_ok = 0;
                 dhcp_ok = 0
             }
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
     }
     if !daemon.tftp_interfaces.is_null() {
@@ -531,37 +531,37 @@ fn iface_allowed(mut param: *mut IfaceParam,
         tftp_ok = 0;
         tmp = daemon.tftp_interfaces;
         while !tmp.is_null() {
-            if !(*tmp).name.is_null() &&
-                   wildcard_match((*tmp).name,
+            if !tmp.name.is_null() &&
+                   wildcard_match(tmp.name,
                                   ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) != 0 {
                 tftp_ok = 1
             }
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
     }
     /* add to list */
     iface =
-        whine_malloc(::std::mem::size_of::<Irec>())      *mut Irec; /* dummy */
+        whine_malloc(::std::mem::size_of::<Irec>())      Irec; /* dummy */
     if !iface.is_null() {
-        (*iface).addr = *addr;
-        (*iface).netmask = netmask;
-        (*iface).tftp_ok = tftp_ok;
-        (*iface).dhcp_ok = dhcp_ok;
-        (*iface).dns_auth = auth_dns;
-        (*iface).mtu = mtu;
-        (*iface).dad = (iface_flags & 1 != 0);
-        (*iface).found = 1;
-        (*iface).warned = 0;
-        (*iface).multicast_done = (*iface).warned;
-        (*iface).done = (*iface).multicast_done;
-        (*iface).index = if_index;
-        (*iface).label = is_label;
-        (*iface).name =
+        iface.addr = *addr;
+        iface.netmask = netmask;
+        iface.tftp_ok = tftp_ok;
+        iface.dhcp_ok = dhcp_ok;
+        iface.dns_auth = auth_dns;
+        iface.mtu = mtu;
+        iface.dad = (iface_flags & 1 != 0);
+        iface.found = 1;
+        iface.warned = 0;
+        iface.multicast_done = iface.warned;
+        iface.done = iface.multicast_done;
+        iface.index = if_index;
+        iface.label = is_label;
+        iface.name =
             whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1))
                 ;
-        if !(*iface).name.is_null() {
-            strcpy((*iface).name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
-            (*iface).next = daemon.interfaces;
+        if !iface.name.is_null() {
+            strcpy(iface.name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
+            iface.next = daemon.interfaces;
             daemon.interfaces = iface;
             return 1
         }
@@ -632,15 +632,15 @@ fn iface_allowed_v4(mut local: NetAddress,
  * Clean old interfaces no longer found.
  */
 fn clean_interfaces() {
-    let mut iface: *mut Irec = 0 ;
-    let mut up: *mut *mut Irec = &mut daemon.interfaces;
+    let mut iface: Irec = 0 ;
+    let mut up: &mut Irec = &mut daemon.interfaces;
     iface = *up;
     while !iface.is_null() {
-        if (*iface).found == 0 && (*iface).done == 0 {
-            *up = (*iface).next;
-            free((*iface).name);
+        if iface.found == 0 && iface.done == 0 {
+            *up = iface.next;
+            free(iface.name);
             free(iface);
-        } else { up = &mut (*iface).next }
+        } else { up = &mut iface.next }
         iface = *up
     };
 }
@@ -649,54 +649,54 @@ fn clean_interfaces() {
  * @return 1 if released, 0 if still required
  */
 fn release_listener(mut l: Listener) -> i32 {
-    if (*l).used > 1 {
-        let mut iface: *mut Irec = 0 ;
+    if l.used > 1 {
+        let mut iface: Irec = 0 ;
         iface = daemon.interfaces;
         while !iface.is_null() {
-            if (*iface).done != 0 &&
-                   NetAddress_isequal(&mut (*l).addr, &mut (*iface).addr) != 0 {
-                if (*iface).found != 0 {
+            if iface.done != 0 &&
+                   NetAddress_isequal(&mut l.addr, &mut iface.addr) != 0 {
+                if iface.found != 0 {
                     /* update listener to point to active interface instead */
-                    if (*(*l).iface).found == 0 { (*l).iface = iface }
-                } else { (*l).used -= 1; (*iface).done = 0 }
+                    if (*l.iface).found == 0 { l.iface = iface }
+                } else { l.used -= 1; iface.done = 0 }
             }
-            iface = (*iface).next
+            iface = iface.next
         }
         /* Someone is still using this listener, skip its deletion */
-        if (*l).used > 0 { return 0 }
+        if l.used > 0 { return 0 }
     }
-    if (*(*l).iface).done != 0 {
+    if (*l.iface).done != 0 {
         let mut port: i32 = 0;
         port =
-            prettyprint_addr(&mut (*(*l).iface).addr,
+            prettyprint_addr(&mut (*l.iface).addr,
                              daemon.addrbuff);
         my_syslog(7,
-                  b"stopped listening on %s(#%d): %s port %d\x00"
-                     , (*(*l).iface).name,
-                  (*(*l).iface).index, daemon.addrbuff, port);
+                  "stopped listening on %s(#%d): %s port %d"
+                     , (*l.iface).name,
+                  (*l.iface).index, daemon.addrbuff, port);
         /* In case it ever returns */
-        (*(*l).iface).done = 0
+        (*l.iface).done = 0
     }
-    if (*l).fd != -(1) { close((*l).fd); }
-    if (*l).tcpfd != -(1) { close((*l).tcpfd); }
-    if (*l).tftpfd != -(1) { close((*l).tftpfd); }
+    if l.fd != -(1) { close(l.fd); }
+    if l.tcpfd != -(1) { close(l.tcpfd); }
+    if l.tftpfd != -(1) { close(l.tftpfd); }
     free(l);
     return 1;
 }
 
 pub fn enumerate_interfaces(mut reset: i32)
  -> i32 {
-    static mut spare: *mut AddressListEntry = 0  ;
+    static mut spare: AddressListEntry = 0  ;
     static mut done: i32 = 0;
     let mut param: IfaceParam =
         IfaceParam {spare: 0 , fd: 0,};
     let mut errsave: i32 = 0;
     let mut ret: i32 = 1;
-    let mut addr: *mut AddressListEntry = 0 ;
-    let mut tmp: *mut AddressListEntry = 0 ;
-    let mut intname: *mut InterfaceName = ;
-    let mut iface: *mut Irec = 0 ;
-    let mut zone: *mut AuthZone = 0 ;
+    let mut addr: AddressListEntry = 0 ;
+    let mut tmp: AddressListEntry = 0 ;
+    let mut intname: InterfaceName = ;
+    let mut iface: Irec = 0 ;
+    let mut zone: AuthZone = 0 ;
     /* Do this max once per select cycle  - also inhibits netlink socket use
    in TCP child processes. */
     if reset != 0 { done = 0; return 1 }
@@ -708,21 +708,21 @@ pub fn enumerate_interfaces(mut reset: i32)
     /* Mark interfaces for garbage collection */
     iface = daemon.interfaces;
     while !iface.is_null() {
-        (*iface).found = 0;
-        iface = (*iface).next
+        iface.found = 0;
+        iface = iface.next
     }
     /* remove addresses stored against interface_names */
     intname = daemon.int_names;
     while !intname.is_null() {
-        addr = (*intname).addresses;
+        addr = intname.addresses;
         while !addr.is_null() {
             tmp = addr.next;
             addr.next = spare;
             spare = addr;
             addr = tmp
         }
-        (*intname).addresses = 0 ;
-        intname = (*intname).next
+        intname.addresses = 0 ;
+        intname = intname.next
     }
     /* Remove list of addresses of local interfaces */
     addr = daemon.interface_addrs;
@@ -737,10 +737,10 @@ pub fn enumerate_interfaces(mut reset: i32)
    ones configured as address literals */
     zone = daemon.auth_zones;
     while !zone.is_null() {
-        if !(*zone).interface_names.is_null() {
-            let mut up: *mut *mut AddressListEntry = 0 ;
-            up = &mut (*zone).subnet;
-            addr = (*zone).subnet;
+        if !zone.interface_names.is_null() {
+            let mut up: AddressListEntry;
+            up = &mut zone.subnet;
+            addr = zone.subnet;
             while !addr.is_null() {
                 tmp = addr.next;
                 if addr.flags & 1 != 0 {
@@ -753,14 +753,14 @@ pub fn enumerate_interfaces(mut reset: i32)
                 addr = tmp
             }
         }
-        zone = (*zone).next
+        zone = zone.next
     }
     param.spare = spare;
     ret =
         iface_enumerate(10,
                         &mut param,
                         ::std::mem::transmute::<Option<fn(_:
-                                                                                *mut In6Addr,
+                                                                                &mut In6Addr,
                                                                             _:
                                                                                 libc::c_int,
                                                                             _:
@@ -780,7 +780,7 @@ pub fn enumerate_interfaces(mut reset: i32)
                                                            ->
                                                                libc::c_int>>(Some(iface_allowed_v6
                                                                                                                         fn(_:
-                                                                                                               *mut In6Addr,
+                                                                                                               &mut In6Addr,
                                                                                                            _:
                                                                                                                libc::c_int,
                                                                                                            _:
@@ -850,14 +850,14 @@ pub fn enumerate_interfaces(mut reset: i32)
 	 a call to enumerate_interfaces, this is checked OK on all calls. */
         let mut l: Listener = 0 ;
         let mut tmp_0: Listener = 0 ;
-        let mut up_0: *mut Listener = 0 ;
+        let mut up_0: Listener = 0 ;
         let mut freed: i32 = 0;
         up_0 = &mut daemon.listeners;
         l = daemon.listeners;
         while !l.is_null() {
-            tmp_0 = (*l).next;
-            if (*l).iface.is_null() || (*(*l).iface).found != 0 {
-                up_0 = &mut (*l).next
+            tmp_0 = l.next;
+            if l.iface.is_null() || (*l.iface).found != 0 {
+                up_0 = &mut l.next
             } else if release_listener(l) != 0 {
                 *up_0 = tmp_0;
                 freed = 1
@@ -973,10 +973,10 @@ fn make_sock(mut addr: NetAddress,
                                                                                                                        ))
                == 0 {
         sprintf(daemon.addrbuff,
-                b"port %d\x00" , port);
+                "port %d" , port);
     }
     s =
-        b"failed to create listening socket for %s: %s\x00"       *const libc::c_char ;
+        "failed to create listening socket for %s: %s"       *const libc::c_char ;
     if fd != -(1) { close(fd); }
     *__errno_location() = errsave;
     if dienow != 0 {
@@ -1028,7 +1028,7 @@ pub fn tcp_interface(mut fd: i32,
     /* suppress potential unused warning */
     let mut if_index: i32 = 0;
     let mut opt: i32 = 1;
-    let mut cmptr: *mut CmsgHdr = 0;
+    let mut cmptr: CmsgHdr = 0;
     let mut msg: MsgHdr =
         MsgHdr {msg_name: 0,
                msg_namelen: 0,
@@ -1057,11 +1057,11 @@ pub fn tcp_interface(mut fd: i32,
                     msg.msg_control
                 } else { 0 };
             while !cmptr.is_null() {
-                if (*cmptr).cmsg_level == IPPROTO_IP &&
-                       (*cmptr).cmsg_type == 8 {
+                if cmptr.cmsg_level == IPPROTO_IP &&
+                       cmptr.cmsg_type == 8 {
                     let mut p: C2RustUnnamed_13 =
                         C2RustUnnamed_13{c: 0,};
-                    p.c = (*cmptr).__cmsg_data.as_mut_ptr();
+                    p.c = cmptr.__cmsg_data.as_mut_ptr();
                     if_index = (*p.p).ipi_ifindex
                 }
                 cmptr = __cmsg_nxthdr(&mut msg, cmptr)
@@ -1078,11 +1078,11 @@ pub fn tcp_interface(mut fd: i32,
                 msg.msg_control
             } else { 0 };
         while !cmptr.is_null() {
-            if (*cmptr).cmsg_level == IPPROTO_IPV6 &&
-                   (*cmptr).cmsg_type == daemon.v6pktinfo {
+            if cmptr.cmsg_level == IPPROTO_IPV6 &&
+                   cmptr.cmsg_type == daemon.v6pktinfo {
                 let mut p_0: C2rustUnnamed12 =
                     C2rustUnnamed12 {c: 0,};
-                p_0.c = (*cmptr).__cmsg_data.as_mut_ptr();
+                p_0.c = cmptr.__cmsg_data.as_mut_ptr();
                 if_index = (*p_0.p).ipi6_ifindex
             }
             cmptr = __cmsg_nxthdr(&mut msg, cmptr)
@@ -1130,13 +1130,13 @@ fn create_listeners(mut addr: NetAddress,
            tftpfd != -(1) {
         l =
             safe_malloc(::std::mem::size_of::<Listener>())          Listener;
-        (*l).next = 0 ;
-        (*l).fd = fd;
-        (*l).tcpfd = tcpfd;
-        (*l).tftpfd = tftpfd;
-        (*l).addr = *addr;
-        (*l).used = 1;
-        (*l).iface = 0
+        l.next = 0 ;
+        l.fd = fd;
+        l.tcpfd = tcpfd;
+        l.tftpfd = tftpfd;
+        l.addr = *addr;
+        l.used = 1;
+        l.iface = 0
     }
     return l;
 }
@@ -1153,7 +1153,7 @@ pub fn create_wildcard_listeners(daemon: &mut DnsmasqDaemon) {
     addr.value = in6addr_any;
     addr.port = daemon.port;
     l6 = create_listeners(&mut addr, daemon.options[40], 1);
-    if !l.is_null() { (*l).next = l6 } else { l = l6 }
+    if !l.is_null() { l.next = l6 } else { l = l6 }
     daemon.listeners = l;
 }
 
@@ -1168,42 +1168,42 @@ fn find_listener(daemon: &mut DnsmasqDaemon, mut addr: &mut NetAddress) -> Optio
 
 pub fn create_bound_listeners(mut dienow: i32) {
     let mut new: Listener = 0 ;
-    let mut iface: *mut Irec = 0 ;
-    let mut if_tmp: *mut Iname = 0;
+    let mut iface: Irec = 0 ;
+    let mut if_tmp: Iname = 0;
     let mut existing: Listener = 0 ;
     iface = daemon.interfaces;
     while !iface.is_null() {
-        if (*iface).done == 0 && (*iface).dad == 0 && (*iface).found != 0 {
-            existing = find_listener(&mut (*iface).addr);
+        if iface.done == 0 && iface.dad == 0 && iface.found != 0 {
+            existing = find_listener(&mut iface.addr);
             if !existing.is_null() {
-                (*iface).done = 1;
-                (*existing).used += 1
+                iface.done = 1;
+                existing.used += 1
                 /* increase usage counter */
             } else {
                 new =
-                    create_listeners(&mut (*iface).addr, (*iface).tftp_ok,
+                    create_listeners(&mut iface.addr, iface.tftp_ok,
                                      dienow);
                 if !new.is_null() {
-                    (*new).iface = iface;
-                    (*new).next = daemon.listeners;
+                    new.iface = iface;
+                    new.next = daemon.listeners;
                     daemon.listeners = new;
-                    (*iface).done = 1;
+                    iface.done = 1;
                     /* Don't log the initial set of listen addresses created
                at startup, since this is happening before the logging
                system is initialised and the sign-on printed. */
                     if dienow == 0 {
                         let mut port: i32 =
-                            prettyprint_addr(&mut (*iface).addr,
+                            prettyprint_addr(&mut iface.addr,
                                              daemon.addrbuff);
                         my_syslog(7,
-                                  b"listening on %s(#%d): %s port %d\x00"                                *const u8,
-                                  (*iface).name, (*iface).index,
+                                  "listening on %s(#%d): %s port %d"                                *const u8,
+                                  iface.name, iface.index,
                                   daemon.addrbuff, port);
                     }
                 }
             }
         }
-        iface = (*iface).next
+        iface = iface.next
     }
     /* Check for --listen-address options that haven't been used because there's
      no interface with a matching address. These may be valid: eg it's possible
@@ -1217,10 +1217,10 @@ pub fn create_bound_listeners(mut dienow: i32) {
      (no netmask) and some MTU login the tftp code. */
     if_tmp = daemon.if_addrs;
     while !if_tmp.is_null() {
-        if (*if_tmp).used == 0 &&
+        if if_tmp.used == 0 &&
                {
                    new =
-                       create_listeners(&mut (*if_tmp).addr,
+                       create_listeners(&mut if_tmp.addr,
                                         (daemon.options[(40                     libc::c_int
                                                                                      ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                          ).wrapping_mul(8                                                                                                 libc::c_int                                                                                          ))
                                                                                           usize]
@@ -1231,18 +1231,18 @@ pub fn create_bound_listeners(mut dienow: i32) {
                                              != 0), dienow);
                    !new.is_null()
                } {
-            (*new).next = daemon.listeners;
+            new.next = daemon.listeners;
             daemon.listeners = new;
             if dienow == 0 {
                 let mut port_0: i32 =
-                    prettyprint_addr(&mut (*if_tmp).addr,
+                    prettyprint_addr(&mut if_tmp.addr,
                                      daemon.addrbuff);
                 my_syslog(7,
-                          b"listening on %s port %d\x00" , daemon.addrbuff,
+                          "listening on %s port %d" , daemon.addrbuff,
                           port_0);
             }
         }
-        if_tmp = (*if_tmp).next
+        if_tmp = if_tmp.next
     };
 }
 /* In --bind-interfaces, the only access control is the addresses we're listening on. 
@@ -1259,65 +1259,65 @@ pub fn create_bound_listeners(mut dienow: i32) {
 */
 
 pub fn warn_bound_listeners() {
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     let mut advice: i32 = 0;
     iface = daemon.interfaces;
     while !iface.is_null() {
-        if (*iface).dns_auth == 0 {
-            if (*iface).addr.sa.sa_family == 2 {
-                if private_net((*iface).addr.in_0.sin_addr, 1)
+        if iface.dns_auth == 0 {
+            if iface.addr.sa.sa_family == 2 {
+                if private_net(iface.addr.in_0.sin_addr, 1)
                        == 0 {
                     inet_ntop(2,
-                              &mut (*iface).addr.in_0.sin_addr
+                              &mut iface.addr.in_0.sin_addr
                                  ,
                               daemon.addrbuff,
                               46);
                     advice = 1;
-                    (*iface).warned = advice;
+                    iface.warned = advice;
                     my_syslog(4,
-                              b"LOUD WARNING: listening on %s may accept requests via interfaces other than %s\x00"
+                              "LOUD WARNING: listening on %s may accept requests via interfaces other than %s"
                                   ,
-                              daemon.addrbuff, (*iface).name);
+                              daemon.addrbuff, iface.name);
                 }
             }
         }
-        iface = (*iface).next
+        iface = iface.next
     }
     if advice != 0 {
         my_syslog(4,
-                  b"LOUD WARNING: use --bind-dynamic rather than --bind-interfaces to avoid DNS amplification attacks via these interface(s)\x00"
+                  "LOUD WARNING: use --bind-dynamic rather than --bind-interfaces to avoid DNS amplification attacks via these interface(s)"
                       );
     };
 }
 
 pub fn warn_wild_labels() {
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     iface = daemon.interfaces;
     while !iface.is_null() {
-        if (*iface).found != 0 && !(*iface).name.is_null() &&
-               (*iface).label != 0 {
+        if iface.found != 0 && !iface.name.is_null() &&
+               iface.label != 0 {
             my_syslog(4,
-                      b"warning: using interface %s instead\x00"
-                         , (*iface).name);
+                      "warning: using interface %s instead"
+                         , iface.name);
         }
-        iface = (*iface).next
+        iface = iface.next
     };
 }
 
 pub fn warn_int_names() {
-    let mut intname: *mut InterfaceName = ;
+    let mut intname: InterfaceName = ;
     intname = daemon.int_names;
     while !intname.is_null() {
-        if (*intname).addresses.is_null() {
+        if intname.addresses.is_null() {
             my_syslog(4,
-                      b"warning: no addresses found for interface %s\x00"                    *const u8, (*intname).intr);
+                      "warning: no addresses found for interface %s"                    *const u8, intname.intr);
         }
-        intname = (*intname).next
+        intname = intname.next
     };
 }
 
 pub fn is_dad_listeners() -> i32 {
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     if daemon.options[(13).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
                                      ] &
@@ -1328,33 +1328,33 @@ pub fn is_dad_listeners() -> i32 {
            != 0 {
         iface = daemon.interfaces;
         while !iface.is_null() {
-            if (*iface).dad != 0 && (*iface).done == 0 {
+            if iface.dad != 0 && iface.done == 0 {
                 return 1
             }
-            iface = (*iface).next
+            iface = iface.next
         }
     }
     return 0;
 }
 
 pub fn join_multicast(mut dienow: i32) {
-    let mut iface: *mut Irec = 0 ;
-    let mut tmp: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
+    let mut tmp: Irec = 0 ;
     iface = daemon.interfaces;
     while !iface.is_null() {
-        if (*iface).addr.sa.sa_family == 10 &&
-               (*iface).dhcp_ok != 0 && (*iface).multicast_done == 0 {
+        if iface.addr.sa.sa_family == 10 &&
+               iface.dhcp_ok != 0 && iface.multicast_done == 0 {
             /* There's an irec per address but we only want to join for multicast 
 	   once per interface. Weed out duplicates. */
             tmp = daemon.interfaces;
             while !tmp.is_null() {
-                if (*tmp).multicast_done != 0 &&
-                       (*tmp).index == (*iface).index {
+                if tmp.multicast_done != 0 &&
+                       tmp.index == iface.index {
                     break ;
                 }
-                tmp = (*tmp).next
+                tmp = tmp.next
             }
-            (*iface).multicast_done = 1;
+            iface.multicast_done = 1;
             if tmp.is_null() {
                 let mut mreq: ipv6_mreq =
                     ipv6_mreq{ipv6mr_multiaddr:
@@ -1363,9 +1363,9 @@ pub fn join_multicast(mut dienow: i32) {
                                                                  [0; 16],},},
                               ipv6mr_interface: 0,};
                 let mut err: i32 = 0;
-                mreq.ipv6mr_interface = (*iface).index;
+                mreq.ipv6mr_interface = iface.index;
                 inet_pton(10,
-                          b"FF02::1:2\x00" ,
+                          "FF02::1:2" ,
                           &mut mreq.ipv6mr_multiaddr );
                 if (daemon.doing_dhcp6 != 0 ||
                         !daemon.relay6.is_null()) &&
@@ -1378,7 +1378,7 @@ pub fn join_multicast(mut dienow: i32) {
                     err = *__errno_location()
                 }
                 inet_pton(10,
-                          b"FF05::1:3\x00" ,
+                          "FF05::1:3" ,
                           &mut mreq.ipv6mr_multiaddr );
                 if daemon.doing_dhcp6 != 0 &&
                        setsockopt(daemon.dhcp6fd,
@@ -1390,7 +1390,7 @@ pub fn join_multicast(mut dienow: i32) {
                     err = *__errno_location()
                 }
                 inet_pton(10,
-                          b"FF02::2\x00" ,
+                          "FF02::2" ,
                           &mut mreq.ipv6mr_multiaddr );
                 if daemon.doing_ra != 0 &&
                        setsockopt(daemon.icmp6fd,
@@ -1403,24 +1403,24 @@ pub fn join_multicast(mut dienow: i32) {
                 }
                 if err != 0 {
                     let mut s: &mut String =
-                        b"interface %s failed to join DHCPv6 multicast group: %s\x00"
+                        "interface %s failed to join DHCPv6 multicast group: %s"
                            ;
                     *__errno_location() = err;
                     if *__errno_location() == 12 {
                         my_syslog(3,
-                                  b"try increasing /proc/sys/net/core/optmem_max\x00"
+                                  "try increasing /proc/sys/net/core/optmem_max"
                                       );
                     }
                     if dienow != 0 {
-                        die(s, (*iface).name, 2);
+                        die(s, iface.name, 2);
                     } else {
-                        my_syslog(3, s, (*iface).name,
+                        my_syslog(3, s, iface.name,
                                   strerror(*__errno_location()));
                     }
                 }
             }
         }
-        iface = (*iface).next
+        iface = iface.next
     };
 }
 /* return a UDP socket bound to a random port, have to cope with straying into
@@ -1600,44 +1600,44 @@ fn allocate_sfd(mut addr: NetAddress,
     /* may have a suitable one already */
     sfd = daemon.sfds;
     while !sfd.is_null() {
-        if NetAddress_isequal(&mut (*sfd).source_addr, addr) != 0 &&
-               strcmp(intname, (*sfd).interface.as_mut_ptr()) ==
-                   0 && ifindex == (*sfd).ifindex {
+        if NetAddress_isequal(&mut sfd.source_addr, addr) != 0 &&
+               strcmp(intname, sfd.interface.as_mut_ptr()) ==
+                   0 && ifindex == sfd.ifindex {
             return sfd
         }
-        sfd = (*sfd).next
+        sfd = sfd.next
     }
     /* need to make a new one. */
     *__errno_location() = 12; /* in case malloc fails. */
     sfd =
         whine_malloc(::std::mem::size_of::<ServerFd>()) ; /* save error from bind/setsockopt. */
     if sfd.is_null() { return 0Fd }
-    (*sfd).fd =
+    sfd.fd =
         socket(addr.sa.sa_family, SOCK_DGRAM,
                0);
-    if (*sfd).fd == -(1) {
+    if sfd.fd == -(1) {
         free(sfd);
         return 0Fd
     }
     if addr.sa.sa_family == 10 &&
-           setsockopt((*sfd).fd, IPPROTO_IPV6,
+           setsockopt(sfd.fd, IPPROTO_IPV6,
                       26,
                       &mut opt,
                       ::std::mem::size_of::<libc::c_int>()) == -(1) ||
-           local_bind((*sfd).fd, addr, intname, ifindex, 0) ==
-               0 || fix_fd((*sfd).fd) == 0 {
+           local_bind(sfd.fd, addr, intname, ifindex, 0) ==
+               0 || fix_fd(sfd.fd) == 0 {
         errsave = *__errno_location();
-        close((*sfd).fd);
+        close(sfd.fd);
         free(sfd);
         *__errno_location() = errsave;
         return 0Fd
     }
-    safe_strncpy((*sfd).interface.as_mut_ptr(), intname,
+    safe_strncpy(sfd.interface.as_mut_ptr(), intname,
                  ::std::mem::size_of::<[libc::c_char; 17]>()        );
-    (*sfd).source_addr = *addr;
-    (*sfd).next = daemon.sfds;
-    (*sfd).ifindex = ifindex;
-    (*sfd).preallocated = 0;
+    sfd.source_addr = *addr;
+    sfd.next = daemon.sfds;
+    sfd.ifindex = ifindex;
+    sfd.preallocated = 0;
     daemon.sfds = sfd;
     return sfd;
 }
@@ -1651,17 +1651,17 @@ pub fn pre_allocate_sfds(daemon: &mut DnsmasqDaemon) {
         let mut addr: NetAddress = Default::default();
         addr._type = AddressType::Ipv4Address;
         addr.port = daemon.query_port;
-        sfd = allocate_sfd(&mut addr, b"\x00");
+        sfd = allocate_sfd(&mut addr, "");
         if !sfd.is_null() {
-            (*sfd).preallocated = 1
+            sfd.preallocated = 1
         }
         addr = Default::default();
         addr._type = AddressType::Ipv6Address;
         addr.value = in6addr_any;
         addr.port = daemon.query_port;
-        sfd = allocate_sfd(&mut addr, b"\x00" );
+        sfd = allocate_sfd(&mut addr, "" );
         if !sfd.is_null() {
-            (*sfd).preallocated = 1
+            sfd.preallocated = 1
         }
     }
     
@@ -1669,10 +1669,10 @@ pub fn pre_allocate_sfds(daemon: &mut DnsmasqDaemon) {
         if srv.flags & (4 | 2 | 1024 | 2048) == 0 & allocate_sfd(srv.source_addr, srv.interface).is_none() && __errno_location() != 0 && daemon.options[13] {
             prettyprint_addr(&mut srv.source_addr, daemon.namebuff);
             if srv.interface[0] != 0 {
-                strcat(daemon.namebuff, b" \x00" );
+                strcat(daemon.namebuff, " " );
                 strcat(daemon.namebuff, srv.interface.as_mut_ptr());
             }
-            die(b"failed to bind server socket for %s: %s\x00", daemon.namebuff,  2);
+            die("failed to bind server socket for %s: %s", daemon.namebuff,  2);
         }
 
     };
@@ -1683,10 +1683,10 @@ pub fn mark_servers(mut flag: i32) {
     /* mark everything with argument flag */
     serv = daemon.servers;
     while !serv.is_null() {
-        if (*serv).flags & flag != 0 { (*serv).flags |= 256 }
+        if serv.flags & flag != 0 { serv.flags |= 256 }
         /* Give looped servers another chance */
-        (*serv).flags &= !(8192);
-        serv = (*serv).next
+        serv.flags &= !(8192);
+        serv = serv.next
     };
 }
 
@@ -1698,15 +1698,15 @@ pub fn cleanup_servers() {
     serv = daemon.servers;
     up = &mut daemon.servers;
     while !serv.is_null() {
-        tmp = (*serv).next;
-        if (*serv).flags & 256 != 0 {
+        tmp = serv.next;
+        if serv.flags & 256 != 0 {
             server_gone(serv);
-            *up = (*serv).next;
-            if !(*serv).domain.is_null() {
-                free((*serv).domain);
+            *up = serv.next;
+            if !serv.domain.is_null() {
+                free(serv.domain);
             }
             free(serv);
-        } else { up = &mut (*serv).next }
+        } else { up = &mut serv.next }
         serv = tmp
     }
     /* Now we have a new set of servers, test for loops. */
@@ -1724,19 +1724,19 @@ pub fn add_update_server(mut flags: i32,
     /* See if there is a suitable candidate, and unmark */
     serv = daemon.servers;
     while !serv.is_null() {
-        if (*serv).flags & 256 != 0 {
+        if serv.flags & 256 != 0 {
             if !domain.is_null() {
-                if !((*serv).flags & 8 == 0 ||
-                         hostname_isequal(domain, (*serv).domain) == 0) {
+                if !(serv.flags & 8 == 0 ||
+                         hostname_isequal(domain, serv.domain) == 0) {
                     break ;
                 }
-            } else if !((*serv).flags & 8 != 0) { break ; }
+            } else if !(serv.flags & 8 != 0) { break ; }
         }
-        serv = (*serv).next
+        serv = serv.next
     }
     if !serv.is_null() {
-        domain_str = (*serv).domain;
-        next = (*serv).next
+        domain_str = serv.domain;
+        next = serv.next
     } else {
         serv =
             whine_malloc(::std::mem::size_of::<Server>())          Server;
@@ -1759,36 +1759,36 @@ pub fn add_update_server(mut flags: i32,
                     daemon.servers = serv
                 } else {
                     s = daemon.servers;
-                    while !(*s).next.is_null() { s = (*s).next }
-                    (*s).next = serv
+                    while !s.next.is_null() { s = s.next }
+                    s.next = serv
                 }
                 if !domain.is_null() { strcpy(domain_str, domain); }
             }
         }
     }
     if !serv.is_null() {
-        (*serv).flags = flags;
-        (*serv).domain = domain_str;
-        (*serv).next = next;
-        (*serv).failed_queries = 0;
-        (*serv).queries = (*serv).failed_queries;
-        (*serv).uid = rand32();
-        if !domain.is_null() { (*serv).flags |= 8 }
+        serv.flags = flags;
+        serv.domain = domain_str;
+        serv.next = next;
+        serv.failed_queries = 0;
+        serv.queries = serv.failed_queries;
+        serv.uid = rand32();
+        if !domain.is_null() { serv.flags |= 8 }
         if !interface.is_null() {
-            safe_strncpy((*serv).interface.as_mut_ptr(), interface,
+            safe_strncpy(serv.interface.as_mut_ptr(), interface,
                          ::std::mem::size_of::<[libc::c_char; 17]>());
         }
-        if !addr.is_null() { (*serv).addr = *addr }
-        if !source_addr.is_null() { (*serv).source_addr = *source_addr }
+        if !addr.is_null() { serv.addr = *addr }
+        if !source_addr.is_null() { serv.source_addr = *source_addr }
     };
 }
 
 pub fn check_servers() {
-    let mut iface: *mut Irec = 0 ;
+    let mut iface: Irec = 0 ;
     let mut serv: Server = 0;
     let mut sfd:ServerFd = 0Fd;
     let mut tmp:ServerFd = 0Fd;
-    let mut up: *mutServerFd = 0 ;
+    let mut up: ServerFd = 0 ;
     let mut port: i32 = 0;
     let mut count: i32 = 0;
     let mut locals: i32 = 0;
@@ -1806,63 +1806,63 @@ pub fn check_servers() {
     /* don't garbage collect pre-allocated sfds. */
     sfd = daemon.sfds;
     while !sfd.is_null() {
-        (*sfd).used = (*sfd).preallocated;
-        sfd = (*sfd).next
+        sfd.used = sfd.preallocated;
+        sfd = sfd.next
     }
     let mut current_block_37: u64;
     count = 0;
     serv = daemon.servers;
     while !serv.is_null() {
-        if (*serv).flags &
+        if serv.flags &
                (4 | 2 | 1024 |
                     2048) == 0 {
             /* Init edns_pktsz for newly created server records. */
-            if (*serv).edns_pktsz == 0 {
-                (*serv).edns_pktsz =
+            if serv.edns_pktsz == 0 {
+                serv.edns_pktsz =
                     daemon.edns_pktsz
             }
             port =
-                prettyprint_addr(&mut (*serv).addr,
+                prettyprint_addr(&mut serv.addr,
                                  daemon.namebuff);
             /* 0.0.0.0 is nothing, the stack treats it like 127.0.0.1 */
-            if (*serv).addr.sa.sa_family == 2 &&
-                   (*serv).addr.in_0.sin_addr.s_addr ==
+            if serv.addr.sa.sa_family == 2 &&
+                   serv.addr.in_0.sin_addr.s_addr ==
                        0 {
-                (*serv).flags |= 256;
+                serv.flags |= 256;
                 current_block_37 = 8515828400728868193;
             } else {
                 iface = daemon.interfaces;
                 while !iface.is_null() {
-                    if NetAddress_isequal(&mut (*serv).addr, &mut (*iface).addr)
+                    if NetAddress_isequal(&mut serv.addr, &mut iface.addr)
                            != 0 {
                         break ;
                     }
-                    iface = (*iface).next
+                    iface = iface.next
                 }
                 if !iface.is_null() {
                     my_syslog(4,
-                              b"ignoring nameserver %s - local interface\x00"
+                              "ignoring nameserver %s - local interface"
                                   ,
                               daemon.namebuff);
-                    (*serv).flags |= 256;
+                    serv.flags |= 256;
                     current_block_37 = 8515828400728868193;
-                } else if (*serv).sfd.is_null() &&
+                } else if serv.sfd.is_null() &&
                               {
-                                  (*serv).sfd =
-                                      allocate_sfd(&mut (*serv).source_addr,
-                                                   (*serv).interface.as_mut_ptr());
-                                  (*serv).sfd.is_null()
+                                  serv.sfd =
+                                      allocate_sfd(&mut serv.source_addr,
+                                                   serv.interface.as_mut_ptr());
+                                  serv.sfd.is_null()
                               } && *__errno_location() != 0 {
                     my_syslog(4,
-                              b"ignoring nameserver %s - cannot make/bind socket: %s\x00"
+                              "ignoring nameserver %s - cannot make/bind socket: %s"
                                   ,
                               daemon.namebuff,
                               strerror(*__errno_location()));
-                    (*serv).flags |= 256;
+                    serv.flags |= 256;
                     current_block_37 = 8515828400728868193;
                 } else {
-                    if !(*serv).sfd.is_null() {
-                        (*(*serv).sfd).used = 1
+                    if !serv.sfd.is_null() {
+                        (*serv.sfd).used = 1
                     }
                     current_block_37 = 3437258052017859086;
                 }
@@ -1870,11 +1870,11 @@ pub fn check_servers() {
         } else { current_block_37 = 3437258052017859086; }
         match current_block_37 {
             3437258052017859086 => {
-                if (*serv).flags & 2048 == 0 &&
-                       (*serv).flags & 4 == 0 {
+                if serv.flags & 2048 == 0 &&
+                       serv.flags & 4 == 0 {
                     count += 1;
                     if !(count > 30) {
-                        if (*serv).flags &
+                        if serv.flags &
                                (8 | 32 |
                                     1024) != 0 {
                             let mut s1: &mut String =
@@ -1882,58 +1882,58 @@ pub fn check_servers() {
                             let mut s2: &mut String =
                                 0 ;
                             let mut s3: &mut String =
-                                b"\x00"                               &mut String;
-                            if (*serv).flags & 8 == 0 {
+                                ""                               &mut String;
+                            if serv.flags & 8 == 0 {
                                 s1 =
-                                    b"unqualified\x00"                                   *const libc::c_char                                  &mut String;
+                                    "unqualified"                                   *const libc::c_char                                  &mut String;
                                 s2 =
-                                    b"names\x00"                                   *const libc::c_char                                  &mut String
-                            } else if strlen((*serv).domain) ==
+                                    "names"                                   *const libc::c_char                                  &mut String
+                            } else if strlen(serv.domain) ==
                                           0 {
                                 s1 =
-                                    b"default\x00"                                   *const libc::c_char                                  &mut String;
+                                    "default"                                   *const libc::c_char                                  &mut String;
                                 s2 =
-                                    b"\x00"                                   *const libc::c_char                                  &mut String
+                                    ""                                   *const libc::c_char                                  &mut String
                             } else {
                                 s1 =
-                                    b"domain\x00"                                   *const libc::c_char                                  &mut String;
-                                s2 = (*serv).domain
+                                    "domain"                                   *const libc::c_char                                  &mut String;
+                                s2 = serv.domain
                             }
-                            if (*serv).flags & 2 != 0 {
+                            if serv.flags & 2 != 0 {
                                 count -= 1;
                                 locals += 1;
                                 if locals <= 8 {
                                     my_syslog(6,
-                                              b"using only locally-known addresses for %s %s\x00"
+                                              "using only locally-known addresses for %s %s"
                                                                                               *const libc::c_char, s1,
                                               s2);
                                 }
-                            } else if (*serv).flags & 1024 != 0
+                            } else if serv.flags & 1024 != 0
                              {
                                 my_syslog(6,
-                                          b"using standard nameservers for %s %s\x00"
+                                          "using standard nameservers for %s %s"
                                                                                       *const libc::c_char, s1, s2);
                             } else {
                                 my_syslog(6,
-                                          b"using nameserver %s#%d for %s %s %s\x00"
+                                          "using nameserver %s#%d for %s %s %s"
                                                                                       *const libc::c_char,
                                           daemon.namebuff, port,
                                           s1, s2, s3);
                             }
-                        } else if (*serv).flags & 8192 != 0 {
+                        } else if serv.flags & 8192 != 0 {
                             my_syslog(6,
-                                      b"NOT using nameserver %s#%d - query loop detected\x00"
+                                      "NOT using nameserver %s#%d - query loop detected"
                                           ,
                                       daemon.namebuff, port);
-                        } else if (*serv).interface[0 ]
+                        } else if serv.interface[0 ]
                                       != 0 {
                             my_syslog(6,
-                                      b"using nameserver %s#%d(via %s)\x00"                                    *const u8,
+                                      "using nameserver %s#%d(via %s)"                                    *const u8,
                                       daemon.namebuff, port,
-                                      (*serv).interface.as_mut_ptr());
+                                      serv.interface.as_mut_ptr());
                         } else {
                             my_syslog(6,
-                                      b"using nameserver %s#%d\x00"                                    *const u8,
+                                      "using nameserver %s#%d"                                    *const u8,
                                       daemon.namebuff, port);
                         }
                     }
@@ -1941,15 +1941,15 @@ pub fn check_servers() {
             }
             _ => { }
         }
-        serv = (*serv).next
+        serv = serv.next
     }
     if locals > 8 {
         my_syslog(6,
-                  b"using %d more local addresses\x00", locals - 8);
+                  "using %d more local addresses", locals - 8);
     }
     if count - 1 > 30 {
         my_syslog(6,
-                  b"using %d more nameservers\x00",
+                  "using %d more nameservers",
                   count - 30 - 1);
     }
     /* Do we need a socket set? */
@@ -1957,12 +1957,12 @@ pub fn check_servers() {
     sfd = daemon.sfds;
     up = &mut daemon.sfds;
     while !sfd.is_null() {
-        tmp = (*sfd).next;
-        if (*sfd).used == 0 {
-            *up = (*sfd).next;
-            close((*sfd).fd);
+        tmp = sfd.next;
+        if sfd.used == 0 {
+            *up = sfd.next;
+            close(sfd.fd);
             free(sfd);
-        } else { up = &mut (*sfd).next }
+        } else { up = &mut sfd.next }
         sfd = tmp
     }
     cleanup_servers();
@@ -1972,14 +1972,14 @@ pub fn check_servers() {
 
 pub fn reload_servers(mut fname: &mut String)
  -> i32 {
-    let mut f: *mut FILE = 0 ;
+    let mut f: FILE = 0 ;
     let mut line: &mut String = 0 ;
     let mut gotone: i32 = 0;
     /* buff happens to be MAXDNAME long... */
-    f = fopen(fname, b"r\x00" );
+    f = fopen(fname, "r" );
     if f.is_null() {
         my_syslog(3,
-                  b"failed to read %s: %s\x00", fname,
+                  "failed to read %s: %s", fname,
                   strerror(*__errno_location()));
         return 0
     }
@@ -1989,12 +1989,12 @@ pub fn reload_servers(mut fname: &mut String)
         if line.is_null() { break ; }
         let mut addr: NetAddress = Default::default();
         let mut source_addr: NetAddress = Default::default();
-        let mut token: &mut String = strtok(line, b" \t\n\r\x00" );
+        let mut token: &mut String = strtok(line, " \t\n\r" );
         if token.is_null() { continue ; }
-        if strcmp(token, b"nameserver\x00" ) != 0 && strcmp(token, b"server\x00" ) != 0 {
+        if strcmp(token, "nameserver\x00" ) != 0 && strcmp(token, b"server" ) != 0 {
             continue ;
         }
-        token = strtok(0 , b" \t\n\r\x00" );
+        token = strtok(0 , " \t\n\r" );
         if token.is_null() { continue ; }
         addr = Default::default();
         source_addr = Default::default();

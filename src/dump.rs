@@ -132,8 +132,8 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
     udp.uh_dport = __bswap_16(53);
     udp.uh_sport = udp.uh_dport;
     if !src.is_null() {
-        family = (*src).sa.sa_family
-    } else { family = (*dst).sa.sa_family }
+        family = src.sa.sa_family
+    } else { family = dst.sa.sa_family }
     if family == 10 {
         iphdr = &mut ip6 ;
         ipsz = ::std::mem::size_of::<ip6_hdr>();
@@ -147,15 +147,15 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
         ip6.ip6_ctlun.ip6_un1.ip6_un1_hlim = 64 as u8;
         if !src.is_null() {
             memcpy(&mut ip6.ip6_src,
-                   &mut (*src).in6.sin6_addr ,
+                   &mut src.in6.sin6_addr ,
                    16);
-            udp.uh_sport = (*src).in6.sin6_port
+            udp.uh_sport = src.in6.sin6_port
         }
         if !dst.is_null() {
             memcpy(&mut ip6.ip6_dst,
-                   &mut (*dst).in6.sin6_addr ,
+                   &mut dst.in6.sin6_addr ,
                    16);
-            udp.uh_dport = (*dst).in6.sin6_port
+            udp.uh_dport = dst.in6.sin6_port
         }
         /* start UDP checksum */
         sum = 0;
@@ -194,12 +194,12 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
         ip.ip_ttl = 64 as u8;
         ip.ip_p = IPPROTO_UDP as u8;
         if !src.is_null() {
-            ip.ip_src = (*src).in_0.sin_addr;
-            udp.uh_sport = (*src).in_0.sin_port
+            ip.ip_src = src.in_0.sin_addr;
+            udp.uh_sport = src.in_0.sin_port
         }
         if !dst.is_null() {
-            ip.ip_dst = (*dst).in_0.sin_addr;
-            udp.uh_dport = (*dst).in_0.sin_port
+            ip.ip_dst = dst.in_0.sin_addr;
+            udp.uh_dport = dst.in_0.sin_port
         }
         ip.ip_sum = 0 ;
         sum = 0;
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
         while (i) <
                   (::std::mem::size_of::<IpHdr>() ).wrapping_div(2    libc::c_ulong) {
             sum =
-                (sum               libc::c_uint).wrapping_add(*(&mut ip   *mut u16).offset(i                          isize)
+                (sum               libc::c_uint).wrapping_add(*(&mut ip    &mut u16) .offset(i                          isize)
                                                    )
                    ;
             i = i.wrapping_add(1)
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
     while (i) <
               (::std::mem::size_of::<udphdr>()).wrapping_div(2libc::c_ulong) {
         sum =
-            (sum           libc::c_uint).wrapping_add(*(&mut udp                                            *mut u16).offset(i                      isize)
+            (sum           libc::c_uint).wrapping_add(*(&mut udp                                             &mut u16) .offset(i                      isize)
                                                )          u32;
         i = i.wrapping_add(1)
     }
@@ -265,7 +265,7 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
                                                                            )
           {
         sum =
-            (sum           libc::c_uint).wrapping_add(*(packet                                            *mut u16).offset(i                      isize)
+            (sum           libc::c_uint).wrapping_add(*(packet                                             &mut u16) .offset(i                      isize)
                                                )          u32;
         i = i.wrapping_add(1)
     }
@@ -296,10 +296,10 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
            read_write(daemon.dumpfd, packet,
                       len, 0) == 0 {
         my_syslog(3,
-                  b"failed to write packet dump\x00");
+                  "failed to write packet dump");
     } else {
         packet_count = packet_count.wrapping_add(1);
         my_syslog(6,
-                  b"dumping UDP packet %u mask 0x%04x\x00", packet_count, mask);
+                  "dumping UDP packet %u mask 0x%04x", packet_count, mask);
     };
 }

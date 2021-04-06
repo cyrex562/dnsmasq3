@@ -15,14 +15,14 @@
 */
 use crate::defines::{BlockData, DnsmasqDaemon};
 
-// static mut keyblock_free: *mut BlockData =
+// static mut keyblock_free: BlockData =
 //     0 as *const BlockData as *mut BlockData;
 // static mut blockdata_count: libc::c_uint = 0;
 // static mut blockdata_hwm: libc::c_uint = 0;
 // static mut blockdata_alloced: libc::c_uint = 0;
-fn blockdata_expand(mut n: i32) {
+fn blockdata_expand(mut n: usize) {
     let mut BlockData = Default::default();
-    let mut i: i32 = 0;
+    let mut i: usize = 0;
     let ref mut fresh6 = (*new.offset((n - 1))).next;
     *fresh6 = keyblock_free;
     keyblock_free = new;
@@ -48,25 +48,27 @@ pub fn blockdata_init(daemon: &mut DnsmasqDaemon) {
 }
 
 pub fn blockdata_report() {
-    my_syslog(
-        6,
-        b"pool memory in use %u, max %u, allocated %u\x00" ,
-        (blockdata_count)
-            .wrapping_mul(::std::mem::size_of::<BlockData>()),
-        (blockdata_hwm)
-            .wrapping_mul(::std::mem::size_of::<BlockData>()),
-        (blockdata_alloced)
-            .wrapping_mul(::std::mem::size_of::<BlockData>()),
-    );
+    // my_syslog(
+    //     6,
+    //     "pool memory in use %u, max %u, allocated %u" ,
+    //     (blockdata_count)
+    //         .wrapping_mul(::std::mem::size_of::<BlockData>()),
+    //     (blockdata_hwm)
+    //         .wrapping_mul(::std::mem::size_of::<BlockData>()),
+    //     (blockdata_alloced)
+    //         .wrapping_mul(::std::mem::size_of::<BlockData>()),
+    // );
+    // TODO: add in new log call
 }
-fn blockdata_alloc_real(
+
+pub fn blockdata_alloc_real(
     mut fd: i32,
-    mut data: &mut String,
+    mut data: &String,
     mut len: usize,
-) -> *mut BlockData {
-    let mut block: *mut BlockData = 0;
-    let mut ret: *mut BlockData = 0;
-    let mut prev: *mut *mut BlockData = &mut ret;
+) -> Option<BlockData> {
+    let mut block: BlockData;
+    let mut ret: BlockData;
+    let mut prev: BlockData;
     let mut blen: usize = 0;
     while len > 0 {
         if keyblock_free.is_null() {
@@ -74,12 +76,12 @@ fn blockdata_alloc_real(
         }
         if !keyblock_free.is_null() {
             block = keyblock_free;
-            keyblock_free = (*block).next;
+            keyblock_free = block.next;
             blockdata_count = blockdata_count.wrapping_add(1)
         } else {
             /* failed to alloc, free partial chain */
-            blockdata_free(ret);
-            return 0;
+            // blockdata_free(ret);
+            return None;
         }
         if blockdata_hwm < blockdata_count {
             blockdata_hwm = blockdata_count
@@ -87,43 +89,43 @@ fn blockdata_alloc_real(
         blen = if len > 40 { 40 } else { len };
         if !data.is_null() {
             memcpy(
-                (*block).key.as_mut_ptr(),
+                block.key.as_mut_ptr(),
                 data,
                 blen,
             );
             data = data.offset(blen)
         } else if read_write(
             fd,
-            (*block).key.as_mut_ptr(),
+            block.key.as_mut_ptr(),
             blen,
             1,
         ) == 0
         {
             /* failed read free partial chain */
-            blockdata_free(ret);
-            return 0;
+            // blockdata_free(ret);
+            return None;
         }
         len = (len).wrapping_sub(blen)  ;
-        *prev = block;
-        prev = &mut (*block).next;
-        (*block).next = 0
+        prev = block;
+        prev = &mut block.next;
+        block.next = 0
     }
-    return ret;
+    return Some(ret);
 }
 
-pub fn blockdata_alloc(mut data: &mut String, mut len: usize) -> *mut BlockData {
+pub fn blockdata_alloc(mut data: &mut String, mut len: usize) -> BlockData {
     return blockdata_alloc_real(0, data, len);
 }
 
-pub fn blockdata_free(mut blocks: *mut BlockData) {
-    let mut tmp: *mut BlockData = 0;
+pub fn blockdata_free(mut blocks: &mut BlockData) {
+    let mut tmp: BlockData = 0;
     if !blocks.is_null() {
         tmp = blocks;
-        while !(*tmp).next.is_null() {
+        while !tmp.next.is_null() {
             blockdata_count = blockdata_count.wrapping_sub(1);
-            tmp = (*tmp).next
+            tmp = tmp.next
         }
-        (*tmp).next = keyblock_free;
+        tmp.next = keyblock_free;
         keyblock_free = blocks;
         blockdata_count = blockdata_count.wrapping_sub(1)
     };
@@ -131,46 +133,37 @@ pub fn blockdata_free(mut blocks: *mut BlockData) {
 /* if data == NULL, return pointer to static block of sufficient size */
 
 pub fn blockdata_retrieve(
-    mut block: *mut BlockData,
+    mut block: &mut BlockData,
     mut len: usize,
-    mut data:Vec<u8>,
+    mut data: &mut Vec<u8>,
 ) ->Vec<u8> {
     let mut blen: usize = 0;
-    let mut b: *mut BlockData = 0;
-    let mut new:Vec<u8> = 0;
-    let mut d:Vec<u8> = 0;
-    static mut buff_len: u32 = 0;
-    static mut buff: mut Vec<u8> = 0;
+    let mut b: BlockData;
+    let mut new: Vec<u8> = Vec::new();
+    let mut d: Vec<u8> = Vec::New();
+    let mut buff_len: usize = 0;
+    let mut buff: Vec<u8> = Vec::new();
     if data.is_null() {
-        if len > buff_len {
-            new = whine_malloc(len);
-            if new.is_null() {
-                return 0;
-            }
-            if !buff.is_null() {
-                free(buff);
-            }
-            buff = new
-        }
-        data = buff
+        data.clone_from(&buff);
     }
-    d = data;
-    b = block;
+    d = data.clone();
+    b = block.clone();
     while len > 0 && !b.is_null() {
         blen = if len > 40 {
             40
         } else {
             len
         };
-        memcpy(d, (*b).key.as_mut_ptr(), blen);
+        memcpy(d, b.key.as_mut_ptr(), blen);
         d = d.offset(blen);
         len = (len).wrapping_sub(blen)  ;
-        b = (*b).next
+        b = b.next
     }
-    return data;
+    let out = data.clone();
+    return out;
 }
 
-pub fn blockdata_write(mut block: *mut BlockData, mut len: usize, mut fd: i32) {
+pub fn blockdata_write(mut block: &mut BlockData, mut len: usize, mut fd: i32) {
     while len > 0 && !block.is_null() {
         let mut blen: usize = if len > 40 {
             40
@@ -179,15 +172,15 @@ pub fn blockdata_write(mut block: *mut BlockData, mut len: usize, mut fd: i32) {
         };
         read_write(
             fd,
-            (*block).key.as_mut_ptr(),
+            block.key.as_mut_ptr(),
             blen,
             0,
         );
         len = (len).wrapping_sub(blen)  ;
-        block = (*block).next
+        block = block.next
     }
 }
 
-pub fn blockdata_read(mut fd: i32, mut len: usize) -> *mut BlockData {
+pub fn blockdata_read(mut fd: i32, mut len: usize) -> BlockData {
     return blockdata_alloc_real(fd, 0 , len);
 }

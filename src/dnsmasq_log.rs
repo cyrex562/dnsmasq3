@@ -3,7 +3,6 @@
 use crate::defines::{SOCK_DGRAM, Passwd, DnsmasqDaemon, GidT, NetAddressUn, SaFamily, ConstNetAddressArg, NetAddress, socklen_t, SOCK_STREAM, time::Instant, pid_t, timespec, TimeT, SyscallSlongT};
 use crate::slack::{log_entry, time};
 use crate::send_event;
-use crate::util::{safe_malloc, safe_strncpy};
 use std::io::stderr;
 use std::env::args;
 use crate::poll::{poll_listen, poll_check};
@@ -18,24 +17,24 @@ static mut entries_lost: i32 = 0;
 static mut connection_good: i32 = 1;
 static mut max_logs: i32 = 0;
 static mut connection_type: i32 = SOCK_DGRAM;
-static mut entries: *mut log_entry = 0;
-static mut free_entries: *mut log_entry =
+static mut entries: log_entry = 0;
+static mut free_entries: log_entry =
     0 p;
 #[no_mangle]
-pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
+pub unsafe extern "C" fn log_start(mut ent_pw: &mut Passwd,
                                    mut errfd: i32) -> i32 {
     let mut ret: i32 = 0;
     echo_stderr =
-        ((*dnsmasq_daemon).options[(6 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+        (dnsmasq_daemon.options[(6 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                        ).wrapping_mul(8))
                                        ] &
              (1) <<
                  (6 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                    ).wrapping_mul(8)))
            ;
-    if (*dnsmasq_daemon).log_fac != -(1) {
-        log_fac = (*dnsmasq_daemon).log_fac
-    } else if (*dnsmasq_daemon).options[(6 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+    if dnsmasq_daemon.log_fac != -(1) {
+        log_fac = dnsmasq_daemon.log_fac
+    } else if dnsmasq_daemon.options[(6 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                  ).wrapping_mul(8))
                                             ] &
                   (1) <<
@@ -44,23 +43,23 @@ pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
                   != 0 {
         log_fac = (16) << 3
     }
-    if !(*dnsmasq_daemon).log_file.is_null() {
+    if !dnsmasq_daemon.log_file.is_null() {
         log_to_file = 1;
-        (*dnsmasq_daemon).max_logs = 0;
-        if strcmp((*dnsmasq_daemon).log_file,
-                  b"-\x00" ) ==
+        dnsmasq_daemon.max_logs = 0;
+        if strcmp(dnsmasq_daemon.log_file,
+                  "-" ) ==
                0 {
             log_stderr = 1;
             echo_stderr = 0;
             log_fd = dup(2)
         }
     }
-    max_logs = (*dnsmasq_daemon).max_logs;
-    if log_reopen((*dnsmasq_daemon).log_file) == 0 {
+    max_logs = dnsmasq_daemon.max_logs;
+    if log_reopen(dnsmasq_daemon.log_file) == 0 {
         send_event(errfd, 17, *__errno_location(),
-                   if !(*dnsmasq_daemon).log_file.is_null() {
-                       (*dnsmasq_daemon).log_file
-                   } else { b"\x00"  });
+                   if !dnsmasq_daemon.log_file.is_null() {
+                       dnsmasq_daemon.log_file
+                   } else { ""  });
         _exit(0);
     }
     /* if queuing is inhibited, make sure we allocate
@@ -69,7 +68,7 @@ pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
         free_entries =
             safe_malloc(::std::mem::size_of::<log_entry>())
                 ;
-        (*free_entries).next = 0 ;
+        free_entries.next = 0 ;
         entries_alloced = 1
     }
     /* If we're running as root and going to change uid later,
@@ -77,8 +76,8 @@ pub unsafe extern "C" fn log_start(mut ent_pw: *mut Passwd,
      the dnsmasq user. Then logrotate can just copy the owner.
      Failure of the chown call is OK, (for instance when started as non-root) */
     if log_to_file != 0 && log_stderr == 0 && !ent_pw.is_null() &&
-           (*ent_pw).pw_uid != 0 &&
-           fchown(log_fd, (*ent_pw).pw_uid, -(1) ) !=
+           ent_pw.pw_uid != 0 &&
+           fchown(log_fd, ent_pw.pw_uid, -(1) ) !=
                0 {
         ret = *__errno_location()
     }
@@ -116,9 +115,9 @@ pub unsafe extern "C" fn log_reopen(mut log_file: &mut String)
     return (log_fd != -(1));
 }
 unsafe extern "C" fn free_entry() {
-    let mut tmp: *mut log_entry = entries;
-    entries = (*tmp).next;
-    (*tmp).next = free_entries;
+    let mut tmp: log_entry = entries;
+    entries = tmp.next;
+    tmp.next = free_entries;
     free_entries = tmp;
 }
 unsafe extern "C" fn log_write() {
@@ -132,35 +131,35 @@ unsafe extern "C" fn log_write() {
 	 a newline, and leave the length alone. */
         let mut len_adjust: i32 = 0;
         if log_to_file != 0 {
-            (*entries).payload[((*entries).offset + (*entries).length -
+            entries.payload[(entries.offset + entries.length -
                                     1) ] =
                 '\n'
         } else if connection_type == SOCK_DGRAM {
             len_adjust = 1
         }
         /* Avoid duplicates over a fork() */
-        if (*entries).pid != getpid() {
+        if entries.pid != getpid() {
             free_entry(); /* avoid wild recursion */
         } else {
             connection_good =
                 1 ; /* syslogd busy, go again when select() or poll() says so */
             rc =
                 write(log_fd,
-                      (*entries).payload.as_mut_ptr().offset((*entries).offset
+                      entries.payload.as_mut_ptr().offset(entries.offset
                                                                 ) ,
-                      ((*entries).length - len_adjust) );
+                      (entries.length - len_adjust) );
             if rc != -(1) {
-                (*entries).length =
-                    ((*entries).length - rc);
-                (*entries).offset =
-                    ((*entries).offset + rc);
-                if (*entries).length == len_adjust {
+                entries.length =
+                    (entries.length - rc);
+                entries.offset =
+                    (entries.offset + rc);
+                if entries.length == len_adjust {
                     free_entry();
                     if entries_lost != 0 {
                         let mut e: i32 = entries_lost;
                         entries_lost = 0;
                         my_syslog(4,
-                                  b"overflow: %d log entries lost\x00"                                *const u8, e);
+                                  "overflow: %d log entries lost"                                *const u8, e);
                     }
                 }
             } else {
@@ -194,7 +193,7 @@ unsafe extern "C" fn log_write() {
                             NetAddressUn {sun_family: 0, sun_path: [0; 108],};
                         logaddr.sun_family = 1;
                         safe_strncpy(logaddr.sun_path.as_mut_ptr(),
-                                     b"/dev/log\x00",
+                                     "/dev/log",
                                      ::std::mem::size_of::<[libc::c_char; 108]>()
                                         );
                         /* Got connection back? try again. */
@@ -235,7 +234,7 @@ unsafe extern "C" fn log_write() {
 	 when logging to a file, for instance. */
                 log_fd = -(1);
                 my_syslog(2,
-                          b"log failed: %s\x00" ,
+                          "log failed: %s" ,
                           strerror(*__errno_location()));
                 return
             }
@@ -251,30 +250,30 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
                                    mut format: *const libc::c_char,
                                    mut args: ...) {
     let mut ap: ::std::ffi::VaListImpl;
-    let mut entry: *mut log_entry = 0 ;
+    let mut entry: log_entry = 0 ;
     let mut time_now: time::Instant = 0;
     let mut p: &mut String = 0 ;
     let mut len: usize = 0;
     let mut pid: pid_t = getpid();
     let mut func: &mut String =
-        b"\x00"  ;
+        ""  ;
     if 0x3f8 & priority ==
            (1) << 3 {
         func =
-            b"-tftp\x00"           &mut String
+            "-tftp"           &mut String
     } else if 0x3f8 & priority ==
                   (3) << 3 {
         func =
-            b"-dhcp\x00"           &mut String
+            "-dhcp"           &mut String
     } else if 0x3f8 & priority ==
                   (2) << 3 {
         func =
-            b"-script\x00"           &mut String
+            "-script"           &mut String
     }
     priority = priority & 0x7;
     if echo_stderr != 0 {
         fprintf(stderr,
-                b"dnsmasq%s: \x00" , func);
+                "dnsmasq%s: " , func);
         ap = args.clone();
         vfprintf(stderr, format, ap.as_va_list());
         fputc('\n' as i32, stderr);
@@ -284,7 +283,7 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
 	 fail during running (always on Solaris). */
         static mut isopen: i32 = 0;
         if isopen == 0 {
-            openlog(b"dnsmasq\x00" ,
+            openlog("dnsmasq" ,
                     0x1, log_fac);
             isopen = 1
         }
@@ -294,12 +293,13 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
     }
     entry = free_entries;
     if !entry.is_null() {
-        free_entries = (*entry).next
+        free_entries = entry.next
     } else if entries_alloced < max_logs &&
                   {
-                      entry =
-                          malloc(::std::mem::size_of::<log_entry>()                        ) ;
-                      !entry.is_null()
+                      // entry =
+                      //     malloc(::std::mem::size_of::<log_entry>()                        ) ;
+                      // !entry.is_null()
+                      true
                   } {
         entries_alloced += 1
     }
@@ -307,26 +307,26 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
         entries_lost += 1
     } else {
         /* add to end of list, consumed from the start */
-        (*entry).next = 0 ;
+        entry.next = 0 ;
         if entries.is_null() {
             entries = entry
         } else {
-            let mut tmp: *mut log_entry = 0 ;
+            let mut tmp: log_entry = 0 ;
             tmp = entries;
-            while !(*tmp).next.is_null() { tmp = (*tmp).next }
-            (*tmp).next = entry
+            while !tmp.next.is_null() { tmp = tmp.next }
+            tmp.next = entry
         }
         time(&mut time_now);
-        p = (*entry).payload.as_mut_ptr();
+        p = entry.payload.as_mut_ptr();
         if log_to_file == 0 {
             p =
                 p.offset(sprintf(p,
-                                 b"<%d>\x00"                                *const libc::c_char, priority | log_fac)
+                                 "<%d>"                                *const libc::c_char, priority | log_fac)
                             )
         }
         /* Omit timestamp for default daemontools situation */
         if log_stderr == 0 ||
-               (*dnsmasq_daemon).options[(16                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
+               dnsmasq_daemon.options[(16                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                                    ).wrapping_mul(8                                             libc::c_int                                      ))
                                              ] &
                    (1) <<
@@ -335,15 +335,15 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
                    == 0 {
             p =
                 p.offset(sprintf(p,
-                                 b"%.15s \x00"                                *const libc::c_char,
+                                 "%.15s "                                *const libc::c_char,
                                  ctime(&mut time_now).offset(4
                                                                 ))                       isize)
         } /* include zero-terminator */
         p =
             p.offset(sprintf(p,
-                             b"dnsmasq%s[%d]: \x00"                            *const libc::c_char, func, pid));
+                             "dnsmasq%s[%d]: "                            *const libc::c_char, func, pid));
         len =
-            p.wrapping_offset_from((*entry).payload.as_mut_ptr())          i32 ;
+            p.wrapping_offset_from(entry.payload.as_mut_ptr())          i32 ;
         ap = args.clone();
         len =
             (len    ).wrapping_add((vsnprintf(p,
@@ -352,12 +352,12 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
                                                         format,
                                                         ap.as_va_list()) +
                                                   1)                                    )           usize;
-        (*entry).length =
+        entry.length =
             if len > 1024 {
                 1024
             } else { len };
-        (*entry).offset = 0;
-        (*entry).pid = pid
+        entry.offset = 0;
+        entry.pid = pid
     }
     /* almost always, logging won't block, so try and write this now,
      to save collecting too many log messages during a select loop. */
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
         let mut d: i32 = 0; /* 1 ms */
         d = 0;
         entry = entries;
-        while !entry.is_null() { entry = (*entry).next; d += 1 }
+        while !entry.is_null() { entry = entry.next; d += 1 }
         if d == max_logs {
             d = 0
         } else if max_logs > 8 {
@@ -441,7 +441,7 @@ pub unsafe extern "C" fn die(mut message: &mut String,
     my_syslog(2, message, arg1, errmess);
     echo_stderr = 0;
     my_syslog(2,
-              b"FAILED to start up\x00" );
+              "FAILED to start up" );
     flush_log();
     exit(exit_code);
 }

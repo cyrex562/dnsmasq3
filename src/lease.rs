@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use crate::defines::{DhcpLease, time::Instant, FILE, NetAddress, NetAddress, DnsmasqDaemon, In6Addr, DhcpConfig, DhcpContext, DhcpNetId, Off64T, socklen_t, SlaacAddress, __bswap_32, DhcpLeaseContext};
-use crate::util::{parse_hex, safe_malloc, netmask_length, is_same_net, is_same_net6, addr6part, whine_malloc, hostname_isequal};
+use crate::util::{parse_hex, netmask_length, is_same_net4, is_same_net6, addr6part, whine_malloc, hostname_isequal};
 use crate::dnsmasq_log::{my_syslog, die};
 use crate::domain::{get_domain, get_domain6};
 use crate::dhcp_common::find_config;
@@ -58,7 +58,7 @@ unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut Dhc
          {
         items =
             fscanf(leasestream,
-                   b"%255s %255s\x00" ,
+                   "%255s %255s" ,
                    daemon.dhcp_buff3,
                    daemon.dhcp_buff2);
         if !(items == 2) { break ; }
@@ -69,7 +69,7 @@ unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut Dhc
         hw_type = clid_len;
         hw_len = hw_type;
         if strcmp(daemon.dhcp_buff3,
-                  b"duid\x00" ) ==
+                  "duid" ) ==
                0 {
             daemon.duid_len =
                 parse_hex(daemon.dhcp_buff2, daemon.dhcp_buff2, 130, 0, 0);
@@ -78,12 +78,12 @@ unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut Dhc
             }
             daemon.duid = Vec::new();
             daemon.duid.copy_from_slice(daemon.dhcp_buff2[0..daemon.duid_len]);
-        } else if fscanf(leasestream, b" %64s %255s %764s\x00", daemon.namebuff,
+        } else if fscanf(leasestream, " %64s %255s %764s", daemon.namebuff,
                          daemon.dhcp_buff,
                          daemon.packet) != 3 {
             my_syslog((3) << 3 |
                           4,
-                      b"ignoring invalid line in lease database: %s %s %s %s ...\x00"
+                      "ignoring invalid line in lease database: %s %s %s %s ..."
                           ,
                       daemon.dhcp_buff3,
                       daemon.dhcp_buff2,
@@ -122,17 +122,17 @@ unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut Dhc
             } else {
                 my_syslog((3) << 3 |
                               4,
-                          b"ignoring invalid line in lease database, bad address: %s\x00"
+                          "ignoring invalid line in lease database, bad address: %s"
                               ,
                           daemon.namebuff);
                 continue ;
             }
             if lease.is_null() {
-                die(b"too many stored leases\x00"                   *const libc::c_char ,
+                die("too many stored leases"                   *const libc::c_char ,
                     0 , 5);
             }
             if strcmp(daemon.packet,
-                      b"*\x00" ) !=
+                      "*" ) !=
                    0 {
                 clid_len =
                     parse_hex(daemon.packet,
@@ -146,7 +146,7 @@ unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut Dhc
                              hw_len, hw_type, clid_len, now,
                              0);
             if strcmp(daemon.dhcp_buff,
-                      b"*\x00" ) !=
+                      "*" ) !=
                    0 {
                 lease_set_hostname(lease, daemon.dhcp_buff,
                                    0, domain,
@@ -167,7 +167,7 @@ unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut Dhc
 }
 #[no_mangle]
 pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
-    let mut leasestream: *mut FILE = 0 ;
+    let mut leasestream: FILE = 0 ;
     leases_left = daemon.dhcp_max;
     if daemon.options[(22).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                             libc::c_int                      ))
@@ -185,10 +185,10 @@ pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
             strcpy(daemon.dhcp_buff,
                    daemon.lease_change_command);
             strcat(daemon.dhcp_buff,
-                   b" init\x00" );
+                   " init" );
             leasestream =
                 popen(daemon.dhcp_buff,
-                      b"r\x00" )
+                      "r" )
         } else {
             dns_dirty = 0;
             file_dirty = dns_dirty;
@@ -198,10 +198,10 @@ pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
         /* NOTE: need a+ mode to create file if it doesn't exist */
         daemon.lease_stream =
             fopen(daemon.lease_file,
-                  b"a+\x00" );
+                  "a+" );
         leasestream = daemon.lease_stream;
         if leasestream.is_null() {
-            die(b"cannot open or create lease file %s: %s\x00"               *const libc::c_char ,
+            die("cannot open or create lease file %s: %s"               *const libc::c_char ,
                 daemon.lease_file, 3);
         }
         /* a+ mode leaves pointer at end. */
@@ -211,10 +211,10 @@ pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
         if read_leases(now, leasestream) == 0 {
             my_syslog((3) << 3 |
                           3,
-                      b"failed to parse lease database cleanly\x00"                    *const u8);
+                      "failed to parse lease database cleanly"                    *const u8);
         }
         if ferror(leasestream) != 0 {
-            die(b"failed to read lease file %s: %s\x00"               *const libc::c_char ,
+            die("failed to read lease file %s: %s"               *const libc::c_char ,
                 daemon.lease_file, 3);
         }
     }
@@ -234,15 +234,15 @@ pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
                           126 {
                 *__errno_location() = 13
             }
-            die(b"cannot run lease-init script %s: %s\x00"               *const libc::c_char ,
+            die("cannot run lease-init script %s: %s"               *const libc::c_char ,
                 daemon.lease_change_command, 3);
         }
         if (rc & 0xff00) >> 8 !=
                0 {
             sprintf(daemon.dhcp_buff,
-                    b"%d\x00" ,
+                    "%d" ,
                     (rc & 0xff00) >> 8);
-            die(b"lease-init script returned exit code %s\x00"               *const libc::c_char ,
+            die("lease-init script returned exit code %s"               *const libc::c_char ,
                 daemon.dhcp_buff,
                 ((rc & 0xff00) >> 8) +
                     10);
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
 pub unsafe extern "C" fn lease_update_from_configs() {
     /* changes to the config may change current leases. */
     let mut lease: DhcpLease = 0;
-    let mut config: *mut DhcpConfig = 0;
+    let mut config: DhcpConfig = 0;
     let mut name: &mut String = 0 ;
     lease = leases;
     while !lease.is_null() {
@@ -269,10 +269,10 @@ pub unsafe extern "C" fn lease_update_from_configs() {
                             lease.hwaddr_len, lease.hwaddr_type,
                             0 , 0 );
             if !config.is_null() &&
-                   (*config).flags & 16 != 0 &&
-                   ((*config).flags & 32 == 0
-                        || (*config).addr.s_addr == lease.addr.s_addr) {
-                lease_set_hostname(lease, (*config).hostname,
+                   config.flags & 16 != 0 &&
+                   (config.flags & 32 == 0
+                        || config.addr.s_addr == lease.addr.s_addr) {
+                lease_set_hostname(lease, config.hostname,
                                    1,
                                    get_domain(lease.addr),
                                    0 );
@@ -319,23 +319,23 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
             if !(lease.flags & (64 | 32) !=
                      0) {
                 ourprintf(&mut err,
-                          b"%lu \x00"                         &mut String,
+                          "%lu "                         &mut String,
                           lease.expires);
                 if lease.hwaddr_type != 1 ||
                        lease.hwaddr_len == 0 {
                     ourprintf(&mut err,
-                              b"%.2x-\x00"
+                              "%.2x-"
                                   , lease.hwaddr_type);
                 }
                 i = 0;
                 while i < lease.hwaddr_len {
                     ourprintf(&mut err,
-                              b"%.2x\x00"
+                              "%.2x"
                                   ,
                               lease.hwaddr[i ]);
                     if i != lease.hwaddr_len - 1 {
                         ourprintf(&mut err,
-                                  b":\x00"
+                                  ":"
                                       );
                     }
                     i += 1
@@ -344,29 +344,29 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
                           &mut lease.addr       daemon.addrbuff,
                           46);
                 ourprintf(&mut err,
-                          b" %s \x00"                         &mut String, daemon.addrbuff);
+                          " %s "                         &mut String, daemon.addrbuff);
                 ourprintf(&mut err,
-                          b"%s \x00"                         &mut String,
+                          "%s "                         &mut String,
                           if !lease.hostname.is_null() {
                               lease.hostname
                           } else {
-                              b"*\x00"
+                              "*"
                           });
                 if !lease.clid.is_null() &&
                        lease.clid_len != 0 {
                     i = 0;
                     while i < lease.clid_len - 1 {
                         ourprintf(&mut err,
-                                  b"%.2x:\x00"                                &mut String,
+                                  "%.2x:"                                &mut String,
                                   *lease.clid.offset(i)                                libc::c_int);
                         i += 1
                     }
                     ourprintf(&mut err,
-                              b"%.2x\n\x00" ,
+                              "%.2x\n" ,
                               *lease.clid.offset(i)                            libc::c_int);
                 } else {
                     ourprintf(&mut err,
-                              b"*\n\x00"
+                              "*\n"
                                   );
                 }
             }
@@ -374,23 +374,23 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
         }
         if !daemon.duid.is_null() {
             ourprintf(&mut err,
-                      b"duid \x00"                     &mut String);
+                      "duid "                     &mut String);
             i = 0;
             while i < daemon.duid_len - 1 {
                 ourprintf(&mut err,
-                          b"%.2x:\x00"                         &mut String,
+                          "%.2x:"                         &mut String,
                           daemon.duid.offset(i));
                 i += 1
             }
             ourprintf(&mut err,
-                      b"%.2x\n\x00"                     &mut String,
+                      "%.2x\n"                     &mut String,
                       daemon.duid.offset(i));
             lease = leases;
             while !lease.is_null() {
                 if !(lease.flags & (64 | 32)
                          == 0) {
                     ourprintf(&mut err,
-                              b"%lu \x00"
+                              "%lu "
                                   ,
                               lease.expires);
                     inet_ntop(10,
@@ -398,35 +398,35 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
                               daemon.addrbuff,
                               46);
                     ourprintf(&mut err,
-                              b"%s%u %s \x00" ,
+                              "%s%u %s " ,
                               if lease.flags & 64 != 0 {
-                                  b"T\x00"
+                                  "T"
                               } else {
-                                  b"\x00"
+                                  ""
                               }, lease.iaid, daemon.addrbuff);
                     ourprintf(&mut err,
-                              b"%s \x00"
+                              "%s "
                                   ,
                               if !lease.hostname.is_null() {
                                   lease.hostname
                               } else {
-                                  b"*\x00"
+                                  "*"
                               });
                     if !lease.clid.is_null() &&
                            lease.clid_len != 0 {
                         i = 0;
                         while i < lease.clid_len - 1 {
                             ourprintf(&mut err,
-                                      b"%.2x:\x00"                                     *const libc::c_char                                    &mut String,
+                                      "%.2x:"                                     *const libc::c_char                                    &mut String,
                                       *lease.clid.offset(i)                                    libc::c_int);
                             i += 1
                         }
                         ourprintf(&mut err,
-                                  b"%.2x\n\x00"                                &mut String,
+                                  "%.2x\n"                                &mut String,
                                   *lease.clid.offset(i)                                libc::c_int);
                     } else {
                         ourprintf(&mut err,
-                                  b"*\n\x00"                                &mut String);
+                                  "*\n"                                &mut String);
                     }
                 }
                 lease = lease.next
@@ -475,7 +475,7 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
             next_event = 60 + now
         }
         my_syslog((3) << 3 | 3,
-                  b"failed to write %s: %s (retry in %us)\x00", daemon.lease_file,
+                  "failed to write %s: %s (retry in %us)", daemon.lease_file,
                   strerror(err), difftime(next_event, now));
     }
     send_alarm(next_event, now);
@@ -492,7 +492,7 @@ unsafe extern "C" fn find_interface_v4(mut local: NetAddress,
     lease = leases;
     while !lease.is_null() {
         if lease.flags & (64 | 32) == 0 &&
-               is_same_net(local, lease.addr, netmask) != 0 &&
+               is_same_net4(local, lease.addr, netmask) != 0 &&
                prefix > lease.new_prefixlen {
             lease.new_interface = if_index;
             lease.new_prefixlen = prefix
@@ -501,7 +501,7 @@ unsafe extern "C" fn find_interface_v4(mut local: NetAddress,
     }
     return 1;
 }
-unsafe extern "C" fn find_interface_v6(mut local: *mut In6Addr,
+unsafe extern "C" fn find_interface_v6(mut local: &mut In6Addr,
                                        mut prefix: i32,
                                        mut scope: i32,
                                        mut if_index: i32,
@@ -528,7 +528,7 @@ unsafe extern "C" fn find_interface_v6(mut local: *mut In6Addr,
     return 1;
 }
 #[no_mangle]
-pub unsafe extern "C" fn lease_ping_reply(mut sender: *mut In6Addr,
+pub unsafe extern "C" fn lease_ping_reply(mut sender: &mut In6Addr,
                                           mut packet: mut Vec<u8>,
                                           mut interface: &mut String) {
     /* We may be doing RA but not DHCPv4, in which case the lease
@@ -598,7 +598,7 @@ pub unsafe extern "C" fn lease_find_interfaces(mut now: time::Instant) {
     iface_enumerate(10,
                     &mut now,
                     ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                            *mut In6Addr,
+                                                                            &mut In6Addr,
                                                                         _:
                                                                             libc::c_int,
                                                                         _:
@@ -618,7 +618,7 @@ pub unsafe extern "C" fn lease_find_interfaces(mut now: time::Instant) {
                                                        ->
                                                            libc::c_int>>(Some(find_interface_v6
                                                                                                                 unsafe extern "C" fn(_:
-                                                                                                           *mut In6Addr,
+                                                                                                           &mut In6Addr,
                                                                                                        _:
                                                                                                            libc::c_int,
                                                                                                        _:
@@ -668,14 +668,14 @@ pub unsafe extern "C" fn lease_update_dns(mut force: i32) {
                 prot = 10
             } else if !lease.hostname.is_null() || !lease.fqdn.is_null()
              {
-                let mut slaac: *mut SlaacAddress = 0 ;
+                let mut slaac: SlaacAddress = 0 ;
                 slaac = lease.slaac_address;
                 while !slaac.is_null() {
-                    if (*slaac).backoff == 0 {
+                    if slaac.backoff == 0 {
                         if !lease.fqdn.is_null() {
                             cache_add_dhcp_entry(lease.fqdn,
                                                  10,
-                                                 &mut (*slaac).addr  *mut In6Addr  NetAddress,
+                                                 &mut slaac.addr  &mut In6Addr  NetAddress,
                                                  lease.expires);
                         }
                         if daemon.options[(20).wrapping_div((::std::mem::size_of::<libc::c_uint>()
@@ -688,11 +688,11 @@ pub unsafe extern "C" fn lease_update_dns(mut force: i32) {
                                == 0 && !lease.hostname.is_null() {
                             cache_add_dhcp_entry(lease.hostname,
                                                  10,
-                                                 &mut (*slaac).addr  *mut In6Addr  NetAddress,
+                                                 &mut slaac.addr  &mut In6Addr  NetAddress,
                                                  lease.expires);
                         }
                     }
-                    slaac = (*slaac).next
+                    slaac = slaac.next
                 }
             }
             if !lease.fqdn.is_null() {
@@ -731,7 +731,7 @@ pub unsafe extern "C" fn lease_prune(mut target: DhcpLease,
                                      mut now: time::Instant) {
     let mut lease: DhcpLease = 0;
     let mut tmp: DhcpLease = 0;
-    let mut up: *mut *mut DhcpLease = 0 ;
+    let mut up: DhcpLease;
     lease = leases;
     up = &mut leases;
     while !lease.is_null() {
@@ -820,7 +820,7 @@ pub unsafe extern "C" fn lease6_find(mut clid: mut Vec<u8>,
                                      mut clid_len: i32,
                                      mut lease_type: i32,
                                      mut iaid: u32,
-                                     mut addr: *mut In6Addr)
+                                     mut addr: &mut In6Addr)
  -> DhcpLease {
     let mut lease: DhcpLease = 0;
     lease = leases;
@@ -830,15 +830,15 @@ pub unsafe extern "C" fn lease6_find(mut clid: mut Vec<u8>,
                       let mut __a: *const In6Addr =
                           &mut lease.addr6                        *const In6Addr;
                       let mut __b: *const In6Addr = addr ;
-                      ((*__a).__in6_u.__u6_addr32[0 ]
+                      (__a.__in6_u.__u6_addr32[0 ]
                            ==
-                           (*__b).__in6_u.__u6_addr32[0       usize] &&
-                           (*__a).__in6_u.__u6_addr32[1       usize] ==
-                               (*__b).__in6_u.__u6_addr32[1           usize] &&
-                           (*__a).__in6_u.__u6_addr32[2       usize] ==
-                               (*__b).__in6_u.__u6_addr32[2           usize] &&
-                           (*__a).__in6_u.__u6_addr32[3       usize] ==
-                               (*__b).__in6_u.__u6_addr32[3           usize])
+                           __b.__in6_u.__u6_addr32[0       usize] &&
+                           __a.__in6_u.__u6_addr32[1       usize] ==
+                               __b.__in6_u.__u6_addr32[1           usize] &&
+                           __a.__in6_u.__u6_addr32[2       usize] ==
+                               __b.__in6_u.__u6_addr32[2           usize] &&
+                           __a.__in6_u.__u6_addr32[3       usize] ==
+                               __b.__in6_u.__u6_addr32[3           usize])
                   }) == 0) {
                 if !(clid_len != lease.clid_len ||
                          memcmp(clid,
@@ -872,7 +872,7 @@ pub unsafe extern "C" fn lease6_find_by_client(mut first: DhcpLease,
                                                mut iaid: u32)
                                                -> DhcpLease {
     let mut lease: DhcpLease = 0;
-    if first.is_null() { first = leases } else { first = (*first).next }
+    if first.is_null() { first = leases } else { first = first.next }
     lease = first;
     while !lease.is_null() {
         if !(lease.flags & 16 != 0) {
@@ -891,7 +891,7 @@ pub unsafe extern "C" fn lease6_find_by_client(mut first: DhcpLease,
     return 0;
 }
 #[no_mangle]
-pub unsafe extern "C" fn lease6_find_by_addr(mut net: *mut In6Addr,
+pub unsafe extern "C" fn lease6_find_by_addr(mut net: &mut In6Addr,
                                              mut prefix: i32,
                                              mut addr: u64)
                                              -> DhcpLease {
@@ -914,20 +914,20 @@ pub unsafe extern "C" fn lease6_find_by_addr(mut net: *mut In6Addr,
 pub unsafe extern "C" fn lease_find_max_addr6(mut context: DhcpContext)
  -> u64 {
     let mut lease: DhcpLease = 0;
-    let mut addr: u64 = addr6part(&mut (*context).start6);
-    if (*context).flags &
+    let mut addr: u64 = addr6part(&mut context.start6);
+    if context.flags &
            ((1) << 0 |
                 (1) << 3) == 0 {
         lease = leases;
         while !lease.is_null() {
             if !(lease.flags & (64 | 32) ==
                      0) {
-                if is_same_net6(&mut lease.addr6, &mut (*context).start6,
+                if is_same_net6(&mut lease.addr6, &mut context.start6,
                                 64) != 0 &&
                        addr6part(&mut lease.addr6) >
-                           addr6part(&mut (*context).start6) &&
+                           addr6part(&mut context.start6) &&
                        addr6part(&mut lease.addr6) <=
-                           addr6part(&mut (*context).end6) &&
+                           addr6part(&mut context.end6) &&
                        addr6part(&mut lease.addr6) > addr {
                     addr = addr6part(&mut lease.addr6)
                 }
@@ -942,8 +942,8 @@ pub unsafe extern "C" fn lease_find_max_addr6(mut context: DhcpContext)
 pub unsafe extern "C" fn lease_find_max_addr(mut context: DhcpContext)
  -> NetAddress {
     let mut lease: DhcpLease = 0; /* illegal value */
-    let mut addr: NetAddress = (*context).start;
-    if (*context).flags &
+    let mut addr: NetAddress = context.start;
+    if context.flags &
            ((1) << 0 |
                 (1) << 3) == 0 {
         lease = leases;
@@ -951,9 +951,9 @@ pub unsafe extern "C" fn lease_find_max_addr(mut context: DhcpContext)
             if !(lease.flags & (64 | 32) !=
                      0) {
                 if __bswap_32(lease.addr.s_addr) >
-                       __bswap_32((*context).start.s_addr) &&
+                       __bswap_32(context.start.s_addr) &&
                        __bswap_32(lease.addr.s_addr) <=
-                           __bswap_32((*context).end.s_addr) &&
+                           __bswap_32(context.end.s_addr) &&
                        __bswap_32(lease.addr.s_addr) >
                            __bswap_32(addr.s_addr) {
                     addr = lease.addr
@@ -992,7 +992,7 @@ pub unsafe extern "C" fn lease4_allocate(mut addr: NetAddress)
     return lease;
 }
 #[no_mangle]
-pub unsafe extern "C" fn lease6_allocate(mut addrp: *mut In6Addr,
+pub unsafe extern "C" fn lease6_allocate(mut addrp: &mut In6Addr,
                                          mut lease_type: i32)
                                          -> DhcpLease {
     let mut lease: DhcpLease = lease_allocate();
@@ -1071,8 +1071,8 @@ pub unsafe extern "C" fn lease_set_hwaddr(mut lease: DhcpLease,
             lease.flags |= 4;
             file_dirty = 1;
             free(lease.clid);
-            lease.clid =
-                whine_malloc(clid_len );
+            // lease.clid =
+            //     whine_malloc(clid_len );
             if lease.clid.is_null() { return }
             change = 1
         } else if memcmp(lease.clid,
@@ -1116,7 +1116,7 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
            (domain.is_null() || hostname_isequal(domain, config_domain) == 0)
        {
         my_syslog((3) << 3 | 4,
-                  b"Ignoring domain %s for DHCP host name %s\x00"
+                  "Ignoring domain %s for DHCP host name %s"
                      , config_domain, name);
     }
     if !lease.hostname.is_null() && !name.is_null() &&
@@ -1133,20 +1133,21 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
 
      Don't allow a name from the client to override a name from dnsmasq config. */
     if !name.is_null() {
-        new_name =
-            whine_malloc(strlen(name).wrapping_add(1    libc::c_ulong))          &mut String;
+        // new_name =
+        //     whine_malloc(strlen(name).wrapping_add(1    libc::c_ulong))          &mut String;
         if !new_name.is_null() {
             strcpy(new_name, name);
             if !domain.is_null() &&
                    {
-                       new_fqdn =
-                           whine_malloc(strlen(new_name).wrapping_add(strlen(domain)).wrapping_add(2                             libc::c_int                      ))
-                               ;
-                       !new_fqdn.is_null()
+                       // new_fqdn =
+                       //     whine_malloc(strlen(new_name).wrapping_add(strlen(domain)).wrapping_add(2                             libc::c_int                      ))
+                       //         ;
+                       // !new_fqdn.is_null()
+                       true
                    } {
                 strcpy(new_fqdn, name);
                 strcat(new_fqdn,
-                       b".\x00" );
+                       "." );
                 strcat(new_fqdn, domain);
             }
         }
@@ -1161,12 +1162,12 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
                        (20 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                                ).wrapping_mul(8         libc::c_int  ))
                    != 0 {
-                if new_fqdn.is_null() || (*lease_tmp).fqdn.is_null() ||
-                       hostname_isequal((*lease_tmp).fqdn, new_fqdn) == 0 {
+                if new_fqdn.is_null() || lease_tmp.fqdn.is_null() ||
+                       hostname_isequal(lease_tmp.fqdn, new_fqdn) == 0 {
                     current_block_23 = 17833034027772472439;
                 } else { current_block_23 = 11307063007268554308; }
-            } else if new_name.is_null() || (*lease_tmp).hostname.is_null() ||
-                          hostname_isequal((*lease_tmp).hostname, new_name) ==
+            } else if new_name.is_null() || lease_tmp.hostname.is_null() ||
+                          hostname_isequal(lease_tmp.hostname, new_name) ==
                               0 {
                 current_block_23 = 17833034027772472439;
             } else { current_block_23 = 11307063007268554308; }
@@ -1174,19 +1175,19 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
                 11307063007268554308 => {
                     if lease.flags &
                            (64 | 32) != 0 {
-                        if (*lease_tmp).flags &
+                        if lease_tmp.flags &
                                (64 | 32) == 0 {
                             current_block_23 = 17833034027772472439;
-                        } else if lease.clid_len == (*lease_tmp).clid_len
+                        } else if lease.clid_len == lease_tmp.clid_len
                                       && !lease.clid.is_null() &&
-                                      !(*lease_tmp).clid.is_null() &&
+                                      !lease_tmp.clid.is_null() &&
                                       memcmp(lease.clid
-                                             (*lease_tmp).clid
+                                             lease_tmp.clid
                                              lease.clid_len                                    ) ==
                                           0 {
                             current_block_23 = 17833034027772472439;
                         } else { current_block_23 = 1608152415753874203; }
-                    } else if (*lease_tmp).flags &
+                    } else if lease_tmp.flags &
                                   (64 | 32) != 0
                      {
                         current_block_23 = 17833034027772472439;
@@ -1194,7 +1195,7 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
                     match current_block_23 {
                         17833034027772472439 => { }
                         _ => {
-                            if (*lease_tmp).flags & 8 != 0 &&
+                            if lease_tmp.flags & 8 != 0 &&
                                    auth == 0 {
                                 free(new_name);
                                 free(new_fqdn);
@@ -1207,7 +1208,7 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
                 }
                 _ => { }
             }
-            lease_tmp = (*lease_tmp).next
+            lease_tmp = lease_tmp.next
         }
     }
     if !lease.hostname.is_null() { kill_name(lease); }
@@ -1255,11 +1256,11 @@ pub unsafe extern "C" fn do_script_run(mut now: time::Instant) -> i32 {
             lease.old_hostname = 0 ;
             return 1
         } else {
-            let mut slaac: *mut SlaacAddress = 0 ;
-            let mut tmp: *mut SlaacAddress = 0 ;
+            let mut slaac: SlaacAddress = 0 ;
+            let mut tmp: SlaacAddress = 0 ;
             slaac = lease.slaac_address;
             while !slaac.is_null() {
-                tmp = (*slaac).next;
+                tmp = slaac.next;
                 free(slaac);
                 slaac = tmp
             }
@@ -1347,8 +1348,8 @@ pub unsafe extern "C" fn lease_add_extradata(mut lease: DhcpLease,
             lease.extradata_len.wrapping_add(len).wrapping_add(100                   libc::c_int
                                                                                         libc::c_uint)
                 ;
-        let mut new: mut Vec<u8> =
-            whine_malloc(newsz);
+        // let mut new: mut Vec<u8> =
+        //     whine_malloc(newsz);
         if new.is_null() { return }
         if !lease.extradata.is_null() {
             memcpy(new,

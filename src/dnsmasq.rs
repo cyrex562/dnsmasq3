@@ -105,7 +105,7 @@ use std::process::exit;
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* Declare static char *compiler_opts  in config.h */
 // 
-// pub static mut daemon: *mut dnsmasq_daemon = 0 as *const daemon as *mut dnsmasq_daemon;
+// pub static mut daemon: dnsmasq_daemon = 0 as *const daemon as *mut dnsmasq_daemon;
 
 // static mut pid: pid_t = 0;
 // static mut pipewrite: libc::c_int = 0;
@@ -123,10 +123,10 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     let mut piperead: i32 = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     let mut err_pipe: [libc::c_int; 2] = [0; 2];
-    let mut ent_pw: *mut Passwd = 0 ;
+    let mut ent_pw: Passwd = 0 ;
     let mut script_uid: uid_t = 0 ;
     let mut script_gid: gid_t = 0 ;
-    let mut gp: *mut Group = 0 ;
+    let mut gp: Group = 0 ;
     let mut i: i32 = 0;
     // if cfg!(target_os = "linux") {
     //     let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX);
@@ -227,7 +227,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     i = 0;
     while i < 3 {
         open(
-            b"/dev/null\x00" ,
+            "/dev/null" ,
             0o2,
         );
         i += 1
@@ -248,7 +248,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         != 0
     {
         die(
-            b"DNSSEC not available: set HAVE_DNSSEC in src/config.h\x00"
+            "DNSSEC not available: set HAVE_DNSSEC in src/config.h"
                 ,
             0 ,
             1,
@@ -266,7 +266,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         != 0
     {
         die(
-            b"conntrack support not available: set HAVE_CONNTRACK in src/config.h\x00"
+            "conntrack support not available: set HAVE_CONNTRACK in src/config.h"
                 ,
             0 ,
             1,
@@ -284,7 +284,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         != 0
     {
         die(
-            b"Ubus not available: set HAVE_UBUS in src/config.h\x00"
+            "Ubus not available: set HAVE_UBUS in src/config.h"
                 ,
             0 ,
             1,
@@ -292,7 +292,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     }
     if daemon.max_port < daemon.min_port {
         die(
-            b"max_port cannot be smaller than min_port\x00"
+            "max_port cannot be smaller than min_port"
                 ,
             0 ,
             1,
@@ -302,7 +302,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     if !daemon.auth_zones.is_null() {
         if daemon.authserver.is_null() {
             die(
-                b"--auth-server required when an auth zone is defined.\x00"
+                "--auth-server required when an auth zone is defined."
                     ,
                 0 ,
                 1,
@@ -374,7 +374,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
             != 0
     {
         die(
-            b"cannot set --bind-interfaces and --bind-dynamic\x00"
+            "cannot set --bind-interfaces and --bind-dynamic"
                 ,
             0 ,
             1,
@@ -382,7 +382,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     }
     if enumerate_interfaces(1) == 0 || enumerate_interfaces(0) == 0 {
         die(
-            b"failed to find list of interfaces: %s\x00"
+            "failed to find list of interfaces: %s"
                 ,
             0 ,
             5,
@@ -423,15 +423,15 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         {
             if_tmp = daemon.if_names;
             while !if_tmp.is_null() {
-                if !(*if_tmp).name.is_null() && (*if_tmp).used == 0 {
+                if !if_tmp.name.is_null() && if_tmp.used == 0 {
                     die(
-                        b"unknown interface %s\x00"
+                        "unknown interface %s"
                             ,
-                        (*if_tmp).name,
+                        if_tmp.name,
                         2,
                     );
                 }
-                if_tmp = (*if_tmp).next
+                if_tmp = if_tmp.next
             }
         }
         /* after enumerate_interfaces()  */
@@ -502,7 +502,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         != 0
     {
         die(
-            b"DBus not available: set HAVE_DBUS in src/config.h\x00"
+            "DBus not available: set HAVE_DBUS in src/config.h"
                 ,
             0 ,
             1,
@@ -520,7 +520,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         != 0
     {
         die(
-            b"UBus not available: set HAVE_UBUS in src/config.h\x00"
+            "UBus not available: set HAVE_UBUS in src/config.h"
                 ,
             0 ,
             1,
@@ -534,11 +534,11 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         && !daemon.scriptuser.is_null()
         && (!daemon.lease_change_command.is_null() || !daemon.luascript.is_null())
     {
-        let mut scr_pw: *mut Passwd = 0 ;
+        let mut scr_pw: Passwd = 0 ;
         scr_pw = getpwnam(daemon.scriptuser);
         if !scr_pw.is_null() {
-            script_uid = (*scr_pw).pw_uid;
-            script_gid = (*scr_pw).pw_gid
+            script_uid = scr_pw.pw_uid;
+            script_gid = scr_pw.pw_gid
         } else {
             baduser = daemon.scriptuser.clone()
         }
@@ -556,7 +556,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     }
     if !baduser.is_null() {
         // die(
-        //     b"unknown user or group: %s\x00" as *const u8 as *const libc::c_char
+        //     "unknown user or group: %s" as *const u8 as *const libc::c_char
         //         as *mut libc::c_char,
         //     baduser,
         //     1,
@@ -564,7 +564,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     }
     /* implement group defaults, "dip" if available, or group associated with uid */
     if daemon.group_set == 0 && gp.is_null() {
-        gp = getgrnam(b"dip\x00" );
+        gp = getgrnam("dip" );
         if gp.is_null() && !ent_pw.is_null() {
             gp = getgrgid(ent_pw.pw_gid)
         }
@@ -606,10 +606,10 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     for each TCP connection, so need CAP_NET_RAW */
     serv = daemon.servers;
     while !serv.is_null() {
-        if (*serv).interface[0 ] != 0 {
+        if serv.interface[0 ] != 0 {
             need_cap_net_raw = 1
         }
-        serv = (*serv).next
+        serv = serv.next
     }
     /* If we're doing Dbus or UBus, the above can be set dynamically,
     (as can ports) so always (potentially) needed. */
@@ -632,27 +632,27 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         } /* Get current values, for verification */
         capsize = 2
     }
-    data = safe_malloc(
-        (::std::mem::size_of::<UserCapData>())
-            .wrapping_mul(capsize),
-    ) as cap_user_data_t;
+    // data = safe_malloc(
+    //     (::std::mem::size_of::<UserCapData>())
+    //         .wrapping_mul(capsize),
+    // ) as cap_user_data_t;
     capget(hdr, data);
     if need_cap_net_admin != 0
         && data.permitted & ((1) << 12) == 0
     {
-        fail = b"NET_ADMIN\x00"
+        fail = "NET_ADMIN"
     } else if need_cap_net_raw != 0
         && data.permitted & ((1) << 13) == 0
     {
-        fail = b"NET_RAW\x00"
+        fail = "NET_RAW"
     } else if need_cap_net_bind_service != 0
         && data.permitted & ((1) << 10) == 0
     {
-        fail = b"NET_BIND_SERVICE\x00"
+        fail = "NET_BIND_SERVICE"
     }
     if !fail.is_null() {
         die(
-            b"process is missing required capability %s\x00"
+            "process is missing required capability %s"
                 ,
             fail,
             5,
@@ -701,9 +701,9 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     {
         /* The following code "daemonizes" the process.
         See Stevens section 12.4 */
-        if chdir(b"/\x00" ) != 0 {
+        if chdir("/" ) != 0 {
             die(
-                b"cannot chdir to filesystem root: %s\x00"
+                "cannot chdir to filesystem root: %s"
                     ,
                 0 ,
                 5,
@@ -771,7 +771,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
             let mut err: i32 = 0;
             sprintf(
                 daemon.namebuff,
-                b"%d\n\x00" ,
+                "%d\n" ,
                 getpid(),
             );
             /* Explanation: Some installations of dnsmasq (eg Debian/Ubuntu) locate the pid-file
@@ -860,7 +860,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     {
         /* open  stdout etc to /dev/null */
         let mut nullfd: i32 = open(
-            b"/dev/null\x00" ,
+            "/dev/null" ,
             0o2,
         );
         if nullfd != -(1) {
@@ -885,7 +885,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         let mut bad_capabilities: i32 = 0;
         let mut dummy: gid_t = 0;
         /* remove all supplementary groups */
-        if !gp.is_null() && (setgroups(0 , &mut dummy) == -(1) || setgid((*gp).gr_gid) == -(1))
+        if !gp.is_null() && (setgroups(0 , &mut dummy) == -(1) || setgid(gp.gr_gid) == -(1))
         {
             send_event( err_pipe[1 ], 15, *__errno_location(), Some(&mut daemon.groupname));
             _exit(0);
@@ -931,8 +931,8 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     }
     if daemon.options[40] != 0
     {
-        let mut dir: *mut DIR = 0 ;
-        let mut p: *mut TftpPrefix = 0 ;
+        let mut dir: DIR = 0 ;
+        let mut p: TftpPrefix = 0 ;
         if !daemon.tftp_prefix.is_null() {
             dir = opendir(daemon.tftp_prefix);
             if dir.is_null() {
@@ -974,20 +974,20 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         if daemon.cachesize != 0 {
             my_syslog(
                 6,
-                b"started, version %s cachesize %d\x00" ,
-                b"2.84rc2\x00" ,
+                "started, version %s cachesize %d" ,
+                "2.84rc2" ,
                 daemon.cachesize,
             );
             if daemon.cachesize > 10000 {
                 my_syslog(4,
-                          b"cache size greater than 10000 may cause performance issues, and is unlikely to be useful.\x00"
+                          "cache size greater than 10000 may cause performance issues, and is unlikely to be useful."
                               );
             }
         } else {
             my_syslog(
                 6,
-                b"started, version %s cache disabled\x00" ,
-                b"2.84rc2\x00" ,
+                "started, version %s cache disabled" ,
+                "2.84rc2" ,
             );
         }
         if daemon.options[(49).wrapping_div(
@@ -1003,19 +1003,19 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         {
             my_syslog(
                 6,
-                b"DNS service limited to local subnets\x00" ,
+                "DNS service limited to local subnets" ,
             );
         }
     }
     my_syslog(
         6,
-        b"compile time options: %s\x00" ,
+        "compile time options: %s" ,
         compile_opts,
     );
     if chown_warn != 0 {
         my_syslog(
             4,
-            b"chown of PID file %s failed: %s\x00" ,
+            "chown of PID file %s failed: %s" ,
             daemon.runfile,
             strerror(chown_warn),
         );
@@ -1023,7 +1023,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     if log_err != 0 {
         my_syslog(
             4,
-            b"warning: failed to change owner of %s: %s\x00" ,
+            "warning: failed to change owner of %s: %s" ,
             daemon.log_file,
             strerror(log_err),
         );
@@ -1031,7 +1031,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     if bind_fallback != 0 {
         my_syslog(
             4,
-            b"setting --bind-interfaces option because of OS limitations\x00"
+            "setting --bind-interfaces option because of OS limitations"
                ,
         );
     }
@@ -1074,15 +1074,15 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     {
         if_tmp = daemon.if_names;
         while !if_tmp.is_null() {
-            if !(*if_tmp).name.is_null() && (*if_tmp).used == 0 {
+            if !if_tmp.name.is_null() && if_tmp.used == 0 {
                 my_syslog(
                     4,
-                    b"warning: interface %s does not currently exist\x00"
+                    "warning: interface %s does not currently exist"
                        ,
-                    (*if_tmp).name,
+                    if_tmp.name,
                 );
             }
-            if_tmp = (*if_tmp).next
+            if_tmp = if_tmp.next
         }
     }
     if daemon.port != 0
@@ -1100,7 +1100,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         if !daemon.resolv_files.is_null() && (*daemon.resolv_files).is_default == 0 {
             my_syslog(
                 4,
-                b"warning: ignoring resolv-file flag because no-resolv is set\x00"
+                "warning: ignoring resolv-file flag because no-resolv is set"
                    ,
             );
         }
@@ -1108,14 +1108,14 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         if daemon.servers.is_null() {
             my_syslog(
                 4,
-                b"warning: no upstream servers configured\x00" ,
+                "warning: no upstream servers configured" ,
             );
         }
     }
     if daemon.max_logs != 0 {
         my_syslog(
             6,
-            b"asynchronous logging enabled, queue limit is %d messages\x00"
+            "asynchronous logging enabled, queue limit is %d messages"
                ,
             daemon.max_logs,
         );
@@ -1123,22 +1123,22 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     context = daemon.dhcp;
     while !context.is_null() {
         dhcp_context_to_string(2, context);
-        context = (*context).next
+        context = context.next
     }
     relay = daemon.relay4;
     while !relay.is_null() {
         log_relay(2, relay);
-        relay = (*relay).next
+        relay = relay.next
     }
     context = daemon.dhcp6;
     while !context.is_null() {
         dhcp_context_to_string(10, context);
-        context = (*context).next
+        context = context.next
     }
     relay = daemon.relay6;
     while !relay.is_null() {
         log_relay(10, relay);
-        relay = (*relay).next
+        relay = relay.next
     }
     if daemon.dhcp6_enabled != 0 || daemon.ra_enabled != 0 {
         dhcp_construct_contexts(now);
@@ -1156,13 +1156,13 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     {
         my_syslog(
             (3) << 3 | 6,
-            b"IPv6 router advertisement enabled\x00" ,
+            "IPv6 router advertisement enabled" ,
         );
     }
     if did_bind != 0 {
         my_syslog(
             (3) << 3 | 6,
-            b"DHCP, sockets bound exclusively to interface %s\x00"
+            "DHCP, sockets bound exclusively to interface %s"
                ,
             bound_device,
         );
@@ -1185,19 +1185,19 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
             )
         != 0
     {
-        let mut p_0: *mut TftpPrefix = 0 ;
+        let mut p_0: TftpPrefix = 0 ;
         my_syslog(
             (1) << 3 | 6,
-            b"TFTP %s%s %s %s\x00" ,
+            "TFTP %s%s %s %s" ,
             if !daemon.tftp_prefix.is_null() {
-                b"root is \x00"
+                "root is "
             } else {
-                b"enabled\x00"
+                "enabled"
             },
             if !daemon.tftp_prefix.is_null() {
                 daemon.tftp_prefix
             } else {
-                b"\x00"
+                ""
             },
             if daemon.options[(26).wrapping_div(
                 (::std::mem::size_of::<libc::c_uint>())
@@ -1210,9 +1210,9 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
                     )
                 != 0
             {
-                b"secure mode\x00"
+                "secure mode"
             } else {
-                b"\x00"
+                ""
             },
             if daemon.options[(60).wrapping_div(
                 (::std::mem::size_of::<libc::c_uint>())
@@ -1225,29 +1225,29 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
                     )
                 != 0
             {
-                b"single port mode\x00"
+                "single port mode"
             } else {
-                b"\x00"
+                ""
             },
         );
         if tftp_prefix_missing != 0 {
             my_syslog(
                 (1) << 3 | 4,
-                b"warning: %s inaccessible\x00" ,
+                "warning: %s inaccessible" ,
                 daemon.tftp_prefix,
             );
         }
         p_0 = daemon.if_prefix;
         while !p_0.is_null() {
-            if (*p_0).missing != 0 {
+            if p_0.missing != 0 {
                 my_syslog(
                     (1) << 3 | 4,
-                    b"warning: TFTP directory %s inaccessible\x00"
+                    "warning: TFTP directory %s inaccessible"
                        ,
-                    (*p_0).prefix,
+                    p_0.prefix,
                 );
             }
-            p_0 = (*p_0).next
+            p_0 = p_0.next
         }
         /* This is a guess, it assumes that for small limits,
         disjoint files might be served, but for large limits,
@@ -1285,7 +1285,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
             daemon.tftp_max = max_fd;
             my_syslog(
                 (1) << 3 | 4,
-                b"restricting maximum simultaneous TFTP transfers to %d\x00"
+                "restricting maximum simultaneous TFTP transfers to %d"
                    ,
                 daemon.tftp_max,
             );
@@ -1576,7 +1576,7 @@ pub fn send_event(
 to describe fatal errors. */
 fn read_event(
     mut fd: i32,
-    mut evp: *mut EventDesc,
+    mut evp: &mut EventDesc,
     mut msg: String,
 ) -> i32 {
     let mut buf: &mut String = 0 ;
@@ -1590,32 +1590,33 @@ fn read_event(
         return 0;
     }
     *msg = 0 ;
-    if (*evp).msg_sz != 0
+    if evp.msg_sz != 0
         && {
-            buf = malloc(((*evp).msg_sz + 1)) ;
-            !buf.is_null()
+            // buf = malloc((evp.msg_sz + 1)) ;
+            // !buf.is_null()
+            true
         }
         && read_write(
             fd,
             buf,
-            (*evp).msg_sz,
+            evp.msg_sz,
             1,
         ) != 0
     {
-        *buf.offset((*evp).msg_sz) = 0;
+        *buf.offset(evp.msg_sz) = 0;
         *msg = buf
     }
     return 1;
 }
-fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
-    *__errno_location() = (*ev).data;
-    match (*ev).event {
+fn fatal_event(mut ev: &mut EventDesc, mut msg: &mut String) {
+    *__errno_location() = ev.data;
+    match ev.event {
         16 => {
             exit(0);
         }
         18 => {
             die(
-                b"cannot fork into background: %s\x00"
+                "cannot fork into background: %s"
                     ,
                 0 ,
                 5,
@@ -1624,7 +1625,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         10 => {
             /* fall through */
             die(
-                b"failed to create helper: %s\x00"
+                "failed to create helper: %s"
                     ,
                 0 ,
                 5,
@@ -1633,7 +1634,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         12 => {
             /* fall through */
             die(
-                b"setting capabilities failed: %s\x00"
+                "setting capabilities failed: %s"
                     ,
                 0 ,
                 5,
@@ -1642,7 +1643,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         11 => {
             /* fall through */
             die(
-                b"failed to change user-id to %s: %s\x00"
+                "failed to change user-id to %s: %s"
                     ,
                 msg,
                 5,
@@ -1651,7 +1652,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         15 => {
             /* fall through */
             die(
-                b"failed to change group-id to %s: %s\x00"
+                "failed to change group-id to %s: %s"
                     ,
                 msg,
                 5,
@@ -1660,7 +1661,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         13 => {
             /* fall through */
             die(
-                b"failed to open pidfile %s: %s\x00"
+                "failed to open pidfile %s: %s"
                     ,
                 msg,
                 3,
@@ -1669,7 +1670,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         17 => {
             /* fall through */
             die(
-                b"cannot open log %s: %s\x00"
+                "cannot open log %s: %s"
                     ,
                 msg,
                 3,
@@ -1678,7 +1679,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         19 => {
             /* fall through */
             die(
-                b"failed to load Lua script: %s\x00"
+                "failed to load Lua script: %s"
                     ,
                 msg,
                 5,
@@ -1687,7 +1688,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         20 => {
             /* fall through */
             die(
-                b"TFTP directory %s inaccessible: %s\x00"
+                "TFTP directory %s inaccessible: %s"
                     ,
                 msg,
                 3,
@@ -1696,7 +1697,7 @@ fn fatal_event(mut ev: *mut EventDesc, mut msg: &mut String) {
         24 => {
             /* fall through */
             die(
-                b"cannot create timestamp file %s: %s\x00"
+                "cannot create timestamp file %s: %s"
                     ,
                 msg,
                 1,
@@ -1770,7 +1771,7 @@ fn async_event(mut pipe_0: i32, mut now: time::Instant) {
             8 => {
                 my_syslog(
                     4,
-                    b"script process killed by signal %d\x00" ,
+                    "script process killed by signal %d" ,
                     ev.data,
                 );
                 current_block_60 = 6367734732029634840;
@@ -1778,7 +1779,7 @@ fn async_event(mut pipe_0: i32, mut now: time::Instant) {
             7 => {
                 my_syslog(
                     4,
-                    b"script process exited with status %d\x00" ,
+                    "script process exited with status %d" ,
                     ev.data,
                 );
                 current_block_60 = 6367734732029634840;
@@ -1786,7 +1787,7 @@ fn async_event(mut pipe_0: i32, mut now: time::Instant) {
             9 => {
                 my_syslog(
                     3,
-                    b"failed to execute %s: %s\x00" ,
+                    "failed to execute %s: %s" ,
                     daemon.lease_change_command,
                     strerror(ev.data),
                 );
@@ -1795,11 +1796,11 @@ fn async_event(mut pipe_0: i32, mut now: time::Instant) {
             25 => {
                 my_syslog(
                     (2) << 3 | 7,
-                    b"%s\x00" ,
+                    "%s" ,
                     if !msg.is_null() {
                         msg
                     } else {
-                        b"\x00"
+                        ""
                     },
                 );
                 free(msg);
@@ -1869,7 +1870,7 @@ fn async_event(mut pipe_0: i32, mut now: time::Instant) {
                 }
                 my_syslog(
                     6,
-                    b"exiting on receipt of SIGTERM\x00" ,
+                    "exiting on receipt of SIGTERM" ,
                 );
                 flush_log();
                 exit(0);
@@ -1918,8 +1919,8 @@ fn poll_resolv(
     mut do_reload: i32,
     mut now: time::Instant,
 ) {
-    let mut res: *mut Resolvc = 0 ;
-    let mut latest: *mut Resolvc = 0 ;
+    let mut res: Resolvc = 0 ;
+    let mut latest: Resolvc = 0 ;
     let mut statbuf: stat = stat {
         st_dev: 0,
         st_ino: 0,
@@ -1967,20 +1968,20 @@ fn poll_resolv(
     latest = 0 ;
     res = daemon.resolv_files;
     while !res.is_null() {
-        if stat((*res).name, &mut statbuf) == -(1) {
+        if stat(res.name, &mut statbuf) == -(1) {
             if force != 0 {
-                (*res).mtime = 0
+                res.mtime = 0
             } else {
-                if (*res).logged == 0 {
+                if res.logged == 0 {
                     my_syslog(
                         4,
-                        b"failed to access %s: %s\x00" ,
-                        (*res).name,
+                        "failed to access %s: %s" ,
+                        res.name,
                         strerror(*__errno_location()),
                     );
                 }
-                (*res).logged = 1;
-                if (*res).mtime != 0 {
+                res.logged = 1;
+                if res.mtime != 0 {
                     /* existing file evaporated, force selection of the latest
                     file even if its mtime hasn't changed since we last looked */
                     poll_resolv(1, do_reload, now);
@@ -1988,24 +1989,24 @@ fn poll_resolv(
                 }
             }
         } else {
-            (*res).logged = 0;
-            if force != 0 || statbuf.st_mtim.tv_sec != (*res).mtime {
-                (*res).mtime = statbuf.st_mtim.tv_sec;
+            res.logged = 0;
+            if force != 0 || statbuf.st_mtim.tv_sec != res.mtime {
+                res.mtime = statbuf.st_mtim.tv_sec;
                 if difftime(statbuf.st_mtim.tv_sec, last_change) > 0.0f64 {
                     last_change = statbuf.st_mtim.tv_sec;
                     latest = res
                 }
             }
         }
-        res = (*res).next
+        res = res.next
     }
     if !latest.is_null() {
         static mut warned: i32 = 0;
-        if reload_servers((*latest).name) != 0 {
+        if reload_servers(latest.name) != 0 {
             my_syslog(
                 6,
-                b"reading %s\x00" ,
-                (*latest).name,
+                "reading %s" ,
+                latest.name,
             );
             warned = 0;
             check_servers();
@@ -2024,12 +2025,12 @@ fn poll_resolv(
                 clear_cache_and_reload(now);
             }
         } else {
-            (*latest).mtime = 0;
+            latest.mtime = 0;
             if warned == 0 {
                 my_syslog(
                     4,
-                    b"no servers found in %s, will retry\x00" ,
-                    (*latest).name,
+                    "no servers found in %s, will retry" ,
+                    latest.name,
                 );
                 warned = 1
             }
@@ -2072,7 +2073,7 @@ fn set_dns_listeners(mut now: time::Instant) -> i32 {
     let mut wait: i32 = 0;
     let mut i: i32 = 0;
     let mut tftp: i32 = 0;
-    let mut transfer: *mut TftpTransfer = 0 ;
+    let mut transfer: TftpTransfer = 0 ;
     if daemon.options[(60).wrapping_div(
         (::std::mem::size_of::<libc::c_uint>())
             .wrapping_mul(8),
@@ -2087,8 +2088,8 @@ fn set_dns_listeners(mut now: time::Instant) -> i32 {
         transfer = daemon.tftp_trans;
         while !transfer.is_null() {
             tftp += 1;
-            poll_listen((*transfer).sockfd, 0x1 );
-            transfer = (*transfer).next
+            poll_listen(transfer.sockfd, 0x1 );
+            transfer = transfer.next
         }
     }
     /* will we be able to get memory? */
@@ -2097,8 +2098,8 @@ fn set_dns_listeners(mut now: time::Instant) -> i32 {
     }
     serverfdp = daemon.sfds;
     while !serverfdp.is_null() {
-        poll_listen((*serverfdp).fd, 0x1 );
-        serverfdp = (*serverfdp).next
+        poll_listen(serverfdp.fd, 0x1 );
+        serverfdp = serverfdp.next
     }
     if daemon.port != 0 && daemon.osport == 0 {
         i = 0;
@@ -2115,18 +2116,18 @@ fn set_dns_listeners(mut now: time::Instant) -> i32 {
     listener = daemon.listeners;
     while !listener.is_null() {
         /* only listen for queries if we have resources */
-        if (*listener).fd != -(1) && wait == 0 {
-            poll_listen((*listener).fd, 0x1 );
+        if listener.fd != -(1) && wait == 0 {
+            poll_listen(listener.fd, 0x1 );
         }
         /* death of a child goes through the select loop, so
         we don't need to explicitly arrange to wake up here */
-        if (*listener).tcpfd != -(1) {
+        if listener.tcpfd != -(1) {
             i = 0;
             while i < 20 {
                 if daemon.tcp_pids[i ] == 0
                     && daemon.tcp_pipes[i ] == -(1)
                 {
-                    poll_listen((*listener).tcpfd, 0x1 );
+                    poll_listen(listener.tcpfd, 0x1 );
                     break;
                 } else {
                     i += 1
@@ -2134,10 +2135,10 @@ fn set_dns_listeners(mut now: time::Instant) -> i32 {
             }
         }
         /* tftp == 0 in single-port mode. */
-        if tftp <= daemon.tftp_max && (*listener).tftpfd != -(1) {
-            poll_listen((*listener).tftpfd, 0x1 );
+        if tftp <= daemon.tftp_max && listener.tftpfd != -(1) {
+            poll_listen(listener.tftpfd, 0x1 );
         }
-        listener = (*listener).next
+        listener = listener.next
     }
     if daemon.options[(6).wrapping_div(
         (::std::mem::size_of::<libc::c_uint>())
@@ -2170,14 +2171,14 @@ fn check_dns_listeners(mut now: time::Instant) {
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     serverfdp = daemon.sfds;
     while !serverfdp.is_null() {
-        if poll_check((*serverfdp).fd, 0x1 ) != 0 {
+        if poll_check(serverfdp.fd, 0x1 ) != 0 {
             reply_query(
-                (*serverfdp).fd,
-                (*serverfdp).source_addr.sa.sa_family,
+                serverfdp.fd,
+                serverfdp.source_addr.sa.sa_family,
                 now,
             );
         }
-        serverfdp = (*serverfdp).next
+        serverfdp = serverfdp.next
     }
     if daemon.port != 0 && daemon.osport == 0 {
         i = 0;
@@ -2232,22 +2233,22 @@ fn check_dns_listeners(mut now: time::Instant) {
     }
     listener = daemon.listeners;
     while !listener.is_null() {
-        if (*listener).fd != -(1)
-            && poll_check((*listener).fd, 0x1 ) != 0
+        if listener.fd != -(1)
+            && poll_check(listener.fd, 0x1 ) != 0
         {
             receive_query(listener, now);
         }
-        if (*listener).tftpfd != -(1)
-            && poll_check((*listener).tftpfd, 0x1 ) != 0
+        if listener.tftpfd != -(1)
+            && poll_check(listener.tftpfd, 0x1 ) != 0
         {
             tftp_request(listener, now);
         }
-        if (*listener).tcpfd != -(1)
-            && poll_check((*listener).tcpfd, 0x1 ) != 0
+        if listener.tcpfd != -(1)
+            && poll_check(listener.tcpfd, 0x1 ) != 0
         {
             let mut confd: i32 = 0;
             let mut client_ok: i32 = 1;
-            let mut iface: *mut Irec = 0 ;
+            let mut iface: Irec = 0 ;
             let mut p: pid_t = 0;
             let mut tcp_addr: NetAddress = NetAddress {
                 sa: NetAddress {
@@ -2259,7 +2260,7 @@ fn check_dns_listeners(mut now: time::Instant) {
                 ::std::mem::size_of::<NetAddress>();
             loop {
                 confd = accept(
-                    (*listener).tcpfd,
+                    listener.tcpfd,
                     NetAddressArg {
                         __NetAddress__: 0,
                     },
@@ -2302,14 +2303,14 @@ fn check_dns_listeners(mut now: time::Instant) {
                             )
                         != 0
                     {
-                        iface = (*listener).iface
+                        iface = listener.iface
                     } else {
                         let mut if_index: i32 = 0;
                         let mut intr_name: [libc::c_char; 16] = [0; 16];
                         /* if we can find the arrival interface, check it's one that's allowed */
                         if_index = tcp_interface(confd, tcp_addr.sa.sa_family); /* May be NULL */
                         if if_index != 0
-                            && indextoname((*listener).tcpfd, if_index, intr_name.as_mut_ptr()) != 0
+                            && indextoname(listener.tcpfd, if_index, intr_name.as_mut_ptr()) != 0
                         {
                             let mut addr: NetAddress = NetAddress {
                                 addr4: NetAddress { s_addr: 0 },
@@ -2321,17 +2322,17 @@ fn check_dns_listeners(mut now: time::Instant) {
                             }
                             iface = daemon.interfaces;
                             while !iface.is_null() {
-                                if (*iface).index == if_index
-                                    && (*iface).addr.sa.sa_family
+                                if iface.index == if_index
+                                    && iface.addr.sa.sa_family
                                         == tcp_addr.sa.sa_family
                                 {
                                     break;
                                 }
-                                iface = (*iface).next
+                                iface = iface.next
                             }
                             if iface.is_null()
                                 && loopback_exception(
-                                    (*listener).tcpfd,
+                                    listener.tcpfd,
                                     tcp_addr.sa.sa_family,
                                     &mut addr,
                                     intr_name.as_mut_ptr(),
@@ -2351,7 +2352,7 @@ fn check_dns_listeners(mut now: time::Instant) {
                                 )
                             != 0
                         {
-                            iface = (*listener).iface
+                            iface = listener.iface
                         } else {
                             /* Check for allowed interfaces when binding the wildcard address:
                             we do this by looking for an interface with the same address as
@@ -2360,10 +2361,10 @@ fn check_dns_listeners(mut now: time::Instant) {
                             interface too, for localisation. */
                             iface = daemon.interfaces; /* parent needs read pipe end. */
                             while !iface.is_null() {
-                                if NetAddress_isequal(&mut (*iface).addr, &mut tcp_addr) != 0 {
+                                if NetAddress_isequal(&mut iface.addr, &mut tcp_addr) != 0 {
                                     break;
                                 }
-                                iface = (*iface).next
+                                iface = iface.next
                             }
                             if iface.is_null() {
                                 client_ok = 0
@@ -2438,8 +2439,8 @@ fn check_dns_listeners(mut now: time::Instant) {
                         let mut netmask: NetAddress = NetAddress { s_addr: 0 };
                         let mut auth_dns: i32 = 0;
                         if !iface.is_null() {
-                            netmask = (*iface).netmask;
-                            auth_dns = (*iface).dns_auth
+                            netmask = iface.netmask;
+                            auth_dns = iface.dns_auth
                         } else {
                             netmask.s_addr = 0;
                             auth_dns = 0
@@ -2473,8 +2474,8 @@ fn check_dns_listeners(mut now: time::Instant) {
                         /* start with no upstream connections. */
                         s = daemon.servers;
                         while !s.is_null() {
-                            (*s).tcpfd = -(1);
-                            s = (*s).next
+                            s.tcpfd = -(1);
+                            s = s.next
                         }
                         /* The connected socket inherits non-blocking
                         attribute from the listening socket.
@@ -2491,11 +2492,11 @@ fn check_dns_listeners(mut now: time::Instant) {
                         }
                         s = daemon.servers;
                         while !s.is_null() {
-                            if (*s).tcpfd != -(1) {
-                                shutdown((*s).tcpfd, SHUT_RDWR);
-                                close((*s).tcpfd);
+                            if s.tcpfd != -(1) {
+                                shutdown(s.tcpfd, SHUT_RDWR);
+                                close(s.tcpfd);
                             }
-                            s = (*s).next
+                            s = s.next
                         }
                         if daemon.options[(6).wrapping_div(
                             (::std::mem::size_of::<libc::c_uint>())
@@ -2516,7 +2517,7 @@ fn check_dns_listeners(mut now: time::Instant) {
                 }
             }
         }
-        listener = (*listener).next
+        listener = listener.next
     }
 }
 

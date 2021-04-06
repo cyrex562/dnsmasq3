@@ -1,10 +1,16 @@
+use std::{fmt, time};
 use std::fs::File;
 use std::path::PathBuf;
-use std::time;
-use socket2::{Socket, NetAddress};
+
 use num::FromPrimitive;
-use crate::in_addr::NetAddress;
+use socket2::{NetAddress, Socket};
+
+use util::array_to_string;
+
 use crate::in6_addr::NetAddress;
+use crate::in_addr::NetAddress;
+use crate::util;
+use crate::util::vec_to_string;
 
 pub type DevT = libc::c_ulong;
 pub type UidT = u32;
@@ -146,11 +152,23 @@ pub union C2RustUnnamed {
 
 pub const INET6_ADDRSTRLEN: usize = 46;
 
+#[derive(Copy, Clone, Debug, Display)]
 pub enum AddressType {
     Unknown = 0,
     MacAddress,
     Ipv4Address,
     Ipv6Address
+}
+
+impl fmt::Display for AddressType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match Self {
+            AddressType::Unknown=> write!(f, "Unknown"),
+            AddressType::MacAddress=> write!(f, "MacAddress"),
+            AddressType::Ipv4Address=> write!(f, "Ipv4Address"),
+            AddressType::Ipv6Address => write!(f, "Ipv6Address"),
+        }
+    }
 }
 
 pub struct DhcpLeaseContext {
@@ -170,6 +188,19 @@ pub struct NetAddress {
     pub key: Vec<u8>,
     pub ds: DigitalSignature
 }
+
+
+impl fmt::Display for NetAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _value = array_to_string(&self.value, 16);
+        let _key = vec_to_string(&self.key);
+        write!(f, "(_type={}, value={}, name={}, port={}, key={}, ds={})", self._type, _value, self.name, self.port, _key, self.ds)
+    }
+}
+
+
+
+
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -228,13 +259,20 @@ pub union C2rustUnnamed7 {
     pub name: String,
 }
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, Debug)]
 #[repr(C)]
 pub struct DigitalSignature {
     pub keydata: Vec<u8>,
     pub keytag: u16,
     pub algo: u8,
     pub digest: u8,
+}
+
+impl fmt::Display for DigitalSignature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _keydata = vec_to_string(&self.keydata);
+        write!("keydata={}, keytag={}, algo={}, digest={}", _keydata, self.keytag, self.algo, self.digest)
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -353,7 +391,7 @@ pub struct Cname {
     pub targetp: Cname,
 }
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, Display)]
 #[repr(C)]
 pub struct AddressListEntry {
     pub addr: NetAddress,
@@ -1284,46 +1322,40 @@ pub const HB3_OPCODE: i32 = 0x78 as i32;
 //                     __delimiter: i32, __stream: *mut FILE)
 //     -> __ssize_t;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct C2rustUnnamed10 {
-    pub type_0: u32,
-    pub name: *const libc::c_char,
+    pub _type: u32,
+    pub name: String,
+}
+
+impl fmt::Display for C2rustUnnamed10 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "_type={}, name={}", self._type, self.name)
+    }
 }
 
 pub const SMALLDNAME: i32 = 50 as i32;
 
-pub const HOSTSFILE: [i8; 11] =
-        unsafe {
-            *::std::mem::transmute::<&[u8; 11],
-                                     &[i8; 11]>(b"/etc/hosts\x00")
-        };
+pub const HOSTSFILE: [i8; 11] = unsafe {
+    *::std::mem::transmute::<&[u8; 11], &[i8; 11]>("/etc/hosts")
+};
 
 
 pub const NOTIMP: i32 = 4 as i32;
-    
 pub const REFUSED: i32 = 5 as i32;
-
 pub const SERVFAIL: i32 = 2 as i32;
-
 pub const MAXDNAME: i32 = 1025 as i32;
-    
 pub const LOG_ERR: i32 = 3 as i32;
-
-pub const LOG_DAEMON: i32 =
-    (3 as i32) << 3 as i32;
+pub const LOG_DAEMON: i32 = (3 as i32) << 3 as i32;
 
 // pub const errno: i32 = *__errno_location();
-
 // #[no_mangle]
 //  pub fn __errno_location() -> *mut i32;
-
-//  #[no_mangle] 
+//  #[no_mangle]
 // pub fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
-
 // #[no_mangle]
 // pub fn ctime(__timer: *const time_t) -> *mut libc::c_char;
-
 // extern "C" {
 //     pub type _IO_wide_data;
 //     pub type _IO_codecvt;
@@ -1450,15 +1482,10 @@ pub struct ArpRecord {
     pub family: u32,
     pub hwaddr: [u8; 16],
     pub addr: NetAddress,
-    // pub next: *mut arp_record,
 }
 
 pub type KernelSaFamily = u16;
 
-//    26 struct atalk_addr {
-//    27     __be16  s_net;
-//    28     __u8    s_node;
-//    29 };
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct AtalkAddr {
@@ -1466,13 +1493,7 @@ pub struct AtalkAddr {
     pub s_node: __u8,
 }
 
-//    31 struct sockaddr_at {
-//    32     __kernel_sa_family_t sat_family;
-//    33     __u8          sat_port;
-//    34     struct atalk_addr sat_addr;
-//    35     char          sat_zero[8];
-//    36 };
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct NetAddressAt {
     pub sat_family: KernelSaFamily,
@@ -1481,19 +1502,13 @@ pub struct NetAddressAt {
     pub sat_zer: [i8;8],
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Ax25Address {
     pub ax25_call: [i8;7],
 }
 
-//    49 struct sockaddr_ax25 {
-//    50     __kernel_sa_family_t sax25_family;
-//    51     ax25_address    sax25_call;
-//    52     int     sax25_ndigis;
-//    53     /* Digipeater ax25_address sets follow */
-//    54 };
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct NetAddressAx25 {
     pub sax25_family: KernelSaFamily,
@@ -1501,18 +1516,7 @@ pub struct NetAddressAx25 {
     pub sax25_ndigis: i32,
 }
 
-// struct sockaddr_dl {
-// 	u_char	sdl_len;	/* Total length of sockaddr */
-// 	u_char	sdl_family;	/* AF_DLI */
-// 	u_short	sdl_index;	/* if != 0, system given index for interface */
-// 	u_char	sdl_type;	/* interface type */
-// 	u_char	sdl_nlen;	/* interface name length, no trailing 0 reqd. */
-// 	u_char	sdl_alen;	/* link level address length */
-// 	u_char	sdl_slen;	/* link layer selector length */
-// 	char	sdl_data[12];	/* minimum work area, can be larger;
-// 				   contains both if name and ll address */
-// };
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone, Debug)]
 #[repr(C)]
 pub struct NetAddressDl {
     pub sdl_len: u8,
@@ -1683,9 +1687,7 @@ pub struct IsoAddr {
 //     sx25_addr: x25_address
 // }
 
-
-
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub union NetAddressArg {
     pub __NetAddress__: NetAddress,
@@ -1728,14 +1730,14 @@ pub const SHUT_RDWR: u8 = 2;
 pub const SHUT_WR: u8 = 1;
 pub const SHUT_RD: u8 = 0;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct NetAddressUn {
     pub sun_family: SaFamily,
     pub sun_path: [i8; 108],
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub union ConstNetAddressArg {
     pub __NetAddress__: *const NetAddress,
@@ -1781,7 +1783,6 @@ pub const IPPROTO_ICMP: i32 = 1;
 pub const IPPROTO_IP: i32 = 0;
 // pub type __u32 = u32;
 
-
 // pub const EthertypeIpv4: u16 = 0x0800;
 // pub const EthertypeIpv6: u16 = 0x86DD;
 #[derive(FromPrimitive)]
@@ -1790,26 +1791,23 @@ enum Ethertype {
     EthertypeIpv6 = 0x86DD,
 }
 
-
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub union Sigval {
     pub sival_int: i32,
     pub sival_ptr:Vec<u8>,
 }
-// pub type __sigval_t = Sigval;
 
+// pub type __sigval_t = Sigval;
 // __WINT_TYPE__ unsigned int
 // pub type __WINT_TYPE__ = u32;
 
-
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub union Unnamed29 {
     pub __wch: __WINT_TYPE__,
     pub __wchb: [i8;4],
 }
-
 
 // #[derive(Clone, Copy)]
 // #[repr(C)]
@@ -1839,7 +1837,7 @@ pub union Unnamed29 {
 //     pub _sifields: C2rustUnnamed2,
 // }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct C2rustUnnamed8 {
     pub si_pid: PidT,
@@ -1848,14 +1846,14 @@ pub struct C2rustUnnamed8 {
     pub si_utime: __clock_t,
     pub si_stime: __clock_t,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct C2rustUnnamed9 {
     pub si_pid: PidT,
     pub si_uid: UidT,
     pub si_sigval: __sigval_t,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct C2rustUnnamed11 {
     pub si_pid: PidT,
@@ -2242,7 +2240,7 @@ pub struct UserCapHeader {
     pub pid: i32,
 }
 
-pub type CapUserHeader = *mut UserCapHeader;
+pub type CapUserHeader = UserCapHeader;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -3503,3 +3501,54 @@ pub struct TabEntryA {
     pub handle: char,
     pub val: i32
 }
+
+// static mut cache_head: Crec = 0 ;
+// static mut cache_tail: Crec = 0 ;
+// static mut hash_table: *mut Crec = 0;
+// static mut dhcp_spare: Crec = 0 ;
+// static mut new_chain: Crec = 0 ;
+// static mut insert_error: i32 = 0;
+// static mut big_free: BigName = 0;
+// static mut bignames_left: i32 = 0;
+// static mut hash_size: i32 = 0;
+pub static mut TYPESTR: [C2rustUnnamed10; 40] =
+    [ C2rustUnnamed10 { _type: 1, name: "A".to_string(),},
+      C2rustUnnamed10 { _type: 2, name: "NS".to_string(),},
+      C2rustUnnamed10 { _type: 5, name: "CNAME".to_string(),},
+        C2rustUnnamed10 { _type: 6, name: "SOA".to_string(),},
+        C2rustUnnamed10 { _type: 10, name: "NULL".to_string(),},
+        C2rustUnnamed10 { _type: 11, name: "WKS".to_string(),},
+        C2rustUnnamed10 { _type: 12, name: "PTR".to_string(),},
+        C2rustUnnamed10 { _type: 13, name:  "HINFO".to_string(),},
+        C2rustUnnamed10 { _type: 15, name: "MX".to_string(),},
+        C2rustUnnamed10 { _type: 16, name: "TXT".to_string(),},
+        C2rustUnnamed10 { _type: 22, name: "NSAP".to_string(),},
+        C2rustUnnamed10 { _type: 23, name: "NSAP_PTR".to_string(),},
+        C2rustUnnamed10 { _type: 24,  name: "SIG".to_string(),},
+        C2rustUnnamed10 { _type: 25, name: "KEY".to_string(),},
+        C2rustUnnamed10 { _type: 28, name: "AAAA".to_string(),},
+        C2rustUnnamed10 { _type: 29, name: "LOC".to_string(),},
+        C2rustUnnamed10 { _type: 33, name: "SRV".to_string(),},
+        C2rustUnnamed10 { _type: 35, name: "NAPTR".to_string(),},
+        C2rustUnnamed10 { _type: 36, name: "KX".to_string(),},
+        C2rustUnnamed10 { _type: 37, name: "CERT".to_string(),},
+        C2rustUnnamed10 { _type: 38, name: "A6".to_string(),},
+        C2rustUnnamed10 { _type: 39, name: "DNAME".to_string(),},
+        C2rustUnnamed10 { _type: 41, name: "OPT".to_string(),},
+        C2rustUnnamed10 { _type: 43, name: "DS".to_string(),},
+        C2rustUnnamed10 { _type: 46, name: "RRSIG".to_string(),},
+        C2rustUnnamed10 { _type: 47, name: "NSEC".to_string(),},
+        C2rustUnnamed10 { _type: 48, name: "DNSKEY".to_string(),},
+        C2rustUnnamed10 { _type: 50, name: "NSEC3".to_string(),},
+        C2rustUnnamed10 { _type: 51, name: "NSEC3PARAM".to_string(),},
+        C2rustUnnamed10 { _type: 52, name: "TLSA".to_string(),},
+        C2rustUnnamed10 { _type: 53, name: "SMIMEA".to_string(),},
+        C2rustUnnamed10 { _type: 55, name: "HIP".to_string(),},
+        C2rustUnnamed10 { _type: 249, name: "TKEY".to_string(),},
+        C2rustUnnamed10 { _type: 250, name: "TSIG".to_string(),},
+        C2rustUnnamed10 { _type: 251, name: "IXFR".to_string(),},
+        C2rustUnnamed10 { _type: 252, name: "AXFR".to_string(),},
+        C2rustUnnamed10 { _type: 253, name: "MAILB".to_string(),},
+        C2rustUnnamed10 { _type: 254, name: "MAILA".to_string(),},
+        C2rustUnnamed10 { _type: 255, name: "ANY".to_string(),},
+        C2rustUnnamed10 { _type: 257,  name: "CAA".to-String(),}];
