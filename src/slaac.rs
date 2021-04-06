@@ -14,13 +14,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DhcpLease, time::Instant, SlaacAddress, DhcpContext, DnsmasqDaemon, In6Addr, NetAddress, C2RustUnnamed, SaFamily, __bswap_16, ConstNetAddressArg, NetAddress, socklen_t};
-use crate::util::{whine_malloc, rand16};
+use crate::defines::{DhcpLease, SlaacAddress, DhcpContext, DnsmasqDaemon, In6Addr, NetAddress, C2RustUnnamed, SaFamily, __bswap_16, ConstNetAddressArg, socklen_t};
 use crate::radv::ra_start_unsolicited;
 use crate::lease::lease_update_dns;
 use crate::slack::{ping_packet, IPPROTO_ICMPV6};
 use crate::outpacket::{reset_counter, expand, save_counter};
 use crate::dnsmasq_log::my_syslog;
+use std::time;
 
 static mut ping_id: i32 = 0;
 #[no_mangle]
@@ -165,7 +165,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
     /* Free any no reused */
     while !old.is_null() {
         slaac = old.next;
-        free(old);
+        // free(old);
         old = slaac
     };
 }

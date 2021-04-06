@@ -1070,7 +1070,7 @@ pub unsafe extern "C" fn lease_set_hwaddr(mut lease: DhcpLease,
         if lease.clid_len != clid_len {
             lease.flags |= 4;
             file_dirty = 1;
-            free(lease.clid);
+            // free(lease.clid);
             // lease.clid =
             //     whine_malloc(clid_len );
             if lease.clid.is_null() { return }
@@ -1092,12 +1092,12 @@ unsafe extern "C" fn kill_name(mut lease: DhcpLease) {
     /* run script to say we lost our old name */
     /* this shouldn't happen unless updates are very quick and the
      script very slow, we just avoid a memory leak if it does. */
-    free(lease.old_hostname);
+    // free(lease.old_hostname);
     /* If we know the fqdn, pass that. The helper will derive the
      unqualified name from it, free the unqualified name here. */
     if !lease.fqdn.is_null() {
         lease.old_hostname = lease.fqdn;
-        free(lease.hostname);
+        // free(lease.hostname);
     } else { lease.old_hostname = lease.hostname }
     lease.fqdn = 0 ;
     lease.hostname = lease.fqdn;
@@ -1197,8 +1197,8 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
                         _ => {
                             if lease_tmp.flags & 8 != 0 &&
                                    auth == 0 {
-                                free(new_name);
-                                free(new_fqdn);
+                                // free(new_name);
+                                // free(new_fqdn);
                                 return
                             }
                             kill_name(lease_tmp);
@@ -1252,7 +1252,7 @@ pub unsafe extern "C" fn do_script_run(mut now: time::Instant) -> i32 {
         /* If the lease still has an old_hostname, do the "old" action on that first */
         if !lease.old_hostname.is_null() {
             queue_script(2, lease, lease.old_hostname, now);
-            free(lease.old_hostname);
+            // free(lease.old_hostname);
             lease.old_hostname = 0 ;
             return 1
         } else {
@@ -1261,16 +1261,16 @@ pub unsafe extern "C" fn do_script_run(mut now: time::Instant) -> i32 {
             slaac = lease.slaac_address;
             while !slaac.is_null() {
                 tmp = slaac.next;
-                free(slaac);
+                // free(slaac);
                 slaac = tmp
             }
             kill_name(lease);
             queue_script(1, lease, lease.old_hostname, now);
             old_leases = lease.next;
-            free(lease.old_hostname);
-            free(lease.clid);
-            free(lease.extradata);
-            free(lease);
+            // free(lease.old_hostname);
+            // free(lease.clid);
+            // free(lease.extradata);
+            // free(lease);
             return 1
         }
     }
@@ -1279,7 +1279,7 @@ pub unsafe extern "C" fn do_script_run(mut now: time::Instant) -> i32 {
     while !lease.is_null() {
         if !lease.old_hostname.is_null() {
             queue_script(2, lease, lease.old_hostname, now);
-            free(lease.old_hostname);
+            // free(lease.old_hostname);
             lease.old_hostname = 0 ;
             return 1
         }
@@ -1314,7 +1314,7 @@ pub unsafe extern "C" fn do_script_run(mut now: time::Instant) -> i32 {
                 !(1 | 2 | 4 |
                       256);
             /* this is used for the "add" call, then junked, since they're not in the database */
-            free(lease.extradata);
+            // free(lease.extradata);
             lease.extradata = 0;
             return 1
         }
@@ -1355,7 +1355,7 @@ pub unsafe extern "C" fn lease_add_extradata(mut lease: DhcpLease,
             memcpy(new,
                    lease.extradata,
                    lease.extradata_len);
-            free(lease.extradata);
+            // free(lease.extradata);
         }
         lease.extradata = new;
         lease.extradata_size = newsz

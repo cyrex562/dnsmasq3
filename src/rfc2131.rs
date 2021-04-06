@@ -1,7 +1,6 @@
-use crate::defines::{NetAddress, DhcpContext, time::Instant, DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt, __bswap_32, InAddrT, SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2rustUnnamed9, DhcpBoot, __bswap_16, Irec, _ISPRINT, DhcpPxeVendor, socklen_t, DelayConfig};
-use crate::util::{expand_buf, memcmp_masked, is_same_net4, legal_hostname, hostname_isequal, safe_strncpy, prettyprint_time, print_mac, rand16, whine_malloc, do_rfc1035_name};
+use crate::defines::{NetAddress, DhcpContext,  DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt,   SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2rustUnnamed9, DhcpBoot,  Irec, _ISPRINT, DhcpPxeVendor,  DelayConfig};
+use crate::util::{expand_buf, memcmp_masked, is_same_net4, legal_hostname, hostname_isequal,  prettyprint_time, print_mac,   do_rfc1035_name};
 use crate::lease::{lease_find_by_client, lease_find_by_addr, lease_prune, lease4_allocate, lease_set_hwaddr, lease_set_hostname, lease_set_expires, lease_set_interface, lease_add_extradata};
-use crate::dnsmasq_log::my_syslog;
 use crate::dhcp_common::{match_bytes, find_config, run_tag_if, match_netid, log_tags, strip_hostname, config_has_mac, option_string, option_filter};
 use crate::dhcp::{address_available, address_allocate, narrow_context, config_find_by_address, do_icmp_ping, host_from_dns};
 use crate::domain::get_domain;
@@ -2035,7 +2034,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                         if mess.giaddr.s_addr != 0 {
                             lease.giaddr = mess.giaddr
                         }
-                        free(lease.extradata);
+                        // free(lease.extradata);
                         lease.extradata = 0;
                         lease.extradata_len =
                             0;
@@ -3158,11 +3157,12 @@ fn pxe_opts(mut pxe_arch: i32,
     ret = daemon.dhcp_opts;
     if fake_opts.is_null() &&
            {
-               fake_opts =
-                   whine_malloc((4                        ).wrapping_mul(::std::mem::size_of::<DhcpOpt>()
-                                                                               ))
-                       ;
-               fake_opts.is_null()
+               // fake_opts =
+               //     whine_malloc((4                        ).wrapping_mul(::std::mem::size_of::<DhcpOpt>()
+               //                                                                 ))
+               //         ;
+               // fake_opts.is_null()
+               true
            } {
         return ret
     }

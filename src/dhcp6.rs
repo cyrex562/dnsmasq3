@@ -1373,7 +1373,7 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
             } else {
                 /* we were never doing RA for this, so free now */
                 *up = context.next;
-                free(context);
+                // free(context);
             }
         } else { up = &mut context.next }
         context = tmp

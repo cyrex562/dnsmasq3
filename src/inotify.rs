@@ -55,7 +55,7 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
             /* Not link or doesn't exist. */
             if *__errno_location() == 22 ||
                    *__errno_location() == 2 {
-                free(buf);
+                // free(buf);
                 return 0
             } else {
                 die("cannot access path %s: %s"                   *const libc::c_char , path,
@@ -76,7 +76,7 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
                         0;
                     strcpy(new_buf, path);
                     strcat(new_buf, buf);
-                    free(buf);
+                    // free(buf);
                     buf = new_buf
                 }
                 return buf
@@ -84,7 +84,7 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
         }
         /* Buffer too small, increase and retry */
         size += 64;
-        free(buf);
+        // free(buf);
     };
 }
 #[no_mangle]
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
                 die("too many symlinks following %s"                   *const libc::c_char , res.name,
                     5);
             }
-            free(path);
+            // free(path);
             path = new_path
         }
         res.wd = -(1);
@@ -260,7 +260,7 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
                                     option_read_dynfile(path, ah.flags);
                                 }
                             }
-                            free(path);
+                            // free(path);
                         }
                     }
                     closedir(dir_stream);
@@ -367,7 +367,7 @@ pub unsafe extern "C" fn inotify_check(mut now: time::Instant) -> i32 {
                             } else if ah.flags & 32 != 0 {
                                 option_read_dynfile(path, 32);
                             }
-                            free(path);
+                            // free(path);
                         }
                     }
                     ah = ah.next

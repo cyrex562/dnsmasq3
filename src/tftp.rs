@@ -1,6 +1,6 @@
 use crate::defines::{Listener, time::Instant, DnsmasqDaemon, NetAddress, NetAddress, MsgHdr, iovec, IfReq, DigitalSignature, Iname, TftpTransfer, TftpPrefix, NetAddress, NetAddress, C2rustUnnamed14, CmsgHdr, socklen_t, Server, NetAddressArg, SaFamily, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2rustUnnamed12, __bswap_16, SOCK_DGRAM, off_t, TftpFile, ConstNetAddressArg, stat, timespec, DhcpLease, uid_t, _ISPRINT};
 use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, fix_fd};
-use crate::util::{wildcard_match, safe_strncpy, NetAddress_isequal, whine_malloc, prettyprint_addr, sa_len, read_write};
+use crate::util::{wildcard_match, NetAddress_isequal, prettyprint_addr, sa_len, read_write};
 use crate::dnsmasq_log::my_syslog;
 use crate::lease::lease_find_by_addr;
 use crate::arp::find_mac;
@@ -259,9 +259,10 @@ pub  fn tftp_request(mut listen: Listener,
     /* May reuse struct transfer from abandoned transfer in single port mode. */
     if transfer.is_null() &&
            {
-               transfer =
-                   whine_malloc(::std::mem::size_of::<TftpTransfer>()                       ) ;
-               transfer.is_null()
+               // transfer =
+               //     whine_malloc(::std::mem::size_of::<TftpTransfer>()                       ) ;
+               // transfer.is_null()
+               false
            } {
         return
     }
@@ -278,7 +279,7 @@ pub  fn tftp_request(mut listen: Listener,
         transfer.sockfd =
             socket(family, SOCK_DGRAM, 0);
         if transfer.sockfd == -(1) {
-            free(transfer);
+            // free(transfer);
             return
         }
     }
@@ -687,9 +688,9 @@ pub  fn tftp_request(mut listen: Listener,
                         }
                         t = t.next
                     }
-                    file =
-                        whine_malloc((::std::mem::size_of::<TftpFile>() ).wrapping_add(strlen(namebuff)).wrapping_add(1))
-                            ;
+                    // file =
+                    //     whine_malloc((::std::mem::size_of::<TftpFile>() ).wrapping_add(strlen(namebuff)).wrapping_add(1))
+                    //         ;
                     if file.is_null() {
                         *__errno_location() = 12
                     } else {
@@ -908,9 +909,9 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
                ((*transfer.file).refcount) == 0
            } {
         close((*transfer.file).fd);
-        free(transfer.file);
+        // free(transfer.file);
     }
-    free(transfer);
+    // free(transfer);
 }
  fn next(mut p: String,
                           mut end: &mut String) -> &mut String {

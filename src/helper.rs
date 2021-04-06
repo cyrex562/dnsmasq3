@@ -529,7 +529,9 @@ fn buff_alloc(mut size: usize) {
         }
         // new = whine_malloc(size) );
         if new.is_null() { return }
-        if !buf.is_null() { free(buf); }
+        if !buf.is_null() {
+            // free(buf);
+        }
         buf = new;
         buf_size = size
     };

@@ -917,8 +917,8 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
             }
         }
     }
-    free(hdr);
-    free(data);
+    // free(hdr);
+    // free(data);
     if daemon.options[6]
     {
         prctl(
@@ -1803,7 +1803,7 @@ fn async_event(mut pipe_0: i32, mut now: time::Instant) {
                         ""
                     },
                 );
-                free(msg);
+                // free(msg);
                 msg = 0 ;
                 current_block_60 = 6367734732029634840;
             }
@@ -2488,7 +2488,7 @@ fn check_dns_listeners(mut now: time::Instant) {
                         shutdown(confd, SHUT_RDWR);
                         close(confd);
                         if !buff.is_null() {
-                            free(buff);
+                            // free(buff);
                         }
                         s = daemon.servers;
                         while !s.is_null() {

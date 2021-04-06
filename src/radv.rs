@@ -18,10 +18,10 @@
    It therefore cannot use any DHCP buffer resources except outpacket, which is
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
-use crate::defines::{time::Instant, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, ModeT, DevT, __uint64_t, __u32, __uint16_t, FILE, SsizeT, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, NetAddress, C2RustUnnamed, Iname, NetAddress, DhcpOpt, RaInterface, SaFamily, ConstNetAddressArg, NetAddress};
+use crate::defines::{time::Instant, DhcpNetId, In6Addr, DhcpContext, CmsgHdr, DhcpBridge, MsgHdr, size_t, ModeT, DevT, __uint64_t, __u32, __uint16_t, FILE, SsizeT, __compar_fn_t, intmax_t, uintmax_t, __gwchar_t, socklen_t, DnsmasqDaemon, DhcpPacket, SOCK_RAW, IPPROTO_IPV6, ssize_t, iovec, NetAddress, C2RustUnnamed, Iname,  DhcpOpt, RaInterface, SaFamily, ConstNetAddressArg, };
 use crate::slack::{in6_pktinfo, icmp6_filter, IPPROTO_ICMPV6, ra_packet, prefix_opt};
 use std::io::{stdout, stdin};
-use crate::util::{expand_buf, rand16, wildcard_match, print_mac, wildcard_matchn, setaddr6part, addr6part, retry_send, is_same_net6, whine_malloc};
+use crate::util::{expand_buf,  wildcard_match, print_mac, wildcard_matchn, setaddr6part, addr6part, retry_send, is_same_net6};
 use crate::network::{set_ipv6pktinfo, fix_fd, indextoname, iface_check};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{recv_dhcp_packet, option_filter};
@@ -499,7 +499,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                     new_timeout(parm.found_context, iface_name, now);
                 }
                 *up = context.next;
-                free(context);
+                // free(context);
             } else {
                 let mut opt: prefix_opt = 0 ;
                 let mut local: In6Addr = context.start6;
@@ -1312,10 +1312,10 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                   aparam.num_alias_ifs);
                         /* Allocate memory to store the alias interface
                        indices. */
-                        aparam.alias_ifs =
-                            whine_malloc((aparam.num_alias_ifs                                 ).wrapping_mul(::std::mem::size_of::<libc::c_int>()
-                                                                                                 ))
-                                as ;
+                        // aparam.alias_ifs =
+                        //     whine_malloc((aparam.num_alias_ifs                                 ).wrapping_mul(::std::mem::size_of::<libc::c_int>()
+                        //                                                                          ))
+                        //         as ;
                         if !aparam.alias_ifs.is_null() {
                             /* Use iface_enumerate again to get the alias
                            interface indices, then send on each of
@@ -1363,7 +1363,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                                             ));
                                 aparam.num_alias_ifs -= 1
                             }
-                            free(aparam.alias_ifs);
+                            // free(aparam.alias_ifs);
                         }
                         break ;
                     } else { aparam.bridge = (*aparam.bridge).next }

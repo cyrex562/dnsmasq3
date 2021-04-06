@@ -948,7 +948,7 @@ fn add_hosts_entry(mut cache: Crec,
            memcmp(&mut lookup.addr ,
                   addr, addrlen) ==
                0 {
-        free(cache);
+        // free(cache);
         return
     }
     /* Ensure there is only one address -> name mapping (first one trumps) 
@@ -1715,7 +1715,7 @@ pub fn cache_make_stat(mut t: &mut TxtRecord)
                         memcpy(new,
                                buff,
                                bufflen);
-                        free(buff);
+                        // free(buff);
                         p =
                             new.offset(p.wrapping_offset_from(buff)                                     i32);
                         lenp = p.offset(-(1));
@@ -2060,7 +2060,7 @@ pub fn querystr(mut desc: &mut String,
     len += 1;
     if buff.is_null() || bufflen < len {
         if !buff.is_null() {
-            free(buff);
+            // free(buff);
         } else if len < 20 { len = 20 }
         // buff = whine_malloc(len ) ;
         bufflen = len

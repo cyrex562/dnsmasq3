@@ -274,11 +274,11 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
                                         __bswap_16(header.arcount) , header, plen);
                    p.is_null()
                } {
-            free(buff);
+            // free(buff);
             return plen
         }
         if p.offset(11) > limit {
-            free(buff);
+            // free(buff);
             return plen
             /* Too big */
         } /* empty name */
@@ -333,13 +333,13 @@ pub unsafe extern "C" fn add_pseudoheader(mut header: DnsHeader,
         /* Copy back any options */
         if !buff.is_null() {
             if p.offset(rdlen) > limit {
-                free(buff);
+                // free(buff);
                 return plen
                 /* Too big */
             }
             memcpy(p, buff,
                    rdlen);
-            free(buff);
+            // free(buff);
             p = p.offset(rdlen)
         }
         /* Only bump arcount if RR is going to fit */

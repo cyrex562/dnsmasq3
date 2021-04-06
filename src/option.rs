@@ -1,5 +1,5 @@
 use crate::defines::{Code, CODE, FACILITYNAMES, __sigset_t, OptionUsage, TxtRecord, DnsmasqDaemon, C2rustUnnamed10, NetAddress, NetAddress, SaFamily, In6Addr, __bswap_16, InAddrT, Server, DhcpNetId, DhcpNetIdList, DhcpConfig, HwaddrConfig, AddressListEntry, DhcpContext, DhcpOpt, __bswap_32, Mysubnet, Resolvc, time::Instant, MxSrvRecord, Iname, NameListEntry, AuthZone, AuthNameList, NetAddress, CondDomain, in_port_t, C2RustUnnamed, IpSets, TftpPrefix, DhcpBridge, SharedNetwork, _ISDIGIT, TagIf, DhcpMatchName, DhcpBoot, DelayConfig, PxeService, DhcpMac, AddrList2, DhcpPxeVendor, DhcpRelay, RaInterface, Doctor, InterfaceName, Cname, _ISSPACE, PtrRecord, NaPtr, HostRecord, BogusAddr, DhcpVendor, _ISXDIGIT, HostsFile, FILE, stat, timespec, DIR, Crec, OptionValue, TabEntryA};
-use crate::util::{whine_malloc, safe_malloc, canonicalise, safe_strncpy, hostname_isequal, addr6part, setaddr6part, is_same_net4, is_same_net6, parse_hex, legal_hostname, rand32, string_from_offset};
+use crate::util::{canonicalise, hostname_isequal, addr6part, setaddr6part, is_same_net4, is_same_net6, parse_hex, legal_hostname, string_from_offset};
 use crate::dnsmasq_log::{die, my_syslog};
 use crate::dhcp_common::{lookup_dhcp_opt, lookup_dhcp_len, strip_hostname, display_opts, display_opts6};
 use std::io::{stdin, stderr};

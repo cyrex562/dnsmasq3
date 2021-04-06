@@ -743,14 +743,14 @@ pub unsafe fn expand_buf(mut iov: &mut iovec, mut size: usize)
                          -> u8 {
     let mut new: Vec<u8> = 0;
     if size <= iov.iov_len { return 1; }
-    new = whine_malloc(size);
+    // new = whine_malloc(size);
     if new.is_null() {
         *__errno_location() = 12;
         return 0;
     }
     if !iov.iov_base.is_null() {
         memcpy(new, iov.iov_base, iov.iov_len);
-        free(iov.iov_base);
+        // free(iov.iov_base);
     }
     iov.iov_base = new;
     iov.iov_len = size;

@@ -285,38 +285,23 @@ fn iface_allowed(mut param: &mut IfaceParam,
                                    mut label: &mut String,
                                    mut addr: NetAddress,
                                    mut netmask: NetAddress,
-                                   mut prefixlen: i32,
+                                   mut prefixlen: usize,
                                    mut iface_flags: i32)
                                    -> i32 {
-    let mut iface: Irec = 0 ;
-    let mut mtu: i32 = 0;
+    let mut iface: Irec = Default::default ;
+    let mut mtu: u16 = 0;
     let mut loopback: i32 = 0;
-    let mut ifr: IfReq =
-        IfReq {ifr_ifrn: C2RustUnnamed_3{ifrn_name: [0; 16],},
-              ifr_ifru:
-                  DigitalSignature {ifru_addr:
-                                      NetAddress {sa_family: 0,
-                                               sa_data: [0; 14],},},};
-    let mut tftp_ok: i32 =
-        (daemon.options[(40 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                       ).wrapping_mul(8))
-                                       ] &
-             (1) <<
-                 (40 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                   ).wrapping_mul(8))
-             != 0);
-    let mut dhcp_ok: i32 = 1;
-    let mut auth_dns: i32 = 0;
-    let mut is_label: i32 = 0;
-    let mut tmp: Iname = 0;
-    if indextoname(param.fd, if_index, ifr.ifr_ifrn.ifrn_name.as_mut_ptr())
-           == 0 ||
-           ioctl(param.fd, 0x8913,
-                 &mut ifr) == -(1) {
+    let mut ifr: IfReq = Default::default();
+    let mut tftp_ok: bool = (daemon.options[40] != 0);
+    let mut dhcp_ok: bool = true;
+    let mut auth_dns: bool = false;
+    let mut is_label: bool = false;
+    let mut tmp: Iname = Default::default();
+    if indextoname(param.fd, if_index, ifr.ifr_ifrn.ifrn_name.as_mut_ptr()) == 0 ||
+           ioctl(param.fd, 0x8913, &mut ifr) == -(1) {
         return 0
     }
-    loopback =
-        ifr.ifr_ifru.ifru_flags & IFF_LOOPBACK;
+    loopback = ifr.ifr_ifru.ifru_flags & IFF_LOOPBACK;
     if loopback != 0 { dhcp_ok = 0 }
     if ioctl(param.fd, 0x8921,
              &mut ifr) != -(1) {
@@ -334,13 +319,13 @@ fn iface_allowed(mut param: &mut IfaceParam,
                                                                                                                       libc::c_int
                                                                                                                ))
            != 0 {
-        let mut al: AddressListEntry = 0 ;
+        let mut al: AddressListEntry = Default::default() ;
         if !param.spare.is_null() {
             al = param.spare;
             param.spare = al.next
         } else {
-            al =
-                whine_malloc(::std::mem::size_of::<AddressListEntry>()))
+            // al =
+            //     whine_malloc(::std::mem::size_of::<AddressListEntry>()))
         }
         if !al.is_null() {
             al.next = daemon.interface_addrs;
@@ -379,9 +364,9 @@ fn iface_allowed(mut param: &mut IfaceParam,
                             al_0 = param.spare;
                             param.spare = al_0.next
                         } else {
-                            al_0 =
-                                whine_malloc(::std::mem::size_of::<AddressListEntry>()
-                                                )
+                            // al_0 =
+                            //     whine_malloc(::std::mem::size_of::<AddressListEntry>()
+                            //                     )
                         }
                         if !al_0.is_null() {
                             al_0.next = zone.subnet;
@@ -398,9 +383,9 @@ fn iface_allowed(mut param: &mut IfaceParam,
                             al_0 = param.spare;
                             param.spare = al_0.next
                         } else {
-                            al_0 =
-                                whine_malloc(::std::mem::size_of::<AddressListEntry>()
-                                                )
+                            // al_0 =
+                            //     whine_malloc(::std::mem::size_of::<AddressListEntry>()
+                            //                     )
                         }
                         if !al_0.is_null() {
                             al_0.next = zone.subnet;
@@ -428,8 +413,8 @@ fn iface_allowed(mut param: &mut IfaceParam,
                     al_0 = param.spare;
                     param.spare = al_0.next
                 } else {
-                    al_0 =
-                        whine_malloc(::std::mem::size_of::<AddressListEntry>())
+                    // al_0 =
+                    //     whine_malloc(::std::mem::size_of::<AddressListEntry>())
                 }
                 if !al_0.is_null() {
                     al_0.next = int_name.addresses;
@@ -484,20 +469,23 @@ fn iface_allowed(mut param: &mut IfaceParam,
         }
         if lo.is_null() &&
                {
-                   lo =
-                       whine_malloc(::std::mem::size_of::<Iname>() );
-                   !lo.is_null()
+                   // lo =
+                   //     whine_malloc(::std::mem::size_of::<Iname>() );
+                   // !lo.is_null()
+                   true
                } {
-            lo.name =
-                whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1   libc::c_int
-                                                                                                                         ))
-                    ;
+            // lo.name =
+            //     whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1   libc::c_int
+            //                                                                                                              ))
+            //         ;
             if !lo.name.is_null() {
                 strcpy(lo.name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
                 lo.used = 1;
                 lo.next = daemon.if_names;
                 daemon.if_names = lo
-            } else { free(lo); }
+            } else {
+                // free(lo);
+            }
         }
     }
     if addr.sa.sa_family == 2 &&
@@ -540,8 +528,8 @@ fn iface_allowed(mut param: &mut IfaceParam,
         }
     }
     /* add to list */
-    iface =
-        whine_malloc(::std::mem::size_of::<Irec>())      Irec; /* dummy */
+    // iface =
+    //     whine_malloc(::std::mem::size_of::<Irec>())      Irec; /* dummy */
     if !iface.is_null() {
         iface.addr = *addr;
         iface.netmask = netmask;
@@ -556,16 +544,16 @@ fn iface_allowed(mut param: &mut IfaceParam,
         iface.done = iface.multicast_done;
         iface.index = if_index;
         iface.label = is_label;
-        iface.name =
-            whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1))
-                ;
+        // iface.name =
+        //     whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1))
+        //         ;
         if !iface.name.is_null() {
             strcpy(iface.name, ifr.ifr_ifrn.ifrn_name.as_mut_ptr());
             iface.next = daemon.interfaces;
             daemon.interfaces = iface;
             return 1
         }
-        free(iface);
+        // free(iface);
     }
     *__errno_location() = 12;
     return 0;
@@ -638,8 +626,8 @@ fn clean_interfaces() {
     while !iface.is_null() {
         if iface.found == 0 && iface.done == 0 {
             *up = iface.next;
-            free(iface.name);
-            free(iface);
+            // free(iface.name);
+            // free(iface);
         } else { up = &mut iface.next }
         iface = *up
     };
@@ -680,7 +668,7 @@ fn release_listener(mut l: Listener) -> i32 {
     if l.fd != -(1) { close(l.fd); }
     if l.tcpfd != -(1) { close(l.tcpfd); }
     if l.tftpfd != -(1) { close(l.tftpfd); }
-    free(l);
+    // free(l);
     return 1;
 }
 
@@ -1128,8 +1116,8 @@ fn create_listeners(mut addr: NetAddress,
     }
     if fd != -(1) || tcpfd != -(1) ||
            tftpfd != -(1) {
-        l =
-            safe_malloc(::std::mem::size_of::<Listener>())          Listener;
+        // l =
+        //     safe_malloc(::std::mem::size_of::<Listener>())          Listener;
         l.next = 0 ;
         l.fd = fd;
         l.tcpfd = tcpfd;
@@ -1609,14 +1597,14 @@ fn allocate_sfd(mut addr: NetAddress,
     }
     /* need to make a new one. */
     *__errno_location() = 12; /* in case malloc fails. */
-    sfd =
-        whine_malloc(::std::mem::size_of::<ServerFd>()) ; /* save error from bind/setsockopt. */
+    // sfd =
+    //     whine_malloc(::std::mem::size_of::<ServerFd>()) ; /* save error from bind/setsockopt. */
     if sfd.is_null() { return 0Fd }
     sfd.fd =
         socket(addr.sa.sa_family, SOCK_DGRAM,
                0);
     if sfd.fd == -(1) {
-        free(sfd);
+        // free(sfd);
         return 0Fd
     }
     if addr.sa.sa_family == 10 &&
@@ -1628,7 +1616,7 @@ fn allocate_sfd(mut addr: NetAddress,
                0 || fix_fd(sfd.fd) == 0 {
         errsave = *__errno_location();
         close(sfd.fd);
-        free(sfd);
+        // free(sfd);
         *__errno_location() = errsave;
         return 0Fd
     }
@@ -1703,9 +1691,9 @@ pub fn cleanup_servers() {
             server_gone(serv);
             *up = serv.next;
             if !serv.domain.is_null() {
-                free(serv.domain);
+                // free(serv.domain);
             }
-            free(serv);
+            // free(serv);
         } else { up = &mut serv.next }
         serv = tmp
     }
@@ -1738,19 +1726,20 @@ pub fn add_update_server(mut flags: i32,
         domain_str = serv.domain;
         next = serv.next
     } else {
-        serv =
-            whine_malloc(::std::mem::size_of::<Server>())          Server;
+        // serv =
+        //     whine_malloc(::std::mem::size_of::<Server>())          Server;
         if !serv.is_null() {
             /* Not found, create a new one. */
             if !domain.is_null() &&
                    {
-                       domain_str =
-                           whine_malloc(strlen(domain).wrapping_add(1                     libc::c_int
-                                                                                     ))
-                               ;
-                       domain_str.is_null()
+                       // domain_str =
+                       //     whine_malloc(strlen(domain).wrapping_add(1                     libc::c_int
+                       //                                                               ))
+                       //         ;
+                       // domain_str.is_null()
+                       true
                    } {
-                free(serv);
+                // free(serv);
                 serv = 0
             } else {
                 let mut s: Server = 0;
@@ -1961,7 +1950,7 @@ pub fn check_servers() {
         if sfd.used == 0 {
             *up = sfd.next;
             close(sfd.fd);
-            free(sfd);
+            // free(sfd);
         } else { up = &mut sfd.next }
         sfd = tmp
     }

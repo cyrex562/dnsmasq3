@@ -35,7 +35,7 @@
 
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
-use crate::util::whine_malloc;
+
 
 // static mut pollfds: pollfd = 0 ;
 // static mut nfds: nfds_t = 0;
@@ -115,7 +115,7 @@ pub  fn poll_listen(mut fd: i32,
                        &mut *pollfds.offset(i)
                        nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
                                                                ));
-                free(pollfds);
+                // free(pollfds);
             }
             pollfds = new
         }

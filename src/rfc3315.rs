@@ -2801,7 +2801,7 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
         if !dnsmasq_daemon.lease_change_command.is_null() {
             let mut class_opt:Vec<u8> = 0;
             lease.flags |= 2;
-            free(lease.extradata);
+            // free(lease.extradata);
             lease.extradata = 0;
             lease.extradata_len = 0;
             lease.extradata_size = lease.extradata_len;

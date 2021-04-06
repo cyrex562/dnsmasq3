@@ -1060,10 +1060,10 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
             *up = tmp;
             /* cannot have a clid */
             if config.flags & 16 != 0 {
-                free(config.hostname);
+                // free(config.hostname);
             }
-            free(config.hwaddr);
-            free(config);
+            // free(config.hwaddr);
+            // free(config);
         } else { up = &mut config.next }
         config = tmp
     }
@@ -1147,7 +1147,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                                   "bad name at %s line %d"        ,
                                   "/etc/ethers", lineno);
                     }
-                    free(host);
+                    // free(host);
                     continue ;
                 } else {
                     flags = 16;
@@ -1230,7 +1230,7 @@ pub unsafe extern "C" fn dhcp_read_ethers() {
                     (*config.hwaddr).next = 0
                 }
                 count += 1;
-                free(host);
+                // free(host);
             }
         }
     }

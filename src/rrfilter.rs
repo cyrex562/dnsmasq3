@@ -17,9 +17,9 @@
 /* Code to safely remove RRs from a DNS answer */
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
    we've chopped out of the packet, or check they don't point into an elided part.  */
-use crate::defines::{DnsHeader, __bswap_16};
+use crate::defines::{DnsHeader};
 use crate::rfc1035::skip_name;
-use crate::util::whine_malloc;
+
 
 unsafe extern "C" fn check_name(mut namep: ,
                                 mut header: DnsHeader, mut plen: usize,
