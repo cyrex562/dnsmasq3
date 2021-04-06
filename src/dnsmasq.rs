@@ -1,11 +1,8 @@
 mod arp;
 mod auth;
 mod blockdata;
-mod bpf;
 mod cache;
-mod conntrack;
 mod crypto;
-mod dbus;
 mod defines;
 mod dhcp;
 mod dhcp6;
@@ -18,8 +15,6 @@ mod edns0;
 mod forward;
 mod hash_questions;
 mod helper;
-mod in6_addr;
-mod in_addr;
 mod inotify;
 mod ipset;
 mod lease;
@@ -37,7 +32,6 @@ mod rrfilter;
 mod slaac;
 mod tables;
 mod tftp;
-mod ubus;
 mod util;
 
 use defines::{
@@ -50,9 +44,9 @@ use crate::blockdata::blockdata_init;
 use crate::cache::{cache_init, cache_recv_insert, cache_reload, dump_cache};
 use crate::defines::{
     NetAddress, C2rustUnnamed14, C2rustUnnamed16, C2rustUnnamed17, C2rustUnnamed26,
-    C2rustUnnamed27, IcmpHdr, NetAddress, InAddrT, IpHdr, Irec, Listener, SaFamily, NetAddress,
-    TftpTransfer, UserCapData, UserCapHeader, EventDesc, Sigaction,
-    DhcpLease, DhcpPacket, NetAddress, Resolvc, ServerFd, TftpPrefix, DIR, IPPROTO_ICMP, SHUT_RDWR,
+    C2rustUnnamed27, IcmpHdr,   IpHdr, Irec, Listener, SaFamily,
+    TftpTransfer, UserCapData, UserCapHeader, EventDesc,
+    DhcpLease, DhcpPacket,  Resolvc, ServerFd, TftpPrefix,  IPPROTO_ICMP, SHUT_RDWR,
     SIGALRM, SIGCHLD, SIGHUP, SIGINT, SIGPIPE, SIGTERM, SIGUSR1, SIGUSR2, SOCK_RAW,
     ConstNetAddressArg, NetAddressArg,
 };
@@ -88,6 +82,7 @@ use crate::util::{dnsmasq_time, rand16, retry_send, NetAddress_isequal};
 use libc;
 use log;
 use std::process::exit;
+use std::time;
 
 // dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 //
@@ -112,7 +107,7 @@ use std::process::exit;
 unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     let mut compiler_opts: String = String::from("");
     let mut bind_fallback: i32 = 0;
-    let mut now: time::Instant = 0;
+    let mut now: time::Instant = time::Instant::now();
     let mut sigact: libc::sigaction = libc::sigaction {
         sa_sigaction: 0,
         sa_mask: libc::sigset_t { __val: [0; 16] },
@@ -123,10 +118,10 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     let mut piperead: i32 = 0;
     let mut pipefd: [libc::c_int; 2] = [0; 2];
     let mut err_pipe: [libc::c_int; 2] = [0; 2];
-    let mut ent_pw: Passwd = 0 ;
+    let mut ent_pw: Passwd = Default::default();
     let mut script_uid: uid_t = 0 ;
     let mut script_gid: gid_t = 0 ;
-    let mut gp: Group = 0 ;
+    let mut gp: Group = Default::default();
     let mut i: i32 = 0;
     // if cfg!(target_os = "linux") {
     //     let mut max_fd: libc::c_long = libc::sysconf(libc::_SC_OPEN_MAX);
@@ -198,16 +193,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     // daemon.addrbuff =
     //     safe_malloc(46 as libc::size_t) as *mut libc::c_char;
     daemon.addrbuff = Vec::new();
-    if daemon.options[(51).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>())
-            .wrapping_mul(8),
-    ) ]
-        & (1)
-            << (51).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>())
-                    .wrapping_mul(8),
-            )
-        != 0
+    if daemon.options[51] != 0
     {
         // daemon.addrbuff2 =
         //     safe_malloc(46 as libc::size_t) as *mut libc::c_char
@@ -236,59 +222,17 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     // TODO:
     // close_fds(max_fd, -(1), -(1),
     //           -(1));
-    if daemon.options[(45).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>())
-            .wrapping_mul(8),
-    ) ]
-        & (1)
-            << (45).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>())
-                    .wrapping_mul(8),
-            )
-        != 0
+    if daemon.options[45] != 0
     {
-        die(
-            "DNSSEC not available: set HAVE_DNSSEC in src/config.h"
-                ,
-            0 ,
-            1,
-        );
+        panic!("dnssec not available: set HAVE_DNSSEC in src/config.h");
     }
-    if daemon.options[(35).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>())
-            .wrapping_mul(8),
-    ) ]
-        & (1)
-            << (35).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>())
-                    .wrapping_mul(8),
-            )
-        != 0
+    if daemon.options[35] != 0
     {
-        die(
-            "conntrack support not available: set HAVE_CONNTRACK in src/config.h"
-                ,
-            0 ,
-            1,
-        );
+        panic!("conntrack support not available: set HAVE_CONNTRACK in src/config.h")
     }
-    if daemon.options[(58).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>())
-            .wrapping_mul(8),
-    ) ]
-        & (1)
-            << (58).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>())
-                    .wrapping_mul(8),
-            )
-        != 0
+    if daemon.options[58] != 0
     {
-        die(
-            "Ubus not available: set HAVE_UBUS in src/config.h"
-                ,
-            0 ,
-            1,
-        );
+        panic!("ubus not available: set HAVE_UBUS in src/config.h")
     }
     if daemon.max_port < daemon.min_port {
         die(
@@ -352,84 +296,22 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
         need_cap_net_admin = 1
     }
     netlink_warn = netlink_init(&mut daemon);
-    if daemon.options[(13).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>())
-            .wrapping_mul(8),
-    ) ]
-        & (1)
-            << (13).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>())
-                    .wrapping_mul(8),
-            )
-        != 0
-        && daemon.options[(39).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>())
-                .wrapping_mul(8),
-        ) ]
-            & (1)
-                << (39).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>())
-                        .wrapping_mul(8),
-                )
-            != 0
+    if daemon.options[13] != 0
     {
-        die(
-            "cannot set --bind-interfaces and --bind-dynamic"
-                ,
-            0 ,
-            1,
-        );
+        panic!("cannot set bind-interfaces and --bind-dynamic");
     }
     if enumerate_interfaces(1) == 0 || enumerate_interfaces(0) == 0 {
-        die(
-            "failed to find list of interfaces: %s"
-                ,
-            0 ,
-            5,
-        );
+        panic!("failed to find list of interfaces: {}", 0);
     }
-    if daemon.options[(13).wrapping_div(
-        (::std::mem::size_of::<libc::c_uint>())
-            .wrapping_mul(8),
-    ) ]
-        & (1)
-            << (13).wrapping_rem(
-                (::std::mem::size_of::<libc::c_uint>())
-                    .wrapping_mul(8),
-            )
-        != 0
-        || daemon.options[(39).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>())
-                .wrapping_mul(8),
-        ) ]
-            & (1)
-                << (39).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>())
-                        .wrapping_mul(8),
-                )
-            != 0
+    if daemon.options[13] != 0
     {
         create_bound_listeners(1);
-        if daemon.options[(39).wrapping_div(
-            (::std::mem::size_of::<libc::c_uint>())
-                .wrapping_mul(8),
-        ) ]
-            & (1)
-                << (39).wrapping_rem(
-                    (::std::mem::size_of::<libc::c_uint>())
-                        .wrapping_mul(8),
-                )
-            == 0
+        if daemon.options[39] == 0
         {
             if_tmp = daemon.if_names;
             while !if_tmp.is_null() {
                 if !if_tmp.name.is_null() && if_tmp.used == 0 {
-                    die(
-                        "unknown interface %s"
-                            ,
-                        if_tmp.name,
-                        2,
-                    );
+                    panic!("unknown interface {}", &if_tmp.name);
                 }
                 if_tmp = if_tmp.next
             }
