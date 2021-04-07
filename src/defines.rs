@@ -1337,10 +1337,10 @@ impl fmt::Display for C2rustUnnamed10 {
 
 pub const SMALLDNAME: i32 = 50 as i32;
 
-pub const HOSTSFILE: [i8; 11] = unsafe {
-    *::std::mem::transmute::<&[u8; 11], &[i8; 11]>("/etc/hosts")
-};
-
+// pub const HOSTSFILE: [i8; 11] = unsafe {
+//     *::std::mem::transmute::<&[u8; 11], &[i8; 11]>("/etc/hosts")
+// };
+pub const HOSTSFILE: &str = "/etc/hosts";
 
 pub const NOTIMP: i32 = 4 as i32;
 pub const REFUSED: i32 = 5 as i32;
