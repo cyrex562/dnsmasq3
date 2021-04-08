@@ -28,6 +28,7 @@ use crate::dnsmasq_log::{die, my_syslog};
 use crate::network::fix_fd;
 use std::time;
 use winapi::um::winbase::AddAtomA;
+use std::str::FromStr;
 
 // static mut seed: [u32; 32] = [0; 32];
 // static mut in_0: [u32; 12] = [0; 12];
@@ -438,7 +439,7 @@ pub fn NetAddress_isequal(mut s1: &NetAddress, mut s2: &NetAddress) -> bool
     return false;
 }
 
-pub fn sa_len(mut addr: NetAddress) -> usize {
+pub fn sa_len(mut addr: &NetAddress) -> usize {
     if addr.sa.sa_family == 10 {
         ::std::mem::size_of::<NetAddress>()
     } else {
@@ -525,12 +526,7 @@ pub fn addr6part(mut addr: &mut In6Addr) -> u64 {
     let mut ret: u64 = 0 as u64;
     i = 8;
     while i < 16 {
-        ret =
-            (ret <<
-                8).wrapping_add(addr.__in6_u.__u6_addr8
-        [i
-        usize]
-        long);
+        ret = (ret << 8).wrapping_add(addr.__in6_u.__u6_addr8 [i]);
         i += 1
     }
     return ret;
@@ -547,22 +543,16 @@ pub fn setaddr6part(mut addr: &mut In6Addr,
     };
 }
 /* returns port number from address */
-pub fn prettyprint_addr(mut addr: NetAddress,
-                        mut buf: &mut String)
+pub fn prettyprint_addr(mut addr: &NetAddress,
+                        mut buf: &mut Vec<u8>)
                         -> i32 {
     let mut port: i32 = 0;
     if addr.sa.sa_family == 2 {
-        inet_ntop(2,
-                  &mut addr.in_0.sin_addr *const libc
-        ::c_void, buf,
-        46);
+        inet_ntop(2, &mut addr.in_0.sin_addr, buf, 46);
         port = __bswap_16(addr.in_0.sin_port)
     } else if addr.sa.sa_family == 10 {
         let mut name: [libc::c_char; 16] = [0; 16];
-        inet_ntop(10,
-                  &mut addr.in6.sin6_addr *const libc
-        ::c_void, buf,
-        46);
+        inet_ntop(10, &mut addr.in6.sin6_addr, buf, 46);
         if addr.in6.sin6_scope_id != 0 &&
             !if_indextoname(addr.in6.sin6_scope_id,
                             name.as_mut_ptr()).is_null() &&
@@ -1019,6 +1009,19 @@ pub fn inet_ntop(family: i32, in_buff: &[u8]) -> Option<String> {
         ];
         let ip6addr = Ipv6Addr::new(items[0], items[1], items[2], items[3], items[4], items[5], items[6], items[7]);
         Some(ip6addr.to_string())
+    } else {
+        None
+    }
+}
+
+pub fn inet_pton(family: i32, in_buff: &String) -> Option<Vec<u8>> {
+    let mut out: Vec<u8> = Vec::new();
+    if family == 2 {
+        let addr = Ipv4Addr::from_str(in_buff.as_str()).unwrap();
+        out.clone_from_slice(addr.octets()[..]);
+        Some(out)
+    } else if family == 10 {
+        let addr = Ipv6Addr::from_str(in_buff.as_str()).unwrap();
     } else {
         None
     }

@@ -1,6 +1,6 @@
-use crate::defines::{Listener, time::Instant, DnsmasqDaemon, NetAddress, NetAddress, MsgHdr, iovec, IfReq, DigitalSignature, Iname, TftpTransfer, TftpPrefix, NetAddress, NetAddress, C2rustUnnamed14, CmsgHdr, socklen_t, Server, NetAddressArg, SaFamily, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2rustUnnamed12, __bswap_16, SOCK_DGRAM, off_t, TftpFile, ConstNetAddressArg, stat, timespec, DhcpLease, uid_t, _ISPRINT};
+use crate::defines::{Listener, DnsmasqDaemon,   MsgHdr,  IfReq, DigitalSignature, Iname, TftpTransfer, TftpPrefix,  NetAddress, C2rustUnnamed14, CmsgHdr,  Server, NetAddressArg, SaFamily, IPPROTO_IP, C2RustUnnamed_13, IPPROTO_IPV6, C2rustUnnamed12,  SOCK_DGRAM,  TftpFile, ConstNetAddressArg, stat, timespec, DhcpLease, uid_t, _ISPRINT};
 use crate::network::{indextoname, iface_check, enumerate_interfaces, loopback_exception, label_exception, fix_fd};
-use crate::util::{wildcard_match, NetAddress_isequal, prettyprint_addr, sa_len, read_write};
+use crate::util::{wildcard_match, NetAddress_isequal, prettyprint_addr, sa_len};
 use crate::dnsmasq_log::my_syslog;
 use crate::lease::lease_find_by_addr;
 use crate::arp::find_mac;
@@ -8,72 +8,44 @@ use crate::forward::send_from;
 use crate::poll::poll_check;
 use crate::slack::{ack, errmess, oackmess, datamess};
 use crate::helper::queue_tftp;
+use std::time;
 
-#[no_mangle]
-pub  fn tftp_request(mut listen: Listener,
-                                      mut now: time::Instant) {
+
+pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
     let mut len: isize = 0;
     let mut packet: &mut String = daemon.packet;
-    let mut filename: &mut String = 0 ;
-    let mut mode: &mut String = 0 ;
-    let mut p: &mut String = 0 ;
-    let mut end: &mut String = 0 ;
-    let mut opt: &mut String = 0 ;
-    let mut addr: NetAddress =
-        NetAddress {sa: NetAddress {sa_family: 0, sa_data: [0; 14],},};
-    let mut peer: NetAddress =
-        NetAddress {sa: NetAddress {sa_family: 0, sa_data: [0; 14],},};
-    let mut msg: MsgHdr =
-        MsgHdr {msg_name: 0,
-               msg_namelen: 0,
-               msg_iov: 0,
-               msg_iovlen: 0,
-               msg_control: 0,
-               msg_controllen: 0,
-               msg_flags: 0,};
-    let mut iov: iovec = iovec{iov_base: 0, iov_len: 0,};
-    let mut ifr: IfReq =
-        IfReq {ifr_ifrn: DigitalSignature {ifrn_name: [0; 16],},
-              ifr_ifru:
-                  C2RustUnnamed_1{ifru_addr:
-                                      NetAddress {sa_family: 0,
-                                               sa_data: [0; 14],},},};
-    let mut is_err: i32 = 1;
+    let mut filename: String = String::new();
+    let mut mode: String = String::new();
+    let mut p: String = String::new();
+    let mut end: String = String::new();
+    let mut opt: String = String::new();
+    let mut addr: NetAddress = Default::default();
+    let mut peer: NetAddress = Default::default();
+    let mut msg: MsgHdr = Default::default();
+    let mut ifr: IfReq = Default::default();
+    let mut is_err = true;
     let mut if_index: i32 = 0;
-    let mut mtu: i32 = 0;
-    let mut tmp: Iname = 0;
-    let mut transfer: TftpTransfer = 0 ;
-    let mut up: TftpTransfer;
-    let mut port: i32 = daemon.start_tftp_port;
+    let mut mtu: u16 = 0;
+    let mut tmp: Iname = Default::default();
+    let mut transfer: TftpTransfer = Default::default();
+    let mut up: TftpTransfer = Default::default();
+    let mut port: u16 = daemon.start_tftp_port;
     let mut mtuflag: i32 = 0;
-    let mut namebuff: [libc::c_char; 16] = [0; 16];
-    let mut name: &mut String = 0 ;
-    let mut prefix: &mut String = daemon.tftp_prefix;
-    let mut pref: TftpPrefix = 0 ;
-    let mut addra: NetAddress = NetAddress {addr4: NetAddress {s_addr: 0,},};
+    let mut namebuff: String = String::new();
+    let mut name: String = String::new() ;
+    let mut prefix: String = daemon.tftp_prefix;
+    let mut pref: TftpPrefix = Default::default();
+    let mut addra: NetAddress = Default::default();
     let mut family: i32 = listen.addr.sa.sa_family;
     /* Can always get recvd interface for IPv6 */
-    let mut check_dest: i32 =
-        (daemon.options[(13 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                       ).wrapping_mul(8))
-                                       ] &
-             (1) <<
-                 (13 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                   ).wrapping_mul(8))
-             == 0 || family == 10);
-    let mut control_u: C2rustUnnamed14 =
-        C2rustUnnamed14 {align:
-                             CmsgHdr {cmsg_len: 0,
-                                     cmsg_level: 0,
-                                     cmsg_type: 0,
-                                     __cmsg_data: [],},};
+    let mut check_dest: bool = (daemon.options[13] == 0 || family == 10);
+    let mut control_u: C2rustUnnamed14 = Default::default();
     msg.msg_controllen =
         ::std::mem::size_of::<C2rustUnnamed14>();
     msg.msg_control = control_u.control.as_mut_ptr();
     msg.msg_flags = 0;
-    msg.msg_name = &mut peer ;
-    msg.msg_namelen =
-        ::std::mem::size_of::<NetAddress>();
+    msg.msg_name = peer;
+    msg.msg_namelen = ::std::mem::size_of::<NetAddress>();
     msg.msg_iov = &mut iov;
     msg.msg_iovlen = 1 ;
     iov.iov_base = packet;
@@ -83,7 +55,7 @@ pub  fn tftp_request(mut listen: Listener,
     len = recvmsg(listen.tftpfd, &mut msg, 0);
     if len < 2 { return }
     /* Can always get recvd interface for IPv6 */
-    if check_dest == 0 {
+    if check_dest == false {
         if !listen.iface.is_null() {
             addr = (*listen.iface).addr;
             name = (*listen.iface).name;
@@ -95,14 +67,12 @@ pub  fn tftp_request(mut listen: Listener,
         } else {
             /* we're listening on an address that doesn't appear on an interface,
 	     ask the kernel what the socket is bound to */
-            let mut tcp_len: socklen_t =
-                ::std::mem::size_of::<NetAddress>()              socklen_t;
-            if getsockname(listen.tftpfd,
-                           NetAddressArg {__NetAddress__:
-                                              &mut addr                                             NetAddress,},
-                           &mut tcp_len) == -(1) {
-                return
-            }
+            let mut tcp_len: usize = ::std::mem::size_of::<NetAddress>();
+            // if getsockname(listen.tftpfd, NetAddressArg {__NetAddress__: &mut addr   NetAddress,},
+            //                &mut tcp_len) == -(1) {
+            //     return
+            // }
+            // TODO: getsockname
         }
     } else {
         let mut cmptr: CmsgHdr = 0;
@@ -112,9 +82,7 @@ pub  fn tftp_request(mut listen: Listener,
         }
         addr.sa.sa_family = family;
         if family == 2 {
-            cmptr =
-                if msg.msg_controllen >=
-                       ::std::mem::size_of::<CmsgHdr>() {
+            cmptr = if msg.msg_controllen >= ::std::mem::size_of::<CmsgHdr>() {
                     msg.msg_control
                 } else { 0 };
             while !cmptr.is_null() {
@@ -130,9 +98,7 @@ pub  fn tftp_request(mut listen: Listener,
             }
         }
         if family == 10 {
-            cmptr =
-                if msg.msg_controllen >=
-                       ::std::mem::size_of::<CmsgHdr>() {
+            cmptr = if msg.msg_controllen >= ::std::mem::size_of::<CmsgHdr>() {
                     msg.msg_control
                 } else { 0 };
             while !cmptr.is_null() {
@@ -147,7 +113,7 @@ pub  fn tftp_request(mut listen: Listener,
                 cmptr = __cmsg_nxthdr(&mut msg, cmptr)
             }
         }
-        if indextoname(listen.tftpfd, if_index, namebuff.as_mut_ptr()) == 0
+        if indextoname(listen.tftpfd, if_index, &mut namebuff) == 0
            {
             return
         }
@@ -722,7 +688,7 @@ pub  fn tftp_request(mut listen: Listener,
     if fd != -(1) { close(fd); }
     return 0 ;
 }
-#[no_mangle]
+
 pub  fn check_tftp_listeners(mut now: time::Instant) {
     let mut transfer: TftpTransfer = 0 ;
     let mut tmp: TftpTransfer = 0 ;
@@ -913,8 +879,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
     }
     // free(transfer);
 }
- fn next(mut p: String,
-                          mut end: &mut String) -> &mut String {
+ fn next(mut p: String, mut end: &mut String) -> &mut String {
     let mut ret: &mut String = *p;
     let mut len: usize = 0;
     if *end.offset(-(1)) !=
@@ -1065,7 +1030,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         return size.wrapping_add(4)
     };
 }
-#[no_mangle]
+
 pub  fn do_tftp_script_run() -> i32 {
     let mut transfer: TftpTransfer = 0 ;
     transfer = daemon.tftp_done_trans;

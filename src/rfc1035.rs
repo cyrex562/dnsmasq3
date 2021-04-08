@@ -424,7 +424,7 @@ pub fn resize_packet(mut header: &mut DnsHeader, mut plen: usize,
 
 pub fn private_net(mut addr: NetAddress,
                                      mut ban_localhost: i32)
-                                     -> i32 {
+                                     -> bool {
     let mut ip_addr: InAddrT = __bswap_32(addr.s_addr);
     return (ip_addr & 0xff000000 ==
                 0x7f000000 &&

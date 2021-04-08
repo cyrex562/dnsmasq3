@@ -56,7 +56,7 @@ pub type NetAddressT = u32;
 #[repr(C)]
 pub struct MsgHdr {
     pub msg_name: Vec<u8>,
-    pub msg_namelen: SocklenT,
+    pub msg_namelen: usize,
     pub msg_iov: iovec,
     pub msg_iovlen: usize,
     pub msg_buf: Vec<u8>,
@@ -237,7 +237,7 @@ pub struct C2rustUnnamed1a {
     pub ifru_hwaddr: NetAddress,
     pub ifru_flags: i16,
     pub ifru_ivalue: i32,
-    pub ifru_mtu: i32,
+    pub ifru_mtu: u16,
     pub ifru_map: Ifmap,
     pub ifru_slave: [u8; 16],
     pub ifru_newname: [u8; 16],
@@ -453,12 +453,12 @@ pub struct InterfaceName {
 //     pub in6: SockAddrIn6,
 // }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct ServerFd {
-    pub fd: i32,
+    pub fd: File,
     pub source_addr: NetAddress,
-    pub interface: [i8; 17],
+    pub interface: String,
     pub ifindex: u32,
     pub used: u32,
     pub preallocated: u32,
@@ -507,12 +507,12 @@ pub struct Irec {
     pub mtu: u16,
     pub done: bool,
     pub warned: bool,
-    pub dad: i32,
-    pub dns_auth: i32,
+    pub dad: bool,
+    pub dns_auth: bool,
     pub index: i32,
     pub multicast_done: bool,
     pub found: bool,
-    pub label: i32,
+    pub label: bool,
     pub name: String,
     // pub next: *mut irec,
 }
@@ -520,12 +520,12 @@ pub struct Irec {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Listener {
-    pub fd: i32,
-    pub tcpfd: i32,
-    pub tftpfd: i32,
+    pub fd: File,
+    pub tcpfd: File,
+    pub tftpfd: File,
     pub used: i32,
     pub addr: NetAddress,
-    pub iface: Irec,
+    pub iface: Option<Irec>,
     // pub next: *mut listener,
 }
 
@@ -534,7 +534,7 @@ pub struct Listener {
 pub struct Iname {
     pub name: String,
     pub addr: NetAddress,
-    pub used: i32,
+    pub used: bool,
     // pub next: *mut iname,
 }
 
@@ -542,7 +542,7 @@ pub struct Iname {
 #[repr(C)]
 pub struct Mysubnet {
     pub addr: NetAddress,
-    pub addr_used: i32,
+    pub addr_used: bool,
     // pub mask: i32,
 }
 
@@ -550,8 +550,8 @@ pub struct Mysubnet {
 #[repr(C)]
 pub struct Resolvc {
     // pub next: *mut Resolvc,
-    pub is_default: i32,
-    pub logged: i32,
+    pub is_default: bool,
+    pub logged: bool,
     pub mtime: TimeT,
     pub name: String,
     pub wd: i32,
@@ -562,10 +562,10 @@ pub struct Resolvc {
 #[repr(C)]
 pub struct HostsFile {
     // pub next: *mut HostsFile,
-    pub flags: i32,
+    pub flags: [bool;32],
     pub fname: String,
     pub wd: i32,
-    // pub index: u32,
+    pub index: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -590,7 +590,7 @@ pub struct FrecSrc {
     pub dest: NetAddress,
     pub iface: u32,
     pub log_id: u32,
-    pub fd: i32,
+    pub fd: File,
     pub orig_id: u16,
     // pub next: *mut frec_src,
 }
@@ -639,7 +639,7 @@ pub struct HwaddrConfig {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DhcpConfig {
-    pub flags: u32,
+    pub flags: [bool;32],
     pub clid_len: i32,
     pub clid: Vec<u8>,
     pub hostname: String,
@@ -658,7 +658,7 @@ pub struct DhcpConfig {
 #[repr(C)]
 pub struct DhcpOpt {
     pub opt: u32,
-    pub len: u32,
+    pub len: usize,
     pub flags: u32,
     pub u: C2rustUnnamed7,
     pub val: Vec<u8>,
@@ -1687,23 +1687,23 @@ pub struct IsoAddr {
 //     sx25_addr: x25_address
 // }
 
-#[derive(Copy, Clone, Debug)]
-#[repr(C)]
-pub union NetAddressArg {
-    pub __NetAddress__: NetAddress,
-    pub __NetAddress_at__: NetAddressAt,
-    pub __NetAddress_ax25__: NetAddressAx25,
-    pub __NetAddress_dl__: NetAddressDl,
-    pub __NetAddress_eon__: NetAddressEon,
-    pub __NetAddress_in__: NetAddress,
-    pub __NetAddress_in6__: NetAddress,
-    pub __NetAddress_inarp__: NetAddress_inarp,
-    pub __NetAddress_ipx__: NetAddress_ipx,
-    pub __NetAddress_iso__: NetAddress_iso,
-    pub __NetAddress_ns__: NetAddress_ns,
-    pub __NetAddress_un__: NetAddressUn,
-    pub __NetAddress_x25__: NetAddress_x25,
-}
+// #[derive(Copy, Clone, Debug)]
+// #[repr(C)]
+// pub union NetAddressArg {
+//     pub __NetAddress__: NetAddress,
+//     pub __NetAddress_at__: NetAddressAt,
+//     pub __NetAddress_ax25__: NetAddressAx25,
+//     pub __NetAddress_dl__: NetAddressDl,
+//     pub __NetAddress_eon__: NetAddressEon,
+//     pub __NetAddress_in__: NetAddress,
+//     pub __NetAddress_in6__: NetAddress,
+//     pub __NetAddress_inarp__: NetAddress_inarp,
+//     pub __NetAddress_ipx__: NetAddress_ipx,
+//     pub __NetAddress_iso__: NetAddress_iso,
+//     pub __NetAddress_ns__: NetAddress_ns,
+//     pub __NetAddress_un__: NetAddressUn,
+//     pub __NetAddress_x25__: NetAddress_x25,
+// }
 
 // pub type __clock_t = libc::c_long;
 // pub type gid_t = GidT;
