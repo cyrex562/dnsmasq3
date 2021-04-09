@@ -33,22 +33,22 @@ use std::str::FromStr;
 // static mut seed: [u32; 32] = [0; 32];
 // static mut in_0: [u32; 12] = [0; 12];
 // static mut out: [u32; 8] = [0; 8];
-// static mut outleft: libc::c_int = 0 as libc::c_int;
+// static mut outleft:  = 0 as ;
 
 // pub fn rand_init() {
-//     let mut fd: libc::c_int =
+//     let mut fd:  =
 //         open("/dev/urandom" as *const u8 as *const libc::c_char,
-//              0 as libc::c_int);
-//     if fd == -(1 as libc::c_int) ||
+//              0 as );
+//     if fd == -(1 as ) ||
 //            read_write(fd, &mut seed as *mut [u32; 32] as *mut libc::c_uchar,
 //                       ::std::mem::size_of::<[u32; 32]>() as libc::c_ulong as
-//                           libc::c_int, 1 as libc::c_int) == 0 ||
+//                           , 1 as ) == 0 ||
 //            read_write(fd, &mut in_0 as *mut [u32; 12] as *mut libc::c_uchar,
 //                       ::std::mem::size_of::<[u32; 12]>() as libc::c_ulong as
-//                           libc::c_int, 1 as libc::c_int) == 0 {
+//                           , 1 as ) == 0 {
 //         die("failed to seed the random number generator: %s" as *const u8
 //                 as *const libc::c_char as *mut libc::c_char,
-//             0 as *mut libc::c_char, 5 as libc::c_int);
+//             0 as *mut libc::c_char, 5 as );
 //     }
 //     close(fd);
 // }
@@ -88,7 +88,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  7                  libc::c_int))
+//                                                                  7                  ))
 //                    ;
 //             x = t[1 ];
 //             t[2 ] =
@@ -99,7 +99,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  9                  libc::c_int))
+//                                                                  9                  ))
 //                    ;
 //             x = t[2 ];
 //             t[3 ] =
@@ -110,7 +110,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  13                  libc::c_int))
+//                                                                  13                  ))
 //                    ;
 //             x = t[3 ];
 //             t[4 ] =
@@ -121,7 +121,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  5                  libc::c_int))
+//                                                                  5                  ))
 //                    ;
 //             x = t[4 ];
 //             t[5 ] =
@@ -132,7 +132,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  7                  libc::c_int))
+//                                                                  7                  ))
 //                    ;
 //             x = t[5 ];
 //             t[6 ] =
@@ -143,7 +143,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  9                  libc::c_int))
+//                                                                  9                  ))
 //                    ;
 //             x = t[6 ];
 //             t[7 ] =
@@ -154,7 +154,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  13                  libc::c_int))
+//                                                                  13                  ))
 //                    ;
 //             x = t[7 ];
 //             t[8 ] =
@@ -165,7 +165,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  5                  libc::c_int))
+//                                                                  5                  ))
 //                    ;
 //             x = t[8 ];
 //             t[9 ] =
@@ -176,7 +176,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  7                  libc::c_int))
+//                                                                  7                  ))
 //                    ;
 //             x = t[9 ];
 //             t[10 ] =
@@ -187,7 +187,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  9                  libc::c_int))
+//                                                                  9                  ))
 //                    ;
 //             x = t[10 ];
 //             t[11 ] =
@@ -198,7 +198,7 @@ use std::str::FromStr;
 //                                                          x >>
 //                                                              32
 //                                                                  -
-//                                                                  13                  libc::c_int))
+//                                                                  13                  ))
 //                    ;
 //             x = t[11 ];
 //             r += 1
@@ -557,7 +557,7 @@ pub fn prettyprint_addr(mut addr: &NetAddress,
             !if_indextoname(addr.in6.sin6_scope_id,
                             name.as_mut_ptr()).is_null() &&
             strlen(buf).wrapping_add(strlen(name.as_mut_ptr())).wrapping_add(2
-        libc::c_int
+
         )
         < = 46
         {
@@ -633,9 +633,9 @@ pub fn parse_hex(mut in_1: &mut String,
             *r != ' ' as i32 {
             if *r != '*' as i32 &&
                 *(*__ctype_b_loc()).offset(*r
-            libc::c_int) &
+            ) &
                 _ISXDIGIT
-            libc::c_int == 0
+             == 0
             {
                 return -(1);
             }
@@ -677,14 +677,14 @@ pub fn parse_hex(mut in_1: &mut String,
                         /* checks above allow mix of hexdigit and *, which
 			 is illegal. */
                         if !strchr(&mut *in_1.offset((j * 2)
-                        isize),
+                        ),
                         '*' as i32).is_null()
                         {
                             return -(1);
                         }
                         *out_0.offset(i) =
                             strtol(&mut *in_1.offset((j * 2)
-                        isize),
+                        ),
                         0,
                         16);
                         mask = mask << 1;
@@ -820,36 +820,36 @@ enum ReadWriteMode {
 //                 n = fd.read(packet, size)?;
 //                 n =
 //                     read(fd,
-//                          &mut *packet.offset(done as isize) as
+//                          &mut *packet.offset(done as ) as
 //                              *mut libc::c_uchar as *mut libc::c_void,
 //                          (size as libc::c_long - done) as usize)
 //             } else {
 //                 n =
 //                     write(fd,
-//                           &mut *packet.offset(done as isize) as
+//                           &mut *packet.offset(done as ) as
 //                               *mut libc::c_uchar as *const libc::c_void,
 //                           (size as libc::c_long - done) as usize)
 //             }
-//             if n == 0 as libc::c_int as libc::c_long {
-//                 return 0 as libc::c_int
+//             if n == 0 as  as libc::c_long {
+//                 return 0 as
 //             }
 //             if !(retry_send(n) != 0 ||
-//                      *__errno_location() == 12 as libc::c_int ||
-//                      *__errno_location() == 105 as libc::c_int) {
+//                      *__errno_location() == 12 as  ||
+//                      *__errno_location() == 105 as ) {
 //                 break ;
 //             }
 //         }
-//         if *__errno_location() != 0 as libc::c_int { return 0 as libc::c_int }
+//         if *__errno_location() != 0 as  { return 0 as  }
 //         done += n
 //     }
-//     return 1 as libc::c_int;
+//     return 1 as ;
 // }
 
 /* close all fds except STDIN, STDOUT and STDERR, spare1, spare2 and spare3 */
 // pub fn close_fds(mut max_fd: libc::c_long,
-//                                    mut spare1: libc::c_int,
-//                                    mut spare2: libc::c_int,
-//                                    mut spare3: libc::c_int) {
+//                                    mut spare1: ,
+//                                    mut spare2: ,
+//                                    mut spare3: ) {
 //     /* On Linux, use the /proc/ filesystem to find which files
 //      are actually open, rather than iterate over the whole space,
 //      for efficiency reasons. If this fails we drop back to the dumb code. */
@@ -862,33 +862,33 @@ enum ReadWriteMode {
 //             if de.is_null() { break ; }
 //             let mut fd: libc::c_long = 0;
 //             let mut e: *mut libc::c_char = 0 as *mut libc::c_char;
-//             *__errno_location() = 0 as libc::c_int;
-//             fd = strtol((*de).d_name.as_mut_ptr(), &mut e, 10 as libc::c_int);
-//             if *__errno_location() != 0 as libc::c_int || e.is_null() ||
-//                    *e as libc::c_int != 0 || fd == dirfd(d) as libc::c_long ||
-//                    fd == 1 as libc::c_int as libc::c_long ||
-//                    fd == 2 as libc::c_int as libc::c_long ||
-//                    fd == 0 as libc::c_int as libc::c_long ||
+//             *__errno_location() = 0 as ;
+//             fd = strtol((*de).d_name.as_mut_ptr(), &mut e, 10 as );
+//             if *__errno_location() != 0 as  || e.is_null() ||
+//                    *e as  != 0 || fd == dirfd(d) as libc::c_long ||
+//                    fd == 1 as  as libc::c_long ||
+//                    fd == 2 as  as libc::c_long ||
+//                    fd == 0 as  as libc::c_long ||
 //                    fd == spare1 as libc::c_long ||
 //                    fd == spare2 as libc::c_long ||
 //                    fd == spare3 as libc::c_long {
 //                 continue ;
 //             }
-//             close(fd as libc::c_int);
+//             close(fd as );
 //         }
 //         closedir(d);
 //         return
 //     }
 //     /* fallback, dumb code. */
 //     max_fd -= 1;
-//     while max_fd >= 0 as libc::c_int as libc::c_long {
-//         if max_fd != 1 as libc::c_int as libc::c_long &&
-//                max_fd != 2 as libc::c_int as libc::c_long &&
-//                max_fd != 0 as libc::c_int as libc::c_long &&
+//     while max_fd >= 0 as  as libc::c_long {
+//         if max_fd != 1 as  as libc::c_long &&
+//                max_fd != 2 as  as libc::c_long &&
+//                max_fd != 0 as  as libc::c_long &&
 //                max_fd != spare1 as libc::c_long &&
 //                max_fd != spare2 as libc::c_long &&
 //                max_fd != spare3 as libc::c_long {
-//             close(max_fd as libc::c_int);
+//             close(max_fd as );
 //         }
 //         max_fd -= 1
 //     };
@@ -897,36 +897,36 @@ enum ReadWriteMode {
 /* Basically match a string value against a wildcard pattern.  */
 // pub fn wildcard_match(mut wildcard: *const libc::c_char,
 //                                         mut match_0: *const libc::c_char)
-//  -> libc::c_int {
-//     while *wildcard as libc::c_int != 0 && *match_0 as libc::c_int != 0 {
-//         if *wildcard as libc::c_int == '*' as i32 { return 1 as libc::c_int }
-//         if *wildcard as libc::c_int != *match_0 as libc::c_int {
-//             return 0 as libc::c_int
+//  ->  {
+//     while *wildcard as  != 0 && *match_0 as  != 0 {
+//         if *wildcard as  == '*' as i32 { return 1 as  }
+//         if *wildcard as  != *match_0 as  {
+//             return 0 as
 //         }
 //         wildcard = wildcard.offset(1);
 //         match_0 = match_0.offset(1)
 //     }
-//     return (*wildcard as libc::c_int == *match_0 as libc::c_int) as
-//                libc::c_int;
+//     return (*wildcard as  == *match_0 as ) as
+//                ;
 // }
 
 /* The same but comparing a maximum of NUM characters, like strncmp.  */
 // pub fn wildcard_matchn(mut wildcard: *const libc::c_char,
 //                                          mut match_0: *const libc::c_char,
-//                                          mut num: libc::c_int)
-//  -> libc::c_int {
-//     while *wildcard as libc::c_int != 0 && *match_0 as libc::c_int != 0 &&
+//                                          mut num: )
+//  ->  {
+//     while *wildcard as  != 0 && *match_0 as  != 0 &&
 //               num != 0 {
-//         if *wildcard as libc::c_int == '*' as i32 { return 1 as libc::c_int }
-//         if *wildcard as libc::c_int != *match_0 as libc::c_int {
-//             return 0 as libc::c_int
+//         if *wildcard as  == '*' as i32 { return 1 as  }
+//         if *wildcard as  != *match_0 as  {
+//             return 0 as
 //         }
 //         wildcard = wildcard.offset(1);
 //         match_0 = match_0.offset(1);
 //         num -= 1
 //     }
-//     return (num == 0 || *wildcard as libc::c_int == *match_0 as libc::c_int)
-//                as libc::c_int;
+//     return (num == 0 || *wildcard as  == *match_0 as )
+//                as ;
 // }
 
 #[cfg(target_os = "linux")]

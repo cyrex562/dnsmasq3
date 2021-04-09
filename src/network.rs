@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DigitalSignature,  C2rustUnnamed1a, IfReq,  Iname, DnsmasqDaemon,  Irec, IfaceParam,   AddressListEntry,  InterfaceName, AuthZone, AuthNameList,  SaFamily,   Listener, SOCK_DGRAM,  IPPROTO_IPV6, ConstNetAddressArg, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr,  Server, C2RustUnnamed_13, C2rustUnnamed12, in_port_t, C2RustUnnamed, ServerFd, NetAddress, AddressType};
+use crate::defines::{DigitalSignature, IfruData, IfReq, Iname, DnsmasqDaemon, Irec, IfaceParam, AddressListEntry, InterfaceName, AuthZone, AuthNameList, SaFamily, Listener, SOCK_DGRAM, IPPROTO_IPV6, ConstNetAddressArg, SOCK_STREAM, IPPROTO_TCP, IPPROTO_IP, CmsgHdr, MsgHdr, Server, C2RustUnnamed_13, C2rustUnnamed12, in_port_t, C2RustUnnamed, ServerFd, NetAddress, AddressType};
 use crate::util::{wildcard_match, NetAddress_isequal, prettyprint_addr, sa_len, hostname_isequal, netaddr_isequal, inet_ntop, inet_pton};
 use crate::dnsmasq_log::{my_syslog, die};
 use crate::netlink::iface_enumerate;
@@ -371,7 +371,7 @@ fn iface_allowed(mut param: &mut IfaceParam,
                    true
                } {
             // lo.name =
-            //     whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1   libc::c_int
+            //     whine_malloc(strlen(ifr.ifr_ifrn.ifrn_name.as_mut_ptr()).wrapping_add(1
             //                                                                                                              ))
             //         ;
             if !lo.name.is_null() {
@@ -457,17 +457,17 @@ fn iface_allowed_v6(daemon: &mut DnsmasqDaemon,
                     mut preferred: i32,
                     mut valid: i32,
                     mut vparam: &mut IfaceParam) -> i32 {
-    let mut addr: NetAddress = Default::default();
+    let mut addr: NetAddress = NetAddress:new();
     addr._type = AddressType::Ipv6Address;
     addr.value.copy_from_slice(&local.value);
-    let mut netmask: NetAddress = Default::default();
+    let mut netmask: NetAddress = NetAddress:new();
     /* warning */
     addr.in6.sin6_family = 10;
     addr.in6.sin6_addr = local;
     addr.in6.sin6_port = daemon.port.to_be();
     /* FreeBSD insists this is zero for non-linklocal addresses */
     if {
-        let mut __a: NetAddress = Default::default();
+        let mut __a: NetAddress = NetAddress:new();
         let mut a_u32: u32 = u32::from_le_bytes(__a.value[0..4]);
         a_u32 = a_u32 & 0xffc00000;
         a_u32 & 0xfe800000} != 0 {
@@ -482,7 +482,7 @@ fn iface_allowed_v4(mut local: NetAddress,
                     mut netmask: NetAddress,
                     mut broadcast: NetAddress,
                     mut vparam: &mut IfaceParam) -> i32 {
-    let mut addr: NetAddress = Default::default();
+    let mut addr: NetAddress = NetAddress:new();
     let mut prefix: usize = 0;
     let mut bit: i32 = 0;
     /* warning */
@@ -546,7 +546,7 @@ fn release_listener(mut l: Listener) -> i32 {
     }
     if l.fd != -(1) { close(l.fd); }
     if l.tcpfd != -(1) { close(l.tcpfd); }
-    if l.tftpfd != -(1) { close(l.tftpfd); }
+    if l.tftp_socket != -(1) { close(l.tftp_socket); }
     // free(l);
     return 1;
 }
@@ -621,41 +621,41 @@ pub fn enumerate_interfaces(mut reset: i32)
     // ret = iface_enumerate(10, &mut param, ::std::mem::transmute::<Option<fn(_:
     //                                                                             &mut In6Addr,
     //                                                                         _:
-    //                                                                             libc::c_int,
+    //                                                                             ,
     //                                                                         _:
-    //                                                                             libc::c_int,
+    //                                                                             ,
     //                                                                         _:
-    //                                                                             libc::c_int,
+    //                                                                             ,
     //                                                                         _:
-    //                                                                             libc::c_int,
+    //                                                                             ,
     //                                                                         _:
-    //                                                                             libc::c_int,
+    //                                                                             ,
     //                                                                         _:
-    //                                                                             libc::c_int,
+    //                                                                             ,
     //                                                                         _:
     //                                                                            Vec<u8>)
     //                                                                         -> i32>,
     //                                             Option<fn()
     //                                                        ->
-    //                                                            libc::c_int>>(Some(iface_allowed_v6
+    //                                                            >>(Some(iface_allowed_v6
     //                                                                                                                     fn(_:
     //                                                                                                            &mut In6Addr,
     //                                                                                                        _:
-    //                                                                                                            libc::c_int,
+    //                                                                                                            ,
     //                                                                                                        _:
-    //                                                                                                            libc::c_int,
+    //                                                                                                            ,
     //                                                                                                        _:
-    //                                                                                                            libc::c_int,
+    //                                                                                                            ,
     //                                                                                                        _:
-    //                                                                                                            libc::c_int,
+    //                                                                                                            ,
     //                                                                                                        _:
-    //                                                                                                            libc::c_int,
+    //                                                                                                            ,
     //                                                                                                        _:
-    //                                                                                                            libc::c_int,
+    //                                                                                                            ,
     //                                                                                                        _:
     //                                                                                                           Vec<u8>)
     //                                                                                                        ->
-    //                                                                                           libc::c_int)));
+    //                                                                                           )));
     if ret != 0 {
         // ret =
         //     iface_enumerate(2,
@@ -663,7 +663,7 @@ pub fn enumerate_interfaces(mut reset: i32)
         //                     ::std::mem::transmute::<Option<fn(_:
         //                                                                         NetAddress,
         //                                                                         _:
-        //                                                                             libc::c_int,
+        //                                                                             ,
         //                                                                         _:
         //                                                                             &mut String,
         //                                                                         _:
@@ -673,13 +673,13 @@ pub fn enumerate_interfaces(mut reset: i32)
         //                                                                         _:
         //                                                                            Vec<u8>)
         //                                                                         ->
-        //                                                            libc::c_int>,
+        //                                                            >,
         //                                             Option<fn()
         //                                                        ->
-        //                                                            libc::c_int>>(Some(iface_allowed_v4   fn(_:
+        //                                                            >>(Some(iface_allowed_v4   fn(_:
         //                                                                                                        NetAddress,
         //                                                                                                        _:
-        //                                                                                                            libc::c_int,
+        //                                                                                                            ,
         //                                                                                                        _:
         //                                                                                                            &mut String,
         //                                                                                                        _:
@@ -689,7 +689,7 @@ pub fn enumerate_interfaces(mut reset: i32)
         //                                                                                                        _:
         //                                                                                                           Vec<u8>)
         //                                                                                                        ->
-        //                                                                                           libc::c_int)))
+        //                                                                                           )))
     }
     errsave = *__errno_location();
     close(param.fd);
@@ -753,20 +753,20 @@ fn make_sock(mut addr: &NetAddress, mut type_0: i32, mut dienow: bool) -> Option
         if *__errno_location() == 93 || *__errno_location() == 97 || *__errno_location() == 22 {
             return None
         }
-    } else if !(setsockopt(&fd, 1, 2, &mut opt as ::std::mem::size_of::<libc::c_int>()) ==
+    } else if !(setsockopt(&fd, 1, 2, &mut opt as ::std::mem::size_of::<>()) ==
                     -(1) || fix_fd(&mut fd) == false) {
-        if !(family == 10 && setsockopt(&fd, IPPROTO_IPV6, 26, &mut opt as ::std::mem::size_of::<libc::c_int>()                   ) == -(1)) {
+        if !(family == 10 && setsockopt(&fd, IPPROTO_IPV6, 26, &mut opt as ::std::mem::size_of::<>()                   ) == -(1)) {
             // rc = bind(&fd,  sa_len(addr));
             if !(rc == -(1)) {
                 if type_0 == SOCK_STREAM {
                     let mut qlen: i32 = 5;
-                    setsockopt(&fd, IPPROTO_TCP, 23, &mut qlen as ::std::mem::size_of::<libc::c_int>());
+                    setsockopt(&fd, IPPROTO_TCP, 23, &mut qlen as ::std::mem::size_of::<>());
                     if listen(&fd, 32) == -(1) {
                         current_block = 4055993212646746884;
                     } else { current_block = 11459959175219260272; }
                 } else if family == 2 {
                     if daemon.options[13] == 0 {
-                        if setsockopt(&fd, IPPROTO_IP, 8, &mut opt as ::std::mem::size_of::<libc::c_int>()) ==
+                        if setsockopt(&fd, IPPROTO_IP, 8, &mut opt as ::std::mem::size_of::<>()) ==
                                -(1) {
                             current_block = 4055993212646746884;
                         } else { current_block = 11459959175219260272; }
@@ -812,7 +812,7 @@ pub fn set_ipv6pktinfo(mut fd: &mut File) -> i32 {
         return 1
     } else {
         if *__errno_location() == 92 &&
-               setsockopt(fd, IPPROTO_IPV6, 2, &mut opt, ::std::mem::size_of::<libc::c_int>()) != -(1) {
+               setsockopt(fd, IPPROTO_IPV6, 2, &mut opt, ::std::mem::size_of::<>()) != -(1) {
             daemon.v6pktinfo = 2;
             return 1
         }
@@ -834,7 +834,7 @@ pub fn tcp_interface(mut fd: &mut File, mut af: i32) -> i32 {
     /* we overwrote the buffer... */
     daemon.srv_save = 0;
     if af == 2 {
-        if setsockopt(fd, IPPROTO_IP, 8, &mut opt, ::std::mem::size_of::<libc::c_int>()) != -(1) &&
+        if setsockopt(fd, IPPROTO_IP, 8, &mut opt, ::std::mem::size_of::<>()) != -(1) &&
                getsockopt(fd, IPPROTO_IP, 9, msg.msg_control, &mut len) != -(1) {
             msg.msg_controllen = len ;
             cmptr = if msg.msg_controllen >= ::std::mem::size_of::<CmsgHdr>()
@@ -915,7 +915,7 @@ fn create_listeners(mut addr: &NetAddress,
         l.next = 0 ;
         l.fd = fd;
         l.tcpfd = tcpfd;
-        l.tftpfd = tftpfd;
+        l.tftp_socket = tftpfd;
         l.addr = *addr;
         l.used = 1;
         l.iface = None
@@ -924,7 +924,7 @@ fn create_listeners(mut addr: &NetAddress,
 }
 
 pub fn create_wildcard_listeners(daemon: &mut DnsmasqDaemon) {
-    let mut addr: NetAddress = Default::default();
+    let mut addr: NetAddress = NetAddress:new();
     let mut l: Listener = Default::default();
     let mut l6: Listener = Default::default();
     addr._type = AddressType::Ipv4Address;
@@ -1164,7 +1164,7 @@ pub fn random_sock(daemon: &mut DnsmasqDaemon, mut family: i32) -> i32 {
     let mut fd: i32 = 0;
     fd = socket(family, SOCK_DGRAM, 0);
     if fd != -(1) {
-        let mut addr: NetAddress = Default::default();
+        let mut addr: NetAddress = NetAddress:new();
         let mut ports_avail: u32 = (daemon.max_port  - daemon.min_port  + 1);
         let mut tries: i32 =
             if ports_avail < 30 {
@@ -1346,7 +1346,7 @@ fn allocate_sfd(mut addr: &NetAddress, mut intname: Option<&mut String>) ->Optio
            setsockopt(sfd.fd, IPPROTO_IPV6,
                       26,
                       &mut opt,
-                      ::std::mem::size_of::<libc::c_int>()) == -(1) ||
+                      ::std::mem::size_of::<>()) == -(1) ||
            local_bind(&sfd.fd, addr, intname, ifindex, 0) ==
                0 || fix_fd(&mut sfd.fd) == false {
         errsave = *__errno_location();
@@ -1372,7 +1372,7 @@ pub fn pre_allocate_sfds(daemon: &mut DnsmasqDaemon) {
     let mut srv: Server = Default::default();
     let mut sfd:ServerFd = Default::default();
     if daemon.query_port != 0 {
-        let mut addr: NetAddress = Default::default();
+        let mut addr: NetAddress = NetAddress:new();
         addr._type = AddressType::Ipv4Address;
         addr.port = daemon.query_port;
         sfd = allocate_sfd(&addr, None).unwrap();
@@ -1469,7 +1469,7 @@ pub fn add_update_server(mut flags: i32,
             if !domain.is_null() &&
                    {
                        // domain_str =
-                       //     whine_malloc(strlen(domain).wrapping_add(1                     libc::c_int
+                       //     whine_malloc(strlen(domain).wrapping_add(1
                        //                                                               ))
                        //         ;
                        // domain_str.is_null()
@@ -1519,11 +1519,11 @@ pub fn check_servers() {
     let mut locals: i32 = 0;
     /* interface may be new since startup */
     if daemon.options[(13).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 {
         enumerate_interfaces(0);
@@ -1712,11 +1712,11 @@ pub fn reload_servers(mut fname: &mut String)
     loop  {
         line = fgets(daemon.namebuff, 1025, f);
         if line.is_null() { break ; }
-        let mut addr: NetAddress = Default::default();
-        let mut source_addr: NetAddress = Default::default();
+        let mut addr: NetAddress = NetAddress:new();
+        let mut source_addr: NetAddress = NetAddress:new();
         let mut token: &mut String = strtok(line, " \t\n\r" );
         if token.is_null() { continue ; }
-        if strcmp(token, "nameserver\x00" ) != 0 && strcmp(token, b"server" ) != 0 {
+        if strcmp(token, "nameserver" ) != 0 && strcmp(token, b"server" ) != 0 {
             continue ;
         }
         token = strtok(0 , " \t\n\r" );
@@ -1767,19 +1767,19 @@ pub fn reload_servers(mut fname: &mut String)
 
 pub fn newaddress(mut now: time::Instant) {
     if daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 ||
            daemon.options[(49 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (49 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 || daemon.doing_dhcp6 != 0 ||
            !daemon.relay6.is_null() ||
@@ -1787,11 +1787,11 @@ pub fn newaddress(mut now: time::Instant) {
         enumerate_interfaces(0);
     }
     if daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         create_bound_listeners(0);

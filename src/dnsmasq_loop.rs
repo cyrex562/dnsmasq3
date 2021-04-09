@@ -7,11 +7,11 @@ use crate::network::check_servers;
 pub unsafe extern "C" fn loop_send_probes() {
     let mut serv: Server = 0;
     if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (50).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 {
         return
@@ -128,11 +128,11 @@ pub unsafe extern "C" fn detect_loop(mut query: &mut String,
     let mut uid: u32 = 0;
     let mut serv: Server = 0;
     if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (50).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 {
         return 0

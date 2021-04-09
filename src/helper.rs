@@ -18,7 +18,7 @@ pub fn create_helper(mut event_fd: i32,
 {
     let mut pid: pid_t = 0;
     let mut i: i32 = 0;
-    let mut pipefd: [libc::c_int; 2] = [0; 2];
+    let mut pipefd: [; 2] = [0; 2];
     // let mut sigact: Sigaction = Sigaction {__sigaction_handler: C2rustUnnamed12 {sa_handler: None,},
     //               sa_mask: __sigset_t{__val: [0; 16],},
     //               sa_flags: 0,
@@ -103,7 +103,7 @@ pub fn create_helper(mut event_fd: i32,
         let mut extradata: mut Vec<u8> = 0;
         let mut is6: i32 = 0;
         let mut err: i32 = 0 ;
-        let mut pipeout: [libc::c_int; 2] = [0; 2];
+        let mut pipeout: [; 2] = [0; 2];
         /* Free rarely-allocated memory from previous iteration. */
         // if !alloc_buff.is_null() {
         //     free(alloc_buff as *mut libc::c_void);
@@ -185,11 +185,11 @@ pub fn create_helper(mut event_fd: i32,
         }
         if is6 != 0 {
             /* or IAID and server DUID for IPv6 */
-            sprintf(daemon.dhcp_buff3, "%s%u\x00" , if data.flags & 64  != 0 { b"T\x00"  } else { b""  }, data.iaid);
+            sprintf(daemon.dhcp_buff3, "%s%u" , if data.flags & 64  != 0 { b"T"  } else { b""  }, data.iaid);
             p = daemon.dhcp_packet.iov_base ;
             i = 0 ;
             while i < daemon.duid_len {
-                p = p.offset(sprintf(p, "%.2x" , *daemon.duid.offset(i as  isize) ) );
+                p = p.offset(sprintf(p, "%.2x" , *daemon.duid.offset(i as  ) ) );
                 if i != daemon.duid_len - 1  {
                     p = p.offset(sprintf(p, ":" ) )
                 }
@@ -414,11 +414,11 @@ pub fn create_helper(mut event_fd: i32,
                     hostname = 0
                 }
                 my_setenv("DNSMASQ_LOG_DHCP" ,
-                          if daemon.options[(28   ).wrapping_div((::std::mem::size_of::<libc::c_uint>()  ).wrapping_mul(8                                                                         libc::c_int                                                                  ))
+                          if daemon.options[(28   ).wrapping_div((::std::mem::size_of::<libc::c_uint>()  ).wrapping_mul(8                                                                                                                                           ))
                                                            ] &
                                  (1) <<
                                      (28  ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                  != 0 {
                               "1"
                           } else { 0 }, &mut err);

@@ -117,7 +117,7 @@ pub unsafe extern "C" fn dhcp6_reply(mut context: DhcpContext,
     state.link_address = 0;
     if dhcp6_maybe_relay(&mut state, dnsmasq_daemon.dhcp_packet.iov_base,
                          sz, client_addr,
-                         (*(client_addr                          *const u8).offset(0        isize) == 0xff)                       libc::c_int, now) != 0 {
+                         (*(client_addr                          *const u8).offset(0        ) == 0xff)                       , now) != 0 {
         return if msg_type == 12 {
                    547
                } else { 546 }
@@ -173,7 +173,7 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
                             state.link_address ;
                         (__a.__in6_u.__u6_addr32[0 ]
                              & __bswap_32(0xffc00000) ==
-                             __bswap_32(0xfe800000))                      libc::c_int
+                             __bswap_32(0xfe800000))
                     }) == 0 &&
                    !(*(state.link_address                     *const u8).offset(0)
                          == 0xff) {
@@ -189,31 +189,31 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
                                               state.link_address                                            *const In6Addr;
                                           let mut __b: *const In6Addr =
                                               &mut share.match_addr6                                            &mut In6Addr                                            *const In6Addr;
-                                          (__a.__in6_u.__u6_addr32[0                       libc::c_int
+                                          (__a.__in6_u.__u6_addr32[0
                                                                                                 usize]
                                                ==
-                                               __b.__in6_u.__u6_addr32[0                           libc::c_int
+                                               __b.__in6_u.__u6_addr32[0
                                                                                                         usize]
                                                &&
-                                               __a.__in6_u.__u6_addr32[1                           libc::c_int
+                                               __a.__in6_u.__u6_addr32[1
                                                                                                         usize]
                                                    ==
                                                    __b.__in6_u.__u6_addr32[1
-                                                                                                                libc::c_int
+
                                                                                                                 usize]
                                                &&
-                                               __a.__in6_u.__u6_addr32[2                           libc::c_int
+                                               __a.__in6_u.__u6_addr32[2
                                                                                                         usize]
                                                    ==
                                                    __b.__in6_u.__u6_addr32[2
-                                                                                                                libc::c_int
+
                                                                                                                 usize]
                                                &&
-                                               __a.__in6_u.__u6_addr32[3                           libc::c_int
+                                               __a.__in6_u.__u6_addr32[3
                                                                                                         usize]
                                                    ==
                                                    __b.__in6_u.__u6_addr32[3
-                                                                                                                libc::c_int
+
                                                                                                                 usize])
 
                                       }) == 0) {
@@ -311,9 +311,9 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
                            opt6_uint(opt,
                                      -(2), 2) &&
                        memcmp(vendor.data,
-                              &mut *(opt                                   mut Vec<u8>).offset((4                      libc::c_int
+                              &mut *(opt                                   mut Vec<u8>).offset((4
                                                                          +
-                                                                         0                          libc::c_int)
+                                                                         0                          )
                                                       )
                                  ,
                               vendor.len) ==
@@ -345,17 +345,17 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
         state.mac_len =
             (opt6_uint(opt, -(2),
                        2) - 2)          libc::c_uint;
-        memcpy(&mut *state.mac.as_mut_ptr().offset(0       isize)             mut Vec<u8>,
+        memcpy(&mut *state.mac.as_mut_ptr().offset(0       )             mut Vec<u8>,
                &mut *(opt).offset((4 +
-                                                          2)      isize)             mut Vec<u8>,
+                                                          2)      )             mut Vec<u8>,
                state.mac_len);
     }
     opt = opts;
     while !opt.is_null() {
         if (&mut *(opt                 mut Vec<u8>).offset((4 +
-                                                       0)   isize)          mut Vec<u8>         Vec<u8>).offset(opt6_uint(opt,
+                                                       0)   )          mut Vec<u8>         Vec<u8>).offset(opt6_uint(opt,
                                                     -(2),
-                                                    2)                                        libc::c_int) > end {
+                                                    2)                                        ) > end {
             return 0
         }
         /* Don't copy MAC address into reply. */
@@ -363,7 +363,7 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
                      2) != 79 {
             let mut o: i32 =
                 new_opt6(opt6_uint(opt,
-                                   -(4), 2)                       libc::c_int);
+                                   -(4), 2)                       );
             if opt6_uint(opt, -(4),
                          2) == 9
                {
@@ -378,26 +378,26 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
 		 relayed packet, not the original sent by the client */
                 if dhcp6_maybe_relay(state,
                                      &mut *(opt                                          mut Vec<u8>).offset((4
-                                                                                                            libc::c_int
+
                                                                                 +
                                                                                 0
-                                                                                                                    libc::c_int)
+                                                                                                                    )
                                                                     )
                                                                           Vec<u8>,
                                      opt6_uint(opt,
                                                -(2),
-                                               2)                                   libc::c_int , client_addr,
+                                               2)                                    , client_addr,
                                      0, now) == 0 {
                     return 0
                 }
             } else {
-                put_opt6(&mut *(opt                              mut Vec<u8>).offset((4                 libc::c_int
+                put_opt6(&mut *(opt                              mut Vec<u8>).offset((4
                                                                     +
-                                                                    0                     libc::c_int)
+                                                                    0                     )
                                                                   )
                             ,
                          opt6_uint(opt,
-                                   -(2), 2)                       libc::c_int                       usize); /* default to send if we receive no FQDN option */
+                                   -(2), 2)                                              usize); /* default to send if we receive no FQDN option */
             }
             end_opt6(o);
         }
@@ -468,11 +468,11 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
     while !context_tmp.is_null() {
         context_tmp.netid.next = &mut context_tmp.netid;
         if dnsmasq_daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
             inet_ntop(10,
@@ -504,7 +504,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
     if !opt.is_null() {
         state.clid =
             &mut *(opt                 mut Vec<u8>).offset((4 +
-                                                       0)   isize)          mut Vec<u8>;
+                                                       0)   )          mut Vec<u8>;
         state.clid_len =
             opt6_uint(opt, -(2),
                       2);
@@ -525,9 +525,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                     opt6_uint(opt, -(2),
                               2) !=
                         dnsmasq_daemon.duid_len) ||
-                   memcmp(&mut *(opt                               mut Vec<u8>).offset((4                  libc::c_int
+                   memcmp(&mut *(opt                               mut Vec<u8>).offset((4
                                                                      +
-                                                                     0                      libc::c_int)
+                                                                     0                      )
                                                                    )
                              ,
                           dnsmasq_daemon.duid,
@@ -573,20 +573,20 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                     let mut enc_opt:Vec<u8> =
                         0;
                     let mut enc_end:Vec<u8> =
-                        &mut *(opt                             mut Vec<u8>).offset((4                libc::c_int
+                        &mut *(opt                             mut Vec<u8>).offset((4
                                                                    +
                                                                    (opt6_uint
                                                                                             unsafe extern "C" fn(_:
                                                                                                  mut Vec<u8>,
                                                                                              _:
-                                                                                                 libc::c_int,
+                                                                                                 ,
                                                                                              _:
-                                                                                                 libc::c_int)
+                                                                                                 )
                                                                             ->
                                                                                 libc::c_uint)(opt                   mut Vec<u8>,
-                                                                                              -(2                       libc::c_int),
-                                                                                              2                   libc::c_int)
-                                                                                          libc::c_int)
+                                                                                              -(2                       ),
+                                                                                              2                   )
+                                                                                          )
                                                                  )                      mut Vec<u8>;
                     let mut offset: i32 = 0;
                     if mopt == 16 {
@@ -609,7 +609,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                         _ => {
                             /* Note that format if user/vendor classes is different to DHCP options - no option types. */
                             enc_opt =
-                                &mut *(opt                                     mut Vec<u8>).offset((4                        libc::c_int
+                                &mut *(opt                                     mut Vec<u8>).offset((4
                                                                            +
                                                                            offset)
                                                           )
@@ -619,9 +619,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                 while i <=
                                           opt6_uint(enc_opt     mut Vec<u8>,
                                                     -(4),
-                                                    2)                                        libc::c_int - vendor.len {
+                                                    2)                                         - vendor.len {
                                     if memcmp(vendor.data
-                                              &mut *(enc_opt      mut Vec<u8>).offset((2 libc::c_int
+                                              &mut *(enc_opt      mut Vec<u8>).offset((2
                                                                                          +
                                                                                          i)
                                                                                       )
@@ -634,7 +634,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                     } else { i += 1 }
                                 }
                                 enc_opt =
-                                    opt6_next(enc_opt.offset(-(2                libc::c_int
+                                    opt6_next(enc_opt.offset(-(2
                                                                   )),
                                               enc_end)
                             }
@@ -647,11 +647,11 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
         vendor = vendor.next
     }
     if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 &&
            {
@@ -686,19 +686,19 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                                                (opt6_uint                 unsafe extern "C" fn(_:
                                                                                              mut Vec<u8>,
                                                                                          _:
-                                                                                             libc::c_int,
+                                                                                             ,
                                                                                          _:
-                                                                                             libc::c_int)
+                                                                                             )
                                                                         ->
                                                                             libc::c_uint)(opt           mut Vec<u8>,
-                                                                                          -(2               libc::c_int),
-                                                                                          2           libc::c_int)
-                                                                                  libc::c_int)
+                                                                                          -(2               ),
+                                                                                          2           )
+                                                                                  )
                                                              )                  mut Vec<u8>;
                 vopt =
-                    opt6_find(&mut *(opt                                   mut Vec<u8>).offset((4                      libc::c_int
+                    opt6_find(&mut *(opt                                   mut Vec<u8>).offset((4
                                                                          +
-                                                                         4                          libc::c_int)
+                                                                         4                          )
                                                       )
                                  ,
                               vend, opt_cfg.opt,
@@ -707,10 +707,10 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                     match_0 =
                         match_bytes(opt_cfg,
                                     &mut *(vopt                                         mut Vec<u8>).offset((4
-                                                                                                          libc::c_int
+
                                                                                +
                                                                                0
-                                                                                                                  libc::c_int)
+                                                                                                                  )
                                                                   )
                                                                         Vec<u8>                                  mut Vec<u8>,
                                     opt6_uint(vopt,
@@ -739,10 +739,10 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
             } else {
                 match_0 =
                     match_bytes(opt_cfg,
-                                &mut *(opt                                     mut Vec<u8>).offset((4                        libc::c_int
+                                &mut *(opt                                     mut Vec<u8>).offset((4
                                                                            +
                                                                            0
-                                                                                                          libc::c_int)
+                                                                                                          )
                                                           )
 
                                    ,
@@ -765,11 +765,11 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
     }
     if state.mac_len != 0 {
         if dnsmasq_daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
             print_mac(dnsmasq_daemon.dhcp_buff, state.mac.as_mut_ptr(),
@@ -809,11 +809,11 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                       1);
         /* Always force update, since the client has no way to do it itself. */
         if dnsmasq_daemon.options[(36 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (36 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                == 0 &&
                state.fqdn_flags & 0x1 == 0 {
@@ -834,7 +834,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                        op.offset(1)    *op);
                 pq = pq.offsetop;
                 op =
-                    op.offset((*op + 1)                            isize);
+                    op.offset((*op + 1)                            );
                 let fresh6 = pq;
                 pq = pq.offset(1);
                 *fresh6 = '.'
@@ -846,11 +846,11 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                 let mut nl: usize = strlen(dnsmasq_daemon.dhcp_buff);
                 state.client_hostname = dnsmasq_daemon.dhcp_buff;
                 if dnsmasq_daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           ).wrapping_mul(8                                                     libc::c_int                                              ))
+                                                                                                           ).wrapping_mul(8                                                                                                   ))
                                                  ] &
                        (1) <<
                            (28                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                       ).wrapping_mul(8                 libc::c_int          ))
+                                                                       ).wrapping_mul(8                           ))
                        != 0 {
                     my_syslog((3) << 3 |
                                   6,
@@ -1057,10 +1057,10 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                             let mut config_ok: i32 = 0;
                             /* align. */
                             memcpy(&mut req_addr_0                                Vec<u8>,
-                                   &mut *(ia_option_0                                        mut Vec<u8>).offset((4                           libc::c_int
+                                   &mut *(ia_option_0                                        mut Vec<u8>).offset((4
                                                                               +
                                                                               0
-                                                                                                                libc::c_int)
+                                                                                                                )
                                                                 )
                                                                       Vec<u8>,
                                    16);
@@ -1187,9 +1187,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                         let mut this_context: DhcpContext =
                             0;
                         memcpy(&mut req_addr_1                            Vec<u8>,
-                               &mut *(ia_option_1                                    mut Vec<u8>).offset((4                       libc::c_int
+                               &mut *(ia_option_1                                    mut Vec<u8>).offset((4
                                                                           +
-                                                                          0                           libc::c_int)
+                                                                          0                           )
                                                         )
                                   ,
                                16);
@@ -1254,8 +1254,8 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                     lease_set_hwaddr(lease,
                                                      state.mac.as_mut_ptr(),
                                                      state.clid,
-                                                     state.mac_len      libc::c_int,
-                                                     state.mac_type      libc::c_int,
+                                                     state.mac_len      ,
+                                                     state.mac_type      ,
                                                      state.clid_len, now,
                                                      0);
                                 }
@@ -1335,9 +1335,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                      C2RustUnnamed{__u6_addr8: [0; 16],},};
                     /* alignment */
                     memcpy(&mut req_addr_2,
-                           &mut *(ia_option_2                                mut Vec<u8>).offset((4                   libc::c_int
+                           &mut *(ia_option_2                                mut Vec<u8>).offset((4
                                                                       +
-                                                                      0                       libc::c_int)
+                                                                      0                       )
                                                                     )
                               ,
                            16);
@@ -1418,9 +1418,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                      C2RustUnnamed{__u6_addr8: [0; 16],},};
                     /* align */
                     memcpy(&mut addr_0,
-                           &mut *(ia_option_3                                mut Vec<u8>).offset((4                   libc::c_int
+                           &mut *(ia_option_3                                mut Vec<u8>).offset((4
                                                                       +
-                                                                      0                       libc::c_int)
+                                                                      0                       )
                                                                     )
                               ,
                            16);
@@ -1491,9 +1491,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                     let mut addr_list: AddressListEntry = 0 ;
                     /* align */
                     memcpy(&mut addr_1,
-                           &mut *(ia_option_4                                mut Vec<u8>).offset((4                   libc::c_int
+                           &mut *(ia_option_4                                mut Vec<u8>).offset((4
                                                                       +
-                                                                      0                       libc::c_int)
+                                                                      0                       )
                                                                     )
                               ,
                            16);
@@ -1622,9 +1622,9 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                     while !ia_option.is_null() {
                         /* worry about alignment here. */
                         memcpy(&mut req_addr                            Vec<u8>,
-                               &mut *(ia_option                                    mut Vec<u8>).offset((4                       libc::c_int
+                               &mut *(ia_option                                    mut Vec<u8>).offset((4
                                                                           +
-                                                                          0                           libc::c_int)
+                                                                          0                           )
                                                         )
                                   ,
                                16);
@@ -1747,7 +1747,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                             address6_allocate(state.context, state.clid,
                                               state.clid_len,
                                               (state.ia_type ==
-                                                   4)                                            libc::c_int, state.iaid,
+                                                   4)                                            , state.iaid,
                                               ia_counter, solicit_tags,
                                               plain_range, &mut addr);
                         if c.is_null() { break ; }
@@ -1796,11 +1796,11 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
 	       other possible servers */
                 o = new_opt6(7);
                 put_opt6_char(if dnsmasq_daemon.options[(17
-                                                                     ).wrapping_div((::std::mem::size_of::<libc::c_uint>()          ).wrapping_mul(8                                                                                 libc::c_int                                                                          ))
+                                                                     ).wrapping_div((::std::mem::size_of::<libc::c_uint>()          ).wrapping_mul(8                                                                                                                                                           ))
                                                                ] &
                                      (1) <<
                                          (17                                 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                      != 0 {
                                   255
                               } else { 0 });
@@ -1836,8 +1836,8 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
     }
     log_tags(tagif, state.xid);
     log6_opts(0, state.xid,
-              dnsmasq_daemon.outpacket.iov_base.offset(start_opts           isize),
-              dnsmasq_daemon.outpacket.iov_base.offset(save_counter(-(1                          libc::c_int))
+              dnsmasq_daemon.outpacket.iov_base.offset(start_opts           ),
+              dnsmasq_daemon.outpacket.iov_base.offset(save_counter(-(1                          ))
                                                              ));
     return 1;
 }
@@ -1880,7 +1880,7 @@ unsafe extern "C" fn add_options(mut state: &mut state,
                 /* option not requested */
                 if i >=
                        opt6_uint(oro,
-                                 -(2), 2)                     libc::c_int - 1 {
+                                 -(2), 2)                      - 1 {
                     current_block_45 = 735147466149431745;
                 } else { current_block_45 = 11050875288958768710; }
             } else { current_block_45 = 11050875288958768710; }
@@ -1904,75 +1904,75 @@ unsafe extern "C" fn add_options(mut state: &mut state,
                             if *(a                               *const u32).offset(0
                                                                 ) ==
                                    __bswap_32(0xfd000000) &&
-                                   *(a                                   *const u32).offset(1                  libc::c_int
+                                   *(a                                   *const u32).offset(1
                                                                     )
                                        == 0 &&
-                                   *(a                                   *const u32).offset(2                  libc::c_int
+                                   *(a                                   *const u32).offset(2
                                                                     )
                                        == 0 &&
-                                   *(a                                   *const u32).offset(3                  libc::c_int
+                                   *(a                                   *const u32).offset(3
                                                                     )
                                        == 0 &&
                                    ({
                                         let mut __a: *const In6Addr =
                                             state.ula_addr                                          *const In6Addr;
-                                        (__a.__in6_u.__u6_addr32[0                     libc::c_int
+                                        (__a.__in6_u.__u6_addr32[0
                                                                                             usize]
                                              ==
                                              0
                                              &&
-                                             __a.__in6_u.__u6_addr32[1                         libc::c_int
+                                             __a.__in6_u.__u6_addr32[1
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[2                         libc::c_int
+                                             __a.__in6_u.__u6_addr32[2
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[3                         libc::c_int
+                                             __a.__in6_u.__u6_addr32[3
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint)
                                     }) != 0 ||
-                                   *(a                                   *const u32).offset(0                  libc::c_int
+                                   *(a                                   *const u32).offset(0
                                                                     )
                                        ==
                                        __bswap_32(0xfe800000)
                                        &&
-                                       *(a                                       *const u32).offset(1                      libc::c_int
+                                       *(a                                       *const u32).offset(1
                                                         )
                                            == 0
                                        &&
-                                       *(a                                       *const u32).offset(2                      libc::c_int
+                                       *(a                                       *const u32).offset(2
                                                         )
                                            == 0
                                        &&
-                                       *(a                                       *const u32).offset(3                      libc::c_int
+                                       *(a                                       *const u32).offset(3
                                                         )
                                            == 0
                                        &&
                                        ({
                                             let mut __a: *const In6Addr =
                                                 state.ll_addr *const In6Addr;
-                                            (__a.__in6_u.__u6_addr32[0                         libc::c_int
+                                            (__a.__in6_u.__u6_addr32[0
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[1
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
                                                      0      libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[2
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
                                                      0      libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[3
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
-                                                     0      libc::c_uint)                                          libc::c_int
+                                                     0      libc::c_uint)
                                         }) != 0 {
                                 len -= 16
                             }
@@ -1988,20 +1988,20 @@ unsafe extern "C" fn add_options(mut state: &mut state,
                                 if ({
                                         let mut __a: *const In6Addr =
                                             a ;
-                                        (__a.__in6_u.__u6_addr32[0                     libc::c_int
+                                        (__a.__in6_u.__u6_addr32[0
                                                                                             usize]
                                              ==
                                              0
                                              &&
-                                             __a.__in6_u.__u6_addr32[1                         libc::c_int
+                                             __a.__in6_u.__u6_addr32[1
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[2                         libc::c_int
+                                             __a.__in6_u.__u6_addr32[2
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[3                         libc::c_int
+                                             __a.__in6_u.__u6_addr32[3
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint)
@@ -2010,98 +2010,98 @@ unsafe extern "C" fn add_options(mut state: &mut state,
                                        {
                                         p = state.fallback
                                     }
-                                } else if *(a                                          *const u32).offset(0                         libc::c_int
+                                } else if *(a                                          *const u32).offset(0
                                                               )
                                               ==
                                               __bswap_32(0xfd000000          libc::c_uint) &&
                                               *(a *const u32).offset(1
-                                                                                                            libc::c_int
+
                                                                       )
                                                   ==
                                                   0   libc::c_uint &&
                                               *(a *const u32).offset(2
-                                                                                                            libc::c_int
+
                                                                       )
                                                   ==
                                                   0   libc::c_uint &&
                                               *(a *const u32).offset(3
-                                                                                                            libc::c_int
+
                                                                       )
                                                   ==
                                                   0   libc::c_uint {
                                     if ({
                                             let mut __a: *const In6Addr =
                                                 state.ula_addr *const In6Addr;
-                                            (__a.__in6_u.__u6_addr32[0                         libc::c_int
+                                            (__a.__in6_u.__u6_addr32[0
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[1
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
                                                      0      libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[2
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
                                                      0      libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[3
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
-                                                     0      libc::c_uint)                                          libc::c_int
+                                                     0      libc::c_uint)
                                         }) == 0 {
                                         p = state.ula_addr
                                     }
-                                } else if *(a                                          *const u32).offset(0                         libc::c_int
+                                } else if *(a                                          *const u32).offset(0
                                                               )
                                               ==
                                               __bswap_32(0xfe800000          libc::c_uint) &&
                                               *(a *const u32).offset(1
-                                                                                                            libc::c_int
+
                                                                       )
                                                   ==
                                                   0   libc::c_uint &&
                                               *(a *const u32).offset(2
-                                                                                                            libc::c_int
+
                                                                       )
                                                   ==
                                                   0   libc::c_uint &&
                                               *(a *const u32).offset(3
-                                                                                                            libc::c_int
+
                                                                       )
                                                   ==
                                                   0   libc::c_uint {
                                     if ({
                                             let mut __a: *const In6Addr =
                                                 state.ll_addr *const In6Addr;
-                                            (__a.__in6_u.__u6_addr32[0                         libc::c_int
+                                            (__a.__in6_u.__u6_addr32[0
                                                                                                     usize]
                                                  ==
                                                  0  libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[1
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
                                                      0      libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[2
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
                                                      0      libc::c_uint &&
                                                  __a.__in6_u.__u6_addr32[3
-                                                                                                            libc::c_int
+
                                                                                                             usize]
                                                      ==
-                                                     0      libc::c_uint)                                          libc::c_int
+                                                     0      libc::c_uint)
                                         }) == 0 {
                                         p = state.ll_addr
                                     }
                                 } else { p = a }
                                 if !p.is_null() {
                                     if opt_cfg.opt == 56 {
-                                        if *(p                                           *const u8).offset(0                         libc::c_int
+                                        if *(p                                           *const u8).offset(0
                                                               )
                                                ==
                                                0xff {
@@ -2230,7 +2230,7 @@ unsafe extern "C" fn add_options(mut state: &mut state,
         let mut len_0: usize = strlen(state.hostname);
         if !state.send_domain.is_null() {
             len_0 =
-                (len_0        ).wrapping_add(strlen(state.send_domain).wrapping_add(2             libc::c_int      ))
+                (len_0        ).wrapping_add(strlen(state.send_domain).wrapping_add(2                   ))
 
         }
         o = new_opt6(39);
@@ -2254,11 +2254,11 @@ unsafe extern "C" fn add_options(mut state: &mut state,
     }
     /* logging */
     if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 && !oro.is_null() {
         let mut q: &mut String = dnsmasq_daemon.namebuff;
@@ -2290,7 +2290,7 @@ unsafe extern "C" fn add_options(mut state: &mut state,
                                   if i >
                                          opt6_uint(oro,
                                                    -(2),
-                                                   2)                                       libc::c_int - 3 {
+                                                   2)                                        - 3 {
                                       ""                                     *const libc::c_char
                                   } else {
                                       ", "                                     *const libc::c_char
@@ -2417,16 +2417,16 @@ unsafe extern "C" fn check_ia(mut state: &mut state,
                                                    (opt6_uint     unsafe extern "C" fn(_:
                                                                                  mut Vec<u8>,
                                                                              _:
-                                                                                 libc::c_int,
+                                                                                 ,
                                                                              _:
-                                                                                 libc::c_int)
+                                                                                 )
                                                             ->
                                                                 libc::c_uint)(opt
                                                                                                                 mut Vec<u8>,
                                                                               -(2
-                                                                                                                    libc::c_int),
+                                                                                                                    ),
                                                                               2
-                                                                                                                libc::c_int)
+                                                                                                                )
                                                       )      )
            ;
     state.iaid =
@@ -2436,11 +2436,11 @@ unsafe extern "C" fn check_ia(mut state: &mut state,
         opt6_find(&mut *(opt                       mut Vec<u8>).offset((4 +
                                                              (if state.ia_type
                                                                      ==
-                                                                     3                      libc::c_int
+                                                                     3
                                                                  {
-                                                                  12                   libc::c_int
+                                                                  12
                                                               } else {
-                                                                  4                   libc::c_int
+                                                                  4
                                                               })))                mut Vec<u8>, *endp,
                   5,
                   24);
@@ -2487,7 +2487,7 @@ unsafe extern "C" fn end_ia(mut t1cntr: i32,
             if min_time == 0xffffffff {
                 0xffffffff
             } else {
-                min_time.wrapping_div(8                                    libc::c_uint).wrapping_mul(7                      libc::c_int
+                min_time.wrapping_div(8                                    libc::c_uint).wrapping_mul(7
                                                                                               libc::c_uint).wrapping_sub(fuzz)
             };
         put_opt6_long(t1);
@@ -2817,14 +2817,14 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
                                                                (opt6_uint                 unsafe extern "C" fn(_:
                                                                                              mut Vec<u8>,
                                                                                          _:
-                                                                                             libc::c_int,
+                                                                                             ,
                                                                                          _:
-                                                                                             libc::c_int)
+                                                                                             )
                                                                         ->
                                                                             libc::c_uint)(class_opt           mut Vec<u8>,
-                                                                                          -(2               libc::c_int),
-                                                                                          2           libc::c_int)
-                                                                                  libc::c_int)
+                                                                                          -(2               ),
+                                                                                          2           )
+                                                                                  )
                                                              )                  mut Vec<u8>;
                 lease.vendorclass_count += 1;
                 /* send enterprise number first  */
@@ -2838,22 +2838,22 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
                 if opt6_uint(class_opt,
                              -(2), 2) >= 6 {
                     enc_opt =
-                        &mut *(class_opt                             mut Vec<u8>).offset((4                libc::c_int
+                        &mut *(class_opt                             mut Vec<u8>).offset((4
                                                                    +
-                                                                   4                    libc::c_int)
+                                                                   4                    )
                                                                  )                      mut Vec<u8>;
                     while !enc_opt.is_null() {
                         lease.vendorclass_count += 1;
                         lease_add_extradata(lease,
                                             &mut *(enc_opt    mut Vec<u8>).offset((4
-                                                                                                                          libc::c_int
+
                                                                                        +
-                                                                                       0     libc::c_int)
+                                                                                       0     )
                                                                                   )
                                                                                         Vec<u8>                                          mut Vec<u8>,
                                             opt6_uint(enc_opt       mut Vec<u8>,
                                                       -(2),
-                                                      2)                                          libc::c_int,
+                                                      2)                                          ,
                                             0);
                         enc_opt = opt6_next(enc_opt, enc_end)
                     }
@@ -2928,26 +2928,26 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
                                                                (opt6_uint                 unsafe extern "C" fn(_:
                                                                                              mut Vec<u8>,
                                                                                          _:
-                                                                                             libc::c_int,
+                                                                                             ,
                                                                                          _:
-                                                                                             libc::c_int)
+                                                                                             )
                                                                         ->
                                                                             libc::c_uint)(class_opt           mut Vec<u8>,
-                                                                                          -(2               libc::c_int),
-                                                                                          2           libc::c_int)
-                                                                                  libc::c_int)
+                                                                                          -(2               ),
+                                                                                          2           )
+                                                                                  )
                                                              )                  mut Vec<u8>;
                 enc_opt_0 =
                     &mut *(class_opt).offset((4 +
-                                                               0                libc::c_int)
+                                                               0                )
                                                              )                  mut Vec<u8>;
                 while !enc_opt_0.is_null() {
                     lease_add_extradata(lease,
                                         &mut *(enc_opt_0mut Vec<u8>).offset((4
-                                                                                                                  libc::c_int
+
                                                                                    +
                                                                                    0
-                                                                                                                          libc::c_int)
+                                                                                                                          )
                                                                           )
                                                                                 Vec<u8>                                      mut Vec<u8>,
                                         opt6_uint(enc_opt_0   mut Vec<u8>,
@@ -2969,11 +2969,11 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
             "nest"
         } else { "sent"  }      &mut String;
     if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 || start_opts == end_opts {
         return
@@ -3017,7 +3017,7 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
             /* align */
             memcpy(&mut addr,
                    &mut *(opt).offset((4 +
-                                                              0               libc::c_int)
+                                                              0               )
                                                             )                 mut Vec<u8>,
                    16);
             inet_ntop(10,
@@ -3045,17 +3045,17 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
                                   2));
             memcpy(dnsmasq_daemon.namebuff.offset(len)                Vec<u8>,
                    &mut *(opt).offset((4 +
-                                                              2               libc::c_int)
+                                                              2               )
                                                             )                 mut Vec<u8>,
                    (opt6_uint(opt, -(2),
                               2) -
                         2));
             *dnsmasq_daemon.namebuff.offset((len +
                                                     opt6_uint(opt               mut Vec<u8>,
-                                                              -(2                 libc::c_int),
-                                                              2               libc::c_int)
+                                                              -(2                 ),
+                                                              2               )
                                                         -
-                                                    2)isize) =
+                                                    2)) =
                 0;
             optname =
                 "status"  )
@@ -3067,7 +3067,7 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
                 } else { 0 };
             optname =
                 option_string(10, type_0,
-                              &mut *(opt                                   mut Vec<u8>).offset((4                      libc::c_int
+                              &mut *(opt                                   mut Vec<u8>).offset((4
                                                                          +
                                                                          offset)
                                                       )
@@ -3090,14 +3090,14 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
                                                                  (opt6_uint                   unsafe extern "C" fn(_:
                                                                                                mut Vec<u8>,
                                                                                            _:
-                                                                                               libc::c_int,
+                                                                                               ,
                                                                                            _:
-                                                                                               libc::c_int)
+                                                                                               )
                                                                           ->
                                                                               libc::c_uint)(opt               mut Vec<u8>,
-                                                                                            -(2                   libc::c_int),
-                                                                                            2               libc::c_int)
-                                                                                      libc::c_int)
+                                                                                            -(2                   ),
+                                                                                            2               )
+                                                                                      )
                                                                ));
         }
         opt = opt6_next(opt, end_opts)
@@ -3108,19 +3108,19 @@ unsafe extern "C" fn log6_quiet(mut state: &mut state,
                                 mut addr: &mut In6Addr,
                                 mut string: &mut String) {
     if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 ||
            dnsmasq_daemon.options[(43 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (43 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                == 0 {
         log6_packet(state, type_0, addr, string);
@@ -3145,11 +3145,11 @@ unsafe extern "C" fn log6_packet(mut state: &mut state,
             0
     }
     if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         my_syslog((3) << 3 | 6,
@@ -3332,14 +3332,14 @@ pub unsafe extern "C" fn relay_upstream6(mut relay: &mut DhcpRelay,
                        !strchr(relay.interface, '*' as i32).is_null() ||
                        {
                            multicast_iface =
-                               if_nametoindex(relay.interface)                             libc::c_int;
+                               if_nametoindex(relay.interface)                             ;
                            (multicast_iface) == 0
                        } ||
                        setsockopt(dnsmasq_daemon.dhcp6fd,
                                   IPPROTO_IPV6,
                                   17,
                                   &mut multicast_iface as
-                                  ::std::mem::size_of::<libc::c_int>()) ==
+                                  ::std::mem::size_of::<>()) ==
                            -(1) {
                     my_syslog((3) << 3 |
                                   3,
@@ -3352,11 +3352,11 @@ pub unsafe extern "C" fn relay_upstream6(mut relay: &mut DhcpRelay,
                       save_counter(-(1)) , &mut to,
                       &mut from, 0);
             if dnsmasq_daemon.options[(28                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (28 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    != 0 {
                 inet_ntop(10,
                           &mut relay.local        dnsmasq_daemon.addrbuff,
@@ -3438,15 +3438,15 @@ pub unsafe extern "C" fn relay_reply6(mut peer: NetAddress,
                 let mut encap_type: i32 =
                     *(&mut *(opt                           mut Vec<u8>).offset((4
                                                                  +
-                                                                 0                  libc::c_int)
+                                                                 0                  )
                                                                ));
-                put_opt6(&mut *(opt                              mut Vec<u8>).offset((4                 libc::c_int
+                put_opt6(&mut *(opt                              mut Vec<u8>).offset((4
                                                                     +
-                                                                    0                     libc::c_int)
+                                                                    0                     )
                                                                   )
                             ,
                          opt6_uint(opt,
-                                   -(2), 2)                       libc::c_int );
+                                   -(2), 2)                        );
                 memcpy(&mut peer.sin6_addr                    Vec<u8>,
                        &mut *inbuff.offset(18)                     mut Vec<u8>,
                        16);

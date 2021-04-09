@@ -122,6 +122,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\src\tftp.rs">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\src\util.rs">
           <value>
             <Attribute>

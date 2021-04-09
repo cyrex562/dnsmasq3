@@ -60,7 +60,7 @@ unsafe extern "C" fn check_name(mut namep: ,
                         (offset -
                              (*rrs.offset(i  )).wrapping_offset_from(*rrs.offset((i
                                                                                             -
-                                                                                            1               libc::c_int)     isize))
+                                                                                            1               )     ))
                                 )
                 }
                 i += 1
@@ -106,7 +106,7 @@ unsafe extern "C" fn check_name(mut namep: ,
             } else {
                 ansp =
                     ansp.offset((count.wrapping_sub(1     libc::c_uint) >>
-                                     3                                   libc::c_int).wrapping_add(1                    libc::c_int
+                                     3                                   ).wrapping_add(1
                                                                                           libc::c_uint)
                                    )
             }
@@ -315,7 +315,7 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
                     } else if i <
                                   __bswap_16(header.nscount)
                                       +
-                                      __bswap_16(header.ancount)                                    libc::c_int {
+                                      __bswap_16(header.ancount)                                     {
                         chop_ns += 1
                     } else { chop_ar += 1 }
                 }

@@ -24,7 +24,7 @@ use crate::util::{hostname_isequal, hostname_issubdomain, inet_ntop, is_same_net
 pub fn find_addrlist(list: &Vec<AddressListEntry>, flag: u32, addr_u: &NetAddress) -> Option<AddressListEntry> {
     for entry in list {
         if list_addr.flags[2] == false {
-            let mut netmask: NetAddress = Default::default();
+            let mut netmask: NetAddress = NetAddress:new();
             let mut address: NetAddress = addr_u.ip_address.clone();
             if is_same_net4(&address, entry.addr.ip_address, &netmask) {
                 return Some(entry.clone());
@@ -957,7 +957,7 @@ pub fn answer_auth(
             while !txt.is_null() {
                 if in_zone(&zone, &txt.name, Some(&cut)) != false {
                     if !cut.is_null() {
-                        cut[0] = '\x00'
+                        cut[0] = ''
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -980,7 +980,7 @@ pub fn answer_auth(
                 if txt.class == 1 &&
                     in_zone(&zone, &txt.name, Some(&cut)) != 0 {
                     if !cut.is_null() {
-                        cut[0] = '\x00'
+                        cut[0] = ''
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -1002,7 +1002,7 @@ pub fn answer_auth(
             while !na.is_null() {
                 if in_zone(&zone, &na.name, Some(&cut)) != 0 {
                     if !cut.is_null() {
-                        cut[0] = '\x00'
+                        cut[0] = ''
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -1024,7 +1024,7 @@ pub fn answer_auth(
                 if in_zone(&zone, &intr.name, Some(cut)) != 0 {
                     let mut addrlist_2: AddressListEntry;
                     if !cut.is_null() {
-                        cut[0] = '\x00'
+                        cut[0] = ''
                     }
                     for addrlist_2 in intr.addresses {
                         if addrlist_2.flags & 2 == 0 &&
@@ -1073,7 +1073,7 @@ pub fn answer_auth(
                         name += zone.domain.as_str();
                     }
                     if !cut.is_null() {
-                        cut[0] = '\x00'
+                        cut[0] = ''
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -1133,7 +1133,7 @@ pub fn answer_auth(
                                 filter_zone(&zone,
                                             (crecp.flags & ((1 << 8) | (1 << 7)), &crecp.addr)) != false) {
                             if !cut.is_null() {
-                                cut[0] = "\x00"
+                                cut[0] = ""
                             }
                             if add_resource_record(header, limit,
                                                    trunc,

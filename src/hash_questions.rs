@@ -98,23 +98,23 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut MsgHdr,
     }
     __cmsg =
         (__cmsg       mut Vec<u8>).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-                                                                                               ).wrapping_sub(1                                         libc::c_int                                  )
+                                                                                               ).wrapping_sub(1                                                                           )
                                              &
                                              !(::std::mem::size_of::<size_t>()
                                            ).wrapping_sub(1
-                                                                                                                  libc::c_int
+
                                                                                                            ))
                                            );
     if __cmsg.offset(1) >
            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen)
            ||
            (__cmsg          mut Vec<u8>).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
-                                                                                                     ).wrapping_sub(1                                               libc::c_int                                        )
+                                                                                                     ).wrapping_sub(1                                                                                       )
                                                 &
                                                 !(::std::mem::size_of::<size_t>()
                                                  ).wrapping_sub(1))
                                               ) >
-               (__mhdr.msg_control              mut Vec<u8>).offset(__mhdr.msg_controllenisize) {
+               (__mhdr.msg_control              mut Vec<u8>).offset(__mhdr.msg_controllen) {
         return 0
     }
     return __cmsg;
@@ -479,34 +479,34 @@ unsafe extern "C" fn sha256_transform(mut ctx: &mut SHA256_CTX,
                       m[i.wrapping_sub(2)                      usize] << 32 - 19) ^
                  m[i.wrapping_sub(2) ]
                      >>
-                     10 ).wrapping_add(m[i.wrapping_sub(7                     libc::c_int
+                     10 ).wrapping_add(m[i.wrapping_sub(7
                                                                                             libc::c_uint)
-                                                              usize]).wrapping_add((m[i.wrapping_sub(15                       libc::c_int                       libc::c_uint)
+                                                              usize]).wrapping_add((m[i.wrapping_sub(15                                              libc::c_uint)
                                                                                                                       usize]
                                                                                    >>
                                                                                    7
-                                                                                                                          libc::c_int
+
                                                                                    |
-                                                                                   m[i.wrapping_sub(15                               libc::c_int                               libc::c_uint) usize]
+                                                                                   m[i.wrapping_sub(15                                                              libc::c_uint) usize]
                                                                                        <<
-                                                                                       32     libc::c_int
+                                                                                       32
                                                                                            -
-                                                                                           7             libc::c_int)
+                                                                                           7             )
                                                                                   ^
-                                                                                  (m[i.wrapping_sub(15                               libc::c_int                               libc::c_uint) usize]
+                                                                                  (m[i.wrapping_sub(15                                                              libc::c_uint) usize]
                                                                                        >>
-                                                                                       18     libc::c_int
+                                                                                       18
                                                                                        |
-                                                                                       m[i.wrapping_sub(15                                       libc::c_int                                       libc::c_uint)         usize]
+                                                                                       m[i.wrapping_sub(15                                                                              libc::c_uint)         usize]
                                                                                            <<
-                                                                                           32             libc::c_int
+                                                                                           32
                                                                                                -
-                                                                                               18                     libc::c_int)
+                                                                                               18                     )
                                                                                   ^
-                                                                                  m[i.wrapping_sub(15                             libc::c_int                             libc::c_uint)
+                                                                                  m[i.wrapping_sub(15                                                          libc::c_uint)
                                                                                                                             usize]
                                                                                       >>
-                                                                                      3   libc::c_int).wrapping_add(m[i.wrapping_sub(16                                                                                                 libc::c_int                                                                                                 libc::c_uint)                                                                   usize]);
+                                                                                      3   ).wrapping_add(m[i.wrapping_sub(16                                                                                                                                                                                                  libc::c_uint)                                                                   usize]);
         i = i.wrapping_add(1)
     }
     a = ctx.state[0 ];
@@ -529,7 +529,7 @@ unsafe extern "C" fn sha256_transform(mut ctx: &mut SHA256_CTX,
                                (e >> 25 |
                                     e <<
                                         32 -
-                                            25                                          libc::c_int)).wrapping_add(e &
+                                            25                                          )).wrapping_add(e &
                                                                                f
                                                                                ^
                                                                                !e
@@ -543,7 +543,7 @@ unsafe extern "C" fn sha256_transform(mut ctx: &mut SHA256_CTX,
                  (a >> 22 |
                       a <<
                           32 -
-                              22                            libc::c_int)).wrapping_add(a & b ^ a & c ^
+                              22                            )).wrapping_add(a & b ^ a & c ^
                                                                  b & c);
         h = g;
         g = f;

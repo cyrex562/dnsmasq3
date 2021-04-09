@@ -50,10 +50,10 @@ pub unsafe extern "C" fn dhcp6_init() {
     if fd == -(1) ||
            setsockopt(fd, IPPROTO_IPV6, 67,
                       &mut class,
-                      ::std::mem::size_of::<libc::c_int>()) == -(1) ||
+                      ::std::mem::size_of::<>()) == -(1) ||
            setsockopt(fd, IPPROTO_IPV6, 26,
                       &mut oneopt,
-                      ::std::mem::size_of::<libc::c_int>()) == -(1) || fix_fd(fd) == 0
+                      ::std::mem::size_of::<>()) == -(1) || fix_fd(fd) == 0
            || set_ipv6pktinfo(fd) == 0 {
         die("cannot create DHCPv6 socket: %s",
             0 , 2);
@@ -68,18 +68,18 @@ pub unsafe extern "C" fn dhcp6_init() {
            (1) <<
                (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8))
            != 0 ||
-           dnsmasq_daemon.options[(39 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8                                     libc::c_int                              ))
+           dnsmasq_daemon.options[(39 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (39 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         let mut rc: i32 = 0;
         rc =
             setsockopt(fd, 1, 15,
                        &mut oneopt,
-                       ::std::mem::size_of::<libc::c_int>()
+                       ::std::mem::size_of::<>()
                           );
         if rc == -(1) &&
                *__errno_location() == 92 {
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn dhcp6_init() {
             rc =
                 setsockopt(fd, 1, 2,
                            &mut oneopt as
-                           ::std::mem::size_of::<libc::c_int>())
+                           ::std::mem::size_of::<>())
         }
         if rc == -(1) {
             die("failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: %s"
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                                    ifr.ifr_ifrn.ifrn_name.as_mut_ptr(),
                                    16) != 0 {
                     parm.ind =
-                        if_nametoindex(bridge.iface.as_mut_ptr())                      libc::c_int;
+                        if_nametoindex(bridge.iface.as_mut_ptr())                      ;
                     if parm.ind == 0 {
                         my_syslog((3) << 3 |
                                       4,
@@ -299,13 +299,13 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                            ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
                                                                                    &mut In6Addr,
                                                                                _:
-                                                                                   libc::c_int,
+                                                                                   ,
                                                                                _:
-                                                                                   libc::c_int,
+                                                                                   ,
                                                                                _:
-                                                                                   libc::c_int,
+                                                                                   ,
                                                                                _:
-                                                                                   libc::c_int,
+                                                                                   ,
                                                                                _:
                                                                                    libc::c_uint,
                                                                                _:
@@ -315,16 +315,16 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                                                                                -> i32>,
                                                    Option<unsafe extern "C" fn()
                                                               ->
-                                                                  libc::c_int>>(Some(complete_context6 unsafe extern "C" fn(_:
+                                                                  >>(Some(complete_context6 unsafe extern "C" fn(_:
                                                                                                                   &mut In6Addr,
                                                                                                               _:
-                                                                                                                  libc::c_int,
+                                                                                                                  ,
                                                                                                               _:
-                                                                                                                  libc::c_int,
+                                                                                                                  ,
                                                                                                               _:
-                                                                                                                  libc::c_int,
+                                                                                                                  ,
                                                                                                               _:
-                                                                                                                  libc::c_int,
+                                                                                                                  ,
                                                                                                               _:
                                                                                                                   libc::c_uint,
                                                                                                               _:
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn dhcp6_packet(mut now: time::Instant) {
                                                                                                               _:
                                                                                                                  Vec<u8>)
                                                                                                               ->
-                                                                                                 libc::c_int)))
+                                                                                                 )))
                == 0 {
             return
         }
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn get_client_mac(mut client: &mut In6Addr,
                      target:
                          In6Addr {__in6_u:
                                       C2RustUnnamed{__u6_addr8: [0; 16],},},};
-    let mut addr: NetAddress = Default::default();
+    let mut addr: NetAddress = NetAddress:new();
     let mut i: i32 = 0;
     let mut maclen: i32 = 0;
     neigh.type_0 = 135 as u8;
@@ -602,31 +602,31 @@ unsafe extern "C" fn complete_context6(mut local: &mut In6Addr,
                                            &mut share.match_addr6                                         &mut In6Addr                                         *const In6Addr;
                                        let mut __b: *const In6Addr =
                                            local ;
-                                       (__a.__in6_u.__u6_addr32[0                    libc::c_int
+                                       (__a.__in6_u.__u6_addr32[0
                                                                                           usize]
                                             ==
-                                            __b.__in6_u.__u6_addr32[0                        libc::c_int
+                                            __b.__in6_u.__u6_addr32[0
                                                                                                   usize]
                                             &&
-                                            __a.__in6_u.__u6_addr32[1                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[1
                                                                                                   usize]
                                                 ==
                                                 __b.__in6_u.__u6_addr32[1
-                                                                                                          libc::c_int
+
                                                                                                           usize]
                                             &&
-                                            __a.__in6_u.__u6_addr32[2                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[2
                                                                                                   usize]
                                                 ==
                                                 __b.__in6_u.__u6_addr32[2
-                                                                                                          libc::c_int
+
                                                                                                           usize]
                                             &&
-                                            __a.__in6_u.__u6_addr32[3                        libc::c_int
+                                            __a.__in6_u.__u6_addr32[3
                                                                                                   usize]
                                                 ==
                                                 __b.__in6_u.__u6_addr32[3
-                                                                                                          libc::c_int
+
                                                                                                           usize])
 
                                    }) == 0 {
@@ -706,7 +706,7 @@ unsafe extern "C" fn complete_context6(mut local: &mut In6Addr,
                                                                  ] &&
                               __a.__in6_u.__u6_addr32[3          usize] ==
                                   __b.__in6_u.__u6_addr32[3
-                                                                 ])                       libc::c_int
+                                                                 ])
                      }) != 0) {
             relay.current = param.relay;
             param.relay = relay;
@@ -785,9 +785,9 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
         while i < clid_len {
             j =
                 (*clid.offset(i)               libc::c_ulonglong).wrapping_add(j <<
-                                                         6          libc::c_int).wrapping_add(j
+                                                         6          ).wrapping_add(j
                                                                                            <<
-                                                                                           16             libc::c_int).wrapping_sub(j);
+                                                                                           16             ).wrapping_sub(j);
             i += 1
         }
     }
@@ -817,7 +817,7 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
 		 by clients. This should avoid the same client being offered the same
 		 address after it has rjected it. */
                         start =
-                            lease_find_max_addr6(c).wrapping_add(1                  libc::c_int
+                            lease_find_max_addr6(c).wrapping_add(1
                                                                                       libc::c_ulonglong).wrapping_add(serial                                 libc::c_ulonglong).wrapping_add(c.addr_epoch                                                                                                         libc::c_ulonglong);
                         if c.addr_epoch != 0 {
                             c.addr_epoch = c.addr_epoch.wrapping_sub(1)
@@ -857,7 +857,7 @@ pub unsafe extern "C" fn address6_allocate(mut context: DhcpContext,
                         }
                         addr = addr.wrapping_add(1);
                         if addr ==
-                               addr6part(&mut c.end6).wrapping_add(1                       libc::c_int
+                               addr6part(&mut c.end6).wrapping_add(1
                                                                                                 libc::c_ulonglong)
                            {
                             addr = addr6part(&mut c.start6)
@@ -923,7 +923,7 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
     if !dnsmasq_daemon.duid_config.is_null() {
         let mut p: mut Vec<u8> = 0;
         p =
-            safe_malloc(dnsmasq_daemon.duid_config_len.wrapping_add(6                        libc::c_int
+            safe_malloc(dnsmasq_daemon.duid_config_len.wrapping_add(6
                                                                                                   libc::c_uint)
                             );
         dnsmasq_daemon.duid = p;
@@ -959,11 +959,11 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
         /* If we have no persistent lease database, or a non-stable RTC, use DUID_LL (newnow == 0) */
         /* rebase epoch to 1/1/2000 */
         if dnsmasq_daemon.options[(22 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (22 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                == 0 || !dnsmasq_daemon.lease_change_command.is_null() {
             newnow = now - 946684800
@@ -971,7 +971,7 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
         iface_enumerate(1,
                         &mut newnow,
                         ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
-                                                                                libc::c_int,
+                                                                                ,
                                                                             _:
                                                                                 libc::c_uint,
                                                                             _:
@@ -983,9 +983,9 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
                                                            -> i32>,
                                                 Option<unsafe extern "C" fn()
                                                            ->
-                                                               libc::c_int>>(Some(make_duid1
+                                                               >>(Some(make_duid1
                                                                                                                         unsafe extern "C" fn(_:
-                                                                                                               libc::c_int,
+                                                                                                               ,
                                                                                                            _:
                                                                                                                libc::c_uint,
                                                                                                            _:
@@ -995,7 +995,7 @@ pub unsafe extern "C" fn make_duid(mut now: time::Instant) {
                                                                                                            _:
                                                                                                               Vec<u8>)
                                                                                           ->
-                                                                                              libc::c_int)));
+                                                                                              )));
         if dnsmasq_daemon.duid.is_null() {
             die("Cannot create DHCPv6 server DUID: %s"               *const libc::c_char ,
                 0 , 5);
@@ -1294,41 +1294,41 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
                     ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
                                                                             &mut In6Addr,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
                                                                            Vec<u8>)
                                                                         -> i32>,
                                             Option<unsafe extern "C" fn()
                                                        ->
-                                                           libc::c_int>>(Some(construct_worker
+                                                           >>(Some(construct_worker
                                                                                                                 unsafe extern "C" fn(_:
                                                                                                            &mut In6Addr,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
                                                                                                           Vec<u8>)
                                                                                                        ->
-                                                                                          libc::c_int)));
+                                                                                          )));
     up = &mut dnsmasq_daemon.dhcp6;
     context = dnsmasq_daemon.dhcp6;
     while !context.is_null() {
@@ -1340,11 +1340,11 @@ pub unsafe extern "C" fn dhcp_construct_contexts(mut now: time::Instant) {
             if context.flags &
                    (1) << 13 != 0 ||
                    dnsmasq_daemon.options[(37 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           ).wrapping_mul(8                                                     libc::c_int                                              ))
+                                                                                                           ).wrapping_mul(8                                                                                                   ))
                                                  ] &
                        (1) <<
                            (37                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                       ).wrapping_mul(8                 libc::c_int          ))
+                                                                       ).wrapping_mul(8                           ))
                        != 0 {
                 /* previously constructed context has gone. advertise it's demise */
                 context.flags =

@@ -20,10 +20,10 @@ static mut outpacket_counter: usize = 0;
 
 pub fn end_opt6(mut container: i32) {
     let mut p:Vec<u8> =
-        daemon.outpacket.iov_base.offset(container     isize).offset(2                       libc::c_int
+        daemon.outpacket.iov_base.offset(container     ).offset(2
                                                           );
     let mut len: u16 =
-        outpacket_counter.wrapping_sub(container                              ).wrapping_sub(4                        libc::c_int
+        outpacket_counter.wrapping_sub(container                              ).wrapping_sub(4
                                                                                            )
            ;
     let mut t_s: u16 = len;
@@ -54,7 +54,7 @@ pub fn expand(mut headroom: usize) ->Vec<u8> {
     if expand_buf(&mut daemon.outpacket,
                   outpacket_counter.wrapping_add(headroom)) != 0 {
         ret =
-            daemon.outpacket.iov_base.offset(outpacket_counter         isize);
+            daemon.outpacket.iov_base.offset(outpacket_counter         );
         outpacket_counter =
             (outpacket_counter).wrapping_add(headroom)          size_t ;
         return ret

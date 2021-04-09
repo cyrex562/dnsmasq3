@@ -53,12 +53,12 @@ pub unsafe extern "C" fn find_pseudoheader(mut header: DnsHeader,
                 let mut t_cp: mut Vec<u8> = ansp;
                 type_0 =
                     ((*t_cp.offset(0)) << 8 |
-                         *t_cp.offset(1)                       libc::c_int) ;
+                         *t_cp.offset(1)                       ) ;
                 ansp = ansp.offset(2);
                 let mut t_cp_0: mut Vec<u8> = ansp;
                 class =
                     ((*t_cp_0.offset(0)) << 8 |
-                         *t_cp_0.offset(1)                       libc::c_int) ;
+                         *t_cp_0.offset(1)                       ) ;
                 ansp = ansp.offset(2);
                 if class == 1 &&
                        type_0 == 249 {
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn add_do_bit(mut header: DnsHeader,
 }
 unsafe extern "C" fn char64(mut c: libc::c_uchar) -> libc::c_uchar {
     return (*::std::mem::transmute::<&[u8; 65],
-                                     &[libc::c_char; 65]>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))[(c                                                                                                 libc::c_int            &            0x3f                                                                                                         libc::c_int)                                                                                               usize]
+                                     &[libc::c_char; 65]>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))[(c                                                                                                             &            0x3f                                                                                                         )                                                                                               usize]
               ;
 }
 unsafe extern "C" fn encoder(mut in_0: mut Vec<u8>,
@@ -440,11 +440,11 @@ unsafe extern "C" fn add_dns_client(mut header: DnsHeader,
         replace = 1;
         *cacheablep = 0;
         if dnsmasq_daemon.options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (55 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
             print_mac(encode.as_mut_ptr(), mac.as_mut_ptr(), maclen);
@@ -651,29 +651,29 @@ pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
     *check_subnet = 0;
     *cacheable = 1;
     if dnsmasq_daemon.options[(32).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (32).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         plen = add_mac(header, plen, limit, source, now, cacheable)
     }
     if dnsmasq_daemon.options[(54).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (54).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 ||
            dnsmasq_daemon.options[(55 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (55 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         plen = add_dns_client(header, plen, limit, source, now, cacheable)
@@ -688,11 +688,11 @@ pub unsafe extern "C" fn add_edns0_config(mut header: DnsHeader,
                              0, 1)
     }
     if dnsmasq_daemon.options[(41).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (41).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         plen = add_source_addr(header, plen, limit, source, cacheable);

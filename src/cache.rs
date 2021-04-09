@@ -124,10 +124,10 @@ fn hash_bucket(mut name: &String)
             (val << 7 |
                  val >>
                      32 -
-                         7                       libc::c_int).wrapping_add(*mix_tab.offset((val.wrapping_add(c)
+                         7                       ).wrapping_add(*mix_tab.offset((val.wrapping_add(c)
                                                                             &
                                                                             0x3f
-                                                                                                     libc::c_int
+
                                                                                                      libc::c_uint)
                                                      )
                                                            ^
@@ -618,7 +618,7 @@ pub fn cache_end_insert() {
             cache_link(new_chain);
             daemon.metrics[METRIC_DNS_CACHE_INSERTED
                                           ] =
-                daemon.metrics[METRIC_DNS_CACHE_INSERTED                                        libc::c_int                                        usize].wrapping_add(1);
+                daemon.metrics[METRIC_DNS_CACHE_INSERTED                                                                                usize].wrapping_add(1);
             /* If we're a child process, send this cache entry up the pipe to the master.
 	     The marshalling process is rather nasty. */
             if daemon.pipe_to_parent != -(1) {
@@ -973,7 +973,7 @@ fn add_hosts_entry(mut cache: Crec,
         i = 0;
         while i < addrlen {
             j =
-                j.wrapping_mul(2                             libc::c_uint).wrapping_add(*(addr          mut Vec<u8>).offset(i              isize)
+                j.wrapping_mul(2                             libc::c_uint).wrapping_add(*(addr          mut Vec<u8>).offset(i              )
                                                                          libc::c_uint).wrapping_rem(hashsz          libc::c_uint);
             i += 1
         }
@@ -1483,7 +1483,7 @@ pub fn cache_add_dhcp_entry(mut host_name:
         /* need new one */
         // crec =
         //     whine_malloc((::std::mem::size_of::<Crec>()).wrapping_add(::std::mem::size_of::<&mut String>()
-        //                                                   ).wrapping_sub(50    libc::c_int
+        //                                                   ).wrapping_sub(50
         //                                                                                                                   ))
 
     }
@@ -1583,7 +1583,7 @@ fn make_non_terminals(mut source: Crec) {
             } else {
                 // crecp =
                 //     whine_malloc((::std::mem::size_of::<Crec>()).wrapping_add(::std::mem::size_of::<&mut String>()
-                //                                                           ).wrapping_sub(50                    libc::c_int             ))
+                //                                                           ).wrapping_sub(50                                 ))
 
             }
             if !crecp.is_null() {
@@ -1630,27 +1630,27 @@ pub fn cache_make_stat(mut t: &mut TxtRecord)
             sprintf(buff.offset(1), "%d" , daemon.cachesize);
         }
         2 => {
-            sprintf(buff.offset(1), "%d" , daemon.metrics[METRIC_DNS_CACHE_INSERTED                                            libc::c_int ]);
+            sprintf(buff.offset(1), "%d" , daemon.metrics[METRIC_DNS_CACHE_INSERTED                                             ]);
         }
         3 => {
             sprintf(buff.offset(1),
                     "%d" ,
-                    daemon.metrics[METRIC_DNS_CACHE_LIVE_FREED                                            libc::c_int ]);
+                    daemon.metrics[METRIC_DNS_CACHE_LIVE_FREED                                             ]);
         }
         4 => {
             sprintf(buff.offset(1),
                     "%u" ,
-                    daemon.metrics[METRIC_DNS_QUERIES_FORWARDED                                            libc::c_int ]);
+                    daemon.metrics[METRIC_DNS_QUERIES_FORWARDED                                             ]);
         }
         5 => {
             sprintf(buff.offset(1),
                     "%u" ,
-                    daemon.metrics[METRIC_DNS_LOCAL_ANSWERED                                            libc::c_int ]);
+                    daemon.metrics[METRIC_DNS_LOCAL_ANSWERED                                             ]);
         }
         6 => {
             sprintf(buff.offset(1),
                     "%u" ,
-                    daemon.metrics[METRIC_DNS_AUTH_ANSWERED                                            libc::c_int ]);
+                    daemon.metrics[METRIC_DNS_AUTH_ANSWERED                                             ]);
         }
         7 => {
             /* sum counts from different records for same server */
@@ -1698,7 +1698,7 @@ pub fn cache_make_stat(mut t: &mut TxtRecord)
                     lenp = fresh11;
                     bytes_avail =
                         (bufflen -
-                             p.wrapping_offset_from(buff))                      libc::c_int;
+                             p.wrapping_offset_from(buff))                      ;
                     bytes_needed =
                         snprintf(p, bytes_avail,
                                  "%s#%d %u %u"                                *const libc::c_char,
@@ -1757,7 +1757,7 @@ fn sanitise(mut name: &mut String)
     if !name.is_null() {
         r = name;
         while *r != 0 {
-            if *(*__ctype_b_loc()).offsetr             libc::c_int &
+            if *(*__ctype_b_loc()).offsetr              &
                    _ISPRINT  ==
                    0 {
                 return "<name unprintable>"
@@ -1863,7 +1863,7 @@ pub fn dump_cache(mut now: time::Instant) {
                 }
                 p =
                     p.offset(sprintf(p,
-                                     "%-30.30s ", sanitise(n))                           isize);
+                                     "%-30.30s ", sanitise(n))                           );
                 if cache.flags & (1) << 11
                        != 0 && is_outdated_cname_pointer(cache) == 0 {
                     a = sanitise(cache_get_cname_target(cache))
@@ -1883,7 +1883,7 @@ pub fn dump_cache(mut now: time::Instant) {
                     if targetlen >
                            40 - len {
                         targetlen =
-                            (40 - len)                          libc::c_int
+                            (40 - len)
                     }
                     blockdata_retrieve(cache.addr.srv.target,
                                        targetlen ,

@@ -165,7 +165,7 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
                 (sum               libc::c_uint).wrapping_add((ip6.ip6_src.__in6_u.__u6_addr8[i
                                                                                                                     usize]
                                                      +
-                                                     ((ip6.ip6_src.__in6_u.__u6_addr8[i.wrapping_add(1                                 libc::c_int                                 libc::c_uint)   usize]
+                                                     ((ip6.ip6_src.__in6_u.__u6_addr8[i.wrapping_add(1                                                                  libc::c_uint)   usize]
                                                           ) <<
                                                           8))
                                                    )
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
                 (sum               libc::c_uint).wrapping_add((ip6.ip6_dst.__in6_u.__u6_addr8[i
                                                                                                                     usize]
                                                      +
-                                                     ((ip6.ip6_dst.__in6_u.__u6_addr8[i.wrapping_add(1                                 libc::c_int                                 libc::c_uint)   usize]
+                                                     ((ip6.ip6_dst.__in6_u.__u6_addr8[i.wrapping_add(1                                                                  libc::c_uint)   usize]
                                                           ) <<
                                                           8))
                                                    )
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
         while (i) <
                   (::std::mem::size_of::<IpHdr>() ).wrapping_div(2    libc::c_ulong) {
             sum =
-                (sum               libc::c_uint).wrapping_add(*(&mut ip    &mut u16) .offset(i                          isize)
+                (sum               libc::c_uint).wrapping_add(*(&mut ip    &mut u16) .offset(i                          )
                                                    )
                    ;
             i = i.wrapping_add(1)
@@ -255,17 +255,17 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
     while (i) <
               (::std::mem::size_of::<udphdr>()).wrapping_div(2libc::c_ulong) {
         sum =
-            (sum           libc::c_uint).wrapping_add(*(&mut udp                                             &mut u16) .offset(i                      isize)
+            (sum           libc::c_uint).wrapping_add(*(&mut udp                                             &mut u16) .offset(i                      )
                                                )          u32;
         i = i.wrapping_add(1)
     }
     i = 0;
     while (i) <
-              len.wrapping_add(1).wrapping_div(2                libc::c_int
+              len.wrapping_add(1).wrapping_div(2
                                                                            )
           {
         sum =
-            (sum           libc::c_uint).wrapping_add(*(packet                                             &mut u16) .offset(i                      isize)
+            (sum           libc::c_uint).wrapping_add(*(packet                                             &mut u16) .offset(i                      )
                                                )          u32;
         i = i.wrapping_add(1)
     }

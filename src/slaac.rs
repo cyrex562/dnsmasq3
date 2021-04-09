@@ -53,15 +53,15 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
                    (lease.hwaddr_type == 1 ||
                         lease.hwaddr_type == 6) {
                 /* convert MAC address to EUI-64 */
-                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(8                          libc::c_int
+                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(8
                                                                 )
                            ,
                        lease.hwaddr.as_mut_ptr(),
                        3);
-                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(13                          libc::c_int
+                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(13
                                                                 )
                            ,
-                       &mut *lease.hwaddr.as_mut_ptr().offset(3                  libc::c_int
+                       &mut *lease.hwaddr.as_mut_ptr().offset(3
                                                                     )
                           ,
                        3);
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
                 current_block_31 = 12039483399334584727;
             } else if lease.hwaddr_len == 8 &&
                           lease.hwaddr_type == 27 {
-                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(8                          libc::c_int
+                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(8
                                                                 )
                            ,
                        lease.hwaddr.as_mut_ptr(),
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
                           *lease.clid.offset(0) == 27 &&
                           lease.hwaddr_type == 24 {
                 /* firewire has EUI-64 identifier as clid */
-                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(8                          libc::c_int
+                memcpy(&mut *addr.__in6_u.__u6_addr8.as_mut_ptr().offset(8
                                                                 )
                            ,
                        &mut *lease.clid.offset(1)
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
                 6873731126896040597 => { }
                 _ => {
                     addr.__in6_u.__u6_addr8[8 ] =
-                        (addr.__in6_u.__u6_addr8[8 ]                       libc::c_int ^ 0x2) as u8;
+                        (addr.__in6_u.__u6_addr8[8 ]                        ^ 0x2) as u8;
                     /* check if we already have this one */
                     up = &mut old;
                     slaac = old;
@@ -109,17 +109,17 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
                                      &&
                                      __a.__in6_u.__u6_addr32[1       ]
                                          ==
-                                         __b.__in6_u.__u6_addr32[1                     libc::c_int
+                                         __b.__in6_u.__u6_addr32[1
                                                                                             usize]
                                      &&
                                      __a.__in6_u.__u6_addr32[2       ]
                                          ==
-                                         __b.__in6_u.__u6_addr32[2                     libc::c_int
+                                         __b.__in6_u.__u6_addr32[2
                                                                                             usize]
                                      &&
                                      __a.__in6_u.__u6_addr32[3       ]
                                          ==
-                                         __b.__in6_u.__u6_addr32[3                     libc::c_int
+                                         __b.__in6_u.__u6_addr32[3
                                                                                             usize])
 
                             }) != 0 {
@@ -314,11 +314,11 @@ pub unsafe extern "C" fn slaac_ping_reply(mut sender: &mut In6Addr,
                               daemon.addrbuff,
                               46);
                     if daemon.options[(43   libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                   ).wrapping_mul(8                                                             libc::c_int                                                      ))
+                                                                                                                   ).wrapping_mul(8                                                                                                                   ))
                                                      ] &
                            (1) <<
                                (43                       ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                               ).wrapping_mul(8                         libc::c_int                  ))
+                                                                               ).wrapping_mul(8                                           ))
                            == 0 {
                         my_syslog((3) << 3 |
                                       6,

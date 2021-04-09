@@ -29,7 +29,7 @@ use winapi::um::ws2tcpip::inet_pton;
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /* define this to get FACILITYNAMES */
-// static mut mem_recover: libc::c_int = 0 as libc::c_int;
+// static mut mem_recover:  = 0 as ;
 // static mut mem_jmp: jmp_buf =
 //     [__jmp_buf_tag{__jmpbuf: [0; 8],
 //                    __mask_was_saved: 0,
@@ -572,7 +572,7 @@ OptionUsage{ opt: 360 , rept: 61 ,flagdesc: String::from(""), desc:  String::fro
    --dhcp-option=3," string"
    has six.
 */
-pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1bF:,.");
+pub static META: String = String::from("123456 \x08\t\n78\r90abcdefABCDE\x1bF:,.");
 
  fn hide_meta(mut c: libc::c_char) -> libc::c_char {
     let mut i: u32 = 0;
@@ -609,7 +609,7 @@ pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1b
 //     let mut ret: *mut libc::c_void = 0 as *mut libc::c_void;
 //     if mem_recover != 0 {
 //         ret = whine_malloc(size);
-//         if ret.is_null() { longjmp(mem_jmp.as_mut_ptr(), 1 as libc::c_int); }
+//         if ret.is_null() { longjmp(mem_jmp.as_mut_ptr(), 1 as ); }
 //     } else { ret = safe_malloc(size) }
 //     return ret;
 // }
@@ -651,20 +651,20 @@ pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1b
 }
 
 //  fn atoi_check(mut a: *mut libc::c_char,
-//                                 mut res: *mut libc::c_int) -> libc::c_int {
+//                                 mut res: *mut ) ->  {
 //     let mut p: *mut libc::c_char = 0 as *mut libc::c_char;
-//     if a.is_null() { return 0 as libc::c_int }
+//     if a.is_null() { return 0 as  }
 //     unhide_metas(a);
 //     p = a;
 //     while *p != 0 {
-//         if (*p as libc::c_int) < '0' as i32 || *p as libc::c_int > '9' as i32
+//         if (*p as ) < '0' as i32 || *p as  > '9' as i32
 //            {
-//             return 0 as libc::c_int
+//             return 0 as
 //         }
 //         p = p.offset(1)
 //     }
 //     *res = atoi(a);
-//     return 1 as libc::c_int;
+//     return 1 as ;
 // }
 
 //
@@ -676,7 +676,7 @@ pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1b
      r.len = len.wrapping_add(1);
      // r.txt = len;
      // TODO: copy value
-     //memcpy(r.txt.offset(1 as libc::c_int as isize), txt, len);
+     //memcpy(r.txt.offset(1 as  as ), txt, len);
      r.stat = stat_0;
      r.name = name.clone();
      // r.next = (*dnsmasq_daemon).txt;
@@ -686,48 +686,48 @@ pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1b
 
 // pub fn do_usage() {
 //     let mut buff: [libc::c_char; 100] = [0; 100];
-//     let mut i: libc::c_int = 0;
-//     let mut j: libc::c_int = 0;
+//     let mut i:  = 0;
+//     let mut j:  = 0;
 //     let mut tab: [TabEntryA; 6] =
 //         [{
 //              let mut init =
-//                  TabEntryA{handle: '$', val: 150 as libc::c_int,};
+//                  TabEntryA{handle: '$', val: 150 as ,};
 //              init
 //          },
 //          {
 //              let mut init =
-//                  TabEntryA{handle: '*', val: 4096 as libc::c_int,};
+//                  TabEntryA{handle: '*', val: 4096 as ,};
 //              init
 //          },
 //          {
 //              let mut init =
-//                  TabEntryA{handle: '&', val: 1000 as libc::c_int,};
+//                  TabEntryA{handle: '&', val: 1000 as ,};
 //              init
 //          },
 //          {
 //              let mut init =
-//                  TabEntryA{handle: '!', val: 150 as libc::c_int,};
+//                  TabEntryA{handle: '!', val: 150 as ,};
 //              init
 //          },
 //          {
 //              let mut init =
-//                  TabEntryA{handle: '#', val: 50 as libc::c_int,};
+//                  TabEntryA{handle: '#', val: 50 as ,};
 //              init
 //          },
 //          {
 //              let mut init =
-//                  TabEntryA{handle: '\u{0}', val: 0 as libc::c_int,};
+//                  TabEntryA{handle: '\u{0}', val: 0 as ,};
 //              init
 //          }];
 //     printf("Usage: dnsmasq [options]\n\n" as *const u8 as
 //                *const libc::c_char);
 //     printf("Valid options are:\n" as *const u8 as *const libc::c_char);
-//     i = 0 as libc::c_int;
-//     while usage[i as usize].opt != 0 as libc::c_int {
+//     i = 0 as ;
+//     while usage[i as usize].opt != 0 as  {
 //         let mut desc: *mut libc::c_char = usage[i as usize].flagdesc;
 //         let mut eq: *mut libc::c_char =
 //             "=" as *const u8 as *const libc::c_char as *mut libc::c_char;
-//         if desc.is_null() || *desc as libc::c_int == '[' as i32 {
+//         if desc.is_null() || *desc as  == '[' as i32 {
 //             eq =
 //                 "" as *const u8 as *const libc::c_char as
 //                     *mut libc::c_char
@@ -737,12 +737,12 @@ pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1b
 //                 "" as *const u8 as *const libc::c_char as
 //                     *mut libc::c_char
 //         }
-//         j = 0 as libc::c_int;
+//         j = 0 as ;
 //         while !opts[j as usize].name.is_null() {
 //             if opts[j as usize].val == usage[i as usize].opt { break ; }
 //             j += 1
 //         }
-//         if usage[i as usize].opt < 256 as libc::c_int {
+//         if usage[i as usize].opt < 256 as  {
 //             sprintf(buff.as_mut_ptr(),
 //                     "-%c, " as *const u8 as *const libc::c_char,
 //                     usage[i as usize].opt);
@@ -750,17 +750,17 @@ pub static META: String = String::from("\x00123456 \x08\t\n78\r90abcdefABCDE\x1b
 //             sprintf(buff.as_mut_ptr(),
 //                     "    " as *const u8 as *const libc::c_char);
 //         }
-//         sprintf(buff.as_mut_ptr().offset(4 as libc::c_int as isize),
+//         sprintf(buff.as_mut_ptr().offset(4 as  as ),
 //                 "--%s%s%s" as *const u8 as *const libc::c_char,
 //                 opts[j as usize].name, eq, desc);
 //         printf("%-55.55s" as *const u8 as *const libc::c_char,
 //                buff.as_mut_ptr());
 //         if !usage[i as usize].arg.is_null() {
 //             strcpy(buff.as_mut_ptr(), usage[i as usize].arg);
-//             j = 0 as libc::c_int;
+//             j = 0 as ;
 //             while tab[j as usize].handle != 0 {
-//                 if tab[j as usize].handle as libc::c_int ==
-//                        *usage[i as usize].arg as libc::c_int {
+//                 if tab[j as usize].handle as  ==
+//                        *usage[i as usize].arg as  {
 //                     sprintf(buff.as_mut_ptr(),
 //                             "%d" as *const u8 as *const libc::c_char,
 //                             tab[j as usize].val);
@@ -899,7 +899,7 @@ pub fn add_rev4(daemon: &mut DnsmasqDaemon,
             p =
                 p.offset(sprintf(p,
                                  "%u."                                *const libc::c_char,
-                                 a & 0xff)                       isize);
+                                 a & 0xff)                       );
             current_block_8 = 643824972125085941;
         }
         24 => { current_block_8 = 643824972125085941; }
@@ -919,7 +919,7 @@ pub fn add_rev4(daemon: &mut DnsmasqDaemon,
                 p.offset(sprintf(p,
                                  "%d."                                *const libc::c_char,
                                  a >> 8 &
-                                     0xff)                       isize);
+                                     0xff)                       );
             current_block_8 = 17981750616475279043;
         }
         _ => { }
@@ -932,7 +932,7 @@ pub fn add_rev4(daemon: &mut DnsmasqDaemon,
                 p.offset(sprintf(p,
                                  "%d."                                *const libc::c_char,
                                  a >> 16 &
-                                     0xff)                       isize)
+                                     0xff)                       )
         }
         _ => { }
     }
@@ -940,7 +940,7 @@ pub fn add_rev4(daemon: &mut DnsmasqDaemon,
     p =
         p.offset(sprintf(p, "%d." ,
                          a >> 24 &
-                             0xff)               isize); /* strlen("32*<n.>ip6.arpa")+1 */
+                             0xff)               ); /* strlen("32*<n.>ip6.arpa")+1 */
     p =
         p.offset(sprintf(p,
                          "in-addr.arpa"                        *const libc::c_char));
@@ -1050,10 +1050,10 @@ fn dhcp_tags(mut arg: &mut String)
 //         }
 //         dhcp_netid_list_free((*config).netid);
 //         dhcp_netid_free((*config).filter);
-//         if (*config).flags & 2 as libc::c_int as libc::c_uint != 0 {
+//         if (*config).flags & 2 as  as libc::c_uint != 0 {
 //             free((*config).clid as *mut libc::c_void);
 //         }
-//         if (*config).flags & 4096 as libc::c_int as libc::c_uint != 0 {
+//         if (*config).flags & 4096 as  as libc::c_uint != 0 {
 //             let mut addr: AddrList = 0 as *mut AddrList;
 //             let mut tmp_0: AddrList = 0 as *mut AddrList;
 //             addr = (*config).addr6;
@@ -1077,7 +1077,7 @@ fn dhcp_tags(mut arg: &mut String)
 // }
 
 //  fn dhcp_opt_free(mut opt: *mut DhcpOpt) {
-//     if (*opt).flags & 256 as libc::c_int != 0 {
+//     if (*opt).flags & 256 as  != 0 {
 //         free((*opt).u.vendor_class as *mut libc::c_void);
 //     }
 //     dhcp_netid_free((*opt).netid);
@@ -1255,7 +1255,7 @@ fn dhcp_tags(mut arg: &mut String)
                         } else if !(c >= '0' as i32 &&
                                         c <= '9' as i32) {
                             is_addr = 0;
-                            if cp.offset(1)                             libc::c_int == 0 &&
+                            if cp.offset(1)                              == 0 &&
                                    is_dec != 0 &&
                                    (c == 'b' as i32 ||
                                         c == 's' as i32 ||
@@ -1331,9 +1331,9 @@ fn dhcp_tags(mut arg: &mut String)
                                 let mut fac: i32 = 1;
                                 let mut current_block_105: u64;
                                 match *comma.offset(strlen(comma).wrapping_sub(1
-                                                                                                                  libc::c_int
+
                                                                                                            )
-                                                       )                                    libc::c_int {
+                                                       )                                     {
                                     119 | 87 => {
                                         fac *= 7;
                                         current_block_105 =
@@ -1395,7 +1395,7 @@ fn dhcp_tags(mut arg: &mut String)
                                     /* fall through */
                                     {
                                         *comma.offset(strlen(comma).wrapping_sub(1
-                                                                                                                      libc::c_int
+
                                                                                                                )
                                                          ) =
                                             0
@@ -1503,7 +1503,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                &mut in_0*const libc::c_void,
                                                4libc::c_ulong);
                                         op =
-                                            op.offset(4       isize)
+                                            op.offset(4       )
                                     } else {
                                         let mut p: mut Vec<u8> =
                                             &mut in_0                                          mut Vec<u8>;
@@ -1549,7 +1549,7 @@ fn dhcp_tags(mut arg: &mut String)
                                     _ => {
                                         new.len =
                                             op.wrapping_offset_from(new.val)
-                                                                                         libc::c_int;
+                                                                                         ;
                                         current_block = 15439134456549723682;
                                     }
                                 }
@@ -1577,11 +1577,11 @@ fn dhcp_tags(mut arg: &mut String)
                                            1
                                            &&
                                            cp.offset(strlen(cp).wrapping_sub(1
-                                                                                                                libc::c_int
+
                                                                                                          )
-                                                         )                                         libc::c_int == ']' as i32 {
+                                                         )                                          == ']' as i32 {
                                         cp.offset(strlen(cp).wrapping_sub(1
-                                                                                                          libc::c_int
+
                                                                                                    )
                                                       ) =
                                             0
@@ -1590,7 +1590,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                  op_0) !=
                                            0 {
                                         op_0 =
-                                            op_0.offset(16         isize)
+                                            op_0.offset(16         )
                                     } else {
                                         strcpy(errstr,
                                                "bad IPv6 address"*const u8*const libc::c_char);
@@ -1603,7 +1603,7 @@ fn dhcp_tags(mut arg: &mut String)
                                     _ => {
                                         new.len =
                                             op_0.wrapping_offset_from(new.val)
-                                                                                         libc::c_int;
+                                                                                         ;
                                         current_block = 15439134456549723682;
                                     }
                                 }
@@ -1666,7 +1666,7 @@ fn dhcp_tags(mut arg: &mut String)
                                             } else {
                                                 domlen =
                                                     strlen(dom).wrapping_add(2
-                                                                                                              libc::c_int
+
                                                                                                        )
                                             }
                                         }
@@ -1732,7 +1732,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                             (r.wrapping_offset_from(p_0)
                                                                               i32
                                                                  |
-                                                                 0xc000                  libc::c_int
+                                                                 0xc000
                                                                                       i32)
                                                                ;
                                                         let mut t_cp:
@@ -1741,14 +1741,14 @@ fn dhcp_tags(mut arg: &mut String)
                                                         let fresh21 = t_cp;
                                                         t_cp = t_cp.offset(1);
                                                         *fresh21 =
-                                                            (t_s              libc::c_int
+                                                            (t_s
                                                                  >>
-                                                                 8                  libc::c_int)
+                                                                 8                  )
                                                                             libc::c_uchar;
                                                         *t_cp =
                                                             t_s             libc::c_uchar;
                                                         tail =
-                                                            tail.offset(2                         libc::c_int
+                                                            tail.offset(2
                                                               );
                                                         newlen =
                                                             tail.wrapping_offset_from(p_0)
@@ -1756,16 +1756,16 @@ fn dhcp_tags(mut arg: &mut String)
                                                         break 's_1219 ;
                                                     } else {
                                                         r =
-                                                            r.offset((*r                       libc::c_int
+                                                            r.offset((*r
                                                                           +
-                                                                          1                           libc::c_int)
+                                                                          1                           )
                                                         )
                                                     }
                                                 }
                                                 tail =
-                                                    tail.offset((*tail                  libc::c_int
+                                                    tail.offset((*tail
                                                                      +
-                                                                     1                      libc::c_int)
+                                                                     1                      )
                                                                    )
                                             }
                                         len = newlen;
@@ -1779,7 +1779,7 @@ fn dhcp_tags(mut arg: &mut String)
                                             if new.opt ==
                                                    120 &&
                                                    !m.is_null() {
-                                                *m.offset(0           isize) =
+                                                *m.offset(0           ) =
                                                     0     libc::c_uchar
                                             }
                                             new.len =
@@ -1803,14 +1803,14 @@ fn dhcp_tags(mut arg: &mut String)
                                         0;
                                     i_0 = 0;
                                     while *comma.offset(i_0) != 0 {
-                                        if *comma.offset(i_0)                                         libc::c_int == ',' as i32 {
+                                        if *comma.offset(i_0)                                          == ',' as i32 {
                                             commas += 1
                                         }
                                         i_0 += 1
                                     }
                                     newp_0 =
                                         opt_malloc(strlen(comma).wrapping_add((2
-                                                                                                                  libc::c_int
+
                                                                                    *
                                                                                    commas)
                                                                                                          ))
@@ -1833,12 +1833,12 @@ fn dhcp_tags(mut arg: &mut String)
                                                  8)                                          libc::c_uchar;
                                         *t_cp_0 = t_s_0;
                                         p_1 =
-                                            p_1.offset(2        isize);
+                                            p_1.offset(2        );
                                         memcpy(p_1,
                                                arg,
                                                len_0);
                                         p_1 =
-                                            p_1.offset(len_0        isize);
+                                            p_1.offset(len_0        );
                                         arg = comma;
                                         comma = split(arg)
                                     }
@@ -1887,7 +1887,7 @@ fn dhcp_tags(mut arg: &mut String)
                                             newp_1 =
                                                 opt_malloc(((len_1 +
                                                                  header_size_0)
-                                                                     ).wrapping_add(strlen(dom_0)).wrapping_add(2                                                                       libc::c_int                                                                ))
+                                                                     ).wrapping_add(strlen(dom_0)).wrapping_add(2                                                                                                                                       ))
                                                    ;
                                             if !p_2.is_null() {
                                                 memcpy(newp_1       Vec<u8>,
@@ -1922,7 +1922,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                 *t_cp_1 =
                                                     t_s_1;
                                                 q_0 =
-                                                    q_0.offset(2                libc::c_int
+                                                    q_0.offset(2
                                                                   );
                                                 let mut t_s_2: u16 =
                                                     (end.wrapping_offset_from(q_0)
@@ -1939,12 +1939,12 @@ fn dhcp_tags(mut arg: &mut String)
                                                 *t_cp_2 =
                                                     t_s_2;
                                                 q_0 =
-                                                    q_0.offset(2                libc::c_int
+                                                    q_0.offset(2
                                                                   )
                                             }
                                             len_1 =
                                                 end.wrapping_offset_from(p_2)
-                                                    libc::c_int;
+                                                    ;
                                             free(dom_0);
                                             arg = comma;
                                             comma = split(arg)
@@ -2034,23 +2034,23 @@ fn dhcp_tags(mut arg: &mut String)
 #[no_mangle]
 pub  fn set_option_bool(mut opt: u32) {
     daemon.options[(opt).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                             ).wrapping_mul(8                       libc::c_int                ))
+                                                                             ).wrapping_mul(8                                       ))
                                   ] |=
         (1) <<
             (opt    ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                   ).wrapping_mul(8
-                                                                                                                libc::c_int
+
                                                                                                          ));
 }
 #[no_mangle]
 pub  fn reset_option_bool(mut opt: u32) {
     daemon.options[(opt).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                             ).wrapping_mul(8                       libc::c_int                ))
+                                                                             ).wrapping_mul(8                                       ))
                                   ] &=
         !((1) <<
               (opt).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                              ).wrapping_mul(8
-                                                                                                                    libc::c_int
+
                                                                                                              )));
 }
  fn server_list_free(mut list: Server) {
@@ -2143,14 +2143,14 @@ pub  fn reset_option_bool(mut opt: u32) {
                             opt_malloc(::std::mem::size_of::<list>()                              ) ;
                         if *arg == '*' as i32 {
                             /* "*" with no suffix is a no-op */
-                            if *arg.offset(1)                             libc::c_int == 0 {
+                            if *arg.offset(1)                              == 0 {
                                 free(li);
                             } else {
                                 li.next = match_suffix;
                                 match_suffix = li;
                                 /* Have to copy: buffer is overwritten */
                                 li.name =
-                                    opt_string_alloc(arg.offset(1                 libc::c_int
+                                    opt_string_alloc(arg.offset(1
                                                                    ))
                             }
                         } else {
@@ -2232,7 +2232,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                     if !li.is_null() { continue ; }
                     path =
                         opt_malloc(strlen(directory).wrapping_add(len).wrapping_add(2
-                                                                                                                            libc::c_int
+
                                                                                                                      ))
                             ;
                     strcpy(path, directory);
@@ -2768,10 +2768,10 @@ pub  fn reset_option_bool(mut opt: u32) {
                                                       msize !=
                                                           8 &&
                                                           msize !=
-                                                              16               libc::c_int
+                                                              16
                                                           &&
                                                           msize !=
-                                                              24               libc::c_int
+                                                              24
                                          {
                                             strcpy(errstr, gen_err);
                                             free(new_7);
@@ -2833,7 +2833,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                                                            >
                                                            (63
                                                                 -
-                                                                46                 libc::c_int)
+                                                                46                 )
                                                                           libc::c_ulong {
                                                     strcpy(errstr,
                                                            "bad prefix"
@@ -2951,7 +2951,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                                                    '*' as i32);
                                        !star.is_null()
                                    } &&
-                                   *star.offset(1)                                 libc::c_int == 0 {
+                                   *star.offset(1)                                  == 0 {
                                 *star = 0;
                                 new_7.indexed = 1
                             }
@@ -3574,13 +3574,13 @@ pub  fn reset_option_bool(mut opt: u32) {
                        == 0 {
                     new_14.flags =
                         (new_14.flags |
-                             (1) << 0)                      libc::c_int
+                             (1) << 0)
                 } else if strcmp(a[1 ],
                                  "proxy"                                *const libc::c_char) == 0
                  {
                     new_14.flags =
                         (new_14.flags |
-                             (1) << 3)                      libc::c_int
+                             (1) << 3)
                 } else if inet_pton(2,
                                     a[1 ],
                                     &mut new_14.end                                 Vec<u8>) == 0 {
@@ -3603,7 +3603,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                                  &mut new_14.netmask                              Vec<u8>) > 0 {
                     new_14.flags =
                         (new_14.flags |
-                             (1) << 1)                      libc::c_int;
+                             (1) << 1)                      ;
                     leasepos = 3;
                     if is_same_net4(new_14.start, new_14.end,
                                     new_14.netmask) == 0 {
@@ -3622,7 +3622,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                                0 {
                         new_14.flags =
                             (new_14.flags |
-                                 (1) << 2)                          libc::c_int;
+                                 (1) << 2)                          ;
                         leasepos = 4
                     }
                 }
@@ -3656,7 +3656,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                                       0 {
                         new_14.flags =
                             (new_14.flags |
-                                 (1) << 13)                          libc::c_int
+                                 (1) << 13)
                     } else if strcmp(a[leasepos ],
                                      "ra-names") ==
                                   0 {
@@ -3688,14 +3688,14 @@ pub  fn reset_option_bool(mut opt: u32) {
                                   0 {
                         new_14.flags =
                             (new_14.flags |
-                                 (1) << 18)                          libc::c_int
+                                 (1) << 18)
                     } else if leasepos == 1 &&
                                   inet_pton(10,
                                             a[leasepos ],
                                             &mut new_14.end6                                          &mut In6Addr                                         Vec<u8>) != 0 {
                         new_14.flags =
                             (new_14.flags |
-                                 (1) << 8)                          libc::c_int
+                                 (1) << 8)
                     } else {
                         if !(strstr(a[leasepos ],
                                     "constructor:"                                   *const libc::c_char) ==
@@ -3703,11 +3703,11 @@ pub  fn reset_option_bool(mut opt: u32) {
                             break ;
                         }
                         new_14.template_interface =
-                            opt_string_alloc(a[leaseposusize].offset(12                  libc::c_int
+                            opt_string_alloc(a[leaseposusize].offset(12
                                                 ));
                         new_14.flags =
                             (new_14.flags |
-                                 (1) << 10)                          libc::c_int
+                                 (1) << 10)
                     }
                     leasepos += 1
                 }
@@ -3772,7 +3772,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                              __a.__in6_u.__u6_addr32[2         usize] ==
                                  0 &&
                              __a.__in6_u.__u6_addr32[3         usize] ==
-                                 0)                      libc::c_int
+                                 0)
                     }) != 0 &&
                        new_14.flags &
                            (1) << 10 == 0 {
@@ -3817,21 +3817,21 @@ pub  fn reset_option_bool(mut opt: u32) {
                     new_14.lease_time = 0xffffffff;
                     new_14.flags =
                         (new_14.flags |
-                             (1) << 19)                      libc::c_int
+                             (1) << 19)
                 } else if strcmp(a[leasepos ],
                                  "deprecated"                                *const libc::c_char) == 0
                  {
                     new_14.flags =
                         (new_14.flags |
-                             (1) << 9)                      libc::c_int
+                             (1) << 9)
                 } else {
                     let mut fac: i32 = 1;
                     if strlen(a[leasepos ]) >
                            0 {
                         let mut current_block_1049: u64;
-                        match *a[leasepos                               usize].offset(strlen(a[leasepos             usize]).wrapping_sub(1 libc::c_int
+                        match *a[leasepos                               usize].offset(strlen(a[leasepos             usize]).wrapping_sub(1
                                                                                                                        )
-                                                      )                            libc::c_int {
+                                                      )                             {
                             119 | 87 => {
                                 fac *= 7;
                                 current_block_1049 = 9610247714461258384;
@@ -3881,7 +3881,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                             8582955123963743225 =>
                             /* fall through */
                             {
-                                *a[leasepos                                 usize].offset(strlen(a[leasepos               usize]).wrapping_sub(1     libc::c_int
+                                *a[leasepos                                 usize].offset(strlen(a[leasepos               usize]).wrapping_sub(1
                                                                                                                            )
                                                         ) =
                                     0
@@ -3907,7 +3907,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                             (atoi(a[leasepos ]) * fac)                          libc::c_uint;
                         new_14.flags =
                             (new_14.flags |
-                                 (1) << 19)                          libc::c_int;
+                                 (1) << 19)                          ;
                         /* Leases of a minute or less confuse
 		       some clients, notably Apple's */
                         if new_14.lease_time <
@@ -3942,9 +3942,9 @@ pub  fn reset_option_bool(mut opt: u32) {
                     /* ethernet address, netid or binary CLID */
                     if (*arg.offset(0)
                             == 'i' as i32 ||
-                            *arg.offset(0)                          libc::c_int == 'I' as i32) &&
-                           (*arg.offset(1)                          libc::c_int == 'd' as i32 ||
-                                *arg.offset(1)                              libc::c_int == 'D' as i32) &&
+                            *arg.offset(0)                           == 'I' as i32) &&
+                           (*arg.offset(1)                           == 'd' as i32 ||
+                                *arg.offset(1)                               == 'D' as i32) &&
                            *arg.offset(2) == ':' as i32 {
                         if *arg.offset(3) == '*' as i32 {
                             new_15.flags |=
@@ -3990,15 +3990,15 @@ pub  fn reset_option_bool(mut opt: u32) {
                         newlist_0.next = new_15.netid;
                         new_15.netid = newlist_0;
                         newlist_0.list =
-                            dhcp_netid_create(arg.offset(4          isize),
+                            dhcp_netid_create(arg.offset(4          ),
                                               0 )
                     } else if strstr(arg,
                                      "tag:") == arg {
                         new_15.filter =
-                            dhcp_netid_create(arg.offset(4          isize),
+                            dhcp_netid_create(arg.offset(4          ),
                                               new_15.filter)
-                    } else if *arg.offset(0)                            libc::c_int == '[' as i32 &&
-                                  *arg.offset(strlen(arg).wrapping_sub(1                        libc::c_int
+                    } else if *arg.offset(0)                             == '[' as i32 &&
+                                  *arg.offset(strlen(arg).wrapping_sub(1
                                                                                            )
                                                  ) ==
                                       ']' as i32 {
@@ -4037,7 +4037,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                                    ((1 as u64) <<
                                         128 -
                                             new_addr.prefixlen).wrapping_sub(1
-                                                                                                                    libc::c_int
+
                                                                                                                     libc::c_ulonglong)
                                        & addrpart_0 !=
                                        0long {
@@ -4050,7 +4050,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                         }
                         i = 0;
                         while i < 8 {
-                            if in6.__in6_u.__u6_addr8[i ]                             libc::c_int != 0 {
+                            if in6.__in6_u.__u6_addr8[i ]                              != 0 {
                                 break ;
                             }
                             i += 1
@@ -4113,7 +4113,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                     let mut isdig: i32 = 0;
                     if strlen(arg) > 1 {
                         lastp =
-                            arg.offset(strlen(arg)                                     isize).offset(-(1            isize));
+                            arg.offset(strlen(arg)                                     ).offset(-(1            ));
                         last = *lastp;
                         let mut current_block_1169: u64;
                         match last {
@@ -4177,7 +4177,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                     while cp_1 != 0 {
                         if *(*__ctype_b_loc()).offset(cp_1
                           ) &
-                               _ISDIGIT                              libc::c_int != 0 {
+                               _ISDIGIT                               != 0 {
                             isdig = 1
                         } else if cp_1 != ' ' as i32 {
                             break ;
@@ -4255,7 +4255,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                     break ;
                 } else {
                     let mut newtag: DhcpNetId =
-                        dhcp_netid_create(arg.offset(4      isize),
+                        dhcp_netid_create(arg.offset(4      ),
                                           0 );
                     if strstr(arg,
                               "set:" )
@@ -4312,8 +4312,8 @@ pub  fn reset_option_bool(mut opt: u32) {
             new_17.wildcard = 0;
             new_17.netid = id;
             id.net = opt_string_alloc(set_prefix(arg));
-            if *comma.offset((len_2 - 1)                           isize) == '*' as i32 {
-                *comma.offset((len_2 - 1)                            isize) = 0;
+            if *comma.offset((len_2 - 1)                           ) == '*' as i32 {
+                *comma.offset((len_2 - 1)                            ) = 0;
                 new_17.wildcard = 1
             }
             new_17.name = opt_string_alloc(comma);
@@ -4882,9 +4882,9 @@ pub  fn reset_option_bool(mut opt: u32) {
                 new_31.ttl = ttl_0;
                 arg = arg.offset((arglen + 1));
                 while *arg != 0 &&
-                          *(*__ctype_b_loc()).offset(*arg      isize)
+                          *(*__ctype_b_loc()).offset(*arg      )
                               &
-                              _ISSPACE                             libc::c_int != 0 {
+                              _ISSPACE                              != 0 {
                     arg = arg.offset(1)
                 }
             }
@@ -5050,7 +5050,7 @@ pub  fn reset_option_bool(mut opt: u32) {
             unhide_metas(tag);
             unhide_metas(value);
             new_35.len =
-                strlen(tag).wrapping_add(strlen(value)).wrapping_add(2                      libc::c_int
+                strlen(tag).wrapping_add(strlen(value)).wrapping_add(2
                                                                                        )
                     ;
             new_35.txt =
@@ -5097,8 +5097,8 @@ pub  fn reset_option_bool(mut opt: u32) {
                     strlen(comma)
                 } else { 0 };
             len_4 =
-                (len_4        ).wrapping_add(len_4.wrapping_div(255                     libc::c_int
-                                                                                     ).wrapping_add(1                               libc::c_int                        ))
+                (len_4        ).wrapping_add(len_4.wrapping_div(255
+                                                                                     ).wrapping_add(1                                                       ))
                      ;
             p_0 = opt_malloc(len_4);
             new_36.txt = p_0;
@@ -5271,7 +5271,7 @@ pub  fn reset_option_bool(mut opt: u32) {
         2926860427235594157 =>
         /* --ignore-address */
         {
-            let mut addr_0: NetAddress = Default::default(); /* error */
+            let mut addr_0: NetAddress = NetAddress:new(); /* error */
             unhide_metas(arg);
             if !arg.is_null() &&
                    inet_pton(2, arg, &mut addr_0)
@@ -5539,7 +5539,7 @@ pub  fn reset_option_bool(mut opt: u32) {
                 comma = split(arg);
                 list_1 =
                     dhcp_netid_create(if is_tag_prefix(arg) != 0 {
-                                          arg.offset(4      isize)
+                                          arg.offset(4      )
                                       } else { arg }, list_1);
                 arg = comma
             }
@@ -5580,7 +5580,7 @@ pub  fn reset_option_bool(mut opt: u32) {
             p = comma;
             while *p != 0 {
                 if *(*__ctype_b_loc()).offsetp &
-                       _ISXDIGIT                      libc::c_int != 0 {
+                       _ISXDIGIT                       != 0 {
                     dig = 1
                 } else if *p != ':' as i32 { break ; }
                 p = p.offset(1)
@@ -5727,8 +5727,8 @@ pub  fn reset_option_bool(mut opt: u32) {
 //         }
 //         arg = 0 ;
 //         ::std::ptr::write_volatile(&mut lineno,
-//                                    ::std::ptr::read_volatile::<libc::c_int>(&lineno
-//                                                                                                             *const libc::c_int)
+//                                    ::std::ptr::read_volatile::<>(&lineno
+//                                                                                                             *const )
 //                                        + 1);
 //         errmess = 0 ;
 //         /* Implement quotes, inside quotes we allow \\ \" \n and \t
@@ -5740,34 +5740,34 @@ pub  fn reset_option_bool(mut opt: u32) {
 //             if *p == '\"' as i32 {
 //                 memmove(p,
 //                         p.offset(1)
-//                         strlen(p.offset(1)).wrapping_add(1                  libc::c_int
+//                         strlen(p.offset(1)).wrapping_add(1
 //                                                                                ));
 //                 while *p != 0 &&
 //                           *p != '\"' as i32 {
 //                     if *p == '\\' as i32 &&
 //                            !strchr("\"tnebr\\"                                  *const libc::c_char,
-//                                    *p.offset(1)                                 libc::c_int).is_null() {
+//                                    *p.offset(1)                                 ).is_null() {
 //                         if *p.offset(1)
 //                                == 't' as i32 {
 //                             *p.offset(1) =
 //                                 '\t'
-//                         } else if *p.offset(1)                                libc::c_int == 'n' as i32 {
+//                         } else if *p.offset(1)                                 == 'n' as i32 {
 //                             *p.offset(1) =
 //                                 '\n'
-//                         } else if *p.offset(1)                                libc::c_int == 'b' as i32 {
+//                         } else if *p.offset(1)                                 == 'b' as i32 {
 //                             *p.offset(1) =
 //                                 '\u{8}'
-//                         } else if *p.offset(1)                                libc::c_int == 'r' as i32 {
+//                         } else if *p.offset(1)                                 == 'r' as i32 {
 //                             *p.offset(1) =
 //                                 '\r'
-//                         } else if *p.offset(1)                                libc::c_int == 'e' as i32 {
+//                         } else if *p.offset(1)                                 == 'e' as i32 {
 //                             /* escape */
 //                             *p.offset(1) =
 //                                 '\u{1b}'
 //                         }
 //                         memmove(p,
 //                                 p.offset(1)
-//                                 strlen(p.offset(1 isize)).wrapping_add(1                          libc::c_int
+//                                 strlen(p.offset(1 )).wrapping_add(1
 //                                                                                                ));
 //                     }
 //                     *p = hide_meta(*p);
@@ -5782,11 +5782,11 @@ pub  fn reset_option_bool(mut opt: u32) {
 //                 } else {
 //                     memmove(p,
 //                             p.offset(1)
-//                             strlen(p.offset(1    )).wrapping_add(1                      libc::c_int
+//                             strlen(p.offset(1    )).wrapping_add(1
 //                                                                                        ));
 //                 }
 //             }
-//             if *(*__ctype_b_loc()).offset(*p)             libc::c_int &
+//             if *(*__ctype_b_loc()).offset(*p)              &
 //                    _ISSPACE  !=
 //                    0 {
 //                 *p = ' ' ;
@@ -6039,16 +6039,16 @@ pub  fn expand_filelist(mut list: &mut HostsFile)
                             0 ;
                         /* ignore emacs backups and dotfiles */
                         if lenfile == 0 ||
-                               ent.d_name[lenfile.wrapping_sub(1                   libc::c_int
+                               ent.d_name[lenfile.wrapping_sub(1
                                                                                  )
                                                  ] ==
                                    '~' as i32 ||
-                               ent.d_name[0 ]                             libc::c_int == '#' as i32 &&
-                                   ent.d_name[lenfile.wrapping_sub(1                       libc::c_int
+                               ent.d_name[0 ]                              == '#' as i32 &&
+                                   ent.d_name[lenfile.wrapping_sub(1
                                                                                          )
                                                      ]
                                        == '#' as i32 ||
-                               ent.d_name[0 ]                             libc::c_int == '.' as i32 {
+                               ent.d_name[0 ]                              == '.' as i32 {
                             continue ;
                         }
                         /* see if we have an existing record.
@@ -6060,9 +6060,9 @@ pub  fn expand_filelist(mut list: &mut HostsFile)
                             if lendir < strlen(ah1.fname) &&
                                    strstr(ah1.fname, ah.fname) ==
                                        ah1.fname &&
-                                   *ah1.fname.offset(lendir)                                 libc::c_int == '/' as i32 &&
-                                   strcmp(ah1.fname.offset(lendir               isize).offset(1
-                                                                                                                    libc::c_int
+                                   *ah1.fname.offset(lendir)                                  == '/' as i32 &&
+                                   strcmp(ah1.fname.offset(lendir               ).offset(1
+
                                                                               ),
                                           ent.d_name.as_mut_ptr()) ==
                                        0 {
@@ -6077,7 +6077,7 @@ pub  fn expand_filelist(mut list: &mut HostsFile)
                                                 )                              HostsFile;
                             if ah1.is_null() { continue ; }
                             path =
-                                whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2     libc::c_int
+                                whine_malloc(lendir.wrapping_add(lenfile).wrapping_add(2
                                                                                                                            ))
                                     ;
                             if path.is_null() {
@@ -6494,11 +6494,11 @@ pub  fn read_opts(mut argc: i32,
     }
     /* only one of these need be specified: the other defaults to the host-name */
     if daemon.options[(10).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (10).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 || !daemon.mxnames.is_null() ||
            !daemon.mxtarget.is_null() {
@@ -6517,11 +6517,11 @@ pub  fn read_opts(mut argc: i32,
         }
         if (!daemon.mxtarget.is_null() ||
                 daemon.options[(10).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                     ).wrapping_mul(8                                               libc::c_int                                        ))
+                                                                                                     ).wrapping_mul(8                                                                                       ))
                                               ] &
                     (1) <<
                         (10).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                 ).wrapping_mul(8           libc::c_int    ))
+                                                                 ).wrapping_mul(8               ))
                     != 0) && mx.is_null() {
             mx =
                 opt_malloc(::std::mem::size_of::<MxSrvRecord>()) ;
@@ -6543,41 +6543,41 @@ pub  fn read_opts(mut argc: i32,
         }
     }
     if daemon.options[(8).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (8).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 && !daemon.resolv_files.is_null() &&
            !(*daemon.resolv_files).next.is_null() &&
            daemon.options[(5 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (5 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         die("only one resolv.conf file allowed in no-poll mode."          *const u8 ,
             0 , 1);
     }
     if daemon.options[(15).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (15).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         let mut line: &mut String = 0 ;
         let mut f: FILE = 0 ;
         if daemon.options[(8 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (8 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 || daemon.resolv_files.is_null() ||
                !(*daemon.resolv_files).next.is_null() {

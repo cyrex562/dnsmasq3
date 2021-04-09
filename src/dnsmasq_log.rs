@@ -327,17 +327,17 @@ pub unsafe extern "C" fn my_syslog(mut priority: i32,
         /* Omit timestamp for default daemontools situation */
         if log_stderr == 0 ||
                dnsmasq_daemon.options[(16                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (16 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    == 0 {
             p =
                 p.offset(sprintf(p,
                                  "%.15s "                                *const libc::c_char,
                                  ctime(&mut time_now).offset(4
-                                                                ))                       isize)
+                                                                ))                       )
         } /* include zero-terminator */
         p =
             p.offset(sprintf(p,

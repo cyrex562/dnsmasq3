@@ -9,20 +9,24 @@ use crate::poll::poll_check;
 use crate::slack::{ack, errmess, oackmess, datamess};
 use crate::helper::queue_tftp;
 use std::time;
+use std::mem::MaybeUninit;
+use socket2::SockAddr;
 
 
-pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
+pub  fn tftp_request(daemon: &mut DnsmasqDaemon,
+                     mut listen: Listener,
+                     mut now: time::Instant) {
     let mut len: isize = 0;
-    let mut packet: &mut String = daemon.packet;
+    let mut packet: &mut Vec<u8> = &mut daemon.packet;
     let mut filename: String = String::new();
     let mut mode: String = String::new();
     let mut p: String = String::new();
     let mut end: String = String::new();
     let mut opt: String = String::new();
-    let mut addr: NetAddress = Default::default();
-    let mut peer: NetAddress = Default::default();
-    let mut msg: MsgHdr = Default::default();
-    let mut ifr: IfReq = Default::default();
+    let mut addr: NetAddress = NetAddress::new();
+    let mut peer: NetAddress = NetAddress::new();
+    // let mut msg: MsgHdr = Default::default();
+    let mut ifr: IfReq = IfReq::new();
     let mut is_err = true;
     let mut if_index: i32 = 0;
     let mut mtu: u16 = 0;
@@ -33,41 +37,45 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
     let mut mtuflag: i32 = 0;
     let mut namebuff: String = String::new();
     let mut name: String = String::new() ;
-    let mut prefix: String = daemon.tftp_prefix;
+    let mut prefix: &mut String = &mut daemon.tftp_prefix;
     let mut pref: TftpPrefix = Default::default();
-    let mut addra: NetAddress = Default::default();
+    let mut addra: NetAddress = NetAddress:new();
     let mut family: i32 = listen.addr.sa.sa_family;
     /* Can always get recvd interface for IPv6 */
     let mut check_dest: bool = (daemon.options[13] == 0 || family == 10);
     let mut control_u: C2rustUnnamed14 = Default::default();
-    msg.msg_controllen =
-        ::std::mem::size_of::<C2rustUnnamed14>();
-    msg.msg_control = control_u.control.as_mut_ptr();
-    msg.msg_flags = 0;
-    msg.msg_name = peer;
-    msg.msg_namelen = ::std::mem::size_of::<NetAddress>();
-    msg.msg_iov = &mut iov;
-    msg.msg_iovlen = 1 ;
-    iov.iov_base = packet;
-    iov.iov_len = daemon.packet_buff_sz ;
+    // msg.msg_controllen =
+    //     ::std::mem::size_of::<C2rustUnnamed14>();
+    // msg.msg_control = control_u.control.as_mut_ptr();
+    // msg.msg_flags = 0;
+    // msg.msg_name = peer;
+    // msg.msg_namelen = ::std::mem::size_of::<NetAddress>();
     /* we overwrote the buffer... */
-    daemon.srv_save = 0;
-    len = recvmsg(listen.tftpfd, &mut msg, 0);
-    if len < 2 { return }
+    daemon.srv_save = None;
+
+    let mut recv_buf: [MaybeUninit<u8>; 0xffff] = unsafe {
+        MaybeUninit::uninit().assume_init()
+    };
+    for elem in &mut recv_buf[..] {
+        *elem = MaybeUninit::new(0);
+    }
+    let mut bytes_read: usize = 0;
+    let mut sender_addr: SockAddr = SockAddr::new();
+    (bytes_read, sender_addr) = listen.tftp_socket.recv_from(&mut recv_buf).expect("failed to read from tftp socket");
+    if bytes_read < 2 { return }
     /* Can always get recvd interface for IPv6 */
     if check_dest == false {
         if !listen.iface.is_null() {
             addr = (*listen.iface).addr;
             name = (*listen.iface).name;
             mtu = (*listen.iface).mtu;
-            if daemon.tftp_mtu != 0 &&
-                   daemon.tftp_mtu < mtu {
+            if daemon.tftp_mtu != 0 && daemon.tftp_mtu < mtu {
                 mtu = daemon.tftp_mtu
             }
         } else {
             /* we're listening on an address that doesn't appear on an interface,
 	     ask the kernel what the socket is bound to */
-            let mut tcp_len: usize = ::std::mem::size_of::<NetAddress>();
+            // let mut tcp_len: usize = ::std::mem::size_of::<NetAddress>();
             // if getsockname(listen.tftpfd, NetAddressArg {__NetAddress__: &mut addr   NetAddress,},
             //                &mut tcp_len) == -(1) {
             //     return
@@ -113,7 +121,7 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                 cmptr = __cmsg_nxthdr(&mut msg, cmptr)
             }
         }
-        if indextoname(listen.tftpfd, if_index, &mut namebuff) == 0
+        if indextoname(listen.tftp_socket, if_index, &mut namebuff) == 0
            {
             return
         }
@@ -136,15 +144,15 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
             if iface_check(family, &mut addra, name, 0) ==
                    0 {
                 if daemon.options[(39 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           ).wrapping_mul(8                                                     libc::c_int                                              ))
+                                                                                                           ).wrapping_mul(8                                                                                                   ))
                                                  ] &
                        (1) <<
                            (39                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                       ).wrapping_mul(8                 libc::c_int          ))
+                                                                       ).wrapping_mul(8                           ))
                        == 0 {
                     enumerate_interfaces(0);
                 }
-                if loopback_exception(listen.tftpfd, family, &mut addra,
+                if loopback_exception(listen.tftp_socket, family, &mut addra,
                                       name) == 0 &&
                        label_exception(if_index, family, &mut addra) == 0 {
                     return
@@ -162,7 +170,7 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
         }
         safe_strncpy(ifr.ifr_ifrn.ifrn_name.as_mut_ptr(), name,
                      16 );
-        if ioctl(listen.tftpfd, 0x8921,
+        if ioctl(listen.tftp_socket, 0x8921,
                  &mut ifr) != -(1) {
             mtu = ifr.ifr_ifru.ifru_mtu;
             if daemon.tftp_mtu != 0 &&
@@ -175,11 +183,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
     if mtu == 0 { mtu = daemon.tftp_mtu }
     /* data transfer via server listening socket */
     if daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (60).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         let mut tftp_cnt: i32 = 0;
@@ -233,14 +241,14 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
         return
     }
     if daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (60).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
-        transfer.sockfd = listen.tftpfd
+        transfer.sockfd = listen.tftp_socket
     } else {
         transfer.sockfd =
             socket(family, SOCK_DGRAM, 0);
@@ -265,12 +273,12 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
     prettyprint_addr(&mut peer, daemon.addrbuff);
     /* if we have a nailed-down range, iterate until we find a free one. */
     while daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                         ).wrapping_mul(8                                   libc::c_int                            ))
+                                                                                         ).wrapping_mul(8                                                               ))
                                         ] &
               (1) <<
                   (60 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                                      ).wrapping_mul(8
-                                                                                                                            libc::c_int
+
                                                                                                                      ))
               == 0 {
         if !(bind(transfer.sockfd,
@@ -279,7 +287,7 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                  setsockopt(transfer.sockfd, IPPROTO_IP,
                             10,
                             &mut mtuflag as
-                            ::std::mem::size_of::<libc::c_int>()                   ) ==
+                            ::std::mem::size_of::<>()                   ) ==
                      -(1) || fix_fd(transfer.sockfd) == 0) {
             break ;
         }
@@ -331,11 +339,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                 opt = next(&mut p, end);
                 if !opt.is_null() &&
                        daemon.options[(27   libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                   ).wrapping_mul(8                                                             libc::c_int                                                      ))
+                                                                                                                   ).wrapping_mul(8                                                                                                                   ))
                                                      ] &
                            (1) <<
                                (27                       ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                               ).wrapping_mul(8                         libc::c_int                  ))
+                                                                               ).wrapping_mul(8                                           ))
                            == 0 {
                     /* 32 bytes for IP, UDP and TFTP headers, 52 bytes for IPv6 */
                     let mut overhead: i32 =
@@ -379,11 +387,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
             if *p == '\\' as i32 {
                 *p = '/'
             } else if daemon.options[(38  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                 ).wrapping_mul(8                                                           libc::c_int                                                    ))
+                                                                                                                 ).wrapping_mul(8                                                                                                               ))
                                                     ] &
                           (1) <<
                               (38).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                             ).wrapping_mul(8                       libc::c_int                ))
+                                                                             ).wrapping_mul(8                                       ))
                           != 0 {
                 *p =
                     ({
@@ -403,7 +411,7 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                              } else { __res = tolowerp }
                          } else {
                              __res =
-                                 *(*__ctype_tolower_loc()).offset(*p                   libc::c_int
+                                 *(*__ctype_tolower_loc()).offset(*p
                                                   )
                          }
                          __res
@@ -428,11 +436,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                         ((1025 - 1)).wrapping_sub(strlen(daemon.namebuff)));
             }
             if daemon.options[(29                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (29 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    != 0 {
                 let mut oldlen: usize = strlen(daemon.namebuff);
                 let mut statbuf: stat =
@@ -468,11 +476,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                 }
             }
             if daemon.options[(56                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (56 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    != 0 {
                 let mut macaddr: mut Vec<u8> = 0;
                 let mut macbuf: [libc::c_uchar; 16] = [0; 16];
@@ -512,15 +520,15 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                              st_mtim: timespec{tv_sec: 0, tv_nsec: 0,},
                              st_ctim: timespec{tv_sec: 0, tv_nsec: 0,},
                              __glibc_reserved: [0; 3],};
-                    snprintf(daemon.namebuff.offset(oldlen_0                isize),
+                    snprintf(daemon.namebuff.offset(oldlen_0                ),
                              ((1025 - 1)                     ).wrapping_sub(oldlen_0),
                              "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x/"                           *const u8,
-                             *macaddr.offset(0)                           libc::c_int,
-                             *macaddr.offset(1)                           libc::c_int,
-                             *macaddr.offset(2)                           libc::c_int,
-                             *macaddr.offset(3)                           libc::c_int,
-                             *macaddr.offset(4)                           libc::c_int,
-                             *macaddr.offset(5)                           libc::c_int);
+                             *macaddr.offset(0)                           ,
+                             *macaddr.offset(1)                           ,
+                             *macaddr.offset(2)                           ,
+                             *macaddr.offset(3)                           ,
+                             *macaddr.offset(4)                           ,
+                             *macaddr.offset(5)                           );
                     /* remove unique-directory if it doesn't exist */
                     if stat(daemon.namebuff, &mut statbuf_0) ==
                            -(1) ||
@@ -536,7 +544,7 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
             if *filename.offset(0) ==
                    '/' as i32 {
                 if strstr(filename, daemon.namebuff) == filename {
-                    *daemon.namebuff.offset(0        isize) =
+                    *daemon.namebuff.offset(0        ) =
                         0
                 } else { filename = filename.offset(1) }
             }
@@ -558,11 +566,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
     }
     send_from(transfer.sockfd,
               (daemon.options[(60                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (60 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    == 0), packet, len , &mut peer,
               &mut addra, if_index);
     if is_err != 0 {
@@ -625,11 +633,11 @@ pub  fn tftp_request(mut listen: Listener, mut now: time::Instant) {
                     current_block = 15533630919196144218;
                 } else { current_block = 1054647088692577877; }
             } else if daemon.options[(26  libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                 ).wrapping_mul(8                                                           libc::c_int                                                    ))
+                                                                                                                 ).wrapping_mul(8                                                                                                               ))
                                                     ] &
                           (1) <<
                               (26).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                             ).wrapping_mul(8                       libc::c_int                ))
+                                                                             ).wrapping_mul(8                                       ))
                           != 0 && uid != statbuf.st_uid {
                 current_block = 15533630919196144218;
             } else { current_block = 1054647088692577877; }
@@ -695,11 +703,11 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
     let mut up: TftpTransfer;
     /* In single port mode, all packets come via port 69 and tftp_request() */
     if daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (60).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 {
         transfer = daemon.tftp_trans;
@@ -817,7 +825,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
 /* packet in daemon->packet as this is called. */
  fn handle_tftp(mut now: time::Instant,
                                  mut transfer: &mut TftpTransfer,
-                                 mut len: isize) {
+                                 mut len: ) {
     let mut mess: ack = daemon.packet ;
     if len >= ::std::mem::size_of::<ack>() {
         if __bswap_16(mess.op) == 4 &&
@@ -860,11 +868,11 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
 }
  fn free_transfer(mut transfer: &mut TftpTransfer) {
     if daemon.options[(60).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (60).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            == 0 {
         close(transfer.sockfd);
@@ -888,7 +896,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         return 0
     }
     *p =
-        p.offset(len.wrapping_add(1)                  isize);
+        p.offset(len.wrapping_add(1)                  );
     return ret;
 }
  fn sanitise(mut buf: &mut String) {
@@ -1011,11 +1019,11 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
                     }
                     /* make space and insert CR */
                     memmove(&mut *mess_0.data.as_mut_ptr().offset(i.wrapping_add(1
-                                                                                                                            libc::c_int
+
                                                                                                                      )
                                                         )
                                ,
-                            &mut *mess_0.data.as_mut_ptr().offset(i                      isize)
+                            &mut *mess_0.data.as_mut_ptr().offset(i                      )
                                ,
                             size.wrapping_sub(i.wrapping_add(1
                                                                        )));

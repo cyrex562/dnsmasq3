@@ -118,14 +118,14 @@ pub fn ra_init(mut now: time::Instant) {
                    &mut len) != 0 ||
         setsockopt(fd, IPPROTO_IPV6, 67,
                    &mut class,
-                   ::std::mem::size_of::<libc::c_int>()) == -(1) || fix_fd(fd) == 0
+                   ::std::mem::size_of::<>()) == -(1) || fix_fd(fd) == 0
         || set_ipv6pktinfo(fd) == 0 ||
         setsockopt(fd, IPPROTO_IPV6, 16,
                    &mut val,
-                   ::std::mem::size_of::<libc::c_int>()) != 0 ||
+                   ::std::mem::size_of::<>()) != 0 ||
         setsockopt(fd, IPPROTO_IPV6, 18,
                    &mut val,
-                   ::std::mem::size_of::<libc::c_int>()) != 0 ||
+                   ::std::mem::size_of::<>()) != 0 ||
         setsockopt(fd, IPPROTO_ICMPV6, 1,
                    &mut filter,
                    ::std::mem::size_of::<icmp6_filter>(),
@@ -202,7 +202,7 @@ pub fn icmp6_packet(mut now: time::Instant) {
             },
             sin6_scope_id: 0,
         };
-    let mut packet: mut Vec < u8 > = 0;
+    let mut packet: Vec<u8> = 0;
     let mut tmp: Iname = 0;
     /* Note: use outpacket for input buffer */
     msg.msg_control = control_u.control6.as_mut_ptr();
@@ -285,12 +285,12 @@ pub fn icmp6_packet(mut now: time::Instant) {
         if daemon.options
         [(44).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (44)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                ).wrapping_mul(8
-        libc::c_int
+
         ))
         == 0
         {
@@ -340,7 +340,7 @@ pub fn icmp6_packet(mut now: time::Instant) {
                             __a.__in6_u.__u6_addr32[2] ==
                                 0 &&
                             __a.__in6_u.__u6_addr32[3] ==
-                                0)                          libc::c_int
+                                0)
                     }) == 0 {
                         &mut from.sin6_addr
                     } else { 0 });
@@ -443,13 +443,13 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                        ::std::mem::transmute::<Option<fn(_:
                                                          &mut In6Addr,
                                                          _:
-                                                         libc::c_int,
+                                                         ,
                                                          _:
-                                                         libc::c_int,
+                                                         ,
                                                          _:
-                                                         libc::c_int,
+                                                         ,
                                                          _:
-                                                         libc::c_int,
+                                                         ,
                                                          _:
                                                          libc::c_uint,
                                                          _:
@@ -459,17 +459,17 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                                          -> i32>,
                            Option<fn()
                                ->
-                               libc::c_int>>(Some(add_prefixes
+                               >>(Some(add_prefixes
     fn (_:
     &mut In6Addr,
     _:
-    libc::c_int,
+    ,
     _:
-    libc::c_int,
+    ,
     _:
-    libc::c_int,
+    ,
     _:
-    libc::c_int,
+    ,
     _:
     libc::c_uint,
     _:
@@ -477,7 +477,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     _:
     Vec < u8 >)
     ->
-    libc::c_int)))
+    )))
     == 0 || parm.link_pref_time == 0
     {
         return;
@@ -551,12 +551,12 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                 [(37
                 libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                             ).wrapping_mul(8
-                libc::c_int                                                            ))
+                                                                            ))
                 ] &
                     (1) <<
                     (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                       ).wrapping_mul(8
-                libc::c_int                        ))
+                                        ))
                 != 0
                 {
                     parm.managed = 1;
@@ -594,12 +594,12 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                     [(44
                     libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                 ).wrapping_mul(8
-                    libc::c_int                                                      ))
+                                                                          ))
                     ] &
                         (1) <<
                         (44).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                           ).wrapping_mul(8
-                    libc::c_int                  ))
+                                      ))
                     == 0
                     {
                         my_syslog((3) << 3 |
@@ -663,7 +663,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     iface_enumerate(1,
                     &mut send_iface,
                     ::std::mem::transmute::<Option<fn(_:
-                                                      libc::c_int,
+                                                      ,
                                                       _:
                                                       libc::c_uint,
                                                       _:
@@ -675,9 +675,9 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                                       -> i32>,
                         Option<fn()
                             ->
-                            libc::c_int>>(Some(add_lla
+                            >>(Some(add_lla
     fn (_:
-    libc::c_int,
+    ,
     _:
     libc::c_uint,
     _:
@@ -687,7 +687,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
     _:
     Vec < u8 >)
     ->
-    libc::c_int)));
+    )));
     /* RDNSS, RFC 6106, use relevant DHCP6 options */
     option_filter(parm.tags, 0,
                   daemon.dhcp_opts6);
@@ -729,15 +729,15 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                         ) ==
                             __bswap_32(0xfd000000) &&
                             *(a *const u32).offset(1
-                        libc::c_int
+
                         )
                         == 0 &&
                             *(a *const u32).offset(2
-                        libc::c_int
+
                         )
                         == 0 &&
                             *(a *const u32).offset(3
-                        libc::c_int
+
                         )
                         == 0 &&
                             parm.ula_pref_time ==
@@ -746,15 +746,15 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                         ) ==
                             __bswap_32(0xfe800000) &&
                             *(a *const u32).offset(1
-                        libc::c_int
+
                         )
                         == 0 &&
                             *(a *const u32).offset(2
-                        libc::c_int
+
                         )
                         == 0 &&
                             *(a *const u32).offset(3
-                        libc::c_int
+
                         )
                         == 0 &&
                             parm.link_pref_time ==
@@ -782,21 +782,21 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                     &&
                                     __a.__in6_u.__u6_addr32
                                 [1
-                                libc::c_int
+
                                 usize]
                                 ==
                                 0
                                     &&
                                     __a.__in6_u.__u6_addr32
                                 [2
-                                libc::c_int
+
                                 usize]
                                 ==
                                 0
                                     &&
                                     __a.__in6_u.__u6_addr32
                                 [3
-                                libc::c_int
+
                                 usize]
                                 ==
                                 0)
@@ -808,25 +808,25 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                     16 );
                                 }
                             } else if *(a *const u32).offset(0
-                            libc::c_int
+
                             )
                             ==
                             __bswap_32(0xfd000000
                             libc::c_uint) &&
                                 *(a *const u32).offset(1
-                            libc::c_int
+
                             )
                             ==
                             0
                                 &&
                                 *(a *const u32).offset(2
-                            libc::c_int
+
                             )
                             ==
                             0
                                 &&
                                 *(a *const u32).offset(3
-                            libc::c_int
+
                             )
                             ==
                             0
@@ -838,25 +838,25 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                                     16 );
                                 }
                             } else if *(a *const u32).offset(0
-                            libc::c_int
+
                             )
                             ==
                             __bswap_32(0xfe800000
                             libc::c_uint) &&
                                 *(a *const u32).offset(1
-                            libc::c_int
+
                             )
                             ==
                             0
                                 &&
                                 *(a *const u32).offset(2
-                            libc::c_int
+
                             )
                             ==
                             0
                                 &&
                                 *(a *const u32).offset(3
-                            libc::c_int
+
                             )
                             ==
                             0
@@ -936,7 +936,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
                 __bswap_32(0xfe800000))
         }) != 0 ||
             *(dest).offset(0)
-        libc::c_int == 0xff &&
+         == 0xff &&
             *(dest).offset(1)
                 & 0xf ==
                 0x2
@@ -950,7 +950,7 @@ fn send_ra_alias(mut now: time::Instant, mut iface: i32,
         setsockopt(daemon.icmp6fd, IPPROTO_IPV6,
                    17,
                    &mut send_iface,
-                   ::std::mem::size_of::<libc::c_int>()
+                   ::std::mem::size_of::<>()
         socklen_t);
     }
     while retry_send(sendto(daemon.icmp6fd,
@@ -1013,10 +1013,10 @@ fn add_prefixes(mut local: &mut In6Addr,
                 __a.__in6_u.__u6_addr32
             [3
             usize] ==
-            __bswap_32(1))                     libc::c_int
+            __bswap_32(1))
         }) == 0 &&
             !(*(local *const u8).offset(0
-        isize)
+        )
         == 0xff) {
             let mut real_prefix: i32 = 0;
             let mut do_slaac: i32 = 0;
@@ -1053,12 +1053,12 @@ fn add_prefixes(mut local: &mut In6Addr,
                         current_block_43 = 7056779235015430508;
                     } else if daemon.options
                     [(37).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                    libc::c_int                                                                    ))
+                                                                                        ))
                     ] &
                         (1) <<
                         (37).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                           ).wrapping_mul(8
-                    libc::c_int                                ))
+                                                    ))
                     == 0
                     {
                         current_block_43 = 10599921512955367680;
@@ -1213,12 +1213,12 @@ fn add_prefixes(mut local: &mut In6Addr,
                     [(44
                     libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                 ).wrapping_mul(8
-                    libc::c_int                                                      ))
+                                                                          ))
                     ] &
                         (1) <<
                         (44).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                           ).wrapping_mul(8
-                    libc::c_int                  ))
+                                      ))
                     == 0
                     {
                         my_syslog((3) << 3 |
@@ -1294,41 +1294,41 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
         ::std::mem::transmute::<Option<fn(_:
                                           &mut In6Addr,
                                           _:
-                                          libc::c_int,
+                                          ,
                                           _:
-                                          libc::c_int,
+                                          ,
                                           _:
-                                          libc::c_int,
+                                          ,
                                           _:
-                                          libc::c_int,
+                                          ,
                                           _:
-                                          libc::c_int,
+                                          ,
                                           _:
-                                          libc::c_int,
+                                          ,
                                           _:
                                           Vec<u8>)
                                           ->
-                                          libc::c_int>,
+                                          >,
             Option<fn()
                 ->
-                libc::c_int>>(Some(iface_search fn (_:
+                >>(Some(iface_search fn (_:
         &mut In6Addr,
         _:
-        libc::c_int,
+        ,
         _:
-        libc::c_int,
+        ,
         _:
-        libc::c_int,
+        ,
         _:
-        libc::c_int,
+        ,
         _:
-        libc::c_int,
+        ,
         _:
-        libc::c_int,
+        ,
         _:
         Vec < u8 >)
         ->
-        libc::c_int)))
+        )))
         != 0
         {
             /* There's a context overdue, but we can't find an interface
@@ -1360,7 +1360,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                 aparam.bridge = daemon.bridges;
                 while !aparam.bridge.is_null() {
                     if if_nametoindex((*aparam.bridge).iface.as_mut_ptr())
-                    libc::c_int == param.iface
+                     == param.iface
                     {
                         /* Count the number of alias interfaces for this
                        'bridge', by calling iface_enumerate with
@@ -1371,7 +1371,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                         iface_enumerate(1,
                                         &mut aparam,
                                         ::std::mem::transmute::<Option<fn(_:
-                                                                          libc::c_int,
+                                                                          ,
                                                                           _:
                                                                           libc::c_uint,
                                                                           _:
@@ -1381,16 +1381,16 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                                                           _:
                                                                           Vec<u8>)
                                                                           ->
-                                                                          libc::c_int>,
+                                                                          >,
                                             Option<fn()
                                                 ->
-                                                libc::c_int>>(Some(send_ra_to_aliases fn (_: libc::c_int,
+                                                >>(Some(send_ra_to_aliases fn (_: ,
                         _: libc::c_uint,
                         _: &mut String,
                         _: size_t,
                         _: Vec < u8 >)
                         ->
-                        libc::c_int)));
+                        )));
                         my_syslog((3) << 3 |
                                       6,
                                   "RTR-ADVERT(%s) %s => %d alias(es)" *const u8,
@@ -1400,7 +1400,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                         /* Allocate memory to store the alias interface
                        indices. */
                         // aparam.alias_ifs =
-                        //     whine_malloc((aparam.num_alias_ifs                                 ).wrapping_mul(::std::mem::size_of::<libc::c_int>()
+                        //     whine_malloc((aparam.num_alias_ifs                                 ).wrapping_mul(::std::mem::size_of::<>()
                         //                                                                          ))
                         //         as ;
                         if !aparam.alias_ifs.is_null() {
@@ -1413,7 +1413,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                             &mut aparam
                             Vec < u8 >,
                             ::std::mem::transmute::<Option<fn(_:
-                                                              libc::c_int,
+                                                              ,
                                                               _:
                                                               libc::c_uint,
                                                               _:
@@ -1423,12 +1423,12 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                                               _:
                                                               Vec<u8>)
                                                               ->
-                                                              libc::c_int>,
+                                                              >,
                                 Option<fn()
                                     ->
-                                    libc::c_int>>(Some(send_ra_to_aliases fn (_: libc::c_int, _: libc::c_uint, _: &mut String, _: size_t, _: Vec < u8 >)
+                                    >>(Some(send_ra_to_aliases fn (_: , _: libc::c_uint, _: &mut String, _: size_t, _: Vec < u8 >)
                             ->
-                            libc::c_int)));
+                            )));
                             while aparam.num_alias_ifs != 0 {
                                 my_syslog((3) <<
                                               3 |
@@ -1441,7 +1441,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                 *aparam.alias_ifs.offset((aparam.num_alias_ifs
                                     -
                                     1
-                                libc::c_int)
+                                )
                                 ));
                                 send_ra_alias(now, param.iface,
                                               param.name.as_mut_ptr(),
@@ -1449,7 +1449,7 @@ pub fn periodic_ra(daemon: &mut DnsmasqDaemon, mut now: time::Instant) -> time::
                                               *aparam.alias_ifs.offset((aparam.num_alias_ifs
                                                   -
                                                   1
-                                libc::c_int)
+                                )
                                 ));
                                 aparam.num_alias_ifs -= 1
                             }
@@ -1483,7 +1483,7 @@ fn send_ra_to_aliases(mut index: i32,
                 if !aparam.alias_ifs.is_null() &&
                     aparam.num_alias_ifs < aparam.max_alias_ifs {
                     *aparam.alias_ifs.offset(aparam.num_alias_ifs
-                    isize) = index
+                    ) = index
                 }
                 aparam.num_alias_ifs += 1
             }
@@ -1576,7 +1576,7 @@ fn new_timeout(mut context: DhcpContext,
             now +
                 (3
         libc::c_uint).wrapping_mul(adv_interval).wrapping_div(4
-        libc::c_int
+
         libc::c_uint)
         +
         (adv_interval.wrapping_mul(rand16()) >>

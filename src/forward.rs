@@ -78,10 +78,10 @@ pub fn send_from(mut fd: i32,
                 ).wrapping_sub(1)
                     &
                     !(::std::mem::size_of::<usize>()).wrapping_sub(1)).wrapping_add((::std::mem::size_of::<CmsgHdr>()).wrapping_add(::std::mem::size_of::<usize>()).wrapping_sub(1
-            libc::c_int                                                                                                                                  )
+                                                                                                                                              )
             &
                 !(::std::mem::size_of::<usize>()).wrapping_sub(1
-            libc::c_int                                                                            ));
+                                                                                        ));
             memcpy(cmptr.__cmsg_data.as_mut_ptr(),
                    &mut p,
                    ::std::mem::size_of::<InPktInfo>());
@@ -112,10 +112,10 @@ pub fn send_from(mut fd: i32,
                 ).wrapping_sub(1)
                     &
                     !(::std::mem::size_of::<usize>()).wrapping_sub(1)).wrapping_add((::std::mem::size_of::<CmsgHdr>()).wrapping_add(::std::mem::size_of::<usize>()).wrapping_sub(1
-            libc::c_int                                                                                                                                  )
+                                                                                                                                              )
             &
                 !(::std::mem::size_of::<usize>()).wrapping_sub(1
-            libc::c_int                                                                            ));
+                                                                                        ));
             memcpy(cmptr.__cmsg_data.as_mut_ptr(),
                    &mut p_0,
                    ::std::mem::size_of::<in6_pktinfo>());
@@ -210,7 +210,7 @@ fn search_servers(mut now: time::Instant,
                     strlen(serv.domain);
                 let mut matchstart: &mut String =
                     qdomain.offset(namelen
-                isize).offset(-(domainlen));
+                ).offset(-(domainlen));
                 if namelen >= domainlen &&
                     hostname_isequal(matchstart, serv.domain) != 0 &&
                     (domainlen == 0 ||
@@ -295,7 +295,7 @@ fn search_servers(mut now: time::Instant,
                                                 (1)
                                                     <<
                                                     10
-                                        libc::c_int
+
                                             != 0
                                         {
                                             flags =
@@ -322,12 +322,12 @@ fn search_servers(mut now: time::Instant,
         daemon.options
     [(12).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                        ).wrapping_mul(8
-    libc::c_int                              ))
+                                  ))
     ] &
         (1) <<
         (12)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-    libc::c_int
+
     ))
     != 0 && strchr(qdomain, '.' as i32).is_null() &&
         namelen != 0
@@ -391,7 +391,7 @@ fn forward_query(mut udpfd: i32,
     let mut gotname: u32 =
         extract_request(header, plen, daemon.namebuff,
                         0);
-    let mut oph: mut Vec < u8 > =
+    let mut oph: Vec<u8> =
         find_pseudoheader(header, plen, 0,
                           0, 0,
                           0);
@@ -420,12 +420,12 @@ fn forward_query(mut udpfd: i32,
         if daemon.options
         [(7).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                           ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (7)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int
+
         ))
         == 0
         {
@@ -445,23 +445,23 @@ fn forward_query(mut udpfd: i32,
         if daemon.options
         [(32).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (32)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                ).wrapping_mul(8
-        libc::c_int
+
         ))
         == 0 &&
             daemon.options
         [(54).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                                      ))
+                                              ))
         ] &
             (1) <<
             (54).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int  ))
+          ))
         == 0 &&
             {
                 forward = lookup_frec_by_query(hash, fwd_flags);
@@ -533,12 +533,12 @@ fn forward_query(mut udpfd: i32,
                 if daemon.options
                 [(7).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                   ).wrapping_mul(8
-                libc::c_int                                              ))
+                                                              ))
                 ] &
                     (1) <<
                     (7).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                      ).wrapping_mul(8
-                libc::c_int          ))
+                          ))
                 != 0
                 {
                     start = daemon.servers
@@ -564,12 +564,12 @@ fn forward_query(mut udpfd: i32,
                 if daemon.options
                 [(7).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                   ).wrapping_mul(8
-                libc::c_int                                              ))
+                                                              ))
                 ] &
                     (1) <<
                     (7).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                      ).wrapping_mul(8
-                libc::c_int          ))
+                          ))
                 == 0
                 {
                     forward.forwardall = 1
@@ -586,13 +586,13 @@ fn forward_query(mut udpfd: i32,
         let mut cacheable: i32 = 0;
         let mut forwarded: i32 = 0;
         let mut edns0_len: usize = 0;
-        let mut pheader: mut Vec < u8 > = 0;
+        let mut pheader: Vec<u8> = 0;
         /* cancel */
         forward.frec_src.log_id = daemon.log_id;
         plen =
             add_edns0_config(header, plen,
-                             (header mut Vec < u8 >).offset(512
-        libc::c_int
+                             (header Vec<u8>).offset(512
+
         ),
         &mut forward.frec_src.source, now,
         &mut subnet, &mut cacheable);
@@ -611,7 +611,7 @@ fn forward_query(mut udpfd: i32,
             /* Reduce udp size on retransmits. */
             if forward.flags & 256 != 0 {
                 let mut t_s: u16 = 1280;
-                let mut t_cp: mut Vec < u8 > = pheader;
+                let mut t_cp: Vec<u8> = pheader;
                 let fresh7 = t_cp;
                 t_cp = t_cp.offset(1);
                 *fresh7 =
@@ -727,8 +727,8 @@ fn forward_query(mut udpfd: i32,
         if !oph.is_null() {
             plen =
                 add_pseudoheader(header, plen,
-                                 (header mut Vec < u8 >).offset(512
-            libc::c_int
+                                 (header Vec<u8>).offset(512
+
             ),
             daemon.edns_pktsz,
             0, 0,
@@ -739,23 +739,23 @@ fn forward_query(mut udpfd: i32,
                   (daemon.options
         [(13).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                                              ))
+                                                      ))
         ] &
             (1) <<
             (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int          ))
+                  ))
         != 0 ||
             daemon.options
         [(39
         libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                     ).wrapping_mul(8
-        libc::c_int                                                      ))
+                                                              ))
         ] &
             (1) <<
             (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int                  ))
+                          ))
         != 0), header,
         plen, udpaddr, dst_addr, dst_iface);
     }
@@ -775,8 +775,8 @@ fn process_reply(mut header: DnsHeader,
                  mut check_subnet: i32,
                  mut query_source: NetAddress)
                  -> usize {
-    let mut pheader: mut Vec < u8 > = 0;
-    let mut sizep: mut Vec < u8 > = 0;
+    let mut pheader: Vec<u8> = 0;
+    let mut sizep: Vec<u8> = 0;
     let mut sets: String = 0;
     let mut munged: i32 = 0;
     let mut is_sign: i32 = 0;
@@ -797,14 +797,14 @@ fn process_reply(mut header: DnsHeader,
                 strlen(ipset_pos.domain);
             let mut matchstart: &mut String =
                 daemon.namebuff.offset(namelen
-            isize).offset(-(domainlen
+            ).offset(-(domainlen
             ));
             if namelen >= domainlen &&
                 hostname_isequal(matchstart, ipset_pos.domain) != 0 &&
                 (domainlen == 0 ||
                     namelen == domainlen ||
                     *matchstart.offset(-(1))
-            libc::c_int == '.' as i32) &&
+             == '.' as i32) &&
                 domainlen >= matchlen {
                 matchlen = domainlen;
                 sets = ( * ipset_pos).sets,
@@ -836,17 +836,17 @@ fn process_reply(mut header: DnsHeader,
                 /* If upstream is advertising a larger UDP packet size
 		 than we allow, trim it so that we don't get overlarge
 		 requests for the client. We can't do this for signed packets. */
-                let mut t_cp: mut Vec < u8 > = sizep;
+                let mut t_cp: Vec<u8> = sizep;
                 udpsz =
                     ((*t_cp.offset(0)) << 8 |
                         *t_cp.offset(1)
-                libc::c_int) ;
+                ) ;
                 sizep = sizep.offset(2);
                 if udpsz >
                     daemon.edns_pktsz {
                     sizep = sizep.offset(-(2));
                     let mut t_s: u16 = daemon.edns_pktsz;
-                    let mut t_cp_0: mut Vec < u8 > = sizep;
+                    let mut t_cp_0: Vec<u8> = sizep;
                     let fresh8 = t_cp_0;
                     t_cp_0 = t_cp_0.offset(1);
                     *fresh8 =
@@ -863,12 +863,12 @@ fn process_reply(mut header: DnsHeader,
         daemon.options
     [(33).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                        ).wrapping_mul(8
-    libc::c_int                              ))
+                                  ))
     ] &
         (1) <<
         (33)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-    libc::c_int
+
     ))
     == 0
     {
@@ -899,12 +899,12 @@ fn process_reply(mut header: DnsHeader,
         if daemon.options
         [(2).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                           ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (2)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int
+
         ))
         == 0
         {
@@ -1047,7 +1047,7 @@ pub fn reply_query(mut fd: i32,
             2) && forward.forwardall == 0
         && forward.flags & 512 == 0 {
         /* for broken servers, attempt to send to another one. */
-        let mut pheader: mut Vec < u8 > = 0;
+        let mut pheader: Vec<u8> = 0;
         let mut plen: usize = 0;
         let mut is_sign: i32 = 0;
         /* In strict order mode, there must be a server later in the chain
@@ -1058,12 +1058,12 @@ pub fn reply_query(mut fd: i32,
         if daemon.options
         [(7).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                           ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (7)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int
+
         ))
         != 0
         {
@@ -1145,12 +1145,12 @@ pub fn reply_query(mut fd: i32,
         if daemon.options
         [(23).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (23)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                ).wrapping_mul(8
-        libc::c_int
+
         ))
         == 0
         {
@@ -1190,12 +1190,12 @@ pub fn reply_query(mut fd: i32,
         if daemon.options
         [(31).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                              ))
+                                      ))
         ] &
             (1) <<
             (31)).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                ).wrapping_mul(8
-        libc::c_int
+
         ))
         != 0
         {
@@ -1254,24 +1254,24 @@ pub fn reply_query(mut fd: i32,
                               != 0 ||
                               daemon.options
                 [(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                libc::c_int                                                                      ))
+                                                                                      ))
                 ] &
                     (1) <<
                     (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                       ).wrapping_mul(8
-                libc::c_int                                  ))
+                                                  ))
                 != 0),
                 daemon.packet, nn, &mut src.source,
                 &mut src.dest, src.iface);
                 if daemon.options
                 [(51).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                    ).wrapping_mul(8
-                libc::c_int                                              ))
+                                                              ))
                 ] &
                     (1) <<
                     (51).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                       ).wrapping_mul(8
-                libc::c_int          ))
+                          ))
                 != 0 &&
                     src != &mut forward.frec_src
                 {
@@ -1296,7 +1296,7 @@ pub fn receive_query(mut listen: Listener,
         daemon.packet;
     let mut source_addr: NetAddress =
         NetAddress { sa: NetAddress { sa_family: 0, sa_data: [0; 14] } };
-    let mut pheader: mut Vec < u8 > = 0;
+    let mut pheader: Vec<u8> = 0;
     let mut type_0: u16 = 0;
     let mut udp_size: u16 = 512;
     let mut dst_addr: NetAddress = NetAddress { addr4: NetAddress { s_addr: 0 } };
@@ -1350,11 +1350,11 @@ pub fn receive_query(mut listen: Listener,
     if daemon.options
     [(13).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                        ).wrapping_mul(8
-    libc::c_int                      ))
+                          ))
     ] &
         (1) <<
         (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-    libc::c_int
+
     ))
     != 0 && !listen.iface.is_null()
     {
@@ -1410,11 +1410,11 @@ pub fn receive_query(mut listen: Listener,
     if daemon.options
     [(49).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                        ).wrapping_mul(8
-    libc::c_int                      ))
+                          ))
     ] &
         (1) <<
         (49).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-    libc::c_int
+
     ))
     != 0
     {
@@ -1521,12 +1521,12 @@ pub fn receive_query(mut listen: Listener,
             if daemon.options
             [(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                ).wrapping_mul(8
-            libc::c_int                                      ))
+                                                  ))
             ] &
                 (1) <<
                 (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                   ).wrapping_mul(8
-            libc::c_int  ))
+              ))
             == 0
             {
                 enumerate_interfaces(0);
@@ -1541,12 +1541,12 @@ pub fn receive_query(mut listen: Listener,
             daemon.options
         [(18).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                                      ))
+                                              ))
         ] &
             (1) <<
             (18).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int  ))
+          ))
         != 0
         {
             let mut iface: Irec = 0;
@@ -1567,12 +1567,12 @@ pub fn receive_query(mut listen: Listener,
                 daemon.options
             [(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                ).wrapping_mul(8
-            libc::c_int                                              ))
+                                                          ))
             ] &
             (1) <<
             (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-            libc::c_int          ))
+                      ))
             == 0
             {
                 enumerate_interfaces(0);
@@ -1628,12 +1628,12 @@ pub fn receive_query(mut listen: Listener,
             daemon.options
         [(18).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                            ).wrapping_mul(8
-        libc::c_int                                      ))
+                                              ))
         ] &
             (1) <<
             (18).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                               ).wrapping_mul(8
-        libc::c_int  ))
+          ))
         == 0
         {
             zone = daemon.auth_zones;
@@ -1657,7 +1657,7 @@ pub fn receive_query(mut listen: Listener,
                           0).is_null() {
         let mut flags: u16 = 0;
         have_pseudoheader = 1;
-        let mut t_cp: mut Vec < u8 > = pheader;
+        let mut t_cp: Vec<u8> = pheader;
         udp_size =
             ((*t_cp.offset(0))
                 << 8 |
@@ -1665,7 +1665,7 @@ pub fn receive_query(mut listen: Listener,
         pheader = pheader.offset(2);
         /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
         pheader = pheader.offset(2); /* ext_rcode */
-        let mut t_cp_0: mut Vec < u8 > = pheader; /* do bit */
+        let mut t_cp_0: Vec<u8> = pheader; /* do bit */
         flags =
             ((*t_cp_0.offset(0)) << 8 |
                 *t_cp_0.offset(1));
@@ -1693,12 +1693,12 @@ pub fn receive_query(mut listen: Listener,
             [(13
             libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                         ).wrapping_mul(8
-            libc::c_int                                                      ))
+                                                                  ))
             ] &
                 (1) <<
                 (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                   ).wrapping_mul(8
-            libc::c_int                  ))
+                              ))
             != 0 ||
                 daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                 ).wrapping_mul(8
@@ -1714,7 +1714,7 @@ pub fn receive_query(mut listen: Listener,
                 ] =
                 daemon.metrics
             [METRIC_DNS_AUTH_ANSWERED
-            libc::c_int
+
             usize].wrapping_add(1)
         }
     } else {
@@ -1729,8 +1729,8 @@ pub fn receive_query(mut listen: Listener,
         m =
             answer_request(header,
                            (header & mut String).offset(udp_size
-        libc::c_int
-        isize),
+
+        ),
         n, dst_addr_4, netmask, now, ad_reqd,
         do_bit, have_pseudoheader);
         if m >= 1 {
@@ -1739,12 +1739,12 @@ pub fn receive_query(mut listen: Listener,
             [(13
             libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                         ).wrapping_mul(8
-            libc::c_int                                                      ))
+                                                                  ))
             ] &
                 (1) <<
                 (13).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
                                   ).wrapping_mul(8
-            libc::c_int                  ))
+                              ))
             != 0 ||
                 daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                 ).wrapping_mul(8
@@ -1760,24 +1760,24 @@ pub fn receive_query(mut listen: Listener,
                 ] =
                 daemon.metrics
             [METRIC_DNS_LOCAL_ANSWERED
-            libc::c_int
+
             usize].wrapping_add(1)
         } else if forward_query(listen.fd, &mut source_addr, &mut dst_addr,
                                 if_index, header, n,
                                 now, 0, ad_reqd, do_bit) != 0 {
             daemon.metrics
             [METRIC_DNS_QUERIES_FORWARDED
-            libc::c_int ] =
+             ] =
             daemon.metrics
             [METRIC_DNS_QUERIES_FORWARDED
-            libc::c_int
+
             usize].wrapping_add(1)
         } else {
             daemon.metrics[METRIC_DNS_LOCAL_ANSWERED
                 ] =
                 daemon.metrics
             [METRIC_DNS_LOCAL_ANSWERED
-            libc::c_int
+
             usize].wrapping_add(1)
         }
     };
@@ -1810,12 +1810,12 @@ let mut gotname: u32 = 0;
 let mut c1: libc::c_uchar = 0;
 let mut c2: libc::c_uchar = 0;
 /* Max TCP packet + slop + size */
-let mut packet: mut Vec < u8 > =
+let mut packet: Vec<u8> =
 // whine_malloc(((65536 + 1025 +
 // 10)).wrapping_add(::std::mem::size_of::< u16 > ()
 // ))
 // ;
-let mut payload: mut Vec < u8 > =
+let mut payload: Vec<u8> =
 &mut * packet.offset(2);
 /* largest field in header is 16-bits, so this is still sufficiently aligned */
 let mut header: DnsHeader = payload;
@@ -1827,7 +1827,7 @@ NetAddress {sa: NetAddress {sa_family: 0, sa_data: [0; 14],},};
 let mut peer_len: socklen_t =
 ::std::mem::size_of::< NetAddress > ();
 let mut query_count: i32 = 0;
-let mut pheader: mut Vec < u8 > = 0;
+let mut pheader: Vec<u8> = 0;
 let mut mark: u32 = 0;
 let mut have_mark: i32 = 0;
 if getpeername(confd,
@@ -1838,11 +1838,11 @@ return packet
 }
 /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
 if daemon.options[(49).wrapping_div((::std::mem::size_of::<libc::c_uint > ()
-).wrapping_mul(8                             libc::c_int                      ))
+).wrapping_mul(8                                                   ))
 ] &
-(1) < <
+(1) <<
 (49).wrapping_rem((::std::mem::size_of::< libc::c_uint > ()).wrapping_mul(8
-libc::c_int
+
 ))
 != 0 {
 let mut addr: * mut AddressListEntry = 0;
@@ -1862,7 +1862,7 @@ let mut netmask_0: NetAddress = NetAddress {s_addr: 0,};
 addr = daemon.interface_addrs;
 while ! addr.is_null() {
 netmask_0.s_addr =
-__bswap_32(( ! (0)) < <
+__bswap_32(( ! (0)) <<
 32 - addr.prefixlen);
 if addr.flags & 2 == 0 &&
 is_same_net(addr.addr.addr4,
@@ -1886,7 +1886,7 @@ read_write(confd, & mut c2, 1, 1)
 == 0 | |
 {
 size =
-((c1) < < 8 |
+((c1) << 8 |
 c2);
 (size) == 0
 } | |
@@ -1895,7 +1895,7 @@ read_write(confd, payload, size,
 return packet
 }
 if size <
-::std::mem::size_of::< DnsHeader > ()             libc::c_int {
+::std::mem::size_of::< DnsHeader > ()              {
 continue;
 }
 /* Clear buffer beyond request to avoid risk of
@@ -1922,14 +1922,14 @@ querystr(if auth_dns != 0 {
 "query"
 } , qtype);
 if peer_addr.sa.sa_family == 2 {
-// log_query((1) < < 19 |
-// (1) < < 7 |
+// log_query((1) << 19 |
+// (1) << 7 |
 // (1) << 3,
 // daemon.namebuff,
 // & mut peer_addr.in_0.sin_addr, types);
 // } else {
-// log_query((1) < < 19 |
-// (1) < < 8 |
+// log_query((1) << 19 |
+// (1) << 8 |
 // (1) << 3,
 // daemon.namebuff,
 // & mut peer_addr.in6.sin6_addr, types);
@@ -1937,11 +1937,11 @@ if peer_addr.sa.sa_family == 2 {
 /* find queries for zones we're authoritative for, and answer them directly */
 if auth_dns == 0 & &
 daemon.options[(18 ).wrapping_div((::std::mem::size_of::< libc::c_uint > ()
-).wrapping_mul(8                                                     libc::c_int                                              ))
+).wrapping_mul(8                                                                                                   ))
 ] &
-(1) < <
+(1) <<
 (18                   ).wrapping_rem((::std::mem::size_of::< libc::c_uint > ()
-).wrapping_mul(8                 libc::c_int          ))
+).wrapping_mul(8                           ))
 == 0 {
 zone = daemon.auth_zones;
 while ! zone.is_null() {
@@ -1965,10 +1965,10 @@ let mut flags: u16 = 0;
 have_pseudoheader = 1;
 /* do bit */
 pheader =
-pheader.offset(4                             isize); /* udp_size, ext_rcode */
+pheader.offset(4                             ); /* udp_size, ext_rcode */
 let mut t_cp: mut Vec < u8> = pheader;
 flags =
-(( * t_cp.offset(0) ) < < 8 |
+(( * t_cp.offset(0) ) << 8 |
 * t_cp.offset(1) );
 pheader = pheader.offset(2);
 if flags & 0x8000 != 0 {
@@ -1978,7 +1978,7 @@ do_bit = 1
 if auth_dns != 0 {
 m =
 answer_auth(header,
-(header & mut String).offset(65536            libc::c_int            isize), size,
+(header & mut String).offset(65536                        ), size,
 now, & mut peer_addr, local_auth, do_bit,
 have_pseudoheader)
 } else {
@@ -1990,7 +1990,7 @@ ad_reqd = 1
 /* m > 0 if answered from cache */
 m =
 answer_request(header,
-(header & mut String).offset(65536               libc::c_int
+(header & mut String).offset(65536
 ),
 size, dst_addr_4, netmask, now, ad_reqd,
 do_bit, have_pseudoheader);
@@ -2002,14 +2002,14 @@ let mut flags_0: u32 =
 let mut addrp: & mut NetAddress = 0;
 let mut type_0: i32 = 16384;
 let mut domain: & mut String = 0;
-let mut oph: mut Vec < u8 > =
+let mut oph: Vec<u8> =
 find_pseudoheader(header, size, 0,
 0,
 0,
 0);
 size =
 add_edns0_config(header, size,
-(header mut Vec < u8 > ).offset(65536                      libc::c_int
+(header Vec<u8> ).offset(65536
 ),
 & mut peer_addr, now, & mut check_subnet,
 & mut cacheable);
@@ -2032,11 +2032,11 @@ added_pheader = 1
 type_0 &= ! (16384);
 if type_0 != 0 | |
 daemon.options[(7   libc::c_ulong).wrapping_div((::std::mem::size_of::< libc::c_uint > ()
-).wrapping_mul(8                                                             libc::c_int                                                      ))
+).wrapping_mul(8                                                                                                                   ))
 ] &
-(1) < <
+(1) <<
 (7                       ).wrapping_rem((::std::mem::size_of::< libc::c_uint > ()
-).wrapping_mul(8                         libc::c_int                  ))
+).wrapping_mul(8                                           ))
 != 0 | | daemon.last_server.is_null() {
 last_server = daemon.servers
 } else { last_server = daemon.last_server }
@@ -2107,7 +2107,7 @@ packet * const libc::c_void,
 size.wrapping_add(::std::mem::size_of::< u16 > ()
 ),
 MSG_FASTOPEN
-libc::c_int,
+,
 ConstNetAddressArg {__NetAddress__:
 & mut ( * last_server).addr.sa,},
 sa_len( & mut ( * last_server).addr)
@@ -2159,7 +2159,7 @@ read_write(( * last_server).tcpfd,
 1) == 0 | |
 read_write(( * last_server).tcpfd,
 payload,
-(c1) < <
+(c1) <<
 8 |
 c2,
 1) == 0 {
@@ -2177,13 +2177,13 @@ continue 's_446;
 ( * last_server).flags |=
 32768;
 m =
-((c1) < <
+((c1) <<
 8 |
 c2);
-if ( * last_server).addr.sa.sa_family                                     libc::c_int == 2 {
-// log_query((1) < <
+if ( * last_server).addr.sa.sa_family                                      == 2 {
+// log_query((1) <<
 // 18 |
-// (1) < <
+// (1) <<
 // 7 |
 // (1) <<
 // 3,
@@ -2192,9 +2192,9 @@ if ( * last_server).addr.sa.sa_family                                     libc::
 // NetAddress,
 // 0 );
 } else {
-// log_query((1) < <
+// log_query((1) <<
 // 18 |
-// (1) < <
+// (1) <<
 // 8 |
 // (1) <<
 // 3,
@@ -2252,15 +2252,15 @@ m =
 process_reply(header, now,
 last_server,
 m       usize,
-(daemon.options[(31).wrapping_div((::std::mem::size_of::< libc::c_uint > ()                                                      ).wrapping_mul(8                                                                                                                             libc::c_int                                                                                                                      ))
+(daemon.options[(31).wrapping_div((::std::mem::size_of::< libc::c_uint > ()                                                      ).wrapping_mul(8                                                                                                                                                                                                                                                   ))
 usize]
 &
 (1)
-< <
-(31                 libc::c_int
-).wrapping_rem((::std::mem::size_of::< libc::c_uint > ()                  ).wrapping_mul(8                                                                                         libc::c_int                                                                                  ))
+<<
+(31
+).wrapping_rem((::std::mem::size_of::< libc::c_uint > ()                  ).wrapping_mul(8                                                                                                                                                                           ))
 != 0 & &
-norebind == 0)       libc::c_int,
+norebind == 0)       ,
 no_cache_dnssec,
 cache_secure,
 bogusanswer, ad_reqd,
@@ -2281,8 +2281,8 @@ daemon.local_ttl);
 if have_pseudoheader != 0 {
 m =
 add_pseudoheader(header, m,
-(header                                            mut Vec < u8 > ).offset(65536
-libc::c_int
+(header                                            Vec<u8> ).offset(65536
+
 ),
 daemon.edns_pktsz,
 0,
@@ -2353,7 +2353,7 @@ pub fn allocate_rfd(mut family: i32)
             daemon.randomsocks[j].family
                 == family &&
             daemon.randomsocks[j].refcount
-        libc::c_int != 0xffff
+         != 0xffff
         {
             finger = j;
             daemon.randomsocks[j].refcount =

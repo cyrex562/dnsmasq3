@@ -195,7 +195,7 @@ unsafe extern "C" fn getline(mut __lineptr: String,
 
 #[inline]
 unsafe extern "C" fn ferror_unlocked(mut __stream: &mut FILE) -> i32 {
-    return (__stream._flags & 0x20 != 0)  libc::c_int;
+    return (__stream._flags & 0x20 != 0)  ;
 }
 
 
@@ -218,7 +218,7 @@ unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
         __idx =
             __l.wrapping_add(__u).wrapping_div(2   );
         __p =
-            (__base          *const libc::c_char).offset(__idx.wrapping_mul(__size)          isize);
+            (__base          *const libc::c_char).offset(__idx.wrapping_mul(__size)          );
         __comparison =
             Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
                                                                                                    __p);
@@ -573,7 +573,7 @@ extern "C" {
 #[inline]
 unsafe extern "C" fn fputc_unlocked(mut __c: i32,
                                     mut __stream: &mut FILE) -> i32 {
-    return if (__stream._IO_write_ptr >= __stream._IO_write_end)  libc::c_int != 0 {
+    return if (__stream._IO_write_ptr >= __stream._IO_write_end)   != 0 {
         __overflow(__stream, __c)
     } else {
         let fresh3 = __stream._IO_write_ptr;
@@ -1573,9 +1573,9 @@ pub struct randfd {
 
 // #[inline]
 // unsafe extern "C" fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
-//     return (__bsx as libc::c_int >> 8 as libc::c_int & 0xff as libc::c_int |
-//         (__bsx as libc::c_int & 0xff as libc::c_int) <<
-//             8 as libc::c_int) as __uint16_t; /* prefix match fail */
+//     return (__bsx as  >> 8 as  & 0xff as  |
+//         (__bsx as  & 0xff as ) <<
+//             8 as ) as __uint16_t; /* prefix match fail */
 // }
 
 
@@ -2964,7 +2964,7 @@ extern "C" {
 pub type __mode_t = libc::c_uint;
 pub type __nlink_t = libc::c_ulong;
 
-pub type __pid_t = libc::c_int;
+pub type __pid_t = ;
 pub type __clock_t = i32;
 pub type __time::Instant = i32;
 
@@ -3017,7 +3017,7 @@ pub struct siginfo_t {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_01 {
-    pub _pad: [libc::c_int; 28],
+    pub _pad: [; 28],
     pub _kill: C2RustUnnamed_9,
     pub _timer: C2RustUnnamed_8,
     pub _rt: C2RustUnnamed_7,
@@ -4462,7 +4462,7 @@ pub struct dhcp_bridge {
 
 #[inline]
 unsafe extern "C" fn putchar_unlocked(mut __c: i32) -> i32 {
-    return if (stdout._IO_write_ptr >= stdout._IO_write_end)  libc::c_int != 0 {
+    return if (stdout._IO_write_ptr >= stdout._IO_write_end)   != 0 {
         __overflow(stdout, __c)
     } else {
         let fresh5 = stdout._IO_write_ptr;
@@ -4610,7 +4610,7 @@ pub union C2RustUnnamed_02{
 
 pub type __u8 = libc::c_uchar;
 
-pub type __s32 = libc::c_int;
+pub type __s32 = ;
 
 
 
@@ -4837,7 +4837,7 @@ pub struct dnsmasq_daemon {
     pub packet_len: usize,
     pub rfd_save: &mut randfd,
     pub tcp_pids: [pid_t; 20],
-    pub tcp_pipes: [libc::c_int; 20],
+    pub tcp_pipes: [; 20],
     pub pipe_to_parent: i32,
     pub randomsocks: [randfd; 64],
     pub v6pktinfo: i32,
@@ -5749,7 +5749,7 @@ pub struct tftp_prefix {
 
 #[inline]
 unsafe extern "C" fn feof_unlocked(mut __stream: &mut FILE) -> i32 {
-    return (__stream._flags & 0x10 != 0)  libc::c_int;
+    return (__stream._flags & 0x10 != 0)  ;
 }
 
 #[inline]
@@ -5857,7 +5857,7 @@ unsafe extern "C" fn putchar(mut __c: i32) -> i32 {
 #[inline]
 unsafe extern "C" fn putc_unlocked(mut __c: i32,
                                    mut __stream: &mut FILE) -> i32 {
-    return if (__stream._IO_write_ptr >= __stream._IO_write_end)  libc::c_int != 0 {
+    return if (__stream._IO_write_ptr >= __stream._IO_write_end)   != 0 {
         __overflow(__stream, __c)
     } else {
         let fresh4 = __stream._IO_write_ptr;
@@ -7548,7 +7548,7 @@ unsafe extern "C" fn __cmsg_nxthdr2(mut __mhdr: &mut msghdr,
 
                   ))
            ) >
-            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen          isize) {
+            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen          ) {
         return 0
     }
     return __cmsg;
@@ -7767,7 +7767,7 @@ extern "C" {
 }
 pub type __uint8_t = libc::c_uchar;
 pub type __uint16_t = u16;
-pub type __int32_t = libc::c_int;
+pub type __int32_t = ;
 pub type __uint32_t = libc::c_uint;
 pub type __uint64_t = libc::c_ulong;
 pub type __intmax_t = i32;
@@ -8015,7 +8015,7 @@ pub const _ISlower: C2RustUnnamed_3 = 512;
 pub const _ISupper: C2RustUnnamed_3 = 256;
 pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
-pub type __gwchar_t = libc::c_int;
+pub type __gwchar_t = ;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union all_addr {
@@ -8308,7 +8308,7 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut msghdr,
 
                   ))
            ) >
-            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen          isize) {
+            (__mhdr.msg_control          mut Vec<u8>).offset(__mhdr.msg_controllen          ) {
         return 0
     }
     return __cmsg;

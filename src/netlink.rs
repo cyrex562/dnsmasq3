@@ -18,18 +18,18 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
     if daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8)) ] &
            (1) <<
                (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         addr.nl_groups |= 0x10
     }
     addr.nl_groups |= 0x400;
     if daemon.options[(39).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (39).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         addr.nl_groups |= 0x100
@@ -75,7 +75,7 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
            setsockopt(daemon.netlinkfd, 270,
                       5,
                       &mut opt,
-                      ::std::mem::size_of::<libc::c_int>()) == -(1) {
+                      ::std::mem::size_of::<>()) == -(1) {
         return "warning: failed to set NETLINK_NO_ENOBUFS on netlink socket"
 
     }
@@ -220,7 +220,7 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                         0;
                                     while len1 >=
                                               ::std::mem::size_of::<rtattr>()
-                                                                                             libc::c_int
+
                                               &&
                                               rta.rta_len
                                                   >=
@@ -233,34 +233,34 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                             addr_0 =
                                                 *(rta.offset(1
                                                                 )   NetAddress)
-                                        } else if rta.rta_type   libc::c_int ==
-                                                      IFA_BROADCAST       libc::c_int {
+                                        } else if rta.rta_type    ==
+                                                      IFA_BROADCAST        {
                                             broadcast =
                                                 *(rta.offset(1
                                                                 )   NetAddress)
-                                        } else if rta.rta_type   libc::c_int ==
+                                        } else if rta.rta_type    ==
                                                       IFA_LABEL
                                          {
                                             label =
                                                 (rta  &mut String).offset(((::std::mem::size_of::<rtattr>()
-                                                                                                               ).wrapping_add(4                                                         libc::c_uint                                                  ).wrapping_sub(1                                                                                                                         libc::c_int                                                                                                                  )
+                                                                                                               ).wrapping_add(4                                                         libc::c_uint                                                  ).wrapping_sub(1                                                                                                                                                                                                                                           )
                                                                                     &
-                                                                                    !(4   libc::c_uint).wrapping_sub(1                                                                 libc::c_int                                                                 libc::c_uint)
-                                                                                                                     ).wrapping_add(0                                                               libc::c_int                                                        )
+                                                                                    !(4   libc::c_uint).wrapping_sub(1                                                                                                                                  libc::c_uint)
+                                                                                                                     ).wrapping_add(0                                                                                                                       )
                                                                             )
                                                     &mut String
                                         }
                                         len1 =
                                             len1.wrapping_sub((rta.rta_len
-                                                                                  libc::c_uint).wrapping_add(4                   libc::c_uint).wrapping_sub(1                                                                                 libc::c_int                                                                                 libc::c_uint)
+                                                                                  libc::c_uint).wrapping_add(4                   libc::c_uint).wrapping_sub(1                                                                                                                                                                  libc::c_uint)
                                                                   &
-                                                                  !(4                     libc::c_uint).wrapping_sub(1                             libc::c_int                             libc::c_uint));
+                                                                  !(4                     libc::c_uint).wrapping_sub(1                                                          libc::c_uint));
                                         rta =
                                             (rta                                           &mut String).offset(((rta.rta_len
-                                                                                                              libc::c_uint).wrapping_add(4                                               libc::c_uint).wrapping_sub(1                                                                                                             libc::c_int                                                                                                             libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(4                                               libc::c_uint).wrapping_sub(1                                                                                                                                                                                                                          libc::c_uint)
                                                                                 &
                                                                                 !(4
-                                                                                                                        libc::c_uint).wrapping_sub(1                                                         libc::c_int                                                         libc::c_uint))
+                                                                                                                        libc::c_uint).wrapping_sub(1                                                                                                                  libc::c_uint))
                                                                     )
 
                                     }
@@ -274,7 +274,7 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                                                       _: _,
                                                                       _: _)
                                                                        ->
-                                                                           libc::c_int>(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(addr_0,                                                   ifa.ifa_index,                                                   label,                                                   netmask,                                                   broadcast,                                                   parm)
+                                                                           >(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(addr_0,                                                   ifa.ifa_index,                                                   label,                                                   netmask,                                                   broadcast,                                                   parm)
                                                == 0 {
                                             callback_ok = 0
                                         }
@@ -291,7 +291,7 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                         0;
                                     while len1 >=
                                               ::std::mem::size_of::<rtattr>()
-                                                                                             libc::c_int
+
                                               &&
                                               rta.rta_len
                                                   >=
@@ -302,25 +302,25 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                         if rta.rta_type ==
                                                IFA_ADDRESS {
                                             addrp =
-                                                rta.offset(1            isize) &mut In6Addr
-                                        } else if rta.rta_type   libc::c_int ==
-                                                      IFA_CACHEINFO       libc::c_int {
+                                                rta.offset(1            ) &mut In6Addr
+                                        } else if rta.rta_type    ==
+                                                      IFA_CACHEINFO        {
                                             let mut ifc: ifa_cacheinfo =
-                                                rta.offset(1            isize) ifa_cacheinfo;
+                                                rta.offset(1            ) ifa_cacheinfo;
                                             preferred = ifc.ifa_prefered;
                                             valid = ifc.ifa_valid
                                         }
                                         len1 =
                                             len1.wrapping_sub((rta.rta_len
-                                                                                  libc::c_uint).wrapping_add(4                   libc::c_uint).wrapping_sub(1                                                                                 libc::c_int                                                                                 libc::c_uint)
+                                                                                  libc::c_uint).wrapping_add(4                   libc::c_uint).wrapping_sub(1                                                                                                                                                                  libc::c_uint)
                                                                   &
-                                                                  !(4                     libc::c_uint).wrapping_sub(1                             libc::c_int                             libc::c_uint));
+                                                                  !(4                     libc::c_uint).wrapping_sub(1                                                          libc::c_uint));
                                         rta =
                                             (rta                                           &mut String).offset(((rta.rta_len
-                                                                                                              libc::c_uint).wrapping_add(4                                               libc::c_uint).wrapping_sub(1                                                                                                             libc::c_int                                                                                                             libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(4                                               libc::c_uint).wrapping_sub(1                                                                                                                                                                                                                          libc::c_uint)
                                                                                 &
                                                                                 !(4
-                                                                                                                        libc::c_uint).wrapping_sub(1                                                         libc::c_int                                                         libc::c_uint))
+                                                                                                                        libc::c_uint).wrapping_sub(1                                                                                                                  libc::c_uint))
                                                                     )
 
                                     }
@@ -347,7 +347,7 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                                                       _: _,
                                                                       _: _)
                                                                        ->
-                                                                           libc::c_int>(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(addrp,                                                   ifa.ifa_prefixlen                                                                                                                                                                                       libc::c_int,                                                   ifa.ifa_scope                                                                                                                                                                                       libc::c_int,                                                   ifa.ifa_index                                                                                                                                                                                       libc::c_int,                                                   flags,                                                   preferred                                                                                                                                                                                       libc::c_int,                                                   valid                                                                                                                                                                                       libc::c_int,                                                   parm)
+                                                                           >(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(addrp,                                                   ifa.ifa_prefixlen                                                                                                                                                                                       ,                                                   ifa.ifa_scope                                                                                                                                                                                       ,                                                   ifa.ifa_index                                                                                                                                                                                       ,                                                   flags,                                                   preferred                                                                                                                                                                                       ,                                                   valid                                                                                                                                                                                       ,                                                   parm)
                                                == 0 {
                                             callback_ok = 0
                                         }
@@ -358,30 +358,30 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                       RTM_NEWNEIGH &&
                                       family == 0 {
                             let mut neigh: ndmsg =
-                                (h                               &mut String).offset((0                 libc::c_int
+                                (h                               &mut String).offset((0
                                                                     +
                                                                     ((::std::mem::size_of::<nlmsghdr>()
-                                                                                         ).wrapping_add(4                                   libc::c_uint                            ).wrapping_sub(1                                                                                                   libc::c_int                                                                                            )
+                                                                                         ).wrapping_add(4                                   libc::c_uint                            ).wrapping_sub(1                                                                                                                                                                                               )
                                                                          &
                                                                          !(4
-                                                                                                          libc::c_uint).wrapping_sub(1                                           libc::c_int                                           libc::c_uint)
+                                                                                                          libc::c_uint).wrapping_sub(1                                                                                      libc::c_uint)
                                                                                                )
-                                                                                            libc::c_int)
+                                                                                            )
                                                                   )
                                     ;
                             let mut rta_0: rtattr =
                                 (neigh                               &mut String).offset(((::std::mem::size_of::<ndmsg>()
-                                                                               ).wrapping_add(4                         libc::c_uint                  ).wrapping_sub(1                                                                                         libc::c_int                                                                                  )
+                                                                               ).wrapping_add(4                         libc::c_uint                  ).wrapping_sub(1                                                                                                                                                                           )
                                                                     &
-                                                                    !(4                       libc::c_uint).wrapping_sub(1                                 libc::c_int                                 libc::c_uint)
+                                                                    !(4                       libc::c_uint).wrapping_sub(1                                                                  libc::c_uint)
                                                                                      )
                                                                   )
                                     ;
                             let mut len1_0: u32 =
                                 (h.nlmsg_len                        ).wrapping_sub((::std::mem::size_of::<ndmsg>()
-                                                                                 ).wrapping_add(((::std::mem::size_of::<nlmsghdr>()                        ).wrapping_add(4                                                                                               libc::c_uint                                                                                        ).wrapping_sub(1                                                                                                                                                               libc::c_int                                                                                                                                                        )
+                                                                                 ).wrapping_add(((::std::mem::size_of::<nlmsghdr>()                        ).wrapping_add(4                                                                                               libc::c_uint                                                                                        ).wrapping_sub(1                                                                                                                                                                                                                                                                                                                       )
                                                                                                        &
-                                                                                                       !(4                                         libc::c_uint).wrapping_sub(1                                                                                                       libc::c_int                                                                                                       libc::c_uint)                              )                           libc::c_int                    ))
+                                                                                                       !(4                                         libc::c_uint).wrapping_sub(1                                                                                                                                                                                                              libc::c_uint)                              )                                               ))
                                    ;
                             let mut maclen: usize =
                                 0 ;
@@ -398,24 +398,24 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                 if rta_0.rta_type ==
                                        NDA_DST {
                                     inaddr =
-                                        rta_0.offset(1      isize)                                      &mut String
+                                        rta_0.offset(1      )                                      &mut String
                                 } else if rta_0.rta_type ==
                                               NDA_LLADDR {
                                     maclen =
                                         (rta_0.rta_len ).wrapping_sub(::std::mem::size_of::<rtattr>()
                                                                                                );
                                     mac =
-                                        rta_0.offset(1      isize)                                      &mut String
+                                        rta_0.offset(1      )                                      &mut String
                                 }
                                 len1_0 =
-                                    len1_0.wrapping_sub((rta_0.rta_len          libc::c_uint).wrapping_add(4       libc::c_uint).wrapping_sub(1                                                                     libc::c_int                                                                     libc::c_uint)
+                                    len1_0.wrapping_sub((rta_0.rta_len          libc::c_uint).wrapping_add(4       libc::c_uint).wrapping_sub(1                                                                                                                                          libc::c_uint)
                                                             &
-                                                            !(4               libc::c_uint).wrapping_sub(1                 libc::c_int                 libc::c_uint));
+                                                            !(4               libc::c_uint).wrapping_sub(1                                  libc::c_uint));
                                 rta_0 =
                                     (rta_0                                   &mut String).offset(((rta_0.rta_len
-                                                                                              libc::c_uint).wrapping_add(4                               libc::c_uint).wrapping_sub(1                                                                                             libc::c_int                                                                                             libc::c_uint)
+                                                                                              libc::c_uint).wrapping_add(4                               libc::c_uint).wrapping_sub(1                                                                                                                                                                                          libc::c_uint)
                                                                         &
-                                                                        !(4                           libc::c_uint).wrapping_sub(1                                         libc::c_int                                         libc::c_uint))
+                                                                        !(4                           libc::c_uint).wrapping_sub(1                                                                                  libc::c_uint))
                                                     )
 
                             }
@@ -429,7 +429,7 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                                               _: _, _: _,
                                                               _: _)
                                                                ->
-                                                                   libc::c_int>(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(neigh.ndm_family                                                                                                                                                                       libc::c_int,                                           inaddr,                                           mac,                                           maclen,                                           parm)
+                                                                   >(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(neigh.ndm_family                                                                                                                                                                       ,                                           inaddr,                                           mac,                                           maclen,                                           parm)
                                        == 0 {
                                     callback_ok = 0
                                 }
@@ -438,30 +438,30 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                       RTM_NEWLINK &&
                                       family == 1 {
                             let mut link: ifinfomsg =
-                                (h                               &mut String).offset((0                 libc::c_int
+                                (h                               &mut String).offset((0
                                                                     +
                                                                     ((::std::mem::size_of::<nlmsghdr>()
-                                                                                         ).wrapping_add(4                                   libc::c_uint                            ).wrapping_sub(1                                                                                                   libc::c_int                                                                                            )
+                                                                                         ).wrapping_add(4                                   libc::c_uint                            ).wrapping_sub(1                                                                                                                                                                                               )
                                                                          &
                                                                          !(4
-                                                                                                          libc::c_uint).wrapping_sub(1                                           libc::c_int                                           libc::c_uint)
+                                                                                                          libc::c_uint).wrapping_sub(1                                                                                      libc::c_uint)
                                                                                                )
-                                                                                            libc::c_int)
+                                                                                            )
                                                                   )
                                     ;
                             let mut rta_1: rtattr =
                                 (link                               &mut String).offset(((::std::mem::size_of::<ifinfomsg>()
-                                                                               ).wrapping_add(4                         libc::c_uint                  ).wrapping_sub(1                                                                                         libc::c_int                                                                                  )
+                                                                               ).wrapping_add(4                         libc::c_uint                  ).wrapping_sub(1                                                                                                                                                                           )
                                                                     &
-                                                                    !(4                       libc::c_uint).wrapping_sub(1                                 libc::c_int                                 libc::c_uint)
+                                                                    !(4                       libc::c_uint).wrapping_sub(1                                                                  libc::c_uint)
                                                                                      )
                                                                   )
                                     ;
                             let mut len1_1: u32 =
                                 (h.nlmsg_len                        ).wrapping_sub((::std::mem::size_of::<ifinfomsg>()
-                                                                                 ).wrapping_add(((::std::mem::size_of::<nlmsghdr>()                        ).wrapping_add(4                                                                                               libc::c_uint                                                                                        ).wrapping_sub(1                                                                                                                                                               libc::c_int                                                                                                                                                        )
+                                                                                 ).wrapping_add(((::std::mem::size_of::<nlmsghdr>()                        ).wrapping_add(4                                                                                               libc::c_uint                                                                                        ).wrapping_sub(1                                                                                                                                                                                                                                                                                                                       )
                                                                                                        &
-                                                                                                       !(4                                         libc::c_uint).wrapping_sub(1                                                                                                       libc::c_int                                                                                                       libc::c_uint)                              )                           libc::c_int                    ))
+                                                                                                       !(4                                         libc::c_uint).wrapping_sub(1                                                                                                                                                                                                              libc::c_uint)                              )                                               ))
                                    ;
                             let mut mac_0: &mut String =
                                 0 ;
@@ -479,17 +479,17 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                         (rta_1.rta_len ).wrapping_sub(::std::mem::size_of::<rtattr>()
                                                                                                );
                                     mac_0 =
-                                        rta_1.offset(1      isize)                                      &mut String
+                                        rta_1.offset(1      )                                      &mut String
                                 }
                                 len1_1 =
-                                    len1_1.wrapping_sub((rta_1.rta_len          libc::c_uint).wrapping_add(4       libc::c_uint).wrapping_sub(1                                                                     libc::c_int                                                                     libc::c_uint)
+                                    len1_1.wrapping_sub((rta_1.rta_len          libc::c_uint).wrapping_add(4       libc::c_uint).wrapping_sub(1                                                                                                                                          libc::c_uint)
                                                             &
-                                                            !(4               libc::c_uint).wrapping_sub(1                 libc::c_int                 libc::c_uint));
+                                                            !(4               libc::c_uint).wrapping_sub(1                                  libc::c_uint));
                                 rta_1 =
                                     (rta_1                                   &mut String).offset(((rta_1.rta_len
-                                                                                              libc::c_uint).wrapping_add(4                               libc::c_uint).wrapping_sub(1                                                                                             libc::c_int                                                                                             libc::c_uint)
+                                                                                              libc::c_uint).wrapping_add(4                               libc::c_uint).wrapping_sub(1                                                                                                                                                                                          libc::c_uint)
                                                                         &
-                                                                        !(4                           libc::c_uint).wrapping_sub(1                                         libc::c_int                                         libc::c_uint))
+                                                                        !(4                           libc::c_uint).wrapping_sub(1                                                                                  libc::c_uint))
                                                     )
 
                             }
@@ -502,7 +502,7 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
                                                               _: _, _: _,
                                                               _: _)
                                                                ->
-                                                                   libc::c_int>(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(link.ifi_index,                                           link.ifi_type                                                                                                                                                                       libc::c_uint,                                           mac_0,                                           maclen_0,                                           parm)
+                                                                   >(Some(callback.expect("non-null function pointer")).expect("non-null function pointer"))(link.ifi_index,                                           link.ifi_type                                                                                                                                                                       libc::c_uint,                                           mac_0,                                           maclen_0,                                           parm)
                                        == 0 {
                                 callback_ok = 0
                             }
@@ -513,16 +513,16 @@ pub fn iface_enumerate(mut family: i32, mut parm:Vec<u8>, mut callback: Option<f
 	       ENOBUFS. Drop it. */
                 len -=
                     (h.nlmsg_len.wrapping_add(4  libc::c_uint).wrapping_sub(1
-                                                                                                                    libc::c_int
+
                                                                                                                     libc::c_uint)
                          &
                          !(4                         libc::c_uint).wrapping_sub(1           libc::c_uint))
                        ;
                 h =
                     (h                   &mut String).offset((h.nlmsg_len.wrapping_add(4
-                                                                                                                    libc::c_uint).wrapping_sub(1                                                     libc::c_int                                                     libc::c_uint)
+                                                                                                                    libc::c_uint).wrapping_sub(1                                                                                                          libc::c_uint)
                                                         &
-                                                        !(4           libc::c_uint).wrapping_sub(1         libc::c_int         libc::c_uint))
+                                                        !(4           libc::c_uint).wrapping_sub(1                  libc::c_uint))
                                                       )                  &mut nlmsghdr
             }
         }
@@ -554,15 +554,15 @@ pub fn netlink_multicast() {
             nl_async(h);
             len -=
                 (h.nlmsg_len.wrapping_add(4                                           libc::c_uint).wrapping_sub(1
-                                                                                                            libc::c_int
+
                                                                                                             libc::c_uint)
                      &
                      !(4                     libc::c_uint).wrapping_sub(1       libc::c_uint))              i32;
             h =
                 (h               &mut String).offset((h.nlmsg_len.wrapping_add(4
-                                                                                                            libc::c_uint).wrapping_sub(1                                             libc::c_int                                             libc::c_uint)
+                                                                                                            libc::c_uint).wrapping_sub(1                                                                                          libc::c_uint)
                                                     &
-                                                    !(4       libc::c_uint).wrapping_sub(1 libc::c_int libc::c_uint))
+                                                    !(4       libc::c_uint).wrapping_sub(1  libc::c_uint))
                                                   ) )
         }
     }
@@ -576,10 +576,10 @@ unsafe extern "C" fn nl_async(mut h: &mut nlmsghdr) {
                                                 ((::std::mem::size_of::<nlmsghdr>()
                                                  ).wrapping_add(4
                                                                                                                         libc::c_uint
-                                                                                                                 ).wrapping_sub(1                                                           libc::c_int                                                    )
+                                                                                                                 ).wrapping_sub(1                                                                                                               )
                                                      &
-                                                     !(4        libc::c_uint).wrapping_sub(1   libc::c_int   libc::c_uint)
-                                                        ) libc::c_int))         Vec<u8> ;
+                                                     !(4        libc::c_uint).wrapping_sub(1      libc::c_uint)
+                                                        ) ))         Vec<u8> ;
         if err.error != 0 {
             my_syslog(3,
                       "netlink returns error: %s", strerror(-err.error));
@@ -597,10 +597,10 @@ unsafe extern "C" fn nl_async(mut h: &mut nlmsghdr) {
                                                 ((::std::mem::size_of::<nlmsghdr>()
                                                  ).wrapping_add(4
                                                                                                                         libc::c_uint
-                                                                                                                 ).wrapping_sub(1                                                           libc::c_int                                                    )
+                                                                                                                 ).wrapping_sub(1                                                                                                               )
                                                      &
-                                                     !(4        libc::c_uint).wrapping_sub(1   libc::c_int   libc::c_uint)
-                                                        ) libc::c_int)) ;
+                                                     !(4        libc::c_uint).wrapping_sub(1      libc::c_uint)
+                                                        ) )) ;
         if rtm.rtm_type == RTN_UNICAST &&
                rtm.rtm_scope == RT_SCOPE_LINK
                &&

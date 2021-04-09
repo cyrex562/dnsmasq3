@@ -231,11 +231,11 @@ pub fn log_tags(mut netid: &mut DhcpNetId,
                                   mut xid: u32) {
     if !netid.is_null() &&
            daemon.options[(28  ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (28  )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         let mut s: &mut String = daemon.namebuff;
@@ -520,7 +520,7 @@ pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
                 if prot == 10  {
                     conflags = 4096 ;
                     cacheflags =
-                        ((1) << 8 )                      libc::c_int
+                        ((1) << 8 )
                 }
                 if config.flags & conflags == 0 &&
                        config.flags & 16  !=
@@ -584,7 +584,7 @@ pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
                                               conf_tmp =
                                                   config_find_by_address6(configs,
                                                                           0                           &mut In6Addr,
-                                                                          0                           libc::c_int,
+                                                                          0                           ,
                                                                           &mut crec.addr.addr6);
                                               (conf_tmp.is_null()) ||
                                                   conf_tmp == config
@@ -916,8 +916,8 @@ pub fn option_string(mut prot: i32,
                     while i < opt_len && j < buf_len {
                         let mut c: libc::c_char =
                             *val.offset(i);
-                        if *(*__ctype_b_loc()).offset(c        isize) &
-                               _ISPRINT                              libc::c_int != 0 {
+                        if *(*__ctype_b_loc()).offset(c        ) &
+                               _ISPRINT                               != 0 {
                             let fresh6 = j;
                             j = j + 1;
                             *buf.offset(fresh6) = c
@@ -941,7 +941,7 @@ pub fn option_string(mut prot: i32,
                             let mut c_0: libc::c_char =
                                 *val.offset(k);
                             if *(*__ctype_b_loc()).offset(c_0 
-                                                             )                             libc::c_int &
+                                                             )                              &
                                    _ISPRINT
                                         != 0 {
                                 let fresh7 = j;
@@ -982,7 +982,7 @@ pub fn option_string(mut prot: i32,
                             let mut c_1: libc::c_char =
                                 *fresh9;
                             if *(*__ctype_b_loc()).offset(c_1 
-                                                             )                             libc::c_int &
+                                                             )                              &
                                    _ISPRINT
                                         != 0 {
                                 let fresh10 = j;

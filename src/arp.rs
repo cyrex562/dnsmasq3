@@ -136,14 +136,14 @@ pub fn find_mac(
             }
         }
         // iface_enumerate(0, 0,
-        //                 ::std::mem::transmute::<Option<unsafe extern "C" fn(_: libc::c_int, _: *mut libc::c_char, _:  *mut libc::c_char, _: size_t, _:  *mut libc::c_void) -> libc::c_int>, Option<unsafe extern "C" fn() ->
-        //                                                        libc::c_int>>(Some(filter_mac);
+        //                 ::std::mem::transmute::<Option<unsafe extern "C" fn(_: , _: *mut libc::c_char, _:  *mut libc::c_char, _: size_t, _:  *mut libc::c_void) -> >, Option<unsafe extern "C" fn() ->
+        //                                                        >>(Some(filter_mac);
         /* Remove all unconfirmed entries to old list. */
         // arp = arps;
         // up = &mut arps;
         // while !arp.is_null() {
         //     tmp = arp.next;
-        //     if arp.status as libc::c_int == 0 as libc::c_int {
+        //     if arp.status as  == 0 as  {
         //         *up = arp.next;
         //         arp.next = old;
         //         old = arp

@@ -41,7 +41,7 @@ use std::time;
 unsafe extern "C" fn read_leases(daemon: &mut DnsmasqDaemon, lease_ctx: &mut DhcpLeaseContext, mut now: time::Instant, mut leasestream: &mut std::fs::File)
  -> i32 {
     let mut ei: u32 = 0;
-    let mut addr: NetAddress = Default::default();
+    let mut addr: NetAddress = NetAddress:new();
     let mut lease: DhcpLease = Default::default();
     let mut clid_len: i32 = 0;
     let mut hw_len: i32 = 0;
@@ -170,11 +170,11 @@ pub unsafe extern "C" fn lease_init(mut now: time::Instant) {
     let mut leasestream: FILE = 0 ;
     leases_left = daemon.dhcp_max;
     if daemon.options[(22).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (22).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         /* run "<lease_change_script> init" once to get the
@@ -358,12 +358,12 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
                     while i < lease.clid_len - 1 {
                         ourprintf(&mut err,
                                   "%.2x:"                                &mut String,
-                                  *lease.clid.offset(i)                                libc::c_int);
+                                  *lease.clid.offset(i)                                );
                         i += 1
                     }
                     ourprintf(&mut err,
                               "%.2x\n" ,
-                              *lease.clid.offset(i)                            libc::c_int);
+                              *lease.clid.offset(i)                            );
                 } else {
                     ourprintf(&mut err,
                               "*\n"
@@ -418,12 +418,12 @@ pub unsafe extern "C" fn lease_update_file(mut now: time::Instant) {
                         while i < lease.clid_len - 1 {
                             ourprintf(&mut err,
                                       "%.2x:"                                     *const libc::c_char                                    &mut String,
-                                      *lease.clid.offset(i)                                    libc::c_int);
+                                      *lease.clid.offset(i)                                    );
                             i += 1
                         }
                         ourprintf(&mut err,
                                   "%.2x\n"                                &mut String,
-                                  *lease.clid.offset(i)                                libc::c_int);
+                                  *lease.clid.offset(i)                                );
                     } else {
                         ourprintf(&mut err,
                                   "*\n"                                &mut String);
@@ -568,7 +568,7 @@ pub unsafe extern "C" fn lease_find_interfaces(mut now: time::Instant) {
                     ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
                                                                         NetAddress,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
                                                                             &mut String,
                                                                         _:
@@ -580,11 +580,11 @@ pub unsafe extern "C" fn lease_find_interfaces(mut now: time::Instant) {
                                                                         -> i32>,
                                             Option<unsafe extern "C" fn()
                                                        ->
-                                                           libc::c_int>>(Some(find_interface_v4
+                                                           >>(Some(find_interface_v4
                                                                                                                 unsafe extern "C" fn(_:
                                                                                                        NetAddress,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
                                                                                                            &mut String,
                                                                                                        _:
@@ -594,47 +594,47 @@ pub unsafe extern "C" fn lease_find_interfaces(mut now: time::Instant) {
                                                                                                        _:
                                                                                                           Vec<u8>)
                                                                                                        ->
-                                                                                          libc::c_int)));
+                                                                                          )));
     iface_enumerate(10,
                     &mut now,
                     ::std::mem::transmute::<Option<unsafe extern "C" fn(_:
                                                                             &mut In6Addr,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
-                                                                            libc::c_int,
+                                                                            ,
                                                                         _:
                                                                            Vec<u8>)
                                                                         -> i32>,
                                             Option<unsafe extern "C" fn()
                                                        ->
-                                                           libc::c_int>>(Some(find_interface_v6
+                                                           >>(Some(find_interface_v6
                                                                                                                 unsafe extern "C" fn(_:
                                                                                                            &mut In6Addr,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
-                                                                                                           libc::c_int,
+                                                                                                           ,
                                                                                                        _:
                                                                                                           Vec<u8>)
                                                                                                        ->
-                                                                                          libc::c_int)));
+                                                                                          )));
     lease = leases;
     while !lease.is_null() {
         if lease.new_interface != 0 {
@@ -706,11 +706,11 @@ pub unsafe extern "C" fn lease_update_dns(mut force: i32) {
                                      }, lease.expires);
             }
             if daemon.options[(20                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (20 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    == 0 && !lease.hostname.is_null() {
                 cache_add_dhcp_entry(lease.hostname, prot,
                                      if prot == 2 {
@@ -742,14 +742,14 @@ pub unsafe extern "C" fn lease_prune(mut target: DhcpLease,
             file_dirty = 1;
             if !lease.hostname.is_null() { dns_dirty = 1 }
             daemon.metrics[if lease.addr.s_addr != 0 {
-                                          METRIC_LEASES_PRUNED_4                                        libc::c_int
+                                          METRIC_LEASES_PRUNED_4
                                       } else {
-                                          METRIC_LEASES_PRUNED_6                                        libc::c_int
+                                          METRIC_LEASES_PRUNED_6
                                       } ] =
                 daemon.metrics[if lease.addr.s_addr != 0 {
-                                              METRIC_LEASES_PRUNED_4                                            libc::c_int
+                                              METRIC_LEASES_PRUNED_4
                                           } else {
-                                              METRIC_LEASES_PRUNED_6                                            libc::c_int
+                                              METRIC_LEASES_PRUNED_6
                                           } ].wrapping_add(1);
             *up = lease.next;
             /* Put on old_leases list 'till we
@@ -1140,7 +1140,7 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
             if !domain.is_null() &&
                    {
                        // new_fqdn =
-                       //     whine_malloc(strlen(new_name).wrapping_add(strlen(domain)).wrapping_add(2                             libc::c_int                      ))
+                       //     whine_malloc(strlen(new_name).wrapping_add(strlen(domain)).wrapping_add(2                                                   ))
                        //         ;
                        // !new_fqdn.is_null()
                        true
@@ -1156,11 +1156,11 @@ pub unsafe extern "C" fn lease_set_hostname(mut lease: DhcpLease,
         lease_tmp = leases;
         while !lease_tmp.is_null() {
             if daemon.options[(20                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (20 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    != 0 {
                 if new_fqdn.is_null() || lease_tmp.fqdn.is_null() ||
                        hostname_isequal(lease_tmp.fqdn, new_fqdn) == 0 {
@@ -1290,19 +1290,19 @@ pub unsafe extern "C" fn do_script_run(mut now: time::Instant) -> i32 {
         if lease.flags & (1 | 2) != 0 ||
                lease.flags & 4 != 0 &&
                    daemon.options[(22 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           ).wrapping_mul(8                                                     libc::c_int                                              ))
+                                                                                                           ).wrapping_mul(8                                                                                                   ))
                                                  ] &
                        (1) <<
                            (22                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                       ).wrapping_mul(8                 libc::c_int          ))
+                                                                       ).wrapping_mul(8                           ))
                        != 0 ||
                lease.flags & 256 != 0 &&
                    daemon.options[(61 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           ).wrapping_mul(8                                                     libc::c_int                                              ))
+                                                                                                           ).wrapping_mul(8                                                                                                   ))
                                                  ] &
                        (1) <<
                            (61                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                       ).wrapping_mul(8                 libc::c_int          ))
+                                                                       ).wrapping_mul(8                           ))
                        != 0 {
             queue_script(if lease.flags & 1 != 0 {
                              4
@@ -1345,7 +1345,7 @@ pub unsafe extern "C" fn lease_add_extradata(mut lease: DhcpLease,
     if lease.extradata_size.wrapping_sub(lease.extradata_len) <
            len.wrapping_add(1) {
         let mut newsz: usize =
-            lease.extradata_len.wrapping_add(len).wrapping_add(100                   libc::c_int
+            lease.extradata_len.wrapping_add(len).wrapping_add(100
                                                                                         libc::c_uint)
                 ;
         // let mut new: mut Vec<u8> =
@@ -1364,7 +1364,7 @@ pub unsafe extern "C" fn lease_add_extradata(mut lease: DhcpLease,
         memcpy(lease.extradata.offset(lease.extradata_len)            Vec<u8>, data,
                len);
     }
-    *lease.extradata.offset(lease.extradata_len.wrapping_add(len)                             isize) = delim;
+    *lease.extradata.offset(lease.extradata_len.wrapping_add(len)                             ) = delim;
     lease.extradata_len =
         lease.extradata_len.wrapping_add(len.wrapping_add(1
                                                                               libc::c_uint));

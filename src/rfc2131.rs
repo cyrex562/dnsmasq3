@@ -138,18 +138,18 @@ pub fn dhcp_reply(mut context: DhcpContext,
                   {
                 elen =
                     option_uint(opt,
-                                offset.wrapping_add(4     libc::c_uint)                              libc::c_int, 1);
+                                offset.wrapping_add(4     libc::c_uint)                              , 1);
                 if option_uint(opt, offset, 4)
                        == 3561 &&
                        offset.wrapping_add(elen).wrapping_add(5
                                                                                 libc::c_uint)
                            <= len {
                     let mut x: mut Vec<u8> =
-                        &mut *opt.offset((2                                        libc::c_uint).wrapping_add(offset.wrapping_add(5                 libc::c_int                 libc::c_uint))
+                        &mut *opt.offset((2                                        libc::c_uint).wrapping_add(offset.wrapping_add(5                                  libc::c_uint))
                                             )
                            ;
                     let mut y: mut Vec<u8> =
-                        &mut *opt.offset((2                                        libc::c_uint).wrapping_add(offset.wrapping_add(elen).wrapping_add(5                                                       libc::c_int                                                       libc::c_uint))
+                        &mut *opt.offset((2                                        libc::c_uint).wrapping_add(offset.wrapping_add(elen).wrapping_add(5                                                                                                              libc::c_uint))
                                             )
                            ;
                     oui =
@@ -189,7 +189,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                 (*opt.offset(1) +
                      2);
             let mut last_opt: mut Vec<u8> =
-                option_find1((&mut *mess.options.as_mut_ptr().offset(0                         libc::c_int
+                option_find1((&mut *mess.options.as_mut_ptr().offset(0
                                                               )
                                                               &mut u8) .offset(::std::mem::size_of::<u32>()
                       ),
@@ -205,11 +205,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
             /* look for RFC3527 Link selection sub-option */
             sopt =
                 option_find1(&mut *opt.offset((2libc::c_uint).wrapping_add(0
-                                                                                                                libc::c_int
+
                                                                                                                 libc::c_uint)
                                                  )                           mut Vec<u8>                           mut Vec<u8>,
-                             &mut *opt.offset((2libc::c_uint).wrapping_add(*opt.offset(1           libc::c_int           isize)
-                                                                                                                libc::c_int
+                             &mut *opt.offset((2libc::c_uint).wrapping_add(*opt.offset(1                      )
+
                                                                                                                 libc::c_uint)
                                                  )                           mut Vec<u8>                           mut Vec<u8>, 5,
                              4);
@@ -217,11 +217,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
             /* look for RFC5107 server-identifier-override */
             sopt =
                 option_find1(&mut *opt.offset((2libc::c_uint).wrapping_add(0
-                                                                                                                libc::c_int
+
                                                                                                                 libc::c_uint)
                                                  )                           mut Vec<u8>                           mut Vec<u8>,
-                             &mut *opt.offset((2libc::c_uint).wrapping_add(*opt.offset(1           libc::c_int           isize)
-                                                                                                                libc::c_int
+                             &mut *opt.offset((2libc::c_uint).wrapping_add(*opt.offset(1                      )
+
                                                                                                                 libc::c_uint)
                                                  )                           mut Vec<u8>                           mut Vec<u8>, 11,
                              4);
@@ -244,15 +244,15 @@ pub fn dhcp_reply(mut context: DhcpContext,
                 match current_block_52 {
                     7385833325316299293 => {
                         sopt =
-                            option_find1(&mut *opt.offset((2            libc::c_uint).wrapping_add(0           libc::c_int           libc::c_uint)
+                            option_find1(&mut *opt.offset((2            libc::c_uint).wrapping_add(0                      libc::c_uint)
                                                              )                                       mut Vec<u8>                                      Vec<u8>                                       mut Vec<u8>,
-                                         &mut *opt.offset((2            libc::c_uint).wrapping_add(*opt.offset(1                                   libc::c_int                                   isize)           libc::c_int           libc::c_uint)
+                                         &mut *opt.offset((2            libc::c_uint).wrapping_add(*opt.offset(1                                                                      )                      libc::c_uint)
                                                              )                                       mut Vec<u8>                                      Vec<u8>                                       mut Vec<u8>, search,
                                          1);
                         if !sopt.is_null() &&
                                vendor.len ==
-                                   *sopt.offset(1)                                 libc::c_int &&
-                               memcmp(&mut *sopt.offset((2          libc::c_uint).wrapping_add(0       libc::c_int       libc::c_uint)
+                                   *sopt.offset(1)                                  &&
+                               memcmp(&mut *sopt.offset((2          libc::c_uint).wrapping_add(0              libc::c_uint)
                                                            )                                    mut Vec<u8>                                   Vec<u8>,
                                       vendor.data,
                                       vendor.len) ==
@@ -278,11 +278,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
         }
         /* If there is no client identifier option, use the hardware address */
         if daemon.options[(59 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (59 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                == 0 &&
                {
@@ -293,7 +293,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                } {
             clid_len = *opt.offset(1);
             clid =
-                &mut *opt.offset((2                                libc::c_uint).wrapping_add(0                  libc::c_int
+                &mut *opt.offset((2                                libc::c_uint).wrapping_add(0
                                                                                       libc::c_uint)
                                     )             Vec<u8>
         }
@@ -475,11 +475,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
         return 0
     }
     if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         let mut context_tmp_0: DhcpContext = 0;
@@ -532,7 +532,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                        , 1);
                     /* Need to take care that bad data can't run us off the end of the packet */
                     if offset_0.wrapping_add(len_0                                    ).wrapping_add(5
-                                                                                                              libc::c_int
+
                                                                                                        )
                            <=
                            *opt.offset(1) &&
@@ -548,14 +548,14 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                 option_uint(opt, o2,
                                             1);
                             if o2.wrapping_add(elen_0libc::c_ulong).wrapping_add(1
-                                                                                                                  libc::c_int
+
                                                                                                            )
                                    <=
-                                   *opt.offset(1)                                 libc::c_int                                 libc::c_ulong &&
+                                   *opt.offset(1)                                                                  libc::c_ulong &&
                                    {
                                        match_0 =
                                            match_bytes(o,
-                                                       &mut *opt.offset((2                          libc::c_uint).wrapping_add(o2.wrapping_add(1                                                                       libc::c_int                                                                )                                       libc::c_uint)
+                                                       &mut *opt.offset((2                          libc::c_uint).wrapping_add(o2.wrapping_add(1                                                                                                                                       )                                       libc::c_uint)
                                                               )
                                                                   mut Vec<u8>
                                                                  Vec<u8>
@@ -567,7 +567,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                 break ;
                             }
                             o2 =
-                                (o2                        ).wrapping_add(elen_0.wrapping_add(1 libc::c_int libc::c_uint)
+                                (o2                        ).wrapping_add(elen_0.wrapping_add(1  libc::c_uint)
                                                                                )
 
                         }
@@ -575,7 +575,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                     if match_0 != 0 { break ; }
                     offset_0 =
                         (offset_0).wrapping_add(len_0.wrapping_add(5
-                                                                                                            libc::c_int
+
                                                                                                             libc::c_uint)
                                                             )
 
@@ -590,10 +590,10 @@ pub fn dhcp_reply(mut context: DhcpContext,
                 match_0 =
                     match_bytes(o,
                                 &mut *opt.offset((2   libc::c_uint).wrapping_add(0
-                                                                                                                      libc::c_int
+
                                                                                                                       libc::c_uint)
                                                     )                              mut Vec<u8>                              mut Vec<u8>,
-                                *opt.offset(1)                              libc::c_int);
+                                *opt.offset(1)                              );
                 current_block_146 = 10720305954121010852;
             }
         }
@@ -659,7 +659,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                     let mut i: i32 = 0;
                     i = 0;
                     while i <=
-                              *opt.offset(1)                            libc::c_int - vendor.len {
+                              *opt.offset(1)                             - vendor.len {
                         if memcmp(vendor.data,
                                   &mut *opt.offset((2     libc::c_uint).wrapping_add(i
                                                                                                                           libc::c_uint)
@@ -690,11 +690,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
     }
     match_vendor_opts(opt, daemon.dhcp_opts);
     if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         if sanitise(opt, daemon.namebuff) != 0 {
@@ -939,11 +939,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
         pp = op;
         /* NB, the following always sets at least one bit */
         if daemon.options[(36 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (36 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
             if fqdn_flags & 0x1 != 0 {
@@ -972,7 +972,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                        op.offset(1)    *op);
                 pq = pq.offsetop;
                 op =
-                    op.offset((*op + 1)                            isize);
+                    op.offset((*op + 1)                            );
                 let fresh6 = pq;
                 pq = pq.offset(1);
                 *fresh6 = '.'
@@ -998,7 +998,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
             let mut len_2: i32 =
                 *opt.offset(1);
             memcpy(daemon.dhcp_buff,
-                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0                     libc::c_int
+                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0
                                                                                             libc::c_uint)
                                        )                Vec<u8>, len_2);
             /* Microsoft clients are broken, and need zero-terminated strings
@@ -1022,11 +1022,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
         let mut m: DhcpMatchName = 0 ;
         let mut nl: usize = strlen(client_hostname);
         if daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
             my_syslog((3) << 3 |
@@ -1144,7 +1144,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
         opt = option_find(mess, sz, 97, 17);
         if !opt.is_null() {
             memcpy(pxe_uuid.as_mut_ptr(),
-                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0                     libc::c_int
+                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0
                                                                                             libc::c_uint)
                                        )                Vec<u8>, 17);
             uuid = pxe_uuid.as_mut_ptr()
@@ -1160,9 +1160,9 @@ pub fn dhcp_reply(mut context: DhcpContext,
                } &&
                {
                    opt =
-                       option_find1(&mut *opt.offset((2       libc::c_uint).wrapping_add(0 libc::c_int libc::c_uint)
+                       option_find1(&mut *opt.offset((2       libc::c_uint).wrapping_add(0  libc::c_uint)
                                                         )                                  mut Vec<u8>                                 Vec<u8>                                  mut Vec<u8>,
-                                    &mut *opt.offset((2       libc::c_uint).wrapping_add(*opt.offset(1                         libc::c_int                         isize) libc::c_int libc::c_uint)
+                                    &mut *opt.offset((2       libc::c_uint).wrapping_add(*opt.offset(1                                                  )  libc::c_uint)
                                                         )                                  mut Vec<u8>                                 Vec<u8>                                  mut Vec<u8>, 71,
                                     4);
                    !opt.is_null()
@@ -1189,7 +1189,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                 return 0
             }
             memcpy(save71.as_mut_ptr(),
-                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0                     libc::c_int
+                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0
                                                                                             libc::c_uint)
                                        )                Vec<u8>, 4);
             service = daemon.pxe_services;
@@ -1366,7 +1366,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                &mut *opt.offset((2                               libc::c_uint).wrapping_add(0))
                                    )            Vec<u8>,
                *opt.offset(1));
-        *req_options.offset(*opt.offset(1)                          libc::c_int) =
+        *req_options.offset(*opt.offset(1)                          ) =
             255
     }
     's_3991:
@@ -1390,11 +1390,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
                         option_find(mess, sz, 50,
                                     4);
                     if opt.is_null() { return 0  }
-                    daemon.metrics[METRIC_DHCPDECLINE                                            libc::c_int ] =
-                        daemon.metrics[METRIC_DHCPDECLINE   libc::c_int   usize].wrapping_add(1);
+                    daemon.metrics[METRIC_DHCPDECLINE                                             ] =
+                        daemon.metrics[METRIC_DHCPDECLINE      usize].wrapping_add(1);
                     log_packet("DHCPDECLINE",
                                &mut *opt.offset((2  libc::c_uint).wrapping_add(0
-                                                                                                                    libc::c_int
+
                                                                                                                     libc::c_uint)
                                                    )                             mut Vec<u8>,
                                emac, emac_len, iface_name,
@@ -1451,8 +1451,8 @@ pub fn dhcp_reply(mut context: DhcpContext,
                         message =
                             "unknown lease"                           *const libc::c_char
                     }
-                    daemon.metrics[METRIC_DHCPRELEASE                                            libc::c_int ] =
-                        daemon.metrics[METRIC_DHCPRELEASE   libc::c_int   usize].wrapping_add(1);
+                    daemon.metrics[METRIC_DHCPRELEASE                                             ] =
+                        daemon.metrics[METRIC_DHCPRELEASE      usize].wrapping_add(1);
                     log_packet("DHCPRELEASE",
                                &mut mess.ciaddr                            Vec<u8>, emac, emac_len,
                                iface_name, 0 , message,
@@ -1578,12 +1578,12 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                 "no address available"                               *const libc::c_char
                         }
                     }
-                    daemon.metrics[METRIC_DHCPDISCOVER                                            libc::c_int ] =
-                        daemon.metrics[METRIC_DHCPDISCOVER   libc::c_int   usize].wrapping_add(1);
+                    daemon.metrics[METRIC_DHCPDISCOVER                                             ] =
+                        daemon.metrics[METRIC_DHCPDISCOVER      usize].wrapping_add(1);
                     log_packet("DHCPDISCOVER",
                                if !opt.is_null() {
                                    &mut *opt.offset((2      libc::c_uint).wrapping_add(0
-                                                                                                                            libc::c_int
+
                                                                                                                             libc::c_uint)
                                                        )                                 mut Vec<u8>
                                } else { 0 }, emac,
@@ -1605,18 +1605,18 @@ pub fn dhcp_reply(mut context: DhcpContext,
                     log_tags(tagif_netid, __bswap_32(mess.xid));
                     apply_delay(mess.xid, recvtime, tagif_netid);
                     if daemon.options[(57   libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                   ).wrapping_mul(8                                                             libc::c_int                                                      ))
+                                                                                                                   ).wrapping_mul(8                                                                                                                   ))
                                                      ] &
                            (1) <<
                                (57                       ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                               ).wrapping_mul(8                         libc::c_int                  ))
+                                                                               ).wrapping_mul(8                                           ))
                            != 0 &&
                            !option_find(mess, sz, 80,
                                         0).is_null() {
                         rapid_commit = 1
                     } else {
-                        daemon.metrics[METRIC_DHCPOFFER   libc::c_int ] =
-                            daemon.metrics[METRIC_DHCPOFFER       libc::c_int       usize].wrapping_add(1);
+                        daemon.metrics[METRIC_DHCPOFFER    ] =
+                            daemon.metrics[METRIC_DHCPOFFER              usize].wrapping_add(1);
                         log_packet("DHCPOFFER",
                                    &mut mess.yiaddr                                Vec<u8>, emac, emac_len,
                                    iface_name, 0 ,
@@ -1687,7 +1687,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                     enumerate_interfaces(0);
                                     intr = daemon.interfaces;
                                     while !intr.is_null() {
-                                        if intr.addr.sa.sa_family                                         libc::c_int == 2
+                                        if intr.addr.sa.sa_family                                          == 2
                                                &&
                                                intr.addr.in_0.sin_addr.s_addr
                                                    == option_addr(opt).s_addr
@@ -1703,13 +1703,13 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                         /* In auth mode, a REQUEST sent to the wrong server
 			     should be faulted, so that the client establishes 
 			     communication with us, otherwise, silently ignore. */
-                                        if daemon.options[(17                       libc::c_int
-                                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                              ).wrapping_mul(8                                                                                                     libc::c_int                                                                                              ))
+                                        if daemon.options[(17
+                                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                              ).wrapping_mul(8                                                                                                                                                                                                   ))
                                                                                               usize]
                                                &
                                                (1) <<
                                                    (17     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                       ).wrapping_mul(8                                                                 libc::c_int                                                          ))
+                                                                                                                       ).wrapping_mul(8                                                                                                                           ))
                                                == 0 {
                                             return 0
                                         }
@@ -1728,12 +1728,12 @@ pub fn dhcp_reply(mut context: DhcpContext,
                         } else {
                             /* INIT-REBOOT */
                             if lease.is_null() &&
-                                   daemon.options[(17               libc::c_int
-                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                     libc::c_int                                                                              ))
+                                   daemon.options[(17
+                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                                                                                                   ))
                                                                  ] &
                                        (1) <<
                                            (17                                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                       ).wrapping_mul(8                                                 libc::c_int                                          ))
+                                                                                                       ).wrapping_mul(8                                                                                           ))
                                        == 0 {
                                 return 0
                             }
@@ -1754,12 +1754,12 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                mess.ciaddr.s_addr != lease.addr.s_addr
                                ||
                                lease.is_null() &&
-                                   daemon.options[(17               libc::c_int
-                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                     libc::c_int                                                                              ))
+                                   daemon.options[(17
+                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                                                                                                   ))
                                                                  ] &
                                        (1) <<
                                            (17                                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                       ).wrapping_mul(8                                                 libc::c_int                                          ))
+                                                                                                       ).wrapping_mul(8                                                                                           ))
                                        == 0 {
                             /* A client rebinding will broadcast the request, so we may see it even 
 		 if the lease is held by another server. Just ignore it in that case. 
@@ -1776,8 +1776,8 @@ pub fn dhcp_reply(mut context: DhcpContext,
                         fuzz = rand16();
                         mess.yiaddr = mess.ciaddr
                     }
-                    daemon.metrics[METRIC_DHCPREQUEST                                            libc::c_int ] =
-                        daemon.metrics[METRIC_DHCPREQUEST   libc::c_int   usize].wrapping_add(1);
+                    daemon.metrics[METRIC_DHCPREQUEST                                             ] =
+                        daemon.metrics[METRIC_DHCPREQUEST      usize].wrapping_add(1);
                     log_packet("DHCPREQUEST",
                                &mut mess.yiaddr                            Vec<u8>, emac, emac_len,
                                iface_name, 0 ,
@@ -1794,7 +1794,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                     }
                     daemon.metrics[METRIC_DHCPINFORM
                                                   ] =
-                        daemon.metrics[METRIC_DHCPINFORM   libc::c_int   usize].wrapping_add(1);
+                        daemon.metrics[METRIC_DHCPINFORM      usize].wrapping_add(1);
                     log_packet("DHCPINFORM",
                                &mut mess.ciaddr                            Vec<u8>, emac, emac_len,
                                iface_name, message, 0 ,
@@ -1825,7 +1825,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                     }
                     log_tags(tagif_netid, __bswap_32(mess.xid));
                     daemon.metrics[METRIC_DHCPACK                                            usize] =
-                        daemon.metrics[METRIC_DHCPACK   libc::c_int   usize].wrapping_add(1);
+                        daemon.metrics[METRIC_DHCPACK      usize].wrapping_add(1);
                     log_packet("DHCPACK",
                                &mut mess.ciaddr                            Vec<u8>, emac, emac_len,
                                iface_name, hostname, 0 ,
@@ -1983,9 +1983,9 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                               METRIC_DHCPNAK
                                           } ] =
                     daemon.metrics[if rapid_commit != 0 {
-                                                  METRIC_NOANSWER   libc::c_int
+                                                  METRIC_NOANSWER
                                               } else {
-                                                  METRIC_DHCPNAK   libc::c_int
+                                                  METRIC_DHCPNAK
                                               } ].wrapping_add(1);
                 log_packet(if rapid_commit != 0 {
                                "NOANSWER"                              *const libc::c_char
@@ -2056,13 +2056,13 @@ pub fn dhcp_reply(mut context: DhcpContext,
                         if !opt.is_null() {
                             add_extradata_opt(lease,
                                               option_find1(&mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(0                                               libc::c_int                                               libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(0                                                                                              libc::c_uint)
                                                                       )
                                                                           mut Vec<u8>
                                                                          Vec<u8>
                                                                           mut Vec<u8>,
                                                            &mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                       libc::c_int                                 )                                               libc::c_int                                               libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                                                        )                                                                                              libc::c_uint)
                                                                       )
                                                                           mut Vec<u8>
                                                                          Vec<u8>
@@ -2071,13 +2071,13 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                                            1));
                             add_extradata_opt(lease,
                                               option_find1(&mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(0                                               libc::c_int                                               libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(0                                                                                              libc::c_uint)
                                                                       )
                                                                           mut Vec<u8>
                                                                          Vec<u8>
                                                                           mut Vec<u8>,
                                                            &mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                       libc::c_int                                 )                                               libc::c_int                                               libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                                                        )                                                                                              libc::c_uint)
                                                                       )
                                                                           mut Vec<u8>
                                                                          Vec<u8>
@@ -2086,13 +2086,13 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                                            1));
                             add_extradata_opt(lease,
                                               option_find1(&mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(0                                               libc::c_int                                               libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(0                                                                                              libc::c_uint)
                                                                       )
                                                                           mut Vec<u8>
                                                                          Vec<u8>
                                                                           mut Vec<u8>,
                                                            &mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                       libc::c_int                                 )                                               libc::c_int                                               libc::c_uint)
+                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                                                        )                                                                                              libc::c_uint)
                                                                       )
                                                                           mut Vec<u8>
                                                                          Vec<u8>
@@ -2110,10 +2110,10 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                         1);
                         if !opt.is_null() {
                             let mut len_4: i32 =
-                                *opt.offset(1)                              libc::c_int;
+                                *opt.offset(1)                              ;
                             let mut rop: mut Vec<u8> =
                                 &mut *opt.offset((2   libc::c_uint).wrapping_add(0
-                                                                                                                      libc::c_int
+
                                                                                                                       libc::c_uint)
                                                     )                              mut Vec<u8>                              mut Vec<u8>;
                             let mut q: &mut String =
@@ -2128,7 +2128,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                                                           i32)
                                                          ,
                                                       "%d%s"                                   *const libc::c_char,
-                                                      *rop.offset(i_0                   isize)
+                                                      *rop.offset(i_0                   )
                                                          ,
                                                       if i_0 +
                                                              1
@@ -2183,15 +2183,15 @@ pub fn dhcp_reply(mut context: DhcpContext,
                                         1);
                         if !opt.is_null() {
                             let mut len_5: i32 =
-                                *opt.offset(1)                              libc::c_int;
+                                *opt.offset(1)                              ;
                             let mut ucp_0: mut Vec<u8> =
                                 &mut *opt.offset((2   libc::c_uint).wrapping_add(0
-                                                                                                                      libc::c_int
+
                                                                                                                       libc::c_uint)
                                                     )                              mut Vec<u8>                              mut Vec<u8>;
                             /* If the user-class option started as counted strings, the first byte will be zero. */
                             if len_5 != 0 &&
-                                   *ucp_0.offset(0)                                 libc::c_int == 0 {
+                                   *ucp_0.offset(0)                                  == 0 {
                                 ucp_0 = ucp_0.offset(1);
                                 len_5 -= 1
                             }
@@ -2253,11 +2253,11 @@ pub fn dhcp_reply(mut context: DhcpContext,
                             hostname =
                                 hostname.offset(sprintf(hostname,
                                                         "%.2x%s"         *const u8         *const libc::c_char,
-                                                        *emac.offset(i_1                      isize)
+                                                        *emac.offset(i_1                      )
                                                            ,
                                                         if i_1 ==
                                                                emac_len -
-                                                                   1                    libc::c_int
+                                                                   1
                                                            {
                                                             ""             *const u8             *const libc::c_char
                                                         } else {
@@ -2376,7 +2376,7 @@ fn sanitise(mut opt: mut Vec<u8>,
     *buf = 0;
     if opt.is_null() { return 0 }
     p =
-        &mut *opt.offset((2                        libc::c_uint).wrapping_add(0          libc::c_uint)                       isize)
+        &mut *opt.offset((2                        libc::c_uint).wrapping_add(0          libc::c_uint)                       )
             ;
     i = *opt.offset(1);
     while i > 0 {
@@ -2403,10 +2403,10 @@ fn add_extradata_opt(mut lease: DhcpLease,
     } else {
         lease_add_extradata(lease,
                             &mut *opt.offset((2                                            libc::c_uint).wrapping_add(0
-                                                                                                              libc::c_int
+
                                                                                                               libc::c_uint)
                                                 )                          mut Vec<u8>                          mut Vec<u8>,
-                            *opt.offset(1)                          libc::c_int,
+                            *opt.offset(1)                          ,
                             0);
     };
 }
@@ -2420,19 +2420,19 @@ fn log_packet(mut type_0: &mut String,
     let mut a: NetAddress = NetAddress {s_addr: 0,};
     if err.is_null() &&
            daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                == 0 &&
            daemon.options[(42 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (42 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         return
@@ -2444,11 +2444,11 @@ fn log_packet(mut type_0: &mut String,
     } /* malformed packet */
     print_mac(daemon.namebuff, ext_mac, mac_len);
     if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         my_syslog((3) << 3 | 6,
@@ -2491,7 +2491,7 @@ fn log_options(mut start: mut Vec<u8>,
             option_string(2,
                           *start.offset(0)                        libc::c_uint,
                           &mut *start.offset((2                                            libc::c_uint).wrapping_add(0
-                                                                                                              libc::c_int
+
                                                                                                               libc::c_uint)
                                                 ),
                           *start.offset(1), daemon.namebuff,
@@ -2549,7 +2549,7 @@ fn option_find(mut mess: DhcpPacket, mut size: usize,
     let mut overload: mut Vec<u8> = 0;
     /* skip over DHCP cookie; */
     ret =
-        option_find1((&mut *mess.options.as_mut_ptr().offset(0                 libc::c_int
+        option_find1((&mut *mess.options.as_mut_ptr().offset(0
                                                                    )
                                               &mut u8) .offset(::std::mem::size_of::<u32>()                                   ),
                      (mess).offset(size),
@@ -2557,7 +2557,7 @@ fn option_find(mut mess: DhcpPacket, mut size: usize,
     if !ret.is_null() { return ret }
     /* look for overload option. */
     overload =
-        option_find1((&mut *mess.options.as_mut_ptr().offset(0                 libc::c_int
+        option_find1((&mut *mess.options.as_mut_ptr().offset(0
                                                                    )
                                               &mut u8) .offset(::std::mem::size_of::<u32>()                                   ),
                      (mess).offset(size),
@@ -2568,9 +2568,9 @@ fn option_find(mut mess: DhcpPacket, mut size: usize,
            1 != 0 &&
            {
                ret =
-                   option_find1(&mut *mess.file.as_mut_ptr().offset(0                        libc::c_int
+                   option_find1(&mut *mess.file.as_mut_ptr().offset(0
                                                             ),
-                                &mut *mess.file.as_mut_ptr().offset(128                        libc::c_int
+                                &mut *mess.file.as_mut_ptr().offset(128
                                                             ),
                                 opt_type, minsize);
                !ret.is_null()
@@ -2582,9 +2582,9 @@ fn option_find(mut mess: DhcpPacket, mut size: usize,
            2 != 0 &&
            {
                ret =
-                   option_find1(&mut *mess.sname.as_mut_ptr().offset(0                         libc::c_int
+                   option_find1(&mut *mess.sname.as_mut_ptr().offset(0
                                                               ),
-                                &mut *mess.sname.as_mut_ptr().offset(64                         libc::c_int
+                                &mut *mess.sname.as_mut_ptr().offset(64
                                                               ),
                                 opt_type, minsize);
                !ret.is_null()
@@ -2610,7 +2610,7 @@ fn option_uint(mut opt: mut Vec<u8>,
     let mut ret: u32 = 0;
     let mut i: i32 = 0;
     let mut p: mut Vec<u8> =
-        &mut *opt.offset((2                        libc::c_uint).wrapping_add(offset          libc::c_uint)                       isize)
+        &mut *opt.offset((2                        libc::c_uint).wrapping_add(offset          libc::c_uint)                       )
            ;
     i = 0;
     while i < size {
@@ -2680,11 +2680,11 @@ fn dhcp_packet_size(
         *dhcp_skip_opts(mess.sname.as_mut_ptr()) =
             255;
         if daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
             log_options(mess.sname.as_mut_ptr(), mess.xid);
@@ -2706,11 +2706,11 @@ fn dhcp_packet_size(
     p = p.offset(1);
     *fresh10 = 255;
     if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 {
         if mess.siaddr.s_addr != 0 {
@@ -2727,7 +2727,7 @@ fn dhcp_packet_size(
                           6,
                       "%u broadcast response", __bswap_32(mess.xid));
         }
-        log_options((&mut *mess.options.as_mut_ptr().offset(0                libc::c_int
+        log_options((&mut *mess.options.as_mut_ptr().offset(0
                                                                   )
                                             &mut u8) .offset(::std::mem::size_of::<u32>()),
                     mess.xid);
@@ -2744,7 +2744,7 @@ fn free_space(mut mess: DhcpPacket,
                                 mut opt: i32, mut len: i32)
                                 -> mut Vec<u8> {
     let mut p: mut Vec<u8> =
-        dhcp_skip_opts((&mut *mess.options.as_mut_ptr().offset(0                   libc::c_int
+        dhcp_skip_opts((&mut *mess.options.as_mut_ptr().offset(0
                                                   )
                                                   &mut u8) .offset(::std::mem::size_of::<u32>()
                                                  ));
@@ -2799,7 +2799,7 @@ fn free_space(mut mess: DhcpPacket,
                 if *overload.offset(2)
                        & 2 != 0 {
                     p = dhcp_skip_opts(mess.sname.as_mut_ptr());
-                    if p.offset(len                              isize).offset(3)
+                    if p.offset(len                              ).offset(3)
                            >=
                            mess.sname.as_mut_ptr().offset(::std::mem::size_of::<[u8; 64]>()
                                                                               libc::c_ulong
@@ -3194,7 +3194,7 @@ fn pxe_opts(mut pxe_arch: i32,
                     let mut len: usize = strlen(service.menu);
                     /* opt 43 max size is 255. encapsulated option has type and length
 	   bytes, so its max size is 253. */
-                    if (p.wrapping_offset_from(daemon.dhcp_buffmut Vec<u8>)                      i32 ).wrapping_add(len).wrapping_add(3                           libc::c_int
+                    if (p.wrapping_offset_from(daemon.dhcp_buffmut Vec<u8>)                      i32 ).wrapping_add(len).wrapping_add(3
                                                                                                  )
                            < 253 {
                         let fresh24 = p;
@@ -3361,7 +3361,7 @@ fn is_pxe_client(mut mess: DhcpPacket, mut sz: usize,
         conf_len = strlen(conf.data) as susize;
         if !((*(opt).offset(1)
                  ) < conf_len) {
-            if strncmp(&mut *(opt                            mut Vec<u8>).offset((2               libc::c_uint).wrapping_add(0                 libc::c_int                 libc::c_uint)
+            if strncmp(&mut *(opt                            mut Vec<u8>).offset((2               libc::c_uint).wrapping_add(0                                  libc::c_uint)
                                                                 )                     mut Vec<u8>                     *const libc::c_char, conf.data,
                        conf_len) == 0 {
                 if !pxe_vendor.is_null() { *pxe_vendor = conf.data }
@@ -3412,11 +3412,11 @@ fn do_options(mut context: DhcpContext,
                       } else { 0  }, config_opts);
     /* logging */
     if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                             libc::c_int                      ))
+                                                                                   ).wrapping_mul(8                                                   ))
                                      ] &
            (1) <<
                (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-                                                                                                                      libc::c_int
+
                                                                                                                ))
            != 0 && !req_options.is_null() {
         let mut q: &mut String =
@@ -3435,7 +3435,7 @@ fn do_options(mut context: DhcpContext,
                                        q.wrapping_offset_from(daemon.namebuff)
                                           ),
                                   "%d%s%s%s",
-                                  *req_options.offset(i)                                libc::c_int,
+                                  *req_options.offset(i)                                ,
                                   if strlen(s) !=
                                          0 {
                                       ":"                                     *const libc::c_char
@@ -3443,13 +3443,13 @@ fn do_options(mut context: DhcpContext,
                                       ""                                     *const libc::c_char
                                   }, s,
                                   if *req_options.offset((i +
-                                                              1               libc::c_int)
-                                                            )                                   libc::c_int == 255 {
+                                                              1               )
+                                                            )                                    == 255 {
                                       ""                                     *const libc::c_char
                                   } else {
                                       ", "                                     *const libc::c_char
                                   }));
-            if *req_options.offset((i + 1))             libc::c_int == 255 ||
+            if *req_options.offset((i + 1))              == 255 ||
                    q.wrapping_offset_from(daemon.namebuff)                 i32 > 40 {
                 q = daemon.namebuff;
                 my_syslog((3) << 3 |
@@ -3484,11 +3484,11 @@ fn do_options(mut context: DhcpContext,
     if !boot.is_null() {
         if !boot.sname.is_null() {
             if daemon.options[(30                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (30 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    == 0 && !req_options.is_null() &&
                    in_list(req_options, 66) != 0 {
                 option_put_string(mess, end, 66, boot.sname,
@@ -3501,11 +3501,11 @@ fn do_options(mut context: DhcpContext,
         }
         if !boot.file.is_null() {
             if daemon.options[(30                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                             libc::c_int                                      ))
+                                                                                                   ).wrapping_mul(8                                                                                   ))
                                              ] &
                    (1) <<
                        (30 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8         libc::c_int  ))
+                                                               ).wrapping_mul(8           ))
                    == 0 && !req_options.is_null() &&
                    in_list(req_options, 67) != 0 {
                 option_put_string(mess, end, 67, boot.file,
@@ -3554,11 +3554,11 @@ fn do_options(mut context: DhcpContext,
      at the end of this function. */
     if req_options.is_null() ||
            daemon.options[(30 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (30 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         f0 = mess.file[0 ];
@@ -3583,7 +3583,7 @@ fn do_options(mut context: DhcpContext,
         let mut t1val: u32 =
             lease_time.wrapping_div(2);
         let mut t2val: u32 =
-            lease_time.wrapping_mul(7                                  libc::c_uint).wrapping_div(8                    libc::c_int
+            lease_time.wrapping_mul(7                                  libc::c_uint).wrapping_div(8
                                                                                           libc::c_uint);
         let mut hval: u32 = 0;
         /* If set by user, sanity check, so not longer than lease. */
@@ -3662,7 +3662,7 @@ fn do_options(mut context: DhcpContext,
             if !domain.is_null() {
                 len =
                     (len).wrapping_add(strlen(domain).wrapping_add(1
-                                                                                                                      libc::c_int
+
                                                                                                                ))
 
             } else if fqdn_flags & 0x4 != 0 {
@@ -3763,7 +3763,7 @@ fn do_options(mut context: DhcpContext,
                                         /* If we send a vendor-id, revisit which vendor-ops we consider 
 	     it appropriate to send. */
                                         if optno == 60 {
-                                            match_vendor_opts(p.offset(-(2                          libc::c_int
+                                            match_vendor_opts(p.offset(-(2
                                                                 )),
                                                               config_opts);
                                             done_vendor_class =
@@ -3839,7 +3839,7 @@ fn do_options(mut context: DhcpContext,
                                        len + 5);
                         if !p.is_null() {
                             let mut swap_ent: i32 =
-                                __bswap_32(opt.u.encap)                              libc::c_int;
+                                __bswap_32(opt.u.encap)                              ;
                             memcpy(p,
                                    &mut swap_ent as
                                    4);
@@ -3852,7 +3852,7 @@ fn do_options(mut context: DhcpContext,
                                 if o.flags & 8 != 0 {
                                     len =
                                         do_opt(o,
-                                               p.offset(2         isize),
+                                               p.offset(2         ),
                                                0,
                                                0);
                                     let fresh41 = p;
@@ -3898,11 +3898,11 @@ fn do_options(mut context: DhcpContext,
     /* restore BOOTP anti-overload hack */
     if req_options.is_null() ||
            daemon.options[(30 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (30 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                != 0 {
         mess.file[0 ] = f0;
@@ -3933,11 +3933,11 @@ fn apply_delay(mut xid: u32, mut recvtime: time::Instant,
     }
     if !delay_conf.is_null() {
         if daemon.options[(42 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                     libc::c_int                              ))
+                                                                                           ).wrapping_mul(8                                                                   ))
                                          ] &
                (1) <<
                    (42 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8 libc::c_int
+                                                       ).wrapping_mul(8
                                                                                                                        ))
                == 0 {
             my_syslog((3) << 3 |

@@ -21,7 +21,7 @@ fn add_attr(mut nlh: &mut nlmsghdr, mut type_0: u16,
                               mut len: usize,
                               mut data: *const libc::c_void) {
     let mut attr: my_nlattr =
-        (nlh      Vec<u8>).offset((nlh.nlmsg_len.wrapping_add(3                       libc::c_int
+        (nlh      Vec<u8>).offset((nlh.nlmsg_len.wrapping_add(3
                                                                                                 libc::c_uint)
                                             &
                                             !(3)                                          libc::c_uint))      my_nlattr;
@@ -32,7 +32,7 @@ fn add_attr(mut nlh: &mut nlmsghdr, mut type_0: u16,
     attr.nla_len = payload_len;
     memcpy((attr         Vec<u8>).offset(((::std::mem::size_of::<my_nlattr>()
                                                                                   ).wrapping_add(3
-                                                                                                            libc::c_int
+
                                                                                                      )
                                                &
                                                !(3)libc::c_ulong)),
@@ -110,7 +110,7 @@ fn new_add_to_ipset(mut setname: *const libc::c_char,
     nlh.nlmsg_len =
         (nlh.nlmsg_len as
       ).wrapping_add((::std::mem::size_of::<my_nfgenmsg>()
-                                                                              ).wrapping_add(3                           libc::c_int
+                                                                              ).wrapping_add(3
                                                                                                  )
                                              &
                                              !(3)                                    )      u32;
@@ -130,7 +130,7 @@ fn new_add_to_ipset(mut setname: *const libc::c_char,
     nlh.nlmsg_len =
         (nlh.nlmsg_len as
       ).wrapping_add((::std::mem::size_of::<my_nlattr>()
-                                                                              ).wrapping_add(3                           libc::c_int
+                                                                              ).wrapping_add(3
                                                                                                  )
                                              &
                                              !(3)                                    )      u32;
@@ -142,7 +142,7 @@ fn new_add_to_ipset(mut setname: *const libc::c_char,
     nlh.nlmsg_len =
         (nlh.nlmsg_len as
       ).wrapping_add((::std::mem::size_of::<my_nlattr>()
-                                                                              ).wrapping_add(3                           libc::c_int
+                                                                              ).wrapping_add(3
                                                                                                  )
                                              &
                                              !(3)                                    )      u32;
@@ -155,20 +155,20 @@ fn new_add_to_ipset(mut setname: *const libc::c_char,
                   (1) << 14),
              addrsz , ipaddr);
     (*nested[1 ]).nla_len =
-        (buffer      Vec<u8>).offset((nlh.nlmsg_len.wrapping_add(3                       libc::c_int
+        (buffer      Vec<u8>).offset((nlh.nlmsg_len.wrapping_add(3
                                                                                                 libc::c_uint)
                                             &
-                                            !(3)                                          libc::c_uint)                                     isize).wrapping_offset_from(nested[1
-                                                                                                                libc::c_int
+                                            !(3)                                          libc::c_uint)                                     ).wrapping_offset_from(nested[1
+
                                                                                                                 usize]
                                                                                                  Vec<u8>)
            ;
     (*nested[0 ]).nla_len =
-        (buffer      Vec<u8>).offset((nlh.nlmsg_len.wrapping_add(3                       libc::c_int
+        (buffer      Vec<u8>).offset((nlh.nlmsg_len.wrapping_add(3
                                                                                                 libc::c_uint)
                                             &
-                                            !(3)                                          libc::c_uint)                                     isize).wrapping_offset_from(nested[0
-                                                                                                                libc::c_int
+                                            !(3)                                          libc::c_uint)                                     ).wrapping_offset_from(nested[0
+
                                                                                                                 usize]
                                                                                                  Vec<u8>)
            ;

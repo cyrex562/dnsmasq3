@@ -103,7 +103,7 @@ use std::time;
 // pub static mut daemon: dnsmasq_daemon = 0 as *const daemon as *mut dnsmasq_daemon;
 
 // static mut pid: pid_t = 0;
-// static mut pipewrite: libc::c_int = 0;
+// static mut pipewrite:  = 0;
 unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     let mut compiler_opts: String = String::from("");
     let mut bind_fallback: i32 = 0;
@@ -116,8 +116,8 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     };
     let mut if_tmp: Iname = Default::default();
     let mut piperead: i32 = 0;
-    let mut pipefd: [libc::c_int; 2] = [0; 2];
-    let mut err_pipe: [libc::c_int; 2] = [0; 2];
+    let mut pipefd: [; 2] = [0; 2];
+    let mut err_pipe: [; 2] = [0; 2];
     let mut ent_pw: Passwd = Default::default();
     let mut script_uid: uid_t = 0 ;
     let mut script_gid: gid_t = 0 ;
@@ -201,7 +201,7 @@ unsafe fn main_0(mut argc: i32, mut argv: String) -> i32 {
     }
     if daemon.lease_file.is_null() {
         if !daemon.dhcp.is_null() || !daemon.dhcp6.is_null() {
-            daemon.lease_file = String::from("/var/lib/misc/dnsmasq.leases\x00");
+            daemon.lease_file = String::from("/var/lib/misc/dnsmasq.leases");
         }
     }
     /* Ensure that at least stdin, stdout and stderr (fd 0, 1, 2) exist,
@@ -2017,8 +2017,8 @@ fn set_dns_listeners(mut now: time::Instant) -> i32 {
             }
         }
         /* tftp == 0 in single-port mode. */
-        if tftp <= daemon.tftp_max && listener.tftpfd != -(1) {
-            poll_listen(listener.tftpfd, 0x1 );
+        if tftp <= daemon.tftp_max && listener.tftp_socket != -(1) {
+            poll_listen(listener.tftp_socket, 0x1 );
         }
         listener = listener.next
     }
@@ -2050,7 +2050,7 @@ fn check_dns_listeners(mut now: time::Instant) {
     let mut serverfdp:ServerFd = 0Fd;
     let mut listener: Listener = 0 ;
     let mut i: i32 = 0;
-    let mut pipefd: [libc::c_int; 2] = [0; 2];
+    let mut pipefd: [; 2] = [0; 2];
     serverfdp = daemon.sfds;
     while !serverfdp.is_null() {
         if poll_check(serverfdp.fd, 0x1 ) != 0 {
@@ -2120,8 +2120,8 @@ fn check_dns_listeners(mut now: time::Instant) {
         {
             receive_query(listener, now);
         }
-        if listener.tftpfd != -(1)
-            && poll_check(listener.tftpfd, 0x1 ) != 0
+        if listener.tftp_socket != -(1)
+            && poll_check(listener.tftp_socket, 0x1 ) != 0
         {
             tftp_request(listener, now);
         }
@@ -2418,7 +2418,7 @@ pub fn make_icmp_sock() -> i32 {
                 1,
                 5,
                 &mut zeroopt,
-                ::std::mem::size_of::<libc::c_int>(),
+                ::std::mem::size_of::<>(),
             ) == -(1)
         {
             close(fd);
