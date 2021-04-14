@@ -1,10 +1,10 @@
-use crate::defines::{Server, DnsmasqDaemon, RandFd, ConstNetAddressArg, socklen_t, DnsHeader, __bswap_16, _ISXDIGIT};
+use crate::defines::{Server, DnsmasqDaemon, RandFd, ConstNetAddressArg, DnsHeader, _ISXDIGIT};
 use crate::forward::{allocate_rfd, free_rfd};
 use crate::util::{retry_send, sa_len, rand16};
 use crate::network::check_servers;
 
-#[no_mangle]
-pub unsafe extern "C" fn loop_send_probes() {
+
+pub fn loop_send_probes() {
     let mut serv: Server = 0;
     if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                                    ).wrapping_mul(8                                                   ))
@@ -46,9 +46,8 @@ pub unsafe extern "C" fn loop_send_probes() {
                     while retry_send(sendto(fd,
                                             dnsmasq_daemon.packet ,
                                             len , 0,
-                                            ConstNetAddressArg {__NetAddress__:
-                                                                     &mut serv.addr.sa,},
-                                            sa_len(&mut serv.addr)                                          socklen_t)) != 0 {
+                                            ConstNetAddressArg::new(),
+                                            sa_len(&mut serv.addr))) != 0 {
                     }
                     free_rfd(rfd);
                 }
@@ -72,11 +71,10 @@ pub unsafe extern "C" fn loop_send_probes() {
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
+fn loop_make_probe(mut uid: u32) -> isize {
     let mut header: DnsHeader =
         dnsmasq_daemon.packet ;
-    let mut p: mut Vec<u8> =
-        header.offset(1);
+    let mut p: DnsHeader = header.offset(1);
     /* packet buffer overwritten */
     dnsmasq_daemon.srv_save = 0; /* Add terminating zero */
     header.id = rand16(); /* log new state */
@@ -97,23 +95,18 @@ unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
     p = p.offset(8);
     let fresh7 = p;
     p = p.offset(1);
-    *fresh7 =
-        strlen("test" )      libc::c_uchar;
-    strcpy(p ,
-           "test" );
-    p =
-        p.offset(strlen("test" ).wrapping_add(1
-                                                                         )
-                    );
+    *fresh7 = "test".to_string().len();
+    p = "test";    
+    p = p.offset(strlen("test" ).wrapping_add(1));
     let mut t_s: u16 = 16;
-    let mut t_cp: mut Vec<u8> = p;
+    let mut t_cp = p;
     let fresh8 = t_cp;
     t_cp = t_cp.offset(1);
     *fresh8 = (t_s >> 8);
     *t_cp = t_s;
     p = p.offset(2);
     let mut t_s_0: u16 = 1;
-    let mut t_cp_0: mut Vec<u8> = p;
+    let mut t_cp_0 = p;
     let fresh9 = t_cp_0;
     t_cp_0 = t_cp_0.offset(1);
     *fresh9 = (t_s_0 >> 8);
@@ -121,8 +114,8 @@ unsafe extern "C" fn loop_make_probe(mut uid: u32) -> isize {
     p = p.offset(2);
     return p.wrapping_offset_from(header) ;
 }
-#[no_mangle]
-pub unsafe extern "C" fn detect_loop(mut query: &mut String,
+
+pub fn detect_loop(mut query: &mut String,
                                      mut type_0: i32) -> i32 {
     let mut i: i32 = 0;
     let mut uid: u32 = 0;
@@ -154,8 +147,7 @@ pub unsafe extern "C" fn detect_loop(mut query: &mut String,
         }
         i += 1
     }
-    uid =
-        strtol(query, 0 , 16)      u32;
+    uid = u32::from_le_bytes(query.as_bytes());
     serv = dnsmasq_daemon.servers;
     while !serv.is_null() {
         if serv.flags &

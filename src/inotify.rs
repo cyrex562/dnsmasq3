@@ -43,7 +43,7 @@ static mut inotify_buffer: &mut String =
    points to, made absolute if relative.
    If path doesn't exist or is not a symlink, return NULL.
    Return value is malloc'ed */
-unsafe extern "C" fn my_readlink(mut path: &mut String)
+fn my_readlink(mut path: &mut String)
  -> &mut String {
     let mut rc: isize = 0;
     let mut size: isize = 64;
@@ -87,8 +87,8 @@ unsafe extern "C" fn my_readlink(mut path: &mut String)
         // free(buf);
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn inotify_dnsmasq_init() {
+
+pub fn inotify_dnsmasq_init() {
     let mut res: Resolvc = 0 ;
     // inotify_buffer =
         // safe_malloc((::std::mem::size_of::<inotify_event>()).wrapping_add(255      libc::c_ulong).wrapping_add(1
@@ -159,8 +159,8 @@ pub unsafe extern "C" fn inotify_dnsmasq_init() {
     };
 }
 /* initialisation for dynamic-dir. Set inotify watch for each directory, and read pre-existing files */
-#[no_mangle]
-pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
+
+pub fn set_dynamic_inotify(mut flag: i32,
                                              mut total_size: i32,
                                              mut rhash: &mut Crec,
                                              mut revhashsz: i32) {
@@ -270,8 +270,8 @@ pub unsafe extern "C" fn set_dynamic_inotify(mut flag: i32,
         ah = ah.next
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn inotify_check(mut now: time::Instant) -> i32 {
+
+pub fn inotify_check(mut now: time::Instant) -> i32 {
     let mut hit: i32 = 0;
     let mut ah: HostsFile = 0;
     loop  {

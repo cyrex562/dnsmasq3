@@ -42,7 +42,7 @@ fn add_attr(mut nlh: &mut nlmsghdr, mut type_0: u16,
                                              3 &
                                              !(3))                                      libc::c_uint);
 }
-#[no_mangle]
+
 pub fn ipset_init() {
     old_kernel =
         (dnsmasq_daemon.kernel_version <
@@ -219,7 +219,7 @@ fn old_add_to_ipset(mut setname: *const libc::c_char,
     }
     return 0;
 }
-#[no_mangle]
+
 pub fn add_to_ipset(mut setname: *const libc::c_char,
                                       mut ipaddr: *const NetAddress,
                                       mut flags: i32,

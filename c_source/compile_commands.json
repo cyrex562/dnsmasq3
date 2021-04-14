@@ -1,0 +1,522 @@
+[
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "forward.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "forward.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dhcp6.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dhcp6.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "netlink.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "netlink.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dnssec.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dnssec.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "slaac.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "slaac.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "poll.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "poll.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "bpf.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "bpf.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "tables.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "tables.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "rfc2131.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "rfc2131.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "rfc3315.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "rfc3315.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "hash_questions.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "hash_questions.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dhcp.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dhcp.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "rrfilter.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "rrfilter.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "ubus.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "ubus.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "outpacket.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "outpacket.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "inotify.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "inotify.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dhcp-common.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dhcp-common.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dnsmasq.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dnsmasq.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "domain.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "domain.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "crypto.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "crypto.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "rfc1035.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "rfc1035.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "ipset.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "ipset.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "metrics.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "metrics.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "auth.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "auth.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "loop.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "loop.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "radv.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "radv.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dbus.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dbus.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "tftp.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "tftp.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "util.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "util.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "network.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "network.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "dump.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "dump.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "lease.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "lease.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "log.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "log.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "cache.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "cache.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "arp.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "arp.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "helper.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "helper.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "edns0.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "edns0.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "conntrack.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "conntrack.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "option.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "option.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-Wall",
+            "-W",
+            "-O2",
+            "-DVERSION=\"2.84rc2\"",
+            "blockdata.c"
+        ],
+        "directory": "/mnt/d/projects/dnsmasq-2.84/src",
+        "file": "blockdata.c"
+    }
+]

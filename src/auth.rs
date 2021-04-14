@@ -15,7 +15,7 @@
 */
 use std::time;
 
-use crate::cache::{cache_enumerate, cache_find_by_addr, cache_find_by_name, cache_find_non_terminal, cache_get_name, log_query, querystr, record_source};
+use crate::cache::{cache_enumerate, cache_find_by_addr, cache_find_by_name, cache_find_non_terminal, cache_get_name,  querystr, record_source};
 use crate::defines::{AddressListEntry, AuthZone, Cname, Crec, DnsHeader, DnsmasqDaemon, Iname, InterfaceName, MxSrvRecord, NameListEntry, NaPtr, NetAddress, TxtRecord};
 use crate::dnsmasq_log::my_syslog;
 use crate::rfc1035::{add_resource_record, extract_name, in_arpa_name_2_addr, skip_questions};
@@ -24,9 +24,9 @@ use crate::util::{hostname_isequal, hostname_issubdomain, inet_ntop, is_same_net
 pub fn find_addrlist(list: &Vec<AddressListEntry>, flag: u32, addr_u: &NetAddress) -> Option<AddressListEntry> {
     for entry in list {
         if list_addr.flags[2] == false {
-            let mut netmask: NetAddress = NetAddress:new();
-            let mut address: NetAddress = addr_u.ip_address.clone();
-            if is_same_net4(&address, entry.addr.ip_address, &netmask) {
+            let mut netmask: NetAddress = NetAddress::new();
+            // let mut address: NetAddress = addr_u.ip_address.clone();
+            if is_same_net4(&address, &entry.addr, &netmask) {
                 return Some(entry.clone());
             }
         } else if is_ame_net6(&mut addr_u.ip_address, &mut entry.addr.ip_address, entry.prefixlen) {
@@ -957,7 +957,7 @@ pub fn answer_auth(
             while !txt.is_null() {
                 if in_zone(&zone, &txt.name, Some(&cut)) != false {
                     if !cut.is_null() {
-                        cut[0] = ''
+                        cut[0] = '\x00'
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -980,7 +980,7 @@ pub fn answer_auth(
                 if txt.class == 1 &&
                     in_zone(&zone, &txt.name, Some(&cut)) != 0 {
                     if !cut.is_null() {
-                        cut[0] = ''
+                        cut[0] = '\x00'
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -1002,7 +1002,7 @@ pub fn answer_auth(
             while !na.is_null() {
                 if in_zone(&zone, &na.name, Some(&cut)) != 0 {
                     if !cut.is_null() {
-                        cut[0] = ''
+                        cut[0] = '\x00'
                     }
                     if add_resource_record(header, limit,
                                            trunc,
@@ -1024,7 +1024,7 @@ pub fn answer_auth(
                 if in_zone(&zone, &intr.name, Some(cut)) != 0 {
                     let mut addrlist_2: AddressListEntry;
                     if !cut.is_null() {
-                        cut[0] = ''
+                        cut[0] = '\x00'
                     }
                     for addrlist_2 in intr.addresses {
                         if addrlist_2.flags & 2 == 0 &&
@@ -1073,7 +1073,7 @@ pub fn answer_auth(
                         name += zone.domain.as_str();
                     }
                     if !cut.is_null() {
-                        cut[0] = ''
+                        cut[0] = '\x00'
                     }
                     if add_resource_record(header, limit,
                                            trunc,

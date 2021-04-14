@@ -40,10 +40,10 @@ use std::str::FromStr;
 //         open("/dev/urandom" as *const u8 as *const libc::c_char,
 //              0 as );
 //     if fd == -(1 as ) ||
-//            read_write(fd, &mut seed as *mut [u32; 32] as *mut libc::c_uchar,
+//            read_write(fd, &mut seed as *mut [u32; 32] as *mut u8,
 //                       ::std::mem::size_of::<[u32; 32]>() as libc::c_ulong as
 //                           , 1 as ) == 0 ||
-//            read_write(fd, &mut in_0 as *mut [u32; 12] as *mut libc::c_uchar,
+//            read_write(fd, &mut in_0 as *mut [u32; 12] as *mut u8,
 //                       ::std::mem::size_of::<[u32; 12]>() as libc::c_ulong as
 //                           , 1 as ) == 0 {
 //         die("failed to seed the random number generator: %s" as *const u8
@@ -821,13 +821,13 @@ enum ReadWriteMode {
 //                 n =
 //                     read(fd,
 //                          &mut *packet.offset(done as ) as
-//                              *mut libc::c_uchar as *mut libc::c_void,
+//                              *mut u8 as *mut libc::c_void,
 //                          (size as libc::c_long - done) as usize)
 //             } else {
 //                 n =
 //                     write(fd,
 //                           &mut *packet.offset(done as ) as
-//                               *mut libc::c_uchar as *const libc::c_void,
+//                               *mut u8 as *const libc::c_void,
 //                           (size as libc::c_long - done) as usize)
 //             }
 //             if n == 0 as  as libc::c_long {

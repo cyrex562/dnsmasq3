@@ -14,16 +14,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{stat, timespec, DnsmasqDaemon, size_t, NetAddress, IpHdr, NetAddress, C2RustUnnamed, In6Addr, __bswap_16, IPPROTO_UDP};
+use crate::defines::{DnsmasqDaemon, NetAddress, IpHdr, NetAddress, C2RustUnnamed, IPPROTO_UDP};
 use std::fs::File;
-use crate::util::read_write;
 use std::io::{Error, Seek};
-use crate::slack::{pcap_hdr_s, pcaprec_hdr_s, ip6_hdr, ip6_hdrctl, udphdr, timeval};
-use crate::dnsmasq_log::my_syslog;
 
 // static mut packet_count: u32 = 0;
 /* actual length of packet */
-#[no_mangle]
+
 pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
     let mut buf: stat =
         stat{st_dev: 0,
@@ -81,43 +78,30 @@ pub fn dump_init(daemon: &mut DnsmasqDaemon) ->Result<(), &'static str> {
                       , 1)?;
     }
 
-    if header.magic_number != 0xa1b2c3d4 {
+    Ok(if header.magic_number != 0xa1b2c3d4 {
         return Err("invalid header");
     } else {
         /* count existing records */
-        while read_write(daemon.dumpfd,
-                         &mut pcap_header ,
-                         ::std::mem::size_of::<pcaprec_hdr_s>(),
-                         1) != 0 {
-            daemon.dumpfd.seek(pcap_header.incl_len, 1)?;
+        while read_write(daemon.dumpfd, &mut pcap_header , ::std::mem::size_of::<pcaprec_hdr_s>(), 1) != 0 {
+            daemon.dumpfd.seek(pcap_header.incl_len)?;
             packet_count = packet_count.wrapping_add(1)
         }
-    }
+    })
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn dump_packet(mut mask: i32,
+
+pub fn dump_packet(mut mask: i32,
                                      mut packet:Vec<u8>,
                                      mut len: usize,
                                      mut src: NetAddress,
                                      mut dst: NetAddress) {
-    let mut ip: IpHdr =
-        IpHdr {ip_hl_ip_v: [0; 1],
-           ip_tos: 0,
-           ip_len: 0,
-           ip_id: 0,
-           ip_off: 0,
-           ip_ttl: 0,
-           ip_p: 0,
-           ip_sum: 0,
-           ip_src: NetAddress {s_addr: 0,},
-           ip_dst: NetAddress {s_addr: 0,},};
+    let mut ip = IpHdr::new();
     let mut ip6: Ip6Hdr = Default::default();
     let mut family: i32 = 0;
     let mut udp: UdpHdr = Default::default();
     let mut pcap_header: pcaprec_hdr_s =
         pcaprec_hdr_s{ts_sec: 0, ts_usec: 0, incl_len: 0, orig_len: 0,};
-    let mut time: ti
+    let mut time;
     meval = timeval{tv_sec: 0, tv_usec: 0,};
     let mut i: u32 = 0;
     let mut sum: u32 = 0;
@@ -162,25 +146,9 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
         i = 0;
         while i < 16 {
             sum =
-                (sum               libc::c_uint).wrapping_add((ip6.ip6_src.__in6_u.__u6_addr8[i
-                                                                                                                    usize]
-                                                     +
-                                                     ((ip6.ip6_src.__in6_u.__u6_addr8[i.wrapping_add(1                                                                  libc::c_uint)   usize]
-                                                          ) <<
-                                                          8))
-                                                   )
-                   ;
-            sum =
-                (sum               libc::c_uint).wrapping_add((ip6.ip6_dst.__in6_u.__u6_addr8[i
-                                                                                                                    usize]
-                                                     +
-                                                     ((ip6.ip6_dst.__in6_u.__u6_addr8[i.wrapping_add(1                                                                  libc::c_uint)   usize]
-                                                          ) <<
-                                                          8))
-                                                   )
-                   ;
-            i =
-                (i               libc::c_uint).wrapping_add(2 libc::c_uint)              u32
+                (sum).wrapping_add((ip6.ip6_src.__in6_u.__u6_addr8[i] + ((ip6.ip6_src.__in6_u.__u6_addr8[i. wrapping_add(1)]) << 8)));
+            sum = (sum).wrapping_add((ip6.ip6_dst.__in6_u.__u6_addr8[i] + ((ip6.ip6_dst.__in6_u.__u6_addr8[i.wrapping_add(1)]) << 8)));
+            i = (i).wrapping_add(2)
         }
     } else {
         iphdr = &mut ip;
@@ -204,12 +172,8 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
         ip.ip_sum = 0 ;
         sum = 0;
         i = 0;
-        while (i) <
-                  (::std::mem::size_of::<IpHdr>() ).wrapping_div(2    libc::c_ulong) {
-            sum =
-                (sum               libc::c_uint).wrapping_add(*(&mut ip    &mut u16) .offset(i                          )
-                                                   )
-                   ;
+        while (i) < (::std::mem::size_of::<IpHdr>() ).wrapping_div(2) {
+            sum = (sum).wrapping_add(*(&mut ip).offset(i));
             i = i.wrapping_add(1)
         }
         while sum >> 16 != 0 {
@@ -223,40 +187,28 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
             } else { !sum } ;
         /* start UDP checksum */
         sum =
-            ip.ip_src.s_addr &
-                0xffff              libc::c_uint; /* for checksum, in case length is odd. */
-        sum =
-            (sum           libc::c_uint).wrapping_add(ip.ip_src.s_addr >>
+            ip.ip_src.s_addr & 0xffff; /* for checksum, in case length is odd. */
+        sum = (sum).wrapping_add(ip.ip_src.s_addr >>
                                                 16 &
-                                                0xffff libc::c_uint)          u32;
+                                                0xffff);
         sum =
-            (sum           libc::c_uint).wrapping_add(ip.ip_dst.s_addr &
-                                                0xffff libc::c_uint)          u32;
+            (sum).wrapping_add(ip.ip_dst.s_addr &
+                                                0xffff);
         sum =
-            (sum           libc::c_uint).wrapping_add(ip.ip_dst.s_addr >>
+            (sum).wrapping_add(ip.ip_dst.s_addr >>
                                                 16 &
-                                                0xffff libc::c_uint)          u32
+                                                0xffff)
     }
     if len & 1 != 0 {
-        *(packet).offset(len) =
-            0
+        *(packet).offset(len) = 0
     }
     udp.uh_sum = 0;
-    udp.uh_ulen =
-        __bswap_16((::std::mem::size_of::<udphdr>() )).wrapping_add(len));
-    sum =
-        (sum       libc::c_uint).wrapping_add(__bswap_16(IPPROTO_UDP
-                                                      )                                      libc::c_uint);
-    sum =
-        (sum       libc::c_uint).wrapping_add(__bswap_16((::std::mem::size_of::<udphdr>()
-                                                     ).wrapping_add(len)
-                                                      )                                      libc::c_uint);
+    udp.uh_ulen = __bswap_16(::std::mem::size_of::<udphdr>()).wrapping_add(len);
+    sum = (sum).wrapping_add(__bswap_16(IPPROTO_UDP));
+    sum = (sum).wrapping_add(__bswap_16((::std::mem::size_of::<udphdr>()).wrapping_add(len)));
     i = 0;
-    while (i) <
-              (::std::mem::size_of::<udphdr>()).wrapping_div(2libc::c_ulong) {
-        sum =
-            (sum           libc::c_uint).wrapping_add(*(&mut udp                                             &mut u16) .offset(i                      )
-                                               )          u32;
+    while (i) < (::std::mem::size_of::<udphdr>()).wrapping_div(2) {
+        sum = (sum ).wrapping_add(*(&mut udp).offset(i));
         i = i.wrapping_add(1)
     }
     i = 0;
@@ -265,18 +217,13 @@ pub unsafe extern "C" fn dump_packet(mut mask: i32,
                                                                            )
           {
         sum =
-            (sum           libc::c_uint).wrapping_add(*(packet                                             &mut u16) .offset(i                      )
-                                               )          u32;
+            (sum).wrapping_add(*(packet).offset(i));
         i = i.wrapping_add(1)
     }
     while sum >> 16 != 0 {
-        sum =
-            (sum &
-                 0xffff               libc::c_uint).wrapping_add(sum >> 16)
+        sum = (sum & 0xffff).wrapping_add(sum >> 16)
     }
-    udp.uh_sum =
-        if sum == 0xffff { sum } else { !sum }
-           ;
+    udp.uh_sum = if sum == 0xffff { sum } else { !sum };
     rc = gettimeofday(&mut time, 0);
     pcap_header.ts_sec = time.tv_sec;
     pcap_header.ts_usec = time.tv_usec;

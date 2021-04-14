@@ -23,8 +23,8 @@ use crate::dnsmasq_log::my_syslog;
 use std::time;
 
 static mut ping_id: i32 = 0;
-#[no_mangle]
-pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
+
+pub fn slaac_add_addrs(mut lease: DhcpLease,
                                          mut now: time::Instant,
                                          mut force: i32) {
     let mut slaac: SlaacAddress = 0 ;
@@ -169,8 +169,8 @@ pub unsafe extern "C" fn slaac_add_addrs(mut lease: DhcpLease,
         old = slaac
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn periodic_slaac(mut now: time::Instant,
+
+pub fn periodic_slaac(mut now: time::Instant,
                                         mut leases: DhcpLease)
  -> time::Instant {
     let mut context: DhcpContext = 0;
@@ -275,8 +275,8 @@ pub unsafe extern "C" fn periodic_slaac(mut now: time::Instant,
     }
     return next_event;
 }
-#[no_mangle]
-pub unsafe extern "C" fn slaac_ping_reply(mut sender: &mut In6Addr,
+
+pub fn slaac_ping_reply(mut sender: &mut In6Addr,
                                           mut packet: mut Vec<u8>,
                                           mut interface: &mut String,
                                           mut leases: DhcpLease) {

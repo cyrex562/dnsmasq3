@@ -53,7 +53,7 @@ pub fn filter_mac<T>(
                         break;
                     } else if arp.hwlen == maclen && arp.hwaddr == mac {
                         /* Existing entry matches - confirm. */
-                        arp.status = 1 ;
+                        arp.status = 1;
                         modified = true;
                         break;
                     }
@@ -136,7 +136,7 @@ pub fn find_mac(
             }
         }
         // iface_enumerate(0, 0,
-        //                 ::std::mem::transmute::<Option<unsafe extern "C" fn(_: , _: *mut libc::c_char, _:  *mut libc::c_char, _: size_t, _:  *mut libc::c_void) -> >, Option<unsafe extern "C" fn() ->
+        //                 ::std::mem::transmute::<Option<fn(_: , _: *mut libc::c_char, _:  *mut libc::c_char, _: size_t, _:  *mut libc::c_void) -> >, Option<fn() ->
         //                                                        >>(Some(filter_mac);
         /* Remove all unconfirmed entries to old list. */
         // arp = arps;

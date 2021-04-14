@@ -50,13 +50,13 @@ pub struct state {
     pub end:Vec<u8>,
     pub tags: &mut DhcpNetId,
     pub context_tags: &mut DhcpNetId,
-    pub mac: [libc::c_uchar; 16],
+    pub mac: [u8; 16],
     pub mac_len: u32,
     pub mac_type: u32,
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn dhcp6_reply(mut context: DhcpContext,
+
+pub fn dhcp6_reply(mut context: DhcpContext,
                                      mut interface: i32,
                                      mut iface_name: &mut String,
                                      mut fallback: &mut In6Addr,
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn dhcp6_reply(mut context: DhcpContext,
     return 0 ;
 }
 /* This cost me blood to write, it will probably cost you blood to understand - srk. */
-unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
+fn dhcp6_maybe_relay(mut state: &mut state,
                                        mut inbuff:Vec<u8>,
                                        mut sz: usize,
                                        mut client_addr: &mut In6Addr,
@@ -405,7 +405,7 @@ unsafe extern "C" fn dhcp6_maybe_relay(mut state: &mut state,
     }
     return 1;
 }
-unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
+fn dhcp6_no_relay(mut state: &mut state,
                                     mut msg_type: i32,
                                     mut inbuff:Vec<u8>,
                                     mut sz: usize,
@@ -576,7 +576,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                         &mut *(opt                             mut Vec<u8>).offset((4
                                                                    +
                                                                    (opt6_uint
-                                                                                            unsafe extern "C" fn(_:
+                                                                                            fn(_:
                                                                                                  mut Vec<u8>,
                                                                                              _:
                                                                                                  ,
@@ -683,7 +683,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                 let mut vopt:Vec<u8> = 0;
                 let mut vend:Vec<u8> =
                     &mut *(opt).offset((4 +
-                                                               (opt6_uint                 unsafe extern "C" fn(_:
+                                                               (opt6_uint                 fn(_:
                                                                                              mut Vec<u8>,
                                                                                          _:
                                                                                              ,
@@ -1841,7 +1841,7 @@ unsafe extern "C" fn dhcp6_no_relay(mut state: &mut state,
                                                              ));
     return 1;
 }
-unsafe extern "C" fn add_options(mut state: &mut state,
+fn add_options(mut state: &mut state,
                                  mut do_refresh: i32)
  -> DhcpNetId {
     let mut oro:Vec<u8> = 0;
@@ -2311,7 +2311,7 @@ unsafe extern "C" fn add_options(mut state: &mut state,
     }
     return tagif;
 }
-unsafe extern "C" fn add_local_addrs(mut context: DhcpContext)
+fn add_local_addrs(mut context: DhcpContext)
  -> i32 {
     let mut done: i32 = 0;
     while !context.is_null() {
@@ -2365,7 +2365,7 @@ unsafe extern "C" fn add_local_addrs(mut context: DhcpContext)
     }
     return done;
 }
-unsafe extern "C" fn get_context_tag(mut state: &mut state,
+fn get_context_tag(mut state: &mut state,
                                      mut context: DhcpContext) {
     /* get tags from context if we've not used it before */
     if context.netid.next == &mut context.netid  &&
@@ -2389,7 +2389,7 @@ unsafe extern "C" fn get_context_tag(mut state: &mut state,
         }
     };
 }
-unsafe extern "C" fn check_ia(mut state: &mut state,
+fn check_ia(mut state: &mut state,
                               mut opt:Vec<u8>,
                               mut endp: Vec<u8>,
                               mut ia_option: Vec<u8>)
@@ -2414,7 +2414,7 @@ unsafe extern "C" fn check_ia(mut state: &mut state,
     }
     *endp =
         &mut *(opt             mut Vec<u8>).offset((4 +
-                                                   (opt6_uint     unsafe extern "C" fn(_:
+                                                   (opt6_uint     fn(_:
                                                                                  mut Vec<u8>,
                                                                              _:
                                                                                  ,
@@ -2446,7 +2446,7 @@ unsafe extern "C" fn check_ia(mut state: &mut state,
                   24);
     return 1;
 }
-unsafe extern "C" fn build_ia(mut state: &mut state,
+fn build_ia(mut state: &mut state,
                               mut t1cntr: ) -> i32 {
     let mut o: i32 = new_opt6(state.ia_type);
     put_opt6_long(state.iaid);
@@ -2460,7 +2460,7 @@ unsafe extern "C" fn build_ia(mut state: &mut state,
     }
     return o;
 }
-unsafe extern "C" fn end_ia(mut t1cntr: i32,
+fn end_ia(mut t1cntr: i32,
                             mut min_time: u32,
                             mut do_fuzz: i32) {
     if t1cntr != 0 {
@@ -2495,7 +2495,7 @@ unsafe extern "C" fn end_ia(mut t1cntr: i32,
         save_counter(sav);
     };
 }
-unsafe extern "C" fn add_address(mut state: &mut state,
+fn add_address(mut state: &mut state,
                                  mut context: DhcpContext,
                                  mut lease_time: u32,
                                  mut ia_option:Vec<u8>,
@@ -2556,7 +2556,7 @@ unsafe extern "C" fn add_address(mut state: &mut state,
                    "DHCPADVERTISE"
                } , addr, state.hostname);
 }
-unsafe extern "C" fn mark_context_used(mut state: &mut state,
+fn mark_context_used(mut state: &mut state,
                                        mut addr: &mut In6Addr) {
     let mut context: DhcpContext = 0;
     /* Mark that we have an address for this prefix. */
@@ -2571,7 +2571,7 @@ unsafe extern "C" fn mark_context_used(mut state: &mut state,
         context = context.current
     };
 }
-unsafe extern "C" fn mark_config_used(mut context: DhcpContext,
+fn mark_config_used(mut context: DhcpContext,
                                       mut addr: &mut In6Addr) {
     while !context.is_null() {
         if is_same_net6(addr, &mut context.start6, context.prefix) != 0
@@ -2584,7 +2584,7 @@ unsafe extern "C" fn mark_config_used(mut context: DhcpContext,
     };
 }
 /* make sure address not leased to another CLID/IAID */
-unsafe extern "C" fn check_address(mut state: &mut state,
+fn check_address(mut state: &mut state,
                                    mut addr: &mut In6Addr) -> i32 {
     let mut lease: DhcpLease = 0;
     lease =
@@ -2601,7 +2601,7 @@ unsafe extern "C" fn check_address(mut state: &mut state,
     return 1;
 }
 /* return true of *addr could have been generated from config. */
-unsafe extern "C" fn config_implies(mut config: &mut DhcpConfig,
+fn config_implies(mut config: &mut DhcpConfig,
                                     mut context: DhcpContext,
                                     mut addr: &mut In6Addr)
                                     -> AddressListEntry {
@@ -2643,7 +2643,7 @@ unsafe extern "C" fn config_implies(mut config: &mut DhcpConfig,
     }
     return 0 ;
 }
-unsafe extern "C" fn config_valid(mut config: &mut DhcpConfig,
+fn config_valid(mut config: &mut DhcpConfig,
                                   mut context: DhcpContext,
                                   mut addr: &mut In6Addr,
                                   mut state: &mut state, mut now: time::Instant)
@@ -2716,7 +2716,7 @@ unsafe extern "C" fn config_valid(mut config: &mut DhcpConfig,
    *min_time - smallest valid time sent so far, to calculate T1 and T2.
    
    */
-unsafe extern "C" fn calculate_times(mut context: DhcpContext,
+fn calculate_times(mut context: DhcpContext,
                                      mut min_time: &mut libc::c_uint,
                                      mut valid_timep: &mut libc::c_uint,
                                      mut preferred_timep: &mut libc::c_uint,
@@ -2764,7 +2764,7 @@ unsafe extern "C" fn calculate_times(mut context: DhcpContext,
     *valid_timep = valid_time;
     *preferred_timep = preferred_time;
 }
-unsafe extern "C" fn update_leases(mut state: &mut state,
+fn update_leases(mut state: &mut state,
                                    mut context: DhcpContext,
                                    mut addr: &mut In6Addr,
                                    mut lease_time: u32,
@@ -2814,7 +2814,7 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
                 let mut enc_opt:Vec<u8> = 0;
                 let mut enc_end:Vec<u8> =
                     &mut *(class_opt).offset((4 +
-                                                               (opt6_uint                 unsafe extern "C" fn(_:
+                                                               (opt6_uint                 fn(_:
                                                                                              mut Vec<u8>,
                                                                                          _:
                                                                                              ,
@@ -2925,7 +2925,7 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
                 let mut enc_opt_0:Vec<u8> = 0;
                 let mut enc_end_0:Vec<u8> =
                     &mut *(class_opt).offset((4 +
-                                                               (opt6_uint                 unsafe extern "C" fn(_:
+                                                               (opt6_uint                 fn(_:
                                                                                              mut Vec<u8>,
                                                                                          _:
                                                                                              ,
@@ -2960,7 +2960,7 @@ unsafe extern "C" fn update_leases(mut state: &mut state,
         }
     };
 }
-unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
+fn log6_opts(mut nest: i32, mut xid: u32,
                                mut start_opts:Vec<u8>,
                                mut end_opts:Vec<u8>) {
     let mut opt:Vec<u8> = 0;
@@ -3087,7 +3087,7 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
             log6_opts(1, xid, ia_options,
                       &mut *(opt                           mut Vec<u8>).offset((4
                                                                  +
-                                                                 (opt6_uint                   unsafe extern "C" fn(_:
+                                                                 (opt6_uint                   fn(_:
                                                                                                mut Vec<u8>,
                                                                                            _:
                                                                                                ,
@@ -3103,7 +3103,7 @@ unsafe extern "C" fn log6_opts(mut nest: i32, mut xid: u32,
         opt = opt6_next(opt, end_opts)
     };
 }
-unsafe extern "C" fn log6_quiet(mut state: &mut state,
+fn log6_quiet(mut state: &mut state,
                                 mut type_0: &mut String,
                                 mut addr: &mut In6Addr,
                                 mut string: &mut String) {
@@ -3126,7 +3126,7 @@ unsafe extern "C" fn log6_quiet(mut state: &mut state,
         log6_packet(state, type_0, addr, string);
     };
 }
-unsafe extern "C" fn log6_packet(mut state: &mut state,
+fn log6_packet(mut state: &mut state,
                                  mut type_0: &mut String,
                                  mut addr: &mut In6Addr,
                                  mut string: &mut String) {
@@ -3169,7 +3169,7 @@ unsafe extern "C" fn log6_packet(mut state: &mut state,
                   } else { ""  });
     };
 }
-unsafe extern "C" fn opt6_find(mut opts:Vec<u8>,
+fn opt6_find(mut opts:Vec<u8>,
                                mut end:Vec<u8>,
                                mut search: u32,
                                mut minsize: u32)
@@ -3206,7 +3206,7 @@ unsafe extern "C" fn opt6_find(mut opts:Vec<u8>,
         opts = opts.offset(opt_len)
     };
 }
-unsafe extern "C" fn opt6_next(mut opts:Vec<u8>,
+fn opt6_next(mut opts:Vec<u8>,
                                mut end:Vec<u8>)
  ->Vec<u8> {
     let mut opt_len: u16 = 0;
@@ -3228,7 +3228,7 @@ unsafe extern "C" fn opt6_next(mut opts:Vec<u8>,
     }
     return opts.offset(opt_len);
 }
-unsafe extern "C" fn opt6_uint(mut opt: mut Vec<u8>,
+fn opt6_uint(mut opt: mut Vec<u8>,
                                mut offset: i32, mut size: i32)
  -> libc::c_uint {
     /* this worries about unaligned data and byte order */
@@ -3245,8 +3245,8 @@ unsafe extern "C" fn opt6_uint(mut opt: mut Vec<u8>,
     }
     return ret;
 }
-#[no_mangle]
-pub unsafe extern "C" fn relay_upstream6(mut relay: &mut DhcpRelay,
+
+pub fn relay_upstream6(mut relay: &mut DhcpRelay,
                                          mut sz: susize,
                                          mut peer_address: &mut In6Addr,
                                          mut scope_id: u32,
@@ -3262,7 +3262,7 @@ pub unsafe extern "C" fn relay_upstream6(mut relay: &mut DhcpRelay,
         In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
     let mut maclen: u32 = 0;
     let mut mactype: u32 = 0;
-    let mut mac: [libc::c_uchar; 16] = [0; 16];
+    let mut mac: [u8; 16] = [0; 16];
     inet_pton(10,
               "FF05::1:3" ,
               &mut multicast);
@@ -3375,8 +3375,8 @@ pub unsafe extern "C" fn relay_upstream6(mut relay: &mut DhcpRelay,
         }
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn relay_reply6(mut peer: NetAddress,
+
+pub fn relay_reply6(mut peer: NetAddress,
                                       mut sz: susize,
                                       mut arrival_interface:
                                           &mut String)

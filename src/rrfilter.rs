@@ -21,7 +21,7 @@ use crate::defines::{DnsHeader};
 use crate::rfc1035::skip_name;
 
 
-unsafe extern "C" fn check_name(mut namep: ,
+fn check_name(mut namep: ,
                                 mut header: DnsHeader, mut plen: usize,
                                 mut fixup: i32,
                                 mut rrs: ,
@@ -132,7 +132,7 @@ unsafe extern "C" fn check_name(mut namep: ,
     return 1;
 }
 /* Go through RRs and check or fixup the domain names contained within */
-unsafe extern "C" fn check_rrs(mut p: mut Vec<u8>,
+fn check_rrs(mut p: mut Vec<u8>,
                                mut header: DnsHeader, mut plen: usize,
                                mut fixup: i32,
                                mut rrs: ,
@@ -206,8 +206,8 @@ unsafe extern "C" fn check_rrs(mut p: mut Vec<u8>,
     return 1;
 }
 /* mode is 0 to remove EDNS0, 1 to filter DNSSEC RRs */
-#[no_mangle]
-pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
+
+pub fn rrfilter(mut header: DnsHeader,
                                   mut plen: usize, mut mode: i32)
                                   -> usize {
     static mut rrs:  =
@@ -373,8 +373,8 @@ pub unsafe extern "C" fn rrfilter(mut header: DnsHeader,
     return plen;
 }
 /* This is used in the DNSSEC code too, hence it's exported */
-#[no_mangle]
-pub unsafe extern "C" fn rrfilter_desc(mut type_0: i32)
+
+pub fn rrfilter_desc(mut type_0: i32)
  -> u16 {
     /* List of RRtypes which include domains in the data.
      0 -> domain
@@ -436,8 +436,8 @@ pub unsafe extern "C" fn rrfilter_desc(mut type_0: i32)
     }
     return p.offset(1);
 }
-#[no_mangle]
-pub unsafe extern "C" fn expand_workspace(mut wkspc:
+
+pub fn expand_workspace(mut wkspc:
                                               ,
                                           mut szp: ,
                                           mut new: i32)

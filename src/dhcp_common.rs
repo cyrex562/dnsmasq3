@@ -16,10 +16,8 @@
 */
 use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddressListEntry, Crec, NetAddress, DhcpOptTblEntry, NetAddress, _ISPRINT, DhcpRelay};
 use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net4, hostname_isequal, prettyprint_time, print_mac, setaddr6part};
-use libc::recvmsg;
 use socket2::Socket;
 use std::io;
-use crate::dnsmasq_log::my_syslog;
 use crate::cache::cache_find_by_name;
 use crate::dhcp::config_find_by_address;
 use crate::dhcp6::config_find_by_address6;
@@ -155,9 +153,9 @@ pub fn option_filter(mut tags: &mut DhcpNetId,
             if tmp.is_null() {
                 opt.flags |= 4096
             } else if tmp.netid.is_null() {
-                my_syslog((3 ) << 3  |
-                              4 ,
-                          "Ignoring duplicate dhcp-option %d"                        *const u8 , tmp.opt);
+                // my_syslog((3 ) << 3  |
+                //               4 ,
+                //           "Ignoring duplicate dhcp-option %d"                        *const u8 , tmp.opt);
             }
         }
         opt = opt.next
@@ -227,17 +225,8 @@ pub fn strip_hostname(mut hostname: &mut String)
     return 0 ;
 }
 
-pub fn log_tags(mut netid: &mut DhcpNetId,
-                                  mut xid: u32) {
-    if !netid.is_null() &&
-           daemon.options[(28  ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (28  )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
+pub fn log_tags(mut netid: &mut DhcpNetId, mut xid: u32) {
+    if !netid.is_null() && daemon.options[28] != 0 {
         let mut s: &mut String = daemon.namebuff;
         *s = 0 ;
         while !netid.is_null() {
@@ -251,24 +240,20 @@ pub fn log_tags(mut netid: &mut DhcpNetId,
                 n = n.next
             }
             if n.is_null() {
-                strncat(s, netid.net,
-                        ((1025  - 1 )).wrapping_sub(strlen(s)));
+                strncat(s, netid.net, (1025  - 1 ).wrapping_sub(strlen(s)));
                 if !netid.next.is_null() {
-                    strncat(s, ", " ,
-                            ((1025  - 1 ))).wrapping_sub(strlen(s)));
+                    strncat(s, ", " , (1025  - 1 ).wrapping_sub(strlen(s)));
                 }
             }
             netid = netid.next
         }
-        my_syslog((3 ) << 3  | 6 ,
-                  "%u tags: %s" , xid,
-                  s);
+        // my_syslog((3 ) << 3  | 6 ,
+        //           "%u tags: %s" , xid,
+        //           s);
     };
 }
 
-pub fn match_bytes(mut o: &mut DhcpOpt,
-                                     mut p: mut Vec<u8>,
-                                     mut len: i32) -> i32 {
+pub fn match_bytes(mut o: &mut DhcpOpt, mut p: &mut Vec<u8>, mut len: i32) -> i32 {
     let mut i: i32 = 0;
     if o.len > len { return 0  }
     if o.len == 0  { return 1  }
@@ -293,7 +278,7 @@ pub fn match_bytes(mut o: &mut DhcpOpt,
 }
 
 pub fn config_has_mac(mut config: &mut DhcpConfig,
-                                        mut hwaddr: mut Vec<u8>,
+                                        mut hwaddr: &mut Vec<u8>,
                                         mut len: i32,
                                         mut type_0: i32)
                                         -> i32 {
@@ -313,7 +298,7 @@ pub fn config_has_mac(mut config: &mut DhcpConfig,
     }
     return 0 ;
 }
-unsafe extern "C" fn is_config_in_context(mut context: DhcpContext,
+fn is_config_in_context(mut context: DhcpContext,
                                           mut config: &mut DhcpConfig)
                                           -> i32 {
     if context.is_null() {
@@ -357,11 +342,11 @@ unsafe extern "C" fn is_config_in_context(mut context: DhcpContext,
     }
     return 0 ;
 }
-unsafe extern "C" fn find_config_match(mut configs: &mut DhcpConfig,
+fn find_config_match(mut configs: &mut DhcpConfig,
                                        mut context: DhcpContext,
-                                       mut clid: mut Vec<u8>,
+                                       mut clid: &mut Vec<u8>,
                                        mut clid_len: i32,
-                                       mut hwaddr: mut Vec<u8>,
+                                       mut hwaddr: &mut Vec<u8>,
                                        mut hw_len: i32,
                                        mut hw_type: i32,
                                        mut hostname: &mut String,
@@ -466,9 +451,9 @@ unsafe extern "C" fn find_config_match(mut configs: &mut DhcpConfig,
 
 pub fn find_config(mut configs: &mut DhcpConfig,
                                      mut context: DhcpContext,
-                                     mut clid: mut Vec<u8>,
+                                     mut clid: &mut Vec<u8>,
                                      mut clid_len: i32,
-                                     mut hwaddr: mut Vec<u8>,
+                                     mut hwaddr: &mut Vec<u8>,
                                      mut hw_len: i32,
                                      mut hw_type: i32,
                                      mut hostname: &mut String,
@@ -535,32 +520,21 @@ pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
                        } &&
                        crec.flags & (1) << 6
                            != 0 {
-                    if !cache_find_by_name(crec, config.hostname,
-                                           0 ,
-                                           cacheflags                                         libc::c_uint).is_null() {
+                    if !cache_find_by_name(crec, config.hostname, 0 , cacheflags).is_null() {
                         /* use primary (first) address */
-                        while !crec.is_null() &&
-                                  crec.flags &
-                                      (1) << 2
-                                      == 0 {
-                            crec =
-                                cache_find_by_name(crec, config.hostname,
-                                                   0 ,
-                                                   cacheflags)
+                        while !crec.is_null() && crec.flags & (1) << 2 == 0 {
+                            crec = cache_find_by_name(crec, config.hostname, 0,  cacheflags)
                         } /* should be never */
                         if crec.is_null() {
                             current_block_27 = 3640593987805443782;
                         } else {
-                            inet_ntop(prot,
-                                      &mut crec.addr
-                                      daemon.addrbuff,
-                                      46 );
-                            my_syslog((3 ) << 3  |
-                                          4 ,
-                                      "%s has more than one address in hostsfile, using %s for DHCP"
-                                          ,
-                                      config.hostname,
-                                      daemon.addrbuff);
+                            inet_ntop(prot, &mut crec.addr, daemon.addrbuff, 46 );
+                            // my_syslog((3 ) << 3  |
+                            //               4 ,
+                            //           "%s has more than one address in hostsfile, using %s for DHCP"
+                            //               ,
+                            //           config.hostname,
+                            //           daemon.addrbuff);
                             current_block_27 = 1109700713171191020;
                         }
                     } else { current_block_27 = 1109700713171191020; }
@@ -582,21 +556,14 @@ pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
                             } else if prot == 10  &&
                                           {
                                               conf_tmp =
-                                                  config_find_by_address6(configs,
-                                                                          0                           &mut In6Addr,
-                                                                          0                           ,
-                                                                          &mut crec.addr.addr6);
+                                                  config_find_by_address6(configs, 0 , &mut In6Addr, 0, &mut crec.addr.addr6);
                                               (conf_tmp.is_null()) ||
                                                   conf_tmp == config
                                           } {
                                 /* host must have exactly one address if comming from /etc/hosts. */
                                 if config.addr6.is_null() &&
                                        {
-                                           config.addr6 =
-                                               whine_m
-                                           alloc(::std::mem::size_of::<AddressListEntry>()
-                                                                     )
-                                                   ;
+                                           config.addr6 = AddressListEntry::new();
                                            !config.addr6.is_null()
                                        } {
                                     (*config.addr6).next =
@@ -609,27 +576,22 @@ pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
                                        (*config.addr6).flags &
                                            (16  |
                                                 8 ) == 0 {
-                                    memcpy(&mut (*config.addr6).addr.addr6
-                                                                                      Vec<u8>,
-                                           &mut crec.addr.addr6                                         &mut In6Addr
-                                           16 );
-                                    config.flags |=
-                                        (4096  |
-                                             16384 )                                      libc::c_uint
+                                    // memcpy(&mut (*config.addr6).addr.addr6
+                                    //                                                   Vec<u8>,
+                                    //        &mut crec.addr.addr6                                         &mut In6Addr
+                                    //        16 );
+                                    config.addr6.addr.addr6 = crec.addr.addr6.clone();
+                                    config.flags |= (4096  | 16384 ) 
                                 }
                             } else {
-                                inet_ntop(prot,
-                                          &mut crec.addr
-                                             ,
-                                          daemon.addrbuff,
-                                          46 );
-                                my_syslog((3 ) <<
-                                              3  |
-                                              4 ,
-                                          "duplicate IP address %s (%s) in dhcp-config directive"
-                                                                                     *const libc::c_char,
-                                          daemon.addrbuff,
-                                          config.hostname);
+                                inet_ntop(prot, &mut crec.addr, daemon.addrbuff,46 );
+                                // my_syslog((3 ) <<
+                                //               3  |
+                                //               4 ,
+                                //           "duplicate IP address %s (%s) in dhcp-config directive"
+                                //                                                      *const libc::c_char,
+                                //           daemon.addrbuff,
+                                //           config.hostname);
                             }
                         }
                     }
@@ -811,7 +773,7 @@ pub fn display_opts() {
 
 pub fn display_opts6() {
     let mut i: i32 = 0;
-    printf("Known DHCPv6 options:\n"         *const libc::c_char);
+    // printf("Known DHCPv6 options:\n"         *const libc::c_char);
     i = 0 ;
     while !DHCPV6_OPT_TBL[i ].name.is_null() {
         if DHCPV6_OPT_TBL[i ].size  & 0x2000  ==
@@ -864,7 +826,7 @@ pub fn lookup_dhcp_len(mut protocol: u32, mut val: u16) -> Option<usize> {
 
 pub fn option_string(mut prot: i32,
                                        mut opt: u32,
-                                       mut val: mut Vec<u8>,
+                                       mut val: &mut Vec<u8>,
                                        mut opt_len: i32,
                                        mut buf: &mut String,
                                        mut buf_len: i32)
@@ -873,7 +835,7 @@ pub fn option_string(mut prot: i32,
     let mut i: i32 = 0;
     let mut j: i32 = 0;
     let mut nodecode: i32 = 0 ;
-    let mut ot: *const DhcpOptTblEntry = DHCPV4_OPT_TBL.as_ptr();
+    let mut ot: DhcpOptTblEntry = DHCPV4_OPT_TBL;
     if prot == 10  { ot = DHCPV6_OPT_TBL.as_ptr() }
     o = 0 ;
     while !(*ot.offset(o)).name.is_null() {
@@ -882,31 +844,27 @@ pub fn option_string(mut prot: i32,
                 buf.clear();
                 if (*ot.offset(o)).size  &
                        0x8000  != 0 {
-                    let mut addr: NetAddress =
-                        NetAddress {addr4: NetAddress {s_addr: 0,},};
-                    let mut addr_len: i32 = 4 ;
+                    let mut addr = NetAddress::new();
+                    let mut addr_len: usize = 4 ;
                     if prot == 10  {
                         addr_len = 16 
                     }
-                    *buf.offset(0 ) =
-                        0 ;
-                    i = 0 ;
+                    buf.offset(0) = 0;
+                    i = 0;
                     while i <= opt_len - addr_len {
                         if i != 0  {
-                            strncat(buf,
-                                    ", "                                  *const libc::c_char,
-                                    (buf_len).wrapping_sub(strlen(buf)));
+                            strncat(buf, ", " (buf_len).wrapping_sub(strlen(buf)));
                         }
                         /* align */
-                        memcpy(&mut addr                             Vec<u8>,
-                               &mut *val.offset(i)                             mut Vec<u8>,
-                               addr_len);
+                        // memcpy(&mut addr                             Vec<u8>,
+                        //        &mut *val.offset(i)                             mut Vec<u8>,
+                        //        addr_len);
+                        addr = val[1..].clone();
                         inet_ntop(prot,
-                                  &mut *val.offset(i)                                mut Vec<u8>
+                                  &mut *val.offset(i),
                                   daemon.addrbuff,
                                   46 );
-                        strncat(buf, daemon.addrbuff,
-                                (buf_len                        ).wrapping_sub(strlen(buf)));
+                        strncat(buf, daemon.addrbuff, (buf_len).wrapping_sub(strlen(buf)));
                         i += addr_len
                     }
                 } else if (*ot.offset(o)).size  &
@@ -963,28 +921,21 @@ pub fn option_string(mut prot: i32,
                               0x800  != 0 {
                     let mut k_0: i32 = 0;
                     let mut len: i32 = 0;
-                    let mut p: mut Vec<u8> = 0;
+                    let mut p: Vec<u8> = Vec::new();
                     i = 0 ;
                     j = 0 ;
                     loop  {
-                        p =
-                            &mut *val.offset(i)                          mut Vec<u8>;
-                        let mut t_cp: mut Vec<u8> = p;
-                        len =
-                            (*t_cp.offset(0 )
-                                 ) << 8  |
-                                *t_cp.offset(1 )                              u16 ;
-                        p = p.offset(2 );
-                        k_0 = 0 ;
+                        p = &mut *val.offset(i);
+                        let mut t_cp: Vec<u8> = p;
+                        len = (*t_cp.offset(0)) << 8 | *t_cp.offset(1);
+                        p = p.offset(2);
+                        k_0 = 0;
                         while k_0 < len && j < buf_len {
                             let fresh9 = p;
                             p = p.offset(1);
                             let mut c_1: libc::c_char =
                                 *fresh9;
-                            if *(*__ctype_b_loc()).offset(c_1 
-                                                             )                              &
-                                   _ISPRINT
-                                        != 0 {
+                            if *(*__ctype_b_loc()).offset(c_1) & _ISPRINTvv!= 0 {
                                 let fresh10 = j;
                                 j = j + 1;
                                 *buf.offset(fresh10) = c_1
@@ -1040,7 +991,7 @@ pub fn option_string(mut prot: i32,
     }
     return if !(*ot.offset(o)).name.is_null() {
                (*ot.offset(o)).name
-           } else { ""  }         &mut String;
+           } else { ""  } ;
 }
 
 pub fn dhcp_context_to_string(mut family: u32, mut context: &DhcpContext) -> String {

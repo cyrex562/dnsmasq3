@@ -1,4 +1,3 @@
-
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -14,30 +13,30 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#[no_mangle]
-pub static mut metric_names: [*const libc::c_char; 20] =
-    ["dns_cache_inserted" ,
-     "dns_cache_live_freed" ,
-     "dns_queries_forwarded" ,
-     "dns_auth_answered" ,
-     "dns_local_answered" ,
-     "bootp" ,
-     "pxe" ,
-     "dhcp_ack" ,
-     "dhcp_decline" ,
-     "dhcp_discover" ,
-     "dhcp_inform" ,
-     "dhcp_nak" ,
-     "dhcp_offer" ,
-     "dhcp_release" ,
-     "dhcp_request" ,
-     "noanswer" ,
-     "leases_allocated_4" ,
-     "leases_pruned_4" ,
-     "leases_allocated_6" ,
-     "leases_pruned_6" ];
-#[no_mangle]
-pub unsafe extern "C" fn get_metric_name(mut i: i32)
- -> *const libc::c_char {
-    return metric_names[i ];
+
+pub static mut metric_names: [*const libc::c_char; 20] = [
+    "dns_cache_inserted",
+    "dns_cache_live_freed",
+    "dns_queries_forwarded",
+    "dns_auth_answered",
+    "dns_local_answered",
+    "bootp",
+    "pxe",
+    "dhcp_ack",
+    "dhcp_decline",
+    "dhcp_discover",
+    "dhcp_inform",
+    "dhcp_nak",
+    "dhcp_offer",
+    "dhcp_release",
+    "dhcp_request",
+    "noanswer",
+    "leases_allocated_4",
+    "leases_pruned_4",
+    "leases_allocated_6",
+    "leases_pruned_6",
+];
+
+pub fn get_metric_name(mut i: i32) -> *const libc::c_char {
+    return metric_names[i];
 }

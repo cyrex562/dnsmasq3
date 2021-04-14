@@ -81,7 +81,7 @@ pub fn netlink_init(daemon: &mut DnsmasqDaemon) -> String {
     }
     return 0 ;
 }
-unsafe extern "C" fn netlink_recv() -> ssize_t {
+fn netlink_recv() -> ssize_t {
     let mut msg: MsgHdr =
         MsgHdr {msg_name: 0,
                msg_namelen: 0,
@@ -569,7 +569,7 @@ pub fn netlink_multicast() {
     /* restore non-blocking status */
     fcntl(daemon.netlinkfd, 4, flags);
 }
-unsafe extern "C" fn nl_async(mut h: &mut nlmsghdr) {
+fn nl_async(mut h: &mut nlmsghdr) {
     if h.nlmsg_type == 0x2 {
         let mut err: nlmsgerr =
             (h           &mut String).offset((0 +

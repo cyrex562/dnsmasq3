@@ -31,7 +31,7 @@ use crate::rfc1035::extract_name;
 use crate::util::zero_array_1;
 
 // SHA256 outputs a 32 byte digest
-pub type BYTE = libc::c_uchar;
+pub type BYTE = u8;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SHA256_CTX {
@@ -43,20 +43,20 @@ pub struct SHA256_CTX {
 // 8-bit byte
 pub type WORD = libc::c_uint;
 #[inline]
-unsafe extern "C" fn __bswap_16(mut __bsx: u16) -> u16 {
+fn __bswap_16(mut __bsx: u16) -> u16 {
     return (__bsx >> 8 & 0xff |
                 (__bsx & 0xff) <<
                     8);
 }
 #[inline]
-unsafe extern "C" fn __bswap_32(mut __bsx: u32) -> u32 {
+fn __bswap_32(mut __bsx: u32) -> u32 {
     return (__bsx & 0xff000000) >> 24 |
                (__bsx & 0xff0000) >> 8 |
                (__bsx & 0xff00) << 8 |
                (__bsx & 0xff) << 24;
 }
 #[inline]
-unsafe extern "C" fn __bswap_64(mut __bsx: u64) -> u64 {
+fn __bswap_64(mut __bsx: u64) -> u64 {
     return ((__bsxlong &
                  0xff00000000000000long) >> 56
                 |
@@ -78,19 +78,19 @@ unsafe extern "C" fn __bswap_64(mut __bsx: u64) -> u64 {
                     56) as u64;
 }
 #[inline]
-unsafe extern "C" fn __uint16_identity(mut __x: u16) -> u16 {
+fn __uint16_identity(mut __x: u16) -> u16 {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __uint32_identity(mut __x: u32) -> u32 {
+fn __uint32_identity(mut __x: u32) -> u32 {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __uint64_identity(mut __x: u64) -> u64 {
+fn __uint64_identity(mut __x: u64) -> u64 {
     return __x;
 }
 #[inline]
-unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut MsgHdr,
+fn __cmsg_nxthdr(mut __mhdr: &mut MsgHdr,
                                    mut __cmsg: &mut CmsgHdr) -> {
     if __cmsg.cmsg_len < ::std::mem::size_of::<CmsgHdr>()
        {
@@ -120,34 +120,34 @@ unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut MsgHdr,
     return __cmsg;
 }
 #[inline]
-unsafe extern "C" fn stat(mut __path: *const libc::c_char,
+fn stat(mut __path: *const libc::c_char,
                           mut __statbuf: &mut stat) -> i32 {
     return __xstat(1, __path, __statbuf);
 }
 #[inline]
-unsafe extern "C" fn fstat(mut __fd: i32, mut __statbuf: &mut stat)
+fn fstat(mut __fd: i32, mut __statbuf: &mut stat)
  -> i32 {
     return __fxstat(1, __fd, __statbuf);
 }
 #[inline]
-unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
+fn stat64(mut __path: *const libc::c_char,
                             mut __statbuf: &mut stat64) -> i32 {
     return __xstat64(1, __path, __statbuf);
 }
 #[inline]
-unsafe extern "C" fn fstat64(mut __fd: i32,
+fn fstat64(mut __fd: i32,
                              mut __statbuf: &mut stat64) -> i32 {
     return __fxstat64(1, __fd, __statbuf);
 }
 #[inline]
-unsafe extern "C" fn fstatat(mut __fd: i32,
+fn fstatat(mut __fd: i32,
                              mut __filename: *const libc::c_char,
                              mut __statbuf: &mut stat,
                              mut __flag: i32) -> i32 {
     return __fxstatat(1, __fd, __filename, __statbuf, __flag);
 }
 #[inline]
-unsafe extern "C" fn fstatat64(mut __fd: i32,
+fn fstatat64(mut __fd: i32,
                                mut __filename: *const libc::c_char,
                                mut __statbuf: &mut stat64,
                                mut __flag: i32) -> i32 {
@@ -155,37 +155,37 @@ unsafe extern "C" fn fstatat64(mut __fd: i32,
                         __flag);
 }
 #[inline]
-unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
+fn lstat(mut __path: *const libc::c_char,
                            mut __statbuf: &mut stat) -> i32 {
     return __lxstat(1, __path, __statbuf);
 }
 #[inline]
-unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
+fn lstat64(mut __path: *const libc::c_char,
                              mut __statbuf: &mut stat64) -> i32 {
     return __lxstat64(1, __path, __statbuf);
 }
 #[inline]
-unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
+fn mknod(mut __path: *const libc::c_char,
                            mut __mode: ModeT, mut __dev: DevT)
                            -> i32 {
     return __xmknod(0, __path, __mode, &mut __dev);
 }
 #[inline]
-unsafe extern "C" fn mknodat(mut __fd: i32,
+fn mknodat(mut __fd: i32,
                              mut __path: *const libc::c_char,
                              mut __mode: ModeT, mut __dev: DevT)
                              -> i32 {
     return __xmknodat(0, __fd, __path, __mode, &mut __dev);
 }
 #[inline]
-unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
+fn vprintf(mut __fmt: *const libc::c_char,
                              mut __arg: ::std::ffi::VaList) -> i32 {
     return vfprintf(stdout, __fmt, __arg.as_va_list());
 }
 #[inline]
-unsafe extern "C" fn getchar() -> i32 { return getc(stdin); }
+fn getchar() -> i32 { return getc(stdin); }
 #[inline]
-unsafe extern "C" fn getc_unlocked(mut __fp: &mut FILE) -> i32 {
+fn getc_unlocked(mut __fp: &mut FILE) -> i32 {
     return if (__fp._IO_read_ptr >= __fp._IO_read_end)  != 0 {
                __uflow(__fp)
            } else {
@@ -195,7 +195,7 @@ unsafe extern "C" fn getc_unlocked(mut __fp: &mut FILE) -> i32 {
            };
 }
 #[inline]
-unsafe extern "C" fn getchar_unlocked() -> i32 {
+fn getchar_unlocked() -> i32 {
     return if (stdin._IO_read_ptr >= stdin._IO_read_end)
                   != 0 {
                __uflow(stdin)
@@ -206,7 +206,7 @@ unsafe extern "C" fn getchar_unlocked() -> i32 {
            };
 }
 #[inline]
-unsafe extern "C" fn fgetc_unlocked(mut __fp: &mut FILE) -> i32 {
+fn fgetc_unlocked(mut __fp: &mut FILE) -> i32 {
     return if (__fp._IO_read_ptr >= __fp._IO_read_end)  != 0 {
                __uflow(__fp)
            } else {
@@ -216,11 +216,11 @@ unsafe extern "C" fn fgetc_unlocked(mut __fp: &mut FILE) -> i32 {
            };
 }
 #[inline]
-unsafe extern "C" fn putchar(mut __c: i32) -> i32 {
+fn putchar(mut __c: i32) -> i32 {
     return putc(__c, stdout);
 }
 #[inline]
-unsafe extern "C" fn fputc_unlocked(mut __c: i32,
+fn fputc_unlocked(mut __c: i32,
                                     mut __stream: &mut FILE) -> i32 {
     return if (__stream._IO_write_ptr >= __stream._IO_write_end)  != 0 {
                __overflow(__stream, __c)
@@ -233,7 +233,7 @@ unsafe extern "C" fn fputc_unlocked(mut __c: i32,
            };
 }
 #[inline]
-unsafe extern "C" fn putc_unlocked(mut __c: i32,
+fn putc_unlocked(mut __c: i32,
                                    mut __stream: &mut FILE) -> i32 {
     return if (__stream._IO_write_ptr >= __stream._IO_write_end)  != 0 {
                __overflow(__stream, __c)
@@ -246,7 +246,7 @@ unsafe extern "C" fn putc_unlocked(mut __c: i32,
            };
 }
 #[inline]
-unsafe extern "C" fn putchar_unlocked(mut __c: i32) -> i32 {
+fn putchar_unlocked(mut __c: i32) -> i32 {
     return if (stdout._IO_write_ptr >= stdout._IO_write_end)  != 0 {
                __overflow(stdout, __c)
            } else {
@@ -257,41 +257,41 @@ unsafe extern "C" fn putchar_unlocked(mut __c: i32) -> i32 {
            };
 }
 #[inline]
-unsafe extern "C" fn getline(mut __lineptr: String,
+fn getline(mut __lineptr: String,
                              mut __n: &mut size_t, mut __stream: &mut FILE)
  -> SsizeT {
     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
 }
 #[inline]
-unsafe extern "C" fn feof_unlocked(mut __stream: &mut FILE) -> i32 {
+fn feof_unlocked(mut __stream: &mut FILE) -> i32 {
     return (__stream._flags & 0x10 != 0) ;
 }
 #[inline]
-unsafe extern "C" fn ferror_unlocked(mut __stream: &mut FILE) -> i32 {
+fn ferror_unlocked(mut __stream: &mut FILE) -> i32 {
     return (__stream._flags & 0x20 != 0) ;
 }
 #[inline]
-unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
+fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
     return strtod(__nptr, 0 );
 }
 #[inline]
-unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) -> i32 {
+fn atoi(mut __nptr: *const libc::c_char) -> i32 {
     return strtol(__nptr, 0 ,
                   10);
 }
 #[inline]
-unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> i32 {
+fn atol(mut __nptr: *const libc::c_char) -> i32 {
     return strtol(__nptr, 0 ,
                   10);
 }
 #[inline]
-unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
+fn atoll(mut __nptr: *const libc::c_char)
  -> libc::c_longlong {
     return strtoll(__nptr, 0 ,
                    10);
 }
 #[inline]
-unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
+fn bsearch(mut __key: *const libc::c_void,
                              mut __base: *const libc::c_void,
                              mut __nmemb: usize, mut __size: usize,
                              mut __compar: __compar_fn_t)
@@ -320,45 +320,45 @@ unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
     return 0;
 }
 #[inline]
-unsafe extern "C" fn tolower(mut __c: i32) -> i32 {
+fn tolower(mut __c: i32) -> i32 {
     return if __c >= -(128) && __c < 256 {
                *(*__ctype_tolower_loc()).offset(__c)
            } else { __c };
 }
 #[inline]
-unsafe extern "C" fn toupper(mut __c: i32) -> i32 {
+fn toupper(mut __c: i32) -> i32 {
     return if __c >= -(128) && __c < 256 {
                *(*__ctype_toupper_loc()).offset(__c)
            } else { __c };
 }
 #[inline]
-unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
+fn strtoimax(mut nptr: *const libc::c_char,
                                mut endptr: String,
                                mut base: i32) -> intmax_t {
     return __strtol_internal(nptr, endptr, base, 0);
 }
 #[inline]
-unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
+fn strtoumax(mut nptr: *const libc::c_char,
                                mut endptr: String,
                                mut base: i32) -> uintmax_t {
     return __strtoul_internal(nptr, endptr, base, 0);
 }
 #[inline]
-unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
+fn wcstoimax(mut nptr: *const __gwchar_t,
                                mut endptr: &mut __gwchar_t.
                                mut base: i32) -> intmax_t {
     return __wcstol_internal(nptr, endptr, base, 0);
 }
 #[inline]
-unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
+fn wcstoumax(mut nptr: *const __gwchar_t,
                                mut endptr: &mut __gwchar_t.
                                mut base: i32) -> uintmax_t {
     return __wcstoul_internal(nptr, endptr, base, 0);
 }
-#[no_mangle]
-pub unsafe extern "C" fn hash_questions_init() { }
-#[no_mangle]
-pub unsafe extern "C" fn hash_questions(mut header: DnsHeader,
+
+pub fn hash_questions_init() { }
+
+pub fn hash_questions(mut header: DnsHeader,
                                         mut plen: usize,
                                         mut name: &mut String)
                                         -> mut Vec<u8> {
@@ -439,7 +439,7 @@ static mut k: [WORD; 64] =
      0x90befffa, 0xa4506ceb,
      0xbef9a3f7, 0xc67178f2];
 /* ********************** FUNCTION DEFINITIONS ***********************/
-unsafe extern "C" fn sha256_transform(mut ctx: &mut SHA256_CTX,
+fn sha256_transform(mut ctx: &mut SHA256_CTX,
                                       mut data: *const BYTE) {
     let mut a: WORD = 0;
     let mut b: WORD = 0;
@@ -572,7 +572,7 @@ unsafe extern "C" fn sha256_transform(mut ctx: &mut SHA256_CTX,
     ctx.state[7 ] =
         (ctx.state[7 ]       libc::c_uint).wrapping_add(h)));
 }
-unsafe extern "C" fn sha256_init(mut ctx: &mut SHA256_CTX) {
+fn sha256_init(mut ctx: &mut SHA256_CTX) {
     ctx.datalen = 0);
     ctx.bitlen = 0long;
     ctx.state[0 ] =
@@ -589,7 +589,7 @@ unsafe extern "C" fn sha256_init(mut ctx: &mut SHA256_CTX) {
     ctx.state[7 ] =
         0x5be0cd19);
 }
-unsafe extern "C" fn sha256_update(mut ctx: &mut SHA256_CTX,
+fn sha256_update(mut ctx: &mut SHA256_CTX,
                                    mut data: *const BYTE, mut len: usize) {
     let mut i: WORD = 0;
     i = 0);
@@ -605,7 +605,7 @@ unsafe extern "C" fn sha256_update(mut ctx: &mut SHA256_CTX,
         i = i.wrapping_add(1)
     };
 }
-unsafe extern "C" fn sha256_final(mut ctx: &mut SHA256_CTX,
+fn sha256_final(mut ctx: &mut SHA256_CTX,
                                   mut hash: &mut BYTE) {
     let mut i: WORD = 0;
     i = ctx.datalen;

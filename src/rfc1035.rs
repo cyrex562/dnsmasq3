@@ -105,15 +105,15 @@ pub fn extract_name(mut header: &DnsHeader,
             j = 0;
             while j < l {
                 if is_extract != false {
-                    let mut c: libc::c_uchar = *p;
+                    let mut c: u8 = *p;
                     if c != 0 && c != '.' as i32 {
                         let fresh8 = cp;
                         cp = cp.offset(1);
                         *fresh8 = c
                     } else { return 0; }
                 } else {
-                    let mut c1: libc::c_uchar = cp;
-                    let mut c2: libc::c_uchar = *p;
+                    let mut c1: u8 = cp;
+                    let mut c2: u8 = *p;
                     if c1 == 0 {
                         retvalue = 2
                     } else {
@@ -244,7 +244,7 @@ pub fn in_arpa_name_2_addr(mut namein: &mut String, mut addrp: &mut NetAddress)
                         j -= 1
                     }
                     *addr.offset(0) = ((*addr.offset(0) >> 4) | strtol(cp1, 0, 16) << 4);
-                    libc::c_uchar;
+                    u8;
                     cp1 = cp1.offset(strlen(cp1).wrapping_add(1))
                 }
                 return (1) << 8;
@@ -681,15 +681,15 @@ pub fn extract_addresses(mut header: DnsHeader,
                                     let fresh15 = t_cp_4;
                                     t_cp_4 = t_cp_4.offset(1);
                                     *fresh15 = (t_l >> 24)
-                                    libc::c_uchar;
+                                    u8;
                                     let fresh16 = t_cp_4;
                                     t_cp_4 = t_cp_4.offset(1);
                                     *fresh16 = (t_l >> 16)
-                                    libc::c_uchar;
+                                    u8;
                                     let fresh17 = t_cp_4;
                                     t_cp_4 = t_cp_4.offset(1);
                                     *fresh17 = (t_l >> 8)
-                                    libc::c_uchar;
+                                    u8;
                                     *t_cp_4 = t_l;
                                     p1 = p1.offset(4
                                     )
@@ -832,15 +832,15 @@ pub fn extract_addresses(mut header: DnsHeader,
                                     let fresh19 = t_cp_9;
                                     t_cp_9 = t_cp_9.offset(1);
                                     *fresh19 = (t_l_0 >> 24)
-                                    libc::c_uchar;
+                                    u8;
                                     let fresh20 = t_cp_9;
                                     t_cp_9 = t_cp_9.offset(1);
                                     *fresh20 = (t_l_0 >> 16)
-                                    libc::c_uchar;
+                                    u8;
                                     let fresh21 = t_cp_9;
                                     t_cp_9 = t_cp_9.offset(1);
                                     *fresh21 = (t_l_0 >> 8)
-                                    libc::c_uchar;
+                                    u8;
                                     *t_cp_9 = t_l_0;
                                     p1 = p1.offset(4
                                     )
@@ -1536,7 +1536,7 @@ pub fn add_resource_record(mut header: &DnsHeader,
                     let fresh25 = t_cp_0;
                     t_cp_0 = t_cp_0.offset(1);
                     *fresh25 = (t_s_0 >> 8)
-                    libc::c_uchar;
+                    u8;
                     *t_cp_0 = t_s_0;
                     p = p.offset(2);
                     current_block = 4488286894823169796;
@@ -1560,7 +1560,7 @@ pub fn add_resource_record(mut header: &DnsHeader,
                         let fresh27 = t_cp_1;
                         t_cp_1 = t_cp_1.offset(1);
                         *fresh27 = (t_s_1 >> 8)
-                        libc::c_uchar;
+                        u8;
                         *t_cp_1 = t_s_1;
                         p = p.offset(2);
                         let mut t_s_2: u16 = class;
@@ -1568,7 +1568,7 @@ pub fn add_resource_record(mut header: &DnsHeader,
                         let fresh28 = t_cp_2;
                         t_cp_2 = t_cp_2.offset(1);
                         *fresh28 = (t_s_2 >> 8)
-                        libc::c_uchar;
+                        u8;
                         *t_cp_2 = t_s_2;
                         p = p.offset(2);
                         let mut t_l: u32_0 = ttl_0;
@@ -1591,7 +1591,7 @@ pub fn add_resource_record(mut header: &DnsHeader,
                         let fresh32 = t_cp_4;
                         t_cp_4 = t_cp_4.offset(1);
                         *fresh32 = (t_s_3 >> 8)
-                        libc::c_uchar;
+                        u8;
                         *t_cp_4 = t_s_3;
                         p = p.offset(2);
                         loop /* Placeholder RDLength */ {
@@ -1657,15 +1657,15 @@ pub fn add_resource_record(mut header: &DnsHeader,
                                     let fresh35 = t_cp_6;
                                     t_cp_6 = t_cp_6.offset(1);
                                     *fresh35 = (t_l_0 >> 24)
-                                    libc::c_uchar;
+                                    u8;
                                     let fresh36 = t_cp_6;
                                     t_cp_6 = t_cp_6.offset(1);
                                     *fresh36 = (t_l_0 >> 16)
-                                    libc::c_uchar;
+                                    u8;
                                     let fresh37 = t_cp_6;
                                     t_cp_6 = t_cp_6.offset(1);
                                     *fresh37 = (t_l_0 >> 8)
-                                    libc::c_uchar;
+                                    u8;
                                     *t_cp_6 = t_l_0;
                                     p = p.offset(4)
                                 }
@@ -1740,7 +1740,7 @@ pub fn add_resource_record(mut header: &DnsHeader,
                                     let fresh40 = t_cp_7;
                                     t_cp_7 = t_cp_7.offset(1);
                                     *fresh40 = (t_s_5 >> 8)
-                                    libc::c_uchar;
+                                    u8;
                                     *t_cp_7 = t_s_5;
                                     sav = sav.offset(2);
                                     *pp = p;

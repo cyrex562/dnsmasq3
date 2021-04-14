@@ -1453,7 +1453,7 @@ fn dhcp_tags(mut arg: &mut String)
                                         (val_0 >>
                                              (new.len - i -
                                                   1) *
-                                                 8)                                      libc::c_uchar;
+                                                 8)                                      u8;
                                     i += 1
                                 }
                                 current_block = 15439134456549723682;
@@ -1744,9 +1744,9 @@ fn dhcp_tags(mut arg: &mut String)
                                                             (t_s
                                                                  >>
                                                                  8                  )
-                                                                            libc::c_uchar;
+                                                                            u8;
                                                         *t_cp =
-                                                            t_s             libc::c_uchar;
+                                                            t_s             u8;
                                                         tail =
                                                             tail.offset(2
                                                               );
@@ -1780,7 +1780,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                    120 &&
                                                    !m.is_null() {
                                                 *m.offset(0           ) =
-                                                    0     libc::c_uchar
+                                                    0     u8
                                             }
                                             new.len =
                                                 len +
@@ -1830,7 +1830,7 @@ fn dhcp_tags(mut arg: &mut String)
                                         t_cp_0 = t_cp_0.offset(1);
                                         *fresh22 =
                                             (t_s_0 >>
-                                                 8)                                          libc::c_uchar;
+                                                 8)                                          u8;
                                         *t_cp_0 = t_s_0;
                                         p_1 =
                                             p_1.offset(2        );
@@ -1905,7 +1905,7 @@ fn dhcp_tags(mut arg: &mut String)
                                             let fresh23 = end;
                                             end = end.offset(1);
                                             *fresh23 =
-                                                0 libc::c_uchar;
+                                                0 u8;
                                             if is6 != 0 &&
                                                    new.opt ==
                                                        56 {
@@ -1918,7 +1918,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                 t_cp_1 = t_cp_1.offset(1);
                                                 *fresh24 =
                                                     (t_s_1 >>
-                                                         8)     libc::c_uchar;
+                                                         8)     u8;
                                                 *t_cp_1 =
                                                     t_s_1;
                                                 q_0 =
@@ -1935,7 +1935,7 @@ fn dhcp_tags(mut arg: &mut String)
                                                 t_cp_2 = t_cp_2.offset(1);
                                                 *fresh25 =
                                                     (t_s_2 >>
-                                                         8)     libc::c_uchar;
+                                                         8)     u8;
                                                 *t_cp_2 =
                                                     t_s_2;
                                                 q_0 =
@@ -2031,7 +2031,7 @@ fn dhcp_tags(mut arg: &mut String)
     dhcp_opt_free(new);
     return 0;
 }
-#[no_mangle]
+
 pub  fn set_option_bool(mut opt: u32) {
     daemon.options[(opt).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                              ).wrapping_mul(8                                       ))
@@ -2042,7 +2042,7 @@ pub  fn set_option_bool(mut opt: u32) {
 
                                                                                                          ));
 }
-#[no_mangle]
+
 pub  fn reset_option_bool(mut opt: u32) {
     daemon.options[(opt).wrapping_div((::std::mem::size_of::<libc::c_uint>()
                                                                              ).wrapping_mul(8                                       ))
@@ -5109,7 +5109,7 @@ pub  fn reset_option_bool(mut opt: u32) {
             while !comma.is_null() && *comma != 0 {
                 let fresh30 = comma;
                 comma = comma.offset(1);
-                let mut c: libc::c_uchar = *fresh30;
+                let mut c: u8 = *fresh30;
                 if c == ',' as i32 ||
                        *cnt == 255 {
                     if c != ',' as i32 {
@@ -5890,7 +5890,7 @@ pub  fn reset_option_bool(mut opt: u32) {
 //     fclose(f);
 // }
 
-#[no_mangle]
+
 pub  fn option_read_dynfile(mut file: &mut String,
                                              mut flags: i32)
  -> i32 {
@@ -5979,7 +5979,7 @@ pub  fn option_read_dynfile(mut file: &mut String,
     return 1;
 }
 /* expand any name which is a directory */
-#[no_mangle]
+
 pub  fn expand_filelist(mut list: &mut HostsFile)
  -> HostsFile {
     let mut i: u32 = 0;
@@ -6117,7 +6117,7 @@ pub  fn expand_filelist(mut list: &mut HostsFile)
     }
     return list;
 }
-#[no_mangle]
+
 pub  fn read_servers_file() {
     let mut f: FILE = 0 ;
     f =
@@ -6200,7 +6200,7 @@ pub  fn read_servers_file() {
         opts_0 = cp
     };
 }
-#[no_mangle]
+
 pub  fn reread_dhcp() {
     let mut hf: HostsFile = 0;
     /* Do these even if there is no daemon->dhcp_hosts_file or
@@ -6243,7 +6243,7 @@ pub  fn reread_dhcp() {
                         0, 0,
                         0);
 }
-#[no_mangle]
+
 pub  fn read_opts(mut argc: i32,
                                    mut argv: String,
                                    mut compile_opts: &mut String) {

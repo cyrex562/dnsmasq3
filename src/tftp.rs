@@ -483,7 +483,7 @@ pub  fn tftp_request(daemon: &mut DnsmasqDaemon,
                                                                ).wrapping_mul(8           ))
                    != 0 {
                 let mut macaddr: mut Vec<u8> = 0;
-                let mut macbuf: [libc::c_uchar; 16] = [0; 16];
+                let mut macbuf: [u8; 16] = [0; 16];
                 if !daemon.dhcp.is_null() &&
                        peer.sa.sa_family == 2 {
                     /* Check if the client IP is in our lease database */

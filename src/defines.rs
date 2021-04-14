@@ -1,9 +1,9 @@
-use std::{fmt, time};
 use std::fs::File;
 use std::path::PathBuf;
+use std::{fmt, time};
 
 use num::FromPrimitive;
-use socket2::{Socket};
+use socket2::Socket;
 
 use util::array_to_string;
 
@@ -73,7 +73,7 @@ pub struct CmsgHdr {
 }
 
 // #[inline]
-// pub unsafe extern "C" fn __cmsg_nxthdr(
+// pub fn __cmsg_nxthdr(
 //     mut __mhdr: *mut msghdr,
 //     mut __cmsg: *mut cmsghdr,
 // ) -> *mut cmsghdr {
@@ -155,15 +155,15 @@ pub enum AddressType {
     Unknown = 0,
     MacAddress,
     Ipv4Address,
-    Ipv6Address
+    Ipv6Address,
 }
 
 impl fmt::Display for AddressType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match Self {
-            AddressType::Unknown=> write!(f, "Unknown"),
-            AddressType::MacAddress=> write!(f, "MacAddress"),
-            AddressType::Ipv4Address=> write!(f, "Ipv4Address"),
+            AddressType::Unknown => write!(f, "Unknown"),
+            AddressType::MacAddress => write!(f, "MacAddress"),
+            AddressType::Ipv4Address => write!(f, "Ipv4Address"),
             AddressType::Ipv6Address => write!(f, "Ipv6Address"),
         }
     }
@@ -173,45 +173,44 @@ pub struct DhcpLeaseContext {
     pub leases: Vec<DhcpLease>,
     pub file_diry: bool,
     pub dns_dirty: bool,
-    pub old_leases: Vec< DhcpLease>,
+    pub old_leases: Vec<DhcpLease>,
     pub leases_left: i32,
 }
 
-#[derive(Copy,Clone,Debug,Default, Display)]
+#[derive(Copy, Clone, Debug, Default, Display)]
 pub struct NetAddress {
     pub _type: AddressType,
-    pub value: [u8;16],
+    pub value: [u8; 16],
     pub name: String,
     pub port: u16,
     pub key: Vec<u8>,
-    pub ds: DigitalSignature
+    pub ds: DigitalSignature,
 }
 
 impl NetAddress {
     pub fn new() -> NetAddress {
-        NetAddress{
+        NetAddress {
             _type: AddressType::Unknown,
-            value: [0;16],
+            value: [0; 16],
             name: String::new(),
             port: 0,
             key: Vec::new(),
-            ds: DigitalSignature::new()
+            ds: DigitalSignature::new(),
         }
     }
 }
-
 
 impl fmt::Display for NetAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _value = array_to_string(&self.value, 16);
         let _key = vec_to_string(&self.key);
-        write!(f, "(_type={}, value={}, name={}, port={}, key={}, ds={})", self._type, _value, self.name, self.port, _key, self.ds)
+        write!(
+            f,
+            "(_type={}, value={}, name={}, port={}, key={}, ds={})",
+            self._type, _value, self.name, self.port, _key, self.ds
+        )
     }
 }
-
-
-
-
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -267,11 +266,10 @@ impl IfruData {
             ifru_ivalue: 0,
             ifru_mtu: 0,
             ifru_map: Ifmap::new(),
-            ifru_slave: [0;16],
-            ifru_newname: [0;16],
+            ifru_slave: [0; 16],
+            ifru_newname: [0; 16],
             ifru_data: NetAddress::new(),
         }
-
     }
 }
 
@@ -290,7 +288,6 @@ impl IfReq {
         }
     }
 }
-
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -311,7 +308,11 @@ pub struct DigitalSignature {
 impl fmt::Display for DigitalSignature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _keydata = vec_to_string(&self.keydata);
-        write!("keydata={}, keytag={}, algo={}, digest={}", _keydata, self.keytag, self.algo, self.digest)
+        write!(
+            "keydata={}, keytag={}, algo={}, digest={}",
+            _keydata,
+            self.keytag, self.algo, self.digest
+        )
     }
 }
 
@@ -321,7 +322,7 @@ impl DigitalSignature {
             keydata: Vec::new(),
             keytag: 0,
             algo: 0,
-            digest: 0
+            digest: 0,
         }
     }
 }
@@ -446,7 +447,7 @@ pub struct Cname {
 #[repr(C)]
 pub struct AddressListEntry {
     pub addr: NetAddress,
-    pub flags: [bool;32],
+    pub flags: [bool; 32],
     pub prefixlen: usize,
     pub decline_time: time::Instant,
 }
@@ -473,7 +474,7 @@ pub struct AuthNameList {
 #[repr(C)]
 pub struct HostRecord {
     pub ttl: u32,
-    pub flags: [bool;32],
+    pub flags: [bool; 32],
     pub names: Vec<NameListEntry>,
     pub addr: NetAddress,
     pub addr6: NetAddress,
@@ -507,7 +508,7 @@ pub struct InterfaceName {
 #[derive(Copy, Clone, Default, Debug)]
 #[repr(C)]
 pub struct ServerFd {
-    pub fd: File,
+    pub fd: Option<File>,
     pub source_addr: NetAddress,
     pub interface: String,
     pub ifindex: u32,
@@ -515,6 +516,20 @@ pub struct ServerFd {
     pub preallocated: u32,
     // pub next: *mut serverfd,
 }
+
+impl ServerFd {
+    pub fn new() -> ServerFd {
+        ServerFd {
+            fd: None,
+            source_addr: NetAddress::new(),
+            interface: String::new(),
+            ifindex: 0,
+            used: 0,
+            preallocated: 0,
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct RandFd {
@@ -584,7 +599,7 @@ impl Irec {
             multicast_done: true,
             found: true,
             label: true,
-            name: String::new()
+            name: String::new(),
         }
     }
 }
@@ -634,7 +649,7 @@ pub struct Resolvc {
 #[repr(C)]
 pub struct HostsFile {
     // pub next: *mut HostsFile,
-    pub flags: [bool;32],
+    pub flags: [bool; 32],
     pub fname: String,
     pub wd: i32,
     pub index: u32,
@@ -711,7 +726,7 @@ pub struct HwaddrConfig {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DhcpConfig {
-    pub flags: [bool;32],
+    pub flags: [bool; 32],
     pub clid_len: i32,
     pub clid: Vec<u8>,
     pub hostname: String,
@@ -883,9 +898,19 @@ pub struct SharedNetwork {
 #[repr(C)]
 pub struct PingResult {
     pub addr: NetAddress,
-    pub time: TimeT,
+    pub time: Option<time::Instant>,
     pub hash: u32,
     // pub next: *mut ping_result,
+}
+
+impl PingResult {
+    pub fn new() -> PingResult {
+        PingResult {
+            addr: NetAddress::new(),
+            time: None,
+            hash: 0,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Default)]
@@ -946,7 +971,7 @@ pub struct DhcpRelay {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct  DhcpOptTblEntry {
+pub struct DhcpOptTblEntry {
     pub name: String,
     pub val: u16,
     pub size: usize,
@@ -1105,9 +1130,9 @@ pub struct DnsmasqDaemon {
     pub log_id: u32,
     pub log_display_id: u32,
     pub log_source_addr: NetAddress,
-    pub dhcpfd: Option<Socket>,
+    pub dhcpfd: Option<UdpSocket>,
     pub helperfd: Option<Socket>,
-    pub pxefd: Option<Socket>,
+    pub pxefd: Option<UdpSocket>,
     pub inotifyfd: i32,
     pub netlinkfd: i32,
     pub kernel_version: i32,
@@ -1141,16 +1166,12 @@ pub const F_FORWARD: u32 = (1) << 3 as i32;
 pub const F_NXDOMAIN: u32 = (1) << 10 as i32;
 pub const F_NEG: u32 = (1) << 5 as i32;
 pub const F_AUTH: u32 = (1) << 21 as i32;
-pub const F_CNAME: u32 =
-        (1) << 11 as i32;
-pub const F_CONFIG: u32 =
-        (1) << 13 as i32;
-pub const F_RRNAME: u32 =
-        (1) << 17 as i32;
+pub const F_CNAME: u32 = (1) << 11 as i32;
+pub const F_CONFIG: u32 = (1) << 13 as i32;
+pub const F_RRNAME: u32 = (1) << 17 as i32;
 pub const ADDRSTRLEN: i32 = 46 as i32;
 pub const ADDRLIST_REVONLY: i32 = 4 as i32;
-pub const F_REVERSE: u32 =
-        (1) << 2 as i32;
+pub const F_REVERSE: u32 = (1) << 2 as i32;
 
 pub const _STAT_VER_LINUX: i32 = 1 as i32;
 pub const _STAT_VER: i32 = _STAT_VER_LINUX;
@@ -1174,7 +1195,6 @@ pub const _STAT_VER: i32 = _STAT_VER_LINUX;
 // pub type _IO_stat_t = fn(*mut FILE, *mut libc::c_void) -> i32;
 // pub type _IO_showmanyc_t = fn(*mut FILE) -> i32;
 // pub type _IO_imbue_t = fn(*mut FILE, libc::c_void);
-
 
 // #define JUMP_FIELD(TYPE, NAME) TYPE NAME
 // pub struct _IO_jump_t
@@ -1224,7 +1244,6 @@ pub const _STAT_VER: i32 = _STAT_VER_LINUX;
 //     pub __imbue: _IO_imbue_t,
 // }
 
-
 // #[derive(Clone, Copy)]
 // #[repr(C)]
 // pub struct _IO_wide_data
@@ -1268,26 +1287,26 @@ pub const _MKNOD_VER: i32 = 0 as i32;
 pub const DHCP_CHADDR_MAX: i32 = 16 as i32;
 
 // #[inline]
-// pub unsafe extern "C" fn tolower(mut __c: i32) -> i32 {
+// pub fn tolower(mut __c: i32) -> i32 {
 //     return if __c >= -(128 as i32) && __c < 256 as i32 {
 //                 *(*__ctype_tolower_loc()).offset(__c as )
 //             } else { __c };
 // }
 
 // #[inline]
-// pub unsafe extern "C" fn toupper(mut __c: i32) -> i32 {
+// pub fn toupper(mut __c: i32) -> i32 {
 //     return if __c >= -(128 as i32) && __c < 256 as i32 {
 //                 *(*__ctype_toupper_loc()).offset(__c as )
 //             } else { __c };
 // }
 
-// #[no_mangle]
+//
 // pub fn __ctype_tolower_loc() -> *mut *const __int32_t;
 
-// #[no_mangle]
+//
 // pub fn __ctype_toupper_loc() -> *mut *const __int32_t;
 
-// #[no_mangle]
+//
 // pub fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
 
 pub const LOG_WARNING: i32 = 4 as i32;
@@ -1308,7 +1327,7 @@ pub struct DnsHeader {
 }
 
 pub const HB4_RCODE: i32 = 0xf as i32;
-    
+
 pub const HB3_TC: i32 = 0x2 as i32;
 
 pub const HB3_AA: i32 = 0x4 as i32;
@@ -1347,49 +1366,48 @@ pub const QUERY: i32 = 0 as i32;
 
 pub const HB3_OPCODE: i32 = 0x78 as i32;
 
-// #[no_mangle]
+//
 // pub fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
 //          -> *mut libc::c_char;
 
-// #[no_mangle]
+//
 // pub fn strcat(_: *mut libc::c_char, _: *const libc::c_char)
 //     -> *mut libc::c_char;
 
-// #[no_mangle]
+//
 // pub fn strcmp(_: *const libc::c_char, _: *const libc::c_char)
 //     -> i32;
 
-// #[no_mangle]
+//
 // pub fn strchr(_: *const libc::c_char, _: i32)
 //     -> *mut libc::c_char;
 
-// #[no_mangle]
+//
 // pub fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 
-
-// #[no_mangle]        
+//
 // pub static mut stdin: *mut FILE;
 
-// #[no_mangle]
+//
 // pub static mut stdout: *mut FILE;
 
-// #[no_mangle]
+//
 // pub fn vfprintf(_: *mut FILE, _: *const libc::c_char,
 //                 _: ::std::ffi::VaList) -> i32;
 
-// #[no_mangle]
+//
 // pub fn getc(__stream: *mut FILE) -> i32;
 
-// #[no_mangle]
+//
 // pub fn putc(__c: i32, __stream: *mut FILE) -> i32;
 
-// #[no_mangle]
+//
 // pub fn __uflow(_: *mut FILE) -> i32;
 
-// #[no_mangle]
+//
 // pub fn __overflow(_: *mut FILE, _: i32) -> i32;
 
-// #[no_mangle]
+//
 // pub fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
 //                     __delimiter: i32, __stream: *mut FILE)
 //     -> __ssize_t;
@@ -1422,116 +1440,116 @@ pub const LOG_ERR: i32 = 3 as i32;
 pub const LOG_DAEMON: i32 = (3 as i32) << 3 as i32;
 
 // pub const errno: i32 = *__errno_location();
-// #[no_mangle]
+//
 //  pub fn __errno_location() -> *mut i32;
-//  #[no_mangle]
+//
 // pub fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
-// #[no_mangle]
+//
 // pub fn ctime(__timer: *const time_t) -> *mut libc::c_char;
 // extern "C" {
 //     pub type _IO_wide_data;
 //     pub type _IO_codecvt;
 //     pub type _IO_marker;
-//     #[no_mangle]
+//
 //     static mut stdin: *mut FILE;
-//     #[no_mangle]
+//
 //     static mut stdout: *mut FILE;
-//     #[no_mangle]
+//
 //     fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
 //      -> i32;
-//     #[no_mangle]
+//
 //     fn getc(__stream: *mut FILE) -> i32;
-//     #[no_mangle]
+//
 //     fn putc(__c: i32, __stream: *mut FILE) -> i32;
-//     #[no_mangle]
+//
 //     fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
 //                   __delimiter: i32, __stream: *mut FILE) -> __ssize_t;
-//     #[no_mangle]
+//
 //     fn __xstat(__ver: i32, __filename: *const libc::c_char,
 //                __stat_buf: *mut stat) -> i32;
-//     #[no_mangle]
+//
 //     fn __fxstat(__ver: i32, __fildes: i32,
 //                 __stat_buf: *mut stat) -> i32;
-//     #[no_mangle]
+//
 //     fn __xstat64(__ver: i32, __filename: *const libc::c_char,
 //                  __stat_buf: *mut stat64) -> i32;
-//     #[no_mangle]
+//
 //     fn __fxstat64(__ver: i32, __fildes: i32,
 //                   __stat_buf: *mut stat64) -> i32;
-//     #[no_mangle]
+//
 //     fn __fxstatat(__ver: i32, __fildes: i32,
 //                   __filename: *const libc::c_char, __stat_buf: *mut stat,
 //                   __flag: i32) -> i32;
-//     #[no_mangle]
+//
 //     fn __fxstatat64(__ver: i32, __fildes: i32,
 //                     __filename: *const libc::c_char, __stat_buf: *mut stat64,
 //                     __flag: i32) -> i32;
-//     #[no_mangle]
+//
 //     fn __lxstat(__ver: i32, __filename: *const libc::c_char,
 //                 __stat_buf: *mut stat) -> i32;
-//     #[no_mangle]
+//
 //     fn __lxstat64(__ver: i32, __filename: *const libc::c_char,
 //                   __stat_buf: *mut stat64) -> i32;
-//     #[no_mangle]
+//
 //     fn __xmknod(__ver: i32, __path: *const libc::c_char,
 //                 __mode: __mode_t, __dev: *mut __dev_t) -> i32;
-//     #[no_mangle]
+//
 //     fn __xmknodat(__ver: i32, __fd: i32,
 //                   __path: *const libc::c_char, __mode: __mode_t,
 //                   __dev: *mut __dev_t) -> i32;
-//     #[no_mangle]
+//
 //     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
 //      -> *mut libc::c_void;
-//     #[no_mangle]
+//
 //     fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
 //               _: libc::c_ulong) -> i32;
-//     #[no_mangle]
+//
 //     fn __uflow(_: *mut FILE) -> i32;
-//     #[no_mangle]
+//
 //     fn __overflow(_: *mut FILE, _: i32) -> i32;
-//     #[no_mangle]
+//
 //     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
 //      -> libc::c_double;
-//     #[no_mangle]
+//
 //     fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //               _: i32) -> libc::c_long;
-//     #[no_mangle]
+//
 //     fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //                _: i32) -> libc::c_longlong;
-//     #[no_mangle]
+//
 //     fn __ctype_tolower_loc() -> *mut *const __int32_t;
-//     #[no_mangle]
+//
 //     fn __ctype_toupper_loc() -> *mut *const __int32_t;
-//     #[no_mangle]
+//
 //     fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
-//     #[no_mangle]
+//
 //     fn __strtol_internal(__nptr: *const libc::c_char,
 //                          __endptr: *mut *mut libc::c_char,
 //                          __base: i32, __group: i32)
 //      -> libc::c_long;
-//     #[no_mangle]
+//
 //     fn __strtoul_internal(__nptr: *const libc::c_char,
 //                           __endptr: *mut *mut libc::c_char,
 //                           __base: i32, __group: i32)
 //      -> libc::c_ulong;
-//     #[no_mangle]
+//
 //     fn __wcstol_internal(__nptr: *const __gwchar_t,
 //                          __endptr: *mut *mut __gwchar_t, __base: i32,
 //                          __group: i32) -> libc::c_long;
-//     #[no_mangle]
+//
 //     fn __wcstoul_internal(__nptr: *const __gwchar_t,
 //                           __endptr: *mut *mut __gwchar_t, __base: i32,
 //                           __group: i32) -> libc::c_ulong;
-//     #[no_mangle]
+//
 //     static mut dnsmasq_daemon: *mut dnsmasq_daemon;
-//     #[no_mangle]
+//
 //     fn whine_malloc(size: size_t) -> *mut libc::c_void;
-//     #[no_mangle]
+//
 //     fn iface_enumerate(family: i32, parm: *mut libc::c_void,
 //                        callback:
-//                            Option<unsafe extern "C" fn() -> i32>)
+//                            Option<fn() -> i32>)
 //      -> i32;
-//     #[no_mangle]
+//
 //     fn queue_arp(action: i32, mac: *mut u8,
 //                  maclen: i32, family: i32,
 //                  addr: *mut all_addr);
@@ -1571,13 +1589,13 @@ pub struct NetAddressAt {
     pub sat_family: KernelSaFamily,
     pub sat_port: __u8,
     pub sat_addr: AtalkAddr,
-    pub sat_zer: [i8;8],
+    pub sat_zer: [i8; 8],
 }
 
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Ax25Address {
-    pub ax25_call: [i8;7],
+    pub ax25_call: [i8; 7],
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -1588,7 +1606,7 @@ pub struct NetAddressAx25 {
     pub sax25_ndigis: i32,
 }
 
-#[derive(Copy,Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct NetAddressDl {
     pub sdl_len: u8,
@@ -1597,7 +1615,7 @@ pub struct NetAddressDl {
     pub sdl_nlen: u8,
     pub sdl_alen: u8,
     pub sdl_slen: u8,
-    pub sdl_data: [char;12],
+    pub sdl_data: [char; 12],
 }
 
 // struct sockaddr_eon {
@@ -1692,7 +1710,6 @@ pub const IPX_NODE_LEN: usize = 6;
 //     sipx_zero: u8
 // }
 
-
 // struct IsoAddr {
 // 	u_char	isoa_len;						/* length (in bytes) */
 // 	char	isoa_genaddr[20];				/* general opaque address */
@@ -1701,7 +1718,7 @@ pub const IPX_NODE_LEN: usize = 6;
 #[repr(C)]
 pub struct IsoAddr {
     pub isoa_len: u8,
-    pub isoa_genaddr: [u8;20]
+    pub isoa_genaddr: [u8; 20],
 }
 
 // struct sockaddr_iso {
@@ -1725,7 +1742,6 @@ pub struct IsoAddr {
 //     siso_addr: IsoAddr,
 //     siso_pad: [u8;6]
 // }
-
 
 //  union sockaddr_ns {
 //    struct sockaddr sa;
@@ -1867,7 +1883,7 @@ enum Ethertype {
 #[repr(C)]
 pub union Sigval {
     pub sival_int: i32,
-    pub sival_ptr:Vec<u8>,
+    pub sival_ptr: Vec<u8>,
 }
 
 // pub type __sigval_t = Sigval;
@@ -1878,7 +1894,7 @@ pub union Sigval {
 #[repr(C)]
 pub union Unnamed29 {
     pub __wch: __WINT_TYPE__,
-    pub __wchb: [i8;4],
+    pub __wchb: [i8; 4],
 }
 
 // #[derive(Clone, Copy)]
@@ -1931,7 +1947,7 @@ pub struct C2rustUnnamed11 {
     pub si_pid: PidT,
     pub si_uid: UidT,
 }
-// pub type __sighandler_t = Option<unsafe extern "C" fn(_: i32) -> ()>;
+// pub type __sighandler_t = Option<fn(_: i32) -> ()>;
 
 // #[derive(Copy, Clone)]
 // #[repr(C)]
@@ -1939,15 +1955,14 @@ pub struct C2rustUnnamed11 {
 //     pub __sigaction_handler: C2rustUnnamed12,
 //     pub sa_mask: __sigset_t,
 //     pub sa_flags: i32,
-//     pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
+//     pub sa_restorer: Option<fn() -> ()>,
 // }
-
 
 // #[derive(Copy, Clone)]
 // #[repr(C)]
 // pub union C2rustUnnamed12 {
 //     pub sa_handler: __sighandler_t,
-//     pub sa_sigaction: Option<unsafe extern "C" fn(_: i32,
+//     pub sa_sigaction: Option<fn(_: i32,
 //                                                   _: *mut SiginfoT,
 //                                                   _: *mut libc::c_void)
 //                                                   -> ()>,
@@ -2195,7 +2210,7 @@ pub struct Group {
 pub struct IpHdr {
     // #[bitfield(name = "ip_hl", ty = "u32", bits = "0..=3")]
     // #[bitfield(name = "ip_v", ty = "u32", bits = "4..=7")]
-    pub ip_hl_ip_v: [u8; 1],
+    pub ip_hl_ip_v: u8,
     pub ip_tos: u8,
     pub ip_len: u16,
     pub ip_id: u16,
@@ -2203,9 +2218,10 @@ pub struct IpHdr {
     pub ip_ttl: u8,
     pub ip_p: u8,
     pub ip_sum: u16,
-    pub ip_src: NetAddress,
-    pub ip_dst: NetAddress,
+    pub ip_src: u32,
+    pub ip_dst: u32,
 }
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct IcmpRaAddr {
@@ -2230,6 +2246,19 @@ pub union C2rustUnnamed14 {
     pub id_mask: u32,
     pub id_data: [u8; 1],
 }
+
+impl C2rustUnnamed14 {
+    pub fn new() -> C2rustUnnamed14 {
+        C2rustUnnamed14 {
+            id_ts: C2rustUnnamed16::new(),
+            id_ip: C2rustUnnamed15::new(),
+            id_radv: IcmpRaAddr::new(),
+            id_mask: 0,
+            id_data: [0; 1],
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2rustUnnamed15 {
@@ -2242,6 +2271,17 @@ pub struct C2rustUnnamed16 {
     pub its_rtime: u32,
     pub its_ttime: u32,
 }
+
+impl C2rustUnnamed16 {
+    pub fn new() -> C2rustUnnamed16 {
+        C2rustUnnamed16 {
+            its_otime: 0,
+            its_rtime: 0,
+            its_ttime: 0,
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2rustUnnamed17 {
@@ -2272,7 +2312,6 @@ pub struct IhIdSeq {
     pub icd_seq: u16,
 }
 
-
 // pub type libc_lock_t = i32;
 
 // struct __dirstream
@@ -2302,7 +2341,6 @@ pub struct IhIdSeq {
 //     pub errcode: i32,
 // }
 
-
 // pub type DIR = __dirstream;
 
 #[derive(Copy, Clone, Default)]
@@ -2317,9 +2355,19 @@ pub type CapUserHeader = UserCapHeader;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UserCapData {
-    pub effective: __u32,
-    pub permitted: __u32,
-    pub inheritable: __u32,
+    pub effective: u32,
+    pub permitted: u32,
+    pub inheritable: u32,
+}
+
+impl UserCapData {
+    pub fn new() -> UserCapData {
+        UserCapData {
+            effective: 0,
+            permitted: 0,
+            inheritable: 0,
+        }
+    }
 }
 
 // pub type cap_user_data_t = *mut __user_cap_data_struct;
@@ -2391,7 +2439,6 @@ pub union C2rustUnnamed24 {
 
 // pub type wint_t = u32;
 
-
 // pub type __gconv_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut*mut u8, *mut u8, *mut*mut u8, libc::size_t, i32, i32) -> i32;
 // pub type __gconv_btowc_fct = fn(*mut __gconv_step, u8) -> wint_t;
 // pub type __gconv_init_fct = fn(*mut __gconv_step) -> i32;
@@ -2401,8 +2448,6 @@ pub union C2rustUnnamed24 {
 // pub type __gconv_trans_query_fct = fn(String, *mut*mutString, *mut libc::size_t);
 // pub type __gconv_trans_init_fct = fn(*mut *mut libc::c_void, String) -> i32;
 // pub type __gconv_trans_end_fct = fn(*mut libc::c_void);
-
-
 
 // struct __gconv_loaded_object
 // {
@@ -2428,7 +2473,6 @@ pub union C2rustUnnamed24 {
 //     pub init_fct: __gconv_init_fct,
 //     pub end_fct: __gconv_end_fct,
 // }
-
 
 // struct __gconv_step
 // {
@@ -2467,7 +2511,6 @@ pub union C2rustUnnamed24 {
 //     pub __data: *mut libc::c_void,
 // }
 
-
 // struct __gconv_trans_data
 // {
 //   __gconv_trans_fct __trans_fct;
@@ -2485,7 +2528,6 @@ pub union C2rustUnnamed24 {
 //     pub __data: *mut libc::c_void,
 //     pub __next: *mut __gconv_trans_data,
 // }
-
 
 // struct __gconv_step_data
 // {
@@ -2510,8 +2552,6 @@ pub union C2rustUnnamed24 {
 //     pub __state: __mbstate_t,
 //     pub __trans: *mut __gconv_trans_data,
 // }
-
-
 
 // typedef struct __gconv_info
 // {
@@ -2540,7 +2580,7 @@ pub union C2rustUnnamed24 {
 #[repr(C)]
 pub struct Unnamed28 {
     pub __cd: __gconv_info,
-    pub __data: __gconv_step_data
+    pub __data: __gconv_step_data,
 }
 
 // #[derive(Copy, Clone)]
@@ -2549,7 +2589,6 @@ pub struct Unnamed28 {
 //     pub __cd: __gconv_info,
 //     pub __combined: Unnamed28,
 // }
-
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2600,6 +2639,16 @@ pub struct C2rustUnnamed26 {
     pub ip: IpHdr,
     pub icmp: IcmpHdr,
 }
+
+impl C2rustUnnamed26 {
+    pub fn new() -> C2rustUnnamed26 {
+        C2rustUnnamed26 {
+            ip: IpHdr::new(),
+            icmp: IcmpHdr::new(),
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2rustUnnamed27 {
@@ -2618,7 +2667,6 @@ pub struct C2rustUnnamed27 {
 //   pub _pos: i32
 // }
 
-
 // pub enum __codecvt_result
 // {
 //   __codecvt_ok,
@@ -2626,7 +2674,6 @@ pub struct C2rustUnnamed27 {
 //   __codecvt_error,
 //   __codecvt_noconv
 // }
-
 
 // #[derive(Copy, Clone)]
 // #[repr(C)]
@@ -2714,175 +2761,175 @@ pub const MSG_OOB: u32 = 1;
 // pub type _IO_wide_data;
 // pub type _IO_codecvt;
 // pub type _IO_marker;
-// #[no_mangle]
+//
 // fn recvmsg(__fd: i32, __message: *mut msghdr,
 //            __flags: i32) -> ssize_t;
-// #[no_mangle]
+//
 // fn setsockopt(__fd: i32, __level: i32,
 //               __optname: i32, __optval: *const libc::c_void,
 //               __optlen: socklen_t) -> i32;
-// #[no_mangle]
+//
 // fn inet_ntop(__af: i32, __cp: *const libc::c_void,
 //              __buf: *mut libc::c_char, __len: socklen_t)
 //  -> *const libc::c_char;
-// #[no_mangle]
+//
 // fn __xstat(__ver: i32, __filename: *const libc::c_char,
 //            __stat_buf: *mut stat) -> i32;
-// #[no_mangle]
+//
 // fn __fxstat(__ver: i32, __fildes: i32,
 //             __stat_buf: *mut stat) -> i32;
-// #[no_mangle]
+//
 // fn __xstat64(__ver: i32, __filename: *const libc::c_char,
 //              __stat_buf: *mut stat64) -> i32;
-// #[no_mangle]
+//
 // fn __fxstat64(__ver: i32, __fildes: i32,
 //               __stat_buf: *mut stat64) -> i32;
-// #[no_mangle]
+//
 // fn __fxstatat(__ver: i32, __fildes: i32,
 //               __filename: *const libc::c_char, __stat_buf: *mut stat,
 //               __flag: i32) -> i32;
-// #[no_mangle]
+//
 // fn __fxstatat64(__ver: i32, __fildes: i32,
 //                 __filename: *const libc::c_char, __stat_buf: *mut stat64,
 //                 __flag: i32) -> i32;
-// #[no_mangle]
+//
 // fn __lxstat(__ver: i32, __filename: *const libc::c_char,
 //             __stat_buf: *mut stat) -> i32;
-// #[no_mangle]
+//
 // fn __lxstat64(__ver: i32, __filename: *const libc::c_char,
 //               __stat_buf: *mut stat64) -> i32;
-// #[no_mangle]
+//
 // fn __xmknod(__ver: i32, __path: *const libc::c_char,
 //             __mode: __mode_t, __dev: *mut __dev_t) -> i32;
-// #[no_mangle]
+//
 // fn __xmknodat(__ver: i32, __fd: i32,
 //               __path: *const libc::c_char, __mode: __mode_t,
 //               __dev: *mut __dev_t) -> i32;
-// #[no_mangle]
+//
 // fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
 //  -> *mut libc::c_void;
-// #[no_mangle]
+//
 // fn memset(_: *mut libc::c_void, _: i32, _: libc::c_ulong)
 //  -> *mut libc::c_void;
-// #[no_mangle]
+//
 // fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
 //           _: libc::c_ulong) -> i32;
-// #[no_mangle]
+//
 // fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
 //  -> *mut libc::c_char;
-// #[no_mangle]
+//
 // fn strncpy(_: *mut libc::c_char, _: *const libc::c_char, _: libc::c_ulong)
 //  -> *mut libc::c_char;
-// #[no_mangle]
+//
 // fn strncat(_: *mut libc::c_char, _: *const libc::c_char, _: libc::c_ulong)
 //  -> *mut libc::c_char;
-// #[no_mangle]
+//
 // fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i32;
-// #[no_mangle]
+//
 // fn strchr(_: *const libc::c_char, _: i32) -> *mut libc::c_char;
-// #[no_mangle]
+//
 // fn strlen(_: *const libc::c_char) -> libc::c_ulong;
-// #[no_mangle]
+//
 // fn strcasecmp(_: *const libc::c_char, _: *const libc::c_char)
 //  -> i32;
-// #[no_mangle]
+//
 // static mut stdin: *mut FILE;
-// #[no_mangle]
+//
 // static mut stdout: *mut FILE;
-// #[no_mangle]
+//
 // fn printf(_: *const libc::c_char, _: ...) -> i32;
-// #[no_mangle]
+//
 // fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...)
 //  -> i32;
 //
-// #[no_mangle]
+//
 // fn getc(__stream: *mut FILE) -> i32;
-// #[no_mangle]
+//
 // fn __uflow(_: *mut FILE) -> i32;
-// #[no_mangle]
+//
 // fn putc(__c: i32, __stream: *mut FILE) -> i32;
-// #[no_mangle]
+//
 // fn __overflow(_: *mut FILE, _: i32) -> i32;
-// #[no_mangle]
+//
 // fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
 //               __delimiter: i32, __stream: *mut FILE) -> __ssize_t;
-// #[no_mangle]
+//
 // fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
 //  -> libc::c_double;
-// #[no_mangle]
+//
 // fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //           _: i32) -> libc::c_long;
-// #[no_mangle]
+//
 // fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //            _: i32) -> libc::c_longlong;
-// #[no_mangle]
+//
 // fn __ctype_b_loc() -> *mut *const u16;
-// #[no_mangle]
+//
 // fn __ctype_tolower_loc() -> *mut *const __int32_t;
-// #[no_mangle]
+//
 // fn __ctype_toupper_loc() -> *mut *const __int32_t;
-// #[no_mangle]
+//
 // fn __errno_location() -> *mut i32;
-// #[no_mangle]
+//
 // fn __strtol_internal(__nptr: *const libc::c_char,
 //                      __endptr: *mut *mut libc::c_char,
 //                      __base: i32, __group: i32)
 //  -> libc::c_long;
-// #[no_mangle]
+//
 // fn __strtoul_internal(__nptr: *const libc::c_char,
 //                       __endptr: *mut *mut libc::c_char,
 //                       __base: i32, __group: i32)
 //  -> libc::c_ulong;
-// #[no_mangle]
+//
 // fn __wcstol_internal(__nptr: *const __gwchar_t,
 //                      __endptr: *mut *mut __gwchar_t, __base: i32,
 //                      __group: i32) -> libc::c_long;
-// #[no_mangle]
+//
 // fn __wcstoul_internal(__nptr: *const __gwchar_t,
 //                       __endptr: *mut *mut __gwchar_t, __base: i32,
 //                       __group: i32) -> libc::c_ulong;
-// #[no_mangle]
+//
 // static mut dnsmasq_daemon: *mut dnsmasq_daemon;
-// #[no_mangle]
+//
 // fn cache_find_by_name(crecp: *mut crec, name: *mut libc::c_char,
 //                       now: time_t, prot: u32) -> *mut crec;
-// #[no_mangle]
+//
 // fn safe_malloc(size: size_t) -> *mut libc::c_void;
-// #[no_mangle]
+//
 // fn whine_malloc(size: size_t) -> *mut libc::c_void;
-// #[no_mangle]
+//
 // fn hostname_isequal(a: *const libc::c_char, b: *const libc::c_char)
 //  -> i32;
-// #[no_mangle]
+//
 // fn is_same_net(a: in_addr, b: in_addr, mask: in_addr) -> i32;
-// #[no_mangle]
+//
 // fn is_same_net6(a: *mut in6_addr, b: *mut in6_addr,
 //                 prefixlen: i32) -> i32;
-// #[no_mangle]
+//
 // fn setaddr6part(addr: *mut in6_addr, host: u64_0);
-// #[no_mangle]
+//
 // fn prettyprint_time(buf: *mut libc::c_char, t: u32);
-// #[no_mangle]
+//
 // fn memcmp_masked(a: *mut u8, b: *mut u8,
 //                  len: i32, mask: u32) -> i32;
-// #[no_mangle]
+//
 // fn expand_buf(iov: *mut iovec, size: size_t) -> i32;
-// #[no_mangle]
+//
 // fn print_mac(buff: *mut libc::c_char, mac: *mut u8,
 //              len: i32) -> *mut libc::c_char;
-// #[no_mangle]
+//
 // fn die(message: *mut libc::c_char, arg1: *mut libc::c_char,
 //        exit_code: i32) -> !;
-// #[no_mangle]
+//
 // fn my_syslog(priority: i32, format: *const libc::c_char, _: ...);
-// #[no_mangle]
+//
 // fn config_find_by_address6(configs: *mut dhcp_config, net: *mut in6_addr,
 //                            prefix: i32, addr: *mut in6_addr)
 //  -> *mut dhcp_config;
-// #[no_mangle]
+//
 // fn indextoname(fd: i32, index: i32,
 //                name: *mut libc::c_char) -> i32;
-// #[no_mangle]
+//
 // fn config_find_by_address(configs: *mut dhcp_config, addr: in_addr)
 //  -> *mut dhcp_config;
 
@@ -2906,130 +2953,239 @@ pub struct DhcpPacket {
     pub options: [u8; 312],
 }
 
-pub static PRIORITY_NAMES: [CODE; 13] =
-    [ Code {c_name: String::from("alert"), c_val: 1},
-        Code {c_name: String::from("crit"), c_val: 2},
-        Code {c_name: String::from("debug"), c_val: 7},
-        Code {c_name: String::from("emerg"), c_val: 0},
-        Code {c_name: String::from("err"), c_val: 3},
-        Code {c_name: String::from("error"), c_val: 3},
-        Code {c_name: String::from("info"), c_val: 6},
-        Code {c_name: String::from("none"), c_val: 0x10},
-        Code {c_name: String::from("notice"), c_val: 5},
-        Code {c_name: String::from("panic"), c_val: 0},
-        Code {c_name: String::from("warn"), c_val: 4},
-        Code {c_name: String::from("warning"), c_val: 4},
-        Code {c_name: String::from(""), c_val: -1}];
+pub static PRIORITY_NAMES: [CODE; 13] = [
+    Code {
+        c_name: String::from("alert"),
+        c_val: 1,
+    },
+    Code {
+        c_name: String::from("crit"),
+        c_val: 2,
+    },
+    Code {
+        c_name: String::from("debug"),
+        c_val: 7,
+    },
+    Code {
+        c_name: String::from("emerg"),
+        c_val: 0,
+    },
+    Code {
+        c_name: String::from("err"),
+        c_val: 3,
+    },
+    Code {
+        c_name: String::from("error"),
+        c_val: 3,
+    },
+    Code {
+        c_name: String::from("info"),
+        c_val: 6,
+    },
+    Code {
+        c_name: String::from("none"),
+        c_val: 0x10,
+    },
+    Code {
+        c_name: String::from("notice"),
+        c_val: 5,
+    },
+    Code {
+        c_name: String::from("panic"),
+        c_val: 0,
+    },
+    Code {
+        c_name: String::from("warn"),
+        c_val: 4,
+    },
+    Code {
+        c_name: String::from("warning"),
+        c_val: 4,
+    },
+    Code {
+        c_name: String::from(""),
+        c_val: -1,
+    },
+];
 
 pub static FACILITYNAMES: [CODE; 23] = [
-    Code {c_name: String::from("auth"), c_val: 4 << 3},
-    Code {c_name: String::from("authpriv"), c_val: 10 << 3},
-    Code {c_name: String::from("cron"), c_val: 9 << 3},
-    Code {c_name: String::from("daemon"), c_val: 3 << 3},
-    Code {c_name: String::from("ftp"), c_val: 11 << 3},
-    Code {c_name: String::from("kern"), c_val: 0 << 3},
-    Code {c_name: String::from("lpr"), c_val: 6 << 3},
-    Code {c_name: String::from("mail"), c_val: 2 << 3},
-    Code {c_name: String::from("mark"), c_val: (24 << 3) | 0},
-    Code {c_name: String::from("news"), c_val: 7 << 3},
-    Code {c_name: String::from("security"), c_val: 4 << 3},
-    Code {c_name: String::from("syslog"), c_val: 5 << 3},
-    Code {c_name: String::from("user"), c_val: 1 << 3},
-    Code {c_name: String::from("uucp"), c_val: 8 << 3},
-    Code {c_name: String::from("local0"), c_val: 16 << 3},
-    Code {c_name: String::from("local1"), c_val: 17 << 3},
-    Code {c_name: String::from("local2"), c_val: 18 << 3},
-    Code {c_name: String::from("local3"), c_val: 19 << 3},
-    Code {c_name: String::from("local4"), c_val: 20 << 3},
-    Code {c_name: String::from("local5"), c_val: 21 << 3},
-    Code {c_name: String::from("local6"), c_val: 22 << 3},
-    Code {c_name: String::from("local7"), c_val: 23 << 3},
-    Code {c_name: String::from(""), c_val:-1},
+    Code {
+        c_name: String::from("auth"),
+        c_val: 4 << 3,
+    },
+    Code {
+        c_name: String::from("authpriv"),
+        c_val: 10 << 3,
+    },
+    Code {
+        c_name: String::from("cron"),
+        c_val: 9 << 3,
+    },
+    Code {
+        c_name: String::from("daemon"),
+        c_val: 3 << 3,
+    },
+    Code {
+        c_name: String::from("ftp"),
+        c_val: 11 << 3,
+    },
+    Code {
+        c_name: String::from("kern"),
+        c_val: 0 << 3,
+    },
+    Code {
+        c_name: String::from("lpr"),
+        c_val: 6 << 3,
+    },
+    Code {
+        c_name: String::from("mail"),
+        c_val: 2 << 3,
+    },
+    Code {
+        c_name: String::from("mark"),
+        c_val: (24 << 3) | 0,
+    },
+    Code {
+        c_name: String::from("news"),
+        c_val: 7 << 3,
+    },
+    Code {
+        c_name: String::from("security"),
+        c_val: 4 << 3,
+    },
+    Code {
+        c_name: String::from("syslog"),
+        c_val: 5 << 3,
+    },
+    Code {
+        c_name: String::from("user"),
+        c_val: 1 << 3,
+    },
+    Code {
+        c_name: String::from("uucp"),
+        c_val: 8 << 3,
+    },
+    Code {
+        c_name: String::from("local0"),
+        c_val: 16 << 3,
+    },
+    Code {
+        c_name: String::from("local1"),
+        c_val: 17 << 3,
+    },
+    Code {
+        c_name: String::from("local2"),
+        c_val: 18 << 3,
+    },
+    Code {
+        c_name: String::from("local3"),
+        c_val: 19 << 3,
+    },
+    Code {
+        c_name: String::from("local4"),
+        c_val: 20 << 3,
+    },
+    Code {
+        c_name: String::from("local5"),
+        c_val: 21 << 3,
+    },
+    Code {
+        c_name: String::from("local6"),
+        c_val: 22 << 3,
+    },
+    Code {
+        c_name: String::from("local7"),
+        c_val: 23 << 3,
+    },
+    Code {
+        c_name: String::from(""),
+        c_val: -1,
+    },
 ];
 
 // extern "C" {
 //     pub type _IO_wide_data;
 //     pub type _IO_codecvt;
 //     pub type _IO_marker;
-//     #[no_mangle]
+//
 //     fn __xstat(__ver: , __filename: *const libc::c_char,
 //                __stat_buf: *mut stat) -> ;
-//     #[no_mangle]
+//
 //     fn __fxstat(__ver: , __fildes: ,
 //                 __stat_buf: *mut stat) -> ;
-//     #[no_mangle]
+//
 //     fn __xstat64(__ver: , __filename: *const libc::c_char,
 //                  __stat_buf: *mut stat64) -> ;
-//     #[no_mangle]
+//
 //     fn __fxstat64(__ver: , __fildes: ,
 //                   __stat_buf: *mut stat64) -> ;
-//     #[no_mangle]
+//
 //     fn __fxstatat(__ver: , __fildes: ,
 //                   __filename: *const libc::c_char, __stat_buf: *mut stat,
 //                   __flag: ) -> ;
-//     #[no_mangle]
+//
 //     fn __fxstatat64(__ver: , __fildes: ,
 //                     __filename: *const libc::c_char, __stat_buf: *mut stat64,
 //                     __flag: ) -> ;
-//     #[no_mangle]
+//
 //     fn __lxstat(__ver: , __filename: *const libc::c_char,
 //                 __stat_buf: *mut stat) -> ;
-//     #[no_mangle]
+//
 //     fn __lxstat64(__ver: , __filename: *const libc::c_char,
 //                   __stat_buf: *mut stat64) -> ;
-//     #[no_mangle]
+//
 //     fn __xmknod(__ver: , __path: *const libc::c_char,
 //                 __mode: __mode_t, __dev: *mut __dev_t) -> ;
-//     #[no_mangle]
+//
 //     fn __xmknodat(__ver: , __fd: ,
 //                   __path: *const libc::c_char, __mode: __mode_t,
 //                   __dev: *mut __dev_t) -> ;
-//     #[no_mangle]
+//
 //     static mut stdin: *mut FILE;
-//     #[no_mangle]
+//
 //     static mut stdout: *mut FILE;
-//     #[no_mangle]
+//
 //     // fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
 //     //             -> ;
-//     #[no_mangle]
+//
 //     fn getc(__stream: *mut FILE) -> ;
-//     #[no_mangle]
+//
 //     fn __uflow(_: *mut FILE) -> ;
-//     #[no_mangle]
+//
 //     fn putc(__c: , __stream: *mut FILE) -> ;
-//     #[no_mangle]
+//
 //     fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
 //                   __delimiter: , __stream: *mut FILE) -> __ssize_t;
-//     #[no_mangle]
+//
 //     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
 //               -> libc::c_double;
-//     #[no_mangle]
+//
 //     fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //               _: ) -> libc::c_long;
-//     #[no_mangle]
+//
 //     fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
 //                _: ) -> libc::c_longlong;
-//     #[no_mangle]
+//
 //     fn __ctype_tolower_loc() -> *mut *const __int32_t;
-//     #[no_mangle]
+//
 //     fn __ctype_toupper_loc() -> *mut *const __int32_t;
-//     #[no_mangle]
+//
 //     fn __strtol_internal(__nptr: *const libc::c_char,
 //                          __endptr: *mut *mut libc::c_char,
 //                          __base: , __group: )
 //                          -> libc::c_long;
-//     #[no_mangle]
+//
 //     fn __strtoul_internal(__nptr: *const libc::c_char,
 //                           __endptr: *mut *mut libc::c_char,
 //                           __base: , __group: )
 //                           -> libc::c_ulong;
-//     #[no_mangle]
+//
 //     fn __wcstol_internal(__nptr: *const __gwchar_t,
 //                          __endptr: *mut *mut __gwchar_t, __base: ,
 //                          __group: ) -> libc::c_long;
-//     #[no_mangle]
+//
 //     fn __overflow(_: *mut FILE, _: ) -> ;
-//     #[no_mangle]
+//
 //     fn __wcstoul_internal(__nptr: *const __gwchar_t,
 //                           __endptr: *mut *mut __gwchar_t, __base: ,
 //                           __group: ) -> libc::c_ulong;
@@ -3040,8 +3196,6 @@ pub static FACILITYNAMES: [CODE; 23] = [
 // pub type __uint64_t = libc::c_ulong;
 // pub type __intmax_t = libc::c_long;
 // pub type __uintmax_t = libc::c_ulong;
-
-
 
 // #[derive(Copy, Clone)]
 // #[repr(C)]
@@ -3118,53 +3272,53 @@ pub static FACILITYNAMES: [CODE; 23] = [
 // pub type FILE = IoFile;
 // pub type __compar_fn_t
 // =
-// Option<unsafe extern "C" fn(_: *const libc::c_void,
+// Option<fn(_: *const libc::c_void,
 //                             _: *const libc::c_void) -> >;
 // pub type intmax_t = __intmax_t;
 // pub type uintmax_t = __uintmax_t;
 // pub type __gwchar_t = ;
 // #[inline]
-// unsafe extern "C" fn vprintf(mut __fmt: *const libc::c_char,
+// fn vprintf(mut __fmt: *const libc::c_char,
 //                              mut __arg: ::std::ffi::VaList) ->  {
 //     return vfprintf(stdout, __fmt, __arg.as_va_list());
 // }
 // #[inline]
-// unsafe extern "C" fn getchar() ->  { return getc(stdin); }
+// fn getchar() ->  { return getc(stdin); }
 // #[inline]
-// unsafe extern "C" fn fgetc_unlocked(mut __fp: *mut FILE) ->  {
+// fn fgetc_unlocked(mut __fp: *mut FILE) ->  {
 //     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as  as
 //         libc::c_long != 0 {
 //         __uflow(__fp)
 //     } else {
 //         let fresh0 = (*__fp)._IO_read_ptr;
 //         (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-//         *(fresh0 as *mut libc::c_uchar) as
+//         *(fresh0 as *mut u8) as
 //     };
 // }
 // #[inline]
-// unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) ->  {
+// fn getc_unlocked(mut __fp: *mut FILE) ->  {
 //     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as  as
 //         libc::c_long != 0 {
 //         __uflow(__fp)
 //     } else {
 //         let fresh1 = (*__fp)._IO_read_ptr;
 //         (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
-//         *(fresh1 as *mut libc::c_uchar) as
+//         *(fresh1 as *mut u8) as
 //     };
 // }
 // #[inline]
-// unsafe extern "C" fn getchar_unlocked() ->  {
+// fn getchar_unlocked() ->  {
 //     return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as
 //         as libc::c_long != 0 {
 //         __uflow(stdin)
 //     } else {
 //         let fresh2 = (*stdin)._IO_read_ptr;
 //         (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
-//         *(fresh2 as *mut libc::c_uchar) as
+//         *(fresh2 as *mut u8) as
 //     };
 // }
 // #[inline]
-// unsafe extern "C" fn wcstoumax(mut nptr: *const __gwchar_t,
+// fn wcstoumax(mut nptr: *const __gwchar_t,
 //                                mut endptr: *mut *mut __gwchar_t,
 //                                mut base: ) -> uintmax_t {
 //     return __wcstoul_internal(nptr, endptr, base, 0 as );
@@ -3205,34 +3359,34 @@ pub static FACILITYNAMES: [CODE; 23] = [
 //             56) as __uint64_t;
 // }
 // #[inline]
-// unsafe extern "C" fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
+// fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
 //     return __x;
 // }
 // #[inline]
-// unsafe extern "C" fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+// fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
 //     return __x;
 // }
 // #[inline]
-// unsafe extern "C" fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
+// fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
 //     return __x;
 // }
 // #[inline]
-// unsafe extern "C" fn __cmsg_nxthdr(mut __mhdr: &mut msghdr,
+// fn __cmsg_nxthdr(mut __mhdr: &mut msghdr,
 //                                    mut __cmsg: &mut cmsghdr) -> Option<cmsghdr> {
 //     if __cmsg.cmsg_len < ::std::mem::size_of::<cmsghdr>()
 //     {
 //         return None;
 //     }
 //     __cmsg =
-//         (__cmsg as *mut libc::c_uchar).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>().wrapping_sub(1)
+//         (__cmsg as *mut u8).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>().wrapping_sub(1)
 //             &
 //             !(::std::mem::size_of::<size_t>()).wrapping_sub(1))) as *mut cmsghdr;
-//     if __cmsg.offset(1 as  as ) as *mut libc::c_uchar >
+//     if __cmsg.offset(1 as  as ) as *mut u8 >
 //         ((*__mhdr).msg_control as
-//             *mut libc::c_uchar).offset((*__mhdr).msg_controllen as )
+//             *mut u8).offset((*__mhdr).msg_controllen as )
 //         ||
 //         (__cmsg as
-//             *mut libc::c_uchar).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+//             *mut u8).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
 //             as
 //             libc::c_ulong).wrapping_sub(1
 //             as
@@ -3249,55 +3403,55 @@ pub static FACILITYNAMES: [CODE; 23] = [
 //                 libc::c_ulong))
 //             as ) >
 //             ((*__mhdr).msg_control as
-//                 *mut libc::c_uchar).offset((*__mhdr).msg_controllen as
+//                 *mut u8).offset((*__mhdr).msg_controllen as
 //                 ) {
 //         return 0 as *mut cmsghdr
 //     }
 //     return __cmsg;
 // }
 // #[inline]
-// unsafe extern "C" fn fputc_unlocked(mut __c: ,
+// fn fputc_unlocked(mut __c: ,
 //                                     mut __stream: *mut FILE) ->  {
 //     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
 //          as libc::c_long != 0 {
-//         __overflow(__stream, __c as libc::c_uchar as )
+//         __overflow(__stream, __c as u8 as )
 //     } else {
 //         let fresh3 = (*__stream)._IO_write_ptr;
 //         (*__stream)._IO_write_ptr =
 //             (*__stream)._IO_write_ptr.offset(1);
 //         *fresh3 = __c as libc::c_char;
-//         *fresh3 as libc::c_uchar as
+//         *fresh3 as u8 as
 //     };
 // }
 // a#[inline]
-// unsafe extern "C" fn stat(mut __path: *const libc::c_char,
+// fn stat(mut __path: *const libc::c_char,
 //                           mut __statbuf: *mut stat) ->  {
 //     return __xstat(1 as , __path, __statbuf);
 // }
 // #[inline]
-// unsafe extern "C" fn fstat(mut __fd: , mut __statbuf: *mut stat)
+// fn fstat(mut __fd: , mut __statbuf: *mut stat)
 //                            ->  {
 //     return __fxstat(1 as , __fd, __statbuf);
 // }
 // #[inline]
-// unsafe extern "C" fn stat64(mut __path: *const libc::c_char,
+// fn stat64(mut __path: *const libc::c_char,
 //                             mut __statbuf: *mut stat64) ->  {
 //     return __xstat64(1 as , __path, __statbuf);
 // }
 // #[inline]
-// unsafe extern "C" fn fstat64(mut __fd: ,
+// fn fstat64(mut __fd: ,
 //                              mut __statbuf: *mut stat64) ->  {
 //     return __fxstat64(1 as , __fd, __statbuf);
 // }
 // #[inline]
-// unsafe extern "C" fn fstatat(mut __fd: ,
+// fn fstatat(mut __fd: ,
 //                              mut __filename: *const libc::c_char,
 //                              mut __statbuf: *mut stat,
 //                              mut __flag: ) ->  {
 //     return __fxstatat(1 as , __fd, __filename, __statbuf, __flag);
 // }
 // #[inline]
-// unsafe extern "C" fn fstatat64(mut __fd: ,
+// fn fstatat64(mut __fd: ,
 //                                mut __filename: *const libc::c_char,
 //                                mut __statbuf: *mut stat64,
 //                                mut __flag: ) ->  {
@@ -3305,96 +3459,96 @@ pub static FACILITYNAMES: [CODE; 23] = [
 //                         __flag);
 // }
 // #[inline]
-// unsafe extern "C" fn lstat(mut __path: *const libc::c_char,
+// fn lstat(mut __path: *const libc::c_char,
 //                            mut __statbuf: *mut stat) ->  {
 //     return __lxstat(1 as , __path, __statbuf);
 // }
 // #[inline]
-// unsafe extern "C" fn lstat64(mut __path: *const libc::c_char,
+// fn lstat64(mut __path: *const libc::c_char,
 //                              mut __statbuf: *mut stat64) ->  {
 //     return __lxstat64(1 as , __path, __statbuf);
 // }
 // #[inline]
-// unsafe extern "C" fn mknod(mut __path: *const libc::c_char,
+// fn mknod(mut __path: *const libc::c_char,
 //                            mut __mode: __mode_t, mut __dev: __dev_t)
 //                            ->  {
 //     return __xmknod(0 as , __path, __mode, &mut __dev);
 // }
 // #[inline]
-// unsafe extern "C" fn mknodat(mut __fd: ,
+// fn mknodat(mut __fd: ,
 //                              mut __path: *const libc::c_char,
 //                              mut __mode: __mode_t, mut __dev: __dev_t)
 //                              ->  {
 //     return __xmknodat(0 as , __fd, __path, __mode, &mut __dev);
 // }
 // #[inline]
-// unsafe extern "C" fn putchar(mut __c: ) ->  {
+// fn putchar(mut __c: ) ->  {
 //     return putc(__c, stdout);
 // }
 // #[inline]
-// unsafe extern "C" fn putc_unlocked(mut __c: ,
+// fn putc_unlocked(mut __c: ,
 //                                    mut __stream: *mut FILE) ->  {
 //     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
 //          as libc::c_long != 0 {
-//         __overflow(__stream, __c as libc::c_uchar as )
+//         __overflow(__stream, __c as u8 as )
 //     } else {
 //         let fresh4 = (*__stream)._IO_write_ptr;
 //         (*__stream)._IO_write_ptr =
 //             (*__stream)._IO_write_ptr.offset(1);
 //         *fresh4 = __c as libc::c_char;
-//         *fresh4 as libc::c_uchar as
+//         *fresh4 as u8 as
 //     };
 // }
 // #[inline]
-// unsafe extern "C" fn putchar_unlocked(mut __c: ) ->  {
+// fn putchar_unlocked(mut __c: ) ->  {
 //     return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
 //          as libc::c_long != 0 {
-//         __overflow(stdout, __c as libc::c_uchar as )
+//         __overflow(stdout, __c as u8 as )
 //     } else {
 //         let fresh5 = (*stdout)._IO_write_ptr;
 //         (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
 //         *fresh5 = __c as libc::c_char;
-//         *fresh5 as libc::c_uchar as
+//         *fresh5 as u8 as
 //     };
 // }
 // #[inline]
-// unsafe extern "C" fn getline(mut __lineptr: *mut *mut libc::c_char,
+// fn getline(mut __lineptr: *mut *mut libc::c_char,
 //                              mut __n: *mut size_t, mut __stream: *mut FILE)
 //                              -> __ssize_t {
 //     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
 // }
 // #[inline]
-// unsafe extern "C" fn feof_unlocked(mut __stream: *mut FILE) ->  {
+// fn feof_unlocked(mut __stream: *mut FILE) ->  {
 //     return ((*__stream)._flags & 0x10 as  != 0 as ) as
 //         ;
 // }
 // #[inline]
-// unsafe extern "C" fn ferror_unlocked(mut __stream: *mut FILE) ->  {
+// fn ferror_unlocked(mut __stream: *mut FILE) ->  {
 //     return ((*__stream)._flags & 0x20 as  != 0 as ) as
 //         ;
 // }
 // #[inline]
-// unsafe extern "C" fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
+// fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
 //     return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
 // }
 // #[inline]
-// unsafe extern "C" fn atoi(mut __nptr: *const libc::c_char) ->  {
+// fn atoi(mut __nptr: *const libc::c_char) ->  {
 //     return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
 //                   10 as ) as ;
 // }
 // #[inline]
-// unsafe extern "C" fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
+// fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
 //     return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
 //                   10 as );
 // }
 // #[inline]
-// unsafe extern "C" fn atoll(mut __nptr: *const libc::c_char)
+// fn atoll(mut __nptr: *const libc::c_char)
 //                            -> libc::c_longlong {
 //     return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
 //                    10 as );
 // }
 // #[inline]
-// unsafe extern "C" fn bsearch(mut __key: *const libc::c_void,
+// fn bsearch(mut __key: *const libc::c_void,
 //                              mut __base: *const libc::c_void,
 //                              mut __nmemb: size_t, mut __size: size_t,
 //                              mut __compar: __compar_fn_t)
@@ -3426,36 +3580,35 @@ pub static FACILITYNAMES: [CODE; 23] = [
 //     return 0 as *mut libc::c_void;
 // }
 // #[inline]
-// unsafe extern "C" fn tolower(mut __c: ) ->  {
+// fn tolower(mut __c: ) ->  {
 //     return if __c >= -(128 as ) && __c < 256 as  {
 //         *(*__ctype_tolower_loc()).offset(__c as )
 //     } else { __c };
 // }
 // #[inline]
-// unsafe extern "C" fn toupper(mut __c: ) ->  {
+// fn toupper(mut __c: ) ->  {
 //     return if __c >= -(128 as ) && __c < 256 as  {
 //         *(*__ctype_toupper_loc()).offset(__c as )
 //     } else { __c };
 // }
 // #[inline]
-// unsafe extern "C" fn strtoimax(mut nptr: *const libc::c_char,
+// fn strtoimax(mut nptr: *const libc::c_char,
 //                                mut endptr: *mut *mut libc::c_char,
 //                                mut base: ) -> intmax_t {
 //     return __strtol_internal(nptr, endptr, base, 0 as );
 // }
 // #[inline]
-// unsafe extern "C" fn strtoumax(mut nptr: *const libc::c_char,
+// fn strtoumax(mut nptr: *const libc::c_char,
 //                                mut endptr: *mut *mut libc::c_char,
 //                                mut base: ) -> uintmax_t {
 //     return __strtoul_internal(nptr, endptr, base, 0 as );
 // }
 // #[inline]
-// unsafe extern "C" fn wcstoimax(mut nptr: *const __gwchar_t,
+// fn wcstoimax(mut nptr: *const __gwchar_t,
 //                                mut endptr: *mut *mut __gwchar_t,
 //                                mut base: ) -> intmax_t {
 //     return __wcstol_internal(nptr, endptr, base, 0 as );
 // }
-
 
 pub const SIGHUP: i32 = 1;
 pub const SIGINT: i32 = 2;
@@ -3499,9 +3652,9 @@ pub struct IfaceParam {
     pub relay_local: NetAddress,
     pub ind: i32,
     pub addr_match: i32,
-    pub fallback: [u8;16],
-    pub ll_addr: [u8;16],
-    pub ula_addr: [u8;16]
+    pub fallback: [u8; 16],
+    pub ll_addr: [u8; 16],
+    pub ula_addr: [u8; 16],
 }
 
 #[derive(Copy, Clone)]
@@ -3512,6 +3665,18 @@ pub struct MatchParam {
     pub netmask: NetAddress,
     pub broadcast: NetAddress,
     pub addr: NetAddress,
+}
+
+impl MatchParam {
+    pub fn new() -> MatchParam {
+        MatchParam {
+            ind: 0,
+            matched: 0,
+            netmask: NetAddress::new(),
+            broadcast: NetAddress::new(),
+            addr: NetAddress::new(),
+        }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -3563,6 +3728,16 @@ pub struct InPktInfo {
     pub ipi_addr: NetAddress,
 }
 
+impl InPktInfo {
+    pub fn new() -> InPktInfo {
+        InPktInfo {
+            ipi_ifindex: 0,
+            ipi_spec_dst: NetAddress::new(),
+            ipi_addr: NetAddress::new(),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct OptionUsage {
@@ -3570,21 +3745,21 @@ pub struct OptionUsage {
     pub rept: u16,
     pub flagdesc: String,
     pub desc: String,
-    pub arg: String
+    pub arg: String,
 }
 
 #[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct OptionValue {
     pub name: String,
-    pub val: i32
+    pub val: i32,
 }
 
-#[derive(Copy,Clone,Default)]
+#[derive(Copy, Clone, Default)]
 #[repr(C)]
 pub struct TabEntryA {
     pub handle: char,
-    pub val: i32
+    pub val: i32,
 }
 
 // static mut cache_head: Crec = 0 ;
@@ -3596,44 +3771,3 @@ pub struct TabEntryA {
 // static mut big_free: BigName = 0;
 // static mut bignames_left: i32 = 0;
 // static mut hash_size: i32 = 0;
-pub static mut TYPESTR: [C2rustUnnamed10; 40] =
-    [ C2rustUnnamed10 { _type: 1, name: "A".to_string(),},
-      C2rustUnnamed10 { _type: 2, name: "NS".to_string(),},
-      C2rustUnnamed10 { _type: 5, name: "CNAME".to_string(),},
-        C2rustUnnamed10 { _type: 6, name: "SOA".to_string(),},
-        C2rustUnnamed10 { _type: 10, name: "NULL".to_string(),},
-        C2rustUnnamed10 { _type: 11, name: "WKS".to_string(),},
-        C2rustUnnamed10 { _type: 12, name: "PTR".to_string(),},
-        C2rustUnnamed10 { _type: 13, name:  "HINFO".to_string(),},
-        C2rustUnnamed10 { _type: 15, name: "MX".to_string(),},
-        C2rustUnnamed10 { _type: 16, name: "TXT".to_string(),},
-        C2rustUnnamed10 { _type: 22, name: "NSAP".to_string(),},
-        C2rustUnnamed10 { _type: 23, name: "NSAP_PTR".to_string(),},
-        C2rustUnnamed10 { _type: 24,  name: "SIG".to_string(),},
-        C2rustUnnamed10 { _type: 25, name: "KEY".to_string(),},
-        C2rustUnnamed10 { _type: 28, name: "AAAA".to_string(),},
-        C2rustUnnamed10 { _type: 29, name: "LOC".to_string(),},
-        C2rustUnnamed10 { _type: 33, name: "SRV".to_string(),},
-        C2rustUnnamed10 { _type: 35, name: "NAPTR".to_string(),},
-        C2rustUnnamed10 { _type: 36, name: "KX".to_string(),},
-        C2rustUnnamed10 { _type: 37, name: "CERT".to_string(),},
-        C2rustUnnamed10 { _type: 38, name: "A6".to_string(),},
-        C2rustUnnamed10 { _type: 39, name: "DNAME".to_string(),},
-        C2rustUnnamed10 { _type: 41, name: "OPT".to_string(),},
-        C2rustUnnamed10 { _type: 43, name: "DS".to_string(),},
-        C2rustUnnamed10 { _type: 46, name: "RRSIG".to_string(),},
-        C2rustUnnamed10 { _type: 47, name: "NSEC".to_string(),},
-        C2rustUnnamed10 { _type: 48, name: "DNSKEY".to_string(),},
-        C2rustUnnamed10 { _type: 50, name: "NSEC3".to_string(),},
-        C2rustUnnamed10 { _type: 51, name: "NSEC3PARAM".to_string(),},
-        C2rustUnnamed10 { _type: 52, name: "TLSA".to_string(),},
-        C2rustUnnamed10 { _type: 53, name: "SMIMEA".to_string(),},
-        C2rustUnnamed10 { _type: 55, name: "HIP".to_string(),},
-        C2rustUnnamed10 { _type: 249, name: "TKEY".to_string(),},
-        C2rustUnnamed10 { _type: 250, name: "TSIG".to_string(),},
-        C2rustUnnamed10 { _type: 251, name: "IXFR".to_string(),},
-        C2rustUnnamed10 { _type: 252, name: "AXFR".to_string(),},
-        C2rustUnnamed10 { _type: 253, name: "MAILB".to_string(),},
-        C2rustUnnamed10 { _type: 254, name: "MAILA".to_string(),},
-        C2rustUnnamed10 { _type: 255, name: "ANY".to_string(),},
-        C2rustUnnamed10 { _type: 257,  name: "CAA".to-String(),}];

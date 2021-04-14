@@ -55,7 +55,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
     let mut override_0: NetAddress = NetAddress {s_addr: 0,};
     let mut fuzz: u16 = 0 ;
     let mut mess_type: u32 = 0;
-    let mut fqdn_flags: libc::c_uchar = 0;
+    let mut fqdn_flags: u8 = 0;
     let mut agent_id: mut Vec<u8> = 0;
     let mut uuid: mut Vec<u8> = 0;
     let mut emac: mut Vec<u8> = 0;
@@ -68,7 +68,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
     let mut cpewan_id: DhcpNetId =
         DhcpNetId {net: 0 , next: 0 ,};
     let mut o: DhcpOpt = 0 ;
-    let mut pxe_uuid: [libc::c_uchar; 17] = [0; 17];
+    let mut pxe_uuid: [u8; 17] = [0; 17];
     let mut oui: mut Vec<u8> = 0;
     let mut serial: mut Vec<u8> = 0;
     let mut class: mut Vec<u8> = 0;
@@ -954,7 +954,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                 /* clear S */
             }
             fqdn_flags =
-                (fqdn_flags | 0x8)              libc::c_uchar
+                (fqdn_flags | 0x8)              u8
             /* set N */
         } else {
             if fqdn_flags & 0x1 == 0 {
@@ -962,7 +962,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                     (fqdn_flags | 0x3)
             }
             fqdn_flags =
-                (fqdn_flags & !(0x8))              libc::c_uchar /* set S and O */
+                (fqdn_flags & !(0x8))              u8 /* set S and O */
             /* clear N */
         }
         if fqdn_flags & 0x4 != 0 {
@@ -1172,7 +1172,7 @@ pub fn dhcp_reply(mut context: DhcpContext,
                 option_uint(opt, 0, 2) ;
             let mut layer: i32 =
                 option_uint(opt, 2, 2) ;
-            let mut save71: [libc::c_uchar; 4] = [0; 4];
+            let mut save71: [u8; 4] = [0; 4];
             let mut opt71: DhcpOpt =
                 DhcpOpt {opt: 0,
                          len: 0,
@@ -2794,7 +2794,7 @@ fn free_space(mut mess: DhcpPacket,
                     let ref mut fresh14 =
                         *overload.offset(2);
                     *fresh14 =
-                        (*fresh14 | 2)                      libc::c_uchar
+                        (*fresh14 | 2)                      u8
                 }
                 if *overload.offset(2)
                        & 2 != 0 {
@@ -2838,7 +2838,7 @@ fn option_put(mut mess: DhcpPacket,
             let fresh17 = p;
             p = p.offset(1);
             *fresh17 =
-                (val >> 8 * (len - (i + 1)))              libc::c_uchar;
+                (val >> 8 * (len - (i + 1)))              u8;
             i += 1
         }
     };
@@ -3145,8 +3145,8 @@ fn pxe_opts(mut pxe_arch: i32,
     let mut j: i32 = 4 - 1;
     let mut boot_server: NetAddress = NetAddress {s_addr: 0,};
     /* We pass back references to these, hence they are declared static */
-    static mut discovery_control: libc::c_uchar = 0;
-    static mut fake_prompt: [libc::c_uchar; 4] =
+    static mut discovery_control: u8 = 0;
+    static mut fake_prompt: [u8; 4] =
         [0, 'P' as i32,
          'X' as i32, 'E' as i32];
     static mut fake_opts: DhcpOpt =
@@ -3274,7 +3274,7 @@ fn pxe_opts(mut pxe_arch: i32,
     fake_prompt[0 ] =
         if i > 1 {
             255
-        } else { 0 }      libc::c_uchar; /* no menu - just use use mess->filename */
+        } else { 0 }      u8; /* no menu - just use use mess->filename */
     if i == 0 {
         discovery_control = 8
     } else {
@@ -3310,7 +3310,7 @@ fn pxe_opts(mut pxe_arch: i32,
         j = j - 1;
         ret = &mut *fake_opts.offset(fresh32) ;
         ret.len =
-            ::std::mem::size_of::<[libc::c_uchar; 4]>() ;
+            ::std::mem::size_of::<[u8; 4]>() ;
         ret.val = fake_prompt.as_mut_ptr();
         ret.opt = 10
     }
@@ -3352,7 +3352,7 @@ pub fn find_boot(mut netid: &mut DhcpNetId)
 fn is_pxe_client(mut mess: DhcpPacket, mut sz: usize,
                                    mut pxe_vendor: &mut libc::c_char)
                                    -> i32 {
-    let mut opt: *const libc::c_uchar = 0 ;
+    let mut opt: *const u8 = 0 ;
     let mut conf_len: susize = 0 as susize;
     let mut conf: *const DhcpPxeVendor = daemon.dhcp_pxe_vendors;
     opt = option_find(mess, sz, 60, 0);
@@ -3380,7 +3380,7 @@ fn do_options(mut context: DhcpContext,
                                 mut domain: &mut String,
                                 mut netid: &mut DhcpNetId,
                                 mut subnet_addr: NetAddress,
-                                mut fqdn_flags: libc::c_uchar,
+                                mut fqdn_flags: u8,
                                 mut null_term: i32,
                                 mut pxe_arch: i32,
                                 mut uuid: mut Vec<u8>,
@@ -3395,8 +3395,8 @@ fn do_options(mut context: DhcpContext,
     let mut i: i32 = 0;
     let mut len: i32 = 0;
     let mut force_encap: i32 = 0;
-    let mut f0: libc::c_uchar = 0;
-    let mut s0: libc::c_uchar = 0;
+    let mut f0: u8 = 0;
+    let mut s0: u8 = 0;
     let mut done_file: i32 = 0;
     let mut done_server: i32 = 0;
     let mut done_vendor_class: i32 = 0;

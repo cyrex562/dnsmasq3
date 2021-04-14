@@ -107,7 +107,7 @@ pub fn create_helper(mut event_fd: i32,
         /* Free rarely-allocated memory from previous iteration. */
         // if !alloc_buff.is_null() {
         //     free(alloc_buff as *mut libc::c_void);
-        //     alloc_buff = 0 as *mut libc::c_uchar
+        //     alloc_buff = 0 as *mut u8
         // }
         /* we read zero bytes when pipe closed: this is our signal to exit */
         if read_write(pipefd[0  ],
