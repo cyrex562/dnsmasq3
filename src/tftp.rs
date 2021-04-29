@@ -63,7 +63,7 @@ void tftp_request(struct listener *listen, time_t now)
   union all_addr addra;
   int family = listen.addr.sa.sa_family;
   /* Can always get recvd interface for IPv6 */
-  int check_dest = !option_bool(OPT_NOWILD) || family == AF_INET6;
+  int check_dest = !daemon.opt_nowild || family == AF_INET6;
   union {
     struct cmsghdr align; /* this ensures alignment */
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -213,7 +213,7 @@ void tftp_request(struct listener *listen, time_t now)
 	  /* Do the same as DHCP */
 	  if (!iface_check(family, &addra, name, NULL))
 	    {
-	      if (!option_bool(OPT_CLEVERBIND))
+	      if (!daemon.opt_cleverbind)
 		enumerate_interfaces(0); 
 	      if (!loopback_exception(listen.tftpfd, family, &addra, name) &&
 		  !label_exception(if_index, family, &addra))

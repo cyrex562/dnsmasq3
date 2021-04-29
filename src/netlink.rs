@@ -59,10 +59,10 @@ char *netlink_init(void)
   addr.nl_pad = 0;
   addr.nl_pid = 0; /* autobind */
   addr.nl_groups = RTMGRP_IPV4_ROUTE;
-  if (option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_cleverbind)
     addr.nl_groups |= RTMGRP_IPV4_IFADDR;  
   addr.nl_groups |= RTMGRP_IPV6_ROUTE;
-  if (option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_cleverbind)
     addr.nl_groups |= RTMGRP_IPV6_IFADDR;
 
 #ifdef HAVE_DHCP6

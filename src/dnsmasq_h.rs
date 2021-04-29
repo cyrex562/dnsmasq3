@@ -814,7 +814,7 @@ pub struct mysubnet {
 //   char *file; /* pointer to file part if path */
 // #endif
 // };
-pub struct resolvc {
+pub struct ResolvFileParams {
     // next
     pub is_default: i32,
     pub logged: i32,
@@ -1459,17 +1459,34 @@ pub struct dhcp_relay {
     // next
 }
 
+// struct arp_record {
+//   unsigned short hwlen, status;
+//   int family;
+//   unsigned char hwaddr[DHCP_CHADDR_MAX]; 
+//   union all_addr addr;
+//   struct arp_record *next;
+// };
+pub struct ArpRecord {
+  pub hwlen: u16,
+  pub status: u16,
+  pub family: i32,
+  pub hwaddr: [u8;32],
+  pub addr: net::IpAddr,
+  // next
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DnsmasqDaemon {
   /* datastuctures representing the command-line and 
      config file arguments. All set (including defaults)
      in option.c */
-
+  pub arps: Vec<ArpRecord>,
+  pub old: Vec<ArpRecord>,
 //   unsigned int options[OPTION_SIZE];
   pub options: [u32;OPTION_SIZE],
     // struct resolvc default_resolv, *resolv_files;
-    pub default_resolv: resolvc,
-    pub resolv_files: resolvc,
+  pub default_resolv: ResolvFileParams,
+  pub resolv_files: Vec<ResolvFileParams>,
   // time_t last_resolv;
   pub last_resolv: time::Instant,
   // char *servers_file;
@@ -1563,7 +1580,7 @@ pub struct DnsmasqDaemon {
   // struct hostsfile *addn_hosts;
   pub addn_hosts: hostsfile,
   // struct dhcp_context *dhcp, *dhcp6;
-  pub dhcp: DhcpContext,
+  pub dhcp: Vec<DhcpContext>,
   pub dhcp6: Vec<DhcpContext>,
   // struct ra_interface *ra_interfaces;
   pub ra_interfaces: ra_interface,
@@ -1591,8 +1608,8 @@ pub struct DnsmasqDaemon {
   // struct addr_list *override_relays;
   pub override_relays: addr_list,
   // struct dhcp_relay *relay4, *relay6;
-  pub relay4: dhcp_relay,
-  pub relay6: dhcp_relay,
+  pub relay4: Vec<dhcp_relay>,
+  pub relay6: Vec<dhcp_relay>,
   // struct delay_config *delay_conf;
   pub delay_conf: delay_config,
   // int override;

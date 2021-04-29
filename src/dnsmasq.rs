@@ -743,7 +743,7 @@ pub fn main () -> Result<(), io::Error>
         
         /* if we are to run scripts, we need to fork a helper before dropping root. */
         daemon.helperfd = -1;
-        if ((daemon.dhcp || daemon.dhcp6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP)) && 
+        if ((daemon.dhcp || daemon.dhcp6 || option_bool(OPT_TFTP) || daemon.opt_script_arp) && 
         (daemon.lease_change_command || daemon.luascript)) {
         daemon.helperfd = create_helper(pipewrite, err_pipe[1], script_uid, script_gid, max_fd);}
         
@@ -905,11 +905,11 @@ pub fn main () -> Result<(), io::Error>
                 if (daemon.opt_dnssec_ign_ns) {
                 my_syslog(LOG_INFO, format!("DNSSEC validation enabled but all unsigned answers are trusted"));}
                 else {
-                my_syslog(LOG_INFO, _("DNSSEC validation enabled"));}
+                my_syslog(LOG_INFO, format!("DNSSEC validation enabled"));}
                 
                 daemon.dnssec_no_time_check = daemon.opt_dnssec_time;
-                if (daemon.opt_dnssec_time && !daemon.back_to_the_future)
-                my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until receipt of SIGINT"));
+                if (daemon.opt_dnssec_time && !daemon.back_to_the_future) {
+                my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until receipt of SIGINT"));}
                 
                 if (rc == 1) {
                 my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until system time valid"));}
@@ -928,46 +928,57 @@ pub fn main () -> Result<(), io::Error>
             daemon.log_file, strerror(log_err)));}
             
             if (bind_fallback) {
-            my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));}
+            my_syslog(LOG_WARNING, format!("setting --bind-interfaces option because of OS limitations"));}
             
-            if (option_bool(OPT_NOWILD))
-            warn_bound_listeners();
-            else if (!option_bool(OPT_CLEVERBIND))
-            warn_wild_labels();
+            if (daemon.opt_nowild) {
+            warn_bound_listeners();}
+            else if (!daemon.opt_cleverbind) {
+            warn_wild_labels();}
             
             warn_int_names();
             
-            if (!option_bool(OPT_NOWILD)) 
-            for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp.next)
-            if (if_tmp.name && !if_tmp.used)
-            my_syslog(LOG_WARNING, _("warning: interface {} does not currently exist"), if_tmp.name);
+            if (!daemon.opt_nowild)  {
+                // for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp.next) {
+                for if_tmp in daemon.if_names {
+                    if (if_tmp.name && !if_tmp.used) {
+                        my_syslog(LOG_WARNING, format!("warning: interface {} does not currently exist", if_tmp.name));
+                    }
+                }
+            }
             
-            if (daemon.port != 0 && option_bool(OPT_NO_RESOLV))
+            if (daemon.port != 0 &&daemon.opt_no_resolv)
             {
-                if (daemon.resolv_files && !daemon.resolv_files.is_default)
-                my_syslog(LOG_WARNING, _("warning: ignoring resolv-file flag because no-resolv is set"));
-                daemon.resolv_files = NULL;
-                if (!daemon.servers)
-                my_syslog(LOG_WARNING, _("warning: no upstream servers configured"));
+                if (daemon.resolv_files && !daemon.resolv_files.is_default) {
+                my_syslog(LOG_WARNING, format!("warning: ignoring resolv-file flag because no-resolv is set"));}
+                daemon.resolv_files.clear();
+                if (!daemon.servers) {
+                    my_syslog(LOG_WARNING, format!("warning: no upstream servers configured"));
+                }
             } 
             
-            if (daemon.max_logs != 0)
-            my_syslog(LOG_INFO, _("asynchronous logging enabled, queue limit is {} messages"), daemon.max_logs);
+            if (daemon.max_logs != 0) {
+            my_syslog(LOG_INFO, format!("asynchronous logging enabled, queue limit is {} messages", daemon.max_logs));}
             
             
             // #ifdef HAVE_DHCP
-            for (context = daemon.dhcp; context; context = context.next)
-            log_context(AF_INET, context);
+            // for (context = daemon.dhcp; context; context = context.next) {
+            for context in daemon.dhcp {
+                log_context(AF_INET, context);
+            }
             
-            for (relay = daemon.relay4; relay; relay = relay.next)
-            log_relay(AF_INET, relay);
+            // for (relay = daemon.relay4; relay; relay = relay.next) {
+            for relay in daemon.relay4 {
+                log_relay(AF_INET, relay);
+            }
             
             // #  ifdef HAVE_DHCP6
-            for (context = daemon.dhcp6; context; context = context.next)
-            log_context(AF_INET6, context);
+            for (context = daemon.dhcp6; context; context = context.next) {
+                log_context(AF_INET6, context);
+            }
             
-            for (relay = daemon.relay6; relay; relay = relay.next)
-            log_relay(AF_INET6, relay);
+            for (relay = daemon.relay6; relay; relay = relay.next) {
+                log_relay(AF_INET6, relay);
+            }
             
             if (daemon.doing_dhcp6 || daemon.doing_ra)
             dhcp_construct_contexts(now);
@@ -1121,7 +1132,7 @@ pub fn main () -> Result<(), io::Error>
                                 // #    endif
                                 
                                 /* Refresh cache */
-                                if (option_bool(OPT_SCRIPT_ARP))
+                                if (daemon.opt_script_arp)
                                 find_mac(NULL, NULL, 0, now);
                                 while (helper_buf_empty() && do_arp_script_run());
                                 
@@ -1839,7 +1850,7 @@ pub fn main () -> Result<(), io::Error>
                                                     
                                                     enumerate_interfaces(0);
                                                     
-                                                    if (option_bool(OPT_NOWILD))
+                                                    if (daemon.opt_nowild)
                                                     iface = listener.iface; /* May be NULL */
                                                     else 
                                                     {
@@ -1866,7 +1877,7 @@ pub fn main () -> Result<(), io::Error>
                                                                 client_ok = 0;
                                                             }
                                                             
-                                                            if (option_bool(OPT_CLEVERBIND))
+                                                            if (daemon.opt_cleverbind)
                                                             iface = listener.iface; /* May be NULL */
                                                             else
                                                             {

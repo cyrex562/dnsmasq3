@@ -63,7 +63,7 @@ void tftp_request(struct listener *listen, time_t now)
   union all_addr addra;
   int family = listen->addr.sa.sa_family;
   /* Can always get recvd interface for IPv6 */
-  int check_dest = !option_bool(OPT_NOWILD) || family == AF_INET6;
+  int check_dest = !daemon.opt_nowild || family == AF_INET6;
   union {
     struct cmsghdr align; /* this ensures alignment */
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];

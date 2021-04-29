@@ -56,7 +56,7 @@ void dhcp6_init(void)
      Need to set REUSEADDR|REUSEPORT to make this possible.
      Handle the case that REUSEPORT is defined, but the kernel doesn't 
      support it. This handles the introduction of REUSEPORT on Linux. */
-  if (option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_nowild || option_bool(OPT_CLEVERBIND))
     {
       int rc = 0;
 

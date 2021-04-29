@@ -206,7 +206,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		    break;
 	      
 	      /* voodoo to clear interface field in address */
-	      if (!option_bool(OPT_NOWILD) && IN6_IS_ADDR_LINKLOCAL(addr))
+	      if (!daemon.opt_nowild && IN6_IS_ADDR_LINKLOCAL(addr))
 		{
 		  addr->s6_addr[2] = 0;
 		  addr->s6_addr[3] = 0;

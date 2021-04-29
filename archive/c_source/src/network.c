@@ -762,7 +762,7 @@ static int make_sock(union mysockaddr *addr, int type, int dienow)
     err:
       errsave = errno;
       port = prettyprint_addr(addr, daemon->addrbuff);
-      if (!option_bool(OPT_NOWILD) && !option_bool(OPT_CLEVERBIND))
+      if (!daemon.opt_nowild && !option_bool(OPT_CLEVERBIND))
 	sprintf(daemon->addrbuff, "port %d", port);
       s = _("failed to create listening socket for %s: %s");
       
@@ -805,7 +805,7 @@ static int make_sock(union mysockaddr *addr, int type, int dienow)
     }
   else if (family == AF_INET)
     {
-      if (!option_bool(OPT_NOWILD))
+      if (!daemon.opt_nowild)
 	{
 #if defined(HAVE_LINUX_NETWORK) 
 	  if (setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &opt, sizeof(opt)) == -1)
@@ -1137,7 +1137,7 @@ int is_dad_listeners(void)
 {
   struct irec *iface;
   
-  if (option_bool(OPT_NOWILD))
+  if (daemon.opt_nowild)
     for (iface = daemon->interfaces; iface; iface = iface->next)
       if (iface->dad && !iface->done)
 	return 1;
@@ -1432,7 +1432,7 @@ void pre_allocate_sfds(void)
     if (!(srv->flags & (SERV_LITERAL_ADDRESS | SERV_NO_ADDR | SERV_USE_RESOLV | SERV_NO_REBIND)) &&
 	!allocate_sfd(&srv->source_addr, srv->interface) &&
 	errno != 0 &&
-	option_bool(OPT_NOWILD))
+	daemon.opt_nowild)
       {
 	(void)prettyprint_addr(&srv->source_addr, daemon->namebuff);
 	if (srv->interface[0] != 0)
@@ -1575,7 +1575,7 @@ void check_servers(void)
   int locals = 0;
 
   /* interface may be new since startup */
-  if (!option_bool(OPT_NOWILD))
+  if (!daemon.opt_nowild)
     enumerate_interfaces(0);
 
   /* don't garbage collect pre-allocated sfds. */

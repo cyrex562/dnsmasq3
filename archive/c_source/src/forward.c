@@ -614,7 +614,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
       plen = setup_reply(header, plen, addrp, flags, daemon->local_ttl);
       if (oph)
 	plen = add_pseudoheader(header, plen, ((unsigned char *) header) + PACKETSZ, daemon->edns_pktsz, 0, NULL, 0, do_bit, 0);
-      send_from(udpfd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND), (char *)header, plen, udpaddr, dst_addr, dst_iface);
+      send_from(udpfd, daemon.opt_nowild || option_bool(OPT_CLEVERBIND), (char *)header, plen, udpaddr, dst_addr, dst_iface);
     }
 
   return 0;
@@ -1301,7 +1301,7 @@ void reply_query(int fd, int family, time_t now)
 	      dump_packet(DUMP_REPLY, daemon->packet, (size_t)nn, NULL, &src->source);
 #endif
 	      
-	      send_from(src->fd, option_bool(OPT_NOWILD) || option_bool (OPT_CLEVERBIND), daemon->packet, nn, 
+	      send_from(src->fd, daemon.opt_nowild || option_bool (OPT_CLEVERBIND), daemon->packet, nn, 
 			&src->source, &src->dest, src->iface);
 
 	      if (option_bool(OPT_EXTRALOG) && src != &forward->frec_src)
@@ -1350,7 +1350,7 @@ void receive_query(struct listener *listen, time_t now)
   } control_u;
   int family = listen->addr.sa.sa_family;
    /* Can always get recvd interface for IPv6 */
-  int check_dst = !option_bool(OPT_NOWILD) || family == AF_INET6;
+  int check_dst = !daemon.opt_nowild || family == AF_INET6;
 
   /* packet buffer overwritten */
   daemon->srv_save = NULL;
@@ -1358,7 +1358,7 @@ void receive_query(struct listener *listen, time_t now)
   dst_addr_4.s_addr = dst_addr.addr4.s_addr = 0;
   netmask.s_addr = 0;
   
-  if (option_bool(OPT_NOWILD) && listen->iface)
+  if (daemon.opt_nowild && listen->iface)
     {
       auth_dns = listen->iface->dns_auth;
      
@@ -1619,7 +1619,7 @@ void receive_query(struct listener *listen, time_t now)
 		      local_auth, do_bit, have_pseudoheader);
       if (m >= 1)
 	{
-	  send_from(listen->fd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND),
+	  send_from(listen->fd, daemon.opt_nowild || option_bool(OPT_CLEVERBIND),
 		    (char *)header, m, &source_addr, &dst_addr, if_index);
 	  daemon->metrics[METRIC_DNS_AUTH_ANSWERED]++;
 	}
@@ -1637,7 +1637,7 @@ void receive_query(struct listener *listen, time_t now)
       
       if (m >= 1)
 	{
-	  send_from(listen->fd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND),
+	  send_from(listen->fd, daemon.opt_nowild || option_bool(OPT_CLEVERBIND),
 		    (char *)header, m, &source_addr, &dst_addr, if_index);
 	  daemon->metrics[METRIC_DNS_LOCAL_ANSWERED]++;
 	}

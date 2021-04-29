@@ -157,10 +157,10 @@ int main (int argc, char **argv)
   
 #ifndef HAVE_LINUX_NETWORK
 #  if !(defined(IP_RECVDSTADDR) && defined(IP_RECVIF) && defined(IP_SENDSRCADDR))
-  if (!option_bool(OPT_NOWILD))
+  if (!daemon.opt_nowild)
     {
       bind_fallback = 1;
-      set_option_bool(OPT_NOWILD);
+      set_daemon.opt_nowild;
     }
 #  endif
   
@@ -168,7 +168,7 @@ int main (int argc, char **argv)
   if (option_bool(OPT_CLEVERBIND))
     {
       bind_fallback = 1;
-      set_option_bool(OPT_NOWILD);
+      set_daemon.opt_nowild;
       reset_option_bool(OPT_CLEVERBIND);
     }
 #endif
@@ -284,7 +284,7 @@ int main (int argc, char **argv)
      The script subsystem relies on DHCP buffers, hence the last two
      conditions below. */  
   if (daemon->dhcp || daemon->doing_dhcp6 || daemon->relay4 || 
-      daemon->relay6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP))
+      daemon->relay6 || option_bool(OPT_TFTP) || daemon.opt_script_arp)
     {
       dhcp_common_init();
       if (daemon->dhcp || daemon->doing_dhcp6)
@@ -333,13 +333,13 @@ int main (int argc, char **argv)
   route_init();
 #endif
 
-  if (option_bool(OPT_NOWILD) && option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_nowild && option_bool(OPT_CLEVERBIND))
     die(_("cannot set --bind-interfaces and --bind-dynamic"), NULL, EC_BADCONF);
   
   if (!enumerate_interfaces(1) || !enumerate_interfaces(0))
     die(_("failed to find list of interfaces: %s"), NULL, EC_MISC);
   
-  if (option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND)) 
+  if (daemon.opt_nowild || option_bool(OPT_CLEVERBIND)) 
     {
       create_bound_listeners(1);
       
@@ -691,7 +691,7 @@ int main (int argc, char **argv)
    /* if we are to run scripts, we need to fork a helper before dropping root. */
   daemon->helperfd = -1;
 #ifdef HAVE_SCRIPT 
-  if ((daemon->dhcp || daemon->dhcp6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP)) && 
+  if ((daemon->dhcp || daemon->dhcp6 || option_bool(OPT_TFTP) || daemon.opt_script_arp) && 
       (daemon->lease_change_command || daemon->luascript))
       daemon->helperfd = create_helper(pipewrite, err_pipe[1], script_uid, script_gid, max_fd);
 #endif
@@ -898,14 +898,14 @@ int main (int argc, char **argv)
   if (bind_fallback)
     my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));
 
-  if (option_bool(OPT_NOWILD))
+  if (daemon.opt_nowild)
     warn_bound_listeners();
   else if (!option_bool(OPT_CLEVERBIND))
     warn_wild_labels();
 
   warn_int_names();
   
-  if (!option_bool(OPT_NOWILD)) 
+  if (!daemon.opt_nowild) 
     for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
       if (if_tmp->name && !if_tmp->used)
 	my_syslog(LOG_WARNING, _("warning: interface %s does not currently exist"), if_tmp->name);
@@ -1089,7 +1089,7 @@ int main (int argc, char **argv)
 #    endif
 
       /* Refresh cache */
-      if (option_bool(OPT_SCRIPT_ARP))
+      if (daemon.opt_script_arp)
 	find_mac(NULL, NULL, 0, now);
       while (helper_buf_empty() && do_arp_script_run());
 
@@ -1805,7 +1805,7 @@ static void check_dns_listeners(time_t now)
  
 	  enumerate_interfaces(0);
 	  
-	  if (option_bool(OPT_NOWILD))
+	  if (daemon.opt_nowild)
 	    iface = listener->iface; /* May be NULL */
 	  else 
 	    {
