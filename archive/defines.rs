@@ -1,0 +1,3773 @@
+use std::fs::File;
+use std::path::PathBuf;
+use std::{fmt, time};
+
+use num::FromPrimitive;
+use socket2::Socket;
+
+use util::array_to_string;
+
+use crate::util;
+use crate::util::vec_to_string;
+
+pub type DevT = libc::c_ulong;
+pub type UidT = u32;
+pub type GidT = u32;
+pub type InoT = libc::c_ulong;
+pub type Ino64T = libc::c_ulong;
+pub type ModeT = u32;
+pub type NLinkT = libc::c_ulong;
+pub type OffT = i32;
+pub type Off64T = i32;
+pub type PidT = i32;
+pub type TimeT = i32;
+pub type BlkSizeT = i32;
+pub type BlkCntT = i32;
+pub type BlkCnt64T = i32;
+pub type SsizeT = i32;
+pub type SyscallSlongT = i32;
+pub type SocklenT = u32;
+pub type NetAddressT = u32;
+
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct timespec {
+//     pub tv_sec: TimeT,
+//     pub tv_nsec: SyscallSlongT,
+// }
+
+// #[derive(Copy,Clone, Default)]
+// #[repr(C)]
+// pub struct iovec {
+//     pub iov_base: *mut libc::c_void,
+//     pub iov_len: libc::size_t,
+// }
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SockAddr {
+//     pub sa_family: sa_family_t,
+//     pub sa_data: [i8; 14],
+// }
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct MsgHdr {
+    pub msg_name: Vec<u8>,
+    pub msg_namelen: usize,
+    pub msg_iov: iovec,
+    pub msg_iovlen: usize,
+    pub msg_buf: Vec<u8>,
+    pub msg_control: Vec<u8>,
+    pub msg_controllen: usize,
+    pub msg_flags: i32,
+}
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct CmsgHdr {
+    pub cmsg_len: usize,
+    pub cmsg_level: i32,
+    pub cmsg_type: i32,
+    pub __cmsg_data: [u8; 0],
+}
+
+// #[inline]
+// pub fn __cmsg_nxthdr(
+//     mut __mhdr: *mut msghdr,
+//     mut __cmsg: *mut cmsghdr,
+// ) -> *mut cmsghdr {
+//     if (*__cmsg).cmsg_len < ::std::mem::size_of::<cmsghdr>() as libc::c_ulong {
+//         return 0 as *mut cmsghdr;
+//     }
+//     __cmsg = (__cmsg as *mut u8).offset(
+//         ((*__cmsg)
+//             .cmsg_len
+//             .wrapping_add(::std::mem::size_of::<size_t>() as libc::c_ulong)
+//             .wrapping_sub(1 as i32 as libc::c_ulong)
+//             & !(::std::mem::size_of::<size_t>() as libc::c_ulong)
+//                 .wrapping_sub(1 as i32 as libc::c_ulong)) as isize,
+//     ) as *mut cmsghdr;
+//     if __cmsg.offset(1 as i32 as ) as *mut u8
+//         > ((*__mhdr).msg_control as *mut u8).offset((*__mhdr).msg_controllen as )
+//         || (__cmsg as *mut u8).offset(
+//             ((*__cmsg)
+//                 .cmsg_len
+//                 .wrapping_add(::std::mem::size_of::<size_t>() as libc::c_ulong)
+//                 .wrapping_sub(1 as i32 as libc::c_ulong)
+//                 & !(::std::mem::size_of::<size_t>() as libc::c_ulong)
+//                     .wrapping_sub(1 as i32 as libc::c_ulong)) as isize,
+//         ) > ((  `   *__mhdr).msg_control as *mut u8)
+//             .offset((*__mhdr).msg_controllen as )
+//     {
+//         return 0 as *mut cmsghdr;
+//     }
+//     return __cmsg;
+// }
+
+pub const AF_UNSPEC: i32 = PF_UNSPEC;
+pub const PF_UNSPEC: i32 = 0;
+pub const AF_INET6: i32 = PF_INET6;
+pub const PF_INET6: i32 = 10;
+pub const AF_INET: i32 = PF_INET;
+pub const PF_INET: i32 = 2;
+
+pub type SaFamily = u16;
+//
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub struct SockAddrIn6 {
+//     pub sin6_family: sa_family_t,
+//     pub sin6_port: in_port_t,
+//     pub sin6_flowinfo: u32,
+//     pub sin6_addr: NetAddress,
+//     pub sin6_scope_id: u32,
+// }
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct NetAddress {
+//     pub __in6_u: C2RustUnnamed,
+// }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed {
+    pub __u6_addr8: [u8; 16],
+    pub __u6_addr16: [u16; 8],
+    pub __u6_addr32: [u32; 4],
+}
+
+// pub type in_port_t = u16;
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SockAddrIn {
+//     pub sin_family: sa_family_t,
+//     pub sin_port: in_port_t,
+//     pub sin_addr: NetAddress,
+//     pub sin_zero: [u8; 8],
+// }
+
+pub const INET6_ADDRSTRLEN: usize = 46;
+
+#[derive(Copy, Clone, Debug, Display)]
+pub enum AddressType {
+    Unknown = 0,
+    MacAddress,
+    Ipv4Address,
+    Ipv6Address,
+}
+
+impl fmt::Display for AddressType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match Self {
+            AddressType::Unknown => write!(f, "Unknown"),
+            AddressType::MacAddress => write!(f, "MacAddress"),
+            AddressType::Ipv4Address => write!(f, "Ipv4Address"),
+            AddressType::Ipv6Address => write!(f, "Ipv6Address"),
+        }
+    }
+}
+
+pub struct DhcpLeaseContext {
+    pub leases: Vec<DhcpLease>,
+    pub file_diry: bool,
+    pub dns_dirty: bool,
+    pub old_leases: Vec<DhcpLease>,
+    pub leases_left: i32,
+}
+
+#[derive(Copy, Clone, Debug, Default, Display)]
+pub struct NetAddress {
+    pub _type: AddressType,
+    pub value: [u8; 16],
+    pub name: String,
+    pub port: u16,
+    pub key: Vec<u8>,
+    pub ds: DigitalSignature,
+}
+
+impl NetAddress {
+    pub fn new() -> NetAddress {
+        NetAddress {
+            _type: AddressType::Unknown,
+            value: [0; 16],
+            name: String::new(),
+            port: 0,
+            key: Vec::new(),
+            ds: DigitalSignature::new(),
+        }
+    }
+}
+
+impl fmt::Display for NetAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _value = array_to_string(&self.value, 16);
+        let _key = vec_to_string(&self.key);
+        write!(
+            f,
+            "(_type={}, value={}, name={}, port={}, key={}, ds={})",
+            self._type, _value, self.name, self.port, _key, self.ds
+        )
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed29 {
+    pub target: BlockData,
+    pub targetlen: u16,
+    pub srvport: u16,
+    pub priority: u16,
+    pub weight: u16,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct BlockData {
+    // pub next: blockdata,
+    pub key: [u8; 40],
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed6 {
+    pub target: C2rustUnnamed7,
+    pub uid: u32,
+    pub is_name_ptr: i32,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct IfruData {
+    pub ifru_addr: NetAddress,
+    pub ifru_dstaddr: NetAddress,
+    pub ifru_broadaddr: NetAddress,
+    pub ifru_netmask: NetAddress,
+    pub ifru_hwaddr: NetAddress,
+    pub ifru_flags: i16,
+    pub ifru_ivalue: i32,
+    pub ifru_mtu: u16,
+    pub ifru_map: Ifmap,
+    pub ifru_slave: [u8; 16],
+    pub ifru_newname: [u8; 16],
+    pub ifru_data: NetAddress,
+}
+
+impl IfruData {
+    fn new() -> IfruData {
+        IfruData {
+            ifru_addr: NetAddress::new(),
+            ifru_dstaddr: NetAddress::new(),
+            ifru_broadaddr: NetAddress::new(),
+            ifru_netmask: NetAddress::new(),
+            ifru_hwaddr: NetAddress::new(),
+            ifru_flags: 0,
+            ifru_ivalue: 0,
+            ifru_mtu: 0,
+            ifru_map: Ifmap::new(),
+            ifru_slave: [0; 16],
+            ifru_newname: [0; 16],
+            ifru_data: NetAddress::new(),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IfReq {
+    pub ifr_ifrn: DigitalSignature,
+    pub ifr_ifru: IfruData,
+}
+
+impl IfReq {
+    pub fn new() -> IfReq {
+        IfReq {
+            ifr_ifrn: DigitalSignature::new(),
+            ifr_ifru: IfruData::new(),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed7 {
+    pub cache: Crec,
+    pub name: String,
+}
+
+#[derive(Copy, Clone, Default, Debug, Debug)]
+#[repr(C)]
+pub struct DigitalSignature {
+    pub keydata: Vec<u8>,
+    pub keytag: u16,
+    pub algo: u8,
+    pub digest: u8,
+}
+
+impl fmt::Display for DigitalSignature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _keydata = vec_to_string(&self.keydata);
+        write!(
+            "keydata={}, keytag={}, algo={}, digest={}",
+            _keydata,
+            self.keytag, self.algo, self.digest
+        )
+    }
+}
+
+impl DigitalSignature {
+    fn new() -> DigitialSignature {
+        DigitalSignature {
+            keydata: Vec::new(),
+            keytag: 0,
+            algo: 0,
+            digest: 0,
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed4 {
+    pub target: C2rustUnnamed5,
+    pub uid: u32,
+    pub is_name_ptr: i32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed5 {
+    pub cache: Crec,
+    pub name: String,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Crec {
+    // pub next: *mut Crec,
+    // pub prev: *mut Crec,
+    // pub hash_next: *mut Crec,
+    pub addr: NetAddress,
+    pub ttd: TimeT,
+    pub uid: u32,
+    pub flags: u32,
+    pub name: C2rustUnnamed6,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed32 {
+    pub sname: String,
+    pub bname: BigName,
+    pub namep: String,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union BigName {
+    pub name: String,
+    // pub next: *mut BigName,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct BogusAddr {
+    pub addr: NetAddress,
+    // pub next: *mut BogusAddr,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Doctor {
+    pub in_0: NetAddress,
+    pub end: NetAddress,
+    pub out: NetAddress,
+    pub mask: NetAddress,
+    // pub next: *mut Doctor,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct MxSrvRecord {
+    pub name: String,
+    pub target: String,
+    pub issrv: i32,
+    pub srvport: i32,
+    pub priority: i32,
+    pub weight: i32,
+    pub offset: u32,
+    // pub next: *mut MxSrvRecord,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct NaPtr {
+    pub name: String,
+    pub replace: String,
+    pub regexp: String,
+    pub services: String,
+    pub flags: String,
+    pub order: u32,
+    pub pref: u32,
+    // pub next: *mut NaPtr,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TxtRecord {
+    pub name: String,
+    pub txt: String,
+    pub class: u16,
+    pub len: u16,
+    pub stat: i32,
+    // pub next: *mut TxtRecord,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct PtrRecord {
+    pub name: String,
+    pub ptr: String,
+    // pub next: *mut PtrRecord,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Cname {
+    pub ttl: i32,
+    pub flag: i32,
+    pub alias: String,
+    pub target: String,
+    // pub next: *mut Cname,
+    pub targetp: Cname,
+}
+
+#[derive(Copy, Clone, Default, Debug, Display)]
+#[repr(C)]
+pub struct AddressListEntry {
+    pub addr: NetAddress,
+    pub flags: [bool; 32],
+    pub prefixlen: usize,
+    pub decline_time: time::Instant,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct AuthZone {
+    pub domain: String,
+    pub interface_names: Vec<AuthNameList>,
+    pub subnet: Vec<AddressListEntry>,
+    pub exclude: Vec<ddrlist>,
+    // pub next: *mut auth_zone,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct AuthNameList {
+    pub name: String,
+    pub flags: i32,
+    // pub next: *mut auth_name_list,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct HostRecord {
+    pub ttl: u32,
+    pub flags: [bool; 32],
+    pub names: Vec<NameListEntry>,
+    pub addr: NetAddress,
+    pub addr6: NetAddress,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct NameListEntry {
+    pub name: String,
+    // pub next: *mut name_list,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct InterfaceName {
+    pub name: String,
+    pub intr: String,
+    pub family: i32,
+    pub addresses: Vec<AddressListEntry>,
+    // pub next: *mut interface_name,
+}
+
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub union MySockAddr {
+//     pub sa: SockAddr,
+//     pub in_0: SockAddrIn,
+//     pub in6: SockAddrIn6,
+// }
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct ServerFd {
+    pub fd: Option<File>,
+    pub source_addr: NetAddress,
+    pub interface: String,
+    pub ifindex: u32,
+    pub used: u32,
+    pub preallocated: u32,
+    // pub next: *mut serverfd,
+}
+
+impl ServerFd {
+    pub fn new() -> ServerFd {
+        ServerFd {
+            fd: None,
+            source_addr: NetAddress::new(),
+            interface: String::new(),
+            ifindex: 0,
+            used: 0,
+            preallocated: 0,
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct RandFd {
+    pub fd: i32,
+    pub refcount: u16,
+    pub family: u16,
+}
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct Server {
+    pub addr: NetAddress,
+    pub source_addr: NetAddress,
+    pub interface: [i8; 17],
+    pub sfd: ServerFd,
+    pub domain: String,
+    pub flags: i32,
+    pub tcpfd: i32,
+    pub edns_pktsz: i32,
+    pub pktsz_reduced: TimeT,
+    pub queries: u32,
+    pub failed_queries: u32,
+    pub uid: u32,
+    // pub next: *mut server,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IpSets {
+    pub sets: String,
+    pub domain: String,
+    // pub next: *mut ipsets,
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct Irec {
+    pub addr: NetAddress,
+    pub netmask: NetAddress,
+    pub tftp_ok: bool,
+    pub dhcp_ok: bool,
+    pub mtu: u16,
+    pub done: bool,
+    pub warned: bool,
+    pub dad: bool,
+    pub dns_auth: bool,
+    pub index: i32,
+    pub multicast_done: bool,
+    pub found: bool,
+    pub label: bool,
+    pub name: String,
+    // pub next: *mut irec,
+}
+
+impl Irec {
+    fn new() -> Irec {
+        Irec {
+            addr: NetAddress::new(),
+            netmask: NetAddress::new(),
+            tftp_ok: true,
+            dhcp_ok: true,
+            mtu: 1500,
+            done: true,
+            warned: true,
+            dad: true,
+            dns_auth: true,
+            index: -1,
+            multicast_done: true,
+            found: true,
+            label: true,
+            name: String::new(),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Listener {
+    pub fd: File,
+    pub tcpfd: File,
+    pub tftp_socket: Socket,
+    pub used: i32,
+    pub addr: NetAddress,
+    pub iface: Option<Irec>,
+    // pub next: *mut listener,
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct Iname {
+    pub name: String,
+    pub addr: NetAddress,
+    pub used: bool,
+    // pub next: *mut iname,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Mysubnet {
+    pub addr: NetAddress,
+    pub addr_used: bool,
+    // pub mask: i32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Resolvc {
+    // pub next: *mut Resolvc,
+    pub is_default: bool,
+    pub logged: bool,
+    pub mtime: TimeT,
+    pub name: String,
+    pub wd: i32,
+    // pub file: String,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct HostsFile {
+    // pub next: *mut HostsFile,
+    pub flags: [bool; 32],
+    pub fname: String,
+    pub wd: i32,
+    pub index: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Frec {
+    pub frec_src: FrecSrc,
+    pub sentto: Server,
+    pub rfd4: RandFd,
+    pub rfd6: RandFd,
+    pub new_id: u16,
+    pub forwardall: i32,
+    pub flags: i32,
+    pub time: TimeT,
+    pub hash: Vec<u8>,
+    // pub next: *mut frec,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct FrecSrc {
+    pub source: NetAddress,
+    pub dest: NetAddress,
+    pub iface: u32,
+    pub log_id: u32,
+    pub fd: File,
+    pub orig_id: u16,
+    // pub next: *mut frec_src,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpNetId {
+    pub net: String,
+    // pub next: *mut dhcp_netid,
+    // pub next: *mut DhcpNetId
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpNetIdList {
+    pub list: Vec<DhcpNetId>,
+    // pub next: *mut dhcp_netid_list,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct TagIf {
+    pub set: DhcpNetIdList,
+    pub tag: DhcpNetId,
+    // pub next: *mut tag_if,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DelayConfig {
+    pub delay: i32,
+    pub netid: DhcpNetId,
+    // pub next: *mut delay_config,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct HwaddrConfig {
+    pub hwaddr_len: i32,
+    pub hwaddr_type: i32,
+    pub hwaddr: Vec<u8>,
+    pub wildcard_mask: u32,
+    // pub next: *mut hwaddr_config,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpConfig {
+    pub flags: [bool; 32],
+    pub clid_len: i32,
+    pub clid: Vec<u8>,
+    pub hostname: String,
+    pub domain: String,
+    pub netid: DhcpNetIdList,
+    pub filter: DhcpNetId,
+    pub addr6: AddressListEntry,
+    pub addr: NetAddress,
+    pub decline_time: TimeT,
+    pub lease_time: u32,
+    pub hwaddr: HwaddrConfig,
+    // pub next: *mut dhcp_config,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpOpt {
+    pub opt: u32,
+    pub len: usize,
+    pub flags: u32,
+    pub u: C2rustUnnamed7,
+    pub val: Vec<u8>,
+    pub netid: DhcpNetId,
+    // pub next: *mut dhcp_opt,
+    // pub next: *mut DhcpOpt
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed31 {
+    pub encap: i32,
+    pub wildcard_mask: u32,
+    pub vendor_class: Vec<u8>,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpBoot {
+    pub file: String,
+    pub sname: String,
+    pub tftp_sname: String,
+    pub next_server: NetAddress,
+    pub netid: DhcpNetId,
+    // pub next: *mut dhcp_boot,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpMatchName {
+    pub name: String,
+    pub wildcard: i32,
+    pub netid: DhcpNetId,
+    // pub next: *mut dhcp_match_name,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct PxeService {
+    pub csa: u16,
+    pub type_0: u16,
+    pub menu: String,
+    pub basename: String,
+    pub sname: String,
+    pub server: NetAddress,
+    pub netid: DhcpNetId,
+    // pub next: *mut pxe_service,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpVendor {
+    pub len: i32,
+    pub match_type: i32,
+    pub enterprise: u32,
+    pub data: String,
+    pub netid: DhcpNetId,
+    // pub next: *mut dhcp_vendor,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpPxeVendor {
+    pub data: String,
+    // pub next: *mut dhcp_pxe_vendor,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpMac {
+    pub mask: u32,
+    pub hwaddr_len: i32,
+    pub hwaddr_type: i32,
+    pub hwaddr: [u8; 16],
+    pub netid: DhcpNetId,
+    // pub next: *mut dhcp_mac,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpBridge {
+    pub iface: [i8; 16],
+    pub alias: DhcpBridge,
+    // pub next: *mut dhcp_bridge,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct CondDomain {
+    pub domain: String,
+    pub prefix: String,
+    pub start: NetAddress,
+    pub end: NetAddress,
+    pub start6: NetAddress,
+    pub end6: NetAddress,
+    pub is6: i32,
+    pub indexed: i32,
+    // pub next: *mut cond_domain,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct RaInterface {
+    pub name: String,
+    pub mtu_name: String,
+    pub interval: i32,
+    pub lifetime: i32,
+    pub prio: i32,
+    pub mtu: i32,
+    // pub next: *mut ra_interface,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct DhcpContext {
+    pub lease_time: u32,
+    pub addr_epoch: u32,
+    pub netmask: NetAddress,
+    pub broadcast: NetAddress,
+    pub local: NetAddress,
+    pub router: NetAddress,
+    pub start: NetAddress,
+    pub end: NetAddress,
+    pub start6: NetAddress,
+    pub end6: NetAddress,
+    pub local6: NetAddress,
+    pub prefix: i32,
+    pub if_index: i32,
+    pub valid: u32,
+    pub preferred: u32,
+    pub saved_valid: u32,
+    pub ra_time: TimeT,
+    pub ra_short_period_start: TimeT,
+    pub address_lost_time: TimeT,
+    pub template_interface: String,
+    pub flags: i32,
+    pub netid: DhcpNetId,
+    pub filter: hcp_netid,
+    // pub next: dhcp_context,
+    // pub current: dhcp_context,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct SharedNetwork {
+    pub if_index: i32,
+    pub match_addr: NetAddress,
+    pub shared_addr: NetAddress,
+    pub match_addr6: NetAddress,
+    pub shared_addr6: NetAddress,
+    // pub next: *mut shared_network,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct PingResult {
+    pub addr: NetAddress,
+    pub time: Option<time::Instant>,
+    pub hash: u32,
+    // pub next: *mut ping_result,
+}
+
+impl PingResult {
+    pub fn new() -> PingResult {
+        PingResult {
+            addr: NetAddress::new(),
+            time: None,
+            hash: 0,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct TftpFile {
+    pub refcount: u32,
+    pub fd: File,
+    pub size: usize,
+    pub dev: u32,
+    pub inode: u32,
+    pub filename: String,
+}
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct TftpTransfer {
+    pub sockfd: Socket,
+    pub timeout: time::Instant,
+    pub backoff: i32,
+    pub block: u32,
+    pub blocksize: u32,
+    pub expansion: u32,
+    pub offset: usize,
+    pub peer: NetAddress,
+    pub source: NetAddress,
+    pub if_index: i32,
+    pub opt_blocksize: usize,
+    pub opt_transize: usize,
+    pub netascii: libc::c_char,
+    pub carrylf: libc::c_char,
+    pub file: TftpFile,
+    // pub next: *mut tftp_transfer,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct AddrList2 {
+    pub addr: NetAddress,
+    // pub next: *mut addr_list,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TftpPrefix {
+    pub interface: String,
+    pub prefix: String,
+    pub missing: i32,
+    // pub next: *mut tftp_prefix,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct DhcpRelay {
+    pub local: NetAddress,
+    pub server: NetAddress,
+    pub interface: String,
+    pub iface_index: i32,
+    pub current: DhcpRelay,
+    // pub next: *mut dhcp_relay,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpOptTblEntry {
+    pub name: String,
+    pub val: u16,
+    pub size: usize,
+}
+
+#[derive(Clone, Default)]
+#[repr(C)]
+pub struct DnsmasqDaemon {
+    // pub options: [u32; 2],
+    pub options: [bool; 64],
+    pub default_resolv: Resolvc,
+    pub resolv_files: Resolvc,
+    pub last_resolv: TimeT,
+    pub servers_file: String,
+    pub mxnames: Vec<MxSrvRecord>,
+    pub naptr: NaPtr,
+    pub txt: TxtRecord,
+    pub rr: TxtRecord,
+    pub ptr: PtrRecord,
+    pub host_records: Vec<HostRecord>,
+    pub host_records_tail: HostRecord,
+    pub cnames: Vec<Cname>,
+    pub auth_zones: Vec<AuthZone>,
+    pub int_names: Vec<InterfaceName>,
+    pub mxtarget: String,
+    pub add_subnet4: Mysubnet,
+    pub add_subnet6: Mysubnet,
+    pub lease_file: String,
+    pub username: String,
+    pub groupname: String,
+    pub scriptuser: String,
+    pub luascript: String,
+    pub authserver: String,
+    pub hostmaster: String,
+    pub authinterface: Iname,
+    pub secondary_forward_server: NameListEntry,
+    pub group_set: i32,
+    pub osport: i32,
+    pub domain_suffix: String,
+    pub cond_domain: CondDomain,
+    pub synth_domains: CondDomain,
+    pub runfile: String,
+    pub lease_change_command: String,
+    pub if_names: Vec<Iname>,
+    pub if_addrs: Vec<Iname>,
+    pub if_except: Iname,
+    pub dhcp_except: Iname,
+    pub auth_peers: Vec<Iname>,
+    pub tftp_interfaces: Vec<Iname>,
+    pub bogus_addr: BogusAddr,
+    pub ignore_addr: BogusAddr,
+    pub servers: Vec<Server>,
+    pub use_ipsets: bool,
+    pub ipsets: IpSets,
+    pub log_fac: u32,
+    pub log_file: String,
+    pub max_logs: u32,
+    pub cachesize: usize,
+    pub ftabsize: usize,
+    pub port: u16,
+    pub query_port: u16,
+    pub min_port: u16,
+    pub max_port: u16,
+    pub local_ttl: u32,
+    pub neg_ttl: u32,
+    pub max_ttl: u32,
+    pub min_cache_ttl: u32,
+    pub max_cache_ttl: u32,
+    pub auth_ttl: u32,
+    pub dhcp_ttl: u32,
+    pub use_dhcp_ttl: u32,
+    pub dns_client_id: String,
+    pub addn_hosts: HostsFile,
+    pub dhcp_enabled: bool,
+    pub dhcp: DhcpContext,
+    pub dhcp6: DhcpContext,
+    pub ra_interfaces: RaInterface,
+    pub dhcp_conf: DhcpConfig,
+    pub dhcp_opts: DhcpOpt,
+    pub dhcp_match: DhcpOpt,
+    pub dhcp_opts6: DhcpOpt,
+    pub dhcp_match6: DhcpOpt,
+    pub dhcp_name_match: DhcpMatchName,
+    pub dhcp_pxe_vendors: DhcpPxeVendor,
+    pub dhcp_vendors: DhcpVendor,
+    pub dhcp_macs: DhcpMac,
+    pub boot_config: DhcpBoot,
+    pub pxe_services: PxeService,
+    pub tag_if: Vec<TagIf>,
+    pub override_relays: AddrList2,
+    pub relay4: DhcpRelay,
+    pub doing_relay_6: bool,
+    pub relay6: DhcpRelay,
+    pub delay_conf: DelayConfig,
+    pub override_0: i32,
+    pub enable_pxe: bool,
+    pub ra_enabled: bool,
+    pub doing_dhcp: bool,
+    pub relay4_enabled: bool,
+    pub dhcp6_enabled: bool,
+    pub relay6_enabled: bool,
+    pub dhcp_ignore: DhcpNetIdList,
+    pub dhcp_ignore_names: DhcpNetIdList,
+    pub dhcp_gen_names: DhcpNetIdList,
+    pub force_broadcast: DhcpNetIdList,
+    pub bootp_dynamic: DhcpNetIdList,
+    pub dhcp_hosts_file: HostsFile,
+    pub dhcp_opts_file: HostsFile,
+    pub use_dynamic_dirs: bool,
+    pub dynamic_dirs: HostsFile,
+    pub dhcp_max: u32,
+    pub tftp_max: u32,
+    pub tftp_mtu: u16,
+    pub dhcp_server_port: u16,
+    pub dhcp_client_port: u16,
+    pub start_tftp_port: u16,
+    pub end_tftp_port: u16,
+    pub min_leasetime: u32,
+    pub doctors: Doctor,
+    pub edns_pktsz: u16,
+    pub tftp_prefix: String,
+    pub if_prefix: TftpPrefix,
+    pub duid_enterprise: u32,
+    pub duid_config_len: u32,
+    pub duid_config: String,
+    pub dbus_name: String,
+    pub ubus_name: String,
+    pub dump_file: PathBuf,
+    pub dump_mask: u32,
+    pub soa_sn: u32,
+    pub soa_refresh: u32,
+    pub soa_retry: u32,
+    pub soa_expiry: u32,
+    pub metrics: [u32; 20],
+    pub packet: Vec<u8>,
+    // pub packet_buff_sz: i32,
+    pub namebuff: String,
+    pub frec_list: Frec,
+    pub free_frec_src: FrecSrc,
+    pub frec_src_count: u32,
+    pub sfds: ServerFd,
+    pub interfaces: Irec,
+    pub listeners: Vec<Listener>,
+    pub last_server: Server,
+    pub forwardtime: time::Instant,
+    pub forwardcount: ue,
+    pub srv_save: Option<Server>,
+    pub packet_len: usize,
+    pub rfd_save: RandFd,
+    pub tcp_pids: [PidT; 20],
+    pub tcp_pipes: [i32; 20],
+    pub pipe_to_parent: u32,
+    pub randomsocks: [RandFd; 64],
+    pub v6pktinfo: u32,
+    pub interface_addrs: AddressListEntry,
+    pub log_id: u32,
+    pub log_display_id: u32,
+    pub log_source_addr: NetAddress,
+    pub dhcpfd: Option<UdpSocket>,
+    pub helperfd: Option<Socket>,
+    pub pxefd: Option<UdpSocket>,
+    pub inotifyfd: i32,
+    pub netlinkfd: i32,
+    pub kernel_version: i32,
+    pub dhcp_packet: Vec<u8>,
+    pub dhcp_buff: Vec<u8>,
+    pub dhcp_buff2: Vec<u8>,
+    pub dhcp_buff3: Vec<u8>,
+    pub ping_results: PingResult,
+    pub lease_stream: FILE,
+    pub bridges: DhcpBridge,
+    pub shared_networks: SharedNetwork,
+    pub duid_len: u32,
+    pub duid: Vec<u8>,
+    pub outpacket: Vec<u8>,
+    pub dhcp6fd: Socket,
+    pub icmp6fd: u32,
+    pub dbus: u32,
+    pub tftp_trans: TftpTransfer,
+    pub tftp_done_trans: TftpTransfer,
+    pub addrbuff: Vec<u8>,
+    pub addrbuff2: Vec<u8>,
+    pub dumpfd: File,
+}
+
+pub const F_IPV4: u32 = (1) << 7 as i32;
+pub const F_IPV6: u32 = (1) << 8 as i32;
+pub const ADDRLIST_IPV6: i32 = 2 as i32;
+pub const F_DHCP: u32 = (1) << 4 as i32;
+pub const F_HOSTS: u32 = (1) << 6 as i32;
+pub const F_FORWARD: u32 = (1) << 3 as i32;
+pub const F_NXDOMAIN: u32 = (1) << 10 as i32;
+pub const F_NEG: u32 = (1) << 5 as i32;
+pub const F_AUTH: u32 = (1) << 21 as i32;
+pub const F_CNAME: u32 = (1) << 11 as i32;
+pub const F_CONFIG: u32 = (1) << 13 as i32;
+pub const F_RRNAME: u32 = (1) << 17 as i32;
+pub const ADDRSTRLEN: i32 = 46 as i32;
+pub const ADDRLIST_REVONLY: i32 = 4 as i32;
+pub const F_REVERSE: u32 = (1) << 2 as i32;
+
+pub const _STAT_VER_LINUX: i32 = 1 as i32;
+pub const _STAT_VER: i32 = _STAT_VER_LINUX;
+
+// https://code.woboq.org/userspace/glibc/libio/libioP.h.html#117
+// pub type _IO_finish_t = fn(*mut FILE, i32);
+// pub type _IO_overflow_t = fn(*mut FILE, i32) -> i32;
+// pub type _IO_underflow_t = fn(*mut FILE) -> i32;
+// pub type _IO_pbackfail_t = fn(*mut FILE, i32) -> i32;
+// pub type _IO_xsputn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> Off64T;
+// pub type _IO_xsgetn_t = fn(FP: *mut FILE, DATA: *mut libc::c_void, N: libc::size_t) -> libc::size_t;
+// pub type _IO_seekoff_t = fn(FP: *mut FILE, OFF: Off64T, DIR: i32, MODE: i32) -> Off64T;
+// pub type _IO_seekpos_t = fn(*mut FILE, Off64T, i32) -> Off64T;
+// pub type _IO_setbuf_t = fn(*mut FILE, String, libc::ssize_t) -> *mut FILE;
+// pub type _IO_sync_t = fn(*mut FILE) -> i32;
+// pub type _IO_doallocate_t = fn(*mut FILE) -> i32;
+// pub type _IO_read_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
+// pub type _IO_write_t = fn(*mut FILE, *mut libc::c_void, libc::ssize_t) -> libc::ssize_t;
+// pub type _IO_seek_t = fn(*mut FILE, *mut Off64T, i32) -> Off64T;
+// pub type _IO_close_t = fn(*mut FILE) -> i32;
+// pub type _IO_stat_t = fn(*mut FILE, *mut libc::c_void) -> i32;
+// pub type _IO_showmanyc_t = fn(*mut FILE) -> i32;
+// pub type _IO_imbue_t = fn(*mut FILE, libc::c_void);
+
+// #define JUMP_FIELD(TYPE, NAME) TYPE NAME
+// pub struct _IO_jump_t
+// {
+//     // JUMP_FIELD(size_t, __dummy);
+//     pub __dummy: libc::size_t,
+//     // JUMP_FIELD(size_t, __dummy2);
+//     pub __dummy2: libc::size_t,
+//     // JUMP_FIELD(_IO_finish_t, __finish);
+//     pub __finish: _IO_finish_t,
+//     // JUMP_FIELD(_IO_overflow_t, __overflow);
+//     pub __overflow: _IO_overflow_t,
+//     // JUMP_FIELD(_IO_underflow_t, __underflow);
+//     pub __underflow: _IO_underflow_t,
+//     // JUMP_FIELD(_IO_underflow_t, __uflow);
+//     pub __uflow: _IO_underflow_t,
+//     // JUMP_FIELD(_IO_pbackfail_t, __pbackfail);
+//     pub __pbackfail: _IO_pbackfail_t,
+//     /* showmany */
+//     // JUMP_FIELD(_IO_xsputn_t, __xsputn);
+//     pub __xsputn: _IO_xsputn_t,
+//     // JUMP_FIELD(_IO_xsgetn_t, __xsgetn);
+//     pub __xsgetn: _IO_xsgetn_t,
+//     // JUMP_FIELD(_IO_seekoff_t, __seekoff);
+//     pub __seekpos: _IO_seekpos_t,
+//     // JUMP_FIELD(_IO_seekpos_t, __seekpos);
+//     pub __seekoff: _IO_seekoff_t,
+//     // JUMP_FIELD(_IO_setbuf_t, __setbuf);
+//     pub __setbuf: _IO_setbuf_t,
+//     // JUMP_FIELD(_IO_sync_t, __sync);
+//     pub __sync: _IO_sync_t,
+//     // JUMP_FIELD(_IO_doallocate_t, __doallocate);
+//     pub __doallocate: _IO_doallocate_t,
+//     // JUMP_FIELD(_IO_read_t, __read);
+//     pub __read: _IO_read_t,
+//     // JUMP_FIELD(_IO_write_t, __write);
+//     pub __write: _IO_write_t,
+//     // JUMP_FIELD(_IO_seek_t, __seek);
+//     pub __seek: _IO_seek_t,
+//     // JUMP_FIELD(_IO_close_t, __close);
+//     pub __close: _IO_close_t,
+//     // JUMP_FIELD(_IO_stat_t, __stat);
+//     pub __stat: _IO_stat_t,
+//     // JUMP_FIELD(_IO_showmanyc_t, __showmanyc);
+//     pub __showmanyc: _IO_showmanyc_t,
+//     // JUMP_FIELD(_IO_imbue_t, __imbue);
+//     pub __imbue: _IO_imbue_t,
+// }
+
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub struct _IO_wide_data
+// {
+// //   wchar_t *_IO_read_ptr;        /* Current read pointer */
+//     pub _IO_read_ptr: *mut libc::wchar_t,
+// //   wchar_t *_IO_read_end;        /* End of get area. */
+//     pub _IO_read_end: *mut libc::wchar_t,
+// //   wchar_t *_IO_read_base;        /* Start of putback+get area. */
+//     pub _IO_read_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_write_base;        /* Start of put area. */
+//     pub _IO_wriate_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_write_ptr;        /* Current put pointer. */
+//     pub _IO_write_ptr: *mut libc::wchar_t,
+// //   wchar_t *_IO_write_end;        /* End of put area. */
+//     pub _IO_write_ned: *mut libc::wchar_t,
+// //   wchar_t *_IO_buf_base;        /* Start of reserve area. */
+//     pub _IO_buf_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_buf_end;                /* End of reserve area. */
+//     pub _IO_buf_end: *mut libc::wchar_t,
+//   /* The following fields are used to support backing up and undo. */
+// //   wchar_t *_IO_save_base;        /* Pointer to start of non-current get area. */
+//     pub _IO_save_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_backup_base;        /* Pointer to first valid character of                                    backup area */
+//     pub _IO_backup_base: *mut libc::wchar_t,
+// //   wchar_t *_IO_save_end;        /* Pointer to end of non-current get area. */
+//     pub _IO_save_end: *mut libc::wchar_t,
+// //   __mbstate_t _IO_state;
+//     pub _IO_state: *mut __mbstate_t,
+// //   __mbstate_t _IO_last_state;
+//     pub __IO_laste_state: *mut __mbstate_t,
+// //   struct _IO_codecvt _codecvt;
+//     pub __codecvt: *mut _IO_codecvt,
+// //   wchar_t _shortbuf[1];
+//     pub _shortbuf: [libc::wchar_t;1],
+// //   const struct _IO_jump_t *_wide_vtable;
+//     pub _wide_vtable: *mut _IO_jump_t,
+// }
+
+pub const _MKNOD_VER: i32 = 0 as i32;
+pub const DHCP_CHADDR_MAX: i32 = 16 as i32;
+
+// #[inline]
+// pub fn tolower(mut __c: i32) -> i32 {
+//     return if __c >= -(128 as i32) && __c < 256 as i32 {
+//                 *(*__ctype_tolower_loc()).offset(__c as )
+//             } else { __c };
+// }
+
+// #[inline]
+// pub fn toupper(mut __c: i32) -> i32 {
+//     return if __c >= -(128 as i32) && __c < 256 as i32 {
+//                 *(*__ctype_toupper_loc()).offset(__c as )
+//             } else { __c };
+// }
+
+//
+// pub fn __ctype_tolower_loc() -> *mut *const __int32_t;
+
+//
+// pub fn __ctype_toupper_loc() -> *mut *const __int32_t;
+
+//
+// pub fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
+
+pub const LOG_WARNING: i32 = 4 as i32;
+pub const LOG_INFO: i32 = 6 as i32;
+
+pub const KEYBLOCK_LEN: i32 = 40 as i32;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DnsHeader {
+    pub id: u16,
+    pub hb3: u8,
+    pub hb4: u8,
+    pub qdcount: u16,
+    pub ancount: u16,
+    pub nscount: u16,
+    pub arcount: u16,
+}
+
+pub const HB4_RCODE: i32 = 0xf as i32;
+
+pub const HB3_TC: i32 = 0x2 as i32;
+
+pub const HB3_AA: i32 = 0x4 as i32;
+
+pub const HB4_AD: i32 = 0x20 as i32;
+
+pub const HB4_RA: i32 = 0x80 as i32;
+
+pub const HB3_QR: i32 = 0x80 as i32;
+
+pub const C_IN: i32 = 1 as i32;
+
+pub const T_SOA: i32 = 6 as i32;
+
+pub const T_A: i32 = 1 as i32;
+
+pub const T_AAAA: i32 = 28 as i32;
+
+pub const T_CNAME: i32 = 5 as i32;
+
+pub const T_NAPTR: i32 = 35 as i32;
+
+pub const T_TXT: i32 = 16 as i32;
+
+pub const T_MX: i32 = 15 as i32;
+
+pub const T_SRV: i32 = 33 as i32;
+
+pub const T_NS: i32 = 2 as i32;
+
+pub const T_AXFR: i32 = 252 as i32;
+
+pub const T_PTR: i32 = 12 as i32;
+
+pub const QUERY: i32 = 0 as i32;
+
+pub const HB3_OPCODE: i32 = 0x78 as i32;
+
+//
+// pub fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
+//          -> *mut libc::c_char;
+
+//
+// pub fn strcat(_: *mut libc::c_char, _: *const libc::c_char)
+//     -> *mut libc::c_char;
+
+//
+// pub fn strcmp(_: *const libc::c_char, _: *const libc::c_char)
+//     -> i32;
+
+//
+// pub fn strchr(_: *const libc::c_char, _: i32)
+//     -> *mut libc::c_char;
+
+//
+// pub fn strlen(_: *const libc::c_char) -> libc::c_ulong;
+
+//
+// pub static mut stdin: *mut FILE;
+
+//
+// pub static mut stdout: *mut FILE;
+
+//
+// pub fn vfprintf(_: *mut FILE, _: *const libc::c_char,
+//                 _: ::std::ffi::VaList) -> i32;
+
+//
+// pub fn getc(__stream: *mut FILE) -> i32;
+
+//
+// pub fn putc(__c: i32, __stream: *mut FILE) -> i32;
+
+//
+// pub fn __uflow(_: *mut FILE) -> i32;
+
+//
+// pub fn __overflow(_: *mut FILE, _: i32) -> i32;
+
+//
+// pub fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+//                     __delimiter: i32, __stream: *mut FILE)
+//     -> __ssize_t;
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct C2rustUnnamed10 {
+    pub _type: u32,
+    pub name: String,
+}
+
+impl fmt::Display for C2rustUnnamed10 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "_type={}, name={}", self._type, self.name)
+    }
+}
+
+pub const SMALLDNAME: i32 = 50 as i32;
+
+// pub const HOSTSFILE: [i8; 11] = unsafe {
+//     *::std::mem::transmute::<&[u8; 11], &[i8; 11]>("/etc/hosts")
+// };
+pub const HOSTSFILE: &str = "/etc/hosts";
+
+pub const NOTIMP: i32 = 4 as i32;
+pub const REFUSED: i32 = 5 as i32;
+pub const SERVFAIL: i32 = 2 as i32;
+pub const MAXDNAME: i32 = 1025 as i32;
+pub const LOG_ERR: i32 = 3 as i32;
+pub const LOG_DAEMON: i32 = (3 as i32) << 3 as i32;
+
+// pub const errno: i32 = *__errno_location();
+//
+//  pub fn __errno_location() -> *mut i32;
+//
+// pub fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
+//
+// pub fn ctime(__timer: *const time_t) -> *mut libc::c_char;
+// extern "C" {
+//     pub type _IO_wide_data;
+//     pub type _IO_codecvt;
+//     pub type _IO_marker;
+//
+//     static mut stdin: *mut FILE;
+//
+//     static mut stdout: *mut FILE;
+//
+//     fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
+//      -> i32;
+//
+//     fn getc(__stream: *mut FILE) -> i32;
+//
+//     fn putc(__c: i32, __stream: *mut FILE) -> i32;
+//
+//     fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+//                   __delimiter: i32, __stream: *mut FILE) -> __ssize_t;
+//
+//     fn __xstat(__ver: i32, __filename: *const libc::c_char,
+//                __stat_buf: *mut stat) -> i32;
+//
+//     fn __fxstat(__ver: i32, __fildes: i32,
+//                 __stat_buf: *mut stat) -> i32;
+//
+//     fn __xstat64(__ver: i32, __filename: *const libc::c_char,
+//                  __stat_buf: *mut stat64) -> i32;
+//
+//     fn __fxstat64(__ver: i32, __fildes: i32,
+//                   __stat_buf: *mut stat64) -> i32;
+//
+//     fn __fxstatat(__ver: i32, __fildes: i32,
+//                   __filename: *const libc::c_char, __stat_buf: *mut stat,
+//                   __flag: i32) -> i32;
+//
+//     fn __fxstatat64(__ver: i32, __fildes: i32,
+//                     __filename: *const libc::c_char, __stat_buf: *mut stat64,
+//                     __flag: i32) -> i32;
+//
+//     fn __lxstat(__ver: i32, __filename: *const libc::c_char,
+//                 __stat_buf: *mut stat) -> i32;
+//
+//     fn __lxstat64(__ver: i32, __filename: *const libc::c_char,
+//                   __stat_buf: *mut stat64) -> i32;
+//
+//     fn __xmknod(__ver: i32, __path: *const libc::c_char,
+//                 __mode: __mode_t, __dev: *mut __dev_t) -> i32;
+//
+//     fn __xmknodat(__ver: i32, __fd: i32,
+//                   __path: *const libc::c_char, __mode: __mode_t,
+//                   __dev: *mut __dev_t) -> i32;
+//
+//     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
+//      -> *mut libc::c_void;
+//
+//     fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
+//               _: libc::c_ulong) -> i32;
+//
+//     fn __uflow(_: *mut FILE) -> i32;
+//
+//     fn __overflow(_: *mut FILE, _: i32) -> i32;
+//
+//     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+//      -> libc::c_double;
+//
+//     fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//               _: i32) -> libc::c_long;
+//
+//     fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//                _: i32) -> libc::c_longlong;
+//
+//     fn __ctype_tolower_loc() -> *mut *const __int32_t;
+//
+//     fn __ctype_toupper_loc() -> *mut *const __int32_t;
+//
+//     fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
+//
+//     fn __strtol_internal(__nptr: *const libc::c_char,
+//                          __endptr: *mut *mut libc::c_char,
+//                          __base: i32, __group: i32)
+//      -> libc::c_long;
+//
+//     fn __strtoul_internal(__nptr: *const libc::c_char,
+//                           __endptr: *mut *mut libc::c_char,
+//                           __base: i32, __group: i32)
+//      -> libc::c_ulong;
+//
+//     fn __wcstol_internal(__nptr: *const __gwchar_t,
+//                          __endptr: *mut *mut __gwchar_t, __base: i32,
+//                          __group: i32) -> libc::c_long;
+//
+//     fn __wcstoul_internal(__nptr: *const __gwchar_t,
+//                           __endptr: *mut *mut __gwchar_t, __base: i32,
+//                           __group: i32) -> libc::c_ulong;
+//
+//     static mut dnsmasq_daemon: *mut dnsmasq_daemon;
+//
+//     fn whine_malloc(size: size_t) -> *mut libc::c_void;
+//
+//     fn iface_enumerate(family: i32, parm: *mut libc::c_void,
+//                        callback:
+//                            Option<fn() -> i32>)
+//      -> i32;
+//
+//     fn queue_arp(action: i32, mac: *mut u8,
+//                  maclen: i32, family: i32,
+//                  addr: *mut all_addr);
+// }
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct __va_list_tag {
+//     pub gp_offset: u32,
+//     pub fp_offset: u32,
+//     pub overflow_arg_area: *mut libc::c_void,
+//     pub reg_save_area: *mut libc::c_void,
+// }
+
+/* No MAC addr */
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct ArpRecord {
+    pub hwlen: u16,
+    pub status: u16,
+    pub family: u32,
+    pub hwaddr: [u8; 16],
+    pub addr: NetAddress,
+}
+
+pub type KernelSaFamily = u16;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct AtalkAddr {
+    pub s_net: __be16,
+    pub s_node: __u8,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct NetAddressAt {
+    pub sat_family: KernelSaFamily,
+    pub sat_port: __u8,
+    pub sat_addr: AtalkAddr,
+    pub sat_zer: [i8; 8],
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct Ax25Address {
+    pub ax25_call: [i8; 7],
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct NetAddressAx25 {
+    pub sax25_family: KernelSaFamily,
+    pub sax25_call: Ax25Address,
+    pub sax25_ndigis: i32,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct NetAddressDl {
+    pub sdl_len: u8,
+    pub sdl_family: u8,
+    pub sdl_index: u16,
+    pub sdl_nlen: u8,
+    pub sdl_alen: u8,
+    pub sdl_slen: u8,
+    pub sdl_data: [char; 12],
+}
+
+// struct sockaddr_eon {
+// 	u_char 			seon_len;	/* Length */
+// 	u_char 			seon_family;	/* AF_ISO */
+// 	u_char			seon_status;	/* overlays session suffixlen */
+// #define EON_ESLINK_UP		0x1
+// #define EON_ESLINK_DOWN		0x2
+// #define EON_ISLINK_UP		0x10
+// #define EON_ISLINK_DOWN		0x20
+// /* no change is neither up or down */
+// 	u_char			seon_pad1;	/* 0, overlays tsfxlen */
+// 	u_char			seon_adrlen;
+// 	u_char			seon_afi;		/* 47 */
+// 	u_char			seon_idi[2];	/* 0006 */
+// 	u_char			seon_vers;		/* 03 */
+// 	u_char			seon_glbnum[2];	/* see RFC 1069 */
+// 	u_char			seon_RDN[2];	/* see RFC 1070 */
+// 	u_char			seon_pad2[3];	/* see RFC 1070 */
+// 	u_char			seon_LAREA[2];	/* see RFC 1070 */
+// 	u_char			seon_pad3[2];	/* see RFC 1070 */
+// 		/* right now ip addr is  aligned  -- be careful --
+// 		 * future revisions may have it u_char[4]
+// 		 */
+// 	u_int			seon_ipaddr;	/* a.b.c.d */
+// 	u_char			seon_protoid;	/* NSEL */
+// };
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SockaddrEon {
+//     pub seon_len: u8,
+//     pub seon_family: u8,
+//     pub seon_status: u8,
+//     pub seon_pad1: u8,
+//     pub seon_adrlen: u8,
+//     pub seon_afi: u8,
+//     pub seon_idi: [u8;2],
+//     pub seon_vers: u8,
+//     pub seon_glbnum: [u8;2],
+//     pub seon_RDN: [u8;2],
+//     pub seon_pad2: [u8;3],
+//     pub seon_LAREA: [u8;2],
+//     pub seon_pad3: [u8;2],
+//     pub seon_ipaddr: u32,
+//     pub seon_protoid: u8
+// }
+
+//  #ifndef BURN_BRIDGES    /* Can be used by third party software. */
+//  struct sockaddr_inarp {
+//          u_char  sin_len;
+//          u_char  sin_family;
+//          u_short sin_port;
+//          struct  in_addr sin_addr;
+//          struct  in_addr sin_srcaddr;
+//          u_short sin_tos;
+//          u_short sin_other;
+//  #define SIN_PROXY 1
+//  };
+//  #endif /* !BURN_BRIDGES  */
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct sockaddr_inarp {
+//     pub sin_len: u8,
+//     pub sin_family: u8,
+//     pub sin_port: u16,
+//     pub sin_addr: NetAddress,
+//     pub sin_srcaddr: NetAddress,
+//     pub sin_tos: u16,
+//     pub sin_other: u16,
+// }
+
+// type __be32 = u32;
+
+pub const IPX_NODE_LEN: usize = 6;
+
+//     9 struct sockaddr_ipx {
+//    10     __kernel_sa_family_t sipx_family;
+//    11     __be16      sipx_port;
+//    12     __be32      sipx_network;
+//    13     unsigned char   sipx_node[IPX_NODE_LEN];
+//    14     __u8        sipx_type;
+//    15     unsigned char   sipx_zero;  /* 16 byte fill */
+//    16 };
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct sockaddr_ipx {
+//     sipx_family: KernelSaFamily,
+//     sipx_port: __be16,
+//     sipx_network: __be32,
+//     sipx_node: [u8;IPX_NODE_LEN],
+//     sipx_type: __u8,
+//     sipx_zero: u8
+// }
+
+// struct IsoAddr {
+// 	u_char	isoa_len;						/* length (in bytes) */
+// 	char	isoa_genaddr[20];				/* general opaque address */
+// };
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IsoAddr {
+    pub isoa_len: u8,
+    pub isoa_genaddr: [u8; 20],
+}
+
+// struct sockaddr_iso {
+// 	u_char	 			siso_len;			/* length */
+// 	u_char	 			siso_family;		/* family */
+// 	u_char				siso_plen;			/* presentation selector length */
+// 	u_char				siso_slen;			/* session selector length */
+// 	u_char				siso_tlen;			/* transport selector length */
+// 	struct 	IsoAddr	siso_addr;			/* network address */
+// 	u_char				siso_pad[6];		/* space for gosip v2 sels */
+// 											/* makes struct 32 bytes long */
+// };
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct sockaddr_iso {
+//     siso_len: u8,
+//     siso_family: u8,
+//     siso_plen: u8,
+//     siso_slen: u8,
+//     siso_tlen: u8,
+//     siso_addr: IsoAddr,
+//     siso_pad: [u8;6]
+// }
+
+//  union sockaddr_ns {
+//    struct sockaddr sa;
+//    struct sockaddr_in sin;
+//  #ifdef HAVE_IPv6
+//    struct sockaddr_in6 sin6;
+//  #endif
+//  };
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct sockaddr_ns {
+//     sa: SockAddr,
+//     sin: SockAddrIn,
+//     sin6: SockAddrIn6
+// }
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct x25_address {
+//     pub x25_addr: [char;16]
+// }
+
+// struct sockaddr_x25 {
+//    61     __kernel_sa_family_t sx25_family;   /* Must be AF_X25 */
+//    62     struct x25_address sx25_addr;       /* X.121 Address */
+//    63 };
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct sockaddr_x25 {
+//     sx25_family: KernelSaFamily,
+//     sx25_addr: x25_address
+// }
+
+// #[derive(Copy, Clone, Debug)]
+// #[repr(C)]
+// pub union NetAddressArg {
+//     pub __NetAddress__: NetAddress,
+//     pub __NetAddress_at__: NetAddressAt,
+//     pub __NetAddress_ax25__: NetAddressAx25,
+//     pub __NetAddress_dl__: NetAddressDl,
+//     pub __NetAddress_eon__: NetAddressEon,
+//     pub __NetAddress_in__: NetAddress,
+//     pub __NetAddress_in6__: NetAddress,
+//     pub __NetAddress_inarp__: NetAddress_inarp,
+//     pub __NetAddress_ipx__: NetAddress_ipx,
+//     pub __NetAddress_iso__: NetAddress_iso,
+//     pub __NetAddress_ns__: NetAddress_ns,
+//     pub __NetAddress_un__: NetAddressUn,
+//     pub __NetAddress_x25__: NetAddress_x25,
+// }
+
+// pub type __clock_t = libc::c_long;
+// pub type gid_t = GidT;
+// pub type uid_t = UidT;
+// pub type ssize_t = SsizeT;
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct __sigset_t {
+//     pub __val: [libc::c_ulong; 16],
+// }
+// pub type sigset_t = __sigset_t;
+// pub type __socket_type = u32;
+pub const SOCK_NONBLOCK: __socket_type = 2048;
+pub const SOCK_CLOEXEC: __socket_type = 524288;
+pub const SOCK_PACKET: __socket_type = 10;
+pub const SOCK_DCCP: __socket_type = 6;
+pub const SOCK_SEQPACKET: __socket_type = 5;
+pub const SOCK_RDM: __socket_type = 4;
+pub const SOCK_RAW: __socket_type = 3;
+pub const SOCK_DGRAM: __socket_type = 2;
+pub const SOCK_STREAM: __socket_type = 1;
+pub const SHUT_RDWR: u8 = 2;
+pub const SHUT_WR: u8 = 1;
+pub const SHUT_RD: u8 = 0;
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct NetAddressUn {
+    pub sun_family: SaFamily,
+    pub sun_path: [i8; 108],
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub union ConstNetAddressArg {
+    pub __NetAddress__: *const NetAddress,
+    pub __NetAddress_at__: *const NetAddressAt,
+    pub __NetAddress_ax25__: *const NetAddressAx25,
+    pub __NetAddress_dl__: *const NetAddressDl,
+    pub __NetAddress_eon__: *const NetAddressEon,
+    pub __NetAddress_in__: *const NetAddress,
+    pub __NetAddress_in6__: *const NetAddress,
+    pub __NetAddress_inarp__: *const NetAddress_inarp,
+    pub __NetAddress_ipx__: *const NetAddress_ipx,
+    pub __NetAddress_iso__: *const NetAddress_iso,
+    pub __NetAddress_ns__: *const NetAddress_ns,
+    pub __NetAddress_un__: *const NetAddressUn,
+    pub __NetAddress_x25__: *const NetAddress_x25,
+}
+
+pub const IPPROTO_MAX: i32 = 256;
+pub const IPPROTO_RAW: i32 = 255;
+pub const IPPROTO_MPLS: i32 = 137;
+pub const IPPROTO_UDPLITE: i32 = 136;
+pub const IPPROTO_SCTP: i32 = 132;
+pub const IPPROTO_COMP: i32 = 108;
+pub const IPPROTO_PIM: i32 = 103;
+pub const IPPROTO_ENCAP: i32 = 98;
+pub const IPPROTO_BEETPH: i32 = 94;
+pub const IPPROTO_MTP: i32 = 92;
+pub const IPPROTO_AH: i32 = 51;
+pub const IPPROTO_ESP: i32 = 50;
+pub const IPPROTO_GRE: i32 = 47;
+pub const IPPROTO_RSVP: i32 = 46;
+pub const IPPROTO_IPV6: i32 = 41;
+pub const IPPROTO_DCCP: i32 = 33;
+pub const IPPROTO_TP: i32 = 29;
+pub const IPPROTO_IDP: i32 = 22;
+pub const IPPROTO_UDP: i32 = 17;
+pub const IPPROTO_PUP: i32 = 12;
+pub const IPPROTO_EGP: i32 = 8;
+pub const IPPROTO_TCP: i32 = 6;
+pub const IPPROTO_IPIP: i32 = 4;
+pub const IPPROTO_IGMP: i32 = 2;
+pub const IPPROTO_ICMP: i32 = 1;
+pub const IPPROTO_IP: i32 = 0;
+// pub type __u32 = u32;
+
+// pub const EthertypeIpv4: u16 = 0x0800;
+// pub const EthertypeIpv6: u16 = 0x86DD;
+#[derive(FromPrimitive)]
+enum Ethertype {
+    EthertypeIpv4 = 0x0800,
+    EthertypeIpv6 = 0x86DD,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub union Sigval {
+    pub sival_int: i32,
+    pub sival_ptr: Vec<u8>,
+}
+
+// pub type __sigval_t = Sigval;
+// __WINT_TYPE__ unsigned int
+// pub type __WINT_TYPE__ = u32;
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub union Unnamed29 {
+    pub __wch: __WINT_TYPE__,
+    pub __wchb: [i8; 4],
+}
+
+// #[derive(Clone, Copy)]
+// #[repr(C)]
+// pub struct __mbstate_t
+// {
+// //   int __count;
+//     pub __count: i32,
+// //   union
+// //   {
+// //     __WINT_TYPE__ __wch;
+// //     char __wchb[4];
+// //   } __value;
+//              /* Value so far.  */
+//     pub __value: Unnamed29,
+// }
+
+// __mbstate_t _IO_state;
+// pub type _IO_state = __mbstate_t;
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct SiginfoT {
+//     pub si_signo: i32,
+//     pub si_errno: i32,
+//     pub si_code: i32,
+//     pub __pad0: i32,
+//     pub _sifields: C2rustUnnamed2,
+// }
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct C2rustUnnamed8 {
+    pub si_pid: PidT,
+    pub si_uid: UidT,
+    pub si_status: i32,
+    pub si_utime: __clock_t,
+    pub si_stime: __clock_t,
+}
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct C2rustUnnamed9 {
+    pub si_pid: PidT,
+    pub si_uid: UidT,
+    pub si_sigval: __sigval_t,
+}
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct C2rustUnnamed11 {
+    pub si_pid: PidT,
+    pub si_uid: UidT,
+}
+// pub type __sighandler_t = Option<fn(_: i32) -> ()>;
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct Sigaction {
+//     pub __sigaction_handler: C2rustUnnamed12,
+//     pub sa_mask: __sigset_t,
+//     pub sa_flags: i32,
+//     pub sa_restorer: Option<fn() -> ()>,
+// }
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub union C2rustUnnamed12 {
+//     pub sa_handler: __sighandler_t,
+//     pub sa_sigaction: Option<fn(_: i32,
+//                                                   _: *mut SiginfoT,
+//                                                   _: *mut libc::c_void)
+//                                                   -> ()>,
+// }
+
+// pub type C2RustUnnamed_13 = u32;
+pub const _SC_THREAD_ROBUST_PRIO_PROTECT: u32 = 248;
+pub const _SC_THREAD_ROBUST_PRIO_INHERIT: u32 = 247;
+pub const _SC_XOPEN_STREAMS: u32 = 246;
+pub const _SC_TRACE_USER_EVENT_MAX: u32 = 245;
+pub const _SC_TRACE_SYS_MAX: u32 = 244;
+pub const _SC_TRACE_NAME_MAX: u32 = 243;
+pub const _SC_TRACE_EVENT_NAME_MAX: u32 = 242;
+pub const _SC_SS_REPL_MAX: u32 = 241;
+pub const _SC_V7_LPBIG_OFFBIG: u32 = 240;
+pub const _SC_V7_LP64_OFF64: u32 = 239;
+pub const _SC_V7_ILP32_OFFBIG: u32 = 238;
+pub const _SC_V7_ILP32_OFF32: u32 = 237;
+pub const _SC_RAW_SOCKETS: u32 = 236;
+pub const _SC_IPV6: u32 = 235;
+pub const _SC_LEVEL4_CACHE_LINESIZE: u32 = 199;
+pub const _SC_LEVEL4_CACHE_ASSOC: u32 = 198;
+pub const _SC_LEVEL4_CACHE_SIZE: u32 = 197;
+pub const _SC_LEVEL3_CACHE_LINESIZE: u32 = 196;
+pub const _SC_LEVEL3_CACHE_ASSOC: u32 = 195;
+pub const _SC_LEVEL3_CACHE_SIZE: u32 = 194;
+pub const _SC_LEVEL2_CACHE_LINESIZE: u32 = 193;
+pub const _SC_LEVEL2_CACHE_ASSOC: u32 = 192;
+pub const _SC_LEVEL2_CACHE_SIZE: u32 = 191;
+pub const _SC_LEVEL1_DCACHE_LINESIZE: u32 = 190;
+pub const _SC_LEVEL1_DCACHE_ASSOC: u32 = 189;
+pub const _SC_LEVEL1_DCACHE_SIZE: u32 = 188;
+pub const _SC_LEVEL1_ICACHE_LINESIZE: u32 = 187;
+pub const _SC_LEVEL1_ICACHE_ASSOC: u32 = 186;
+pub const _SC_LEVEL1_ICACHE_SIZE: u32 = 185;
+pub const _SC_TRACE_LOG: u32 = 184;
+pub const _SC_TRACE_INHERIT: u32 = 183;
+pub const _SC_TRACE_EVENT_FILTER: u32 = 182;
+pub const _SC_TRACE: u32 = 181;
+pub const _SC_HOST_NAME_MAX: u32 = 180;
+pub const _SC_V6_LPBIG_OFFBIG: u32 = 179;
+pub const _SC_V6_LP64_OFF64: u32 = 178;
+pub const _SC_V6_ILP32_OFFBIG: u32 = 177;
+pub const _SC_V6_ILP32_OFF32: u32 = 176;
+pub const _SC_2_PBS_CHECKPOINT: u32 = 175;
+pub const _SC_STREAMS: u32 = 174;
+pub const _SC_SYMLOOP_MAX: u32 = 173;
+pub const _SC_2_PBS_TRACK: u32 = 172;
+pub const _SC_2_PBS_MESSAGE: u32 = 171;
+pub const _SC_2_PBS_LOCATE: u32 = 170;
+pub const _SC_2_PBS_ACCOUNTING: u32 = 169;
+pub const _SC_2_PBS: u32 = 168;
+pub const _SC_USER_GROUPS_R: u32 = 167;
+pub const _SC_USER_GROUPS: u32 = 166;
+pub const _SC_TYPED_MEMORY_OBJECTS: u32 = 165;
+pub const _SC_TIMEOUTS: u32 = 164;
+pub const _SC_SYSTEM_DATABASE_R: u32 = 163;
+pub const _SC_SYSTEM_DATABASE: u32 = 162;
+pub const _SC_THREAD_SPORADIC_SERVER: u32 = 161;
+pub const _SC_SPORADIC_SERVER: u32 = 160;
+pub const _SC_SPAWN: u32 = 159;
+pub const _SC_SIGNALS: u32 = 158;
+pub const _SC_SHELL: u32 = 157;
+pub const _SC_REGEX_VERSION: u32 = 156;
+pub const _SC_REGEXP: u32 = 155;
+pub const _SC_SPIN_LOCKS: u32 = 154;
+pub const _SC_READER_WRITER_LOCKS: u32 = 153;
+pub const _SC_NETWORKING: u32 = 152;
+pub const _SC_SINGLE_PROCESS: u32 = 151;
+pub const _SC_MULTI_PROCESS: u32 = 150;
+pub const _SC_MONOTONIC_CLOCK: u32 = 149;
+pub const _SC_FILE_SYSTEM: u32 = 148;
+pub const _SC_FILE_LOCKING: u32 = 147;
+pub const _SC_FILE_ATTRIBUTES: u32 = 146;
+pub const _SC_PIPE: u32 = 145;
+pub const _SC_FIFO: u32 = 144;
+pub const _SC_FD_MGMT: u32 = 143;
+pub const _SC_DEVICE_SPECIFIC_R: u32 = 142;
+pub const _SC_DEVICE_SPECIFIC: u32 = 141;
+pub const _SC_DEVICE_IO: u32 = 140;
+pub const _SC_THREAD_CPUTIME: u32 = 139;
+pub const _SC_CPUTIME: u32 = 138;
+pub const _SC_CLOCK_SELECTION: u32 = 137;
+pub const _SC_C_LANG_SUPPORT_R: u32 = 136;
+pub const _SC_C_LANG_SUPPORT: u32 = 135;
+pub const _SC_BASE: u32 = 134;
+pub const _SC_BARRIERS: u32 = 133;
+pub const _SC_ADVISORY_INFO: u32 = 132;
+pub const _SC_XOPEN_REALTIME_THREADS: u32 = 131;
+pub const _SC_XOPEN_REALTIME: u32 = 130;
+pub const _SC_XOPEN_LEGACY: u32 = 129;
+pub const _SC_XBS5_LPBIG_OFFBIG: u32 = 128;
+pub const _SC_XBS5_LP64_OFF64: u32 = 127;
+pub const _SC_XBS5_ILP32_OFFBIG: u32 = 126;
+pub const _SC_XBS5_ILP32_OFF32: u32 = 125;
+pub const _SC_NL_TEXTMAX: u32 = 124;
+pub const _SC_NL_SETMAX: u32 = 123;
+pub const _SC_NL_NMAX: u32 = 122;
+pub const _SC_NL_MSGMAX: u32 = 121;
+pub const _SC_NL_LANGMAX: u32 = 120;
+pub const _SC_NL_ARGMAX: u32 = 119;
+pub const _SC_USHRT_MAX: u32 = 118;
+pub const _SC_ULONG_MAX: u32 = 117;
+pub const _SC_UINT_MAX: u32 = 116;
+pub const _SC_UCHAR_MAX: u32 = 115;
+pub const _SC_SHRT_MIN: u32 = 114;
+pub const _SC_SHRT_MAX: u32 = 113;
+pub const _SC_SCHAR_MIN: u32 = 112;
+pub const _SC_SCHAR_MAX: u32 = 111;
+pub const _SC_SSIZE_MAX: u32 = 110;
+pub const _SC_NZERO: u32 = 109;
+pub const _SC_MB_LEN_MAX: u32 = 108;
+pub const _SC_WORD_BIT: u32 = 107;
+pub const _SC_LONG_BIT: u32 = 106;
+pub const _SC_INT_MIN: u32 = 105;
+pub const _SC_INT_MAX: u32 = 104;
+pub const _SC_CHAR_MIN: u32 = 103;
+pub const _SC_CHAR_MAX: u32 = 102;
+pub const _SC_CHAR_BIT: u32 = 101;
+pub const _SC_XOPEN_XPG4: u32 = 100;
+pub const _SC_XOPEN_XPG3: u32 = 99;
+pub const _SC_XOPEN_XPG2: u32 = 98;
+pub const _SC_2_UPE: u32 = 97;
+pub const _SC_2_C_VERSION: u32 = 96;
+pub const _SC_2_CHAR_TERM: u32 = 95;
+pub const _SC_XOPEN_SHM: u32 = 94;
+pub const _SC_XOPEN_ENH_I18N: u32 = 93;
+pub const _SC_XOPEN_CRYPT: u32 = 92;
+pub const _SC_XOPEN_UNIX: u32 = 91;
+pub const _SC_XOPEN_XCU_VERSION: u32 = 90;
+pub const _SC_XOPEN_VERSION: u32 = 89;
+pub const _SC_PASS_MAX: u32 = 88;
+pub const _SC_ATEXIT_MAX: u32 = 87;
+pub const _SC_AVPHYS_PAGES: u32 = 86;
+pub const _SC_PHYS_PAGES: u32 = 85;
+pub const _SC_NPROCESSORS_ONLN: u32 = 84;
+pub const _SC_NPROCESSORS_CONF: u32 = 83;
+pub const _SC_THREAD_PROCESS_SHARED: u32 = 82;
+pub const _SC_THREAD_PRIO_PROTECT: u32 = 81;
+pub const _SC_THREAD_PRIO_INHERIT: u32 = 80;
+pub const _SC_THREAD_PRIORITY_SCHEDULING: u32 = 79;
+pub const _SC_THREAD_ATTR_STACKSIZE: u32 = 78;
+pub const _SC_THREAD_ATTR_STACKADDR: u32 = 77;
+pub const _SC_THREAD_THREADS_MAX: u32 = 76;
+pub const _SC_THREAD_STACK_MIN: u32 = 75;
+pub const _SC_THREAD_KEYS_MAX: u32 = 74;
+pub const _SC_THREAD_DESTRUCTOR_ITERATIONS: u32 = 73;
+pub const _SC_TTY_NAME_MAX: u32 = 72;
+pub const _SC_LOGIN_NAME_MAX: u32 = 71;
+pub const _SC_GETPW_R_SIZE_MAX: u32 = 70;
+pub const _SC_GETGR_R_SIZE_MAX: u32 = 69;
+pub const _SC_THREAD_SAFE_FUNCTIONS: u32 = 68;
+pub const _SC_THREADS: u32 = 67;
+pub const _SC_T_IOV_MAX: u32 = 66;
+pub const _SC_PII_OSI_M: u32 = 65;
+pub const _SC_PII_OSI_CLTS: u32 = 64;
+pub const _SC_PII_OSI_COTS: u32 = 63;
+pub const _SC_PII_INTERNET_DGRAM: u32 = 62;
+pub const _SC_PII_INTERNET_STREAM: u32 = 61;
+pub const _SC_IOV_MAX: u32 = 60;
+pub const _SC_UIO_MAXIOV: u32 = 60;
+pub const _SC_SELECT: u32 = 59;
+pub const _SC_POLL: u32 = 58;
+pub const _SC_PII_OSI: u32 = 57;
+pub const _SC_PII_INTERNET: u32 = 56;
+pub const _SC_PII_SOCKET: u32 = 55;
+pub const _SC_PII_XTI: u32 = 54;
+pub const _SC_PII: u32 = 53;
+pub const _SC_2_LOCALEDEF: u32 = 52;
+pub const _SC_2_SW_DEV: u32 = 51;
+pub const _SC_2_FORT_RUN: u32 = 50;
+pub const _SC_2_FORT_DEV: u32 = 49;
+pub const _SC_2_C_DEV: u32 = 48;
+pub const _SC_2_C_BIND: u32 = 47;
+pub const _SC_2_VERSION: u32 = 46;
+pub const _SC_CHARCLASS_NAME_MAX: u32 = 45;
+pub const _SC_RE_DUP_MAX: u32 = 44;
+pub const _SC_LINE_MAX: u32 = 43;
+pub const _SC_EXPR_NEST_MAX: u32 = 42;
+pub const _SC_EQUIV_CLASS_MAX: u32 = 41;
+pub const _SC_COLL_WEIGHTS_MAX: u32 = 40;
+pub const _SC_BC_STRING_MAX: u32 = 39;
+pub const _SC_BC_SCALE_MAX: u32 = 38;
+pub const _SC_BC_DIM_MAX: u32 = 37;
+pub const _SC_BC_BASE_MAX: u32 = 36;
+pub const _SC_TIMER_MAX: u32 = 35;
+pub const _SC_SIGQUEUE_MAX: u32 = 34;
+pub const _SC_SEM_VALUE_MAX: u32 = 33;
+pub const _SC_SEM_NSEMS_MAX: u32 = 32;
+pub const _SC_RTSIG_MAX: u32 = 31;
+pub const _SC_PAGESIZE: u32 = 30;
+pub const _SC_VERSION: u32 = 29;
+pub const _SC_MQ_PRIO_MAX: u32 = 28;
+pub const _SC_MQ_OPEN_MAX: u32 = 27;
+pub const _SC_DELAYTIMER_MAX: u32 = 26;
+pub const _SC_AIO_PRIO_DELTA_MAX: u32 = 25;
+pub const _SC_AIO_MAX: u32 = 24;
+pub const _SC_AIO_LISTIO_MAX: u32 = 23;
+pub const _SC_SHARED_MEMORY_OBJECTS: u32 = 22;
+pub const _SC_SEMAPHORES: u32 = 21;
+pub const _SC_MESSAGE_PASSING: u32 = 20;
+pub const _SC_MEMORY_PROTECTION: u32 = 19;
+pub const _SC_MEMLOCK_RANGE: u32 = 18;
+pub const _SC_MEMLOCK: u32 = 17;
+pub const _SC_MAPPED_FILES: u32 = 16;
+pub const _SC_FSYNC: u32 = 15;
+pub const _SC_SYNCHRONIZED_IO: u32 = 14;
+pub const _SC_PRIORITIZED_IO: u32 = 13;
+pub const _SC_ASYNCHRONOUS_IO: u32 = 12;
+pub const _SC_TIMERS: u32 = 11;
+pub const _SC_PRIORITY_SCHEDULING: u32 = 10;
+pub const _SC_REALTIME_SIGNALS: u32 = 9;
+pub const _SC_SAVED_IDS: u32 = 8;
+pub const _SC_JOB_CONTROL: u32 = 7;
+pub const _SC_TZNAME_MAX: u32 = 6;
+pub const _SC_STREAM_MAX: u32 = 5;
+pub const _SC_OPEN_MAX: u32 = 4;
+pub const _SC_NGROUPS_MAX: u32 = 3;
+pub const _SC_CLK_TCK: u32 = 2;
+pub const _SC_CHILD_MAX: u32 = 1;
+pub const _SC_ARG_MAX: u32 = 0;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Passwd {
+    pub pw_name: String,
+    pub pw_passwd: String,
+    pub pw_uid: UidT,
+    pub pw_gid: GidT,
+    pub pw_gecos: String,
+    pub pw_dir: String,
+    pub pw_shell: String,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Group {
+    pub gr_name: String,
+    pub gr_passwd: String,
+    pub gr_gid: GidT,
+    pub gr_mem: String,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IpHdr {
+    // #[bitfield(name = "ip_hl", ty = "u32", bits = "0..=3")]
+    // #[bitfield(name = "ip_v", ty = "u32", bits = "4..=7")]
+    pub ip_hl_ip_v: u8,
+    pub ip_tos: u8,
+    pub ip_len: u16,
+    pub ip_id: u16,
+    pub ip_off: u16,
+    pub ip_ttl: u8,
+    pub ip_p: u8,
+    pub ip_sum: u16,
+    pub ip_src: u32,
+    pub ip_dst: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IcmpRaAddr {
+    pub ira_addr: u32,
+    pub ira_preference: u32,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IcmpHdr {
+    pub icmp_type: u8,
+    pub icmp_code: u8,
+    pub icmp_cksum: u16,
+    pub icmp_hun: C2rustUnnamed17,
+    pub icmp_dun: C2rustUnnamed14,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed14 {
+    pub id_ts: C2rustUnnamed16,
+    pub id_ip: C2rustUnnamed15,
+    pub id_radv: IcmpRaAddr,
+    pub id_mask: u32,
+    pub id_data: [u8; 1],
+}
+
+impl C2rustUnnamed14 {
+    pub fn new() -> C2rustUnnamed14 {
+        C2rustUnnamed14 {
+            id_ts: C2rustUnnamed16::new(),
+            id_ip: C2rustUnnamed15::new(),
+            id_radv: IcmpRaAddr::new(),
+            id_mask: 0,
+            id_data: [0; 1],
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed15 {
+    pub idi_ip: IpHdr,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed16 {
+    pub its_otime: u32,
+    pub its_rtime: u32,
+    pub its_ttime: u32,
+}
+
+impl C2rustUnnamed16 {
+    pub fn new() -> C2rustUnnamed16 {
+        C2rustUnnamed16 {
+            its_otime: 0,
+            its_rtime: 0,
+            its_ttime: 0,
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed17 {
+    pub ih_pptr: u8,
+    pub ih_gwaddr: NetAddress,
+    pub ih_idseq: IhIdSeq,
+    pub ih_void: u32,
+    pub ih_pmtu: IhPmtu,
+    pub ih_rtradv: IhRtrAdv,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IhRtrAdv {
+    pub irt_num_addrs: u8,
+    pub irt_wpa: u8,
+    pub irt_lifetime: u16,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IhPmtu {
+    pub ipm_void: u16,
+    pub ipm_nextmtu: u16,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IhIdSeq {
+    pub icd_id: u16,
+    pub icd_seq: u16,
+}
+
+// pub type libc_lock_t = i32;
+
+// struct __dirstream
+//   {
+//     int fd;                        /* File descriptor.  */
+//     __libc_lock_define (, lock) /* Mutex lock for this structure.  */
+//     size_t allocation;                /* Space allocated for the block.  */
+//     size_t size;                /* Total valid data in the block.  */
+//     size_t offset;                /* Current offset into the block.  */
+//     off_t filepos;                /* Position of next entry to read.  */
+//     int errcode;                /* Delayed error code.  */
+//     /* Directory block.  We must make sure that this block starts
+//        at an address that is aligned adequately enough to store
+//        dirent entries.  Using the alignment of "void *" is not
+//        sufficient because dirents on 32-bit platforms can require
+//        64-bit alignment.  We use "long double" here to be consistent
+//        with what malloc uses.  */
+//     char data[0] __attribute__ ((aligned (__alignof__ (long double))));
+//   };
+// pub struct __dirstream {
+//     pub fd: i32,
+//     pub lock: libc_lock_t,
+//     pub allocation: libc::size_t,
+//     pub size: libc::size_t,
+//     pub offset: libc::size_t,
+//     pub filepos: libc::off_t,
+//     pub errcode: i32,
+// }
+
+// pub type DIR = __dirstream;
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct UserCapHeader {
+    pub version: __u32,
+    pub pid: i32,
+}
+
+pub type CapUserHeader = UserCapHeader;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct UserCapData {
+    pub effective: u32,
+    pub permitted: u32,
+    pub inheritable: u32,
+}
+
+impl UserCapData {
+    pub fn new() -> UserCapData {
+        UserCapData {
+            effective: 0,
+            permitted: 0,
+            inheritable: 0,
+        }
+    }
+}
+
+// pub type cap_user_data_t = *mut __user_cap_data_struct;
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct EventDesc {
+    pub event: i32,
+    pub data: i32,
+    pub msg_sz: i32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed18 {
+    pub keytag: u16,
+    pub algo: u16,
+    pub digest: u16,
+    pub rcode: u16,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed19 {
+    pub target: BlockData,
+    pub targetlen: u16,
+    pub srvport: u16,
+    pub priority: u16,
+    pub weight: u16,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed20 {
+    pub keydata: BlockData,
+    pub keylen: u16,
+    pub keytag: u16,
+    pub algo: u8,
+    pub digest: u8,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed21 {
+    pub keydata: BlockData,
+    pub keylen: u16,
+    pub flags: u16,
+    pub keytag: u16,
+    pub algo: u8,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed22 {
+    pub target: C2rustUnnamed23,
+    pub uid: u32,
+    pub is_name_ptr: i32,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed23 {
+    pub cache: Crec,
+    pub name: String,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed24 {
+    pub sname: [i8; 50],
+    pub bname: BigName,
+    pub namep: String,
+}
+
+// pub type wint_t = u32;
+
+// pub type __gconv_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut*mut u8, *mut u8, *mut*mut u8, libc::size_t, i32, i32) -> i32;
+// pub type __gconv_btowc_fct = fn(*mut __gconv_step, u8) -> wint_t;
+// pub type __gconv_init_fct = fn(*mut __gconv_step) -> i32;
+// pub type __gconv_end_fct = fn(*mut __gconv_step);
+// pub type __gconv_trans_fct = fn(*mut __gconv_step, *mut __gconv_step_data, *mut libc::c_void, *mut u8, *mut*mut u8, *mut u8, *mut*mut u8, *mut libc::size_t);
+// pub type __gconv_trans_context_fct = fn(*mut libc::c_void, *mut u8, *mut u8, *mut u8, *mut u8) -> i32;
+// pub type __gconv_trans_query_fct = fn(String, *mut*mutString, *mut libc::size_t);
+// pub type __gconv_trans_init_fct = fn(*mut *mut libc::c_void, String) -> i32;
+// pub type __gconv_trans_end_fct = fn(*mut libc::c_void);
+
+// struct __gconv_loaded_object
+// {
+//   /* Name of the object.  It must be the first structure element.  */
+//   const char *name;
+//   /* Reference counter for the db functionality.  If no conversion is
+//      needed we unload the db library.  */
+//   int counter;
+//   /* The handle for the shared object.  */
+//   void *handle;
+//   /* Pointer to the functions the module defines.  */
+//   __gconv_fct fct;
+//   __gconv_init_fct init_fct;
+//   __gconv_end_fct end_fct;
+// };
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_loaded_object {
+//     pub name: String,
+//     pub counter: i32,
+//     pub handle: *mut libc::c_void,
+//     pub fct: __gconv_fct,
+//     pub init_fct: __gconv_init_fct,
+//     pub end_fct: __gconv_end_fct,
+// }
+
+// struct __gconv_step
+// {
+//   struct __gconv_loaded_object *__shlib_handle;
+//   __const char *__modname;
+//   int __counter;
+//   char *__from_name;
+//   char *__to_name;
+//   __gcon_fct __fct;
+//   __gconv_btowc_fct __btowc_fct;
+//   __gconv_init_fct __init_fct;
+//   __gconv_end_fct __end_fct;
+//   int __min_needed_from;
+//   int __max_needed_from;
+//   int __min_needed_to;
+//   int __max_needed_to;
+//   int __stateful;
+//   void *__data;
+// };
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_step {
+//     pub __shlib_handle: *mut __gconv_loaded_object,
+//     pub __modname: String,
+//     pub __counter: i32,
+//     pub __from_name: String,
+//     pub __to_name: String,
+//     pub __fct: __gconv_fct,
+//     pub __btowc_fct: __gconv_btowc_fct,
+//     pub __init_fct: __gconv_init_fct,
+//     pub __end_fct: __gconv_end_fct,
+//     pub __min_needed_from: i32,
+//     pub __max_needed_from: i32,
+//     pub __min_needed_to: i32,
+//     pub __max_needed_to: i32,
+//     pub __data: *mut libc::c_void,
+// }
+
+// struct __gconv_trans_data
+// {
+//   __gconv_trans_fct __trans_fct;
+//   __gconv_trans_context_fct __trans_context_fct;
+//   __gconv_trans_end_fct __trans_end_fct;
+//   void *__data;
+//   struct __gconv_trans_data *__next;
+// };
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_trans_data {
+//     pub __trans_fct: __gconv_trans_fct,
+//     pub __trans_context_fct: __gconv_trans_context_fct,
+//     pub __trans_end_fct: __gconv_trans_end_fct,
+//     pub __data: *mut libc::c_void,
+//     pub __next: *mut __gconv_trans_data,
+// }
+
+// struct __gconv_step_data
+// {
+//   unsigned char *__outbuf;
+//   unsigned char *__outbufend;
+//   int __flags;
+//   int __invocation_counter;
+//   int __internal_use;
+//   __mbstate_t *__statep;
+//   __mbstate_t __state;
+//   struct __gconv_trans_data *__trans;
+// };
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_step_data {
+//     pub __outbuf: *mut u8,
+//     pub __outbufend: *mut u8,
+//     pub __flags: i32,
+//     pub __invocation_counter: i32,
+//     pub __internal_use: i32,
+//     pub __statep: *mut __mbstate_t,
+//     pub __state: __mbstate_t,
+//     pub __trans: *mut __gconv_trans_data,
+// }
+
+// typedef struct __gconv_info
+// {
+//   size_t __nsteps;
+//   struct __gconv_step *__steps;
+//   __extension__ struct __gconv_step_data __data [];
+// } *__gconv_t;
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct __gconv_info {
+//     pub __nsteps: libc::size_t,
+//     pub __steps: *mut __gconv_step,
+//     pub __data: *mut __gconv_step_data
+// }
+
+// typedef union
+// {
+//   struct __gconv_info __cd;
+//   struct
+//   {
+//     struct __gconv_info __cd;
+//     struct __gconv_step_data __data;
+//   } __combined;
+// } _IO_iconv_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Unnamed28 {
+    pub __cd: __gconv_info,
+    pub __data: __gconv_step_data,
+}
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub union _IO_iconv_t {
+//     pub __cd: __gconv_info,
+//     pub __combined: Unnamed28,
+// }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpLease {
+    pub clid_len: i32,
+    pub clid: Vec<u8>,
+    pub hostname: String,
+    pub fqdn: String,
+    pub old_hostname: String,
+    pub flags: i32,
+    pub expires: time::Instant,
+    pub hwaddr_len: i32,
+    pub hwaddr_type: i32,
+    pub hwaddr: [u8; 16],
+    pub addr: NetAddress,
+    pub override_0: NetAddress,
+    pub giaddr: NetAddress,
+    pub extradata: Vec<u8>,
+    pub extradata_len: u32,
+    pub extradata_size: u32,
+    pub last_interface: i32,
+    pub new_interface: i32,
+    pub new_prefixlen: i32,
+    pub addr6: NetAddress,
+    pub iaid: u32,
+    pub slaac_address: SlaacAddress,
+    pub vendorclass_count: i32,
+    // pub next: *mut dhcp_lease,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct SlaacAddress {
+    pub addr: NetAddress,
+    pub ping_time: time::Instant,
+    pub backoff: i32,
+    // pub next: *mut slaac_address,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed25 {
+    pub encap: i32,
+    pub wildcard_mask: u32,
+    pub vendor_class: Vec<u8>,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed26 {
+    pub ip: IpHdr,
+    pub icmp: IcmpHdr,
+}
+
+impl C2rustUnnamed26 {
+    pub fn new() -> C2rustUnnamed26 {
+        C2rustUnnamed26 {
+            ip: IpHdr::new(),
+            icmp: IcmpHdr::new(),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2rustUnnamed27 {
+    pub ip: IpHdr,
+    pub icmp: IcmpHdr,
+}
+
+// #[derive(Copy,Clone)]
+// #[repr(C)]
+// pub struct _IO_marker {
+//   pub next: *mut _IO_marker,
+//   pub sbuf: *mut FILE,
+//   /* If _pos >= 0
+//  it points to _buf->Gbase()+_pos. FIXME comment */
+//   /* if _pos < 0, it points to _buf->eBptr()+_pos. FIXME comment */
+//   pub _pos: i32
+// }
+
+// pub enum __codecvt_result
+// {
+//   __codecvt_ok,
+//   __codecvt_partial,
+//   __codecvt_error,
+//   __codecvt_noconv
+// }
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// struct _IO_codecvt
+// {
+// //   void (*__codecvt_destr) (struct _IO_codecvt *);
+//   pub __codecvt_destr: fn(&mut _IO_codecvt),
+// //   enum __codecvt_result (*__codecvt_do_out) (struct _IO_codecvt *,
+// //                                              __mbstate_t *,
+// //                                              const wchar_t *,
+// //                                              const wchar_t *,
+// //                                              const wchar_t **, char *,
+// //                                              char *, char **);
+//     pub __codecvt_do_out: fn(*mut _IO_codecvt, *mut __mbstate_t, *mut libc::wchar_t, *mut libc::wchar_t, *mut*mut libc::wchar_t, String, String, *mut String) -> __codecvt_result,
+// //   enum __codecvt_result (*__codecvt_do_unshift) (struct _IO_codecvt *,
+// //                                                  __mbstate_t *, char *,
+// //                                                  char *, char **);
+//     pub __codecvt_do_unshift: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String) -> __codecvt_result,
+// //   enum __codecvt_result (*__codecvt_do_in) (struct _IO_codecvt *,
+// //                                             __mbstate_t *,
+// //                                             const char *, const char *,
+// //                                             const char **, wchar_t *,
+// //                                             wchar_t *, wchar_t **);
+//     pub __codecvt_do_in: fn(*mut _IO_codecvt, *mut __mbstate_t, String, String, *mut String, *mut libc::wchar_t, *mut libc::wchar_t, *mut *mut libc::wchar_t) -> __codecvt_result,
+// //   int (*__codecvt_do_encoding) (struct _IO_codecvt *);
+//     pub __codecvt_do_encoding: fn(*mut _IO_codecvt) -> i32,
+// //   int (*__codecvt_do_always_noconv) (struct _IO_codecvt *);
+//     pub __codecvt_do_always_noconv: fn(*mut _IO_codecvt) -> i32,
+// //   int (*__codecvt_do_length) (struct _IO_codecvt *, __mbstate_t *,
+// //                               const char *, const char *, size_t);
+//     pub __codecvt_do_length: fn(*mut _IO_codecvt, *mut __mbstate_t, String) -> i32,
+// //   int (*__codecvt_do_max_length) (struct _IO_codecvt *);
+//     pub __codecvt_do_max_length: fn(*mut _IO_codecvt) -> i32,
+// //   _IO_iconv_t __cd_in;
+//     pub __cd_in: _IO_iconv_t,
+// //   _IO_iconv_t __cd_out;
+//     pub __cd_out: _IO_iconv_t,
+// }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Code {
+    pub c_name: String,
+    pub c_val: i32,
+}
+
+pub type CODE = Code;
+
+pub const _ISALNUM: u32 = 8;
+pub const _ISPUNCT: u32 = 4;
+pub const _ISCNTRL: u32 = 2;
+pub const _ISBLANK: u32 = 1;
+pub const _ISGRAPH: u32 = 32768;
+pub const _ISPRINT: u32 = 16384;
+pub const _ISSPACE: u32 = 8192;
+pub const _ISXDIGIT: u32 = 4096;
+pub const _ISDIGIT: u32 = 2048;
+pub const _ISALPHA: u32 = 1024;
+pub const _ISLOWER: u32 = 512;
+pub const _ISUPPER: u32 = 256;
+
+pub const MSG_CMSG_CLOEXEC: u32 = 1073741824;
+pub const MSG_FASTOPEN: u32 = 536870912;
+pub const MSG_ZEROCOPY: u32 = 67108864;
+pub const MSG_BATCH: u32 = 262144;
+pub const MSG_WAITFORONE: u32 = 65536;
+pub const MSG_MORE: u32 = 32768;
+pub const MSG_NOSIGNAL: u32 = 16384;
+pub const MSG_ERRQUEUE: u32 = 8192;
+pub const MSG_RST: u32 = 4096;
+pub const MSG_CONFIRM: u32 = 2048;
+pub const MSG_SYN: u32 = 1024;
+pub const MSG_FIN: u32 = 512;
+pub const MSG_WAITALL: u32 = 256;
+pub const MSG_EOR: u32 = 128;
+pub const MSG_DONTWAIT: u32 = 64;
+pub const MSG_TRUNC: u32 = 32;
+pub const MSG_PROXY: u32 = 16;
+pub const MSG_CTRUNC: u32 = 8;
+pub const MSG_TRYHARD: u32 = 4;
+pub const MSG_DONTROUTE: u32 = 4;
+pub const MSG_PEEK: u32 = 2;
+pub const MSG_OOB: u32 = 1;
+
+// pub type _IO_wide_data;
+// pub type _IO_codecvt;
+// pub type _IO_marker;
+//
+// fn recvmsg(__fd: i32, __message: *mut msghdr,
+//            __flags: i32) -> ssize_t;
+//
+// fn setsockopt(__fd: i32, __level: i32,
+//               __optname: i32, __optval: *const libc::c_void,
+//               __optlen: socklen_t) -> i32;
+//
+// fn inet_ntop(__af: i32, __cp: *const libc::c_void,
+//              __buf: *mut libc::c_char, __len: socklen_t)
+//  -> *const libc::c_char;
+//
+// fn __xstat(__ver: i32, __filename: *const libc::c_char,
+//            __stat_buf: *mut stat) -> i32;
+//
+// fn __fxstat(__ver: i32, __fildes: i32,
+//             __stat_buf: *mut stat) -> i32;
+//
+// fn __xstat64(__ver: i32, __filename: *const libc::c_char,
+//              __stat_buf: *mut stat64) -> i32;
+//
+// fn __fxstat64(__ver: i32, __fildes: i32,
+//               __stat_buf: *mut stat64) -> i32;
+//
+// fn __fxstatat(__ver: i32, __fildes: i32,
+//               __filename: *const libc::c_char, __stat_buf: *mut stat,
+//               __flag: i32) -> i32;
+//
+// fn __fxstatat64(__ver: i32, __fildes: i32,
+//                 __filename: *const libc::c_char, __stat_buf: *mut stat64,
+//                 __flag: i32) -> i32;
+//
+// fn __lxstat(__ver: i32, __filename: *const libc::c_char,
+//             __stat_buf: *mut stat) -> i32;
+//
+// fn __lxstat64(__ver: i32, __filename: *const libc::c_char,
+//               __stat_buf: *mut stat64) -> i32;
+//
+// fn __xmknod(__ver: i32, __path: *const libc::c_char,
+//             __mode: __mode_t, __dev: *mut __dev_t) -> i32;
+//
+// fn __xmknodat(__ver: i32, __fd: i32,
+//               __path: *const libc::c_char, __mode: __mode_t,
+//               __dev: *mut __dev_t) -> i32;
+//
+// fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong)
+//  -> *mut libc::c_void;
+//
+// fn memset(_: *mut libc::c_void, _: i32, _: libc::c_ulong)
+//  -> *mut libc::c_void;
+//
+// fn memcmp(_: *const libc::c_void, _: *const libc::c_void,
+//           _: libc::c_ulong) -> i32;
+//
+// fn strcpy(_: *mut libc::c_char, _: *const libc::c_char)
+//  -> *mut libc::c_char;
+//
+// fn strncpy(_: *mut libc::c_char, _: *const libc::c_char, _: libc::c_ulong)
+//  -> *mut libc::c_char;
+//
+// fn strncat(_: *mut libc::c_char, _: *const libc::c_char, _: libc::c_ulong)
+//  -> *mut libc::c_char;
+//
+// fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i32;
+//
+// fn strchr(_: *const libc::c_char, _: i32) -> *mut libc::c_char;
+//
+// fn strlen(_: *const libc::c_char) -> libc::c_ulong;
+//
+// fn strcasecmp(_: *const libc::c_char, _: *const libc::c_char)
+//  -> i32;
+//
+// static mut stdin: *mut FILE;
+//
+// static mut stdout: *mut FILE;
+//
+// fn printf(_: *const libc::c_char, _: ...) -> i32;
+//
+// fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...)
+//  -> i32;
+//
+//
+// fn getc(__stream: *mut FILE) -> i32;
+//
+// fn __uflow(_: *mut FILE) -> i32;
+//
+// fn putc(__c: i32, __stream: *mut FILE) -> i32;
+//
+// fn __overflow(_: *mut FILE, _: i32) -> i32;
+//
+// fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+//               __delimiter: i32, __stream: *mut FILE) -> __ssize_t;
+//
+// fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+//  -> libc::c_double;
+//
+// fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//           _: i32) -> libc::c_long;
+//
+// fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//            _: i32) -> libc::c_longlong;
+//
+// fn __ctype_b_loc() -> *mut *const u16;
+//
+// fn __ctype_tolower_loc() -> *mut *const __int32_t;
+//
+// fn __ctype_toupper_loc() -> *mut *const __int32_t;
+//
+// fn __errno_location() -> *mut i32;
+//
+// fn __strtol_internal(__nptr: *const libc::c_char,
+//                      __endptr: *mut *mut libc::c_char,
+//                      __base: i32, __group: i32)
+//  -> libc::c_long;
+//
+// fn __strtoul_internal(__nptr: *const libc::c_char,
+//                       __endptr: *mut *mut libc::c_char,
+//                       __base: i32, __group: i32)
+//  -> libc::c_ulong;
+//
+// fn __wcstol_internal(__nptr: *const __gwchar_t,
+//                      __endptr: *mut *mut __gwchar_t, __base: i32,
+//                      __group: i32) -> libc::c_long;
+//
+// fn __wcstoul_internal(__nptr: *const __gwchar_t,
+//                       __endptr: *mut *mut __gwchar_t, __base: i32,
+//                       __group: i32) -> libc::c_ulong;
+//
+// static mut dnsmasq_daemon: *mut dnsmasq_daemon;
+//
+// fn cache_find_by_name(crecp: *mut crec, name: *mut libc::c_char,
+//                       now: time_t, prot: u32) -> *mut crec;
+//
+// fn safe_malloc(size: size_t) -> *mut libc::c_void;
+//
+// fn whine_malloc(size: size_t) -> *mut libc::c_void;
+//
+// fn hostname_isequal(a: *const libc::c_char, b: *const libc::c_char)
+//  -> i32;
+//
+// fn is_same_net(a: in_addr, b: in_addr, mask: in_addr) -> i32;
+//
+// fn is_same_net6(a: *mut in6_addr, b: *mut in6_addr,
+//                 prefixlen: i32) -> i32;
+//
+// fn setaddr6part(addr: *mut in6_addr, host: u64_0);
+//
+// fn prettyprint_time(buf: *mut libc::c_char, t: u32);
+//
+// fn memcmp_masked(a: *mut u8, b: *mut u8,
+//                  len: i32, mask: u32) -> i32;
+//
+// fn expand_buf(iov: *mut iovec, size: size_t) -> i32;
+//
+// fn print_mac(buff: *mut libc::c_char, mac: *mut u8,
+//              len: i32) -> *mut libc::c_char;
+//
+// fn die(message: *mut libc::c_char, arg1: *mut libc::c_char,
+//        exit_code: i32) -> !;
+//
+// fn my_syslog(priority: i32, format: *const libc::c_char, _: ...);
+//
+// fn config_find_by_address6(configs: *mut dhcp_config, net: *mut in6_addr,
+//                            prefix: i32, addr: *mut in6_addr)
+//  -> *mut dhcp_config;
+//
+// fn indextoname(fd: i32, index: i32,
+//                name: *mut libc::c_char) -> i32;
+//
+// fn config_find_by_address(configs: *mut dhcp_config, addr: in_addr)
+//  -> *mut dhcp_config;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct DhcpPacket {
+    pub op: u8,
+    pub htype: u8,
+    pub hlen: u8,
+    pub hops: u8,
+    pub xid: u32,
+    pub secs: u16,
+    pub flags: u16,
+    pub ciaddr: NetAddress,
+    pub yiaddr: NetAddress,
+    pub siaddr: NetAddress,
+    pub giaddr: NetAddress,
+    pub chaddr: [u8; 16],
+    pub sname: [u8; 64],
+    pub file: [u8; 128],
+    pub options: [u8; 312],
+}
+
+pub static PRIORITY_NAMES: [CODE; 13] = [
+    Code {
+        c_name: String::from("alert"),
+        c_val: 1,
+    },
+    Code {
+        c_name: String::from("crit"),
+        c_val: 2,
+    },
+    Code {
+        c_name: String::from("debug"),
+        c_val: 7,
+    },
+    Code {
+        c_name: String::from("emerg"),
+        c_val: 0,
+    },
+    Code {
+        c_name: String::from("err"),
+        c_val: 3,
+    },
+    Code {
+        c_name: String::from("error"),
+        c_val: 3,
+    },
+    Code {
+        c_name: String::from("info"),
+        c_val: 6,
+    },
+    Code {
+        c_name: String::from("none"),
+        c_val: 0x10,
+    },
+    Code {
+        c_name: String::from("notice"),
+        c_val: 5,
+    },
+    Code {
+        c_name: String::from("panic"),
+        c_val: 0,
+    },
+    Code {
+        c_name: String::from("warn"),
+        c_val: 4,
+    },
+    Code {
+        c_name: String::from("warning"),
+        c_val: 4,
+    },
+    Code {
+        c_name: String::from(""),
+        c_val: -1,
+    },
+];
+
+pub static FACILITYNAMES: [CODE; 23] = [
+    Code {
+        c_name: String::from("auth"),
+        c_val: 4 << 3,
+    },
+    Code {
+        c_name: String::from("authpriv"),
+        c_val: 10 << 3,
+    },
+    Code {
+        c_name: String::from("cron"),
+        c_val: 9 << 3,
+    },
+    Code {
+        c_name: String::from("daemon"),
+        c_val: 3 << 3,
+    },
+    Code {
+        c_name: String::from("ftp"),
+        c_val: 11 << 3,
+    },
+    Code {
+        c_name: String::from("kern"),
+        c_val: 0 << 3,
+    },
+    Code {
+        c_name: String::from("lpr"),
+        c_val: 6 << 3,
+    },
+    Code {
+        c_name: String::from("mail"),
+        c_val: 2 << 3,
+    },
+    Code {
+        c_name: String::from("mark"),
+        c_val: (24 << 3) | 0,
+    },
+    Code {
+        c_name: String::from("news"),
+        c_val: 7 << 3,
+    },
+    Code {
+        c_name: String::from("security"),
+        c_val: 4 << 3,
+    },
+    Code {
+        c_name: String::from("syslog"),
+        c_val: 5 << 3,
+    },
+    Code {
+        c_name: String::from("user"),
+        c_val: 1 << 3,
+    },
+    Code {
+        c_name: String::from("uucp"),
+        c_val: 8 << 3,
+    },
+    Code {
+        c_name: String::from("local0"),
+        c_val: 16 << 3,
+    },
+    Code {
+        c_name: String::from("local1"),
+        c_val: 17 << 3,
+    },
+    Code {
+        c_name: String::from("local2"),
+        c_val: 18 << 3,
+    },
+    Code {
+        c_name: String::from("local3"),
+        c_val: 19 << 3,
+    },
+    Code {
+        c_name: String::from("local4"),
+        c_val: 20 << 3,
+    },
+    Code {
+        c_name: String::from("local5"),
+        c_val: 21 << 3,
+    },
+    Code {
+        c_name: String::from("local6"),
+        c_val: 22 << 3,
+    },
+    Code {
+        c_name: String::from("local7"),
+        c_val: 23 << 3,
+    },
+    Code {
+        c_name: String::from(""),
+        c_val: -1,
+    },
+];
+
+// extern "C" {
+//     pub type _IO_wide_data;
+//     pub type _IO_codecvt;
+//     pub type _IO_marker;
+//
+//     fn __xstat(__ver: , __filename: *const libc::c_char,
+//                __stat_buf: *mut stat) -> ;
+//
+//     fn __fxstat(__ver: , __fildes: ,
+//                 __stat_buf: *mut stat) -> ;
+//
+//     fn __xstat64(__ver: , __filename: *const libc::c_char,
+//                  __stat_buf: *mut stat64) -> ;
+//
+//     fn __fxstat64(__ver: , __fildes: ,
+//                   __stat_buf: *mut stat64) -> ;
+//
+//     fn __fxstatat(__ver: , __fildes: ,
+//                   __filename: *const libc::c_char, __stat_buf: *mut stat,
+//                   __flag: ) -> ;
+//
+//     fn __fxstatat64(__ver: , __fildes: ,
+//                     __filename: *const libc::c_char, __stat_buf: *mut stat64,
+//                     __flag: ) -> ;
+//
+//     fn __lxstat(__ver: , __filename: *const libc::c_char,
+//                 __stat_buf: *mut stat) -> ;
+//
+//     fn __lxstat64(__ver: , __filename: *const libc::c_char,
+//                   __stat_buf: *mut stat64) -> ;
+//
+//     fn __xmknod(__ver: , __path: *const libc::c_char,
+//                 __mode: __mode_t, __dev: *mut __dev_t) -> ;
+//
+//     fn __xmknodat(__ver: , __fd: ,
+//                   __path: *const libc::c_char, __mode: __mode_t,
+//                   __dev: *mut __dev_t) -> ;
+//
+//     static mut stdin: *mut FILE;
+//
+//     static mut stdout: *mut FILE;
+//
+//     // fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: ::std::ffi::VaList)
+//     //             -> ;
+//
+//     fn getc(__stream: *mut FILE) -> ;
+//
+//     fn __uflow(_: *mut FILE) -> ;
+//
+//     fn putc(__c: , __stream: *mut FILE) -> ;
+//
+//     fn __getdelim(__lineptr: *mut *mut libc::c_char, __n: *mut size_t,
+//                   __delimiter: , __stream: *mut FILE) -> __ssize_t;
+//
+//     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char)
+//               -> libc::c_double;
+//
+//     fn strtol(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//               _: ) -> libc::c_long;
+//
+//     fn strtoll(_: *const libc::c_char, _: *mut *mut libc::c_char,
+//                _: ) -> libc::c_longlong;
+//
+//     fn __ctype_tolower_loc() -> *mut *const __int32_t;
+//
+//     fn __ctype_toupper_loc() -> *mut *const __int32_t;
+//
+//     fn __strtol_internal(__nptr: *const libc::c_char,
+//                          __endptr: *mut *mut libc::c_char,
+//                          __base: , __group: )
+//                          -> libc::c_long;
+//
+//     fn __strtoul_internal(__nptr: *const libc::c_char,
+//                           __endptr: *mut *mut libc::c_char,
+//                           __base: , __group: )
+//                           -> libc::c_ulong;
+//
+//     fn __wcstol_internal(__nptr: *const __gwchar_t,
+//                          __endptr: *mut *mut __gwchar_t, __base: ,
+//                          __group: ) -> libc::c_long;
+//
+//     fn __overflow(_: *mut FILE, _: ) -> ;
+//
+//     fn __wcstoul_internal(__nptr: *const __gwchar_t,
+//                           __endptr: *mut *mut __gwchar_t, __base: ,
+//                           __group: ) -> libc::c_ulong;
+// }
+// pub type __uint16_t = libc::c_ushort;
+// pub type __int32_t = ;
+// pub type __uint32_t = libc::c_uint;
+// pub type __uint64_t = libc::c_ulong;
+// pub type __intmax_t = libc::c_long;
+// pub type __uintmax_t = libc::c_ulong;
+
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct stat {
+//     pub st_dev: DevT,
+//     pub st_ino: InoT,
+//     pub st_nlink: NLinkT,
+//     pub st_mode: ModeT,
+//     pub st_uid: UidT,
+//     pub st_gid: GidT,
+//     pub __pad0: ,
+//     pub st_rdev: DevT,
+//     pub st_size: usize,
+//     pub st_blksize: BlkSizeT,
+//     pub st_blocks: BlkCntT,
+//     pub st_atim: timespec,
+//     pub st_mtim: timespec,
+//     pub st_ctim: timespec,
+//     pub __glibc_reserved: [SyscallSlongT; 3],
+// }
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct stat64 {
+//     pub st_dev: DevT,
+//     pub st_ino: Ino64T,
+//     pub st_nlink: NLinkT,
+//     pub st_mode: ModeT,
+//     pub st_uid: UidT,
+//     pub st_gid: GidT,
+//     pub __pad0: ,
+//     pub st_rdev: DevT,
+//     pub st_size: usize,
+//     pub st_blksize: BlkSizeT,
+//     pub st_blocks: BlkCnt64T,
+//     pub st_atim: timespec,
+//     pub st_mtim: timespec,
+//     pub st_ctim: timespec,
+//     pub __glibc_reserved: [SyscallSlongT; 3],
+// }
+// #[derive(Copy, Clone)]
+// #[repr(C)]
+// pub struct IoFile {
+//     pub _flags: ,
+//     pub _IO_read_ptr: *mut libc::c_char,
+//     pub _IO_read_end: *mut libc::c_char,
+//     pub _IO_read_base: *mut libc::c_char,
+//     pub _IO_write_base: *mut libc::c_char,
+//     pub _IO_write_ptr: *mut libc::c_char,
+//     pub _IO_write_end: *mut libc::c_char,
+//     pub _IO_buf_base: *mut libc::c_char,
+//     pub _IO_buf_end: *mut libc::c_char,
+//     pub _IO_save_base: *mut libc::c_char,
+//     pub _IO_backup_base: *mut libc::c_char,
+//     pub _IO_save_end: *mut libc::c_char,
+//     pub _markers: *mut _IO_marker,
+//     pub _chain: *mut IoFile,
+//     pub _fileno: ,
+//     pub _flags2: ,
+//     pub _old_offset: usize,
+//     pub _cur_column: libc::c_ushort,
+//     pub _vtable_offset: libc::c_schar,
+//     pub _shortbuf: [libc::c_char; 1],
+//     pub _lock: *mut libc::c_void,
+//     pub _offset: Off64T,
+//     pub _codecvt: *mut _IO_codecvt,
+//     pub _wide_data: *mut _IO_wide_data,
+//     pub _freeres_list: *mut IoFile,
+//     pub _freeres_buf: *mut libc::c_void,
+//     pub __pad5: usize,
+//     pub _mode: ,
+//     pub _unused2: [libc::c_char; 20],
+// }
+// pub type _IO_lock_t = ();
+// pub type FILE = IoFile;
+// pub type __compar_fn_t
+// =
+// Option<fn(_: *const libc::c_void,
+//                             _: *const libc::c_void) -> >;
+// pub type intmax_t = __intmax_t;
+// pub type uintmax_t = __uintmax_t;
+// pub type __gwchar_t = ;
+// #[inline]
+// fn vprintf(mut __fmt: *const libc::c_char,
+//                              mut __arg: ::std::ffi::VaList) ->  {
+//     return vfprintf(stdout, __fmt, __arg.as_va_list());
+// }
+// #[inline]
+// fn getchar() ->  { return getc(stdin); }
+// #[inline]
+// fn fgetc_unlocked(mut __fp: *mut FILE) ->  {
+//     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as  as
+//         libc::c_long != 0 {
+//         __uflow(__fp)
+//     } else {
+//         let fresh0 = (*__fp)._IO_read_ptr;
+//         (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+//         *(fresh0 as *mut u8) as
+//     };
+// }
+// #[inline]
+// fn getc_unlocked(mut __fp: *mut FILE) ->  {
+//     return if ((*__fp)._IO_read_ptr >= (*__fp)._IO_read_end) as  as
+//         libc::c_long != 0 {
+//         __uflow(__fp)
+//     } else {
+//         let fresh1 = (*__fp)._IO_read_ptr;
+//         (*__fp)._IO_read_ptr = (*__fp)._IO_read_ptr.offset(1);
+//         *(fresh1 as *mut u8) as
+//     };
+// }
+// #[inline]
+// fn getchar_unlocked() ->  {
+//     return if ((*stdin)._IO_read_ptr >= (*stdin)._IO_read_end) as
+//         as libc::c_long != 0 {
+//         __uflow(stdin)
+//     } else {
+//         let fresh2 = (*stdin)._IO_read_ptr;
+//         (*stdin)._IO_read_ptr = (*stdin)._IO_read_ptr.offset(1);
+//         *(fresh2 as *mut u8) as
+//     };
+// }
+// #[inline]
+// fn wcstoumax(mut nptr: *const __gwchar_t,
+//                                mut endptr: *mut *mut __gwchar_t,
+//                                mut base: ) -> uintmax_t {
+//     return __wcstoul_internal(nptr, endptr, base, 0 as );
+// }
+
+// pub fn __bswap_16(mut __bsx: __uint16_t) -> __uint16_t {
+//     return (__bsx >> 8 & 0xff |
+//         (__bsx & 0xff) <<
+//             8) ;
+// }
+
+// pub fn __bswap_32(mut __bsx: __uint32_t) -> __uint32_t {
+//     return (__bsx & 0xff000000) >> 24 |
+//         (__bsx & 0xff0000) >> 8 |
+//         (__bsx & 0xff00) << 8 |
+//         (__bsx & 0xff) << 24;
+// }
+
+// pub fn __bswap_64(mut __bsx: __uint64_t) -> __uint64_t {
+//     return ((__bsxlong &
+//         0xff00000000000000long) >> 56
+//         |
+//         (__bsxlong &
+//             0xff000000000000long) >>
+//             40 |
+//         (__bsxlong &
+//             0xff0000000000long) >> 24
+//         |
+//         (__bsxlong &
+//             0xff00000000long) >> 8 |
+//         (__bsxlong & 0xff000000long)
+//             << 8 |
+//         (__bsxlong & 0xff0000long)
+//             << 24 |
+//         (__bsxlong & 0xff00long) <<
+//             40 |
+//         (__bsxlong & 0xfflong) <<
+//             56) as __uint64_t;
+// }
+// #[inline]
+// fn __uint16_identity(mut __x: __uint16_t) -> __uint16_t {
+//     return __x;
+// }
+// #[inline]
+// fn __uint32_identity(mut __x: __uint32_t) -> __uint32_t {
+//     return __x;
+// }
+// #[inline]
+// fn __uint64_identity(mut __x: __uint64_t) -> __uint64_t {
+//     return __x;
+// }
+// #[inline]
+// fn __cmsg_nxthdr(mut __mhdr: &mut msghdr,
+//                                    mut __cmsg: &mut cmsghdr) -> Option<cmsghdr> {
+//     if __cmsg.cmsg_len < ::std::mem::size_of::<cmsghdr>()
+//     {
+//         return None;
+//     }
+//     __cmsg =
+//         (__cmsg as *mut u8).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>().wrapping_sub(1)
+//             &
+//             !(::std::mem::size_of::<size_t>()).wrapping_sub(1))) as *mut cmsghdr;
+//     if __cmsg.offset(1 as  as ) as *mut u8 >
+//         ((*__mhdr).msg_control as
+//             *mut u8).offset((*__mhdr).msg_controllen as )
+//         ||
+//         (__cmsg as
+//             *mut u8).offset((__cmsg.cmsg_len.wrapping_add(::std::mem::size_of::<size_t>()
+//             as
+//             libc::c_ulong).wrapping_sub(1
+//             as
+//
+//             as
+//             libc::c_ulong)
+//             &
+//             !(::std::mem::size_of::<size_t>()
+//                 as
+//                 libc::c_ulong).wrapping_sub(1
+//                 as
+//
+//                 as
+//                 libc::c_ulong))
+//             as ) >
+//             ((*__mhdr).msg_control as
+//                 *mut u8).offset((*__mhdr).msg_controllen as
+//                 ) {
+//         return 0 as *mut cmsghdr
+//     }
+//     return __cmsg;
+// }
+// #[inline]
+// fn fputc_unlocked(mut __c: ,
+//                                     mut __stream: *mut FILE) ->  {
+//     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+//          as libc::c_long != 0 {
+//         __overflow(__stream, __c as u8 as )
+//     } else {
+//         let fresh3 = (*__stream)._IO_write_ptr;
+//         (*__stream)._IO_write_ptr =
+//             (*__stream)._IO_write_ptr.offset(1);
+//         *fresh3 = __c as libc::c_char;
+//         *fresh3 as u8 as
+//     };
+// }
+// a#[inline]
+// fn stat(mut __path: *const libc::c_char,
+//                           mut __statbuf: *mut stat) ->  {
+//     return __xstat(1 as , __path, __statbuf);
+// }
+// #[inline]
+// fn fstat(mut __fd: , mut __statbuf: *mut stat)
+//                            ->  {
+//     return __fxstat(1 as , __fd, __statbuf);
+// }
+// #[inline]
+// fn stat64(mut __path: *const libc::c_char,
+//                             mut __statbuf: *mut stat64) ->  {
+//     return __xstat64(1 as , __path, __statbuf);
+// }
+// #[inline]
+// fn fstat64(mut __fd: ,
+//                              mut __statbuf: *mut stat64) ->  {
+//     return __fxstat64(1 as , __fd, __statbuf);
+// }
+// #[inline]
+// fn fstatat(mut __fd: ,
+//                              mut __filename: *const libc::c_char,
+//                              mut __statbuf: *mut stat,
+//                              mut __flag: ) ->  {
+//     return __fxstatat(1 as , __fd, __filename, __statbuf, __flag);
+// }
+// #[inline]
+// fn fstatat64(mut __fd: ,
+//                                mut __filename: *const libc::c_char,
+//                                mut __statbuf: *mut stat64,
+//                                mut __flag: ) ->  {
+//     return __fxstatat64(1 as , __fd, __filename, __statbuf,
+//                         __flag);
+// }
+// #[inline]
+// fn lstat(mut __path: *const libc::c_char,
+//                            mut __statbuf: *mut stat) ->  {
+//     return __lxstat(1 as , __path, __statbuf);
+// }
+// #[inline]
+// fn lstat64(mut __path: *const libc::c_char,
+//                              mut __statbuf: *mut stat64) ->  {
+//     return __lxstat64(1 as , __path, __statbuf);
+// }
+// #[inline]
+// fn mknod(mut __path: *const libc::c_char,
+//                            mut __mode: __mode_t, mut __dev: __dev_t)
+//                            ->  {
+//     return __xmknod(0 as , __path, __mode, &mut __dev);
+// }
+// #[inline]
+// fn mknodat(mut __fd: ,
+//                              mut __path: *const libc::c_char,
+//                              mut __mode: __mode_t, mut __dev: __dev_t)
+//                              ->  {
+//     return __xmknodat(0 as , __fd, __path, __mode, &mut __dev);
+// }
+// #[inline]
+// fn putchar(mut __c: ) ->  {
+//     return putc(__c, stdout);
+// }
+// #[inline]
+// fn putc_unlocked(mut __c: ,
+//                                    mut __stream: *mut FILE) ->  {
+//     return if ((*__stream)._IO_write_ptr >= (*__stream)._IO_write_end) as
+//          as libc::c_long != 0 {
+//         __overflow(__stream, __c as u8 as )
+//     } else {
+//         let fresh4 = (*__stream)._IO_write_ptr;
+//         (*__stream)._IO_write_ptr =
+//             (*__stream)._IO_write_ptr.offset(1);
+//         *fresh4 = __c as libc::c_char;
+//         *fresh4 as u8 as
+//     };
+// }
+// #[inline]
+// fn putchar_unlocked(mut __c: ) ->  {
+//     return if ((*stdout)._IO_write_ptr >= (*stdout)._IO_write_end) as
+//          as libc::c_long != 0 {
+//         __overflow(stdout, __c as u8 as )
+//     } else {
+//         let fresh5 = (*stdout)._IO_write_ptr;
+//         (*stdout)._IO_write_ptr = (*stdout)._IO_write_ptr.offset(1);
+//         *fresh5 = __c as libc::c_char;
+//         *fresh5 as u8 as
+//     };
+// }
+// #[inline]
+// fn getline(mut __lineptr: *mut *mut libc::c_char,
+//                              mut __n: *mut size_t, mut __stream: *mut FILE)
+//                              -> __ssize_t {
+//     return __getdelim(__lineptr, __n, '\n' as i32, __stream);
+// }
+// #[inline]
+// fn feof_unlocked(mut __stream: *mut FILE) ->  {
+//     return ((*__stream)._flags & 0x10 as  != 0 as ) as
+//         ;
+// }
+// #[inline]
+// fn ferror_unlocked(mut __stream: *mut FILE) ->  {
+//     return ((*__stream)._flags & 0x20 as  != 0 as ) as
+//         ;
+// }
+// #[inline]
+// fn atof(mut __nptr: *const libc::c_char) -> libc::c_double {
+//     return strtod(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char);
+// }
+// #[inline]
+// fn atoi(mut __nptr: *const libc::c_char) ->  {
+//     return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+//                   10 as ) as ;
+// }
+// #[inline]
+// fn atol(mut __nptr: *const libc::c_char) -> libc::c_long {
+//     return strtol(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+//                   10 as );
+// }
+// #[inline]
+// fn atoll(mut __nptr: *const libc::c_char)
+//                            -> libc::c_longlong {
+//     return strtoll(__nptr, 0 as *mut libc::c_void as *mut *mut libc::c_char,
+//                    10 as );
+// }
+// #[inline]
+// fn bsearch(mut __key: *const libc::c_void,
+//                              mut __base: *const libc::c_void,
+//                              mut __nmemb: size_t, mut __size: size_t,
+//                              mut __compar: __compar_fn_t)
+//                              -> *mut libc::c_void {
+//     let mut __l: size_t = 0;
+//     let mut __u: size_t = 0;
+//     let mut __idx: size_t = 0;
+//     let mut __p: *const libc::c_void = 0 as *const libc::c_void;
+//     let mut __comparison:  = 0;
+//     __l = 0 as  as size_t;
+//     __u = __nmemb;
+//     while __l < __u {
+//         __idx =
+//             __l.wrapping_add(__u).wrapping_div(2 as  as
+//                 libc::c_ulong);
+//         __p =
+//             (__base as
+//                 *const libc::c_char).offset(__idx.wrapping_mul(__size) as
+//                 ) as *mut libc::c_void;
+//         __comparison =
+//             Some(__compar.expect("non-null function pointer")).expect("non-null function pointer")(__key,
+//                                                                                                    __p);
+//         if __comparison < 0 as  {
+//             __u = __idx
+//         } else if __comparison > 0 as  {
+//             __l = __idx.wrapping_add(1 as  as libc::c_ulong)
+//         } else { return __p as *mut libc::c_void }
+//     }
+//     return 0 as *mut libc::c_void;
+// }
+// #[inline]
+// fn tolower(mut __c: ) ->  {
+//     return if __c >= -(128 as ) && __c < 256 as  {
+//         *(*__ctype_tolower_loc()).offset(__c as )
+//     } else { __c };
+// }
+// #[inline]
+// fn toupper(mut __c: ) ->  {
+//     return if __c >= -(128 as ) && __c < 256 as  {
+//         *(*__ctype_toupper_loc()).offset(__c as )
+//     } else { __c };
+// }
+// #[inline]
+// fn strtoimax(mut nptr: *const libc::c_char,
+//                                mut endptr: *mut *mut libc::c_char,
+//                                mut base: ) -> intmax_t {
+//     return __strtol_internal(nptr, endptr, base, 0 as );
+// }
+// #[inline]
+// fn strtoumax(mut nptr: *const libc::c_char,
+//                                mut endptr: *mut *mut libc::c_char,
+//                                mut base: ) -> uintmax_t {
+//     return __strtoul_internal(nptr, endptr, base, 0 as );
+// }
+// #[inline]
+// fn wcstoimax(mut nptr: *const __gwchar_t,
+//                                mut endptr: *mut *mut __gwchar_t,
+//                                mut base: ) -> intmax_t {
+//     return __wcstol_internal(nptr, endptr, base, 0 as );
+// }
+
+pub const SIGHUP: i32 = 1;
+pub const SIGINT: i32 = 2;
+pub const SIGQUIT: i32 = 3;
+pub const SIGILL: i32 = 4;
+pub const SIGTRAP: i32 = 5;
+pub const SIGABRT: i32 = 6;
+pub const SIGIOT: i32 = 6;
+pub const SIGBUS: i32 = 7;
+pub const SIGFPE: i32 = 8;
+pub const SIGKILL: i32 = 9;
+pub const SIGUSR1: i32 = 10;
+pub const SIGSEGV: i32 = 11;
+pub const SIGUSR2: i32 = 12;
+pub const SIGPIPE: i32 = 13;
+pub const SIGALRM: i32 = 14;
+pub const SIGTERM: i32 = 15;
+pub const SIGSTKFLT: i32 = 16;
+pub const SIGCHLD: i32 = 17;
+pub const SIGCONT: i32 = 18;
+pub const SIGSTOP: i32 = 19;
+pub const SIGTSTP: i32 = 20;
+pub const SIGTTIN: i32 = 21;
+pub const SIGTTOU: i32 = 22;
+pub const SIGURG: i32 = 23;
+pub const SIGXCPU: i32 = 24;
+pub const SIGXFSZ: i32 = 25;
+pub const SIGVTALRM: i32 = 26;
+pub const SIGPROF: i32 = 27;
+pub const SIGWINCH: i32 = 28;
+pub const SIGIO: i32 = 29;
+pub const SIGPWR: i32 = 30;
+pub const SIGSYS: i32 = 31;
+pub const SIGUNUSED: i32 = 31;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct IfaceParam {
+    pub current: DhcpContext,
+    pub relay: DhcpRelay,
+    pub relay_local: NetAddress,
+    pub ind: i32,
+    pub addr_match: i32,
+    pub fallback: [u8; 16],
+    pub ll_addr: [u8; 16],
+    pub ula_addr: [u8; 16],
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct MatchParam {
+    pub ind: i32,
+    pub matched: i32,
+    pub netmask: NetAddress,
+    pub broadcast: NetAddress,
+    pub addr: NetAddress,
+}
+
+impl MatchParam {
+    pub fn new() -> MatchParam {
+        MatchParam {
+            ind: 0,
+            matched: 0,
+            netmask: NetAddress::new(),
+            broadcast: NetAddress::new(),
+            addr: NetAddress::new(),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2rustUnnamed14a {
+    pub c: Vec<u8>,
+    pub p: InPktInfo,
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct Cparam {
+    pub now: time::Instant,
+    pub newone: u32,
+    pub newname: u32,
+}
+
+// pub type __caddr_t = *mut libc::c_char;
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct Ifmap {
+    pub mem_start: u32,
+    pub mem_end: u32,
+    pub base_addr: u16,
+    pub irq: u8,
+    pub dma: u8,
+    pub port: u16,
+}
+
+impl Ifmap {
+    fn new() -> Ifmap {
+        Ifmap {
+            mem_start: 0,
+            mem_end: 0,
+            base_addr: 0,
+            irq: 0,
+            dma: 0,
+            port: 0,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct InPktInfo {
+    pub ipi_ifindex: u32,
+    pub ipi_spec_dst: NetAddress,
+    pub ipi_addr: NetAddress,
+}
+
+impl InPktInfo {
+    pub fn new() -> InPktInfo {
+        InPktInfo {
+            ipi_ifindex: 0,
+            ipi_spec_dst: NetAddress::new(),
+            ipi_addr: NetAddress::new(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct OptionUsage {
+    pub opt: u16,
+    pub rept: u16,
+    pub flagdesc: String,
+    pub desc: String,
+    pub arg: String,
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct OptionValue {
+    pub name: String,
+    pub val: i32,
+}
+
+#[derive(Copy, Clone, Default)]
+#[repr(C)]
+pub struct TabEntryA {
+    pub handle: char,
+    pub val: i32,
+}
+
+// static mut cache_head: Crec = 0 ;
+// static mut cache_tail: Crec = 0 ;
+// static mut hash_table: *mut Crec = 0;
+// static mut dhcp_spare: Crec = 0 ;
+// static mut new_chain: Crec = 0 ;
+// static mut insert_error: i32 = 0;
+// static mut big_free: BigName = 0;
+// static mut bignames_left: i32 = 0;
+// static mut hash_size: i32 = 0;

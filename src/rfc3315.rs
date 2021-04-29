@@ -1,4 +1,3 @@
-
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -14,2692 +13,1750 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DhcpContext, In6Addr, DhcpNetId, time::Instant, DhcpVendor, SharedNetwork, __bswap_32, DnsmasqDaemon, socklen_t, C2RustUnnamed, DhcpOpt, DhcpConfig, DhcpMac, DhcpMatchName, DhcpNetIdList, AddressListEntry, DhcpLease, DhcpRelay, NetAddress, NetAddress, NetAddress, NetAddress, SaFamily, __bswap_16, IPPROTO_IPV6, NetAddress};
-use crate::dhcp6::{get_client_mac, address6_valid, address6_available, address6_allocate};
-use crate::util::{is_same_net6, print_mac, memcmp_masked, legal_hostname, hostname_isequal, prettyprint_time, do_rfc1035_name, rand16, setaddr6part, addr6part, wildcard_match};
-use crate::dnsmasq_log::my_syslog;
-use crate::outpacket::{put_opt6, new_opt6, end_opt6, save_counter, put_opt6_short, put_opt6_string, put_opt6_long, put_opt6_char, expand, reset_counter};
-use crate::dhcp_common::{match_bytes, find_config, run_tag_if, strip_hostname, match_netid, log_tags, option_filter, option_string};
-use crate::lease::{lease6_find, lease_set_expires, lease_set_hwaddr, lease_set_hostname, lease_prune, lease6_reset, lease6_find_by_client, lease6_find_by_addr, lease6_allocate, lease_set_iaid, lease_set_interface, lease_add_extradata};
-use crate::domain::get_domain6;
-use crate::forward::send_from;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct state {
-    pub clid: mut Vec<u8>,
-    pub clid_len: i32,
-    pub ia_type: i32,
-    pub interface: i32,
-    pub hostname_auth: i32,
-    pub lease_allocate: i32,
-    pub client_hostname: &mut String,
-    pub hostname: &mut String,
-    pub domain: &mut String,
-    pub send_domain: &mut String,
-    pub context: DhcpContext,
-    pub link_address: &mut In6Addr,
-    pub fallback: &mut In6Addr,
-    pub ll_addr: &mut In6Addr,
-    pub ula_addr: &mut In6Addr,
-    pub xid: u32,
-    pub fqdn_flags: u32,
-    pub iaid: u32,
-    pub iface_name: &mut String,
-    pub packet_options:Vec<u8>,
-    pub end:Vec<u8>,
-    pub tags: &mut DhcpNetId,
-    pub context_tags: &mut DhcpNetId,
-    pub mac: [u8; 16],
-    pub mac_len: u32,
-    pub mac_type: u32,
+
+#include "dnsmasq.h"
+
+#ifdef HAVE_DHCP6
+
+struct state {
+  unsigned char *clid;
+  int clid_len, ia_type, interface, hostname_auth, lease_allocate;
+  char *client_hostname, *hostname, *domain, *send_domain;
+  struct dhcp_context *context;
+  struct in6_addr *link_address, *fallback, *ll_addr, *ula_addr;
+  unsigned int xid, fqdn_flags, iaid;
+  char *iface_name;
+  void *packet_options, *end;
+  struct dhcp_netid *tags, *context_tags;
+  unsigned char mac[DHCP_CHADDR_MAX];
+  unsigned int mac_len, mac_type;
+};
+
+static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz, 
+			     struct in6_addr *client_addr, int is_unicast, time_t now);
+static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_t sz, int is_unicast, time_t now);
+static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_opts);
+static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string);
+static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, char *string);
+static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize);
+static void *opt6_next(void *opts, void *end);
+static unsigned int opt6_uint(unsigned char *opt, int offset, int size);
+static void get_context_tag(struct state *state, struct dhcp_context *context);
+static int check_ia(struct state *state, void *opt, void **endp, void **ia_option);
+static int build_ia(struct state *state, int *t1cntr);
+static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz);
+static void mark_context_used(struct state *state, struct in6_addr *addr);
+static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr);
+static int check_address(struct state *state, struct in6_addr *addr);
+static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now);
+static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr);
+static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
+			unsigned int *min_time, struct in6_addr *addr, time_t now);
+static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now);
+static int add_local_addrs(struct dhcp_context *context);
+static struct dhcp_netid *add_options(struct state *state, int do_refresh);
+static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
+			    unsigned int *preferred_timep, unsigned int lease_time);
+
+pub const opt: u32 = 6;_len(opt) ((int)(opt6_uint(opt, -2, 2)))
+pub const opt: u32 = 6;_type(opt) (opt6_uint(opt, -4, 2))
+pub const opt: u32 = 6;_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[4+(i)]))
+
+pub const opt: u32 = 6;_user_vendor_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2+(i)]))
+pub const opt: u32 = 6;_user_vendor_len(opt) ((int)(opt6_uint(opt, -4, 2)))
+pub const opt: u32 = 6;_user_vendor_next(opt, end) (opt6_next(((void *) opt) - 2, end))
+ 
+
+unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *iface_name,
+			   struct in6_addr *fallback,  struct in6_addr *ll_addr, struct in6_addr *ula_addr,
+			   size_t sz, struct in6_addr *client_addr, time_t now)
+{
+  struct dhcp_vendor *vendor;
+  int msg_type;
+  struct state state;
+  
+  if (sz <= 4)
+    return 0;
+  
+  msg_type = *((unsigned char *)daemon->dhcp_packet.iov_base);
+  
+  /* Mark these so we only match each at most once, to avoid tangled linked lists */
+  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
+    vendor->netid.next = &vendor->netid;
+  
+  reset_counter();
+  state.context = context;
+  state.interface = interface;
+  state.iface_name = iface_name;
+  state.fallback = fallback;
+  state.ll_addr = ll_addr;
+  state.ula_addr = ula_addr;
+  state.mac_len = 0;
+  state.tags = NULL;
+  state.link_address = NULL;
+
+  if (dhcp6_maybe_relay(&state, daemon->dhcp_packet.iov_base, sz, client_addr, 
+			IN6_IS_ADDR_MULTICAST(client_addr), now))
+    return msg_type == DHCP6RELAYFORW ? DHCPV6_SERVER_PORT : DHCPV6_CLIENT_PORT;
+
+  return 0;
 }
 
-
-pub fn dhcp6_reply(mut context: DhcpContext,
-                                     mut interface: i32,
-                                     mut iface_name: &mut String,
-                                     mut fallback: &mut In6Addr,
-                                     mut ll_addr: &mut In6Addr,
-                                     mut ula_addr: &mut In6Addr,
-                                     mut sz: usize,
-                                     mut client_addr: &mut In6Addr,
-                                     mut now: time::Instant) -> u16 {
-    let mut vendor: DhcpVendor = 0 ;
-    let mut msg_type: i32 = 0;
-    let mut state: state =
-        state{clid: 0,
-              clid_len: 0,
-              ia_type: 0,
-              interface: 0,
-              hostname_auth: 0,
-              lease_allocate: 0,
-              client_hostname: 0 ,
-              hostname: 0 ,
-              domain: 0 ,
-              send_domain: 0 ,
-              context: 0,
-              link_address: 0,
-              fallback: 0,
-              ll_addr: 0,
-              ula_addr: 0,
-              xid: 0,
-              fqdn_flags: 0,
-              iaid: 0,
-              iface_name: 0 ,
-              packet_options: 0,
-              end: 0,
-              tags: 0 ,
-              context_tags: 0 ,
-              mac: [0; 16],
-              mac_len: 0,
-              mac_type: 0,};
-    if sz <= 4 {
-        return 0
-    }
-    msg_type =
-        *(dnsmasq_daemon.dhcp_packet.iov_base) ;
-    /* Mark these so we only match each at most once, to avoid tangled linked lists */
-    vendor = dnsmasq_daemon.dhcp_vendors;
-    while !vendor.is_null() {
-        vendor.netid.next = &mut vendor.netid;
-        vendor = vendor.next
-    }
-    reset_counter();
-    state.context = context;
-    state.interface = interface;
-    state.iface_name = iface_name;
-    state.fallback = fallback;
-    state.ll_addr = ll_addr;
-    state.ula_addr = ula_addr;
-    state.mac_len = 0;
-    state.tags = 0 ;
-    state.link_address = 0;
-    if dhcp6_maybe_relay(&mut state, dnsmasq_daemon.dhcp_packet.iov_base,
-                         sz, client_addr,
-                         (*(client_addr                          *const u8).offset(0        ) == 0xff)                       , now) != 0 {
-        return if msg_type == 12 {
-                   547
-               } else { 546 }
-    }
-    return 0 ;
-}
 /* This cost me blood to write, it will probably cost you blood to understand - srk. */
-fn dhcp6_maybe_relay(mut state: &mut state,
-                                       mut inbuff:Vec<u8>,
-                                       mut sz: usize,
-                                       mut client_addr: &mut In6Addr,
-                                       mut is_unicast: i32,
-                                       mut now: time::Instant) -> i32 {
-    let mut end:Vec<u8> = inbuff.offset(sz);
-    let mut opts:Vec<u8> =
-        inbuff.offset(34);
-    let mut msg_type: i32 =
-        *(inbuff);
-    let mut outmsgtypep: mut Vec<u8> = 0;
-    let mut opt:Vec<u8> = 0;
-    let mut vendor: DhcpVendor = 0 ;
-    /* if not an encapsulated relayed message, just do the stuff */
-    if msg_type != 12 {
-        /* if link_address != NULL if points to the link address field of the 
+static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz, 
+			     struct in6_addr *client_addr, int is_unicast, time_t now)
+{
+  void *end = inbuff + sz;
+  void *opts = inbuff + 34;
+  int msg_type = *((unsigned char *)inbuff);
+  unsigned char *outmsgtypep;
+  void *opt;
+  struct dhcp_vendor *vendor;
+
+  /* if not an encapsulated relayed message, just do the stuff */
+  if (msg_type != DHCP6RELAYFORW)
+    {
+      /* if link_address != NULL if points to the link address field of the 
 	 innermost nested RELAYFORW message, which is where we find the
 	 address of the network on which we can allocate an address.
 	 Recalculate the available contexts using that information. 
 
       link_address == NULL means there's no relay in use, so we try and find the client's 
       MAC address from the local ND cache. */
-        if state.link_address.is_null() {
-            get_client_mac(client_addr, state.interface,
-                           state.mac.as_mut_ptr(), &mut state.mac_len,
-                           &mut state.mac_type, now);
-        } else {
-            let mut c: DhcpContext = 0;
-            let mut share: SharedNetwork = 0 ;
-            state.context = 0;
-            if ({
-                    let mut __a: *const In6Addr =
-                        state.link_address ;
-                    (__a.__in6_u.__u6_addr32[0 ] ==
-                         0 &&
-                         __a.__in6_u.__u6_addr32[1 ]
-                             == 0 &&
-                         __a.__in6_u.__u6_addr32[2 ]
-                             == 0 &&
-                         __a.__in6_u.__u6_addr32[3 ]
-                             == __bswap_32(1))
-                }) == 0 &&
-                   ({
-                        let mut __a: *const In6Addr =
-                            state.link_address ;
-                        (__a.__in6_u.__u6_addr32[0 ]
-                             & __bswap_32(0xffc00000) ==
-                             __bswap_32(0xfe800000))
-                    }) == 0 &&
-                   !(*(state.link_address                     *const u8).offset(0)
-                         == 0xff) {
-                c = dnsmasq_daemon.dhcp6;
-                while !c.is_null() {
-                    share = dnsmasq_daemon.shared_networks;
-                    while !share.is_null() {
-                        if !(share.shared_addr.s_addr !=
-                                 0) {
-                            if !(share.if_index != 0 ||
-                                     ({
-                                          let mut __a: *const In6Addr =
-                                              state.link_address                                            *const In6Addr;
-                                          let mut __b: *const In6Addr =
-                                              &mut share.match_addr6                                            &mut In6Addr                                            *const In6Addr;
-                                          (__a.__in6_u.__u6_addr32[0
-                                                                                                usize]
-                                               ==
-                                               __b.__in6_u.__u6_addr32[0
-                                                                                                        usize]
-                                               &&
-                                               __a.__in6_u.__u6_addr32[1
-                                                                                                        usize]
-                                                   ==
-                                                   __b.__in6_u.__u6_addr32[1
+      
+      if (!state->link_address)
+	get_client_mac(client_addr, state->interface, state->mac, &state->mac_len, &state->mac_type, now);
+      else
+	{
+	  struct dhcp_context *c;
+	  struct shared_network *share = NULL;
+	  state->context = NULL;
 
-                                                                                                                usize]
-                                               &&
-                                               __a.__in6_u.__u6_addr32[2
-                                                                                                        usize]
-                                                   ==
-                                                   __b.__in6_u.__u6_addr32[2
+	  if (!IN6_IS_ADDR_LOOPBACK(state->link_address) &&
+	      !IN6_IS_ADDR_LINKLOCAL(state->link_address) &&
+	      !IN6_IS_ADDR_MULTICAST(state->link_address))
+	    for (c = daemon->dhcp6; c; c = c->next)
+	      {
+		for (share = daemon->shared_networks; share; share = share->next)
+		  {
+		    if (share->shared_addr.s_addr != 0)
+		      continue;
+		    
+		    if (share->if_index != 0 ||
+			!IN6_ARE_ADDR_EQUAL(state->link_address, &share->match_addr6))
+		      continue;
+		    
+		    if ((c->flags & CONTEXT_DHCP) &&
+			!(c->flags & (CONTEXT_TEMPLATE | CONTEXT_OLD)) &&
+			is_same_net6(&share->shared_addr6, &c->start6, c->prefix) &&
+			is_same_net6(&share->shared_addr6, &c->end6, c->prefix))
+		      break;
+		  }
+		
+		if (share ||
+		    ((c->flags & CONTEXT_DHCP) &&
+		     !(c->flags & (CONTEXT_TEMPLATE | CONTEXT_OLD)) &&
+		     is_same_net6(state->link_address, &c->start6, c->prefix) &&
+		     is_same_net6(state->link_address, &c->end6, c->prefix)))
+		  {
+		    c->preferred = c->valid = 0xffffffff;
+		    c->current = state->context;
+		    state->context = c;
+		  }
+	      }
+	  
+	  if (!state->context)
+	    {
+	      inet_ntop(AF_INET6, state->link_address, daemon->addrbuff, ADDRSTRLEN); 
+	      my_syslog(MS_DHCP | LOG_WARNING, 
+			_("no address range available for DHCPv6 request from relay at %s"),
+			daemon->addrbuff);
+	      return 0;
+	    }
+	}
+	  
+      if (!state->context)
+	{
+	  my_syslog(MS_DHCP | LOG_WARNING, 
+		    _("no address range available for DHCPv6 request via %s"), state->iface_name);
+	  return 0;
+	}
 
-                                                                                                                usize]
-                                               &&
-                                               __a.__in6_u.__u6_addr32[3
-                                                                                                        usize]
-                                                   ==
-                                                   __b.__in6_u.__u6_addr32[3
-
-                                                                                                                usize])
-
-                                      }) == 0) {
-                                if c.flags &
-                                       (1) << 8
-                                       != 0 &&
-                                       c.flags &
-                                           ((1) <<
-                                                10 |
-                                                (1) <<
-                                                    16) == 0 &&
-                                       is_same_net6(&mut share.shared_addr6,
-                                                    &mut c.start6,
-                                                    c.prefix) != 0 &&
-                                       is_same_net6(&mut share.shared_addr6,
-                                                    &mut c.end6,
-                                                    c.prefix) != 0 {
-                                    break ;
-                                }
-                            }
-                        }
-                        share = share.next
-                    }
-                    if !share.is_null() ||
-                           c.flags &
-                               (1) << 8 != 0 &&
-                               c.flags &
-                                   ((1) << 10 |
-                                        (1) <<
-                                            16) == 0 &&
-                               is_same_net6(state.link_address,
-                                            &mut c.start6, c.prefix) !=
-                                   0 &&
-                               is_same_net6(state.link_address,
-                                            &mut c.end6, c.prefix) != 0
-                       {
-                        c.valid = 0xffffffff;
-                        c.preferred = c.valid;
-                        c.current = state.context;
-                        state.context = c
-                    }
-                    c = c.next
-                }
-            }
-            if state.context.is_null() {
-                inet_ntop(10,
-                          state.link_address,
-                          dnsmasq_daemon.addrbuff,
-                          46);
-                my_syslog((3) << 3 |
-                              4,
-                          "no address range available for DHCPv6 request from relay at %s"
-                              ,
-                          dnsmasq_daemon.addrbuff);
-                return 0
-            }
-        }
-        if state.context.is_null() {
-            my_syslog((3) << 3 |
-                          4,
-                      "no address range available for DHCPv6 request via %s"
-                          ,
-                      state.iface_name);
-            return 0
-        }
-        return dhcp6_no_relay(state, msg_type, inbuff, sz, is_unicast, now)
+      return dhcp6_no_relay(state, msg_type, inbuff, sz, is_unicast, now);
     }
-    /* must have at least msg_type+hopcount+link_address+peer_address+minimal size option
+
+  /* must have at least msg_type+hopcount+link_address+peer_address+minimal size option
      which is               1   +    1   +    16      +     16     + 2 + 2 = 38 */
-    if sz < 38 { return 0 }
-    /* copy header stuff into reply message and set type to reply */
-    outmsgtypep =
-        put_opt6(inbuff, 34 );
-    if outmsgtypep.is_null() { return 0 }
-    *outmsgtypep = 13;
-    let mut current_block_36: u64;
-    /* look for relay options and set tags if found. */
-    vendor = dnsmasq_daemon.dhcp_vendors;
-    while !vendor.is_null() {
-        let mut mopt: i32 = 0;
-        if vendor.match_type == 5 {
-            mopt = 38;
-            current_block_36 = 2543120759711851213;
-        } else if vendor.match_type == 4 {
-            mopt = 37;
-            current_block_36 = 2543120759711851213;
-        } else { current_block_36 = 4090602189656566074; }
-        match current_block_36 {
-            2543120759711851213 => {
-                opt =
-                    opt6_find(opts, end, mopt,
-                              1);
-                if !opt.is_null() &&
-                       vendor.len ==
-                           opt6_uint(opt,
-                                     -(2), 2) &&
-                       memcmp(vendor.data,
-                              &mut *(opt                                   mut Vec<u8>).offset((4
-                                                                         +
-                                                                         0                          )
-                                                      )
-                                 ,
-                              vendor.len) ==
-                           0 &&
-                       vendor.netid.next !=
-                           &mut vendor.netid  {
-                    vendor.netid.next = state.tags;
-                    state.tags = &mut vendor.netid;
-                    break ;
-                }
-            }
-            _ => { }
-        }
-        vendor = vendor.next
+  if (sz < 38)
+    return 0;
+  
+  /* copy header stuff into reply message and set type to reply */
+  if (!(outmsgtypep = put_opt6(inbuff, 34)))
+    return 0;
+  *outmsgtypep = DHCP6RELAYREPL;
+
+  /* look for relay options and set tags if found. */
+  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
+    {
+      int mopt;
+      
+      if (vendor->match_type == MATCH_SUBSCRIBER)
+	mopt = OPTION6_SUBSCRIBER_ID;
+      else if (vendor->match_type == MATCH_REMOTE)
+	mopt = OPTION6_REMOTE_ID; 
+      else
+	continue;
+
+      if ((opt = opt6_find(opts, end, mopt, 1)) &&
+	  vendor->len == opt6_len(opt) &&
+	  memcmp(vendor->data, opt6_ptr(opt, 0), vendor->len) == 0 &&
+	  vendor->netid.next != &vendor->netid)
+	{
+	  vendor->netid.next = state->tags;
+	  state->tags = &vendor->netid;
+	  break;
+	}
     }
-    /* RFC-6939 */
-    opt =
-        opt6_find(opts, end, 79,
-                  3);
-    if !opt.is_null() {
-        if opt6_uint(opt, -(2),
-                     2) - 2 >
-               16 {
-            return 0
-        }
-        state.mac_type =
-            opt6_uint(opt, 0,
-                      2);
-        state.mac_len =
-            (opt6_uint(opt, -(2),
-                       2) - 2)          libc::c_uint;
-        memcpy(&mut *state.mac.as_mut_ptr().offset(0       )             mut Vec<u8>,
-               &mut *(opt).offset((4 +
-                                                          2)      )             mut Vec<u8>,
-               state.mac_len);
+  
+  /* RFC-6939 */
+  if ((opt = opt6_find(opts, end, OPTION6_CLIENT_MAC, 3)))
+    {
+      if (opt6_len(opt) - 2 > DHCP_CHADDR_MAX) {
+        return 0;
+      }
+      state->mac_type = opt6_uint(opt, 0, 2);
+      state->mac_len = opt6_len(opt) - 2;
+      memcpy(&state->mac[0], opt6_ptr(opt, 2), state->mac_len);
     }
-    opt = opts;
-    while !opt.is_null() {
-        if (&mut *(opt                 mut Vec<u8>).offset((4 +
-                                                       0)   )          mut Vec<u8>         Vec<u8>).offset(opt6_uint(opt,
-                                                    -(2),
-                                                    2)                                        ) > end {
-            return 0
-        }
-        /* Don't copy MAC address into reply. */
-        if opt6_uint(opt, -(4),
-                     2) != 79 {
-            let mut o: i32 =
-                new_opt6(opt6_uint(opt,
-                                   -(4), 2)                       );
-            if opt6_uint(opt, -(4),
-                         2) == 9
-               {
-                let mut align: In6Addr =
-                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-                /* the packet data is unaligned, copy to aligned storage */
-                memcpy(&mut align,
-                       inbuff.offset(2),
-                       16);
-                state.link_address = &mut align;
-                /* zero is_unicast since that is now known to refer to the 
+  
+  for (opt = opts; opt; opt = opt6_next(opt, end))
+    {
+      if (opt6_ptr(opt, 0) + opt6_len(opt) > end) 
+        return 0;
+     
+      /* Don't copy MAC address into reply. */
+      if (opt6_type(opt) != OPTION6_CLIENT_MAC)
+	{
+	  int o = new_opt6(opt6_type(opt));
+	  if (opt6_type(opt) == OPTION6_RELAY_MSG)
+	    {
+	      struct in6_addr align;
+	      /* the packet data is unaligned, copy to aligned storage */
+	      memcpy(&align, inbuff + 2, IN6ADDRSZ); 
+	      state->link_address = &align;
+	      /* zero is_unicast since that is now known to refer to the 
 		 relayed packet, not the original sent by the client */
-                if dhcp6_maybe_relay(state,
-                                     &mut *(opt                                          mut Vec<u8>).offset((4
-
-                                                                                +
-                                                                                0
-                                                                                                                    )
-                                                                    )
-                                                                          Vec<u8>,
-                                     opt6_uint(opt,
-                                               -(2),
-                                               2)                                    , client_addr,
-                                     0, now) == 0 {
-                    return 0
-                }
-            } else {
-                put_opt6(&mut *(opt                              mut Vec<u8>).offset((4
-                                                                    +
-                                                                    0                     )
-                                                                  )
-                            ,
-                         opt6_uint(opt,
-                                   -(2), 2)                                              usize); /* default to send if we receive no FQDN option */
-            }
-            end_opt6(o);
-        }
-        opt = opt6_next(opt, end)
+	      if (!dhcp6_maybe_relay(state, opt6_ptr(opt, 0), opt6_len(opt), client_addr, 0, now))
+		return 0;
+	    }
+	  else
+	    put_opt6(opt6_ptr(opt, 0), opt6_len(opt));
+	  end_opt6(o);
+	}
     }
-    return 1;
+  
+  return 1;
 }
-fn dhcp6_no_relay(mut state: &mut state,
-                                    mut msg_type: i32,
-                                    mut inbuff:Vec<u8>,
-                                    mut sz: usize,
-                                    mut is_unicast: i32,
-                                    mut now: time::Instant) -> i32 {
-    let mut opt:Vec<u8> = 0;
-    let mut i: i32 = 0;
-    let mut o: i32 = 0;
-    let mut o1: i32 = 0;
-    let mut start_opts: i32 = 0;
-    let mut opt_cfg: DhcpOpt = 0 ;
-    let mut tagif: DhcpNetId = 0 ;
-    let mut config: DhcpConfig = 0;
-    let mut known_id: DhcpNetId =
-        DhcpNetId {net: 0 , next: 0 ,};
-    let mut iface_id: DhcpNetId =
-        DhcpNetId {net: 0 , next: 0 ,};
-    let mut v6_id: DhcpNetId =
-        DhcpNetId {net: 0 , next: 0 ,};
-    let mut outmsgtypep: mut Vec<u8> = 0;
-    let mut vendor: DhcpVendor = 0 ;
-    let mut context_tmp: DhcpContext = 0;
-    let mut mac_opt: DhcpMac = 0 ;
-    let mut ignore: u32 = 0;
-    state.packet_options = inbuff.offset(4);
-    state.end = inbuff.offset(sz);
-    state.clid = 0;
-    state.clid_len = 0;
-    state.lease_allocate = 0;
-    state.context_tags = 0 ;
-    state.domain = 0 ;
-    state.send_domain = 0 ;
-    state.hostname_auth = 0;
-    state.hostname = 0 ;
-    state.client_hostname = 0 ;
-    state.fqdn_flags = 0x1;
-    /* set tag with name == interface */
-    iface_id.net = state.iface_name;
-    iface_id.next = state.tags;
-    state.tags = &mut iface_id;
-    /* set tag "dhcpv6" */
-    v6_id.net =
-        "dhcpv6"       &mut String;
-    v6_id.next = state.tags;
-    state.tags = &mut v6_id;
-    /* copy over transaction-id, and save pointer to message type */
-    outmsgtypep =
-        put_opt6(inbuff, 4 );
-    if outmsgtypep.is_null() { return 0 }
-    start_opts = save_counter(-(1));
-    state.xid =
-        (*outmsgtypep.offset(3) |
-             (*outmsgtypep.offset(2))
-                 << 8 |
-             (*outmsgtypep.offset(1))
-                 << 16);
-    /* We're going to be linking tags from all context we use. 
-     mark them as unused so we don't link one twice and break the list */
-    context_tmp = state.context;
-    while !context_tmp.is_null() {
-        context_tmp.netid.next = &mut context_tmp.netid;
-        if dnsmasq_daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-            inet_ntop(10,
-                      &mut context_tmp.start6 , dnsmasq_daemon.dhcp_buff,
-                      46);
-            inet_ntop(10,
-                      &mut context_tmp.end6 , dnsmasq_daemon.dhcp_buff2,
-                      46);
-            if context_tmp.flags &
-                   (1) << 0 != 0 {
-                my_syslog((3) << 3 |
-                              6,
-                          "%u available DHCPv6 subnet: %s/%d"                        *const u8, state.xid,
-                          dnsmasq_daemon.dhcp_buff, context_tmp.prefix);
-            } else {
-                my_syslog((3) << 3 |
-                              6,
-                          "%u available DHCP range: %s -- %s"                        *const u8, state.xid,
-                          dnsmasq_daemon.dhcp_buff,
-                          dnsmasq_daemon.dhcp_buff2);
-            }
-        }
-        context_tmp = context_tmp.current
-    }
-    opt =
-        opt6_find(state.packet_options, state.end,
-                  1,
-                  1);
-    if !opt.is_null() {
-        state.clid =
-            &mut *(opt                 mut Vec<u8>).offset((4 +
-                                                       0)   )          mut Vec<u8>;
-        state.clid_len =
-            opt6_uint(opt, -(2),
-                      2);
-        o = new_opt6(1);
-        put_opt6(state.clid,
-                 state.clid_len );
-        end_opt6(o);
-    } else if msg_type != 11 { return 0 }
-    /* server-id must match except for SOLICIT, CONFIRM and REBIND messages */
-    if msg_type != 1 && msg_type != 4 &&
-           msg_type != 11 && msg_type != 6 &&
-           {
-               opt =
-                   opt6_find(state.packet_options, state.end,
-                             2,
-                             1);
-               (opt.is_null() ||
-                    opt6_uint(opt, -(2),
-                              2) !=
-                        dnsmasq_daemon.duid_len) ||
-                   memcmp(&mut *(opt                               mut Vec<u8>).offset((4
-                                                                     +
-                                                                     0                      )
-                                                                   )
-                             ,
-                          dnsmasq_daemon.duid,
-                          dnsmasq_daemon.duid_len) !=
-                       0
-           } {
-        return 0
-    }
-    o = new_opt6(2);
-    put_opt6(dnsmasq_daemon.duid,
-             dnsmasq_daemon.duid_len );
-    end_opt6(o);
-    if is_unicast != 0 &&
-           (msg_type == 3 || msg_type == 5 ||
-                msg_type == 8 || msg_type == 9)
-       {
-        *outmsgtypep = 7;
-        o1 = new_opt6(13);
-        put_opt6_short(5);
-        put_opt6_string("Use multicast"  );
-        end_opt6(o1);
-        return 1
-    }
-    let mut current_block_64: u64;
-    /* match vendor and user class options */
-    vendor = dnsmasq_daemon.dhcp_vendors;
-    while !vendor.is_null() {
-        let mut mopt: i32 = 0;
-        if vendor.match_type == 1 {
-            mopt = 16;
-            current_block_64 = 6560072651652764009;
-        } else if vendor.match_type == 2 {
-            mopt = 15;
-            current_block_64 = 6560072651652764009;
-        } else { current_block_64 = 17747245473264231573; }
-        match current_block_64 {
-            6560072651652764009 => {
-                opt =
-                    opt6_find(state.packet_options, state.end,
-                              mopt,
-                              2);
-                if !opt.is_null() {
-                    let mut enc_opt:Vec<u8> =
-                        0;
-                    let mut enc_end:Vec<u8> =
-                        &mut *(opt                             mut Vec<u8>).offset((4
-                                                                   +
-                                                                   (opt6_uint
-                                                                                            fn(_:
-                                                                                                 mut Vec<u8>,
-                                                                                             _:
-                                                                                                 ,
-                                                                                             _:
-                                                                                                 )
-                                                                            ->
-                                                                                libc::c_uint)(opt                   mut Vec<u8>,
-                                                                                              -(2                       ),
-                                                                                              2                   )
-                                                                                          )
-                                                                 )                      mut Vec<u8>;
-                    let mut offset: i32 = 0;
-                    if mopt == 16 {
-                        if (opt6_uint(opt,
-                                      -(2), 2)
-                               ) < 4 {
-                            current_block_64 = 17747245473264231573;
-                        } else if vendor.enterprise !=
-                                      opt6_uint(opt,
-                                                0,
-                                                4) {
-                            current_block_64 = 17747245473264231573;
-                        } else {
-                            offset = 4;
-                            current_block_64 = 307447392441238883;
-                        }
-                    } else { current_block_64 = 307447392441238883; }
-                    match current_block_64 {
-                        17747245473264231573 => { }
-                        _ => {
-                            /* Note that format if user/vendor classes is different to DHCP options - no option types. */
-                            enc_opt =
-                                &mut *(opt                                     mut Vec<u8>).offset((4
-                                                                           +
-                                                                           offset)
-                                                          )
-                                                                Vec<u8>;
-                            while !enc_opt.is_null() {
-                                i = 0;
-                                while i <=
-                                          opt6_uint(enc_opt     mut Vec<u8>,
-                                                    -(4),
-                                                    2)                                         - vendor.len {
-                                    if memcmp(vendor.data
-                                              &mut *(enc_opt      mut Vec<u8>).offset((2
-                                                                                         +
-                                                                                         i)
-                                                                                      )
-                                                                                            Vec<u8>,
-                                              vendor.len)
-                                           == 0 {
-                                        vendor.netid.next = state.tags;
-                                        state.tags = &mut vendor.netid;
-                                        break ;
-                                    } else { i += 1 }
-                                }
-                                enc_opt =
-                                    opt6_next(enc_opt.offset(-(2
-                                                                  )),
-                                              enc_end)
-                            }
-                        }
-                    }
-                }
-            }
-            _ => { }
-        }
-        vendor = vendor.next
-    }
-    if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
 
-                                                                                                               ))
-           != 0 &&
-           {
-               opt =
-                   opt6_find(state.packet_options, state.end,
-                             16,
-                             4);
-               !opt.is_null()
-           } {
-        my_syslog((3) << 3 | 6,
-                  "%u vendor class: %u", state.xid,
-                  opt6_uint(opt, 0,
-                            4));
+static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_t sz, int is_unicast, time_t now)
+{
+  void *opt;
+  int i, o, o1, start_opts;
+  struct dhcp_opt *opt_cfg;
+  struct dhcp_netid *tagif;
+  struct dhcp_config *config = NULL;
+  struct dhcp_netid known_id, iface_id, v6_id;
+  unsigned char *outmsgtypep;
+  struct dhcp_vendor *vendor;
+  struct dhcp_context *context_tmp;
+  struct dhcp_mac *mac_opt;
+  unsigned int ignore = 0;
+
+  state->packet_options = inbuff + 4;
+  state->end = inbuff + sz;
+  state->clid = NULL;
+  state->clid_len = 0;
+  state->lease_allocate = 0;
+  state->context_tags = NULL;
+  state->domain = NULL;
+  state->send_domain = NULL;
+  state->hostname_auth = 0;
+  state->hostname = NULL;
+  state->client_hostname = NULL;
+  state->fqdn_flags = 0x01; /* default to send if we receive no FQDN option */
+
+  /* set tag with name == interface */
+  iface_id.net = state->iface_name;
+  iface_id.next = state->tags;
+  state->tags = &iface_id; 
+
+  /* set tag "dhcpv6" */
+  v6_id.net = "dhcpv6";
+  v6_id.next = state->tags;
+  state->tags = &v6_id;
+
+  /* copy over transaction-id, and save pointer to message type */
+  if (!(outmsgtypep = put_opt6(inbuff, 4)))
+    return 0;
+  start_opts = save_counter(-1);
+  state->xid = outmsgtypep[3] | outmsgtypep[2] << 8 | outmsgtypep[1] << 16;
+   
+  /* We're going to be linking tags from all context we use. 
+     mark them as unused so we don't link one twice and break the list */
+  for (context_tmp = state->context; context_tmp; context_tmp = context_tmp->current)
+    {
+      context_tmp->netid.next = &context_tmp->netid;
+
+      if (option_bool(OPT_LOG_OPTS))
+	{
+	   inet_ntop(AF_INET6, &context_tmp->start6, daemon->dhcp_buff, ADDRSTRLEN); 
+	   inet_ntop(AF_INET6, &context_tmp->end6, daemon->dhcp_buff2, ADDRSTRLEN); 
+	   if (context_tmp->flags & (CONTEXT_STATIC))
+	     my_syslog(MS_DHCP | LOG_INFO, _("%u available DHCPv6 subnet: %s/%d"),
+		       state->xid, daemon->dhcp_buff, context_tmp->prefix);
+	   else
+	     my_syslog(MS_DHCP | LOG_INFO, _("%u available DHCP range: %s -- %s"), 
+		       state->xid, daemon->dhcp_buff, daemon->dhcp_buff2);
+	}
     }
-    let mut current_block_78: u64;
-    /* dhcp-match. If we have hex-and-wildcards, look for a left-anchored match.
+
+  if ((opt = opt6_find(state->packet_options, state->end, OPTION6_CLIENT_ID, 1)))
+    {
+      state->clid = opt6_ptr(opt, 0);
+      state->clid_len = opt6_len(opt);
+      o = new_opt6(OPTION6_CLIENT_ID);
+      put_opt6(state->clid, state->clid_len);
+      end_opt6(o);
+    }
+  else if (msg_type != DHCP6IREQ)
+    return 0;
+
+  /* server-id must match except for SOLICIT, CONFIRM and REBIND messages */
+  if (msg_type != DHCP6SOLICIT && msg_type != DHCP6CONFIRM && msg_type != DHCP6IREQ && msg_type != DHCP6REBIND &&
+      (!(opt = opt6_find(state->packet_options, state->end, OPTION6_SERVER_ID, 1)) ||
+       opt6_len(opt) != daemon->duid_len ||
+       memcmp(opt6_ptr(opt, 0), daemon->duid, daemon->duid_len) != 0))
+    return 0;
+  
+  o = new_opt6(OPTION6_SERVER_ID);
+  put_opt6(daemon->duid, daemon->duid_len);
+  end_opt6(o);
+
+  if (is_unicast &&
+      (msg_type == DHCP6REQUEST || msg_type == DHCP6RENEW || msg_type == DHCP6RELEASE || msg_type == DHCP6DECLINE))
+    
+    {  
+      *outmsgtypep = DHCP6REPLY;
+      o1 = new_opt6(OPTION6_STATUS_CODE);
+      put_opt6_short(DHCP6USEMULTI);
+      put_opt6_string("Use multicast");
+      end_opt6(o1);
+      return 1;
+    }
+
+  /* match vendor and user class options */
+  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
+    {
+      int mopt;
+      
+      if (vendor->match_type == MATCH_VENDOR)
+	mopt = OPTION6_VENDOR_CLASS;
+      else if (vendor->match_type == MATCH_USER)
+	mopt = OPTION6_USER_CLASS; 
+      else
+	continue;
+
+      if ((opt = opt6_find(state->packet_options, state->end, mopt, 2)))
+	{
+	  void *enc_opt, *enc_end = opt6_ptr(opt, opt6_len(opt));
+	  int offset = 0;
+	  
+	  if (mopt == OPTION6_VENDOR_CLASS)
+	    {
+	      if (opt6_len(opt) < 4)
+		continue;
+	      
+	      if (vendor->enterprise != opt6_uint(opt, 0, 4))
+		continue;
+	    
+	      offset = 4;
+	    }
+ 
+	  /* Note that format if user/vendor classes is different to DHCP options - no option types. */
+	  for (enc_opt = opt6_ptr(opt, offset); enc_opt; enc_opt = opt6_user_vendor_next(enc_opt, enc_end))
+	    for (i = 0; i <= (opt6_user_vendor_len(enc_opt) - vendor->len); i++)
+	      if (memcmp(vendor->data, opt6_user_vendor_ptr(enc_opt, i), vendor->len) == 0)
+		{
+		  vendor->netid.next = state->tags;
+		  state->tags = &vendor->netid;
+		  break;
+		}
+	}
+    }
+
+  if (option_bool(OPT_LOG_OPTS) && (opt = opt6_find(state->packet_options, state->end, OPTION6_VENDOR_CLASS, 4)))
+    my_syslog(MS_DHCP | LOG_INFO, _("%u vendor class: %u"), state->xid, opt6_uint(opt, 0, 4));
+  
+  /* dhcp-match. If we have hex-and-wildcards, look for a left-anchored match.
      Otherwise assume the option is an array, and look for a matching element. 
      If no data given, existence of the option is enough. This code handles 
      V-I opts too. */
-    opt_cfg = dnsmasq_daemon.dhcp_match6;
-    while !opt_cfg.is_null() {
-        let mut match_0: i32 = 0;
-        if opt_cfg.flags & 2048 != 0 {
-            opt =
-                opt6_find(state.packet_options, state.end,
-                          17,
-                          4);
-            while !opt.is_null() {
-                let mut vopt:Vec<u8> = 0;
-                let mut vend:Vec<u8> =
-                    &mut *(opt).offset((4 +
-                                                               (opt6_uint                 fn(_:
-                                                                                             mut Vec<u8>,
-                                                                                         _:
-                                                                                             ,
-                                                                                         _:
-                                                                                             )
-                                                                        ->
-                                                                            libc::c_uint)(opt           mut Vec<u8>,
-                                                                                          -(2               ),
-                                                                                          2           )
-                                                                                  )
-                                                             )                  mut Vec<u8>;
-                vopt =
-                    opt6_find(&mut *(opt                                   mut Vec<u8>).offset((4
-                                                                         +
-                                                                         4                          )
-                                                      )
-                                 ,
-                              vend, opt_cfg.opt,
-                              0);
-                while !vopt.is_null() {
-                    match_0 =
-                        match_bytes(opt_cfg,
-                                    &mut *(vopt                                         mut Vec<u8>).offset((4
+  for (opt_cfg = daemon->dhcp_match6; opt_cfg; opt_cfg = opt_cfg->next)
+    {
+      int match = 0;
+      
+      if (opt_cfg->flags & DHOPT_RFC3925)
+	{
+	  for (opt = opt6_find(state->packet_options, state->end, OPTION6_VENDOR_OPTS, 4);
+	       opt;
+	       opt = opt6_find(opt6_next(opt, state->end), state->end, OPTION6_VENDOR_OPTS, 4))
+	    {
+	      void *vopt;
+	      void *vend = opt6_ptr(opt, opt6_len(opt));
+	      
+	      for (vopt = opt6_find(opt6_ptr(opt, 4), vend, opt_cfg->opt, 0);
+		   vopt;
+		   vopt = opt6_find(opt6_next(vopt, vend), vend, opt_cfg->opt, 0))
+		if ((match = match_bytes(opt_cfg, opt6_ptr(vopt, 0), opt6_len(vopt))))
+		  break;
+	    }
+	  if (match)
+	    break;
+	}
+      else
+	{
+	  if (!(opt = opt6_find(state->packet_options, state->end, opt_cfg->opt, 1)))
+	    continue;
+	  
+	  match = match_bytes(opt_cfg, opt6_ptr(opt, 0), opt6_len(opt));
+	} 
+  
+      if (match)
+	{
+	  opt_cfg->netid->next = state->tags;
+	  state->tags = opt_cfg->netid;
+	}
+    }
 
-                                                                               +
-                                                                               0
-                                                                                                                  )
-                                                                  )
-                                                                        Vec<u8>                                  mut Vec<u8>,
-                                    opt6_uint(vopt,
-                                              -(2),
-                                              2) );
-                    if match_0 != 0 { break ; }
-                    vopt =
-                        opt6_find(opt6_next(vopt, vend), vend,
-                                  opt_cfg.opt,
-                                  0)
-                }
-                opt =
-                    opt6_find(opt6_next(opt, state.end), state.end,
-                              17,
-                              4)
-            }
-            if match_0 != 0 { break ; }
-            current_block_78 = 2616667235040759262;
-        } else {
-            opt =
-                opt6_find(state.packet_options, state.end,
-                          opt_cfg.opt,
-                          1);
-            if opt.is_null() {
-                current_block_78 = 5793491756164225964;
-            } else {
-                match_0 =
-                    match_bytes(opt_cfg,
-                                &mut *(opt                                     mut Vec<u8>).offset((4
-                                                                           +
-                                                                           0
-                                                                                                          )
-                                                          )
+  if (state->mac_len != 0)
+    {
+      if (option_bool(OPT_LOG_OPTS))
+	{
+	  print_mac(daemon->dhcp_buff, state->mac, state->mac_len);
+	  my_syslog(MS_DHCP | LOG_INFO, _("%u client MAC address: %s"), state->xid, daemon->dhcp_buff);
+	}
 
-                                   ,
-                                opt6_uint(opt,
-                                          -(2),
-                                          2));
-                current_block_78 = 2616667235040759262;
-            }
-        }
-        match current_block_78 {
-            2616667235040759262 => {
-                if match_0 != 0 {
-                    (*opt_cfg.netid).next = state.tags;
-                    state.tags = opt_cfg.netid
-                }
-            }
-            _ => { }
-        }
-        opt_cfg = opt_cfg.next
+      for (mac_opt = daemon->dhcp_macs; mac_opt; mac_opt = mac_opt->next)
+	if ((unsigned)mac_opt->hwaddr_len == state->mac_len &&
+	    ((unsigned)mac_opt->hwaddr_type == state->mac_type || mac_opt->hwaddr_type == 0) &&
+	    memcmp_masked(mac_opt->hwaddr, state->mac, state->mac_len, mac_opt->mask))
+	  {
+	    mac_opt->netid.next = state->tags;
+	    state->tags = &mac_opt->netid;
+	  }
     }
-    if state.mac_len != 0 {
-        if dnsmasq_daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-            print_mac(dnsmasq_daemon.dhcp_buff, state.mac.as_mut_ptr(),
-                      state.mac_len);
-            my_syslog((3) << 3 |
-                          6,
-                      "%u client MAC address: %s", state.xid,
-                      dnsmasq_daemon.dhcp_buff);
-        }
-        mac_opt = dnsmasq_daemon.dhcp_macs;
-        while !mac_opt.is_null() {
-            if mac_opt.hwaddr_len == state.mac_len &&
-                   (mac_opt.hwaddr_type ==
-                        state.mac_type ||
-                        mac_opt.hwaddr_type == 0) &&
-                   memcmp_masked(mac_opt.hwaddr.as_mut_ptr(),
-                                 state.mac.as_mut_ptr(),
-                                 state.mac_len,
-                                 mac_opt.mask) != 0 {
-                mac_opt.netid.next = state.tags;
-                state.tags = &mut mac_opt.netid
-            }
-            mac_opt = mac_opt.next
-        }
+  
+  if ((opt = opt6_find(state->packet_options, state->end, OPTION6_FQDN, 1)))
+    {
+      /* RFC4704 refers */
+       int len = opt6_len(opt) - 1;
+       
+       state->fqdn_flags = opt6_uint(opt, 0, 1);
+       
+       /* Always force update, since the client has no way to do it itself. */
+       if (!option_bool(OPT_FQDN_UPDATE) && !(state->fqdn_flags & 0x01))
+	 state->fqdn_flags |= 0x03;
+ 
+       state->fqdn_flags &= ~0x04;
+
+       if (len != 0 && len < 255)
+	 {
+	   unsigned char *pp, *op = opt6_ptr(opt, 1);
+	   char *pq = daemon->dhcp_buff;
+	   
+	   pp = op;
+	   while (*op != 0 && ((op + (*op)) - pp) < len)
+	     {
+	       memcpy(pq, op+1, *op);
+	       pq += *op;
+	       op += (*op)+1;
+	       *(pq++) = '.';
+	     }
+	   
+	   if (pq != daemon->dhcp_buff)
+	     pq--;
+	   *pq = 0;
+	   
+	   if (legal_hostname(daemon->dhcp_buff))
+	     {
+	       struct dhcp_match_name *m;
+	       size_t nl = strlen(daemon->dhcp_buff);
+	       
+	       state->client_hostname = daemon->dhcp_buff;
+	       
+	       if (option_bool(OPT_LOG_OPTS))
+		 my_syslog(MS_DHCP | LOG_INFO, _("%u client provides name: %s"), state->xid, state->client_hostname);
+	       
+	       for (m = daemon->dhcp_name_match; m; m = m->next)
+		 {
+		   size_t ml = strlen(m->name);
+		   char save = 0;
+		   
+		   if (nl < ml)
+		     continue;
+		   if (nl > ml)
+		     {
+		       save = state->client_hostname[ml];
+		       state->client_hostname[ml] = 0;
+		     }
+		   
+		   if (hostname_isequal(state->client_hostname, m->name) &&
+		       (save == 0 || m->wildcard))
+		     {
+		       m->netid->next = state->tags;
+		       state->tags = m->netid;
+		     }
+		   
+		   if (save != 0)
+		     state->client_hostname[ml] = save;
+		 }
+	     }
+	 }
+    }	 
+  
+  if (state->clid &&
+      (config = find_config(daemon->dhcp_conf, state->context, state->clid, state->clid_len,
+			    state->mac, state->mac_len, state->mac_type, NULL, run_tag_if(state->tags))) &&
+      have_config(config, CONFIG_NAME))
+    {
+      state->hostname = config->hostname;
+      state->domain = config->domain;
+      state->hostname_auth = 1;
     }
-    opt =
-        opt6_find(state.packet_options, state.end,
-                  39,
-                  1);
-    if !opt.is_null() {
-        /* RFC4704 refers */
-        let mut len: i32 =
-            opt6_uint(opt, -(2),
-                      2) - 1;
-        state.fqdn_flags =
-            opt6_uint(opt, 0,
-                      1);
-        /* Always force update, since the client has no way to do it itself. */
-        if dnsmasq_daemon.options[(36 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (36 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               == 0 &&
-               state.fqdn_flags & 0x1 == 0 {
-            state.fqdn_flags |= 0x3
-        }
-        state.fqdn_flags &= !(0x4);
-        if len != 0 && len < 255 {
-            let mut pp: mut Vec<u8> = 0;
-            let mut op: mut Vec<u8> =
-                &mut *(opt                     mut Vec<u8>).offset((4 +
-                                                           1)
-                                                         )              mut Vec<u8>              mut Vec<u8>;
-            let mut pq: &mut String = dnsmasq_daemon.dhcp_buff;
-            pp = op;
-            while *op != 0 &&
-                      (op.offset(*op ).wrapping_offset_from(pp)                     i32) < len {
-                memcpy(pq,
-                       op.offset(1)    *op);
-                pq = pq.offsetop;
-                op =
-                    op.offset((*op + 1)                            );
-                let fresh6 = pq;
-                pq = pq.offset(1);
-                *fresh6 = '.'
-            }
-            if pq != dnsmasq_daemon.dhcp_buff { pq = pq.offset(-1) }
-            *pq = 0;
-            if legal_hostname(dnsmasq_daemon.dhcp_buff) != 0 {
-                let mut m: DhcpMatchName = 0 ;
-                let mut nl: usize = strlen(dnsmasq_daemon.dhcp_buff);
-                state.client_hostname = dnsmasq_daemon.dhcp_buff;
-                if dnsmasq_daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                           ).wrapping_mul(8                                                                                                   ))
-                                                 ] &
-                       (1) <<
-                           (28                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                       ).wrapping_mul(8                           ))
-                       != 0 {
-                    my_syslog((3) << 3 |
-                                  6,
-                              "%u client provides name: %s"    , state.xid,
-                              state.client_hostname);
-                }
-                m = dnsmasq_daemon.dhcp_name_match;
-                while !m.is_null() {
-                    let mut ml: usize = strlen(m.name);
-                    let mut save: libc::c_char =
-                        0;
-                    if !(nl < ml) {
-                        if nl > ml {
-                            save =
-                                *state.client_hostname.offset(ml);
-                            *state.client_hostname.offset(ml) =
-                                0
-                        }
-                        if hostname_isequal(state.client_hostname,
-                                            m.name) != 0 &&
-                               (save == 0 ||
-                                    m.wildcard != 0) {
-                            (*m.netid).next = state.tags;
-                            state.tags = m.netid
-                        }
-                        if save != 0 {
-                            *state.client_hostname.offset(ml) =
-                                save
-                        }
-                    }
-                    m = m.next
-                }
-            }
-        }
-    }
-    if !state.clid.is_null() &&
-           {
-               config =
-                   find_config(dnsmasq_daemon.dhcp_conf, state.context,
-                               state.clid, state.clid_len,
-                               state.mac.as_mut_ptr(),
-                               state.mac_len,
-                               state.mac_type,
-                               0 ,
-                               run_tag_if(state.tags));
-               !config.is_null()
-           } &&
-           (!config.is_null() &&
-                config.flags & 16 != 0) {
-        state.hostname = config.hostname;
-        state.domain = config.domain;
-        state.hostname_auth = 1
-    } else if !state.client_hostname.is_null() {
-        state.domain = strip_hostname(state.client_hostname);
-        if strlen(state.client_hostname) !=
-               0 {
-            state.hostname = state.client_hostname;
-            if config.is_null() {
-                /* Search again now we have a hostname. 
+  else if (state->client_hostname)
+    {
+      state->domain = strip_hostname(state->client_hostname);
+      
+      if (strlen(state->client_hostname) != 0)
+	{
+	  state->hostname = state->client_hostname;
+	  
+	  if (!config)
+	    {
+	      /* Search again now we have a hostname. 
 		 Only accept configs without CLID here, (it won't match)
 		 to avoid impersonation by name. */
-                let mut new: DhcpConfig =
-                    find_config(dnsmasq_daemon.dhcp_conf, state.context,
-                                0, 0,
-                                0, 0,
-                                0, state.hostname,
-                                run_tag_if(state.tags));
-                if !new.is_null() &&
-                       !(!new.is_null() &&
-                             new.flags & 2
-                                 != 0) && new.hwaddr.is_null() {
-                    config = new
-                }
-            }
-        }
+	      struct dhcp_config *new = find_config(daemon->dhcp_conf, state->context, NULL, 0, NULL, 0, 0, state->hostname, run_tag_if(state->tags));
+	      if (new && !have_config(new, CONFIG_CLID) && !new->hwaddr)
+		config = new;
+	    }
+	}
     }
-    if !config.is_null() {
-        let mut list: DhcpNetIdList = 0;
-        list = config.netid;
-        while !list.is_null() {
-            (*list.list).next = state.tags;
-            state.tags = list.list;
-            list = list.next
+
+  if (config)
+    {
+      struct dhcp_netid_list *list;
+      
+      for (list = config->netid; list; list = list->next)
+        {
+          list->list->next = state->tags;
+          state->tags = list->list;
         }
-        /* set "known" tag for known hosts */
-        known_id.net =
-            "known"           &mut String;
-        known_id.next = state.tags;
-        state.tags = &mut known_id;
-        if !config.is_null() &&
-               config.flags & 1 != 0 {
-            ignore = 1
-        }
-    } else if !state.clid.is_null() &&
-                  !find_config(dnsmasq_daemon.dhcp_conf,
-                               0, state.clid,
-                               state.clid_len, state.mac.as_mut_ptr(),
-                               state.mac_len,
-                               state.mac_type,
-                               0 ,
-                               run_tag_if(state.tags)).is_null() {
-        known_id.net =
-            "known-othernet"           &mut String;
-        known_id.next = state.tags;
-        state.tags = &mut known_id
+
+      /* set "known" tag for known hosts */
+      known_id.net = "known";
+      known_id.next = state->tags;
+      state->tags = &known_id;
+
+      if (have_config(config, CONFIG_DISABLE))
+	ignore = 1;
     }
-    tagif = run_tag_if(state.tags);
-    /* if all the netids in the ignore list are present, ignore this client */
-    if !dnsmasq_daemon.dhcp_ignore.is_null() {
-        let mut id_list: DhcpNetIdList = 0;
-        id_list = dnsmasq_daemon.dhcp_ignore;
-        while !id_list.is_null() {
-            if match_netid(id_list.list, tagif, 0) != 0 {
-                ignore = 1
-            }
-            id_list = id_list.next
-        }
+  else if (state->clid &&
+	   find_config(daemon->dhcp_conf, NULL, state->clid, state->clid_len,
+		       state->mac, state->mac_len, state->mac_type, NULL, run_tag_if(state->tags)))
+    {
+      known_id.net = "known-othernet";
+      known_id.next = state->tags;
+      state->tags = &known_id;
     }
-    /* if all the netids in the ignore_name list are present, ignore client-supplied name */
-    if state.hostname_auth == 0 {
-        let mut id_list_0: DhcpNetIdList = 0;
-        id_list_0 = dnsmasq_daemon.dhcp_ignore_names;
-        while !id_list_0.is_null() {
-            if id_list_0.list.is_null() ||
-                   match_netid(id_list_0.list, tagif, 0) !=
-                       0 {
-                break ;
-            }
-            id_list_0 = id_list_0.next
-        }
-        if !id_list_0.is_null() { state.hostname = 0  }
+  
+  tagif = run_tag_if(state->tags);
+  
+  /* if all the netids in the ignore list are present, ignore this client */
+  if (daemon->dhcp_ignore)
+    {
+      struct dhcp_netid_list *id_list;
+     
+      for (id_list = daemon->dhcp_ignore; id_list; id_list = id_list->next)
+	if (match_netid(id_list->list, tagif, 0))
+	  ignore = 1;
     }
-    let mut address_assigned: i32 = 0;
-    let mut solicit_tags: DhcpNetId = 0 ;
-    let mut c: DhcpContext = 0;
-    let mut current_block_486: u64;
-    match msg_type {
-        1 => {
-            address_assigned = 0;
-            /* tags without all prefix-class tags */
-            solicit_tags = 0 ;
-            c = 0;
-            *outmsgtypep = 2;
-            if !opt6_find(state.packet_options, state.end,
-                          14,
-                          0).is_null() {
-                *outmsgtypep = 7;
-                state.lease_allocate = 1;
-                o = new_opt6(14);
-                end_opt6(o);
-            }
-            log6_quiet(state,
-                       "DHCPSOLICIT"
-                           , 0,
-                       if ignore != 0 {
-                           "ignored"
-                       } else { 0 }                     &mut String);
-            current_block_486 = 15319502457978536222;
-        }
-        3 => {
-            let mut address_assigned_0: i32 = 0;
-            let mut start: i32 = save_counter(-(1));
-            /* set reply message type */
-            *outmsgtypep = 7;
-            state.lease_allocate = 1;
-            log6_quiet(state,
-                       "DHCPREQUEST"
-                           , 0,
-                       if ignore != 0 {
-                           "ignored"
-                       } else { 0 }                     &mut String);
-            if ignore != 0 { return 0 }
-            opt = state.packet_options;
-            loop  {
-                if opt.is_null() {
-                    current_block_486 = 309319537768397308;
-                    break ;
-                }
-                let mut ia_option_0:Vec<u8> =
-                    0;
-                let mut ia_end_0:Vec<u8> = 0;
-                let mut min_time_0: u32 = 0xffffffff;
-                let mut t1cntr_0: i32 = 0;
-                if !(check_ia(state, opt, &mut ia_end_0, &mut ia_option_0) ==
-                         0) {
-                    if ia_option_0.is_null() {
-                        /* If we get a request with an IA_*A without addresses, treat it exactly like
-		    a SOLICT with rapid commit set. */
-                        save_counter(start);
-                        current_block_486 = 15319502457978536222;
-                        break ;
-                    } else {
-                        o = build_ia(state, &mut t1cntr_0);
-                        while !ia_option_0.is_null() {
-                            let mut req_addr_0: In6Addr =
-                                In6Addr {__in6_u:
-                                             C2RustUnnamed{__u6_addr8:
-                                                               [0; 16],},};
-                            let mut dynamic: DhcpContext =
-                                0;
-                            let mut c_0: DhcpContext =
-                                0;
-                            let mut lease_time_0: u32 = 0;
-                            let mut config_ok: i32 = 0;
-                            /* align. */
-                            memcpy(&mut req_addr_0                                Vec<u8>,
-                                   &mut *(ia_option_0                                        mut Vec<u8>).offset((4
-                                                                              +
-                                                                              0
-                                                                                                                )
-                                                                )
-                                                                      Vec<u8>,
-                                   16);
-                            c_0 =
-                                address6_valid(state.context,
-                                               &mut req_addr_0, tagif,
-                                               1);
-                            if !c_0.is_null() {
-                                config_ok =
-                                    (config_implies(config, c_0,
-                                                    &mut req_addr_0) !=
-                                         0                                        &mut AddrList)
-                            }
-                            dynamic =
-                                address6_available(state.context,
-                                                   &mut req_addr_0, tagif,
-                                                   1);
-                            if !dynamic.is_null() || !c_0.is_null() {
-                                if dynamic.is_null() && config_ok == 0 {
-                                    /* Static range, not configured. */
-                                    o1 = new_opt6(13);
-                                    put_opt6_short(2);
-                                    put_opt6_string("address unavailable"
-                                                             *const libc::c_char     &mut String);
-                                    end_opt6(o1);
-                                } else if check_address(state,
-                                                        &mut req_addr_0) == 0
-                                 {
-                                    /* Address leased to another DUID/IAID */
-                                    o1 = new_opt6(13);
-                                    put_opt6_short(1);
-                                    put_opt6_string("address in use"     *const u8     *const libc::c_char     &mut String);
-                                    end_opt6(o1);
-                                } else {
-                                    if dynamic.is_null() { dynamic = c_0 }
-                                    lease_time_0 = dynamic.lease_time;
-                                    if config_ok != 0 &&
-                                           (!config.is_null() &&
-                                                config.flags &
-                                                    8     libc::c_uint != 0) {
-                                        lease_time_0 = config.lease_time
-                                    }
-                                    add_address(state, dynamic, lease_time_0,
-                                                ia_option_0, &mut min_time_0,
-                                                &mut req_addr_0, now);
-                                    get_context_tag(state, dynamic);
-                                    address_assigned_0 = 1
-                                }
-                            } else {
-                                /* requested address not on the correct link */
-                                o1 = new_opt6(13);
-                                put_opt6_short(4libc::c_uint);
-                                put_opt6_string("not on link" *const u8 *const libc::c_char &mut String);
-                                end_opt6(o1);
-                            }
-                            ia_option_0 =
-                                opt6_find(opt6_next(ia_option_0, ia_end_0),
-                                          ia_end_0,
-                                          5,
-                                          24)
-                        }
-                        end_ia(t1cntr_0, min_time_0, 0);
-                        end_opt6(o);
-                    }
-                }
-                opt = opt6_next(opt, state.end)
-            }
-            match current_block_486 {
-                15319502457978536222 => { }
-                _ => {
-                    if address_assigned_0 != 0 {
-                        o1 = new_opt6(13);
-                        put_opt6_short(0);
-                        put_opt6_string("success"                                       *const libc::c_char                                      &mut String);
-                        end_opt6(o1);
-                    } else {
-                        /* no address, return error */
-                        o1 = new_opt6(13);
-                        put_opt6_short(2);
-                        put_opt6_string("no addresses available"                                      *const u8
-                                            );
-                        end_opt6(o1);
-                        log6_packet(state,
-                                    "DHCPREPLY"                                   *const libc::c_char                                  &mut String, 0,
-                                    "no addresses available"                                            &mut String);
-                    }
-                    tagif = add_options(state, 0);
-                    current_block_486 = 14838758841813985983;
-                }
-            }
-        }
-        5 => {
-            /* set reply message type */
-            *outmsgtypep = 7;
-            log6_quiet(state,
-                       "DHCPRENEW"                      &mut String, 0,
-                       0 );
-            opt = state.packet_options;
-            while !opt.is_null() {
-                let mut ia_option_1:Vec<u8> =
-                    0;
-                let mut ia_end_1:Vec<u8> = 0;
-                let mut min_time_1: u32 = 0xffffffff;
-                let mut t1cntr_1: i32 = 0;
-                let mut iacntr: i32 = 0;
-                if !(check_ia(state, opt, &mut ia_end_1, &mut ia_option_1) ==
-                         0) {
-                    o = build_ia(state, &mut t1cntr_1);
-                    iacntr = save_counter(-(1));
-                    while !ia_option_1.is_null() {
-                        let mut lease: DhcpLease = 0;
-                        let mut req_addr_1: In6Addr =
-                            In6Addr {__in6_u:
-                                         C2RustUnnamed{__u6_addr8:
-                                                           [0; 16],},};
-                        let mut preferred_time: u32 =
-                            opt6_uint(ia_option_1,
-                                      16, 4);
-                        let mut valid_time: u32 =
-                            opt6_uint(ia_option_1,
-                                      20, 4);
-                        let mut message: &mut String =
-                            0 ;
-                        let mut this_context: DhcpContext =
-                            0;
-                        memcpy(&mut req_addr_1                            Vec<u8>,
-                               &mut *(ia_option_1                                    mut Vec<u8>).offset((4
-                                                                          +
-                                                                          0                           )
-                                                        )
-                                  ,
-                               16);
-                        lease =
-                            lease6_find(state.clid, state.clid_len,
-                                        if state.ia_type ==
-                                               3 {
-                                            32
-                                        } else { 64 },
-                                        state.iaid, &mut req_addr_1);
-                        if lease.is_null() {
-                            /* If the server cannot find a client entry for the IA the server
-		       returns the IA containing no addresses with a Status Code option set
-		       to NoBinding in the Reply message. */
-                            save_counter(iacntr);
-                            t1cntr_1 = 0;
-                            log6_packet(state,
-                                        "DHCPREPLY"                                       *const libc::c_char                                      &mut String,
-                                        &mut req_addr_1,
-                                        "lease not found"                                       *const libc::c_char                                      &mut String);
-                            o1 = new_opt6(13);
-                            put_opt6_short(3);
-                            put_opt6_string("no binding found"                                          *const u8                                          *const libc::c_char                                          &mut String);
-                            end_opt6(o1);
-                            valid_time = 0;
-                            preferred_time = valid_time;
-                            break ;
-                        } else {
-                            this_context =
-                                address6_available(state.context,
-                                                   &mut req_addr_1, tagif,
-                                                   1);
-                            if !this_context.is_null() ||
-                                   {
-                                       this_context =
-                                           address6_valid(state.context,
-                                                          &mut req_addr_1,
-                                                          tagif,
-                                                          1);
-                                       !this_context.is_null()
-                                   } {
-                                let mut lease_time_1: u32 = 0;
-                                get_context_tag(state, this_context);
-                                if !config_implies(config, this_context,
-                                                   &mut req_addr_1).is_null()
-                                       &&
-                                       (!config.is_null() &&
-                                            config.flags &
-                                                8 libc::c_uint != 0) {
-                                    lease_time_1 = config.lease_time
-                                } else {
-                                    lease_time_1 = this_context.lease_time
-                                }
-                                calculate_times(this_context, &mut min_time_1,
-                                                &mut valid_time,
-                                                &mut preferred_time,
-                                                lease_time_1);
-                                lease_set_expires(lease, valid_time, now);
-                                /* Update MAC record in case it's new information. */
-                                if state.mac_len !=
-                                       0 {
-                                    lease_set_hwaddr(lease,
-                                                     state.mac.as_mut_ptr(),
-                                                     state.clid,
-                                                     state.mac_len      ,
-                                                     state.mac_type      ,
-                                                     state.clid_len, now,
-                                                     0);
-                                }
-                                if state.ia_type == 3 &&
-                                       !state.hostname.is_null() {
-                                    let mut addr_domain: &mut String =
-                                        get_domain6(&mut req_addr_1);
-                                    if state.send_domain.is_null() {
-                                        state.send_domain = addr_domain
-                                    }
-                                    lease_set_hostname(lease,
-                                                       state.hostname,
-                                                       state.hostname_auth,
-                                                       addr_domain,
-                                                       state.domain);
-                                    message = state.hostname
-                                }
-                                if preferred_time ==
-                                       0 {
-                                    message =
-                                        "deprecated"                                       *const libc::c_char                                      &mut String
-                                }
-                            } else {
-                                valid_time = 0;
-                                preferred_time = valid_time;
-                                message =
-                                    "address invalid"                                   *const libc::c_char                                  &mut String
-                            }
-                            if !message.is_null() &&
-                                   message != state.hostname {
-                                log6_packet(state,
-                                            "DHCPREPLY"                                           *const libc::c_char                                          &mut String,
-                                            &mut req_addr_1, message);
-                            } else {
-                                log6_quiet(state,
-                                           "DHCPREPLY",
-                                           &mut req_addr_1, message);
-                            }
-                            o1 = new_opt6(5);
-                            put_opt6(&mut req_addr_1                                  Vec<u8>,
-                                     ::std::mem::size_of::<In6Addr>());
-                            put_opt6_long(preferred_time);
-                            put_opt6_long(valid_time);
-                            end_opt6(o1);
-                            ia_option_1 =
-                                opt6_find(opt6_next(ia_option_1, ia_end_1),
-                                          ia_end_1,
-                                          5,
-                                          24)
-                        }
-                    }
-                    end_ia(t1cntr_1, min_time_1, 1);
-                    end_opt6(o);
-                }
-                opt = opt6_next(opt, state.end)
-            }
-            tagif = add_options(state, 0);
-            current_block_486 = 14838758841813985983;
-        }
-        4 => {
-            let mut good_addr: i32 = 0;
-            /* set reply message type */
-            *outmsgtypep = 7;
-            log6_quiet(state,
-                       "DHCPCONFIRM"
-                           , 0,
-                       0 );
-            opt = state.packet_options;
-            while !opt.is_null() {
-                let mut ia_option_2:Vec<u8> =
-                    0;
-                let mut ia_end_2:Vec<u8> = 0;
-                check_ia(state, opt, &mut ia_end_2, &mut ia_option_2);
-                while !ia_option_2.is_null() {
-                    let mut req_addr_2: In6Addr =
-                        In6Addr {__in6_u:
-                                     C2RustUnnamed{__u6_addr8: [0; 16],},};
-                    /* alignment */
-                    memcpy(&mut req_addr_2,
-                           &mut *(ia_option_2                                mut Vec<u8>).offset((4
-                                                                      +
-                                                                      0                       )
-                                                                    )
-                              ,
-                           16);
-                    if address6_valid(state.context, &mut req_addr_2,
-                                      tagif, 1).is_null() {
-                        o1 = new_opt6(13);
-                        put_opt6_short(4);
-                        put_opt6_string("confirm failed"                                       *const libc::c_char                                      &mut String);
-                        end_opt6(o1);
-                        log6_quiet(state,
-                                   "DHCPREPLY", &mut req_addr_2,
-                                   "confirm failed");
-                        return 1
-                    }
-                    good_addr = 1;
-                    log6_quiet(state,
-                               "DHCPREPLY",
-                               &mut req_addr_2, state.hostname);
-                    ia_option_2 =
-                        opt6_find(opt6_next(ia_option_2, ia_end_2), ia_end_2,
-                                  5,
-                                  24)
-                }
-                opt = opt6_next(opt, state.end)
-            }
-            /* No addresses, no reply: RFC 3315 18.2.2 */
-            if good_addr == 0 { return 0 }
-            o1 = new_opt6(13);
-            put_opt6_short(0);
-            put_opt6_string("all addresses still on link"                           *const libc::c_char );
-            end_opt6(o1);
-            current_block_486 = 14838758841813985983;
-        }
-        11 => {
-            /* We can't discriminate contexts based on address, as we don't know it.
-	   If there is only one possible context, we can use its tags */
-            if !state.context.is_null() &&
-                   !(*state.context).netid.net.is_null() &&
-                   (*state.context).current.is_null() {
-                (*state.context).netid.next = 0 ;
-                state.context_tags = &mut (*state.context).netid
-            }
-            /* Similarly, we can't determine domain from address, but if the FQDN is
-	   given in --dhcp-host, we can use that, and failing that we can use the 
-	   unqualified configured domain, if any. */
-            if state.hostname_auth != 0 {
-                state.send_domain = state.domain
-            } else { state.send_domain = get_domain6(0) }
-            log6_quiet(state,
-                       "DHCPINFORMATION-REQUEST"  ,
-                       0,
-                       if ignore != 0 {
-                           "ignored"
-                       } else { state.hostname }                     &mut String);
-            if ignore != 0 { return 0 }
-            *outmsgtypep = 7;
-            tagif = add_options(state, 1);
-            current_block_486 = 14838758841813985983;
-        }
-        8 => {
-            /* set reply message type */
-            *outmsgtypep = 7;
-            log6_quiet(state,
-                       "DHCPRELEASE"
-                           , 0,
-                       0 );
-            opt = state.packet_options;
-            while !opt.is_null() {
-                let mut ia_option_3:Vec<u8> =
-                    0;
-                let mut ia_end_3:Vec<u8> = 0;
-                let mut made_ia: i32 = 0;
-                check_ia(state, opt, &mut ia_end_3, &mut ia_option_3);
-                while !ia_option_3.is_null() {
-                    let mut lease_0: DhcpLease = 0;
-                    let mut addr_0: In6Addr =
-                        In6Addr {__in6_u:
-                                     C2RustUnnamed{__u6_addr8: [0; 16],},};
-                    /* align */
-                    memcpy(&mut addr_0,
-                           &mut *(ia_option_3                                mut Vec<u8>).offset((4
-                                                                      +
-                                                                      0                       )
-                                                                    )
-                              ,
-                           16);
-                    lease_0 =
-                        lease6_find(state.clid, state.clid_len,
-                                    if state.ia_type == 3 {
-                                        32
-                                    } else { 64 },
-                                    state.iaid, &mut addr_0);
-                    if !lease_0.is_null() {
-                        lease_prune(lease_0, now);
-                    } else {
-                        if made_ia == 0 {
-                            o = new_opt6(state.ia_type);
-                            put_opt6_long(state.iaid);
-                            if state.ia_type == 3 {
-                                put_opt6_long(0                                            libc::c_uint);
-                                put_opt6_long(0                                            libc::c_uint);
-                            }
-                            made_ia = 1
-                        }
-                        o1 = new_opt6(5);
-                        put_opt6(&mut addr_0                              Vec<u8>,
-                                 16 );
-                        put_opt6_long(0);
-                        put_opt6_long(0);
-                        end_opt6(o1);
-                    }
-                    ia_option_3 =
-                        opt6_find(opt6_next(ia_option_3, ia_end_3), ia_end_3,
-                                  5,
-                                  24)
-                }
-                if made_ia != 0 {
-                    o1 = new_opt6(13);
-                    put_opt6_short(3);
-                    put_opt6_string("no binding found"                                   *const libc::c_char                                  &mut String);
-                    end_opt6(o1);
-                    end_opt6(o);
-                }
-                opt = opt6_next(opt, state.end)
-            }
-            o1 = new_opt6(13);
-            put_opt6_short(0);
-            put_opt6_string("release received"                           *const libc::c_char );
-            end_opt6(o1);
-            current_block_486 = 14838758841813985983;
-        }
-        9 => {
-            /* set reply message type */
-            *outmsgtypep = 7;
-            log6_quiet(state,
-                       "DHCPDECLINE"
-                           , 0,
-                       0 );
-            opt = state.packet_options;
-            while !opt.is_null() {
-                let mut ia_option_4:Vec<u8> =
-                    0;
-                let mut ia_end_4:Vec<u8> = 0;
-                let mut made_ia_0: i32 = 0;
-                check_ia(state, opt, &mut ia_end_4, &mut ia_option_4);
-                while !ia_option_4.is_null() {
-                    let mut lease_1: DhcpLease = 0;
-                    let mut addr_1: In6Addr =
-                        In6Addr {__in6_u:
-                                     C2RustUnnamed{__u6_addr8: [0; 16],},};
-                    let mut addr_list: AddressListEntry = 0 ;
-                    /* align */
-                    memcpy(&mut addr_1,
-                           &mut *(ia_option_4                                mut Vec<u8>).offset((4
-                                                                      +
-                                                                      0                       )
-                                                                    )
-                              ,
-                           16);
-                    addr_list =
-                        config_implies(config, state.context, &mut addr_1);
-                    if !addr_list.is_null() {
-                        prettyprint_time(dnsmasq_daemon.dhcp_buff3,
-                                         600);
-                        inet_ntop(10,
-                                  &mut addr_1
-                                  dnsmasq_daemon.addrbuff,
-                                  46);
-                        my_syslog((3) << 3 |
-                                      4,
-                                  "disabling DHCP static address %s for %s"
-                                      ,
-                                  dnsmasq_daemon.addrbuff,
-                                  dnsmasq_daemon.dhcp_buff3);
-                        addr_list.flags |= 32;
-                        addr_list.decline_time = now
-                    } else {
-                        /* make sure this host gets a different address next time. */
-                        context_tmp = state.context;
-                        while !context_tmp.is_null() {
-                            context_tmp.addr_epoch =
-                                context_tmp.addr_epoch.wrapping_add(1);
-                            context_tmp = context_tmp.current
-                        }
-                    }
-                    lease_1 =
-                        lease6_find(state.clid, state.clid_len,
-                                    if state.ia_type == 3 {
-                                        32
-                                    } else { 64 },
-                                    state.iaid, &mut addr_1);
-                    if !lease_1.is_null() {
-                        lease_prune(lease_1, now);
-                    } else {
-                        if made_ia_0 == 0 {
-                            o = new_opt6(state.ia_type);
-                            put_opt6_long(state.iaid);
-                            if state.ia_type == 3 {
-                                put_opt6_long(0                                            libc::c_uint);
-                                put_opt6_long(0                                            libc::c_uint);
-                            }
-                            made_ia_0 = 1
-                        }
-                        o1 = new_opt6(5);
-                        put_opt6(&mut addr_1                              Vec<u8>,
-                                 16 );
-                        put_opt6_long(0);
-                        put_opt6_long(0);
-                        end_opt6(o1);
-                    }
-                    ia_option_4 =
-                        opt6_find(opt6_next(ia_option_4, ia_end_4), ia_end_4,
-                                  5,
-                                  24)
-                }
-                if made_ia_0 != 0 {
-                    o1 = new_opt6(13);
-                    put_opt6_short(3);
-                    put_opt6_string("no binding found"                                   *const libc::c_char                                  &mut String);
-                    end_opt6(o1);
-                    end_opt6(o);
-                }
-                opt = opt6_next(opt, state.end)
-            }
-            /* We must answer with 'success' in global section anyway */
-            o1 = new_opt6(13);
-            put_opt6_short(0);
-            put_opt6_string("success"
-                                );
-            end_opt6(o1);
-            current_block_486 = 14838758841813985983;
-        }
-        _ => { return 0 }
+  
+  /* if all the netids in the ignore_name list are present, ignore client-supplied name */
+  if (!state->hostname_auth)
+    {
+       struct dhcp_netid_list *id_list;
+       
+       for (id_list = daemon->dhcp_ignore_names; id_list; id_list = id_list->next)
+	 if ((!id_list->list) || match_netid(id_list->list, tagif, 0))
+	   break;
+       if (id_list)
+	 state->hostname = NULL;
     }
-    match current_block_486 {
-        15319502457978536222 => {
-            solicit_tags = tagif;
-            if ignore != 0 { return 0 }
-            /* reset USED bits in leases */
-            lease6_reset();
-            /* Can use configured address max once per prefix */
-            c = state.context;
-            while !c.is_null() {
-                c.flags =
-                    (c.flags &
-                         !((1) << 14)) ;
-                c = c.current
-            }
-            let mut current_block_242: u64;
-            opt = state.packet_options;
-            while !opt.is_null() {
-                let mut ia_option:Vec<u8> = 0;
-                let mut ia_end:Vec<u8> = 0;
-                let mut min_time: u32 = 0xffffffff;
-                let mut t1cntr: i32 = 0;
-                let mut ia_counter: i32 = 0;
-                /* set unless we're sending a particular prefix-class, when we
+  
+
+  switch (msg_type)
+    {
+    default:
+      return 0;
+      
+      
+    case DHCP6SOLICIT:
+      {
+      	int address_assigned = 0;
+	/* tags without all prefix-class tags */
+	struct dhcp_netid *solicit_tags;
+	struct dhcp_context *c;
+	
+	*outmsgtypep = DHCP6ADVERTISE;
+	
+	if (opt6_find(state->packet_options, state->end, OPTION6_RAPID_COMMIT, 0))
+	  {
+	    *outmsgtypep = DHCP6REPLY;
+	    state->lease_allocate = 1;
+	    o = new_opt6(OPTION6_RAPID_COMMIT);
+	    end_opt6(o);
+	  }
+	
+  	log6_quiet(state, "DHCPSOLICIT", NULL, ignore ? _("ignored") : NULL);
+
+      request_no_address:
+	solicit_tags = tagif;
+	
+	if (ignore)
+	  return 0;
+	
+	/* reset USED bits in leases */
+	lease6_reset();
+
+	/* Can use configured address max once per prefix */
+	for (c = state->context; c; c = c->current)
+	  c->flags &= ~CONTEXT_CONF_USED;
+
+	for (opt = state->packet_options; opt; opt = opt6_next(opt, state->end))
+	  {   
+	    void *ia_option, *ia_end;
+	    unsigned int min_time = 0xffffffff;
+	    int t1cntr;
+	    int ia_counter;
+	    /* set unless we're sending a particular prefix-class, when we
 	       want only dhcp-ranges with the correct tags set and not those without any tags. */
-                let mut plain_range: i32 = 1;
-                let mut lease_time: u32 = 0;
-                let mut ltmp: DhcpLease = 0;
-                let mut req_addr: In6Addr =
-                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-                let mut addr: In6Addr =
-                    In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-                if !(check_ia(state, opt, &mut ia_end, &mut ia_option) == 0) {
-                    /* reset USED bits in contexts - one address per prefix per IAID */
-                    c = state.context;
-                    while !c.is_null() {
-                        c.flags =
-                            (c.flags &
-                                 !((1) << 15))
-                               ;
-                        c = c.current
-                    }
-                    o = build_ia(state, &mut t1cntr);
-                    if address_assigned != 0 {
-                        address_assigned = 2
-                    }
-                    let mut current_block_206: u64;
-                    ia_counter = 0;
-                    while !ia_option.is_null() {
-                        /* worry about alignment here. */
-                        memcpy(&mut req_addr                            Vec<u8>,
-                               &mut *(ia_option                                    mut Vec<u8>).offset((4
-                                                                          +
-                                                                          0                           )
-                                                        )
-                                  ,
-                               16);
-                        c =
-                            address6_valid(state.context, &mut req_addr,
-                                           solicit_tags, plain_range);
-                        if !c.is_null() {
-                            lease_time = c.lease_time;
-                            /* If the client asks for an address on the same network as a configured address, 
+	    int plain_range = 1;
+	    u32 lease_time;
+	    struct dhcp_lease *ltmp;
+	    struct in6_addr req_addr, addr;
+	    
+	    if (!check_ia(state, opt, &ia_end, &ia_option))
+	      continue;
+	    
+	    /* reset USED bits in contexts - one address per prefix per IAID */
+	    for (c = state->context; c; c = c->current)
+	      c->flags &= ~CONTEXT_USED;
+
+	    o = build_ia(state, &t1cntr);
+	    if (address_assigned)
+		address_assigned = 2;
+
+	    for (ia_counter = 0; ia_option; ia_counter++, ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
+	      {
+		/* worry about alignment here. */
+		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
+				
+		if ((c = address6_valid(state->context, &req_addr, solicit_tags, plain_range)))
+		  {
+		    lease_time = c->lease_time;
+		    /* If the client asks for an address on the same network as a configured address, 
 		       offer the configured address instead, to make moving to newly-configured
 		       addresses automatic. */
-                            if c.flags &
-                                   (1) << 14 ==
-                                   0 &&
-                                   config_valid(config, c, &mut addr, state,
-                                                now) != 0 {
-                                req_addr =
-                                    addr; /* address leased elsewhere */
-                                mark_config_used(c, &mut addr);
-                                if !config.is_null() &&
-                                       config.flags &
-                                           8 !=
-                                           0 {
-                                    lease_time = config.lease_time
-                                }
-                                current_block_206 = 1851490986684842406;
-                            } else {
-                                c =
-                                    address6_available(state.context,
-                                                       &mut req_addr,
-                                                       solicit_tags,
-                                                       plain_range);
-                                if c.is_null() {
-                                    current_block_206 = 9350489878244555550;
-                                } else if check_address(state, &mut req_addr)
-                                              == 0 {
-                                    current_block_206 = 9350489878244555550;
-                                } else {
-                                    current_block_206 = 1851490986684842406;
-                                }
-                            }
-                            match current_block_206 {
-                                9350489878244555550 => { }
-                                _ => {
-                                    /* add address to output packet */
-                                    add_address(state, c, lease_time,
-                                                ia_option, &mut min_time,
-                                                &mut req_addr,
-                                                now); /* not an address we're allowed */
-                                    mark_context_used(state, &mut req_addr);
-                                    get_context_tag(state, c);
-                                    address_assigned = 1
-                                }
-                            }
-                        }
-                        ia_counter += 1;
-                        ia_option =
-                            opt6_find(opt6_next(ia_option, ia_end), ia_end,
-                                      5,
-                                      24)
-                    }
-                    /* Suggest configured address(es) */
-                    c = state.context;
-                    while !c.is_null() {
-                        if c.flags &
-                               (1) << 14 == 0
-                               &&
-                               match_netid(c.filter, solicit_tags,
-                                           plain_range) != 0 &&
-                               config_valid(config, c, &mut addr, state, now)
-                                   != 0 {
-                            mark_config_used(state.context, &mut addr);
-                            if !config.is_null() &&
-                                   config.flags &
-                                       8 != 0 {
-                                lease_time = config.lease_time
-                            } else { lease_time = c.lease_time }
-                            /* add address to output packet */
-                            add_address(state, c, lease_time,
-                                        0, &mut min_time,
-                                        &mut addr, now);
-                            mark_context_used(state, &mut addr);
-                            get_context_tag(state, c);
-                            address_assigned = 1
-                        }
-                        c = c.current
-                    }
-                    /* return addresses for existing leases */
-                    ltmp = 0;
-                    loop  {
-                        ltmp =
-                            lease6_find_by_client(ltmp,
-                                                  if state.ia_type ==
-                                                         3 {
-                                                      32
-                                                  } else {
-                                                      64
-                                                  }, state.clid,
-                                                  state.clid_len,
-                                                  state.iaid);
-                        if ltmp.is_null() { break ; }
-                        req_addr = ltmp.addr6;
-                        c =
-                            address6_available(state.context,
-                                               &mut req_addr, solicit_tags,
-                                               plain_range);
-                        if !c.is_null() {
-                            add_address(state, c, c.lease_time,
-                                        0, &mut min_time,
-                                        &mut req_addr, now);
-                            mark_context_used(state, &mut req_addr);
-                            get_context_tag(state, c);
-                            address_assigned = 1
-                        }
-                    }
-                    loop 
-                         /* Return addresses for all valid contexts which don't yet have one */
-                         {
-                        c =
-                            address6_allocate(state.context, state.clid,
-                                              state.clid_len,
-                                              (state.ia_type ==
-                                                   4)                                            , state.iaid,
-                                              ia_counter, solicit_tags,
-                                              plain_range, &mut addr);
-                        if c.is_null() { break ; }
-                        add_address(state, c, c.lease_time,
-                                    0, &mut min_time,
-                                    &mut addr, now);
-                        mark_context_used(state, &mut addr);
-                        get_context_tag(state, c);
-                        address_assigned = 1
-                    }
-                    if address_assigned != 1 {
-                        /* If the server will not assign any addresses to any IAs in a
+		    if (!(c->flags & CONTEXT_CONF_USED) && config_valid(config, c, &addr, state, now))
+		      {
+			req_addr = addr;
+			mark_config_used(c, &addr);
+			if (have_config(config, CONFIG_TIME))
+			  lease_time = config->lease_time;
+		      }
+		    else if (!(c = address6_available(state->context, &req_addr, solicit_tags, plain_range)))
+		      continue; /* not an address we're allowed */
+		    else if (!check_address(state, &req_addr))
+		      continue; /* address leased elsewhere */
+		    
+		    /* add address to output packet */
+		    add_address(state, c, lease_time, ia_option, &min_time, &req_addr, now);
+		    mark_context_used(state, &req_addr);
+		    get_context_tag(state, c);
+		    address_assigned = 1;
+		  }
+	      }
+	    
+	    /* Suggest configured address(es) */
+	    for (c = state->context; c; c = c->current) 
+	      if (!(c->flags & CONTEXT_CONF_USED) &&
+		  match_netid(c->filter, solicit_tags, plain_range) &&
+		  config_valid(config, c, &addr, state, now))
+		{
+		  mark_config_used(state->context, &addr);
+		  if (have_config(config, CONFIG_TIME))
+		    lease_time = config->lease_time;
+		  else
+		    lease_time = c->lease_time;
+
+		  /* add address to output packet */
+		  add_address(state, c, lease_time, NULL, &min_time, &addr, now);
+		  mark_context_used(state, &addr);
+		  get_context_tag(state, c);
+		  address_assigned = 1;
+		}
+	    
+	    /* return addresses for existing leases */
+	    ltmp = NULL;
+	    while ((ltmp = lease6_find_by_client(ltmp, state->ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA, state->clid, state->clid_len, state->iaid)))
+	      {
+		req_addr = ltmp->addr6;
+		if ((c = address6_available(state->context, &req_addr, solicit_tags, plain_range)))
+		  {
+		    add_address(state, c, c->lease_time, NULL, &min_time, &req_addr, now);
+		    mark_context_used(state, &req_addr);
+		    get_context_tag(state, c);
+		    address_assigned = 1;
+		  }
+	      }
+		 	   
+	    /* Return addresses for all valid contexts which don't yet have one */
+	    while ((c = address6_allocate(state->context, state->clid, state->clid_len, state->ia_type == OPTION6_IA_TA,
+					  state->iaid, ia_counter, solicit_tags, plain_range, &addr)))
+	      {
+		add_address(state, c, c->lease_time, NULL, &min_time, &addr, now);
+		mark_context_used(state, &addr);
+		get_context_tag(state, c);
+		address_assigned = 1;
+	      }
+	    
+	    if (address_assigned != 1)
+	      {
+		/* If the server will not assign any addresses to any IAs in a
 		   subsequent Request from the client, the server MUST send an Advertise
 		   message to the client that doesn't include any IA options. */
-                        if state.lease_allocate == 0 {
-                            save_counter(o);
-                            current_block_242 = 13164310931121142693;
-                        } else {
-                            /* If the server cannot assign any addresses to an IA in the message
+		if (!state->lease_allocate)
+		  {
+		    save_counter(o);
+		    continue;
+		  }
+		
+		/* If the server cannot assign any addresses to an IA in the message
 		   from the client, the server MUST include the IA in the Reply message
 		   with no addresses in the IA and a Status Code option in the IA
 		   containing status code NoAddrsAvail. */
-                            o1 = new_opt6(13);
-                            put_opt6_short(2);
-                            put_opt6_string("address unavailable"                                          *const u8                                          *const libc::c_char                                          &mut String);
-                            end_opt6(o1);
-                            current_block_242 = 15605369199999130895;
-                        }
-                    } else { current_block_242 = 15605369199999130895; }
-                    match current_block_242 {
-                        13164310931121142693 => { }
-                        _ => {
-                            end_ia(t1cntr, min_time, 0);
-                            end_opt6(o);
-                        }
-                    }
-                }
-                opt = opt6_next(opt, state.end)
-            }
-            if address_assigned != 0 {
-                o1 = new_opt6(13);
-                put_opt6_short(0);
-                put_opt6_string("success"                               *const libc::c_char );
-                end_opt6(o1);
-                /* If --dhcp-authoritative is set, we can tell client not to wait for
+		o1 = new_opt6(OPTION6_STATUS_CODE);
+		put_opt6_short(DHCP6NOADDRS);
+		put_opt6_string(_("address unavailable"));
+		end_opt6(o1);
+	      }
+	    
+	    end_ia(t1cntr, min_time, 0);
+	    end_opt6(o);	
+	  }
+
+	if (address_assigned) 
+	  {
+	    o1 = new_opt6(OPTION6_STATUS_CODE);
+	    put_opt6_short(DHCP6SUCCESS);
+	    put_opt6_string(_("success"));
+	    end_opt6(o1);
+	    
+	    /* If --dhcp-authoritative is set, we can tell client not to wait for
 	       other possible servers */
-                o = new_opt6(7);
-                put_opt6_char(if dnsmasq_daemon.options[(17
-                                                                     ).wrapping_div((::std::mem::size_of::<libc::c_uint>()          ).wrapping_mul(8                                                                                                                                                           ))
-                                                               ] &
-                                     (1) <<
-                                         (17                                 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                                                                   ))
-                                     != 0 {
-                                  255
-                              } else { 0 });
-                end_opt6(o);
-                tagif = add_options(state, 0)
-            } else {
-                /* no address, return error */
-                o1 = new_opt6(13);
-                put_opt6_short(2);
-                put_opt6_string("no addresses available"                               *const libc::c_char );
-                end_opt6(o1);
-                /* Some clients will ask repeatedly when we're not giving
+	    o = new_opt6(OPTION6_PREFERENCE);
+	    put_opt6_char(option_bool(OPT_AUTHORITATIVE) ? 255 : 0);
+	    end_opt6(o);
+	    tagif = add_options(state, 0);
+	  }
+	else
+	  { 
+	    /* no address, return error */
+	    o1 = new_opt6(OPTION6_STATUS_CODE);
+	    put_opt6_short(DHCP6NOADDRS);
+	    put_opt6_string(_("no addresses available"));
+	    end_opt6(o1);
+
+	    /* Some clients will ask repeatedly when we're not giving
 	       out addresses because we're in stateless mode. Avoid spamming
 	       the log in that case. */
-                c = state.context;
-                while !c.is_null() {
-                    if c.flags &
-                           (1) << 7 == 0 {
-                        log6_packet(state,
-                                    if state.lease_allocate != 0 {
-                                        "DHCPREPLY"                                       *const libc::c_char
-                                    } else {
-                                        "DHCPADVERTISE"                                       *const libc::c_char
-                                    } ,
-                                    0,
-                                    "no addresses available"                                            &mut String);
-                        break ;
-                    } else { c = c.current }
-                }
-            }
-        }
-        _ => { }
+	    for (c = state->context; c; c = c->current)
+	      if (!(c->flags & CONTEXT_RA_STATELESS))
+		{
+		  log6_packet(state, state->lease_allocate ? "DHCPREPLY" : "DHCPADVERTISE", NULL, _("no addresses available"));
+		  break;
+		}
+	  }
+
+	break;
+      }
+      
+    case DHCP6REQUEST:
+      {
+	int address_assigned = 0;
+	int start = save_counter(-1);
+
+	/* set reply message type */
+	*outmsgtypep = DHCP6REPLY;
+	state->lease_allocate = 1;
+
+	log6_quiet(state, "DHCPREQUEST", NULL, ignore ? _("ignored") : NULL);
+	
+	if (ignore)
+	  return 0;
+	
+	for (opt = state->packet_options; opt; opt = opt6_next(opt, state->end))
+	  {   
+	    void *ia_option, *ia_end;
+	    unsigned int min_time = 0xffffffff;
+	    int t1cntr;
+	    
+	     if (!check_ia(state, opt, &ia_end, &ia_option))
+	       continue;
+
+	     if (!ia_option)
+	       {
+		 /* If we get a request with an IA_*A without addresses, treat it exactly like
+		    a SOLICT with rapid commit set. */
+		 save_counter(start);
+		 goto request_no_address; 
+	       }
+
+	    o = build_ia(state, &t1cntr);
+	      
+	    for (; ia_option; ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
+	      {
+		struct in6_addr req_addr;
+		struct dhcp_context *dynamic, *c;
+		unsigned int lease_time;
+		int config_ok = 0;
+
+		/* align. */
+		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
+		
+		if ((c = address6_valid(state->context, &req_addr, tagif, 1)))
+		  config_ok = (config_implies(config, c, &req_addr) != NULL);
+		
+		if ((dynamic = address6_available(state->context, &req_addr, tagif, 1)) || c)
+		  {
+		    if (!dynamic && !config_ok)
+		      {
+			/* Static range, not configured. */
+			o1 = new_opt6(OPTION6_STATUS_CODE);
+			put_opt6_short(DHCP6NOADDRS);
+			put_opt6_string(_("address unavailable"));
+			end_opt6(o1);
+		      }
+		    else if (!check_address(state, &req_addr))
+		      {
+			/* Address leased to another DUID/IAID */
+			o1 = new_opt6(OPTION6_STATUS_CODE);
+			put_opt6_short(DHCP6UNSPEC);
+			put_opt6_string(_("address in use"));
+			end_opt6(o1);
+		      } 
+		    else 
+		      {
+			if (!dynamic)
+			  dynamic = c;
+
+			lease_time = dynamic->lease_time;
+			
+			if (config_ok && have_config(config, CONFIG_TIME))
+			  lease_time = config->lease_time;
+
+			add_address(state, dynamic, lease_time, ia_option, &min_time, &req_addr, now);
+			get_context_tag(state, dynamic);
+			address_assigned = 1;
+		      }
+		  }
+		else 
+		  {
+		    /* requested address not on the correct link */
+		    o1 = new_opt6(OPTION6_STATUS_CODE);
+		    put_opt6_short(DHCP6NOTONLINK);
+		    put_opt6_string(_("not on link"));
+		    end_opt6(o1);
+		  }
+	      }
+	 
+	    end_ia(t1cntr, min_time, 0);
+	    end_opt6(o);	
+	  }
+
+	if (address_assigned) 
+	  {
+	    o1 = new_opt6(OPTION6_STATUS_CODE);
+	    put_opt6_short(DHCP6SUCCESS);
+	    put_opt6_string(_("success"));
+	    end_opt6(o1);
+	  }
+	else
+	  { 
+	    /* no address, return error */
+	    o1 = new_opt6(OPTION6_STATUS_CODE);
+	    put_opt6_short(DHCP6NOADDRS);
+	    put_opt6_string(_("no addresses available"));
+	    end_opt6(o1);
+	    log6_packet(state, "DHCPREPLY", NULL, _("no addresses available"));
+	  }
+
+	tagif = add_options(state, 0);
+	break;
+      }
+      
+  
+    case DHCP6RENEW:
+      {
+	/* set reply message type */
+	*outmsgtypep = DHCP6REPLY;
+	
+	log6_quiet(state, "DHCPRENEW", NULL, NULL);
+
+	for (opt = state->packet_options; opt; opt = opt6_next(opt, state->end))
+	  {
+	    void *ia_option, *ia_end;
+	    unsigned int min_time = 0xffffffff;
+	    int t1cntr, iacntr;
+	    
+	    if (!check_ia(state, opt, &ia_end, &ia_option))
+	      continue;
+	    
+	    o = build_ia(state, &t1cntr);
+	    iacntr = save_counter(-1); 
+	    
+	    for (; ia_option; ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
+	      {
+		struct dhcp_lease *lease = NULL;
+		struct in6_addr req_addr;
+		unsigned int preferred_time =  opt6_uint(ia_option, 16, 4);
+		unsigned int valid_time =  opt6_uint(ia_option, 20, 4);
+		char *message = NULL;
+		struct dhcp_context *this_context;
+
+		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ); 
+		
+		if (!(lease = lease6_find(state->clid, state->clid_len,
+					  state->ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA, 
+					  state->iaid, &req_addr)))
+		  {
+		    /* If the server cannot find a client entry for the IA the server
+		       returns the IA containing no addresses with a Status Code option set
+		       to NoBinding in the Reply message. */
+		    save_counter(iacntr);
+		    t1cntr = 0;
+		    
+		    log6_packet(state, "DHCPREPLY", &req_addr, _("lease not found"));
+		    
+		    o1 = new_opt6(OPTION6_STATUS_CODE);
+		    put_opt6_short(DHCP6NOBINDING);
+		    put_opt6_string(_("no binding found"));
+		    end_opt6(o1);
+
+		    preferred_time = valid_time = 0;
+		    break;
+		  }
+		
+		
+		if ((this_context = address6_available(state->context, &req_addr, tagif, 1)) ||
+		    (this_context = address6_valid(state->context, &req_addr, tagif, 1)))
+		  {
+		    unsigned int lease_time;
+
+		    get_context_tag(state, this_context);
+		    
+		    if (config_implies(config, this_context, &req_addr) && have_config(config, CONFIG_TIME))
+		      lease_time = config->lease_time;
+		    else 
+		      lease_time = this_context->lease_time;
+		    
+		    calculate_times(this_context, &min_time, &valid_time, &preferred_time, lease_time); 
+		    
+		    lease_set_expires(lease, valid_time, now);
+		    /* Update MAC record in case it's new information. */
+		    if (state->mac_len != 0)
+		      lease_set_hwaddr(lease, state->mac, state->clid, state->mac_len, state->mac_type, state->clid_len, now, 0);
+		    if (state->ia_type == OPTION6_IA_NA && state->hostname)
+		      {
+			char *addr_domain = get_domain6(&req_addr);
+			if (!state->send_domain)
+			  state->send_domain = addr_domain;
+			lease_set_hostname(lease, state->hostname, state->hostname_auth, addr_domain, state->domain); 
+			message = state->hostname;
+		      }
+		    
+		    
+		    if (preferred_time == 0)
+		      message = _("deprecated");
+		  }
+		else
+		  {
+		    preferred_time = valid_time = 0;
+		    message = _("address invalid");
+		  } 
+
+		if (message && (message != state->hostname))
+		  log6_packet(state, "DHCPREPLY", &req_addr, message);	
+		else
+		  log6_quiet(state, "DHCPREPLY", &req_addr, message);
+	
+		o1 =  new_opt6(OPTION6_IAADDR);
+		put_opt6(&req_addr, sizeof(req_addr));
+		put_opt6_long(preferred_time);
+		put_opt6_long(valid_time);
+		end_opt6(o1);
+	      }
+	    
+	    end_ia(t1cntr, min_time, 1);
+	    end_opt6(o);
+	  }
+	
+	tagif = add_options(state, 0);
+	break;
+	
+      }
+      
+    case DHCP6CONFIRM:
+      {
+	int good_addr = 0;
+
+	/* set reply message type */
+	*outmsgtypep = DHCP6REPLY;
+	
+	log6_quiet(state, "DHCPCONFIRM", NULL, NULL);
+	
+	for (opt = state->packet_options; opt; opt = opt6_next(opt, state->end))
+	  {
+	    void *ia_option, *ia_end;
+	    
+	    for (check_ia(state, opt, &ia_end, &ia_option);
+		 ia_option;
+		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
+	      {
+		struct in6_addr req_addr;
+
+		/* alignment */
+		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
+		
+		if (!address6_valid(state->context, &req_addr, tagif, 1))
+		  {
+		    o1 = new_opt6(OPTION6_STATUS_CODE);
+		    put_opt6_short(DHCP6NOTONLINK);
+		    put_opt6_string(_("confirm failed"));
+		    end_opt6(o1);
+		    log6_quiet(state, "DHCPREPLY", &req_addr, _("confirm failed"));
+		    return 1;
+		  }
+
+		good_addr = 1;
+		log6_quiet(state, "DHCPREPLY", &req_addr, state->hostname);
+	      }
+	  }	 
+	
+	/* No addresses, no reply: RFC 3315 18.2.2 */
+	if (!good_addr)
+	  return 0;
+
+	o1 = new_opt6(OPTION6_STATUS_CODE);
+	put_opt6_short(DHCP6SUCCESS );
+	put_opt6_string(_("all addresses still on link"));
+	end_opt6(o1);
+	break;
     }
-    log_tags(tagif, state.xid);
-    log6_opts(0, state.xid,
-              dnsmasq_daemon.outpacket.iov_base.offset(start_opts           ),
-              dnsmasq_daemon.outpacket.iov_base.offset(save_counter(-(1                          ))
-                                                             ));
-    return 1;
+      
+    case DHCP6IREQ:
+      {
+	/* We can't discriminate contexts based on address, as we don't know it.
+	   If there is only one possible context, we can use its tags */
+	if (state->context && state->context->netid.net && !state->context->current)
+	  {
+	    state->context->netid.next = NULL;
+	    state->context_tags =  &state->context->netid;
+	  }
+
+	/* Similarly, we can't determine domain from address, but if the FQDN is
+	   given in --dhcp-host, we can use that, and failing that we can use the 
+	   unqualified configured domain, if any. */
+	if (state->hostname_auth)
+	  state->send_domain = state->domain;
+	else
+	  state->send_domain = get_domain6(NULL);
+
+	log6_quiet(state, "DHCPINFORMATION-REQUEST", NULL, ignore ? _("ignored") : state->hostname);
+	if (ignore)
+	  return 0;
+	*outmsgtypep = DHCP6REPLY;
+	tagif = add_options(state, 1);
+	break;
+      }
+      
+      
+    case DHCP6RELEASE:
+      {
+	/* set reply message type */
+	*outmsgtypep = DHCP6REPLY;
+
+	log6_quiet(state, "DHCPRELEASE", NULL, NULL);
+
+	for (opt = state->packet_options; opt; opt = opt6_next(opt, state->end))
+	  {
+	    void *ia_option, *ia_end;
+	    int made_ia = 0;
+	    	    
+	    for (check_ia(state, opt, &ia_end, &ia_option);
+		 ia_option;
+		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24)) 
+	      {
+		struct dhcp_lease *lease;
+		struct in6_addr addr;
+
+		/* align */
+		memcpy(&addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
+		if ((lease = lease6_find(state->clid, state->clid_len, state->ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA,
+					 state->iaid, &addr)))
+		  lease_prune(lease, now);
+		else
+		  {
+		    if (!made_ia)
+		      {
+			o = new_opt6(state->ia_type);
+			put_opt6_long(state->iaid);
+			if (state->ia_type == OPTION6_IA_NA)
+			  {
+			    put_opt6_long(0);
+			    put_opt6_long(0); 
+			  }
+			made_ia = 1;
+		      }
+		    
+		    o1 = new_opt6(OPTION6_IAADDR);
+		    put_opt6(&addr, IN6ADDRSZ);
+		    put_opt6_long(0);
+		    put_opt6_long(0);
+		    end_opt6(o1);
+		  }
+	      }
+	    
+	    if (made_ia)
+	      {
+		o1 = new_opt6(OPTION6_STATUS_CODE);
+		put_opt6_short(DHCP6NOBINDING);
+		put_opt6_string(_("no binding found"));
+		end_opt6(o1);
+		
+		end_opt6(o);
+	      }
+	  }
+	
+	o1 = new_opt6(OPTION6_STATUS_CODE);
+	put_opt6_short(DHCP6SUCCESS);
+	put_opt6_string(_("release received"));
+	end_opt6(o1);
+	
+	break;
+      }
+
+    case DHCP6DECLINE:
+      {
+	/* set reply message type */
+	*outmsgtypep = DHCP6REPLY;
+	
+	log6_quiet(state, "DHCPDECLINE", NULL, NULL);
+
+	for (opt = state->packet_options; opt; opt = opt6_next(opt, state->end))
+	  {
+	    void *ia_option, *ia_end;
+	    int made_ia = 0;
+	    	    
+	    for (check_ia(state, opt, &ia_end, &ia_option);
+		 ia_option;
+		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24)) 
+	      {
+		struct dhcp_lease *lease;
+		struct in6_addr addr;
+		struct addrlist *addr_list;
+		
+		/* align */
+		memcpy(&addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
+
+		if ((addr_list = config_implies(config, state->context, &addr)))
+		  {
+		    prettyprint_time(daemon->dhcp_buff3, DECLINE_BACKOFF);
+		    inet_ntop(AF_INET6, &addr, daemon->addrbuff, ADDRSTRLEN);
+		    my_syslog(MS_DHCP | LOG_WARNING, _("disabling DHCP static address %s for %s"), 
+			      daemon->addrbuff, daemon->dhcp_buff3);
+		    addr_list->flags |= ADDRLIST_DECLINED;
+		    addr_list->decline_time = now;
+		  }
+		else
+		  /* make sure this host gets a different address next time. */
+		  for (context_tmp = state->context; context_tmp; context_tmp = context_tmp->current)
+		    context_tmp->addr_epoch++;
+		
+		if ((lease = lease6_find(state->clid, state->clid_len, state->ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA,
+					 state->iaid, &addr)))
+		  lease_prune(lease, now);
+		else
+		  {
+		    if (!made_ia)
+		      {
+			o = new_opt6(state->ia_type);
+			put_opt6_long(state->iaid);
+			if (state->ia_type == OPTION6_IA_NA)
+			  {
+			    put_opt6_long(0);
+			    put_opt6_long(0); 
+			  }
+			made_ia = 1;
+		      }
+		    
+		    o1 = new_opt6(OPTION6_IAADDR);
+		    put_opt6(&addr, IN6ADDRSZ);
+		    put_opt6_long(0);
+		    put_opt6_long(0);
+		    end_opt6(o1);
+		  }
+	      }
+	    
+	    if (made_ia)
+	      {
+		o1 = new_opt6(OPTION6_STATUS_CODE);
+		put_opt6_short(DHCP6NOBINDING);
+		put_opt6_string(_("no binding found"));
+		end_opt6(o1);
+		
+		end_opt6(o);
+	      }
+	    
+	  }
+
+	/* We must answer with 'success' in global section anyway */
+	o1 = new_opt6(OPTION6_STATUS_CODE);
+	put_opt6_short(DHCP6SUCCESS);
+	put_opt6_string(_("success"));
+	end_opt6(o1);
+	break;
+      }
+
+    }
+  
+  log_tags(tagif, state->xid);
+  log6_opts(0, state->xid, daemon->outpacket.iov_base + start_opts, daemon->outpacket.iov_base + save_counter(-1));
+  
+  return 1;
+
 }
-fn add_options(mut state: &mut state,
-                                 mut do_refresh: i32)
- -> DhcpNetId {
-    let mut oro:Vec<u8> = 0;
-    /* filter options based on tags, those we want get DHOPT_TAGOK bit set */
-    let mut tagif: DhcpNetId =
-        option_filter(state.tags, state.context_tags,
-                      dnsmasq_daemon.dhcp_opts6);
-    let mut opt_cfg: DhcpOpt = 0 ;
-    let mut done_dns: i32 = 0;
-    let mut done_refresh: i32 = (do_refresh == 0);
-    let mut do_encap: i32 = 0;
-    let mut i: i32 = 0;
-    let mut o: i32 = 0;
-    let mut o1: i32 = 0;
-    oro =
-        opt6_find(state.packet_options, state.end,
-                  6,
-                  0);
-    let mut current_block_45: u64;
-    opt_cfg = dnsmasq_daemon.dhcp_opts6;
-    while !opt_cfg.is_null() {
-        /* netids match and not encapsulated? */
-        if !(opt_cfg.flags & 4096 == 0) {
-            if opt_cfg.flags & 16 == 0 && !oro.is_null() {
-                i = 0;
-                while i <
-                          opt6_uint(oro,
-                                    -(2), 2) - 1 {
-                    if opt6_uint(oro, i,
-                                 2) ==
-                           opt_cfg.opt {
-                        break ;
-                    }
-                    i += 2
-                }
-                /* option not requested */
-                if i >=
-                       opt6_uint(oro,
-                                 -(2), 2)                      - 1 {
-                    current_block_45 = 735147466149431745;
-                } else { current_block_45 = 11050875288958768710; }
-            } else { current_block_45 = 11050875288958768710; }
-            match current_block_45 {
-                735147466149431745 => { }
-                _ => {
-                    if opt_cfg.opt == 32 {
-                        done_refresh = 1
-                    }
-                    if opt_cfg.opt == 23 {
-                        done_dns = 1
-                    }
-                    if opt_cfg.flags & 8192 != 0 {
-                        let mut len: i32 = 0;
-                        let mut j: i32 = 0;
-                        let mut a: In6Addr = 0;
-                        a = opt_cfg.val;
-                        len = opt_cfg.len;
-                        j = 0;
-                        while j < opt_cfg.len {
-                            if *(a                               *const u32).offset(0
-                                                                ) ==
-                                   __bswap_32(0xfd000000) &&
-                                   *(a                                   *const u32).offset(1
-                                                                    )
-                                       == 0 &&
-                                   *(a                                   *const u32).offset(2
-                                                                    )
-                                       == 0 &&
-                                   *(a                                   *const u32).offset(3
-                                                                    )
-                                       == 0 &&
-                                   ({
-                                        let mut __a: *const In6Addr =
-                                            state.ula_addr                                          *const In6Addr;
-                                        (__a.__in6_u.__u6_addr32[0
-                                                                                            usize]
-                                             ==
-                                             0
-                                             &&
-                                             __a.__in6_u.__u6_addr32[1
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[2
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[3
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint)
-                                    }) != 0 ||
-                                   *(a                                   *const u32).offset(0
-                                                                    )
-                                       ==
-                                       __bswap_32(0xfe800000)
-                                       &&
-                                       *(a                                       *const u32).offset(1
-                                                        )
-                                           == 0
-                                       &&
-                                       *(a                                       *const u32).offset(2
-                                                        )
-                                           == 0
-                                       &&
-                                       *(a                                       *const u32).offset(3
-                                                        )
-                                           == 0
-                                       &&
-                                       ({
-                                            let mut __a: *const In6Addr =
-                                                state.ll_addr *const In6Addr;
-                                            (__a.__in6_u.__u6_addr32[0
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[1
 
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[2
+static struct dhcp_netid *add_options(struct state *state, int do_refresh)  
+{
+  void *oro;
+  /* filter options based on tags, those we want get DHOPT_TAGOK bit set */
+  struct dhcp_netid *tagif = option_filter(state->tags, state->context_tags, daemon->dhcp_opts6);
+  struct dhcp_opt *opt_cfg;
+  int done_dns = 0, done_refresh = !do_refresh, do_encap = 0;
+  int i, o, o1;
 
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[3
+  oro = opt6_find(state->packet_options, state->end, OPTION6_ORO, 0);
+  
+  for (opt_cfg = daemon->dhcp_opts6; opt_cfg; opt_cfg = opt_cfg->next)
+    {
+      /* netids match and not encapsulated? */
+      if (!(opt_cfg->flags & DHOPT_TAGOK))
+	continue;
+      
+      if (!(opt_cfg->flags & DHOPT_FORCE) && oro)
+	{
+	  for (i = 0; i <  opt6_len(oro) - 1; i += 2)
+	    if (opt6_uint(oro, i, 2) == (unsigned)opt_cfg->opt)
+	      break;
+	  
+	  /* option not requested */
+	  if (i >=  opt6_len(oro) - 1)
+	    continue;
+	}
+      
+      if (opt_cfg->opt == OPTION6_REFRESH_TIME)
+	done_refresh = 1;
+       
+      if (opt_cfg->opt == OPTION6_DNS_SERVER)
+	done_dns = 1;
+      
+      if (opt_cfg->flags & DHOPT_ADDR6)
+	{
+	  int len, j;
+	  struct in6_addr *a;
+	  
+	  for (a = (struct in6_addr *)opt_cfg->val, len = opt_cfg->len, j = 0; 
+	       j < opt_cfg->len; j += IN6ADDRSZ, a++)
+	    if ((IN6_IS_ADDR_ULA_ZERO(a) && IN6_IS_ADDR_UNSPECIFIED(state->ula_addr)) ||
+		(IN6_IS_ADDR_LINK_LOCAL_ZERO(a) && IN6_IS_ADDR_UNSPECIFIED(state->ll_addr)))
+	      len -= IN6ADDRSZ;
+	  
+	  if (len != 0)
+	    {
+	      
+	      o = new_opt6(opt_cfg->opt);
+	      	  
+	      for (a = (struct in6_addr *)opt_cfg->val, j = 0; j < opt_cfg->len; j+=IN6ADDRSZ, a++)
+		{
+		  struct in6_addr *p = NULL;
 
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint)
-                                        }) != 0 {
-                                len -= 16
-                            }
-                            j += 16;
-                            a = a.offset(1)
-                        }
-                        if len != 0 {
-                            o = new_opt6(opt_cfg.opt);
-                            a = opt_cfg.val;
-                            j = 0;
-                            while j < opt_cfg.len {
-                                let mut p: In6Addr = 0;
-                                if ({
-                                        let mut __a: *const In6Addr =
-                                            a ;
-                                        (__a.__in6_u.__u6_addr32[0
-                                                                                            usize]
-                                             ==
-                                             0
-                                             &&
-                                             __a.__in6_u.__u6_addr32[1
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[2
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                             __a.__in6_u.__u6_addr32[3
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint)
-                                    }) != 0 {
-                                    if add_local_addrs(state.context) == 0
-                                       {
-                                        p = state.fallback
-                                    }
-                                } else if *(a                                          *const u32).offset(0
-                                                              )
-                                              ==
-                                              __bswap_32(0xfd000000          libc::c_uint) &&
-                                              *(a *const u32).offset(1
+		  if (IN6_IS_ADDR_UNSPECIFIED(a))
+		    {
+		      if (!add_local_addrs(state->context))
+			p = state->fallback;
+		    }
+		  else if (IN6_IS_ADDR_ULA_ZERO(a))
+		    {
+		      if (!IN6_IS_ADDR_UNSPECIFIED(state->ula_addr))
+			p = state->ula_addr;
+		    }
+		  else if (IN6_IS_ADDR_LINK_LOCAL_ZERO(a))
+		    {
+		      if (!IN6_IS_ADDR_UNSPECIFIED(state->ll_addr))
+			p = state->ll_addr;
+		    }
+		  else
+		    p = a;
 
-                                                                      )
-                                                  ==
-                                                  0   libc::c_uint &&
-                                              *(a *const u32).offset(2
+		  if (!p)
+		    continue;
+		  else if (opt_cfg->opt == OPTION6_NTP_SERVER)
+		    {
+		      if (IN6_IS_ADDR_MULTICAST(p))
+			o1 = new_opt6(NTP_SUBOPTION_MC_ADDR);
+		      else
+			o1 = new_opt6(NTP_SUBOPTION_SRV_ADDR);
+		      put_opt6(p, IN6ADDRSZ);
+		      end_opt6(o1);
+		    }
+		  else
+		    put_opt6(p, IN6ADDRSZ);
+		}
 
-                                                                      )
-                                                  ==
-                                                  0   libc::c_uint &&
-                                              *(a *const u32).offset(3
-
-                                                                      )
-                                                  ==
-                                                  0   libc::c_uint {
-                                    if ({
-                                            let mut __a: *const In6Addr =
-                                                state.ula_addr *const In6Addr;
-                                            (__a.__in6_u.__u6_addr32[0
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[1
-
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[2
-
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[3
-
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint)
-                                        }) == 0 {
-                                        p = state.ula_addr
-                                    }
-                                } else if *(a                                          *const u32).offset(0
-                                                              )
-                                              ==
-                                              __bswap_32(0xfe800000          libc::c_uint) &&
-                                              *(a *const u32).offset(1
-
-                                                                      )
-                                                  ==
-                                                  0   libc::c_uint &&
-                                              *(a *const u32).offset(2
-
-                                                                      )
-                                                  ==
-                                                  0   libc::c_uint &&
-                                              *(a *const u32).offset(3
-
-                                                                      )
-                                                  ==
-                                                  0   libc::c_uint {
-                                    if ({
-                                            let mut __a: *const In6Addr =
-                                                state.ll_addr *const In6Addr;
-                                            (__a.__in6_u.__u6_addr32[0
-                                                                                                    usize]
-                                                 ==
-                                                 0  libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[1
-
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[2
-
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint &&
-                                                 __a.__in6_u.__u6_addr32[3
-
-                                                                                                            usize]
-                                                     ==
-                                                     0      libc::c_uint)
-                                        }) == 0 {
-                                        p = state.ll_addr
-                                    }
-                                } else { p = a }
-                                if !p.is_null() {
-                                    if opt_cfg.opt == 56 {
-                                        if *(p                                           *const u8).offset(0
-                                                              )
-                                               ==
-                                               0xff {
-                                            o1 = new_opt6(2)
-                                        } else {
-                                            o1 = new_opt6(1)
-                                        }
-                                        put_opt6(p,
-                                                 16 );
-                                        end_opt6(o1);
-                                    } else {
-                                        put_opt6(p,
-                                                 16 );
-                                    }
-                                }
-                                j += 16;
-                                a = a.offset(1)
-                            }
-                            end_opt6(o);
-                        }
-                    } else {
-                        o = new_opt6(opt_cfg.opt);
-                        if !opt_cfg.val.is_null() {
-                            put_opt6(opt_cfg.val,
-                                     opt_cfg.len );
-                        }
-                        end_opt6(o);
-                    }
-                }
-            }
-        }
-        opt_cfg = opt_cfg.next
+	      end_opt6(o);
+	    }
+	}
+      else
+	{
+	  o = new_opt6(opt_cfg->opt);
+	  if (opt_cfg->val)
+	    put_opt6(opt_cfg->val, opt_cfg->len);
+	  end_opt6(o);
+	}
     }
-    if dnsmasq_daemon.port == 53 && done_dns == 0 {
-        o = new_opt6(23);
-        if add_local_addrs(state.context) == 0 {
-            put_opt6(state.fallback,
-                     16 );
-        }
-        end_opt6(o);
+  
+  if (daemon->port == NAMESERVER_PORT && !done_dns)
+    {
+      o = new_opt6(OPTION6_DNS_SERVER);
+      if (!add_local_addrs(state->context))
+	put_opt6(state->fallback, IN6ADDRSZ);
+      end_opt6(o); 
     }
-    if !state.context.is_null() && done_refresh == 0 {
-        let mut c: DhcpContext = 0;
-        let mut lease_time: u32 = 0xffffffff;
-        /* Find the smallest lease tie of all contexts,
+
+  if (state->context && !done_refresh)
+    {
+      struct dhcp_context *c;
+      unsigned int lease_time = 0xffffffff;
+      
+      /* Find the smallest lease tie of all contexts,
 	 subject to the RFC-4242 stipulation that this must not 
 	 be less than 600. */
-        c = state.context;
-        while !c.is_null() {
-            if c.lease_time < lease_time {
-                if c.lease_time < 600 {
-                    lease_time = 600
-                } else { lease_time = c.lease_time }
-            }
-            c = c.next
-        }
-        o = new_opt6(32);
-        put_opt6_long(lease_time);
-        end_opt6(o);
+      for (c = state->context; c; c = c->next)
+	if (c->lease_time < lease_time)
+	  {
+	    if (c->lease_time < 600)
+	      lease_time = 600;
+	    else
+	      lease_time = c->lease_time;
+	  }
+
+      o = new_opt6(OPTION6_REFRESH_TIME);
+      put_opt6_long(lease_time);
+      end_opt6(o); 
     }
+   
     /* handle vendor-identifying vendor-encapsulated options,
        dhcp-option = vi-encap:13,17,....... */
-    opt_cfg = dnsmasq_daemon.dhcp_opts6;
-    while !opt_cfg.is_null() {
-        opt_cfg.flags &= !(64);
-        opt_cfg = opt_cfg.next
-    }
-    if !oro.is_null() {
-        i = 0;
-        while i <
-                  opt6_uint(oro, -(2),
-                            2) -
-                      1 {
-            if opt6_uint(oro, i, 2) ==
-                   17 {
-                do_encap = 1
-            }
-            i += 2
-        }
-    }
-    opt_cfg = dnsmasq_daemon.dhcp_opts6;
-    while !opt_cfg.is_null() {
-        if opt_cfg.flags & 2048 != 0 {
-            let mut found: i32 = 0;
-            let mut oc: DhcpOpt = 0 ;
-            if !(opt_cfg.flags & 64 != 0) {
-                oc = dnsmasq_daemon.dhcp_opts6;
-                while !oc.is_null() {
-                    oc.flags &= !(8);
-                    if !(oc.flags & 2048 == 0 ||
-                             opt_cfg.u.encap != oc.u.encap) {
-                        oc.flags |= 64;
-                        if match_netid(oc.netid, tagif, 1)
-                               != 0 {
-                            /* option requested/forced? */
-                            if oro.is_null() || do_encap != 0 ||
-                                   oc.flags & 16 != 0 {
-                                oc.flags |= 8;
-                                found = 1
-                            }
-                        }
-                    }
-                    oc = oc.next
-                }
-                if found != 0 {
-                    o = new_opt6(17);
-                    put_opt6_long(opt_cfg.u.encap);
-                    oc = dnsmasq_daemon.dhcp_opts6;
-                    while !oc.is_null() {
-                        if oc.flags & 8 != 0 {
-                            o1 = new_opt6(oc.opt);
-                            put_opt6(oc.val,
-                                     oc.len );
-                            end_opt6(o1);
-                        }
-                        oc = oc.next
-                    }
-                    end_opt6(o);
-                }
-            }
-        }
-        opt_cfg = opt_cfg.next
-    }
-    if !state.hostname.is_null() {
-        let mut p_0: mut Vec<u8> = 0;
-        let mut len_0: usize = strlen(state.hostname);
-        if !state.send_domain.is_null() {
-            len_0 =
-                (len_0        ).wrapping_add(strlen(state.send_domain).wrapping_add(2                   ))
+  for (opt_cfg = daemon->dhcp_opts6; opt_cfg; opt_cfg = opt_cfg->next)
+    opt_cfg->flags &= ~DHOPT_ENCAP_DONE;
+    
+  if (oro)
+    for (i = 0; i <  opt6_len(oro) - 1; i += 2)
+      if (opt6_uint(oro, i, 2) == OPTION6_VENDOR_OPTS)
+	do_encap = 1;
+  
+  for (opt_cfg = daemon->dhcp_opts6; opt_cfg; opt_cfg = opt_cfg->next)
+    { 
+      if (opt_cfg->flags & DHOPT_RFC3925)
+	{
+	  int found = 0;
+	  struct dhcp_opt *oc;
+	  
+	  if (opt_cfg->flags & DHOPT_ENCAP_DONE)
+	    continue;
+	  
+	  for (oc = daemon->dhcp_opts6; oc; oc = oc->next)
+	    {
+	      oc->flags &= ~DHOPT_ENCAP_MATCH;
+	      
+	      if (!(oc->flags & DHOPT_RFC3925) || opt_cfg->u.encap != oc->u.encap)
+		continue;
+	      
+	      oc->flags |= DHOPT_ENCAP_DONE;
+	      if (match_netid(oc->netid, tagif, 1))
+		{
+		  /* option requested/forced? */
+		  if (!oro || do_encap || (oc->flags & DHOPT_FORCE))
+		    {
+		      oc->flags |= DHOPT_ENCAP_MATCH;
+		      found = 1;
+		    }
+		} 
+	    }
+	  
+	  if (found)
+	    { 
+	      o = new_opt6(OPTION6_VENDOR_OPTS);	      
+	      put_opt6_long(opt_cfg->u.encap);	
+	     
+	      for (oc = daemon->dhcp_opts6; oc; oc = oc->next)
+		if (oc->flags & DHOPT_ENCAP_MATCH)
+		  {
+		    o1 = new_opt6(oc->opt);
+		    put_opt6(oc->val, oc->len);
+		    end_opt6(o1);
+		  }
+	      end_opt6(o);
+	    }
+	}
+    }      
 
-        }
-        o = new_opt6(39);
-        p_0 =
-            expand(len_0.wrapping_add(2))          mut Vec<u8>;
-        if !p_0.is_null() {
-            let fresh7 = p_0;
-            p_0 = p_0.offset(1);
-            *fresh7 = state.fqdn_flags;
-            p_0 =
-                do_rfc1035_name(p_0, state.hostname,
-                                0 );
-            if !state.send_domain.is_null() {
-                p_0 =
-                    do_rfc1035_name(p_0, state.send_domain,
-                                    0 );
-                *p_0 = 0
-            }
-        }
-        end_opt6(o);
-    }
-    /* logging */
-    if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
 
-                                                                                                               ))
-           != 0 && !oro.is_null() {
-        let mut q: &mut String = dnsmasq_daemon.namebuff;
-        i = 0;
-        while i <
-                  opt6_uint(oro, -(2),
-                            2) -
-                      1 {
-            let mut s: &mut String =
-                option_string(10,
-                              opt6_uint(oro, i,
-                                        2),
-                              0, 0,
-                              0 , 0);
-            q =
-                q.offset(snprintf(q,
-                                  (1025 -
-                                       q.wrapping_offset_from(dnsmasq_daemon.namebuff)
-                                          ),
-                                  "%d%s%s%s",
-                                  opt6_uint(oro, i,
-                                            2),
-                                  if strlen(s) !=
-                                         0 {
-                                      ":"                                     *const libc::c_char
-                                  } else {
-                                      ""                                     *const libc::c_char
-                                  }, s,
-                                  if i >
-                                         opt6_uint(oro,
-                                                   -(2),
-                                                   2)                                        - 3 {
-                                      ""                                     *const libc::c_char
-                                  } else {
-                                      ", "                                     *const libc::c_char
-                                  }));
-            if i >
-                   opt6_uint(oro, -(2),
-                             2) -
-                       3 ||
-                   q.wrapping_offset_from(dnsmasq_daemon.namebuff)                 i32 > 40 {
-                q = dnsmasq_daemon.namebuff;
-                my_syslog((3) << 3 |
-                              6,
-                          "%u requested options: %s" , state.xid,
-                          dnsmasq_daemon.namebuff);
-            }
-            i += 2
-        }
-    }
-    return tagif;
-}
-fn add_local_addrs(mut context: DhcpContext)
- -> i32 {
-    let mut done: i32 = 0;
-    while !context.is_null() {
-        if context.flags &
-               (1) << 15 != 0 &&
-               ({
-                    let mut __a: *const In6Addr =
-                        &mut context.local6                      *const In6Addr;
-                    (__a.__in6_u.__u6_addr32[0 ] ==
-                         0 &&
-                         __a.__in6_u.__u6_addr32[1 ]
-                             == 0 &&
-                         __a.__in6_u.__u6_addr32[2 ]
-                             == 0 &&
-                         __a.__in6_u.__u6_addr32[3 ]
-                             == 0)
-                }) == 0 {
-            /* squash duplicates */
-            let mut c: DhcpContext = 0;
-            c = context.current;
-            while !c.is_null() {
-                if c.flags &
-                       (1) << 15 != 0 &&
-                       ({
-                            let mut __a: *const In6Addr =
-                                &mut context.local6;
-                            let mut __b: *const In6Addr =
-                                &mut c.local6;
-                            (__a.__in6_u.__u6_addr32[0         usize] ==
-                                 __b.__in6_u.__u6_addr32[0] &&
-                                 __a.__in6_u.__u6_addr32[1] ==
-                                     __b.__in6_u.__u6_addr32[1       ]
-                                 &&
-                                 __a.__in6_u.__u6_addr32[2] ==
-                                     __b.__in6_u.__u6_addr32[2       ]
-                                 &&
-                                 __a.__in6_u.__u6_addr32[3] ==
-                                     __b.__in6_u.__u6_addr32[3       ])
+  if (state->hostname)
+    {
+      unsigned char *p;
+      size_t len = strlen(state->hostname);
+      
+      if (state->send_domain)
+	len += strlen(state->send_domain) + 2;
 
-                        }) != 0 {
-                    break ;
-                }
-                c = c.current
-            }
-            if c.is_null() {
-                done = 1;
-                put_opt6(&mut context.local6                      Vec<u8>, 16 );
-            }
-        }
-        context = context.current
+      o = new_opt6(OPTION6_FQDN);
+      if ((p = expand(len + 2)))
+	{
+	  *(p++) = state->fqdn_flags;
+	  p = do_rfc1035_name(p, state->hostname, NULL);
+	  if (state->send_domain)
+	    {
+	      p = do_rfc1035_name(p, state->send_domain, NULL);
+	      *p = 0;
+	    }
+	}
+      end_opt6(o);
     }
-    return done;
+
+
+  /* logging */
+  if (option_bool(OPT_LOG_OPTS) && oro)
+    {
+      char *q = daemon->namebuff;
+      for (i = 0; i <  opt6_len(oro) - 1; i += 2)
+	{
+	  char *s = option_string(AF_INET6, opt6_uint(oro, i, 2), NULL, 0, NULL, 0);
+	  q += snprintf(q, MAXDNAME - (q - daemon->namebuff),
+			"%d%s%s%s", 
+			opt6_uint(oro, i, 2),
+			strlen(s) != 0 ? ":" : "",
+			s, 
+			(i > opt6_len(oro) - 3) ? "" : ", ");
+	  if ( i >  opt6_len(oro) - 3 || (q - daemon->namebuff) > 40)
+	    {
+	      q = daemon->namebuff;
+	      my_syslog(MS_DHCP | LOG_INFO, _("%u requested options: %s"), state->xid, daemon->namebuff);
+	    }
+	}
+    } 
+
+  return tagif;
 }
-fn get_context_tag(mut state: &mut state,
-                                     mut context: DhcpContext) {
-    /* get tags from context if we've not used it before */
-    if context.netid.next == &mut context.netid  &&
-           !context.netid.net.is_null() {
-        context.netid.next = state.context_tags;
-        state.context_tags = &mut context.netid;
-        if state.hostname_auth == 0 {
-            let mut id_list: DhcpNetIdList = 0;
-            id_list = dnsmasq_daemon.dhcp_ignore_names;
-            while !id_list.is_null() {
-                if id_list.list.is_null() ||
-                       match_netid(id_list.list, &mut context.netid,
-                                   0) != 0 {
-                    break ;
-                }
-                id_list = id_list.next
-            }
-            if !id_list.is_null() {
-                state.hostname = 0
-            }
-        }
-    };
+ 
+static int add_local_addrs(struct dhcp_context *context)
+{
+  int done = 0;
+  
+  for (; context; context = context->current)
+    if ((context->flags & CONTEXT_USED) && !IN6_IS_ADDR_UNSPECIFIED(&context->local6))
+      {
+	/* squash duplicates */
+	struct dhcp_context *c;
+	for (c = context->current; c; c = c->current)
+	  if ((c->flags & CONTEXT_USED) &&
+	      IN6_ARE_ADDR_EQUAL(&context->local6, &c->local6))
+	    break;
+	
+	if (!c)
+	  { 
+	    done = 1;
+	    put_opt6(&context->local6, IN6ADDRSZ);
+	  }
+      }
+
+  return done;
 }
-fn check_ia(mut state: &mut state,
-                              mut opt:Vec<u8>,
-                              mut endp: Vec<u8>,
-                              mut ia_option: Vec<u8>)
- -> i32 {
-    state.ia_type =
-        opt6_uint(opt, -(4),
-                  2);
-    *ia_option = 0;
-    if state.ia_type != 3 &&
-           state.ia_type != 4 {
-        return 0
+
+
+static void get_context_tag(struct state *state, struct dhcp_context *context)
+{
+  /* get tags from context if we've not used it before */
+  if (context->netid.next == &context->netid && context->netid.net)
+    {
+      context->netid.next = state->context_tags;
+      state->context_tags = &context->netid;
+      if (!state->hostname_auth)
+	{
+	  struct dhcp_netid_list *id_list;
+	  
+	  for (id_list = daemon->dhcp_ignore_names; id_list; id_list = id_list->next)
+	    if ((!id_list->list) || match_netid(id_list->list, &context->netid, 0))
+	      break;
+	  if (id_list)
+	    state->hostname = NULL;
+	}
     }
-    if state.ia_type == 3 &&
-           (opt6_uint(opt, -(2),
-                      2)) < 12 {
-        return 0
-    }
-    if state.ia_type == 4 &&
-           (opt6_uint(opt, -(2),
-                      2)) < 4 {
-        return 0
-    }
-    *endp =
-        &mut *(opt             mut Vec<u8>).offset((4 +
-                                                   (opt6_uint     fn(_:
-                                                                                 mut Vec<u8>,
-                                                                             _:
-                                                                                 ,
-                                                                             _:
-                                                                                 )
-                                                            ->
-                                                                libc::c_uint)(opt
-                                                                                                                mut Vec<u8>,
-                                                                              -(2
-                                                                                                                    ),
-                                                                              2
-                                                                                                                )
-                                                      )      )
-           ;
-    state.iaid =
-        opt6_uint(opt, 0,
-                  4);
-    *ia_option =
-        opt6_find(&mut *(opt                       mut Vec<u8>).offset((4 +
-                                                             (if state.ia_type
-                                                                     ==
-                                                                     3
-                                                                 {
-                                                                  12
-                                                              } else {
-                                                                  4
-                                                              })))                mut Vec<u8>, *endp,
-                  5,
-                  24);
-    return 1;
-}
-fn build_ia(mut state: &mut state,
-                              mut t1cntr: ) -> i32 {
-    let mut o: i32 = new_opt6(state.ia_type);
-    put_opt6_long(state.iaid);
-    *t1cntr = 0;
-    if state.ia_type == 3 {
-        /* save pointer */
-        *t1cntr = save_counter(-(1));
-        /* so we can fill these in later */
-        put_opt6_long(0);
-        put_opt6_long(0);
-    }
-    return o;
-}
-fn end_ia(mut t1cntr: i32,
-                            mut min_time: u32,
-                            mut do_fuzz: i32) {
-    if t1cntr != 0 {
-        /* go back and fill in fields in IA_NA option */
-        let mut sav: i32 = save_counter(t1cntr);
-        let mut t1: u32 = 0;
-        let mut t2: u32 = 0;
-        let mut fuzz: u32 = 0;
-        if do_fuzz != 0 {
-            fuzz = rand16();
-            while fuzz >
-                      min_time.wrapping_div(16)
-                  {
-                fuzz = fuzz.wrapping_div(2)
-            }
-        }
-        t1 =
-            if min_time == 0xffffffff {
-                0xffffffff
-            } else {
-                min_time.wrapping_div(2                                    libc::c_uint).wrapping_sub(fuzz)
-            };
-        t2 =
-            if min_time == 0xffffffff {
-                0xffffffff
-            } else {
-                min_time.wrapping_div(8                                    libc::c_uint).wrapping_mul(7
-                                                                                              libc::c_uint).wrapping_sub(fuzz)
-            };
-        put_opt6_long(t1);
-        put_opt6_long(t2);
-        save_counter(sav);
-    };
-}
-fn add_address(mut state: &mut state,
-                                 mut context: DhcpContext,
-                                 mut lease_time: u32,
-                                 mut ia_option:Vec<u8>,
-                                 mut min_time: &mut libc::c_uint,
-                                 mut addr: &mut In6Addr, mut now: time::Instant) {
-    let mut valid_time: u32 = 0;
-    let mut preferred_time: u32 = 0;
-    let mut o: i32 = new_opt6(5);
-    let mut lease: DhcpLease = 0;
-    /* get client requested times */
-    if !ia_option.is_null() {
-        preferred_time =
-            opt6_uint(ia_option, 16,
-                      4);
-        valid_time =
-            opt6_uint(ia_option, 20,
-                      4)
-    }
-    calculate_times(context, min_time, &mut valid_time, &mut preferred_time,
-                    lease_time);
-    put_opt6(addr,
-             ::std::mem::size_of::<In6Addr>());
-    put_opt6_long(preferred_time);
-    put_opt6_long(valid_time);
-    end_opt6(o);
-    if state.lease_allocate != 0 {
-        update_leases(state, context, addr, valid_time, now);
-    }
-    lease =
-        lease6_find_by_addr(addr, 128,
-                            0 as u64);
-    if !lease.is_null() { lease.flags |= 16 }
-    /* get tags from context if we've not used it before */
-    if context.netid.next == &mut context.netid  &&
-           !context.netid.net.is_null() {
-        context.netid.next = state.context_tags;
-        state.context_tags = &mut context.netid;
-        if state.hostname_auth == 0 {
-            let mut id_list: DhcpNetIdList = 0;
-            id_list = dnsmasq_daemon.dhcp_ignore_names;
-            while !id_list.is_null() {
-                if id_list.list.is_null() ||
-                       match_netid(id_list.list, &mut context.netid,
-                                   0) != 0 {
-                    break ;
-                }
-                id_list = id_list.next
-            }
-            if !id_list.is_null() {
-                state.hostname = 0
-            }
-        }
-    }
-    log6_quiet(state,
-               if state.lease_allocate != 0 {
-                   "DHCPREPLY"
-               } else {
-                   "DHCPADVERTISE"
-               } , addr, state.hostname);
-}
-fn mark_context_used(mut state: &mut state,
-                                       mut addr: &mut In6Addr) {
-    let mut context: DhcpContext = 0;
-    /* Mark that we have an address for this prefix. */
-    context = state.context;
-    while !context.is_null() {
-        if is_same_net6(addr, &mut context.start6, context.prefix) != 0
-           {
-            context.flags =
-                (context.flags |
-                     (1) << 15)
-        }
-        context = context.current
-    };
-}
-fn mark_config_used(mut context: DhcpContext,
-                                      mut addr: &mut In6Addr) {
-    while !context.is_null() {
-        if is_same_net6(addr, &mut context.start6, context.prefix) != 0
-           {
-            context.flags =
-                (context.flags |
-                     (1) << 14)
-        }
-        context = context.current
-    };
-}
-/* make sure address not leased to another CLID/IAID */
-fn check_address(mut state: &mut state,
-                                   mut addr: &mut In6Addr) -> i32 {
-    let mut lease: DhcpLease = 0;
-    lease =
-        lease6_find_by_addr(addr, 128,
-                            0 as u64);
-    if lease.is_null() { return 1 }
-    if lease.clid_len != state.clid_len ||
-           memcmp(lease.clid,
-                  state.clid,
-                  state.clid_len) != 0 ||
-           lease.iaid != state.iaid {
-        return 0
-    }
-    return 1;
-}
-/* return true of *addr could have been generated from config. */
-fn config_implies(mut config: &mut DhcpConfig,
-                                    mut context: DhcpContext,
-                                    mut addr: &mut In6Addr)
-                                    -> AddressListEntry {
-    let mut prefix: i32 = 0;
-    let mut wild_addr: In6Addr =
-        In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-    let mut addr_list: AddressListEntry = 0 ;
-    if config.is_null() ||
-           config.flags & 4096 == 0 {
-        return 0
-    }
-    let mut current_block_9: u64;
-    addr_list = config.addr6;
-    while !addr_list.is_null() {
-        prefix =
-            if addr_list.flags & 8 != 0 {
-                addr_list.prefixlen
-            } else { 128 };
-        wild_addr = addr_list.addr.addr6;
-        if addr_list.flags & 16 != 0 &&
-               context.prefix == 64 {
-            wild_addr = context.start6;
-            setaddr6part(&mut wild_addr,
-                         addr6part(&mut addr_list.addr.addr6));
-            current_block_9 = 7746791466490516765;
-        } else if is_same_net6(&mut context.start6, addr,
-                               context.prefix) == 0 {
-            current_block_9 = 17179679302217393232;
-        } else { current_block_9 = 7746791466490516765; }
-        match current_block_9 {
-            7746791466490516765 => {
-                if is_same_net6(&mut wild_addr, addr, prefix) != 0 {
-                    return addr_list
-                }
-            }
-            _ => { }
-        }
-        addr_list = addr_list.next
-    }
-    return 0 ;
-}
-fn config_valid(mut config: &mut DhcpConfig,
-                                  mut context: DhcpContext,
-                                  mut addr: &mut In6Addr,
-                                  mut state: &mut state, mut now: time::Instant)
-                                  -> i32 {
-    let mut addrpart: u64 = 0;
-    let mut i: u64 = 0;
-    let mut addresses: u64 = 0;
-    let mut addr_list: AddressListEntry = 0 ;
-    if config.is_null() ||
-           config.flags & 4096 == 0 {
-        return 0
-    }
-    let mut current_block_14: u64;
-    addr_list = config.addr6;
-    while !addr_list.is_null() {
-        if addr_list.flags & 32 == 0 ||
-               difftime(now, addr_list.decline_time) >=
-                   600   {
-            addrpart = addr6part(&mut addr_list.addr.addr6);
-            addresses = 1 as u64;
-            if addr_list.flags & 8 != 0 {
-                addresses =
-                    (1 as u64) <<
-                        128 - addr_list.prefixlen
-            }
-            if addr_list.flags & 16 != 0 {
-                if context.prefix != 64 {
-                    current_block_14 = 10680521327981672866;
-                } else {
-                    *addr = context.start6;
-                    current_block_14 = 3512920355445576850;
-                }
-            } else if is_same_net6(&mut context.start6,
-                                   &mut addr_list.addr.addr6,
-                                   context.prefix) != 0 {
-                *addr = addr_list.addr.addr6;
-                current_block_14 = 3512920355445576850;
-            } else { current_block_14 = 10680521327981672866; }
-            match current_block_14 {
-                10680521327981672866 => { }
-                _ => {
-                    i = 0 as u64;
-                    while i < addresses {
-                        setaddr6part(addr, addrpart.wrapping_add(i));
-                        if check_address(state, addr) != 0 {
-                            return 1
-                        }
-                        i = i.wrapping_add(1)
-                    }
-                }
-            }
-        }
-        addr_list = addr_list.next
-    }
+} 
+
+static int check_ia(struct state *state, void *opt, void **endp, void **ia_option)
+{
+  state->ia_type = opt6_type(opt);
+  *ia_option = NULL;
+
+  if (state->ia_type != OPTION6_IA_NA && state->ia_type != OPTION6_IA_TA)
     return 0;
+  
+  if (state->ia_type == OPTION6_IA_NA && opt6_len(opt) < 12)
+    return 0;
+	    
+  if (state->ia_type == OPTION6_IA_TA && opt6_len(opt) < 4)
+    return 0;
+  
+  *endp = opt6_ptr(opt, opt6_len(opt));
+  state->iaid = opt6_uint(opt, 0, 4);
+  *ia_option = opt6_find(opt6_ptr(opt, state->ia_type == OPTION6_IA_NA ? 12 : 4), *endp, OPTION6_IAADDR, 24);
+
+  return 1;
 }
+
+
+static int build_ia(struct state *state, int *t1cntr)
+{
+  int  o = new_opt6(state->ia_type);
+ 
+  put_opt6_long(state->iaid);
+  *t1cntr = 0;
+	    
+  if (state->ia_type == OPTION6_IA_NA)
+    {
+      /* save pointer */
+      *t1cntr = save_counter(-1);
+      /* so we can fill these in later */
+      put_opt6_long(0);
+      put_opt6_long(0); 
+    }
+
+  return o;
+}
+
+static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz)
+{
+  if (t1cntr != 0)
+    {
+      /* go back and fill in fields in IA_NA option */
+      int sav = save_counter(t1cntr);
+      unsigned int t1, t2, fuzz = 0;
+
+      if (do_fuzz)
+	{
+	  fuzz = rand16();
+      
+	  while (fuzz > (min_time/16))
+	    fuzz = fuzz/2;
+	}
+      
+      t1 = (min_time == 0xffffffff) ? 0xffffffff : min_time/2 - fuzz;
+      t2 = (min_time == 0xffffffff) ? 0xffffffff : ((min_time/8)*7) - fuzz;
+      put_opt6_long(t1);
+      put_opt6_long(t2);
+      save_counter(sav);
+    }	
+}
+
+static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
+			unsigned int *min_time, struct in6_addr *addr, time_t now)
+{
+  unsigned int valid_time = 0, preferred_time = 0;
+  int o = new_opt6(OPTION6_IAADDR);
+  struct dhcp_lease *lease;
+
+  /* get client requested times */
+  if (ia_option)
+    {
+      preferred_time =  opt6_uint(ia_option, 16, 4);
+      valid_time =  opt6_uint(ia_option, 20, 4);
+    }
+
+  calculate_times(context, min_time, &valid_time, &preferred_time, lease_time); 
+  
+  put_opt6(addr, sizeof(*addr));
+  put_opt6_long(preferred_time);
+  put_opt6_long(valid_time); 		    
+  end_opt6(o);
+  
+  if (state->lease_allocate)
+    update_leases(state, context, addr, valid_time, now);
+
+  if ((lease = lease6_find_by_addr(addr, 128, 0)))
+    lease->flags |= LEASE_USED;
+
+  /* get tags from context if we've not used it before */
+  if (context->netid.next == &context->netid && context->netid.net)
+    {
+      context->netid.next = state->context_tags;
+      state->context_tags = &context->netid;
+      
+      if (!state->hostname_auth)
+	{
+	  struct dhcp_netid_list *id_list;
+	  
+	  for (id_list = daemon->dhcp_ignore_names; id_list; id_list = id_list->next)
+	    if ((!id_list->list) || match_netid(id_list->list, &context->netid, 0))
+	      break;
+	  if (id_list)
+	    state->hostname = NULL;
+	}
+    }
+
+  log6_quiet(state, state->lease_allocate ? "DHCPREPLY" : "DHCPADVERTISE", addr, state->hostname);
+
+}
+
+static void mark_context_used(struct state *state, struct in6_addr *addr)
+{
+  struct dhcp_context *context;
+
+  /* Mark that we have an address for this prefix. */
+  for (context = state->context; context; context = context->current)
+    if (is_same_net6(addr, &context->start6, context->prefix))
+      context->flags |= CONTEXT_USED;
+}
+
+static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr)
+{
+  for (; context; context = context->current)
+    if (is_same_net6(addr, &context->start6, context->prefix))
+      context->flags |= CONTEXT_CONF_USED;
+}
+
+/* make sure address not leased to another CLID/IAID */
+static int check_address(struct state *state, struct in6_addr *addr)
+{ 
+  struct dhcp_lease *lease;
+
+  if (!(lease = lease6_find_by_addr(addr, 128, 0)))
+    return 1;
+
+  if (lease->clid_len != state->clid_len || 
+      memcmp(lease->clid, state->clid, state->clid_len) != 0 ||
+      lease->iaid != state->iaid)
+    return 0;
+
+  return 1;
+}
+
+
+/* return true of *addr could have been generated from config. */
+static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr)
+{
+  int prefix;
+  struct in6_addr wild_addr;
+  struct addrlist *addr_list;
+  
+  if (!config || !(config->flags & CONFIG_ADDR6))
+    return NULL;
+  
+  for (addr_list = config->addr6; addr_list; addr_list = addr_list->next)
+    {
+      prefix = (addr_list->flags & ADDRLIST_PREFIX) ? addr_list->prefixlen : 128;
+      wild_addr = addr_list->addr.addr6;
+      
+      if ((addr_list->flags & ADDRLIST_WILDCARD) && context->prefix == 64)
+	{
+	  wild_addr = context->start6;
+	  setaddr6part(&wild_addr, addr6part(&addr_list->addr.addr6));
+	}
+      else if (!is_same_net6(&context->start6, addr, context->prefix))
+	continue;
+      
+      if (is_same_net6(&wild_addr, addr, prefix))
+	return addr_list;
+    }
+  
+  return NULL;
+}
+
+static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now)
+{
+  u64 addrpart, i, addresses;
+  struct addrlist *addr_list;
+  
+  if (!config || !(config->flags & CONFIG_ADDR6))
+    return 0;
+
+  for (addr_list = config->addr6; addr_list; addr_list = addr_list->next)
+    if (!(addr_list->flags & ADDRLIST_DECLINED) ||
+	difftime(now, addr_list->decline_time) >= (float)DECLINE_BACKOFF)
+      {
+	addrpart = addr6part(&addr_list->addr.addr6);
+	addresses = 1;
+	
+	if (addr_list->flags & ADDRLIST_PREFIX)
+	  addresses = (u64)1<<(128-addr_list->prefixlen);
+	
+	if ((addr_list->flags & ADDRLIST_WILDCARD))
+	  {
+	    if (context->prefix != 64)
+	      continue;
+	    
+	    *addr = context->start6;
+	  }
+	else if (is_same_net6(&context->start6, &addr_list->addr.addr6, context->prefix))
+	  *addr = addr_list->addr.addr6;
+	else
+	  continue;
+	
+	for (i = 0 ; i < addresses; i++)
+	  {
+	    setaddr6part(addr, addrpart+i);
+	    
+	    if (check_address(state, addr))
+	      return 1;
+	  }
+      }
+  
+  return 0;
+}
+
 /* Calculate valid and preferred times to send in leases/renewals. 
 
    Inputs are:
@@ -2716,747 +1773,434 @@ fn config_valid(mut config: &mut DhcpConfig,
    *min_time - smallest valid time sent so far, to calculate T1 and T2.
    
    */
-fn calculate_times(mut context: DhcpContext,
-                                     mut min_time: &mut libc::c_uint,
-                                     mut valid_timep: &mut libc::c_uint,
-                                     mut preferred_timep: &mut libc::c_uint,
-                                     mut lease_time: u32) {
-    let mut req_preferred: u32 = *preferred_timep;
-    let mut req_valid: u32 = *valid_timep;
-    let mut valid_time: u32 = lease_time;
-    let mut preferred_time: u32 = lease_time;
-    /* RFC 3315: "A server ignores the lifetimes set
+static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
+			    unsigned int *preferred_timep, unsigned int lease_time)
+{
+  unsigned int req_preferred = *preferred_timep, req_valid = *valid_timep;
+  unsigned int valid_time = lease_time, preferred_time = lease_time;
+  
+  /* RFC 3315: "A server ignores the lifetimes set
      by the client if the preferred lifetime is greater than the valid
      lifetime. */
-    if req_preferred <= req_valid {
-        if req_preferred != 0 {
-            /* 0 == "no preference from client" */
-            if req_preferred < 120 {
-                req_preferred = 120
-            } /* sanity */
-            if req_preferred < preferred_time {
-                preferred_time = req_preferred
-            }
-        }
-        if req_valid != 0 {
-            /* 0 == "no preference from client" */
-            if req_valid < 120 {
-                req_valid = 120
-            } /* sanity */
-            if req_valid < valid_time { valid_time = req_valid }
-        }
+  if (req_preferred <= req_valid)
+    {
+      if (req_preferred != 0)
+	{
+	  /* 0 == "no preference from client" */
+	  if (req_preferred < 120u)
+	    req_preferred = 120u; /* sanity */
+	  
+	  if (req_preferred < preferred_time)
+	    preferred_time = req_preferred;
+	}
+      
+      if (req_valid != 0)
+	/* 0 == "no preference from client" */
+	{
+	  if (req_valid < 120u)
+	    req_valid = 120u; /* sanity */
+	  
+	  if (req_valid < valid_time)
+	    valid_time = req_valid;
+	}
     }
-    /* deprecate (preferred == 0) which configured, or when local address 
+
+  /* deprecate (preferred == 0) which configured, or when local address 
      is deprecated */
-    if context.flags &
-           (1) << 9 != 0 ||
-           context.preferred == 0 {
-        preferred_time = 0
-    }
-    if preferred_time != 0 &&
-           preferred_time < *min_time {
-        *min_time = preferred_time
-    }
-    if valid_time != 0 &&
-           valid_time < *min_time {
-        *min_time = valid_time
-    }
-    *valid_timep = valid_time;
-    *preferred_timep = preferred_time;
-}
-fn update_leases(mut state: &mut state,
-                                   mut context: DhcpContext,
-                                   mut addr: &mut In6Addr,
-                                   mut lease_time: u32,
-                                   mut now: time::Instant) {
-    let mut lease: DhcpLease =
-        lease6_find_by_addr(addr, 128,
-                            0 as u64);
-    let mut tagif: DhcpNetId = run_tag_if(state.tags);
-    if lease.is_null() {
-        lease =
-            lease6_allocate(addr,
-                            if state.ia_type == 3 {
-                                32
-                            } else { 64 })
-    }
-    if !lease.is_null() {
-        lease_set_expires(lease, lease_time, now);
-        lease_set_iaid(lease, state.iaid);
-        lease_set_hwaddr(lease, state.mac.as_mut_ptr(), state.clid,
-                         state.mac_len,
-                         state.mac_type, state.clid_len,
-                         now, 0);
-        lease_set_interface(lease, state.interface, now);
-        if !state.hostname.is_null() &&
-               state.ia_type == 3 {
-            let mut addr_domain: &mut String = get_domain6(addr);
-            if state.send_domain.is_null() {
-                state.send_domain = addr_domain
-            }
-            lease_set_hostname(lease, state.hostname,
-                               state.hostname_auth, addr_domain,
-                               state.domain);
-        }
-        if !dnsmasq_daemon.lease_change_command.is_null() {
-            let mut class_opt:Vec<u8> = 0;
-            lease.flags |= 2;
-            // free(lease.extradata);
-            lease.extradata = 0;
-            lease.extradata_len = 0;
-            lease.extradata_size = lease.extradata_len;
-            lease.vendorclass_count = 0;
-            class_opt =
-                opt6_find(state.packet_options, state.end,
-                          16,
-                          4);
-            if !class_opt.is_null() {
-                let mut enc_opt:Vec<u8> = 0;
-                let mut enc_end:Vec<u8> =
-                    &mut *(class_opt).offset((4 +
-                                                               (opt6_uint                 fn(_:
-                                                                                             mut Vec<u8>,
-                                                                                         _:
-                                                                                             ,
-                                                                                         _:
-                                                                                             )
-                                                                        ->
-                                                                            libc::c_uint)(class_opt           mut Vec<u8>,
-                                                                                          -(2               ),
-                                                                                          2           )
-                                                                                  )
-                                                             )                  mut Vec<u8>;
-                lease.vendorclass_count += 1;
-                /* send enterprise number first  */
-                sprintf(dnsmasq_daemon.dhcp_buff2,
-                        "%u" ,
-                        opt6_uint(class_opt,
-                                  0, 4));
-                lease_add_extradata(lease,
-                                    dnsmasq_daemon.dhcp_buff2                                  mut Vec<u8>,
-                                    strlen(dnsmasq_daemon.dhcp_buff2)                                  libc::c_uint, 0);
-                if opt6_uint(class_opt,
-                             -(2), 2) >= 6 {
-                    enc_opt =
-                        &mut *(class_opt                             mut Vec<u8>).offset((4
-                                                                   +
-                                                                   4                    )
-                                                                 )                      mut Vec<u8>;
-                    while !enc_opt.is_null() {
-                        lease.vendorclass_count += 1;
-                        lease_add_extradata(lease,
-                                            &mut *(enc_opt    mut Vec<u8>).offset((4
-
-                                                                                       +
-                                                                                       0     )
-                                                                                  )
-                                                                                        Vec<u8>                                          mut Vec<u8>,
-                                            opt6_uint(enc_opt       mut Vec<u8>,
-                                                      -(2),
-                                                      2)                                          ,
-                                            0);
-                        enc_opt = opt6_next(enc_opt, enc_end)
-                    }
-                }
-            }
-            lease_add_extradata(lease,
-                                state.client_hostname                              mut Vec<u8>,
-                                if !state.client_hostname.is_null() {
-                                    strlen(state.client_hostname)
-                                } else { 0 }
-                                   , 0);
-            /* space-concat tag set */
-            if tagif.is_null() && context.netid.net.is_null() {
-                lease_add_extradata(lease, 0,
-                                    0,
-                                    0);
-            } else {
-                if !context.netid.net.is_null() {
-                    lease_add_extradata(lease,
-                                        context.netid.net                                      mut Vec<u8>,
-                                        strlen(context.netid.net)                                      libc::c_uint,
-                                        if !tagif.is_null() {
-                                            ' ' as i32
-                                        } else { 0 });
-                }
-                if !tagif.is_null() {
-                    let mut n: DhcpNetId = 0 ;
-                    n = tagif;
-                    while !n.is_null() {
-                        let mut n1: DhcpNetId = 0 ;
-                        /* kill dupes */
-                        n1 = n.next;
-                        while !n1.is_null() {
-                            if strcmp(n.net, n1.net) == 0
-                               {
-                                break ;
-                            }
-                            n1 = n1.next
-                        }
-                        if n1.is_null() {
-                            lease_add_extradata(lease,
-                                                n.net mut Vec<u8>,
-                                                strlen(n.net) libc::c_uint,
-                                                if !n.next.is_null() {
-                                                    ' ' as i32
-                                                } else { 0 });
-                        }
-                        n = n.next
-                    }
-                }
-            }
-            if !state.link_address.is_null() {
-                inet_ntop(10,
-                          state.link_address,
-                          dnsmasq_daemon.addrbuff,
-                          46);
-            }
-            lease_add_extradata(lease,
-                                dnsmasq_daemon.addrbuff                              mut Vec<u8>,
-                                if !state.link_address.is_null() {
-                                    strlen(dnsmasq_daemon.addrbuff)
-                                } else { 0 }
-                                   , 0);
-            class_opt =
-                opt6_find(state.packet_options, state.end,
-                          15,
-                          2);
-            if !class_opt.is_null() {
-                let mut enc_opt_0:Vec<u8> = 0;
-                let mut enc_end_0:Vec<u8> =
-                    &mut *(class_opt).offset((4 +
-                                                               (opt6_uint                 fn(_:
-                                                                                             mut Vec<u8>,
-                                                                                         _:
-                                                                                             ,
-                                                                                         _:
-                                                                                             )
-                                                                        ->
-                                                                            libc::c_uint)(class_opt           mut Vec<u8>,
-                                                                                          -(2               ),
-                                                                                          2           )
-                                                                                  )
-                                                             )                  mut Vec<u8>;
-                enc_opt_0 =
-                    &mut *(class_opt).offset((4 +
-                                                               0                )
-                                                             )                  mut Vec<u8>;
-                while !enc_opt_0.is_null() {
-                    lease_add_extradata(lease,
-                                        &mut *(enc_opt_0mut Vec<u8>).offset((4
-
-                                                                                   +
-                                                                                   0
-                                                                                                                          )
-                                                                          )
-                                                                                Vec<u8>                                      mut Vec<u8>,
-                                        opt6_uint(enc_opt_0   mut Vec<u8>,
-                                                  -(2),
-                                                  2) ,
-                                        0);
-                    enc_opt_0 = opt6_next(enc_opt_0, enc_end_0)
-                }
-            }
-        }
-    };
-}
-fn log6_opts(mut nest: i32, mut xid: u32,
-                               mut start_opts:Vec<u8>,
-                               mut end_opts:Vec<u8>) {
-    let mut opt:Vec<u8> = 0;
-    let mut desc: &mut String =
-        if nest != 0 {
-            "nest"
-        } else { "sent"  }      &mut String;
-    if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-
-                                                                                                               ))
-           == 0 || start_opts == end_opts {
-        return
-    }
-    opt = start_opts;
-    while !opt.is_null() {
-        let mut type_0: i32 =
-            opt6_uint(opt, -(4),
-                      2);
-        let mut ia_options:Vec<u8> = 0;
-        let mut optname: &mut String = 0 ;
-        if type_0 == 3 {
-            sprintf(dnsmasq_daemon.namebuff,
-                    "IAID=%u T1=%u T2=%u"                   *const libc::c_char,
-                    opt6_uint(opt, 0,
-                              4),
-                    opt6_uint(opt, 4,
-                              4),
-                    opt6_uint(opt, 8,
-                              4));
-            optname =
-                "ia-na"  );
-            ia_options =
-                &mut *(opt                     mut Vec<u8>).offset((4 +
-                                                           12)
-                                                         )              mut Vec<u8>
-        } else if type_0 == 4 {
-            sprintf(dnsmasq_daemon.namebuff,
-                    "IAID=%u" ,
-                    opt6_uint(opt, 0,
-                              4));
-            optname =
-                "ia-ta"  );
-            ia_options =
-                &mut *(opt                     mut Vec<u8>).offset((4 +
-                                                           4)
-                                                         )              mut Vec<u8>
-        } else if type_0 == 5 {
-            let mut addr: In6Addr =
-                In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-            /* align */
-            memcpy(&mut addr,
-                   &mut *(opt).offset((4 +
-                                                              0               )
-                                                            )                 mut Vec<u8>,
-                   16);
-            inet_ntop(10,
-                      &mut addr,
-                      dnsmasq_daemon.addrbuff,
-                      46);
-            sprintf(dnsmasq_daemon.namebuff,
-                    "%s PL=%u VL=%u" ,
-                    dnsmasq_daemon.addrbuff,
-                    opt6_uint(opt, 16,
-                              4),
-                    opt6_uint(opt, 20,
-                              4));
-            optname =
-                "iaaddr"  );
-            ia_options =
-                &mut *(opt                     mut Vec<u8>).offset((4 +
-                                                           24)
-                                                         )              mut Vec<u8>
-        } else if type_0 == 13 {
-            let mut len: i32 =
-                sprintf(dnsmasq_daemon.namebuff,
-                        "%u " ,
-                        opt6_uint(opt, 0,
-                                  2));
-            memcpy(dnsmasq_daemon.namebuff.offset(len)                Vec<u8>,
-                   &mut *(opt).offset((4 +
-                                                              2               )
-                                                            )                 mut Vec<u8>,
-                   (opt6_uint(opt, -(2),
-                              2) -
-                        2));
-            *dnsmasq_daemon.namebuff.offset((len +
-                                                    opt6_uint(opt               mut Vec<u8>,
-                                                              -(2                 ),
-                                                              2               )
-                                                        -
-                                                    2)) =
-                0;
-            optname =
-                "status"  )
-        } else {
-            /* account for flag byte on FQDN */
-            let mut offset: i32 =
-                if type_0 == 39 {
-                    1
-                } else { 0 };
-            optname =
-                option_string(10, type_0,
-                              &mut *(opt                                   mut Vec<u8>).offset((4
-                                                                         +
-                                                                         offset)
-                                                      )
-
-                                 ,
-                              opt6_uint(opt,
-                                        -(2), 2)
-                                  - offset,
-                              dnsmasq_daemon.namebuff, 1025)
-        }
-        my_syslog((3) << 3 | 6,
-                  "%u %s size:%3d option:%3d %s  %s", xid, desc,
-                  opt6_uint(opt, -(2),
-                            2), type_0, optname,
-                  dnsmasq_daemon.namebuff);
-        if !ia_options.is_null() {
-            log6_opts(1, xid, ia_options,
-                      &mut *(opt                           mut Vec<u8>).offset((4
-                                                                 +
-                                                                 (opt6_uint                   fn(_:
-                                                                                               mut Vec<u8>,
-                                                                                           _:
-                                                                                               ,
-                                                                                           _:
-                                                                                               )
-                                                                          ->
-                                                                              libc::c_uint)(opt               mut Vec<u8>,
-                                                                                            -(2                   ),
-                                                                                            2               )
-                                                                                      )
-                                                               ));
-        }
-        opt = opt6_next(opt, end_opts)
-    };
-}
-fn log6_quiet(mut state: &mut state,
-                                mut type_0: &mut String,
-                                mut addr: &mut In6Addr,
-                                mut string: &mut String) {
-    if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-
-                                                                                                               ))
-           != 0 ||
-           dnsmasq_daemon.options[(43 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (43 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               == 0 {
-        log6_packet(state, type_0, addr, string);
-    };
-}
-fn log6_packet(mut state: &mut state,
-                                 mut type_0: &mut String,
-                                 mut addr: &mut In6Addr,
-                                 mut string: &mut String) {
-    let mut clid_len: i32 = state.clid_len;
-    /* avoid buffer overflow */
-    if clid_len > 100 { clid_len = 100 }
-    print_mac(dnsmasq_daemon.namebuff, state.clid, clid_len);
-    if !addr.is_null() {
-        inet_ntop(10, addr,
-                  dnsmasq_daemon.dhcp_buff2,
-                  (256 - 1));
-        strcat(dnsmasq_daemon.dhcp_buff2,
-               " " );
-    } else {
-        *dnsmasq_daemon.dhcp_buff2.offset(0) =
-            0
-    }
-    if dnsmasq_daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-
-                                                                                                               ))
-           != 0 {
-        my_syslog((3) << 3 | 6,
-                  "%u %s(%s) %s%s %s", state.xid, type_0,
-                  state.iface_name, dnsmasq_daemon.dhcp_buff2,
-                  dnsmasq_daemon.namebuff,
-                  if !string.is_null() {
-                      string
-                  } else { ""  });
-    } else {
-        my_syslog((3) << 3 | 6,
-                  "%s(%s) %s%s %s" ,
-                  type_0, state.iface_name, dnsmasq_daemon.dhcp_buff2,
-                  dnsmasq_daemon.namebuff,
-                  if !string.is_null() {
-                      string
-                  } else { ""  });
-    };
-}
-fn opt6_find(mut opts:Vec<u8>,
-                               mut end:Vec<u8>,
-                               mut search: u32,
-                               mut minsize: u32)
- ->Vec<u8> {
-    let mut opt: u16 = 0;
-    let mut opt_len: u16 = 0;
-    let mut start:Vec<u8> = 0;
-    if opts.is_null() { return 0 }
-    loop  {
-        if (end.wrapping_offset_from(opts)) <
-               4 {
-            return 0
-        }
-        start = opts;
-        let mut t_cp: mut Vec<u8> = opts;
-        opt =
-            ((*t_cp.offset(0))
-                 << 8 |
-                 *t_cp.offset(1) );
-        opts = opts.offset(2);
-        let mut t_cp_0: mut Vec<u8> = opts;
-        opt_len =
-            ((*t_cp_0.offset(0) ) << 8 |
-                 *t_cp_0.offset(1) );
-        opts = opts.offset(2);
-        if opt_len >
-               end.wrapping_offset_from(opts) {
-            return 0
-        }
-        if opt == search && opt_len >= minsize
-           {
-            return start
-        }
-        opts = opts.offset(opt_len)
-    };
-}
-fn opt6_next(mut opts:Vec<u8>,
-                               mut end:Vec<u8>)
- ->Vec<u8> {
-    let mut opt_len: u16 = 0;
-    if (end.wrapping_offset_from(opts)) <
-           4 {
-        return 0
-    }
-    opts = opts.offset(2);
-    let mut t_cp: mut Vec<u8> = opts;
-    opt_len =
-        ((*t_cp.offset(0)) <<
-             8 |
-             *t_cp.offset(1))
-           ;
-    opts = opts.offset(2);
-    if opt_len >=
-           end.wrapping_offset_from(opts) {
-        return 0
-    }
-    return opts.offset(opt_len);
-}
-fn opt6_uint(mut opt: mut Vec<u8>,
-                               mut offset: i32, mut size: i32)
- -> libc::c_uint {
-    /* this worries about unaligned data and byte order */
-    let mut ret: u32 = 0;
-    let mut i: i32 = 0;
-    let mut p: mut Vec<u8> =
-        &mut *opt.offset((4 + offset))      mut Vec<u8>;
-    i = 0;
-    while i < size {
-        let fresh8 = p;
-        p = p.offset(1);
-        ret = ret << 8 | *fresh8;
-        i += 1
-    }
-    return ret;
+  if ((context->flags & CONTEXT_DEPRECATE) || context->preferred == 0)
+    preferred_time = 0;
+  
+  if (preferred_time != 0 && preferred_time < *min_time)
+    *min_time = preferred_time;
+  
+  if (valid_time != 0 && valid_time < *min_time)
+    *min_time = valid_time;
+  
+  *valid_timep = valid_time;
+  *preferred_timep = preferred_time;
 }
 
-pub fn relay_upstream6(mut relay: &mut DhcpRelay,
-                                         mut sz: susize,
-                                         mut peer_address: &mut In6Addr,
-                                         mut scope_id: u32,
-                                         mut now: time::Instant) {
-    /* ->local is same value for all relays on ->current chain */
-    let mut from: NetAddress = NetAddress {addr4: NetAddress {s_addr: 0,},};
-    let mut header: mut Vec<u8> = 0;
-    let mut inbuff: mut Vec<u8> =
-        dnsmasq_daemon.dhcp_packet.iov_base;
-    let mut msg_type: i32 = *inbuff;
-    let mut hopcount: i32 = 0;
-    let mut multicast: In6Addr =
-        In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-    let mut maclen: u32 = 0;
-    let mut mactype: u32 = 0;
-    let mut mac: [u8; 16] = [0; 16];
-    inet_pton(10,
-              "FF05::1:3" ,
-              &mut multicast);
-    get_client_mac(peer_address, scope_id, mac.as_mut_ptr(),
-                   &mut maclen, &mut mactype, now);
-    /* source address == relay address */
-    from.addr6 = relay.local.addr6;
-    /* Get hop count from nested relayed message */
-    if msg_type == 12 {
-        hopcount =
-            *inbuff.offset(1) +
-                1
-    } else { hopcount = 0 }
-    /* RFC 3315 HOP_COUNT_LIMIT */
-    if hopcount > 32 { return }
-    reset_counter();
-    header =
-        put_opt6(0, 34 )      mut Vec<u8>;
-    if !header.is_null() {
-        let mut o: i32 = 0;
-        *header.offset(0) =
-            12;
-        *header.offset(1) = hopcount;
-        memcpy(&mut *header.offset(2)             mut Vec<u8>,
-               &mut relay.local.addr6             *const libc::c_void, 16);
-        memcpy(&mut *header.offset(18)             mut Vec<u8>,
-               peer_address,
-               16);
-        /* RFC-6939 */
-        if maclen != 0 {
-            o = new_opt6(79);
-            put_opt6_short(mactype);
-            put_opt6(mac.as_mut_ptr(), maclen );
-            end_opt6(o);
-        }
-        o = new_opt6(9);
-        put_opt6(inbuff, sz );
-        end_opt6(o);
-        while !relay.is_null() {
-            let mut to: NetAddress =
-                NetAddress {sa: NetAddress {sa_family: 0, sa_data: [0; 14],},};
-            to.sa.sa_family = 10;
-            to.in6.sin6_addr = relay.server.addr6;
-            to.in6.sin6_port = __bswap_16(547);
-            to.in6.sin6_flowinfo = 0;
-            to.in6.sin6_scope_id = 0;
-            if ({
-                    let mut __a: *const In6Addr =
-                        &mut relay.server.addr6                      *const In6Addr;
-                    let mut __b: *const In6Addr =
-                        &mut multicast ;
-                    (__a.__in6_u.__u6_addr32[0 ] ==
-                         __b.__in6_u.__u6_addr32[0 ]
-                         &&
-                         __a.__in6_u.__u6_addr32[1 ]
-                             ==
-                             __b.__in6_u.__u6_addr32[1         usize] &&
-                         __a.__in6_u.__u6_addr32[2 ]
-                             ==
-                             __b.__in6_u.__u6_addr32[2         usize] &&
-                         __a.__in6_u.__u6_addr32[3 ]
-                             ==
-                             __b.__in6_u.__u6_addr32[3         usize])
-                }) != 0 {
-                let mut multicast_iface: i32 = 0;
-                if relay.interface.is_null() ||
-                       !strchr(relay.interface, '*' as i32).is_null() ||
-                       {
-                           multicast_iface =
-                               if_nametoindex(relay.interface)                             ;
-                           (multicast_iface) == 0
-                       } ||
-                       setsockopt(dnsmasq_daemon.dhcp6fd,
-                                  IPPROTO_IPV6,
-                                  17,
-                                  &mut multicast_iface as
-                                  ::std::mem::size_of::<>()) ==
-                           -(1) {
-                    my_syslog((3) << 3 |
-                                  3,
-                              "Cannot multicast to DHCPv6 server without correct interface"
-                                  );
-                }
-            }
-            send_from(dnsmasq_daemon.dhcp6fd, 0,
-                      dnsmasq_daemon.outpacket.iov_base                    &mut String,
-                      save_counter(-(1)) , &mut to,
-                      &mut from, 0);
-            if dnsmasq_daemon.options[(28                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                                                                   ))
-                                             ] &
-                   (1) <<
-                       (28 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8           ))
-                   != 0 {
-                inet_ntop(10,
-                          &mut relay.local        dnsmasq_daemon.addrbuff,
-                          46);
-                inet_ntop(10,
-                          &mut relay.server        dnsmasq_daemon.namebuff,
-                          46);
-                my_syslog((3) << 3 |
-                              6,
-                          "DHCP relay %s -> %s" , dnsmasq_daemon.addrbuff,
-                          dnsmasq_daemon.namebuff);
-            }
-            /* Save this for replies */
-            relay.iface_index = scope_id;
-            relay = relay.current
-        }
-    };
+static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now)
+{
+  struct dhcp_lease *lease = lease6_find_by_addr(addr, 128, 0);
+#ifdef HAVE_SCRIPT
+  struct dhcp_netid *tagif = run_tag_if(state->tags);
+#endif
+
+  (void)context;
+
+  if (!lease)
+    lease = lease6_allocate(addr, state->ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA);
+  
+  if (lease)
+    {
+      lease_set_expires(lease, lease_time, now);
+      lease_set_iaid(lease, state->iaid); 
+      lease_set_hwaddr(lease, state->mac, state->clid, state->mac_len, state->mac_type, state->clid_len, now, 0);
+      lease_set_interface(lease, state->interface, now);
+      if (state->hostname && state->ia_type == OPTION6_IA_NA)
+	{
+	  char *addr_domain = get_domain6(addr);
+	  if (!state->send_domain)
+	    state->send_domain = addr_domain;
+	  lease_set_hostname(lease, state->hostname, state->hostname_auth, addr_domain, state->domain);
+	}
+      
+#ifdef HAVE_SCRIPT
+      if (daemon->lease_change_command)
+	{
+	  void *class_opt;
+	  lease->flags |= LEASE_CHANGED;
+	  free(lease->extradata);
+	  lease->extradata = NULL;
+	  lease->extradata_size = lease->extradata_len = 0;
+	  lease->vendorclass_count = 0; 
+	  
+	  if ((class_opt = opt6_find(state->packet_options, state->end, OPTION6_VENDOR_CLASS, 4)))
+	    {
+	      void *enc_opt, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
+	      lease->vendorclass_count++;
+	      /* send enterprise number first  */
+	      sprintf(daemon->dhcp_buff2, "%u", opt6_uint(class_opt, 0, 4));
+	      lease_add_extradata(lease, (unsigned char *)daemon->dhcp_buff2, strlen(daemon->dhcp_buff2), 0);
+	      
+	      if (opt6_len(class_opt) >= 6) 
+		for (enc_opt = opt6_ptr(class_opt, 4); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
+		  {
+		    lease->vendorclass_count++;
+		    lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
+		  }
+	    }
+	  
+	  lease_add_extradata(lease, (unsigned char *)state->client_hostname, 
+			      state->client_hostname ? strlen(state->client_hostname) : 0, 0);				
+	  
+	  /* space-concat tag set */
+	  if (!tagif && !context->netid.net)
+	    lease_add_extradata(lease, NULL, 0, 0);
+	  else
+	    {
+	      if (context->netid.net)
+		lease_add_extradata(lease, (unsigned char *)context->netid.net, strlen(context->netid.net), tagif ? ' ' : 0);
+	      
+	      if (tagif)
+		{
+		  struct dhcp_netid *n;
+		  for (n = tagif; n; n = n->next)
+		    {
+		      struct dhcp_netid *n1;
+		      /* kill dupes */
+		      for (n1 = n->next; n1; n1 = n1->next)
+			if (strcmp(n->net, n1->net) == 0)
+			  break;
+		      if (!n1)
+			lease_add_extradata(lease, (unsigned char *)n->net, strlen(n->net), n->next ? ' ' : 0); 
+		    }
+		}
+	    }
+	  
+	  if (state->link_address)
+	    inet_ntop(AF_INET6, state->link_address, daemon->addrbuff, ADDRSTRLEN);
+	  
+	  lease_add_extradata(lease, (unsigned char *)daemon->addrbuff, state->link_address ? strlen(daemon->addrbuff) : 0, 0);
+	  
+	  if ((class_opt = opt6_find(state->packet_options, state->end, OPTION6_USER_CLASS, 2)))
+	    {
+	      void *enc_opt, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
+	      for (enc_opt = opt6_ptr(class_opt, 0); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
+		lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
+	    }
+	}
+#endif	
+      
+    }
+}
+			  
+			
+	
+static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_opts)
+{
+  void *opt;
+  char *desc = nest ? "nest" : "sent";
+  
+  if (!option_bool(OPT_LOG_OPTS) || start_opts == end_opts)
+    return;
+  
+  for (opt = start_opts; opt; opt = opt6_next(opt, end_opts))
+    {
+      int type = opt6_type(opt);
+      void *ia_options = NULL;
+      char *optname;
+      
+      if (type == OPTION6_IA_NA)
+	{
+	  sprintf(daemon->namebuff, "IAID=%u T1=%u T2=%u",
+		  opt6_uint(opt, 0, 4), opt6_uint(opt, 4, 4), opt6_uint(opt, 8, 4));
+	  optname = "ia-na";
+	  ia_options = opt6_ptr(opt, 12);
+	}
+      else if (type == OPTION6_IA_TA)
+	{
+	  sprintf(daemon->namebuff, "IAID=%u", opt6_uint(opt, 0, 4));
+	  optname = "ia-ta";
+	  ia_options = opt6_ptr(opt, 4);
+	}
+      else if (type == OPTION6_IAADDR)
+	{
+	  struct in6_addr addr;
+
+	  /* align */
+	  memcpy(&addr, opt6_ptr(opt, 0), IN6ADDRSZ);
+	  inet_ntop(AF_INET6, &addr, daemon->addrbuff, ADDRSTRLEN);
+	  sprintf(daemon->namebuff, "%s PL=%u VL=%u", 
+		  daemon->addrbuff, opt6_uint(opt, 16, 4), opt6_uint(opt, 20, 4));
+	  optname = "iaaddr";
+	  ia_options = opt6_ptr(opt, 24);
+	}
+      else if (type == OPTION6_STATUS_CODE)
+	{
+	  int len = sprintf(daemon->namebuff, "%u ", opt6_uint(opt, 0, 2));
+	  memcpy(daemon->namebuff + len, opt6_ptr(opt, 2), opt6_len(opt)-2);
+	  daemon->namebuff[len + opt6_len(opt) - 2] = 0;
+	  optname = "status";
+	}
+      else
+	{
+	  /* account for flag byte on FQDN */
+	  int offset = type == OPTION6_FQDN ? 1 : 0;
+	  optname = option_string(AF_INET6, type, opt6_ptr(opt, offset), opt6_len(opt) - offset, daemon->namebuff, MAXDNAME);
+	}
+      
+      my_syslog(MS_DHCP | LOG_INFO, "%u %s size:%3d option:%3d %s  %s", 
+		xid, desc, opt6_len(opt), type, optname, daemon->namebuff);
+      
+      if (ia_options)
+	log6_opts(1, xid, ia_options, opt6_ptr(opt, opt6_len(opt)));
+    }
+}		 
+ 
+static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, char *string)
+{
+  if (option_bool(OPT_LOG_OPTS) || !option_bool(OPT_QUIET_DHCP6))
+    log6_packet(state, type, addr, string);
 }
 
-pub fn relay_reply6(mut peer: NetAddress,
-                                      mut sz: susize,
-                                      mut arrival_interface:
-                                          &mut String)
-                                      -> u16 {
-    let mut relay: DhcpRelay = 0;
-    let mut link: In6Addr =
-        In6Addr {__in6_u: C2RustUnnamed{__u6_addr8: [0; 16],},};
-    let mut inbuff: mut Vec<u8> =
-        dnsmasq_daemon.dhcp_packet.iov_base;
-    /* must have at least msg_type+hopcount+link_address+peer_address+minimal size option
+static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string)
+{
+  int clid_len = state->clid_len;
+
+  /* avoid buffer overflow */
+  if (clid_len > 100)
+    clid_len = 100;
+  
+  print_mac(daemon->namebuff, state->clid, clid_len);
+
+  if (addr)
+    {
+      inet_ntop(AF_INET6, addr, daemon->dhcp_buff2, DHCP_BUFF_SZ - 1);
+      strcat(daemon->dhcp_buff2, " ");
+    }
+  else
+    daemon->dhcp_buff2[0] = 0;
+
+  if(option_bool(OPT_LOG_OPTS))
+    my_syslog(MS_DHCP | LOG_INFO, "%u %s(%s) %s%s %s",
+	      state->xid, 
+	      type,
+	      state->iface_name, 
+	      daemon->dhcp_buff2,
+	      daemon->namebuff,
+	      string ? string : "");
+  else
+    my_syslog(MS_DHCP | LOG_INFO, "%s(%s) %s%s %s",
+	      type,
+	      state->iface_name, 
+	      daemon->dhcp_buff2,
+	      daemon->namebuff,
+	      string ? string : "");
+}
+
+static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize)
+{
+  u16 opt, opt_len;
+  void *start;
+  
+  if (!opts)
+    return NULL;
+    
+  while (1)
+    {
+      if (end - opts < 4) 
+	return NULL;
+      
+      start = opts;
+      GETSHORT(opt, opts);
+      GETSHORT(opt_len, opts);
+      
+      if (opt_len > (end - opts))
+	return NULL;
+      
+      if (opt == search && (opt_len >= minsize))
+	return start;
+      
+      opts += opt_len;
+    }
+}
+
+static void *opt6_next(void *opts, void *end)
+{
+  u16 opt_len;
+  
+  if (end - opts < 4) 
+    return NULL;
+  
+  opts += 2;
+  GETSHORT(opt_len, opts);
+  
+  if (opt_len >= (end - opts))
+    return NULL;
+  
+  return opts + opt_len;
+}
+
+static unsigned int opt6_uint(unsigned char *opt, int offset, int size)
+{
+  /* this worries about unaligned data and byte order */
+  unsigned int ret = 0;
+  int i;
+  unsigned char *p = opt6_ptr(opt, offset);
+  
+  for (i = 0; i < size; i++)
+    ret = (ret << 8) | *p++;
+  
+  return ret;
+} 
+
+void relay_upstream6(struct dhcp_relay *relay, ssize_t sz, 
+		     struct in6_addr *peer_address, u32 scope_id, time_t now)
+{
+  /* ->local is same value for all relays on ->current chain */
+  
+  union all_addr from;
+  unsigned char *header;
+  unsigned char *inbuff = daemon->dhcp_packet.iov_base;
+  int msg_type = *inbuff;
+  int hopcount;
+  struct in6_addr multicast;
+  unsigned int maclen, mactype;
+  unsigned char mac[DHCP_CHADDR_MAX];
+
+  inet_pton(AF_INET6, ALL_SERVERS, &multicast);
+  get_client_mac(peer_address, scope_id, mac, &maclen, &mactype, now);
+
+  /* source address == relay address */
+  from.addr6 = relay->local.addr6;
+    
+  /* Get hop count from nested relayed message */ 
+  if (msg_type == DHCP6RELAYFORW)
+    hopcount = *((unsigned char *)inbuff+1) + 1;
+  else
+    hopcount = 0;
+
+  /* RFC 3315 HOP_COUNT_LIMIT */
+  if (hopcount > 32)
+    return;
+
+  reset_counter();
+
+  if ((header = put_opt6(NULL, 34)))
+    {
+      int o;
+
+      header[0] = DHCP6RELAYFORW;
+      header[1] = hopcount;
+      memcpy(&header[2],  &relay->local.addr6, IN6ADDRSZ);
+      memcpy(&header[18], peer_address, IN6ADDRSZ);
+ 
+      /* RFC-6939 */
+      if (maclen != 0)
+	{
+	  o = new_opt6(OPTION6_CLIENT_MAC);
+	  put_opt6_short(mactype);
+	  put_opt6(mac, maclen);
+	  end_opt6(o);
+	}
+      
+      o = new_opt6(OPTION6_RELAY_MSG);
+      put_opt6(inbuff, sz);
+      end_opt6(o);
+      
+      for (; relay; relay = relay->current)
+	{
+	  union mysockaddr to;
+	  
+	  to.sa.sa_family = AF_INET6;
+	  to.in6.sin6_addr = relay->server.addr6;
+	  to.in6.sin6_port = htons(DHCPV6_SERVER_PORT);
+	  to.in6.sin6_flowinfo = 0;
+	  to.in6.sin6_scope_id = 0;
+
+	  if (IN6_ARE_ADDR_EQUAL(&relay->server.addr6, &multicast))
+	    {
+	      int multicast_iface;
+	      if (!relay->interface || strchr(relay->interface, '*') ||
+		  (multicast_iface = if_nametoindex(relay->interface)) == 0 ||
+		  setsockopt(daemon->dhcp6fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &multicast_iface, sizeof(multicast_iface)) == -1)
+		my_syslog(MS_DHCP | LOG_ERR, _("Cannot multicast to DHCPv6 server without correct interface"));
+	    }
+		
+	  send_from(daemon->dhcp6fd, 0, daemon->outpacket.iov_base, save_counter(-1), &to, &from, 0);
+	  
+	  if (option_bool(OPT_LOG_OPTS))
+	    {
+	      inet_ntop(AF_INET6, &relay->local, daemon->addrbuff, ADDRSTRLEN);
+	      inet_ntop(AF_INET6, &relay->server, daemon->namebuff, ADDRSTRLEN);
+	      my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay %s -> %s"), daemon->addrbuff, daemon->namebuff);
+	    }
+
+	  /* Save this for replies */
+	  relay->iface_index = scope_id;
+	}
+    }
+}
+
+unsigned short relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface)
+{
+  struct dhcp_relay *relay;
+  struct in6_addr link;
+  unsigned char *inbuff = daemon->dhcp_packet.iov_base;
+  
+  /* must have at least msg_type+hopcount+link_address+peer_address+minimal size option
      which is               1   +    1   +    16      +     16     + 2 + 2 = 38 */
-    if sz < 38 ||
-           *inbuff != 13 {
-        return 0
+  
+  if (sz < 38 || *inbuff != DHCP6RELAYREPL)
+    return 0;
+  
+  memcpy(&link, &inbuff[2], IN6ADDRSZ); 
+  
+  for (relay = daemon->relay6; relay; relay = relay->next)
+    if (IN6_ARE_ADDR_EQUAL(&link, &relay->local.addr6) &&
+	(!relay->interface || wildcard_match(relay->interface, arrival_interface)))
+      break;
+      
+  reset_counter();
+
+  if (relay)
+    {
+      void *opt, *opts = inbuff + 34;
+      void *end = inbuff + sz;
+      for (opt = opts; opt; opt = opt6_next(opt, end))
+	if (opt6_type(opt) == OPTION6_RELAY_MSG && opt6_len(opt) > 0)
+	  {
+	    int encap_type = *((unsigned char *)opt6_ptr(opt, 0));
+	    put_opt6(opt6_ptr(opt, 0), opt6_len(opt));
+	    memcpy(&peer->sin6_addr, &inbuff[18], IN6ADDRSZ); 
+	    peer->sin6_scope_id = relay->iface_index;
+	    return encap_type == DHCP6RELAYREPL ? DHCPV6_SERVER_PORT : DHCPV6_CLIENT_PORT;
+	  }
     }
-    memcpy(&mut link,
-           &mut *inbuff.offset(2)         mut Vec<u8>,
-           16);
-    relay = dnsmasq_daemon.relay6;
-    while !relay.is_null() {
-        if ({
-                let mut __a: *const In6Addr =
-                    &mut link ;
-                let mut __b: *const In6Addr =
-                    &mut relay.local.addr6 ;
-                (__a.__in6_u.__u6_addr32[0 ] ==
-                     __b.__in6_u.__u6_addr32[0 ] &&
-                     __a.__in6_u.__u6_addr32[1 ] ==
-                         __b.__in6_u.__u6_addr32[1 ]
-                     &&
-                     __a.__in6_u.__u6_addr32[2 ] ==
-                         __b.__in6_u.__u6_addr32[2 ]
-                     &&
-                     __a.__in6_u.__u6_addr32[3 ] ==
-                         __b.__in6_u.__u6_addr32[3     usize])
-            }) != 0 &&
-               (relay.interface.is_null() ||
-                    wildcard_match(relay.interface, arrival_interface) !=
-                        0) {
-            break ;
-        }
-        relay = relay.next
-    }
-    reset_counter();
-    if !relay.is_null() {
-        let mut opt:Vec<u8> = 0;
-        let mut opts:Vec<u8> =
-            inbuff.offset(34);
-        let mut end:Vec<u8> =
-            inbuff.offset(sz);
-        opt = opts;
-        while !opt.is_null() {
-            if opt6_uint(opt, -(4),
-                         2) == 9
-                   &&
-                   opt6_uint(opt, -(2),
-                             2) >
-                       0 {
-                let mut encap_type: i32 =
-                    *(&mut *(opt                           mut Vec<u8>).offset((4
-                                                                 +
-                                                                 0                  )
-                                                               ));
-                put_opt6(&mut *(opt                              mut Vec<u8>).offset((4
-                                                                    +
-                                                                    0                     )
-                                                                  )
-                            ,
-                         opt6_uint(opt,
-                                   -(2), 2)                        );
-                memcpy(&mut peer.sin6_addr                    Vec<u8>,
-                       &mut *inbuff.offset(18)                     mut Vec<u8>,
-                       16);
-                peer.sin6_scope_id = relay.iface_index;
-                return if encap_type == 13 {
-                           547
-                       } else { 546 }
-            }
-            opt = opt6_next(opt, end)
-        }
-    }
-    return 0 ;
+
+  return 0;
 }
+
+#endif

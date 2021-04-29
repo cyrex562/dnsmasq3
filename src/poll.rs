@@ -1,4 +1,3 @@
-
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -14,9 +13,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include "dnsmasq.h"
+
 /* Wrapper for poll(). Allocates and extends array of struct pollfds,
    keeps them in fd order so that we can set and test conditions on
    fd using a simple but efficient binary chop. */
+
 /* poll_reset()
    poll_listen(fd, event)
    .
@@ -36,91 +39,87 @@
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
 
+static struct pollfd *pollfds = NULL;
+static nfds_t nfds, arrsize = 0;
 
-// static mut pollfds: pollfd = 0 ;
-// static mut nfds: nfds_t = 0;
-// static mut arrsize: nfds_t = 0 as nfds_t;
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry
    to the left of which a new record should be inserted. */
- fn fd_search(mut fd: i32) -> nfds_t {
-    let mut left: nfds_t = 0;
-    let mut right: nfds_t = 0;
-    let mut mid: nfds_t = 0;
-    right = nfds;
-    if right == 0 {
-        return 0 as nfds_t
-    }
-    left = 0 as nfds_t;
-    loop  {
-        if right == left.wrapping_add(1) {
-            return if (*pollfds.offset(left)).fd >= fd {
-                       left
-                   } else { right }
-        }
-        mid = left.wrapping_add(right).wrapping_div(2 );
-        if (*pollfds.offset(mid)).fd > fd {
-            right = mid
-        } else { left = mid }
-    };
-}
-
-pub  fn poll_reset() { nfds = 0 as nfds_t; }
-
-pub  fn do_poll(mut timeout: i32) -> i32 {
-    return poll(pollfds, nfds, timeout);
-}
-
-pub  fn poll_check(mut fd: i32,
-                                    mut event: libc::c_short) -> i32 {
-    let mut i: nfds_t = fd_search(fd);
-    if i < nfds && (*pollfds.offset(i)).fd == fd {
-        return (*pollfds.offset(i)).revents &
-                   event
-    }
+static nfds_t fd_search(int fd)
+{
+  nfds_t left, right, mid;
+  
+  if ((right = nfds) == 0)
     return 0;
+  
+  left = 0;
+  
+  while (1)
+    {
+      if (right == left + 1)
+	return (pollfds[left].fd >= fd) ? left : right;
+      
+      mid = (left + right)/2;
+      
+      if (pollfds[mid].fd > fd)
+	right = mid;
+      else 
+	left = mid;
+    }
 }
 
-pub  fn poll_listen(mut fd: i32,
-                                     mut event: libc::c_short) {
-    let mut i: nfds_t = fd_search(fd);
-    if i < nfds && (*pollfds.offset(i)).fd == fd {
-        let ref mut fresh6 = (*pollfds.offset(i)).events;
-        *fresh6 =
-            (*fresh6 | event)
-    } else {
-        if arrsize != nfds {
-            // memmove(&mut *pollfds.offset(i.wrapping_add(1)),
-            //         &mut *pollfds.offset(i),
-            //         nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
-            //                                              ));
-        } else {
-            /* Array too small, extend. */
-            let mut new: pollfd = 0 ;
-            arrsize =
-                if arrsize == 0 {
-                    64
-                } else {
-                    arrsize.wrapping_mul(2)
-                };
-            new =
-                whine_malloc(arrsize.wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                     ))              pollfd;
-            if new.is_null() { return }
-            if !pollfds.is_null() {
-                memcpy(new,
-                       pollfds,
-                       i.wrapping_mul(::std::mem::size_of::<pollfd>() ));
-                memcpy(&mut *new.offset(i.wrapping_add(1 ))                     Vec<u8>,
-                       &mut *pollfds.offset(i)
-                       nfds.wrapping_sub(i).wrapping_mul(::std::mem::size_of::<pollfd>()
-                                                               ));
-                // free(pollfds);
-            }
-            pollfds = new
-        }
-        (*pollfds.offset(i)).fd = fd;
-        (*pollfds.offset(i)).events = event;
-        nfds = nfds.wrapping_add(1)
-    };
+void poll_reset(void)
+{
+  nfds = 0;
+}
+
+int do_poll(int timeout)
+{
+  return poll(pollfds, nfds, timeout);
+}
+
+int poll_check(int fd, short event)
+{
+  nfds_t i = fd_search(fd);
+  
+  if (i < nfds && pollfds[i].fd == fd)
+    return pollfds[i].revents & event;
+
+  return 0;
+}
+
+void poll_listen(int fd, short event)
+{
+   nfds_t i = fd_search(fd);
+  
+   if (i < nfds && pollfds[i].fd == fd)
+     pollfds[i].events |= event;
+   else
+     {
+       if (arrsize != nfds)
+	 memmove(&pollfds[i+1], &pollfds[i], (nfds - i) * sizeof(struct pollfd));
+       else
+	 {
+	   /* Array too small, extend. */
+	   struct pollfd *new;
+
+	   arrsize = (arrsize == 0) ? 64 : arrsize * 2;
+
+	   if (!(new = whine_malloc(arrsize * sizeof(struct pollfd))))
+	     return;
+
+	   if (pollfds)
+	     {
+	       memcpy(new, pollfds, i * sizeof(struct pollfd));
+	       memcpy(&new[i+1], &pollfds[i], (nfds - i) * sizeof(struct pollfd));
+	       free(pollfds);
+	     }
+	   
+	   pollfds = new;
+	 }
+       
+       pollfds[i].fd = fd;
+       pollfds[i].events = event;
+       nfds++;
+     }
 }

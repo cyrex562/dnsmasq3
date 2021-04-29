@@ -1,61 +1,3 @@
-use crate::defines::{Server, DnsmasqDaemon, RandFd, ConstNetAddressArg, DnsHeader, _ISXDIGIT};
-use crate::forward::{allocate_rfd, free_rfd};
-use crate::util::{retry_send, sa_len, rand16};
-use crate::network::check_servers;
-
-
-pub fn loop_send_probes() {
-    let mut serv: Server = 0;
-    if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (50).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
-
-                                                                                                               ))
-           == 0 {
-        return
-    }
-    let mut current_block_7: u64;
-    /* Loop through all upstream servers not for particular domains, and send a query to that server which is
-      identifiable, via the uid. If we see that query back again, then the server is looping, and we should not use it. */
-    serv = dnsmasq_daemon.servers;
-    while !serv.is_null() {
-        if serv.flags &
-               (4 | 2 | 1024 |
-                    2048 | 8 | 32
-                    | 8192) == 0 {
-            let mut len: isize = loop_make_probe(serv.uid);
-            let mut fd: i32 = 0;
-            let mut rfd: RandFd = 0 ;
-            if !serv.sfd.is_null() {
-                fd = (*serv.sfd).fd;
-                current_block_7 = 2868539653012386629;
-            } else {
-                rfd = allocate_rfd(serv.addr.sa.sa_family);
-                if rfd.is_null() {
-                    current_block_7 = 12517898123489920830;
-                } else {
-                    fd = rfd.fd;
-                    current_block_7 = 2868539653012386629;
-                }
-            }
-            match current_block_7 {
-                12517898123489920830 => { }
-                _ => {
-                    while retry_send(sendto(fd,
-                                            dnsmasq_daemon.packet ,
-                                            len , 0,
-                                            ConstNetAddressArg::new(),
-                                            sa_len(&mut serv.addr))) != 0 {
-                    }
-                    free_rfd(rfd);
-                }
-            }
-        }
-        serv = serv.next
-    };
-}
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -71,94 +13,105 @@ pub fn loop_send_probes() {
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-fn loop_make_probe(mut uid: u32) -> isize {
-    let mut header: DnsHeader =
-        dnsmasq_daemon.packet ;
-    let mut p: DnsHeader = header.offset(1);
-    /* packet buffer overwritten */
-    dnsmasq_daemon.srv_save = 0; /* Add terminating zero */
-    header.id = rand16(); /* log new state */
-    header.arcount = __bswap_16(0);
-    header.nscount = header.arcount;
-    header.ancount = header.nscount;
-    header.qdcount = __bswap_16(1);
-    header.hb3 = 0x1 as u8;
-    header.hb4 = 0 as u8;
-    header.hb3 =
-        (header.hb3 & !(0x78) |
-             0) as u8;
-    let fresh6 = p;
-    p = p.offset(1);
-    *fresh6 = 8;
-    sprintf(p ,
-            "%.8x" , uid);
-    p = p.offset(8);
-    let fresh7 = p;
-    p = p.offset(1);
-    *fresh7 = "test".to_string().len();
-    p = "test";    
-    p = p.offset(strlen("test" ).wrapping_add(1));
-    let mut t_s: u16 = 16;
-    let mut t_cp = p;
-    let fresh8 = t_cp;
-    t_cp = t_cp.offset(1);
-    *fresh8 = (t_s >> 8);
-    *t_cp = t_s;
-    p = p.offset(2);
-    let mut t_s_0: u16 = 1;
-    let mut t_cp_0 = p;
-    let fresh9 = t_cp_0;
-    t_cp_0 = t_cp_0.offset(1);
-    *fresh9 = (t_s_0 >> 8);
-    *t_cp_0 = t_s_0;
-    p = p.offset(2);
-    return p.wrapping_offset_from(header) ;
+
+#include "dnsmasq.h"
+
+#ifdef HAVE_LOOP
+static ssize_t loop_make_probe(u32 uid);
+
+void loop_send_probes()
+{
+   struct server *serv;
+   
+   if (!option_bool(OPT_LOOP_DETECT))
+     return;
+
+   /* Loop through all upstream servers not for particular domains, and send a query to that server which is
+      identifiable, via the uid. If we see that query back again, then the server is looping, and we should not use it. */
+   for (serv = daemon->servers; serv; serv = serv->next)
+     if (!(serv->flags & 
+	   (SERV_LITERAL_ADDRESS | SERV_NO_ADDR | SERV_USE_RESOLV | SERV_NO_REBIND | SERV_HAS_DOMAIN | SERV_FOR_NODOTS | SERV_LOOP)))
+       {
+	 ssize_t len = loop_make_probe(serv->uid);
+	 int fd;
+	 struct randfd *rfd = NULL;
+	 
+	 if (serv->sfd)
+	   fd = serv->sfd->fd;
+	 else 
+	   {
+	     if (!(rfd = allocate_rfd(serv->addr.sa.sa_family)))
+	       continue;
+	     fd = rfd->fd;
+	   }
+
+	 while (retry_send(sendto(fd, daemon->packet, len, 0, 
+				  &serv->addr.sa, sa_len(&serv->addr))));
+	 
+	 free_rfd(rfd);
+       }
 }
+  
+static ssize_t loop_make_probe(u32 uid)
+{
+  struct dns_header *header = (struct dns_header *)daemon->packet;
+  unsigned char *p = (unsigned char *)(header+1);
 
-pub fn detect_loop(mut query: &mut String,
-                                     mut type_0: i32) -> i32 {
-    let mut i: i32 = 0;
-    let mut uid: u32 = 0;
-    let mut serv: Server = 0;
-    if dnsmasq_daemon.options[(50).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (50).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+  /* packet buffer overwritten */
+  daemon->srv_save = NULL;
+  
+  header->id = rand16();
+  header->ancount = header->nscount = header->arcount = htons(0);
+  header->qdcount = htons(1);
+  header->hb3 = HB3_RD;
+  header->hb4 = 0;
+  SET_OPCODE(header, QUERY);
 
-                                                                                                               ))
-           == 0 {
-        return 0
-    }
-    if type_0 != 16 ||
-           strlen("test").wrapping_add(9  ) !=
-               strlen(query) ||
-           strstr(query, "test" ) !=
-               query.offset(9) {
-        return 0
-    }
-    i = 0;
-    while i < 8 {
-        if *(*__ctype_b_loc()).offset(*query.offset(i)
-                                         ) &
-               _ISXDIGIT  == 0
-           {
-            return 0
-        }
-        i += 1
-    }
-    uid = u32::from_le_bytes(query.as_bytes());
-    serv = dnsmasq_daemon.servers;
-    while !serv.is_null() {
-        if serv.flags &
-               (4 | 2 | 1024 |
-                    2048 | 8 | 32
-                    | 8192) == 0 && uid == serv.uid {
-            serv.flags |= 8192;
-            check_servers();
-            return 1
-        }
-        serv = serv.next
-    }
+  *p++ = 8;
+  sprintf((char *)p, "%.8x", uid);
+  p += 8;
+  *p++ = strlen(LOOP_TEST_DOMAIN);
+  strcpy((char *)p, LOOP_TEST_DOMAIN); /* Add terminating zero */
+  p += strlen(LOOP_TEST_DOMAIN) + 1;
+
+  PUTSHORT(LOOP_TEST_TYPE, p);
+  PUTSHORT(C_IN, p);
+
+  return p - (unsigned char *)header;
+}
+  
+
+int detect_loop(char *query, int type)
+{
+  int i;
+  u32 uid;
+  struct server *serv;
+  
+  if (!option_bool(OPT_LOOP_DETECT))
     return 0;
+
+  if (type != LOOP_TEST_TYPE ||
+      strlen(LOOP_TEST_DOMAIN) + 9 != strlen(query) ||
+      strstr(query, LOOP_TEST_DOMAIN) != query + 9)
+    return 0;
+
+  for (i = 0; i < 8; i++)
+    if (!isxdigit(query[i]))
+      return 0;
+
+  uid = strtol(query, NULL, 16);
+
+  for (serv = daemon->servers; serv; serv = serv->next)
+     if (!(serv->flags & 
+	   (SERV_LITERAL_ADDRESS | SERV_NO_ADDR | SERV_USE_RESOLV | SERV_NO_REBIND | SERV_HAS_DOMAIN | SERV_FOR_NODOTS | SERV_LOOP)) &&
+	 uid == serv->uid)
+       {
+	 serv->flags |= SERV_LOOP;
+	 check_servers(); /* log new state */
+	 return 1;
+       }
+
+  return 0;
 }
+
+#endif

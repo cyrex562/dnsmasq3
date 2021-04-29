@@ -1,4 +1,3 @@
-
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -14,598 +13,498 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use crate::defines::{DnsmasqDaemon, Irec, Iname, MsgHdr, MSG_PEEK, MSG_TRUNC, DhcpNetId, TagIf, DhcpNetIdList, DhcpOpt, DhcpConfig, HwaddrConfig, DhcpContext, AddressListEntry, Crec, NetAddress, DhcpOptTblEntry, NetAddress, _ISPRINT, DhcpRelay};
-use crate::util::{expand_buf, memcmp_masked, is_same_net6, is_same_net4, hostname_isequal, prettyprint_time, print_mac, setaddr6part};
-use socket2::Socket;
-use std::io;
-use crate::cache::cache_find_by_name;
-use crate::dhcp::config_find_by_address;
-use crate::dhcp6::config_find_by_address6;
-use crate::network::indextoname;
 
-pub fn dhcp_common_init(daemon: &mut DnsmasqDaemon) {
-    /* These each hold a DHCP option max size 255
+#include "dnsmasq.h"
+
+#ifdef HAVE_DHCP
+
+void dhcp_common_init(void)
+{
+  /* These each hold a DHCP option max size 255
      and get a terminating zero added */
-    daemon.dhcp_buff = Vec::new();
-    daemon.dhcp_buff2 = Vec::new();
-    daemon.dhcp_buff3 = Vec::new();
-    /* dhcp_packet is used by v4 and v6, outpacket only by v6 
+  daemon->dhcp_buff = safe_malloc(DHCP_BUFF_SZ);
+  daemon->dhcp_buff2 = safe_malloc(DHCP_BUFF_SZ); 
+  daemon->dhcp_buff3 = safe_malloc(DHCP_BUFF_SZ);
+  
+  /* dhcp_packet is used by v4 and v6, outpacket only by v6 
      sizeof(struct dhcp_packet) is as good an initial size as any,
      even for v6 */
-    daemon.dhcp_packet = Default::default();
-    // expand_buf(&mut daemon.dhcp_packet,
-    //            ::std::mem::size_of::<dhcp_packet>() as libc::c_ulong);
-    // if !daemon.dhcp6.is_null() {
-    //     expand_buf(&mut daemon.outpacket,
-    //                ::std::mem::size_of::<dhcp_packet>() as libc::c_ulong);
-    // };
+  expand_buf(&daemon->dhcp_packet, sizeof(struct dhcp_packet));
+#ifdef HAVE_DHCP6
+  if (daemon->dhcp6)
+    expand_buf(&daemon->outpacket, sizeof(struct dhcp_packet));
+#endif
+}
+
+ssize_t recv_dhcp_packet(int fd, struct msghdr *msg)
+{  
+  ssize_t sz, new_sz;
+ 
+  while (1)
+    {
+      msg->msg_flags = 0;
+      while ((sz = recvmsg(fd, msg, MSG_PEEK | MSG_TRUNC)) == -1 && errno == EINTR);
+      
+      if (sz == -1)
+	return -1;
+      
+      if (!(msg->msg_flags & MSG_TRUNC))
+	break;
+
+      /* Very new Linux kernels return the actual size needed, 
+	 older ones always return truncated size */
+      if ((size_t)sz == msg->msg_iov->iov_len)
+	{
+	  if (!expand_buf(msg->msg_iov, sz + 100))
+	    return -1;
+	}
+      else
+	{
+	  expand_buf(msg->msg_iov, sz);
+	  break;
+	}
+    }
+  
+  while ((new_sz = recvmsg(fd, msg, 0)) == -1 && errno == EINTR);
+
+  /* Some kernels seem to ignore MSG_PEEK, and dequeue the packet anyway. 
+     If that happens we get EAGAIN here because the socket is non-blocking.
+     Use the result of the original testing recvmsg as long as the buffer
+     was big enough. There's a small race here that may lose the odd packet,
+     but it's UDP anyway. */
+  
+  if (new_sz == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
+    new_sz = sz;
+  
+  return (msg->msg_flags & MSG_TRUNC) ? -1 : new_sz;
+}
+
+struct dhcp_netid *run_tag_if(struct dhcp_netid *tags)
+{
+  struct tag_if *exprs;
+  struct dhcp_netid_list *list;
+
+  for (exprs = daemon->tag_if; exprs; exprs = exprs->next)
+    if (match_netid(exprs->tag, tags, 1))
+      for (list = exprs->set; list; list = list->next)
+	{
+	  list->list->next = tags;
+	  tags = list->list;
+	}
+
+  return tags;
 }
 
 
-pub fn recv_dhcp_packet(daemon: &mut DnsmasqDaemon, socket: UdpSocket, packet_buf: &mut Vec<u8>) -> Result<usize,  std::io::Error> {
-    socket.recv(packet_buf)
-}
+struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *context_tags, struct dhcp_opt *opts)
+{
+  struct dhcp_netid *tagif = run_tag_if(tags);
+  struct dhcp_opt *opt;
+  struct dhcp_opt *tmp;  
 
-pub fn run_tag_if(mut tags: &mut DhcpNetId)
- -> DhcpNetId {
-    let mut exprs: TagIf;
-    let mut list: DhcpNetIdList;
-    exprs = daemon.tag_if;
-
-    for exprs in daemon.tag_if {
-        if match_netid(exprs.tag, tags, 1) != 0 {
-            // list = exprs.set;
-            // for item in list {
-            //     list.list = tags;
-            //     tags = 
-            // }
-        }
-        
+  /* flag options which are valid with the current tag set (sans context tags) */
+  for (opt = opts; opt; opt = opt->next)
+    {
+      opt->flags &= ~DHOPT_TAGOK;
+      if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
+	  match_netid(opt->netid, tagif, 0))
+	opt->flags |= DHOPT_TAGOK;
     }
 
-    // while !exprs.is_null() {
-    //     if match_netid((*exprs).tag, tags, 1 ) != 0 {
-    //         list = (*exprs).set;
-    //         while !list.is_null() {
-    //             (*(*list).list).next = tags;
-    //             tags = (*list).list;
-    //             list = (*list).next
-    //         }
-    //     }
-    //     exprs = (*exprs).next
-    // }
-    return tags;
-}
-
-pub fn option_filter(mut tags: &mut DhcpNetId,
-                                       mut context_tags: &mut DhcpNetId,
-                                       mut opts: &mut DhcpOpt)
-                                       -> DhcpNetId {
-    let mut tagif: DhcpNetId = run_tag_if(tags);
-    let mut opt: DhcpOpt = 0 ;
-    let mut tmp: DhcpOpt = 0 ;
-    /* flag options which are valid with the current tag set (sans context tags) */
-    opt = opts;
-    while !opt.is_null() {
-        opt.flags &= !(4096 );
-        if opt.flags &
-               (4  | 256  | 2048 )
-               == 0 && match_netid(opt.netid, tagif, 0 ) != 0
-           {
-            opt.flags |= 4096
-        }
-        opt = opt.next
-    }
-    /* now flag options which are valid, including the context tags,
+  /* now flag options which are valid, including the context tags,
      otherwise valid options are inhibited if we found a higher priority one above */
-    if !context_tags.is_null() {
-        let mut last_tag: DhcpNetId = 0 ;
-        last_tag = context_tags;
-        while !last_tag.next.is_null() { last_tag = last_tag.next }
-        last_tag.next = tags;
-        tagif = run_tag_if(context_tags);
-        /* reset stuff with tag:!<tag> which now matches. */
-        opt = opts;
-        while !opt.is_null() {
-            if opt.flags &
-                   (4  | 256  |
-                        2048 ) == 0 &&
-                   opt.flags & 4096  != 0 &&
-                   match_netid(opt.netid, tagif, 0 ) == 0 {
-                opt.flags &= !(4096 )
-            }
-            opt = opt.next
-        }
-        opt = opts;
-        while !opt.is_null() {
-            if opt.flags &
-                   (4  | 256  |
-                        2048  | 4096 ) == 0 &&
-                   match_netid(opt.netid, tagif, 0 ) != 0 {
-                let mut tmp_0: DhcpOpt = 0 ;
-                tmp_0 = opts;
-                while !tmp_0.is_null() {
-                    if tmp_0.opt == opt.opt && !opt.netid.is_null()
-                           && tmp_0.flags & 4096  != 0 {
-                        break ;
-                    }
-                    tmp_0 = tmp_0.next
-                }
-                if tmp_0.is_null() { opt.flags |= 4096  }
-            }
-            opt = opt.next
-        }
+  if (context_tags)
+    {
+      struct dhcp_netid *last_tag;
+
+      for (last_tag = context_tags; last_tag->next; last_tag = last_tag->next);
+      last_tag->next = tags;
+      tagif = run_tag_if(context_tags);
+      
+      /* reset stuff with tag:!<tag> which now matches. */
+      for (opt = opts; opt; opt = opt->next)
+	if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
+	    (opt->flags & DHOPT_TAGOK) &&
+	    !match_netid(opt->netid, tagif, 0))
+	  opt->flags &= ~DHOPT_TAGOK;
+
+      for (opt = opts; opt; opt = opt->next)
+	if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) &&
+	    match_netid(opt->netid, tagif, 0))
+	  {
+	    struct dhcp_opt *tmp;  
+	    for (tmp = opts; tmp; tmp = tmp->next) 
+	      if (tmp->opt == opt->opt && opt->netid && (tmp->flags & DHOPT_TAGOK))
+		break;
+	    if (!tmp)
+	      opt->flags |= DHOPT_TAGOK;
+	  }      
     }
-    /* now flag untagged options which are not overridden by tagged ones */
-    opt = opts;
-    while !opt.is_null() {
-        if opt.flags &
-               (4  | 256  | 2048  |
-                    4096 ) == 0 && opt.netid.is_null() {
-            tmp = opts;
-            while !tmp.is_null() {
-                if tmp.opt == opt.opt &&
-                       tmp.flags & 4096  != 0 {
-                    break ;
-                }
-                tmp = tmp.next
-            }
-            if tmp.is_null() {
-                opt.flags |= 4096
-            } else if tmp.netid.is_null() {
-                // my_syslog((3 ) << 3  |
-                //               4 ,
-                //           "Ignoring duplicate dhcp-option %d"                        *const u8 , tmp.opt);
-            }
-        }
-        opt = opt.next
-    }
-    /* Finally, eliminate duplicate options later in the chain, and therefore earlier in the config file. */
-    opt = opts;
-    while !opt.is_null() {
-        if opt.flags & 4096  != 0 {
-            tmp = opt.next;
-            while !tmp.is_null() {
-                if tmp.opt == opt.opt {
-                    tmp.flags &= !(4096 )
-                }
-                tmp = tmp.next
-            }
-        }
-        opt = opt.next
-    }
-    return tagif;
+  
+  /* now flag untagged options which are not overridden by tagged ones */
+  for (opt = opts; opt; opt = opt->next)
+    if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) && !opt->netid)
+      {
+	for (tmp = opts; tmp; tmp = tmp->next) 
+	  if (tmp->opt == opt->opt && (tmp->flags & DHOPT_TAGOK))
+	    break;
+	if (!tmp)
+	  opt->flags |= DHOPT_TAGOK;
+	else if (!tmp->netid)
+	  my_syslog(MS_DHCP | LOG_WARNING, _("Ignoring duplicate dhcp-option %d"), tmp->opt); 
+      }
+
+  /* Finally, eliminate duplicate options later in the chain, and therefore earlier in the config file. */
+  for (opt = opts; opt; opt = opt->next)
+    if (opt->flags & DHOPT_TAGOK)
+      for (tmp = opt->next; tmp; tmp = tmp->next) 
+	if (tmp->opt == opt->opt)
+	  tmp->flags &= ~DHOPT_TAGOK;
+  
+  return tagif;
 }
+	
 /* Is every member of check matched by a member of pool? 
    If tagnotneeded, untagged is OK */
+int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, int tagnotneeded)
+{
+  struct dhcp_netid *tmp1;
+  
+  if (!check && !tagnotneeded)
+    return 0;
 
-pub fn match_netid(mut check: Vec<DhcpNetId>, mut pool: &mut DhcpNetId, mut tagnotneeded: bool) -> i32 {
-    let mut tmp1: DhcpNetId;
-    if check.is_null() && !tagnotneeded { return 0  }
-    while !check.is_null() {
-        /* '#' for not is for backwards compat. */
-        if *check.net.offset(0 )  !=
-               '!' as i32 &&
-               *check.net.offset(0 )
-                   != '#' as i32 {
-            tmp1 = pool;
-            while !tmp1.is_null() {
-                if strcmp(check.net, tmp1.net) == 0  {
-                    break ;
-                }
-                tmp1 = tmp1.next
-            }
-            if tmp1.is_null() { return 0  }
-        } else {
-            tmp1 = pool;
-            while !tmp1.is_null() {
-                if strcmp(check.net.offset(1 ),
-                          tmp1.net) == 0  {
-                    return 0 
-                }
-                tmp1 = tmp1.next
-            }
-        }
-        check = check.next
+  for (; check; check = check->next)
+    {
+      /* '#' for not is for backwards compat. */
+      if (check->net[0] != '!' && check->net[0] != '#')
+	{
+	  for (tmp1 = pool; tmp1; tmp1 = tmp1->next)
+	    if (strcmp(check->net, tmp1->net) == 0)
+	      break;
+	  if (!tmp1)
+	    return 0;
+	}
+      else
+	for (tmp1 = pool; tmp1; tmp1 = tmp1->next)
+	  if (strcmp((check->net)+1, tmp1->net) == 0)
+	    return 0;
     }
-    return 1 ;
+  return 1;
 }
+
 /* return domain or NULL if none. */
-
-pub fn strip_hostname(mut hostname: &mut String)
- -> &mut String {
-    let mut dot: &mut String =
-        strchr(hostname, '.' as i32); /* truncate */
-    if dot.is_null() { return 0  }
-    *dot = 0 ;
-    if strlen(dot.offset(1 )) !=
-           0  {
-        return dot.offset(1 )
-    }
-    return 0 ;
+char *strip_hostname(char *hostname)
+{
+  char *dot = strchr(hostname, '.');
+ 
+  if (!dot)
+    return NULL;
+  
+  *dot = 0; /* truncate */
+  if (strlen(dot+1) != 0)
+    return dot+1;
+  
+  return NULL;
 }
 
-pub fn log_tags(mut netid: &mut DhcpNetId, mut xid: u32) {
-    if !netid.is_null() && daemon.options[28] != 0 {
-        let mut s: &mut String = daemon.namebuff;
-        *s = 0 ;
-        while !netid.is_null() {
-            /* kill dupes. */
-            let mut n: DhcpNetId = 0 ;
-            n = netid.next;
-            while !n.is_null() {
-                if strcmp(netid.net, n.net) == 0  {
-                    break ;
-                }
-                n = n.next
-            }
-            if n.is_null() {
-                strncat(s, netid.net, (1025  - 1 ).wrapping_sub(strlen(s)));
-                if !netid.next.is_null() {
-                    strncat(s, ", " , (1025  - 1 ).wrapping_sub(strlen(s)));
-                }
-            }
-            netid = netid.next
-        }
-        // my_syslog((3 ) << 3  | 6 ,
-        //           "%u tags: %s" , xid,
-        //           s);
-    };
+void log_tags(struct dhcp_netid *netid, u32 xid)
+{
+  if (netid && option_bool(OPT_LOG_OPTS))
+    {
+      char *s = daemon->namebuff;
+      for (*s = 0; netid; netid = netid->next)
+	{
+	  /* kill dupes. */
+	  struct dhcp_netid *n;
+	  
+	  for (n = netid->next; n; n = n->next)
+	    if (strcmp(netid->net, n->net) == 0)
+	      break;
+	  
+	  if (!n)
+	    {
+	      strncat (s, netid->net, (MAXDNAME-1) - strlen(s));
+	      if (netid->next)
+		strncat (s, ", ", (MAXDNAME-1) - strlen(s));
+	    }
+	}
+      my_syslog(MS_DHCP | LOG_INFO, _("%u tags: %s"), xid, s);
+    } 
+}   
+  
+int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
+{
+  int i;
+  
+  if (o->len > len)
+    return 0;
+  
+  if (o->len == 0)
+    return 1;
+     
+  if (o->flags & DHOPT_HEX)
+    { 
+      if (memcmp_masked(o->val, p, o->len, o->u.wildcard_mask))
+	return 1;
+    }
+  else 
+    for (i = 0; i <= (len - o->len); ) 
+      {
+	if (memcmp(o->val, p + i, o->len) == 0)
+	  return 1;
+	    
+	if (o->flags & DHOPT_STRING)
+	  i++;
+	else
+	  i += o->len;
+      }
+  
+  return 0;
 }
 
-pub fn match_bytes(mut o: &mut DhcpOpt, mut p: &mut Vec<u8>, mut len: i32) -> i32 {
-    let mut i: i32 = 0;
-    if o.len > len { return 0  }
-    if o.len == 0  { return 1  }
-    if o.flags & 512  != 0 {
-        if memcmp_masked(o.val, p, o.len, o.u.wildcard_mask) != 0 {
-            return 1 
-        }
-    } else {
-        i = 0 ;
-        while i <= len - o.len {
-            if memcmp(o.val,
-                      p.offset(i),
-                      o.len) == 0  {
-                return 1 
-            }
-            if o.flags & 2  != 0 {
-                i += 1
-            } else { i += o.len }
-        }
-    }
-    return 0 ;
+int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, int type)
+{
+  struct hwaddr_config *conf_addr;
+  
+  for (conf_addr = config->hwaddr; conf_addr; conf_addr = conf_addr->next)
+    if (conf_addr->wildcard_mask == 0 &&
+	conf_addr->hwaddr_len == len &&
+	(conf_addr->hwaddr_type == type || conf_addr->hwaddr_type == 0) &&
+	memcmp(conf_addr->hwaddr, hwaddr, len) == 0)
+      return 1;
+  
+  return 0;
 }
 
-pub fn config_has_mac(mut config: &mut DhcpConfig,
-                                        mut hwaddr: &mut Vec<u8>,
-                                        mut len: i32,
-                                        mut type_0: i32)
-                                        -> i32 {
-    let mut conf_addr: HwaddrConfig = 0;
-    conf_addr = config.hwaddr;
-    while !conf_addr.is_null() {
-        if conf_addr.wildcard_mask == 0  &&
-               conf_addr.hwaddr_len == len &&
-               (conf_addr.hwaddr_type == type_0 ||
-                    conf_addr.hwaddr_type == 0 ) &&
-               memcmp(conf_addr.hwaddr.as_mut_ptr(),
-                      hwaddr, len) ==
-                   0  {
-            return 1 
-        }
-        conf_addr = conf_addr.next
+static int is_config_in_context(struct dhcp_context *context, struct dhcp_config *config)
+{
+  if (!context) /* called via find_config() from lease_update_from_configs() */
+    return 1; 
+  
+#ifdef HAVE_DHCP6
+  if (context->flags & CONTEXT_V6)
+    {
+       struct addrlist *addr_list;
+
+       if (!(config->flags & CONFIG_ADDR6))
+	 return 1;
+       
+        for (; context; context = context->current)
+	  for (addr_list = config->addr6; addr_list; addr_list = addr_list->next)
+	    {
+	      if ((addr_list->flags & ADDRLIST_WILDCARD) && context->prefix == 64)
+		return 1;
+	      
+	      if (is_same_net6(&addr_list->addr.addr6, &context->start6, context->prefix))
+		return 1;
+	    }
     }
-    return 0 ;
+  else
+#endif
+    {
+      if (!(config->flags & CONFIG_ADDR))
+	return 1;
+      
+      for (; context; context = context->current)
+	if ((config->flags & CONFIG_ADDR) && is_same_net(config->addr, context->start, context->netmask))
+	  return 1;
+    }
+
+  return 0;
 }
-fn is_config_in_context(mut context: DhcpContext,
-                                          mut config: &mut DhcpConfig)
-                                          -> i32 {
-    if context.is_null() {
-        /* called via find_config() from lease_update_from_configs() */
-        return 1 
-    }
-    if context.flags &
-           (1) << 17  != 0 {
-        let mut addr_list: AddressListEntry = 0 ;
-        if config.flags & 4096  == 0 {
-            return 1 
-        }
-        while !context.is_null() {
-            addr_list = config.addr6;
-            while !addr_list.is_null() {
-                if addr_list.flags & 16  != 0 &&
-                       context.prefix == 64  {
-                    return 1 
-                }
-                if is_same_net6(&mut addr_list.addr.addr6,
-                                &mut context.start6, context.prefix) !=
-                       0 {
-                    return 1 
-                }
-                addr_list = addr_list.next
-            }
-            context = context.current
-        }
-    } else {
-        if config.flags & 32  == 0 {
-            return 1 
-        }
-        while !context.is_null() {
-            if config.flags & 32  != 0 &&
-                   is_same_net4(config.addr, context.start,
-                                context.netmask) != 0 {
-                return 1 
-            }
-            context = context.current
-        }
-    }
-    return 0 ;
-}
-fn find_config_match(mut configs: &mut DhcpConfig,
-                                       mut context: DhcpContext,
-                                       mut clid: &mut Vec<u8>,
-                                       mut clid_len: i32,
-                                       mut hwaddr: &mut Vec<u8>,
-                                       mut hw_len: i32,
-                                       mut hw_type: i32,
-                                       mut hostname: &mut String,
-                                       mut tags: &mut DhcpNetId,
-                                       mut tag_not_needed: i32)
-                                       -> DhcpConfig {
-    let mut count: i32 = 0;
-    let mut new: i32 = 0;
-    let mut config: DhcpConfig = 0;
-    let mut candidate: DhcpConfig = 0;
-    let mut conf_addr: HwaddrConfig = 0;
-    if !clid.is_null() {
-        config = configs;
-        while !config.is_null() {
-            if config.flags & 2  != 0 {
-                if config.clid_len == clid_len &&
-                       memcmp(config.clid,
-                              clid,
-                              clid_len) == 0
-                       && is_config_in_context(context, config) != 0 &&
-                       match_netid(config.filter, tags, tag_not_needed) !=
-                           0 {
-                    return config
-                }
-                /* dhcpcd prefixes ASCII client IDs by zero which is wrong, but we try and
+
+static struct dhcp_config *find_config_match(struct dhcp_config *configs,
+					     struct dhcp_context *context,
+					     unsigned char *clid, int clid_len,
+					     unsigned char *hwaddr, int hw_len, 
+					     int hw_type, char *hostname,
+					     struct dhcp_netid *tags, int tag_not_needed)
+{
+  int count, new;
+  struct dhcp_config *config, *candidate; 
+  struct hwaddr_config *conf_addr;
+
+  if (clid)
+    for (config = configs; config; config = config->next)
+      if (config->flags & CONFIG_CLID)
+	{
+	  if (config->clid_len == clid_len && 
+	      memcmp(config->clid, clid, clid_len) == 0 &&
+	      is_config_in_context(context, config) &&
+	      match_netid(config->filter, tags, tag_not_needed))
+	    
+	    return config;
+	  
+	  /* dhcpcd prefixes ASCII client IDs by zero which is wrong, but we try and
 	     cope with that here. This is IPv4 only. context==NULL implies IPv4, 
 	     see lease_update_from_configs() */
-                if (context.is_null() ||
-                        context.flags &
-                            (1) << 17  == 0) &&
-                       *clid  == 0  &&
-                       config.clid_len == clid_len - 1  &&
-                       memcmp(config.clid,
-                              clid.offset(1 )
-                              (clid_len - 1 ))
-                           == 0  &&
-                       is_config_in_context(context, config) != 0 &&
-                       match_netid(config.filter, tags, tag_not_needed) !=
-                           0 {
-                    return config
-                }
-            }
-            config = config.next
-        }
-    }
-    if !hwaddr.is_null() {
-        config = configs;
-        while !config.is_null() {
-            if config_has_mac(config, hwaddr, hw_len, hw_type) != 0 &&
-                   is_config_in_context(context, config) != 0 &&
-                   match_netid(config.filter, tags, tag_not_needed) != 0 {
-                return config
-            }
-            config = config.next
-        }
-    }
-    if !hostname.is_null() && !context.is_null() {
-        config = configs;
-        while !config.is_null() {
-            if config.flags & 16  != 0 &&
-                   hostname_isequal(config.hostname, hostname) != 0 &&
-                   is_config_in_context(context, config) != 0 &&
-                   match_netid(config.filter, tags, tag_not_needed) != 0 {
-                return config
-            }
-            config = config.next
-        }
-    }
-    if hwaddr.is_null() { return 0 }
-    /* use match with fewest wildcard octets */
-    candidate = 0;
-    count = 0 ;
-    config = configs;
-    while !config.is_null() {
-        if is_config_in_context(context, config) != 0 &&
-               match_netid(config.filter, tags, tag_not_needed) != 0 {
-            conf_addr = config.hwaddr;
-            while !conf_addr.is_null() {
-                if conf_addr.wildcard_mask !=
-                       0  &&
-                       conf_addr.hwaddr_len == hw_len &&
-                       (conf_addr.hwaddr_type == hw_type ||
-                            conf_addr.hwaddr_type == 0 ) &&
-                       {
-                           new =
-                               memcmp_masked(conf_addr.hwaddr.as_mut_ptr(),
-                                             hwaddr, hw_len,
-                                             conf_addr.wildcard_mask);
-                           (new) > count
-                       } {
-                    count = new;
-                    candidate = config
-                }
-                conf_addr = conf_addr.next
-            }
-        }
-        config = config.next
-    }
-    return candidate;
+	  if ((!context || !(context->flags & CONTEXT_V6)) && *clid == 0 && config->clid_len == clid_len-1  &&
+	      memcmp(config->clid, clid+1, clid_len-1) == 0 &&
+	      is_config_in_context(context, config) &&
+	      match_netid(config->filter, tags, tag_not_needed))
+	    return config;
+	}
+  
+
+  if (hwaddr)
+    for (config = configs; config; config = config->next)
+      if (config_has_mac(config, hwaddr, hw_len, hw_type) &&
+	  is_config_in_context(context, config) &&
+	  match_netid(config->filter, tags, tag_not_needed))
+	return config;
+  
+  if (hostname && context)
+    for (config = configs; config; config = config->next)
+      if ((config->flags & CONFIG_NAME) && 
+	  hostname_isequal(config->hostname, hostname) &&
+	  is_config_in_context(context, config) &&
+	  match_netid(config->filter, tags, tag_not_needed))
+	return config;
+
+  
+  if (!hwaddr)
+    return NULL;
+
+  /* use match with fewest wildcard octets */
+  for (candidate = NULL, count = 0, config = configs; config; config = config->next)
+    if (is_config_in_context(context, config) &&
+	match_netid(config->filter, tags, tag_not_needed))
+      for (conf_addr = config->hwaddr; conf_addr; conf_addr = conf_addr->next)
+	if (conf_addr->wildcard_mask != 0 &&
+	    conf_addr->hwaddr_len == hw_len &&	
+	    (conf_addr->hwaddr_type == hw_type || conf_addr->hwaddr_type == 0) &&
+	    (new = memcmp_masked(conf_addr->hwaddr, hwaddr, hw_len, conf_addr->wildcard_mask)) > count)
+	  {
+	      count = new;
+	      candidate = config;
+	  }
+  
+  return candidate;
 }
+
 /* Find tagged configs first. */
+struct dhcp_config *find_config(struct dhcp_config *configs,
+				struct dhcp_context *context,
+				unsigned char *clid, int clid_len,
+				unsigned char *hwaddr, int hw_len, 
+				int hw_type, char *hostname, struct dhcp_netid *tags)
+{
+  struct dhcp_config *ret = find_config_match(configs, context, clid, clid_len, hwaddr, hw_len, hw_type, hostname, tags, 0);
 
-pub fn find_config(mut configs: &mut DhcpConfig,
-                                     mut context: DhcpContext,
-                                     mut clid: &mut Vec<u8>,
-                                     mut clid_len: i32,
-                                     mut hwaddr: &mut Vec<u8>,
-                                     mut hw_len: i32,
-                                     mut hw_type: i32,
-                                     mut hostname: &mut String,
-                                     mut tags: &mut DhcpNetId)
-                                     -> DhcpConfig {
-    let mut ret: DhcpConfig =
-        find_config_match(configs, context, clid, clid_len, hwaddr, hw_len,
-                          hw_type, hostname, tags, 0 );
-    if ret.is_null() {
-        ret =
-            find_config_match(configs, context, clid, clid_len, hwaddr,
-                              hw_len, hw_type, hostname, tags,
-                              1 )
-    }
-    return ret;
+  if (!ret)
+    ret = find_config_match(configs, context, clid, clid_len, hwaddr, hw_len, hw_type, hostname, tags, 1);
+
+  return ret;
 }
 
-pub fn dhcp_update_configs(mut configs: &mut DhcpConfig) {
-    /* Some people like to keep all static IP addresses in /etc/hosts.
+void dhcp_update_configs(struct dhcp_config *configs)
+{
+  /* Some people like to keep all static IP addresses in /etc/hosts.
      This goes through /etc/hosts and sets static addresses for any DHCP config
      records which don't have an address and whose name matches. 
      We take care to maintain the invariant that any IP address can appear
      in at most one dhcp-host. Since /etc/hosts can be re-read by SIGHUP, 
      restore the status-quo ante first. */
-    let mut config: DhcpConfig = 0;
-    let mut conf_tmp: DhcpConfig = 0;
-    let mut crec: Crec = 0 ;
-    let mut prot: i32 = 2 ;
-    config = configs;
-    while !config.is_null() {
-        if config.flags & 512  != 0 {
-            config.flags &=
-                !(32  | 512 )
-        }
-        if config.flags & 16384  != 0 {
-            config.flags &=
-                !(4096  | 16384 )
-        }
-        config = config.next
-    }
-    loop  {
-        if daemon.port != 0  {
-            let mut current_block_27: u64;
-            config = configs;
-            while !config.is_null() {
-                let mut conflags: i32 = 32 ;
-                let mut cacheflags: i32 =
-                    ((1) << 7 ) ;
-                if prot == 10  {
-                    conflags = 4096 ;
-                    cacheflags =
-                        ((1) << 8 )
-                }
-                if config.flags & conflags == 0 &&
-                       config.flags & 16  !=
-                           0 &&
-                       {
-                           crec =
-                               cache_find_by_name(0 ,
-                                                  config.hostname,
-                                                  0 ,
-                                                  cacheflags);
-                           !crec.is_null()
-                       } &&
-                       crec.flags & (1) << 6
-                           != 0 {
-                    if !cache_find_by_name(crec, config.hostname, 0 , cacheflags).is_null() {
-                        /* use primary (first) address */
-                        while !crec.is_null() && crec.flags & (1) << 2 == 0 {
-                            crec = cache_find_by_name(crec, config.hostname, 0,  cacheflags)
-                        } /* should be never */
-                        if crec.is_null() {
-                            current_block_27 = 3640593987805443782;
-                        } else {
-                            inet_ntop(prot, &mut crec.addr, daemon.addrbuff, 46 );
-                            // my_syslog((3 ) << 3  |
-                            //               4 ,
-                            //           "%s has more than one address in hostsfile, using %s for DHCP"
-                            //               ,
-                            //           config.hostname,
-                            //           daemon.addrbuff);
-                            current_block_27 = 1109700713171191020;
-                        }
-                    } else { current_block_27 = 1109700713171191020; }
-                    match current_block_27 {
-                        3640593987805443782 => { }
-                        _ => {
-                            if prot == 2  &&
-                                   {
-                                       conf_tmp =
-                                           config_find_by_address(configs,
-                                                                  crec.addr.addr4);
-                                       (conf_tmp.is_null()) ||
-                                           conf_tmp == config
-                                   } {
-                                config.addr = crec.addr.addr4;
-                                config.flags |=
-                                    (32  | 512 )
+  
+  struct dhcp_config *config, *conf_tmp;
+  struct crec *crec;
+  int prot = AF_INET;
 
-                            } else if prot == 10  &&
-                                          {
-                                              conf_tmp =
-                                                  config_find_by_address6(configs, 0 , &mut In6Addr, 0, &mut crec.addr.addr6);
-                                              (conf_tmp.is_null()) ||
-                                                  conf_tmp == config
-                                          } {
-                                /* host must have exactly one address if comming from /etc/hosts. */
-                                if config.addr6.is_null() &&
-                                       {
-                                           config.addr6 = AddressListEntry::new();
-                                           !config.addr6.is_null()
-                                       } {
-                                    (*config.addr6).next =
-                                        0 ;
-                                    (*config.addr6).flags =
-                                        0 
-                                }
-                                if !config.addr6.is_null() &&
-                                       (*config.addr6).next.is_null() &&
-                                       (*config.addr6).flags &
-                                           (16  |
-                                                8 ) == 0 {
-                                    // memcpy(&mut (*config.addr6).addr.addr6
-                                    //                                                   Vec<u8>,
-                                    //        &mut crec.addr.addr6                                         &mut In6Addr
-                                    //        16 );
-                                    config.addr6.addr.addr6 = crec.addr.addr6.clone();
-                                    config.flags |= (4096  | 16384 ) 
-                                }
-                            } else {
-                                inet_ntop(prot, &mut crec.addr, daemon.addrbuff,46 );
-                                // my_syslog((3 ) <<
-                                //               3  |
-                                //               4 ,
-                                //           "duplicate IP address %s (%s) in dhcp-config directive"
-                                //                                                      *const libc::c_char,
-                                //           daemon.addrbuff,
-                                //           config.hostname);
-                            }
-                        }
-                    }
-                }
-                config = config.next
-            }
-        }
-        if !(prot == 2 ) { break ; }
-        prot = 10 
-    };
+  for (config = configs; config; config = config->next)
+  {
+    if (config->flags & CONFIG_ADDR_HOSTS)
+      config->flags &= ~(CONFIG_ADDR | CONFIG_ADDR_HOSTS);
+#ifdef HAVE_DHCP6
+    if (config->flags & CONFIG_ADDR6_HOSTS)
+      config->flags &= ~(CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS);
+#endif
+  }
+
+#ifdef HAVE_DHCP6 
+ again:  
+#endif
+
+  if (daemon->port != 0)
+    for (config = configs; config; config = config->next)
+      {
+	int conflags = CONFIG_ADDR;
+	int cacheflags = F_IPV4;
+
+#ifdef HAVE_DHCP6
+	if (prot == AF_INET6)
+	  {
+	    conflags = CONFIG_ADDR6;
+	    cacheflags = F_IPV6;
+	  }
+#endif
+	if (!(config->flags & conflags) &&
+	    (config->flags & CONFIG_NAME) && 
+	    (crec = cache_find_by_name(NULL, config->hostname, 0, cacheflags)) &&
+	    (crec->flags & F_HOSTS))
+	  {
+	    if (cache_find_by_name(crec, config->hostname, 0, cacheflags))
+	      {
+		/* use primary (first) address */
+		while (crec && !(crec->flags & F_REVERSE))
+		  crec = cache_find_by_name(crec, config->hostname, 0, cacheflags);
+		if (!crec)
+		  continue; /* should be never */
+		inet_ntop(prot, &crec->addr, daemon->addrbuff, ADDRSTRLEN);
+		my_syslog(MS_DHCP | LOG_WARNING, _("%s has more than one address in hostsfile, using %s for DHCP"), 
+			  config->hostname, daemon->addrbuff);
+	      }
+	    
+	    if (prot == AF_INET && 
+		(!(conf_tmp = config_find_by_address(configs, crec->addr.addr4)) || conf_tmp == config))
+	      {
+		config->addr = crec->addr.addr4;
+		config->flags |= CONFIG_ADDR | CONFIG_ADDR_HOSTS;
+		continue;
+	      }
+
+#ifdef HAVE_DHCP6
+	    if (prot == AF_INET6 && 
+		(!(conf_tmp = config_find_by_address6(configs, NULL, 0, &crec->addr.addr6)) || conf_tmp == config))
+	      {
+		/* host must have exactly one address if comming from /etc/hosts. */
+		if (!config->addr6 && (config->addr6 = whine_malloc(sizeof(struct addrlist))))
+		  {
+		    config->addr6->next = NULL;
+		    config->addr6->flags = 0;
+		  }
+
+		if (config->addr6 && !config->addr6->next && !(config->addr6->flags & (ADDRLIST_WILDCARD|ADDRLIST_PREFIX)))
+		  {
+		    memcpy(&config->addr6->addr.addr6, &crec->addr.addr6, IN6ADDRSZ);
+		    config->flags |= CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS;
+		  }
+	    
+		continue;
+	      }
+#endif
+
+	    inet_ntop(prot, &crec->addr, daemon->addrbuff, ADDRSTRLEN);
+	    my_syslog(MS_DHCP | LOG_WARNING, _("duplicate IP address %s (%s) in dhcp-config directive"), 
+		      daemon->addrbuff, config->hostname);
+	    
+	    
+	  }
+      }
+
+#ifdef HAVE_DHCP6
+  if (prot == AF_INET)
+    {
+      prot = AF_INET6;
+      goto again;
+    }
+#endif
+
 }
 
-pub fn whichdevice(daemon: &mut DnsmasqDaemon) -> Option<String> {
-    /* If we are doing DHCP on exactly one interface, and running linux, do SO_BINDTODEVICE
+#ifdef HAVE_LINUX_NETWORK 
+char *whichdevice(void)
+{
+  /* If we are doing DHCP on exactly one interface, and running linux, do SO_BINDTODEVICE
      to that device. This is for the use case of  (eg) OpenStack, which runs a new
      dnsmasq instance for each VLAN interface it creates. Without the BINDTODEVICE, 
      individual processes don't always see the packets they should.
@@ -615,391 +514,451 @@ pub fn whichdevice(daemon: &mut DnsmasqDaemon) -> Option<String> {
      or a configured interface doesn't yet exist, then more interfaces may arrive later, 
      so we can't safely assert there is only one interface and proceed.
 */
-    let mut iface: Irec = Default::default();
-    let mut found: Irec = Default::default();
-    let mut if_tmp: Iname = Default::default();
-    // if daemon.if_names.is_null() { return 0 as *mut libc::c_char }
-    if_tmp = daemon.if_names;
-    while !if_tmp.is_null() {
-        if !if_tmp.name.is_null() &&
-               (if_tmp.used == 0 ||
-                    !strchr(if_tmp.name, '*' as i32).is_null()) {
-            return None;
-        }
-        if_tmp = if_tmp.next
+  
+  struct irec *iface, *found;
+  struct iname *if_tmp;
+  
+  if (!daemon->if_names)
+    return NULL;
+  
+  for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
+    if (if_tmp->name && (!if_tmp->used || strchr(if_tmp->name, '*')))
+      return NULL;
+
+  for (found = NULL, iface = daemon->interfaces; iface; iface = iface->next)
+    if (iface->dhcp_ok)
+      {
+	if (!found)
+	  found = iface;
+	else if (strcmp(found->name, iface->name) != 0) 
+	  return NULL; /* more than one. */
+      }
+
+  if (found)
+    return found->name;
+
+  return NULL;
+}
+ 
+void  bindtodevice(char *device, int fd)
+{
+  size_t len = strlen(device)+1;
+  if (len > IFNAMSIZ)
+    len = IFNAMSIZ;
+  /* only allowed by root. */
+  if (setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, device, len) == -1 &&
+      errno != EPERM)
+    die(_("failed to set SO_BINDTODEVICE on DHCP socket: %s"), NULL, EC_BADNET);
+}
+#endif
+
+static const struct opttab_t {
+  char *name;
+  u16 val, size;
+} opttab[] = {
+  { "netmask", 1, OT_ADDR_LIST },
+  { "time-offset", 2, 4 },
+  { "router", 3, OT_ADDR_LIST  },
+  { "dns-server", 6, OT_ADDR_LIST },
+  { "log-server", 7, OT_ADDR_LIST },
+  { "lpr-server", 9, OT_ADDR_LIST },
+  { "hostname", 12, OT_INTERNAL | OT_NAME },
+  { "boot-file-size", 13, 2 | OT_DEC },
+  { "domain-name", 15, OT_NAME },
+  { "swap-server", 16, OT_ADDR_LIST },
+  { "root-path", 17, OT_NAME },
+  { "extension-path", 18, OT_NAME },
+  { "ip-forward-enable", 19, 1 },
+  { "non-local-source-routing", 20, 1 },
+  { "policy-filter", 21, OT_ADDR_LIST },
+  { "max-datagram-reassembly", 22, 2 | OT_DEC },
+  { "default-ttl", 23, 1 | OT_DEC },
+  { "mtu", 26, 2 | OT_DEC },
+  { "all-subnets-local", 27, 1 },
+  { "broadcast", 28, OT_INTERNAL | OT_ADDR_LIST },
+  { "router-discovery", 31, 1 },
+  { "router-solicitation", 32, OT_ADDR_LIST },
+  { "static-route", 33, OT_ADDR_LIST },
+  { "trailer-encapsulation", 34, 1 },
+  { "arp-timeout", 35, 4 | OT_DEC },
+  { "ethernet-encap", 36, 1 },
+  { "tcp-ttl", 37, 1 },
+  { "tcp-keepalive", 38, 4 | OT_DEC },
+  { "nis-domain", 40, OT_NAME },
+  { "nis-server", 41, OT_ADDR_LIST },
+  { "ntp-server", 42, OT_ADDR_LIST },
+  { "vendor-encap", 43, OT_INTERNAL },
+  { "netbios-ns", 44, OT_ADDR_LIST },
+  { "netbios-dd", 45, OT_ADDR_LIST },
+  { "netbios-nodetype", 46, 1 },
+  { "netbios-scope", 47, 0 },
+  { "x-windows-fs", 48, OT_ADDR_LIST },
+  { "x-windows-dm", 49, OT_ADDR_LIST },
+  { "requested-address", 50, OT_INTERNAL | OT_ADDR_LIST },
+  { "lease-time", 51, OT_INTERNAL | OT_TIME },
+  { "option-overload", 52, OT_INTERNAL },
+  { "message-type", 53, OT_INTERNAL | OT_DEC },
+  { "server-identifier", 54, OT_INTERNAL | OT_ADDR_LIST },
+  { "parameter-request", 55, OT_INTERNAL },
+  { "message", 56, OT_INTERNAL },
+  { "max-message-size", 57, OT_INTERNAL },
+  { "T1", 58, OT_TIME},
+  { "T2", 59, OT_TIME},
+  { "vendor-class", 60, 0 },
+  { "client-id", 61, OT_INTERNAL },
+  { "nis+-domain", 64, OT_NAME },
+  { "nis+-server", 65, OT_ADDR_LIST },
+  { "tftp-server", 66, OT_NAME },
+  { "bootfile-name", 67, OT_NAME },
+  { "mobile-ip-home", 68, OT_ADDR_LIST }, 
+  { "smtp-server", 69, OT_ADDR_LIST }, 
+  { "pop3-server", 70, OT_ADDR_LIST }, 
+  { "nntp-server", 71, OT_ADDR_LIST }, 
+  { "irc-server", 74, OT_ADDR_LIST }, 
+  { "user-class", 77, 0 },
+  { "rapid-commit", 80, 0 },
+  { "FQDN", 81, OT_INTERNAL },
+  { "agent-id", 82, OT_INTERNAL },
+  { "client-arch", 93, 2 | OT_DEC },
+  { "client-interface-id", 94, 0 },
+  { "client-machine-id", 97, 0 },
+  { "subnet-select", 118, OT_INTERNAL },
+  { "domain-search", 119, OT_RFC1035_NAME },
+  { "sip-server", 120, 0 },
+  { "classless-static-route", 121, 0 },
+  { "vendor-id-encap", 125, 0 },
+  { "tftp-server-address", 150, OT_ADDR_LIST },
+  { "server-ip-address", 255, OT_ADDR_LIST }, /* special, internal only, sets siaddr */
+  { NULL, 0, 0 }
+};
+
+#ifdef HAVE_DHCP6
+static const struct opttab_t opttab6[] = {
+  { "client-id", 1, OT_INTERNAL },
+  { "server-id", 2, OT_INTERNAL },
+  { "ia-na", 3, OT_INTERNAL },
+  { "ia-ta", 4, OT_INTERNAL },
+  { "iaaddr", 5, OT_INTERNAL },
+  { "oro", 6, OT_INTERNAL },
+  { "preference", 7, OT_INTERNAL | OT_DEC },
+  { "unicast", 12, OT_INTERNAL },
+  { "status", 13, OT_INTERNAL },
+  { "rapid-commit", 14, OT_INTERNAL },
+  { "user-class", 15, OT_INTERNAL | OT_CSTRING },
+  { "vendor-class", 16, OT_INTERNAL | OT_CSTRING },
+  { "vendor-opts", 17, OT_INTERNAL },
+  { "sip-server-domain", 21,  OT_RFC1035_NAME },
+  { "sip-server", 22, OT_ADDR_LIST },
+  { "dns-server", 23, OT_ADDR_LIST },
+  { "domain-search", 24, OT_RFC1035_NAME },
+  { "nis-server", 27, OT_ADDR_LIST },
+  { "nis+-server", 28, OT_ADDR_LIST },
+  { "nis-domain", 29,  OT_RFC1035_NAME },
+  { "nis+-domain", 30, OT_RFC1035_NAME },
+  { "sntp-server", 31,  OT_ADDR_LIST },
+  { "information-refresh-time", 32, OT_TIME },
+  { "FQDN", 39, OT_INTERNAL | OT_RFC1035_NAME },
+  { "ntp-server", 56, 0 /* OT_ADDR_LIST | OT_RFC1035_NAME */ },
+  { "bootfile-url", 59, OT_NAME },
+  { "bootfile-param", 60, OT_CSTRING },
+  { NULL, 0, 0 }
+};
+#endif
+
+
+
+void display_opts(void)
+{
+  int i;
+  
+  printf(_("Known DHCP options:\n"));
+  
+  for (i = 0; opttab[i].name; i++)
+    if (!(opttab[i].size & OT_INTERNAL))
+      printf("%3d %s\n", opttab[i].val, opttab[i].name);
+}
+
+#ifdef HAVE_DHCP6
+void display_opts6(void)
+{
+  int i;
+  printf(_("Known DHCPv6 options:\n"));
+  
+  for (i = 0; opttab6[i].name; i++)
+    if (!(opttab6[i].size & OT_INTERNAL))
+      printf("%3d %s\n", opttab6[i].val, opttab6[i].name);
+}
+#endif
+
+int lookup_dhcp_opt(int prot, char *name)
+{
+  const struct opttab_t *t;
+  int i;
+
+  (void)prot;
+
+#ifdef HAVE_DHCP6
+  if (prot == AF_INET6)
+    t = opttab6;
+  else
+#endif
+    t = opttab;
+
+  for (i = 0; t[i].name; i++)
+    if (strcasecmp(t[i].name, name) == 0)
+      return t[i].val;
+  
+  return -1;
+}
+
+int lookup_dhcp_len(int prot, int val)
+{
+  const struct opttab_t *t;
+  int i;
+
+  (void)prot;
+
+#ifdef HAVE_DHCP6
+  if (prot == AF_INET6)
+    t = opttab6;
+  else
+#endif
+    t = opttab;
+
+  for (i = 0; t[i].name; i++)
+    if (val == t[i].val)
+      return t[i].size & ~OT_DEC;
+
+   return 0;
+}
+
+char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len, char *buf, int buf_len)
+{
+  int o, i, j, nodecode = 0;
+  const struct opttab_t *ot = opttab;
+
+#ifdef HAVE_DHCP6
+  if (prot == AF_INET6)
+    ot = opttab6;
+#endif
+
+  for (o = 0; ot[o].name; o++)
+    if (ot[o].val == opt)
+      {
+	if (buf)
+	  {
+	    memset(buf, 0, buf_len);
+	    
+	    if (ot[o].size & OT_ADDR_LIST) 
+	      {
+		union all_addr addr;
+		int addr_len = INADDRSZ;
+
+#ifdef HAVE_DHCP6
+		if (prot == AF_INET6)
+		  addr_len = IN6ADDRSZ;
+#endif
+		for (buf[0]= 0, i = 0; i <= opt_len - addr_len; i += addr_len) 
+		  {
+		    if (i != 0)
+		      strncat(buf, ", ", buf_len - strlen(buf));
+		    /* align */
+		    memcpy(&addr, &val[i], addr_len); 
+		    inet_ntop(prot, &val[i], daemon->addrbuff, ADDRSTRLEN);
+		    strncat(buf, daemon->addrbuff, buf_len - strlen(buf));
+		  }
+	      }
+	    else if (ot[o].size & OT_NAME)
+		for (i = 0, j = 0; i < opt_len && j < buf_len ; i++)
+		  {
+		    char c = val[i];
+		    if (isprint((int)c))
+		      buf[j++] = c;
+		  }
+#ifdef HAVE_DHCP6
+	    /* We don't handle compressed rfc1035 names, so no good in IPv4 land */
+	    else if ((ot[o].size & OT_RFC1035_NAME) && prot == AF_INET6)
+	      {
+		i = 0, j = 0;
+		while (i < opt_len && val[i] != 0)
+		  {
+		    int k, l = i + val[i] + 1;
+		    for (k = i + 1; k < opt_len && k < l && j < buf_len ; k++)
+		     {
+		       char c = val[k];
+		       if (isprint((int)c))
+			 buf[j++] = c;
+		     }
+		    i = l;
+		    if (val[i] != 0 && j < buf_len)
+		      buf[j++] = '.';
+		  }
+	      }
+	    else if ((ot[o].size & OT_CSTRING))
+	      {
+		int k, len;
+		unsigned char *p;
+
+		i = 0, j = 0;
+		while (1)
+		  {
+		    p = &val[i];
+		    GETSHORT(len, p);
+		    for (k = 0; k < len && j < buf_len; k++)
+		      {
+		       char c = *p++;
+		       if (isprint((int)c))
+			 buf[j++] = c;
+		     }
+		    i += len +2;
+		    if (i >= opt_len)
+		      break;
+
+		    if (j < buf_len)
+		      buf[j++] = ',';
+		  }
+	      }	      
+#endif
+	    else if ((ot[o].size & (OT_DEC | OT_TIME)) && opt_len != 0)
+	      {
+		unsigned int dec = 0;
+		
+		for (i = 0; i < opt_len; i++)
+		  dec = (dec << 8) | val[i]; 
+
+		if (ot[o].size & OT_TIME)
+		  prettyprint_time(buf, dec);
+		else
+		  sprintf(buf, "%u", dec);
+	      }
+	    else
+	      nodecode = 1;
+	  }
+	break;
+      }
+
+  if (opt_len != 0 && buf && (!ot[o].name || nodecode))
+    {
+      int trunc  = 0;
+      if (opt_len > 14)
+	{
+	  trunc = 1;
+	  opt_len = 14;
+	}
+      print_mac(buf, val, opt_len);
+      if (trunc)
+	strncat(buf, "...", buf_len - strlen(buf));
+    
+
     }
-    found = 0;
-    iface = daemon.interfaces;
-    while !iface.is_null() {
-        if iface.dhcp_ok != 0 {
-            if found.is_null() {
-                found = iface
-            } else if strcmp(found.name, iface.name) != 0
-             {
-                return None;
-            }
-            /* more than one. */
-        }
-        iface = iface.next
+
+  return ot[o].name ? ot[o].name : "";
+
+}
+
+void log_context(int family, struct dhcp_context *context)
+{
+  /* Cannot use dhcp_buff* for RA contexts */
+
+  void *start = &context->start;
+  void *end = &context->end;
+  char *template = "", *p = daemon->namebuff;
+  
+  *p = 0;
+    
+#ifdef HAVE_DHCP6
+  if (family == AF_INET6)
+    {
+      struct in6_addr subnet = context->start6;
+      if (!(context->flags & CONTEXT_TEMPLATE))
+	setaddr6part(&subnet, 0);
+      inet_ntop(AF_INET6, &subnet, daemon->addrbuff, ADDRSTRLEN); 
+      start = &context->start6;
+      end = &context->end6;
     }
-    if !found.is_null() { return found.name }
-    return None;
-}
+#endif
 
-pub fn bind_to_device(device: &String, fd: &mut Socket) -> io::Result<()> {
-    return fd.bind_device(device.as_bytes())
-}
+  if (family != AF_INET && (context->flags & CONTEXT_DEPRECATE))
+    strcpy(daemon->namebuff, _(", prefix deprecated"));
+  else
+    {
+      p += sprintf(p, _(", lease time "));
+      prettyprint_time(p, context->lease_time);
+      p += strlen(p);
+    }	
 
-static DHCPV4_OPT_TBL: Vec<DhcpOptTblEntry> = vec!
-    [DhcpOptTblEntry {name: String::from("netmask"), val: 1  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("time-offset"), val: 2  , size: 4  ,},
-     DhcpOptTblEntry {name: String::from("router"), val: 3  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("dns-server"), val: 6  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("log-server"), val: 7  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("lpr-server"), val: 9  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("hostname"), val: 12  , size: (0x2000  | 0x1000 ),},
-     DhcpOptTblEntry {name: String::from("boot-file-size"), val: 13  , size: (2  | 0x400 ),},
-     DhcpOptTblEntry {name: String::from("domain-name"), val: 15  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("swap-server"), val: 16  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("root-path"), val: 17  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("extension-path"), val: 18  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("ip-forward-enable"), val: 19  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("non-local-source-routing"), val: 20  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("policy-filter"), val: 21  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("max-datagram-reassembly"), val: 22  , size: (2  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("default-ttl"), val: 23  , size: (1  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("mtu"), val: 26  , size: (2  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("all-subnets-local"), val: 27  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("broadcast"), val: 28  , size: (0x2000  | 0x8000 ) ,},
-     DhcpOptTblEntry {name: String::from("router-discovery"), val: 31  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("router-solicitation"), val: 32  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("static-route"), val: 33  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("trailer-encapsulation"), val: 34  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("arp-timeout"), val: 35  , size: (4  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("ethernet-encap"), val: 36  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("tcp-ttl"), val: 37  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("tcp-keepalive"), val: 38  , size: (4  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("nis-domain"), val: 40  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("nis-server"), val: 41  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("ntp-server"), val: 42  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("vendor-encap"), val: 43  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("netbios-ns"), val: 44  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("netbios-dd"), val: 45  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("netbios-nodetype"), val: 46  , size: 1  ,},
-     DhcpOptTblEntry {name: String::from("netbios-scope"), val: 47  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("x-windows-fs"), val: 48  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("x-windows-dm"), val: 49  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("requested-address"), val: 50  , size: (0x2000  | 0x8000 ) ,},
-     DhcpOptTblEntry {name: String::from("lease-time"), val: 51  , size: (0x2000  | 0x200 ) ,},
-     DhcpOptTblEntry {name: String::from("option-overload"), val: 52  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("message-type"), val: 53  , size: (0x2000  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("server-identifier"), val: 54  , size: (0x2000  | 0x8000 ) ,},
-     DhcpOptTblEntry {name: String::from("parameter-request"), val: 55  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("message"), val: 56  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("max-message-size"), val: 57  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("T1"), val: 58  , size: 0x200  ,},
-     DhcpOptTblEntry {name: String::from("T2"), val: 59  , size: 0x200  ,},
-     DhcpOptTblEntry {name: String::from("vendor-class"), val: 60  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("client-id"), val: 61  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("nis+-domain"), val: 64  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("nis+-server"), val: 65  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("tftp-server"), val: 66  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("bootfile-name"), val: 67  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("mobile-ip-home"), val: 68  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("smtp-server"), val: 69  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("pop3-server"), val: 70  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("nntp-server"), val: 71  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("irc-server"), val: 74  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("user-class"), val: 77  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("rapid-commit"), val: 80  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("FQDN"), val: 81  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("agent-id"), val: 82  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("client-arch"), val: 93  , size: (2  | 0x400 ) ,},
-     DhcpOptTblEntry {name: String::from("client-interface-id"), val: 94  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("client-machine-id"), val: 97  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("subnet-select"), val: 118  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("domain-search"), val: 119  , size: 0x4000  ,},
-     DhcpOptTblEntry {name: String::from("sip-server"), val: 120  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("classless-static-route"), val: 121  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("vendor-id-encap"), val: 125  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("tftp-server-address"), val: 150  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("server-ip-address"), val: 255  , size: 0x8000  ,},];
-
-
-
-static DHCPV6_OPT_TBL: Vec<DhcpOptTblEntry> = vec![
-    DhcpOptTblEntry {name: String::from("client-id"), val: 1, size: 0x2000,},
-    DhcpOptTblEntry {name: String::from("server-id"), val: 2, size: 0x2000,},
-    DhcpOptTblEntry {name: String::from("ia-na"), val: 3, size: 0x2000 ,},
-    DhcpOptTblEntry {name: String::from("ia-ta"), val: 4  , size: 0x2000  ,},
-    DhcpOptTblEntry {name: String::from("iaaddr"), val: 5  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("oro"), val: 6  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("preference"), val: 7  , size: (0x2000  | 0x400 ),},
-     DhcpOptTblEntry {name: String::from("unicast"), val: 12  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("status"), val: 13  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("rapid-commit"), val: 14  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("user-class"), val: 15  , size: (0x2000  | 0x800 ),},
-     DhcpOptTblEntry {name: String::from("vendor-class"), val: 16  , size: (0x2000  | 0x800 ),},
-     DhcpOptTblEntry {name: String::from("vendor-opts"), val: 17  , size: 0x2000  ,},
-     DhcpOptTblEntry {name: String::from("sip-server-domain"), val: 21  , size: 0x4000  ,},
-     DhcpOptTblEntry {name: String::from("sip-server"), val: 22  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("dns-server"), val: 23  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("domain-search"), val: 24  , size: 0x4000  ,},
-     DhcpOptTblEntry {name: String::from("nis-server"), val: 27  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("nis+-server"), val: 28  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("nis-domain"), val: 29  , size: 0x4000  ,},
-     DhcpOptTblEntry {name: String::from("nis+-domain"), val: 30  , size: 0x4000  ,},
-     DhcpOptTblEntry {name: String::from("sntp-server"), val: 31  , size: 0x8000  ,},
-     DhcpOptTblEntry {name: String::from("information-refresh-time"), val: 32  , size: 0x200  ,},
-     DhcpOptTblEntry {name: String::from("FQDN"), val: 39  , size: (0x2000  | 0x4000 ),},
-     DhcpOptTblEntry {name: String::from("ntp-server"), val: 56  , size: 0  ,},
-     DhcpOptTblEntry {name: String::from("bootfile-url"), val: 59  , size: 0x1000  ,},
-     DhcpOptTblEntry {name: String::from("bootfile-param"), val: 60  , size: 0x800  ,},];
-
-pub fn display_opts() {
-    let mut i: i32 = 0;
-    printf("Known DHCP options:\n" );
-    i = 0 ;
-    while !DHCPV4_OPT_TBL[i ].name.is_null() {
-        if DHCPV4_OPT_TBL[i ].size  & 0x2000  == 0
-           {
-            printf("%3d %s\n" ,
-                   DHCPV4_OPT_TBL[i ].val,
-                   DHCPV4_OPT_TBL[i ].name);
-        }
-        i += 1
-    };
-}
-
-pub fn display_opts6() {
-    let mut i: i32 = 0;
-    // printf("Known DHCPv6 options:\n"         *const libc::c_char);
-    i = 0 ;
-    while !DHCPV6_OPT_TBL[i ].name.is_null() {
-        if DHCPV6_OPT_TBL[i ].size  & 0x2000  ==
-               0 {
-            printf("%3d %s\n" ,
-                   DHCPV6_OPT_TBL[i ].val,
-                   DHCPV6_OPT_TBL[i ].name);
-        }
-        i += 1
-    };
-}
-
-pub fn lookup_dhcp_opt(mut protocol: u32, mut name: &String)
-                       -> Option<u16> {
-    // let mut t: OptTab = Default::default();
-    // let mut i: u32 = 0;
-
-    if protocol == 10 {
-        for entry in DHCPV6_OPT_TBL {
-            if entry.name == name {
-                return Some(entry.val)
-            }
-        }
-    } else {
-        for entry in DHCPV4_OPT_TBL {
-            if entry.name == name {
-                return Some(entry.val)
-            }
-        }
+#ifdef HAVE_DHCP6
+  if (context->flags & CONTEXT_CONSTRUCTED)
+    {
+      char ifrn_name[IFNAMSIZ];
+      
+      template = p;
+      p += sprintf(p, ", ");
+      
+      if (indextoname(daemon->icmp6fd, context->if_index, ifrn_name))
+	sprintf(p, "%s for %s", (context->flags & CONTEXT_OLD) ? "old prefix" : "constructed", ifrn_name);
     }
-    None
-}
-
-pub fn lookup_dhcp_len(mut protocol: u32, mut val: u16) -> Option<usize> {
-    if protocol == 10 {
-        for entry in DHCPV6_OPT_TBL.into_iter() {
-            if entry.val == val {
-                return Some(entry.size)
-            }
-        }
-    } else {
-        for entry in DHCPV4_OPT_TBL.into_iter() {
-            if entry.val == val {
-                return Some(entry.size)
-            }
-        }
+  else if (context->flags & CONTEXT_TEMPLATE && !(context->flags & CONTEXT_RA_STATELESS))
+    {
+      template = p;
+      p += sprintf(p, ", ");
+      
+      sprintf(p, "template for %s", context->template_interface);  
     }
-    return None
-}
-
-pub fn option_string(mut prot: i32,
-                                       mut opt: u32,
-                                       mut val: &mut Vec<u8>,
-                                       mut opt_len: i32,
-                                       mut buf: &mut String,
-                                       mut buf_len: i32)
- -> &mut String {
-    let mut o: i32 = 0;
-    let mut i: i32 = 0;
-    let mut j: i32 = 0;
-    let mut nodecode: i32 = 0 ;
-    let mut ot: DhcpOptTblEntry = DHCPV4_OPT_TBL;
-    if prot == 10  { ot = DHCPV6_OPT_TBL.as_ptr() }
-    o = 0 ;
-    while !(*ot.offset(o)).name.is_null() {
-        if (*ot.offset(o)).val == opt {
-            if !buf.is_empty() {
-                buf.clear();
-                if (*ot.offset(o)).size  &
-                       0x8000  != 0 {
-                    let mut addr = NetAddress::new();
-                    let mut addr_len: usize = 4 ;
-                    if prot == 10  {
-                        addr_len = 16 
-                    }
-                    buf.offset(0) = 0;
-                    i = 0;
-                    while i <= opt_len - addr_len {
-                        if i != 0  {
-                            strncat(buf, ", " (buf_len).wrapping_sub(strlen(buf)));
-                        }
-                        /* align */
-                        // memcpy(&mut addr                             Vec<u8>,
-                        //        &mut *val.offset(i)                             mut Vec<u8>,
-                        //        addr_len);
-                        addr = val[1..].clone();
-                        inet_ntop(prot,
-                                  &mut *val.offset(i),
-                                  daemon.addrbuff,
-                                  46 );
-                        strncat(buf, daemon.addrbuff, (buf_len).wrapping_sub(strlen(buf)));
-                        i += addr_len
-                    }
-                } else if (*ot.offset(o)).size  &
-                              0x1000  != 0 {
-                    i = 0 ;
-                    j = 0 ;
-                    while i < opt_len && j < buf_len {
-                        let mut c: libc::c_char =
-                            *val.offset(i);
-                        if *(*__ctype_b_loc()).offset(c        ) &
-                               _ISPRINT                               != 0 {
-                            let fresh6 = j;
-                            j = j + 1;
-                            *buf.offset(fresh6) = c
-                        }
-                        i += 1
-                    }
-                } else if (*ot.offset(o)).size  &
-                              0x4000  != 0 &&
-                              prot == 10  {
-                    i = 0 ;
-                    j = 0 ;
-                    while i < opt_len &&
-                              *val.offset(i)  !=
-                                  0  {
-                        let mut k: i32 = 0;
-                        let mut l: i32 =
-                            i + *val.offset(i)  +
-                                1 ;
-                        k = i + 1 ;
-                        while k < opt_len && k < l && j < buf_len {
-                            let mut c_0: libc::c_char =
-                                *val.offset(k);
-                            if *(*__ctype_b_loc()).offset(c_0 
-                                                             )                              &
-                                   _ISPRINT
-                                        != 0 {
-                                let fresh7 = j;
-                                j = j + 1;
-                                *buf.offset(fresh7) = c_0
-                            }
-                            k += 1
-                        }
-                        i = l;
-                        if *val.offset(i)  !=
-                               0  && j < buf_len {
-                            let fresh8 = j;
-                            j = j + 1;
-                            *buf.offset(fresh8) =
-                                '.'
-                        }
-                    }
-                } else if (*ot.offset(o)).size  &
-                              0x800  != 0 {
-                    let mut k_0: i32 = 0;
-                    let mut len: i32 = 0;
-                    let mut p: Vec<u8> = Vec::new();
-                    i = 0 ;
-                    j = 0 ;
-                    loop  {
-                        p = &mut *val.offset(i);
-                        let mut t_cp: Vec<u8> = p;
-                        len = (*t_cp.offset(0)) << 8 | *t_cp.offset(1);
-                        p = p.offset(2);
-                        k_0 = 0;
-                        while k_0 < len && j < buf_len {
-                            let fresh9 = p;
-                            p = p.offset(1);
-                            let mut c_1: libc::c_char =
-                                *fresh9;
-                            if *(*__ctype_b_loc()).offset(c_1) & _ISPRINTvv!= 0 {
-                                let fresh10 = j;
-                                j = j + 1;
-                                *buf.offset(fresh10) = c_1
-                            }
-                            k_0 += 1
-                        }
-                        i += len + 2 ;
-                        if i >= opt_len { break ; }
-                        if j < buf_len {
-                            let fresh11 = j;
-                            j = j + 1;
-                            *buf.offset(fresh11) =
-                                ','
-                        }
-                    }
-                } else if (*ot.offset(o)).size  &
-                              (0x400  | 0x200 ) !=
-                              0 && opt_len != 0  {
-                    let mut dec: u32 =
-                        0 ;
-                    i = 0 ;
-                    while i < opt_len {
-                        dec =
-                            dec << 8  |
-                                *val.offset(i);
-                        i += 1
-                    }
-                    if (*ot.offset(o)).size  &
-                           0x200  != 0 {
-                        prettyprint_time(buf, dec);
-                    } else {
-                        sprintf(buf,
-                                "%u" ,
-                                dec);
-                    }
-                } else { nodecode = 1  }
-            }
-            break ;
-        } else { o += 1 }
+#endif
+     
+  if (!(context->flags & CONTEXT_OLD) &&
+      ((context->flags & CONTEXT_DHCP) || family == AF_INET)) 
+    {
+#ifdef HAVE_DHCP6
+      if (context->flags & CONTEXT_RA_STATELESS)
+	{
+	  if (context->flags & CONTEXT_TEMPLATE)
+	    strncpy(daemon->dhcp_buff, context->template_interface, DHCP_BUFF_SZ);
+	  else
+	    strcpy(daemon->dhcp_buff, daemon->addrbuff);
+	}
+      else 
+#endif
+	inet_ntop(family, start, daemon->dhcp_buff, DHCP_BUFF_SZ);
+      inet_ntop(family, end, daemon->dhcp_buff3, DHCP_BUFF_SZ);
+      my_syslog(MS_DHCP | LOG_INFO, 
+		(context->flags & CONTEXT_RA_STATELESS) ? 
+		_("%s stateless on %s%.0s%.0s%s") :
+		(context->flags & CONTEXT_STATIC) ? 
+		_("%s, static leases only on %.0s%s%s%.0s") :
+		(context->flags & CONTEXT_PROXY) ?
+		_("%s, proxy on subnet %.0s%s%.0s%.0s") :
+		_("%s, IP range %s -- %s%s%.0s"),
+		(family != AF_INET) ? "DHCPv6" : "DHCP",
+		daemon->dhcp_buff, daemon->dhcp_buff3, daemon->namebuff, template);
     }
-    if opt_len != 0  && !buf.is_null() &&
-           ((*ot.offset(o)).name.is_null() || nodecode != 0) {
-        let mut trunc: i32 = 0 ;
-        if opt_len > 14  {
-            trunc = 1 ;
-            opt_len = 14 
-        }
-        print_mac(buf, val, opt_len);
-        if trunc != 0 {
-            strncat(buf, "..." ,
-                    (buf_len).wrapping_sub(strlen(buf)));
-        }
+  
+#ifdef HAVE_DHCP6
+  if (context->flags & CONTEXT_TEMPLATE)
+    {
+      strcpy(daemon->addrbuff, context->template_interface);
+      template = "";
     }
-    return if !(*ot.offset(o)).name.is_null() {
-               (*ot.offset(o)).name
-           } else { ""  } ;
+
+  if ((context->flags & CONTEXT_RA_NAME) && !(context->flags & CONTEXT_OLD))
+    my_syslog(MS_DHCP | LOG_INFO, _("DHCPv4-derived IPv6 names on %s%s"), daemon->addrbuff, template);
+  
+  if ((context->flags & CONTEXT_RA) || (option_bool(OPT_RA) && (context->flags & CONTEXT_DHCP) && family == AF_INET6)) 
+    my_syslog(MS_DHCP | LOG_INFO, _("router advertisement on %s%s"), daemon->addrbuff, template);
+#endif
+
 }
 
-pub fn dhcp_context_to_string(mut family: u32, mut context: &DhcpContext) -> String {
-    /* We don't handle compressed rfc1035 names, so no good in IPv4 land */
-    /* Cannot use dhcp_buff* for RA contexts */
-    format!("{}", context).to_string()
-}
+void log_relay(int family, struct dhcp_relay *relay)
+{
+  inet_ntop(family, &relay->local, daemon->addrbuff, ADDRSTRLEN);
+  inet_ntop(family, &relay->server, daemon->namebuff, ADDRSTRLEN); 
 
-pub fn log_relay(mut family: u32, mut relay: &DhcpRelay) -> String {
-    format!("{}", relay).to_string()
+  if (relay->interface)
+    my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s to %s via %s"), daemon->addrbuff, daemon->namebuff, relay->interface);
+  else
+    my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s to %s"), daemon->addrbuff, daemon->namebuff);
 }
+   
+#endif

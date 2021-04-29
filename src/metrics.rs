@@ -14,7 +14,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-pub static mut metric_names: [*const libc::c_char; 20] = [
+#include "dnsmasq.h"
+
+const char * metric_names[] = {
     "dns_cache_inserted",
     "dns_cache_live_freed",
     "dns_queries_forwarded",
@@ -35,8 +37,8 @@ pub static mut metric_names: [*const libc::c_char; 20] = [
     "leases_pruned_4",
     "leases_allocated_6",
     "leases_pruned_6",
-];
+};
 
-pub fn get_metric_name(mut i: i32) -> *const libc::c_char {
+const char* get_metric_name(int i) {
     return metric_names[i];
 }

@@ -1,614 +1,445 @@
-use crate::defines::{NetAddress, DhcpContext,  DhcpLease, DhcpVendor, DhcpMac, DhcpNetIdList, DhcpPacket, DnsmasqDaemon, DhcpConfig, DhcpNetId, DhcpOpt,   SharedNetwork, DhcpMatchName, AddrList2, PxeService, C2rustUnnamed9, DhcpBoot,  Irec, _ISPRINT, DhcpPxeVendor,  DelayConfig};
-use crate::util::{expand_buf, memcmp_masked, is_same_net4, legal_hostname, hostname_isequal,  prettyprint_time, print_mac,   do_rfc1035_name};
-use crate::lease::{lease_find_by_client, lease_find_by_addr, lease_prune, lease4_allocate, lease_set_hwaddr, lease_set_hostname, lease_set_expires, lease_set_interface, lease_add_extradata};
-use crate::dhcp_common::{match_bytes, find_config, run_tag_if, match_netid, log_tags, strip_hostname, config_has_mac, option_string, option_filter};
-use crate::dhcp::{address_available, address_allocate, narrow_context, config_find_by_address, do_icmp_ping, host_from_dns};
-use crate::domain::get_domain;
-use crate::slack::{METRIC_BOOTP, METRIC_PXE, METRIC_DHCPDECLINE, METRIC_DHCPRELEASE, METRIC_DHCPDISCOVER, METRIC_DHCPOFFER, METRIC_DHCPREQUEST, METRIC_DHCPINFORM, METRIC_DHCPACK, METRIC_NOANSWER, METRIC_DHCPNAK};
-use crate::cache::a_record_from_hosts;
-use crate::network::enumerate_interfaces;
-use crate::delay_dhcp;
+/* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
-pub fn dhcp_reply(mut context: DhcpContext,
-                                    mut iface_name: &mut String,
-                                    mut int_index: i32,
-                                    mut sz: usize, mut now: time::Instant,
-                                    mut unicast_dest: i32,
-                                    mut loopback: i32,
-                                    mut is_inform: ,
-                                    mut pxe: i32,
-                                    mut fallback: NetAddress,
-                                    mut recvtime: time::Instant) -> usize {
-    let mut opt: mut Vec<u8> = 0;
-    let mut clid: mut Vec<u8> = 0;
-    let mut ltmp: DhcpLease = 0;
-    let mut lease: DhcpLease = 0;
-    let mut vendor: DhcpVendor = 0 ;
-    let mut mac: DhcpMac = 0 ;
-    let mut id_list: DhcpNetIdList = 0;
-    let mut clid_len: i32 = 0;
-    let mut ignore: i32 = 0;
-    let mut do_classes: i32 = 0;
-    let mut rapid_commit: i32 = 0;
-    let mut selecting: i32 = 0;
-    let mut pxearch: i32 = -(1);
-    let mut pxevendor: *const libc::c_char = 0;
-    let mut mess: DhcpPacket =
-        daemon.dhcp_packet.iov_base ;
-    let mut end: mut Vec<u8> =
-        mess.offset(1);
-    let mut real_end: mut Vec<u8> =
-        mess.offset(1);
-    let mut hostname: &mut String = 0 ;
-    let mut offer_hostname: &mut String = 0 ;
-    let mut client_hostname: &mut String = 0 ;
-    let mut domain: &mut String = 0 ;
-    let mut hostname_auth: i32 = 0;
-    let mut borken_opt: i32 = 0;
-    let mut req_options: mut Vec<u8> = 0;
-    let mut message: &mut String = 0 ;
-    let mut time: u32 = 0;
-    let mut config: DhcpConfig = 0;
-    let mut netid: DhcpNetId = 0 ;
-    let mut tagif_netid: DhcpNetId = 0 ;
-    let mut subnet_addr: NetAddress = NetAddress {s_addr: 0,};
-    let mut override_0: NetAddress = NetAddress {s_addr: 0,};
-    let mut fuzz: u16 = 0 ;
-    let mut mess_type: u32 = 0;
-    let mut fqdn_flags: u8 = 0;
-    let mut agent_id: mut Vec<u8> = 0;
-    let mut uuid: mut Vec<u8> = 0;
-    let mut emac: mut Vec<u8> = 0;
-    let mut vendor_class_len: i32 = 0;
-    let mut emac_len: i32 = 0;
-    let mut known_id: DhcpNetId =
-        DhcpNetId {net: 0 , next: 0 ,};
-    let mut iface_id: DhcpNetId =
-        DhcpNetId {net: 0 , next: 0 ,};
-    let mut cpewan_id: DhcpNetId =
-        DhcpNetId {net: 0 , next: 0 ,};
-    let mut o: DhcpOpt = 0 ;
-    let mut pxe_uuid: [u8; 17] = [0; 17];
-    let mut oui: mut Vec<u8> = 0;
-    let mut serial: mut Vec<u8> = 0;
-    let mut class: mut Vec<u8> = 0;
-    override_0.s_addr = 0;
-    subnet_addr.s_addr = override_0.s_addr;
-    /* set tag with name == interface */
-    iface_id.net = iface_name;
-    iface_id.next = 0 ;
-    netid = &mut iface_id;
-    if mess.op != 1 ||
-           mess.hlen > 16 {
-        return 0
-    }
-    if mess.htype == 0 &&
-           mess.hlen != 0 {
-        return 0
-    }
-    /* check for DHCP rather than BOOTP */
-    opt = option_find(mess, sz, 53, 1);
-    if !opt.is_null() {
-        let mut cookie: u32 =
-            __bswap_32(0x63825363);
-        /* only insist on a cookie for DHCP. */
-        if memcmp(mess.options.as_mut_ptr(),
-                  &mut cookie ,
-                  ::std::mem::size_of::<u32>()) !=
-               0 {
-            return 0
-        }
-        mess_type = option_uint(opt, 0, 1);
-        /* two things to note here: expand_buf may move the packet,
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; version 2 dated June, 1991, or
+   (at your option) version 3 dated 29 June, 2007.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+     
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "dnsmasq.h"
+
+#ifdef HAVE_DHCP
+
+#define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
+#define option_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2u+(unsigned int)(i)]))
+
+#ifdef HAVE_SCRIPT
+static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
+#endif
+
+static int sanitise(unsigned char *opt, char *buf);
+static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback);
+static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt);
+static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val);
+static void option_put_string(struct dhcp_packet *mess, unsigned char *end, 
+			      int opt, const char *string, int null_term);
+static struct in_addr option_addr(unsigned char *opt);
+static unsigned int option_uint(unsigned char *opt, int offset, int size);
+static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
+		       int mac_len, char *interface, char *string, char *err, u32 xid);
+static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize);
+static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize);
+static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end);
+static void clear_packet(struct dhcp_packet *mess, unsigned char *end);
+static int in_list(unsigned char *list, int opt);
+static void do_options(struct dhcp_context *context,
+		       struct dhcp_packet *mess,
+		       unsigned char *end,
+		       unsigned char *req_options,
+		       char *hostname, 
+		       char *domain,
+		       struct dhcp_netid *netid,
+		       struct in_addr subnet_addr, 
+		       unsigned char fqdn_flags,
+		       int null_term, int pxe_arch,
+		       unsigned char *uuid,
+		       int vendor_class_len,
+		       time_t now,
+		       unsigned int lease_time,
+		       unsigned short fuzz,
+		       const char *pxevendor);
+
+
+static void match_vendor_opts(unsigned char *opt, struct dhcp_opt *dopt); 
+static int do_encap_opts(struct dhcp_opt *opt, int encap, int flag, struct dhcp_packet *mess, unsigned char *end, int null_term);
+static void pxe_misc(struct dhcp_packet *mess, unsigned char *end, unsigned char *uuid, const char *pxevendor);
+static int prune_vendor_opts(struct dhcp_netid *netid);
+static struct dhcp_opt *pxe_opts(int pxe_arch, struct dhcp_netid *netid, struct in_addr local, time_t now);
+struct dhcp_boot *find_boot(struct dhcp_netid *netid);
+static int pxe_uefi_workaround(int pxe_arch, struct dhcp_netid *netid, struct dhcp_packet *mess, struct in_addr local, time_t now, int pxe);
+static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid);
+static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_vendor);
+
+size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+		  size_t sz, time_t now, int unicast_dest, int loopback,
+		  int *is_inform, int pxe, struct in_addr fallback, time_t recvtime)
+{
+  unsigned char *opt, *clid = NULL;
+  struct dhcp_lease *ltmp, *lease = NULL;
+  struct dhcp_vendor *vendor;
+  struct dhcp_mac *mac;
+  struct dhcp_netid_list *id_list;
+  int clid_len = 0, ignore = 0, do_classes = 0, rapid_commit = 0, selecting = 0, pxearch = -1;
+  const char *pxevendor = NULL;
+  struct dhcp_packet *mess = (struct dhcp_packet *)daemon->dhcp_packet.iov_base;
+  unsigned char *end = (unsigned char *)(mess + 1); 
+  unsigned char *real_end = (unsigned char *)(mess + 1); 
+  char *hostname = NULL, *offer_hostname = NULL, *client_hostname = NULL, *domain = NULL;
+  int hostname_auth = 0, borken_opt = 0;
+  unsigned char *req_options = NULL;
+  char *message = NULL;
+  unsigned int time;
+  struct dhcp_config *config;
+  struct dhcp_netid *netid, *tagif_netid;
+  struct in_addr subnet_addr, override;
+  unsigned short fuzz = 0;
+  unsigned int mess_type = 0;
+  unsigned char fqdn_flags = 0;
+  unsigned char *agent_id = NULL, *uuid = NULL;
+  unsigned char *emac = NULL;
+  int vendor_class_len = 0, emac_len = 0;
+  struct dhcp_netid known_id, iface_id, cpewan_id;
+  struct dhcp_opt *o;
+  unsigned char pxe_uuid[17];
+  unsigned char *oui = NULL, *serial = NULL;
+#ifdef HAVE_SCRIPT
+  unsigned char *class = NULL;
+#endif
+
+  subnet_addr.s_addr = override.s_addr = 0;
+
+  /* set tag with name == interface */
+  iface_id.net = iface_name;
+  iface_id.next = NULL;
+  netid = &iface_id; 
+  
+  if (mess->op != BOOTREQUEST || mess->hlen > DHCP_CHADDR_MAX)
+    return 0;
+   
+  if (mess->htype == 0 && mess->hlen != 0)
+    return 0;
+
+  /* check for DHCP rather than BOOTP */
+  if ((opt = option_find(mess, sz, OPTION_MESSAGE_TYPE, 1)))
+    {
+      u32 cookie = htonl(DHCP_COOKIE);
+      
+      /* only insist on a cookie for DHCP. */
+      if (memcmp(mess->options, &cookie, sizeof(u32)) != 0)
+	return 0;
+      
+      mess_type = option_uint(opt, 0, 1);
+      
+      /* two things to note here: expand_buf may move the packet,
 	 so reassign mess from daemon->packet. Also, the size
 	 sent includes the IP and UDP headers, hence the magic "-28" */
-        opt = option_find(mess, sz, 57, 2);
-        if !opt.is_null() {
-            let mut size: usize =
-                (option_uint(opt, 0, 2)               usize).wrapping_sub(28);
-            if size > 16384 {
-                size = 16384
-            } else if size <
-                          ::std::mem::size_of::<DhcpPacket>() {
-                size = ::std::mem::size_of::<DhcpPacket>()
-            }
-            if expand_buf(&mut daemon.dhcp_packet, size) != 0 {
-                mess =
-                    daemon.dhcp_packet.iov_base                  DhcpPacket;
-                end = (mess).offset(size);
-                real_end = end
-            }
-        }
-        /* Some buggy clients set ciaddr when they shouldn't, so clear that here since
+      if ((opt = option_find(mess, sz, OPTION_MAXMESSAGE, 2)))
+	{
+	  size_t size = (size_t)option_uint(opt, 0, 2) - 28;
+	  
+	  if (size > DHCP_PACKET_MAX)
+	    size = DHCP_PACKET_MAX;
+	  else if (size < sizeof(struct dhcp_packet))
+	    size = sizeof(struct dhcp_packet);
+	  
+	  if (expand_buf(&daemon->dhcp_packet, size))
+	    {
+	      mess = (struct dhcp_packet *)daemon->dhcp_packet.iov_base;
+	      real_end = end = ((unsigned char *)mess) + size;
+	    }
+	}
+
+      /* Some buggy clients set ciaddr when they shouldn't, so clear that here since
 	 it can affect the context-determination code. */
-        if !option_find(mess, sz, 50,
-                        4).is_null() ||
-               mess_type == 1 {
-            mess.ciaddr.s_addr = 0
-        }
-        /* search for device identity from CPEWAN devices, we pass this through to the script */
-        opt = option_find(mess, sz, 125, 5);
-        if !opt.is_null() {
-            let mut elen: u32 = 0;
-            let mut offset: u32 = 0;
-            let mut len: u32 =
-                *opt.offset(1)              libc::c_uint;
-            offset = 0;
-            while offset < len.wrapping_sub(5)
-                  {
-                elen =
-                    option_uint(opt,
-                                offset.wrapping_add(4     libc::c_uint)                              , 1);
-                if option_uint(opt, offset, 4)
-                       == 3561 &&
-                       offset.wrapping_add(elen).wrapping_add(5
-                                                                                libc::c_uint)
-                           <= len {
-                    let mut x: mut Vec<u8> =
-                        &mut *opt.offset((2                                        libc::c_uint).wrapping_add(offset.wrapping_add(5                                  libc::c_uint))
-                                            )
-                           ;
-                    let mut y: mut Vec<u8> =
-                        &mut *opt.offset((2                                        libc::c_uint).wrapping_add(offset.wrapping_add(elen).wrapping_add(5                                                                                                              libc::c_uint))
-                                            )
-                           ;
-                    oui =
-                        option_find1(x, y, 1,
-                                     1);
-                    serial =
-                        option_find1(x, y, 2,
-                                     1);
-                    class =
-                        option_find1(x, y, 3,
-                                     1);
-                    /* If TR069-id is present set the tag "cpewan-id" to facilitate echoing 
+      if ((option_find(mess, sz, OPTION_REQUESTED_IP, INADDRSZ) || mess_type == DHCPDISCOVER))
+	mess->ciaddr.s_addr = 0;
+
+      /* search for device identity from CPEWAN devices, we pass this through to the script */
+      if ((opt = option_find(mess, sz, OPTION_VENDOR_IDENT_OPT, 5)))
+	{
+	  unsigned  int elen, offset, len = option_len(opt);
+	  
+	  for (offset = 0; offset < (len - 5); offset += elen + 5)
+	    {
+	      elen = option_uint(opt, offset + 4 , 1);
+	      if (option_uint(opt, offset, 4) == BRDBAND_FORUM_IANA && offset + elen + 5 <= len)
+		{
+		  unsigned char *x = option_ptr(opt, offset + 5);
+		  unsigned char *y = option_ptr(opt, offset + elen + 5);
+		  oui = option_find1(x, y, 1, 1);
+		  serial = option_find1(x, y, 2, 1);
+#ifdef HAVE_SCRIPT
+		  class = option_find1(x, y, 3, 1);		  
+#endif
+		  /* If TR069-id is present set the tag "cpewan-id" to facilitate echoing 
 		     the gateway id back. Note that the device class is optional */
-                    if !oui.is_null() && !serial.is_null() {
-                        cpewan_id.net =
-                            "cpewan-id"                           *const libc::c_char ;
-                        cpewan_id.next = netid;
-                        netid = &mut cpewan_id
-                    }
-                    break ;
-                } else {
-                    offset =
-                        offset.wrapping_add(elen.wrapping_add(5
-                                                                                libc::c_uint))
-                }
-            }
-        }
-        opt = option_find(mess, sz, 82, 1);
-        if !opt.is_null() {
-            /* Any agent-id needs to be copied back out, verbatim, as the last option
+		  if (oui && serial)
+		    {
+		      cpewan_id.net = "cpewan-id";
+		      cpewan_id.next = netid;
+		      netid = &cpewan_id;
+		    }
+		  break;
+		}
+	    }
+	}
+      
+      if ((opt = option_find(mess, sz, OPTION_AGENT_ID, 1)))
+	{
+	  /* Any agent-id needs to be copied back out, verbatim, as the last option
 	     in the packet. Here, we shift it to the very end of the buffer, if it doesn't
 	     get overwritten, then it will be shuffled back at the end of processing.
 	     Note that the incoming options must not be overwritten here, so there has to 
 	     be enough free space at the end of the packet to copy the option. */
-            let mut sopt: mut Vec<u8> = 0;
-            let mut total: u32 =
-                (*opt.offset(1) +
-                     2);
-            let mut last_opt: mut Vec<u8> =
-                option_find1((&mut *mess.options.as_mut_ptr().offset(0
-                                                              )
-                                                              &mut u8) .offset(::std::mem::size_of::<u32>()
-                      ),
-                             (mess).offset(sz),
-                             255, 0);
-            if !last_opt.is_null() && last_opt < end.offset(-(total))
-               {
-                end = end.offset(-(total));
-                agent_id = end;
-                memcpy(agent_id,
-                       opt, total);
-            }
-            /* look for RFC3527 Link selection sub-option */
-            sopt =
-                option_find1(&mut *opt.offset((2libc::c_uint).wrapping_add(0
+	  unsigned char *sopt;
+	  unsigned int total = option_len(opt) + 2;
+	  unsigned char *last_opt = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + sz,
+						 OPTION_END, 0);
+	  if (last_opt && last_opt < end - total)
+	    {
+	      end -= total;
+	      agent_id = end;
+	      memcpy(agent_id, opt, total);
+	    }
 
-                                                                                                                libc::c_uint)
-                                                 )                           mut Vec<u8>                           mut Vec<u8>,
-                             &mut *opt.offset((2libc::c_uint).wrapping_add(*opt.offset(1                      )
+	  /* look for RFC3527 Link selection sub-option */
+	  if ((sopt = option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_SUBNET_SELECT, INADDRSZ)))
+	    subnet_addr = option_addr(sopt);
 
-                                                                                                                libc::c_uint)
-                                                 )                           mut Vec<u8>                           mut Vec<u8>, 5,
-                             4);
-            if !sopt.is_null() { subnet_addr = option_addr(sopt) }
-            /* look for RFC5107 server-identifier-override */
-            sopt =
-                option_find1(&mut *opt.offset((2libc::c_uint).wrapping_add(0
+	  /* look for RFC5107 server-identifier-override */
+	  if ((sopt = option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_SERVER_OR, INADDRSZ)))
+	    override = option_addr(sopt);
+	  
+	  /* if a circuit-id or remote-is option is provided, exact-match to options. */ 
+	  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
+	    {
+	      int search;
+	      
+	      if (vendor->match_type == MATCH_CIRCUIT)
+		search = SUBOPT_CIRCUIT_ID;
+	      else if (vendor->match_type == MATCH_REMOTE)
+		search = SUBOPT_REMOTE_ID;
+	      else if (vendor->match_type == MATCH_SUBSCRIBER)
+		search = SUBOPT_SUBSCR_ID;
+	      else 
+		continue;
 
-                                                                                                                libc::c_uint)
-                                                 )                           mut Vec<u8>                           mut Vec<u8>,
-                             &mut *opt.offset((2libc::c_uint).wrapping_add(*opt.offset(1                      )
+	      if ((sopt = option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), search, 1)) &&
+		  vendor->len == option_len(sopt) &&
+		  memcmp(option_ptr(sopt, 0), vendor->data, vendor->len) == 0)
+		{
+		  vendor->netid.next = netid;
+		  netid = &vendor->netid;
+		} 
+	    }
+	}
 
-                                                                                                                libc::c_uint)
-                                                 )                           mut Vec<u8>                           mut Vec<u8>, 11,
-                             4);
-            if !sopt.is_null() { override_0 = option_addr(sopt) }
-            let mut current_block_52: u64;
-            /* if a circuit-id or remote-is option is provided, exact-match to options. */
-            vendor = daemon.dhcp_vendors;
-            while !vendor.is_null() {
-                let mut search: i32 = 0;
-                if vendor.match_type == 3 {
-                    search = 1;
-                    current_block_52 = 7385833325316299293;
-                } else if vendor.match_type == 4 {
-                    search = 2;
-                    current_block_52 = 7385833325316299293;
-                } else if vendor.match_type == 5 {
-                    search = 6;
-                    current_block_52 = 7385833325316299293;
-                } else { current_block_52 = 15970011996474399071; }
-                match current_block_52 {
-                    7385833325316299293 => {
-                        sopt =
-                            option_find1(&mut *opt.offset((2            libc::c_uint).wrapping_add(0                      libc::c_uint)
-                                                             )                                       mut Vec<u8>                                      Vec<u8>                                       mut Vec<u8>,
-                                         &mut *opt.offset((2            libc::c_uint).wrapping_add(*opt.offset(1                                                                      )                      libc::c_uint)
-                                                             )                                       mut Vec<u8>                                      Vec<u8>                                       mut Vec<u8>, search,
-                                         1);
-                        if !sopt.is_null() &&
-                               vendor.len ==
-                                   *sopt.offset(1)                                  &&
-                               memcmp(&mut *sopt.offset((2          libc::c_uint).wrapping_add(0              libc::c_uint)
-                                                           )                                    mut Vec<u8>                                   Vec<u8>,
-                                      vendor.data,
-                                      vendor.len) ==
-                                   0 {
-                            vendor.netid.next = netid;
-                            netid = &mut vendor.netid
-                        }
-                    }
-                    _ => { }
-                }
-                vendor = vendor.next
-            }
-        }
-        /* Check for RFC3011 subnet selector - only if RFC3527 one not present */
-        if subnet_addr.s_addr == 0 &&
-               {
-                   opt =
-                       option_find(mess, sz, 118,
-                                   4);
-                   !opt.is_null()
-               } {
-            subnet_addr = option_addr(opt)
-        }
-        /* If there is no client identifier option, use the hardware address */
-        if daemon.options[(59 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (59 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               == 0 &&
-               {
-                   opt =
-                       option_find(mess, sz, 61,
-                                   1);
-                   !opt.is_null()
-               } {
-            clid_len = *opt.offset(1);
-            clid =
-                &mut *opt.offset((2                                libc::c_uint).wrapping_add(0
-                                                                                      libc::c_uint)
-                                    )             Vec<u8>
-        }
-        /* do we have a lease in store? */
-        lease =
-            lease_find_by_client(mess.chaddr.as_mut_ptr(),
-                                 mess.hlen,
-                                 mess.htype, clid,
-                                 clid_len);
-        /* If this request is missing a clid, but we've seen one before, 
+      /* Check for RFC3011 subnet selector - only if RFC3527 one not present */
+      if (subnet_addr.s_addr == 0 && (opt = option_find(mess, sz, OPTION_SUBNET_SELECT, INADDRSZ)))
+	subnet_addr = option_addr(opt);
+      
+      /* If there is no client identifier option, use the hardware address */
+      if (!option_bool(OPT_IGNORE_CLID) && (opt = option_find(mess, sz, OPTION_CLIENT_ID, 1)))
+	{
+	  clid_len = option_len(opt);
+	  clid = option_ptr(opt, 0);
+	}
+
+      /* do we have a lease in store? */
+      lease = lease_find_by_client(mess->chaddr, mess->hlen, mess->htype, clid, clid_len);
+
+      /* If this request is missing a clid, but we've seen one before, 
 	 use it again for option matching etc. */
-        if !lease.is_null() && clid.is_null() && !lease.clid.is_null() {
-            clid_len = lease.clid_len;
-            clid = lease.clid
-        }
-        /* find mac to use for logging and hashing */
-        emac =
-            extended_hwaddr(mess.htype,
-                            mess.hlen,
-                            mess.chaddr.as_mut_ptr(), clid_len, clid,
-                            &mut emac_len)
+      if (lease && !clid && lease->clid)
+	{
+	  clid_len = lease->clid_len;
+	  clid = lease->clid;
+	}
+
+      /* find mac to use for logging and hashing */
+      emac = extended_hwaddr(mess->htype, mess->hlen, mess->chaddr, clid_len, clid, &emac_len);
     }
-    mac = daemon.dhcp_macs;
-    while !mac.is_null() {
-        if mac.hwaddr_len == mess.hlen &&
-               (mac.hwaddr_type == mess.htype ||
-                    mac.hwaddr_type == 0) &&
-               memcmp_masked(mac.hwaddr.as_mut_ptr(),
-                             mess.chaddr.as_mut_ptr(),
-                             mess.hlen, mac.mask) != 0 {
-            mac.netid.next = netid;
-            netid = &mut mac.netid
-        }
-        mac = mac.next
-    }
-    /* Determine network for this packet. Our caller will have already linked all the 
+  
+  for (mac = daemon->dhcp_macs; mac; mac = mac->next)
+    if (mac->hwaddr_len == mess->hlen &&
+	(mac->hwaddr_type == mess->htype || mac->hwaddr_type == 0) &&
+	memcmp_masked(mac->hwaddr, mess->chaddr, mess->hlen, mac->mask))
+      {
+	mac->netid.next = netid;
+	netid = &mac->netid;
+      }
+  
+  /* Determine network for this packet. Our caller will have already linked all the 
      contexts which match the addresses of the receiving interface but if the 
      machine has an address already, or came via a relay, or we have a subnet selector, 
      we search again. If we don't have have a giaddr or explicit subnet selector, 
      use the ciaddr. This is necessary because a  machine which got a lease via a 
      relay won't use the relay to renew. If matching a ciaddr fails but we have a context 
      from the physical network, continue using that to allow correct DHCPNAK generation later. */
-    if mess.giaddr.s_addr != 0 || subnet_addr.s_addr != 0 ||
-           mess.ciaddr.s_addr != 0 {
-        let mut context_tmp: DhcpContext = 0;
-        let mut context_new: DhcpContext = 0;
-        let mut share: SharedNetwork = 0 ;
-        let mut addr: NetAddress = NetAddress {s_addr: 0,};
-        let mut force: i32 = 0;
-        let mut via_relay: i32 = 0;
-        if subnet_addr.s_addr != 0 {
-            addr = subnet_addr;
-            force = 1
-        } else if mess.giaddr.s_addr != 0 {
-            addr = mess.giaddr;
-            force = 1;
-            via_relay = 1
-        } else {
-            /* If ciaddr is in the hardware derived set of contexts, leave that unchanged */
-            addr = mess.ciaddr;
-            context_tmp = context;
-            while !context_tmp.is_null() {
-                if context_tmp.netmask.s_addr != 0 &&
-                       is_same_net4(addr, context_tmp.start,
-                                    context_tmp.netmask) != 0 &&
-                       is_same_net4(addr, context_tmp.end,
-                                    context_tmp.netmask) != 0 {
-                    context_new = context;
-                    break ;
-                } else { context_tmp = context_tmp.current }
-            }
-        }
-        if context_new.is_null() {
-            context_tmp = daemon.dhcp;
-            while !context_tmp.is_null() {
-                let mut netmask: NetAddress = context_tmp.netmask;
-                /* guess the netmask for relayed networks */
-                if context_tmp.flags &
-                       (1) << 1 == 0 &&
-                       context_tmp.netmask.s_addr ==
-                           0 {
-                    if __bswap_32(context_tmp.start.s_addr) &
-                           0x80000000 ==
-                           0 &&
-                           __bswap_32(context_tmp.end.s_addr) &
-                               0x80000000 ==
-                               0 {
-                        netmask.s_addr =
-                            __bswap_32(0xff000000)
-                    } else if __bswap_32(context_tmp.start.s_addr) &
-                                  0xc0000000 ==
-                                  0x80000000 &&
-                                  __bswap_32(context_tmp.end.s_addr) &
-                                      0xc0000000 ==
-                                      0x80000000 {
-                        netmask.s_addr =
-                            __bswap_32(0xffff0000)
-                    } else if __bswap_32(context_tmp.start.s_addr) &
-                                  0xe0000000 ==
-                                  0xc0000000 &&
-                                  __bswap_32(context_tmp.end.s_addr) &
-                                      0xe0000000 ==
-                                      0xc0000000 {
-                        netmask.s_addr =
-                            __bswap_32(0xffffff00)
-                    }
-                }
-                /* check to see is a context is OK because of a shared address on
-		 the relayed subnet. */
-                if via_relay != 0 {
-                    share = daemon.shared_networks;
-                    while !share.is_null() {
-                        if !(share.shared_addr.s_addr ==
-                                 0) {
-                            if !(share.if_index != 0 ||
-                                     share.match_addr.s_addr !=
-                                         mess.giaddr.s_addr) {
-                                if netmask.s_addr !=
-                                       0 &&
-                                       is_same_net4(share.shared_addr,
-                                                    context_tmp.start,
-                                                    netmask) != 0 &&
-                                       is_same_net4(share.shared_addr,
-                                                    context_tmp.end,
-                                                    netmask) != 0 {
-                                    break ;
-                                }
-                            }
-                        }
-                        share = share.next
-                    }
-                }
-                /* This section fills in context mainly when a client which is on a remote (relayed)
-		 network renews a lease without using the relay, after dnsmasq has restarted. */
-                if !share.is_null() ||
-                       netmask.s_addr != 0 &&
-                           is_same_net4(addr, context_tmp.start, netmask) !=
-                               0 &&
-                           is_same_net4(addr, context_tmp.end, netmask) != 0
-                   {
-                    context_tmp.netmask = netmask;
-                    if context_tmp.local.s_addr ==
-                           0 {
-                        context_tmp.local = fallback
-                    }
-                    if context_tmp.router.s_addr ==
-                           0 && share.is_null()
-                       {
-                        context_tmp.router = mess.giaddr
-                    }
-                    /* fill in missing broadcast addresses for relayed ranges */
-                    if context_tmp.flags &
-                           (1) << 2 == 0 &&
-                           context_tmp.broadcast.s_addr ==
-                               0 {
-                        context_tmp.broadcast.s_addr =
-                            context_tmp.start.s_addr |
-                                !context_tmp.netmask.s_addr
-                    }
-                    context_tmp.current = context_new;
-                    context_new = context_tmp
-                }
-                context_tmp = context_tmp.next
-            }
-        }
-        if !context_new.is_null() || force != 0 { context = context_new }
-    }
-    if context.is_null() {
-        my_syslog((3) << 3 | 4,
-                  "no address range available for DHCP request %s %s"                *const u8,
-                  if subnet_addr.s_addr != 0 {
-                      "with subnet selector"
-                  } else { "via"  },
-                  if subnet_addr.s_addr != 0 {
-                      inet_ntoa(subnet_addr)
-                  } else if mess.giaddr.s_addr != 0 {
-                      inet_ntoa(mess.giaddr)
-                  } else { iface_name });
-        return 0
-    }
-    if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+  if (mess->giaddr.s_addr || subnet_addr.s_addr || mess->ciaddr.s_addr)
+    {
+      struct dhcp_context *context_tmp, *context_new = NULL;
+      struct shared_network *share = NULL;
+      struct in_addr addr;
+      int force = 0, via_relay = 0;
+      
+      if (subnet_addr.s_addr)
+	{
+	  addr = subnet_addr;
+	  force = 1;
+	}
+      else if (mess->giaddr.s_addr)
+	{
+	  addr = mess->giaddr;
+	  force = 1;
+	  via_relay = 1;
+	}
+      else
+	{
+	  /* If ciaddr is in the hardware derived set of contexts, leave that unchanged */
+	  addr = mess->ciaddr;
+	  for (context_tmp = context; context_tmp; context_tmp = context_tmp->current)
+	    if (context_tmp->netmask.s_addr && 
+		is_same_net(addr, context_tmp->start, context_tmp->netmask) &&
+		is_same_net(addr, context_tmp->end, context_tmp->netmask))
+	      {
+		context_new = context;
+		break;
+	      }
+	} 
+		
+      if (!context_new)
+	{
+	  for (context_tmp = daemon->dhcp; context_tmp; context_tmp = context_tmp->next)
+	    {
+	      struct in_addr netmask = context_tmp->netmask;
+	      
+	      /* guess the netmask for relayed networks */
+	      if (!(context_tmp->flags & CONTEXT_NETMASK) && context_tmp->netmask.s_addr == 0)
+		{
+		  if (IN_CLASSA(ntohl(context_tmp->start.s_addr)) && IN_CLASSA(ntohl(context_tmp->end.s_addr)))
+		    netmask.s_addr = htonl(0xff000000);
+		  else if (IN_CLASSB(ntohl(context_tmp->start.s_addr)) && IN_CLASSB(ntohl(context_tmp->end.s_addr)))
+		    netmask.s_addr = htonl(0xffff0000);
+		  else if (IN_CLASSC(ntohl(context_tmp->start.s_addr)) && IN_CLASSC(ntohl(context_tmp->end.s_addr)))
+		    netmask.s_addr = htonl(0xffffff00); 
+		}
 
-                                                                                                               ))
-           != 0 {
-        let mut context_tmp_0: DhcpContext = 0;
-        context_tmp_0 = context;
-        while !context_tmp_0.is_null() {
-            strcpy(daemon.namebuff,
-                   inet_ntoa(context_tmp_0.start));
-            if context_tmp_0.flags &
-                   ((1) << 0 |
-                        (1) << 3) != 0 {
-                my_syslog((3) << 3 |
-                              6,
-                          "%u available DHCP subnet: %s/%s", __bswap_32(mess.xid),
-                          daemon.namebuff,
-                          inet_ntoa(context_tmp_0.netmask));
-            } else {
-                my_syslog((3) << 3 |
-                              6,
-                          "%u available DHCP range: %s -- %s"                        *const u8,
-                          __bswap_32(mess.xid), daemon.namebuff,
-                          inet_ntoa(context_tmp_0.end));
-            }
-            context_tmp_0 = context_tmp_0.current
-        }
+	      /* check to see is a context is OK because of a shared address on
+		 the relayed subnet. */
+	      if (via_relay)
+		for (share = daemon->shared_networks; share; share = share->next)
+		  {
+#ifdef HAVE_DHCP6
+		    if (share->shared_addr.s_addr == 0)
+		      continue;
+#endif
+		    if (share->if_index != 0 ||
+			share->match_addr.s_addr != mess->giaddr.s_addr)
+		      continue;
+		    
+		    if (netmask.s_addr != 0  && 
+			is_same_net(share->shared_addr, context_tmp->start, netmask) &&
+			is_same_net(share->shared_addr, context_tmp->end, netmask))
+		      break;
+		  }
+	      
+	      /* This section fills in context mainly when a client which is on a remote (relayed)
+		 network renews a lease without using the relay, after dnsmasq has restarted. */
+	      if (share ||
+		  (netmask.s_addr != 0  && 
+		   is_same_net(addr, context_tmp->start, netmask) &&
+		   is_same_net(addr, context_tmp->end, netmask)))
+		{
+		  context_tmp->netmask = netmask;
+		  if (context_tmp->local.s_addr == 0)
+		    context_tmp->local = fallback;
+		  if (context_tmp->router.s_addr == 0 && !share)
+		    context_tmp->router = mess->giaddr;
+		  
+		  /* fill in missing broadcast addresses for relayed ranges */
+		  if (!(context_tmp->flags & CONTEXT_BRDCAST) && context_tmp->broadcast.s_addr == 0 )
+		    context_tmp->broadcast.s_addr = context_tmp->start.s_addr | ~context_tmp->netmask.s_addr;
+		  
+		  context_tmp->current = context_new;
+		  context_new = context_tmp;
+		}
+	      
+	    }
+	}
+	  
+      if (context_new || force)
+	context = context_new; 
     }
-    let mut current_block_146: u64;
-    /* dhcp-match. If we have hex-and-wildcards, look for a left-anchored match.
+  
+  if (!context)
+    {
+      my_syslog(MS_DHCP | LOG_WARNING, _("no address range available for DHCP request %s %s"), 
+		subnet_addr.s_addr ? _("with subnet selector") : _("via"),
+		subnet_addr.s_addr ? inet_ntoa(subnet_addr) : (mess->giaddr.s_addr ? inet_ntoa(mess->giaddr) : iface_name));
+      return 0;
+    }
+
+  if (option_bool(OPT_LOG_OPTS))
+    {
+      struct dhcp_context *context_tmp;
+      for (context_tmp = context; context_tmp; context_tmp = context_tmp->current)
+	{
+	  strcpy(daemon->namebuff, inet_ntoa(context_tmp->start));
+	  if (context_tmp->flags & (CONTEXT_STATIC | CONTEXT_PROXY))
+	    my_syslog(MS_DHCP | LOG_INFO, _("%u available DHCP subnet: %s/%s"),
+		      ntohl(mess->xid), daemon->namebuff, inet_ntoa(context_tmp->netmask));
+	  else
+	    my_syslog(MS_DHCP | LOG_INFO, _("%u available DHCP range: %s -- %s"), 
+		      ntohl(mess->xid), daemon->namebuff, inet_ntoa(context_tmp->end));
+	}
+    }
+  
+  /* dhcp-match. If we have hex-and-wildcards, look for a left-anchored match.
      Otherwise assume the option is an array, and look for a matching element. 
      If no data given, existence of the option is enough. This code handles 
      rfc3925 V-I classes too. */
-    o = daemon.dhcp_match;
-    while !o.is_null() {
-        let mut len_0: u32 = 0;
-        let mut elen_0: u32 = 0;
-        let mut match_0: u32 = 0;
-        let mut offset_0: usize = 0;
-        let mut o2: usize = 0;
-        if o.flags & 2048 != 0 {
-            opt = option_find(mess, sz, 124, 5);
-            if opt.is_null() {
-                current_block_146 = 18316056106135622027;
-            } else {
-                offset_0 = 0 ;
-                while offset_0 <
-                          (*opt.offset(1)                         libc::c_uint).wrapping_sub(5)
-                              {
-                    len_0 =
-                        option_uint(opt,
-                                    offset_0.wrapping_add(4    )
-                                       , 1);
-                    /* Need to take care that bad data can't run us off the end of the packet */
-                    if offset_0.wrapping_add(len_0                                    ).wrapping_add(5
+  for (o = daemon->dhcp_match; o; o = o->next)
+    {
+      unsigned int len, elen, match = 0;
+      size_t offset, o2;
 
-                                                                                                       )
-                           <=
-                           *opt.offset(1) &&
-                           option_uint(opt, offset_0,
-                                       4) ==
-                               o.u.encap {
-                        o2 =
-                            offset_0.wrapping_add(5   libc::c_ulong);
-                        while o2 <
-                                  offset_0.wrapping_add(len_0  ).wrapping_add(5)
-                              {
-                            elen_0 =
-                                option_uint(opt, o2,
-                                            1);
-                            if o2.wrapping_add(elen_0libc::c_ulong).wrapping_add(1
+      if (o->flags & DHOPT_RFC3925)
+	{
+	  if (!(opt = option_find(mess, sz, OPTION_VENDOR_IDENT, 5)))
+	    continue;
+	  
+	  for (offset = 0; offset < (option_len(opt) - 5u); offset += len + 5)
+	    {
+	      len = option_uint(opt, offset + 4 , 1);
+	      /* Need to take care that bad data can't run us off the end of the packet */
+	      if ((offset + len + 5 <= (unsigned)(option_len(opt))) &&
+		  (option_uint(opt, offset, 4) == (unsigned int)o->u.encap))
+		for (o2 = offset + 5; o2 < offset + len + 5; o2 += elen + 1)
+		  { 
+		    elen = option_uint(opt, o2, 1);
+		    if ((o2 + elen + 1 <= (unsigned)option_len(opt)) &&
+			(match = match_bytes(o, option_ptr(opt, o2 + 1), elen)))
+		      break;
+		  }
+	      if (match) 
+		break;
+	    }	  
+	}
+      else
+	{
+	  if (!(opt = option_find(mess, sz, o->opt, 1)))
+	    continue;
+	  
+	  match = match_bytes(o, option_ptr(opt, 0), option_len(opt));
+	} 
 
-                                                                                                           )
-                                   <=
-                                   *opt.offset(1)                                                                  libc::c_ulong &&
-                                   {
-                                       match_0 =
-                                           match_bytes(o,
-                                                       &mut *opt.offset((2                          libc::c_uint).wrapping_add(o2.wrapping_add(1                                                                                                                                       )                                       libc::c_uint)
-                                                              )
-                                                                  mut Vec<u8>
-                                                                 Vec<u8>
-                                                                  mut Vec<u8>,
-                                                       elen_0)
-                                              ;
-                                       (match_0) != 0
-                                   } {
-                                break ;
-                            }
-                            o2 =
-                                (o2                        ).wrapping_add(elen_0.wrapping_add(1  libc::c_uint)
-                                                                               )
-
-                        }
-                    }
-                    if match_0 != 0 { break ; }
-                    offset_0 =
-                        (offset_0).wrapping_add(len_0.wrapping_add(5
-
-                                                                                                            libc::c_uint)
-                                                            )
-
-                }
-                current_block_146 = 10720305954121010852;
-            }
-        } else {
-            opt = option_find(mess, sz, o.opt, 1);
-            if opt.is_null() {
-                current_block_146 = 18316056106135622027;
-            } else {
-                match_0 =
-                    match_bytes(o,
-                                &mut *opt.offset((2   libc::c_uint).wrapping_add(0
-
-                                                                                                                      libc::c_uint)
-                                                    )                              mut Vec<u8>                              mut Vec<u8>,
-                                *opt.offset(1)                              );
-                current_block_146 = 10720305954121010852;
-            }
-        }
-        match current_block_146 {
-            10720305954121010852 => {
-                if match_0 != 0 {
-                    (*o.netid).next = netid;
-                    netid = o.netid
-                }
-            }
-            _ => { }
-        }
-        o = o.next
+      if (match)
+	{
+	  o->netid->next = netid;
+	  netid = o->netid;
+	}
     }
-    /* user-class options are, according to RFC3004, supposed to contain
+	
+  /* user-class options are, according to RFC3004, supposed to contain
      a set of counted strings. Here we check that this is so (by seeing
      if the counts are consistent with the overall option length) and if
      so zero the counts so that we don't get spurious matches between 
@@ -618,1692 +449,1134 @@ pub fn dhcp_reply(mut context: DhcpContext,
      The code, later, which sends user-class data to the lease-change script
      relies on the transformation done here.
   */
-    opt = option_find(mess, sz, 77, 1);
-    if !opt.is_null() {
-        let mut ucp: mut Vec<u8> =
-            &mut *opt.offset((2                            libc::c_uint).wrapping_add(0
-                                                                              libc::c_uint)
-                                )         Vec<u8>;
-        let mut tmp: i32 = 0;
-        let mut j: i32 = 0;
-        j = 0;
-        while j < *opt.offset(1) {
-            j += *ucp.offset(j) + 1
-        }
-        if j == *opt.offset(1) {
-            j = 0;
-            while j < *opt.offset(1) {
-                tmp =
-                    j + *ucp.offset(j) +
-                        1;
-                *ucp.offset(j) = 0;
-                j = tmp
-            }
-        }
+
+  if ((opt = option_find(mess, sz, OPTION_USER_CLASS, 1)))
+    {
+      unsigned char *ucp = option_ptr(opt, 0);
+      int tmp, j;
+      for (j = 0; j < option_len(opt); j += ucp[j] + 1);
+      if (j == option_len(opt))
+	for (j = 0; j < option_len(opt); j = tmp)
+	  {
+	    tmp = j + ucp[j] + 1;
+	    ucp[j] = 0;
+	  }
     }
-    let mut current_block_167: u64;
-    vendor = daemon.dhcp_vendors;
-    while !vendor.is_null() {
-        let mut mopt: i32 = 0;
-        if vendor.match_type == 1 {
-            mopt = 60;
-            current_block_167 = 13526015532137226550;
-        } else if vendor.match_type == 2 {
-            mopt = 77;
-            current_block_167 = 13526015532137226550;
-        } else { current_block_167 = 12227374774078719326; }
-        match current_block_167 {
-            13526015532137226550 => {
-                opt = option_find(mess, sz, mopt, 1);
-                if !opt.is_null() {
-                    let mut i: i32 = 0;
-                    i = 0;
-                    while i <=
-                              *opt.offset(1)                             - vendor.len {
-                        if memcmp(vendor.data,
-                                  &mut *opt.offset((2     libc::c_uint).wrapping_add(i
-                                                                                                                          libc::c_uint)
-                                                      )                                mut Vec<u8>,
-                                  vendor.len) ==
-                               0 {
-                            vendor.netid.next = netid;
-                            netid = &mut vendor.netid;
-                            break ;
-                        } else { i += 1 }
-                    }
-                }
-            }
-            _ => { }
-        }
-        vendor = vendor.next
+    
+  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
+    {
+      int mopt;
+      
+      if (vendor->match_type == MATCH_VENDOR)
+	mopt = OPTION_VENDOR_ID;
+      else if (vendor->match_type == MATCH_USER)
+	mopt = OPTION_USER_CLASS; 
+      else
+	continue;
+
+      if ((opt = option_find(mess, sz, mopt, 1)))
+	{
+	  int i;
+	  for (i = 0; i <= (option_len(opt) - vendor->len); i++)
+	    if (memcmp(vendor->data, option_ptr(opt, i), vendor->len) == 0)
+	      {
+		vendor->netid.next = netid;
+		netid = &vendor->netid;
+		break;
+	      }
+	}
     }
-    /* mark vendor-encapsulated options which match the client-supplied vendor class,
+
+  /* mark vendor-encapsulated options which match the client-supplied vendor class,
      save client-supplied vendor class */
-    opt = option_find(mess, sz, 60, 1);
-    if !opt.is_null() {
-        memcpy(daemon.dhcp_buff3,
-               &mut *opt.offset((2                               libc::c_uint).wrapping_add(0))
-                                   )            Vec<u8>,
-               *opt.offset(1));
-        vendor_class_len =
-            *opt.offset(1)
+  if ((opt = option_find(mess, sz, OPTION_VENDOR_ID, 1)))
+    {
+      memcpy(daemon->dhcp_buff3, option_ptr(opt, 0), option_len(opt));
+      vendor_class_len = option_len(opt);
     }
-    match_vendor_opts(opt, daemon.dhcp_opts);
-    if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+  match_vendor_opts(opt, daemon->dhcp_opts);
+  
+  if (option_bool(OPT_LOG_OPTS))
+    {
+      if (sanitise(opt, daemon->namebuff))
+	my_syslog(MS_DHCP | LOG_INFO, _("%u vendor class: %s"), ntohl(mess->xid), daemon->namebuff);
+      if (sanitise(option_find(mess, sz, OPTION_USER_CLASS, 1), daemon->namebuff))
+	my_syslog(MS_DHCP | LOG_INFO, _("%u user class: %s"), ntohl(mess->xid), daemon->namebuff);
+    }
 
-                                                                                                               ))
-           != 0 {
-        if sanitise(opt, daemon.namebuff) != 0 {
-            my_syslog((3) << 3 |
-                          6,
-                      "%u vendor class: %s", __bswap_32(mess.xid),
-                      daemon.namebuff);
-        }
-        if sanitise(option_find(mess, sz, 77,
-                                1), daemon.namebuff)
-               != 0 {
-            my_syslog((3) << 3 |
-                          6,
-                      "%u user class: %s", __bswap_32(mess.xid),
-                      daemon.namebuff);
-        }
+  mess->op = BOOTREPLY;
+  
+  config = find_config(daemon->dhcp_conf, context, clid, clid_len, 
+		       mess->chaddr, mess->hlen, mess->htype, NULL, run_tag_if(netid));
+
+  /* set "known" tag for known hosts */
+  if (config)
+    {
+      known_id.net = "known";
+      known_id.next = netid;
+      netid = &known_id;
     }
-    mess.op = 2 as u8;
-    config =
-        find_config(daemon.dhcp_conf, context, clid, clid_len,
-                    mess.chaddr.as_mut_ptr(), mess.hlen,
-                    mess.htype, 0 ,
-                    run_tag_if(netid));
-    /* set "known" tag for known hosts */
-    if !config.is_null() {
-        known_id.net =
-            "known"           &mut String;
-        known_id.next = netid;
-        netid = &mut known_id
-    } else if !find_config(daemon.dhcp_conf,
-                           0, clid, clid_len,
-                           mess.chaddr.as_mut_ptr(),
-                           mess.hlen,
-                           mess.htype,
-                           0 ,
-                           run_tag_if(netid)).is_null() {
-        known_id.net =
-            "known-othernet"           &mut String;
-        known_id.next = netid;
-        netid = &mut known_id
+  else if (find_config(daemon->dhcp_conf, NULL, clid, clid_len, 
+		       mess->chaddr, mess->hlen, mess->htype, NULL, run_tag_if(netid)))
+    {
+      known_id.net = "known-othernet";
+      known_id.next = netid;
+      netid = &known_id;
     }
-    if mess_type == 0 && pxe == 0 {
-        /* BOOTP request */
-        let mut id: DhcpNetId =
-            DhcpNetId {net: 0 ,
-                       next: 0 ,};
-        let mut bootp_id: DhcpNetId =
-            DhcpNetId {net: 0 ,
-                       next: 0 ,};
-        let mut logaddr: NetAddress = 0;
-        /* must have a MAC addr for bootp */
-        if mess.htype == 0 ||
-               mess.hlen == 0 ||
-               context.flags &
-                   (1) << 3 != 0 {
-            return 0
-        } /* BOOTP vend area is only 64 bytes */
-        if !config.is_null() &&
-               config.flags & 1 != 0 {
-            message =
-                "disabled"  )
-        }
-        end = mess.options.as_mut_ptr().offset(64);
-        if !config.is_null() &&
-               config.flags & 16 != 0 {
-            hostname = config.hostname;
-            domain = config.domain
-        }
-        if !config.is_null() {
-            let mut list: DhcpNetIdList = 0;
-            list = config.netid;
-            while !list.is_null() {
-                (*list.list).next = netid;
-                netid = list.list;
-                list = list.next
-            }
-        }
-        /* Match incoming filename field as a netid. */
-        if mess.file[0 ] != 0 {
-            memcpy(daemon.dhcp_buff2,
-                   mess.file.as_mut_ptr(),
-                   ::std::mem::size_of::<[u8; 128]>() ); /* ensure zero term. */
-            *daemon.dhcp_buff2.offset((::std::mem::size_of::<[u8; 128]>()
-                                                 ).wrapping_add(1)
-                                                    ) =
-                0;
-            id.net = daemon.dhcp_buff2;
-            id.next = netid;
-            netid = &mut id
-        }
-        /* Add "bootp" as a tag to allow different options, address ranges etc
+  
+  if (mess_type == 0 && !pxe)
+    {
+      /* BOOTP request */
+      struct dhcp_netid id, bootp_id;
+      struct in_addr *logaddr = NULL;
+
+      /* must have a MAC addr for bootp */
+      if (mess->htype == 0 || mess->hlen == 0 || (context->flags & CONTEXT_PROXY))
+	return 0;
+      
+      if (have_config(config, CONFIG_DISABLE))
+	message = _("disabled");
+
+      end = mess->options + 64; /* BOOTP vend area is only 64 bytes */
+            
+      if (have_config(config, CONFIG_NAME))
+	{
+	  hostname = config->hostname;
+	  domain = config->domain;
+	}
+
+      if (config)
+	{
+	  struct dhcp_netid_list *list;
+
+	  for (list = config->netid; list; list = list->next)
+	    {
+	      list->list->next = netid;
+	      netid = list->list;
+	    }
+	}
+
+      /* Match incoming filename field as a netid. */
+      if (mess->file[0])
+	{
+	  memcpy(daemon->dhcp_buff2, mess->file, sizeof(mess->file));
+	  daemon->dhcp_buff2[sizeof(mess->file) + 1] = 0; /* ensure zero term. */
+	  id.net = (char *)daemon->dhcp_buff2;
+	  id.next = netid;
+	  netid = &id;
+	}
+
+      /* Add "bootp" as a tag to allow different options, address ranges etc
 	 for BOOTP clients */
-        bootp_id.net =
-            "bootp"           &mut String;
-        bootp_id.next = netid;
-        netid = &mut bootp_id;
-        tagif_netid = run_tag_if(netid);
-        id_list = daemon.dhcp_ignore;
-        while !id_list.is_null() {
-            if match_netid(id_list.list, tagif_netid, 0) !=
-                   0 {
-                message =
-                    "ignored"                   &mut String
-            }
-            id_list = id_list.next
-        }
-        if message.is_null() {
-            let mut nailed: i32 = 0;
-            if !config.is_null() &&
-                   config.flags & 32 != 0 {
-                nailed = 1;
-                logaddr = &mut config.addr;
-                mess.yiaddr = config.addr;
-                lease = lease_find_by_addr(config.addr);
-                if !lease.is_null() &&
-                       (lease.hwaddr_len != mess.hlen ||
-                            lease.hwaddr_type !=
-                                mess.htype ||
-                            memcmp(lease.hwaddr.as_mut_ptr()
-                                   mess.chaddr.as_mut_ptr()
-                                   lease.hwaddr_len) !=
-                                0) {
-                    message =
-                        "address in use"
-                }
-            } else {
-                lease =
-                    lease_find_by_client(mess.chaddr.as_mut_ptr(),
-                                         mess.hlen,
-                                         mess.htype,
-                                         0,
-                                         0);
-                if lease.is_null() ||
-                       address_available(context, lease.addr,
-                                         tagif_netid).is_null() {
-                    if !lease.is_null() {
-                        /* lease exists, wrong network. */
-                        lease_prune(lease, now);
-                        lease = 0
-                    }
-                    if address_allocate(context, &mut mess.yiaddr,
-                                        mess.chaddr.as_mut_ptr(),
-                                        mess.hlen,
-                                        tagif_netid, now, loopback) == 0 {
-                        message =
-                            "no address available"                           *const libc::c_char
-                    }
-                } else { mess.yiaddr = lease.addr }
-            }
-            if message.is_null() &&
-                   {
-                       context =
-                           narrow_context(context, mess.yiaddr, netid);
-                       context.is_null()
-                   } {
-                message =
-                    "wrong network"
+      bootp_id.net = "bootp";
+      bootp_id.next = netid;
+      netid = &bootp_id;
+      
+      tagif_netid = run_tag_if(netid);
 
-            } else if !context.netid.net.is_null() {
-                context.netid.next = netid;
-                tagif_netid = run_tag_if(&mut context.netid)
-            }
-            log_tags(tagif_netid, __bswap_32(mess.xid));
-            if message.is_null() && nailed == 0 {
-                id_list = daemon.bootp_dynamic;
-                while !id_list.is_null() {
-                    if id_list.list.is_null() ||
-                           match_netid(id_list.list, tagif_netid,
-                                       0) != 0 {
-                        break ;
-                    }
-                    id_list = id_list.next
-                }
-                if id_list.is_null() {
-                    message =
-                        "no address configured"
-                }
-            }
-            if message.is_null() && lease.is_null() &&
-                   {
-                       lease = lease4_allocate(mess.yiaddr);
-                       lease.is_null()
-                   } {
-                message =
-                    "no leases left"
+      for (id_list = daemon->dhcp_ignore; id_list; id_list = id_list->next)
+	if (match_netid(id_list->list, tagif_netid, 0))
+	  message = _("ignored");
+      
+      if (!message)
+	{
+	  int nailed = 0;
 
-            }
-            if message.is_null() {
-                logaddr = &mut mess.yiaddr;
-                lease_set_hwaddr(lease, mess.chaddr.as_mut_ptr(),
-                                 0 ,
-                                 mess.hlen,
-                                 mess.htype,
-                                 0, now, 1);
-                if !hostname.is_null() {
-                    lease_set_hostname(lease, hostname, 1,
-                                       get_domain(lease.addr), domain);
-                }
-                /* infinite lease unless nailed in dhcp-host line. */
-                lease_set_expires(lease,
-                                  if !config.is_null() &&
-                                         config.flags &
-                                             8
-                                             != 0 {
-                                      config.lease_time
-                                  } else { 0xffffffff }, now);
-                lease_set_interface(lease, int_index, now);
-                clear_packet(mess, end);
-                do_options(context, mess, end, 0,
-                           hostname, get_domain(mess.yiaddr), netid,
-                           subnet_addr, 0,
-                           0, -(1),
-                           0, vendor_class_len, now,
-                           0xffffffff,
-                           0 ,
-                           0);
-            }
-        }
-        daemon.metrics[METRIC_BOOTP ] =
-            daemon.metrics[METRIC_BOOTP                                    usize].wrapping_add(1);
-        log_packet("BOOTP" , logaddr,
-                   mess.chaddr.as_mut_ptr(), mess.hlen,
-                   iface_name, 0 , message, mess.xid);
-        return if !message.is_null() {
-                   0
-               } else { dhcp_packet_size(mess, agent_id, real_end) }
+	  if (have_config(config, CONFIG_ADDR))
+	    {
+	      nailed = 1;
+	      logaddr = &config->addr;
+	      mess->yiaddr = config->addr;
+	      if ((lease = lease_find_by_addr(config->addr)) &&
+		  (lease->hwaddr_len != mess->hlen ||
+		   lease->hwaddr_type != mess->htype ||
+		   memcmp(lease->hwaddr, mess->chaddr, lease->hwaddr_len) != 0))
+		message = _("address in use");
+	    }
+	  else
+	    {
+	      if (!(lease = lease_find_by_client(mess->chaddr, mess->hlen, mess->htype, NULL, 0)) ||
+		  !address_available(context, lease->addr, tagif_netid))
+		{
+		   if (lease)
+		     {
+		       /* lease exists, wrong network. */
+		       lease_prune(lease, now);
+		       lease = NULL;
+		     }
+		   if (!address_allocate(context, &mess->yiaddr, mess->chaddr, mess->hlen, tagif_netid, now, loopback))
+		     message = _("no address available");
+		}
+	      else
+		mess->yiaddr = lease->addr;
+	    }
+	  
+	  if (!message && !(context = narrow_context(context, mess->yiaddr, netid)))
+	    message = _("wrong network");
+	  else if (context->netid.net)
+	    {
+	      context->netid.next = netid;
+	      tagif_netid = run_tag_if(&context->netid);
+	    }
+
+	  log_tags(tagif_netid, ntohl(mess->xid));
+	    
+	  if (!message && !nailed)
+	    {
+	      for (id_list = daemon->bootp_dynamic; id_list; id_list = id_list->next)
+		if ((!id_list->list) || match_netid(id_list->list, tagif_netid, 0))
+		  break;
+	      if (!id_list)
+		message = _("no address configured");
+	    }
+
+	  if (!message && 
+	      !lease && 
+	      (!(lease = lease4_allocate(mess->yiaddr))))
+	    message = _("no leases left");
+	  
+	  if (!message)
+	    {
+	      logaddr = &mess->yiaddr;
+		
+	      lease_set_hwaddr(lease, mess->chaddr, NULL, mess->hlen, mess->htype, 0, now, 1);
+	      if (hostname)
+		lease_set_hostname(lease, hostname, 1, get_domain(lease->addr), domain); 
+	      /* infinite lease unless nailed in dhcp-host line. */
+	      lease_set_expires(lease,  
+				have_config(config, CONFIG_TIME) ? config->lease_time : 0xffffffff, 
+				now); 
+	      lease_set_interface(lease, int_index, now);
+	      
+	      clear_packet(mess, end);
+	      do_options(context, mess, end, NULL, hostname, get_domain(mess->yiaddr), 
+			 netid, subnet_addr, 0, 0, -1, NULL, vendor_class_len, now, 0xffffffff, 0, NULL);
+	    }
+	}
+      
+      daemon->metrics[METRIC_BOOTP]++;
+      log_packet("BOOTP", logaddr, mess->chaddr, mess->hlen, iface_name, NULL, message, mess->xid);
+      
+      return message ? 0 : dhcp_packet_size(mess, agent_id, real_end);
     }
-    opt = option_find(mess, sz, 81, 3);
-    if !opt.is_null() {
-        /* http://tools.ietf.org/wg/dhc/draft-ietf-dhc-fqdn-option/draft-ietf-dhc-fqdn-option-10.txt */
-        let mut len_1: i32 =
-            *opt.offset(1);
-        let mut pq: &mut String = daemon.dhcp_buff;
-        let mut pp: mut Vec<u8> = 0;
-        let mut op: mut Vec<u8> =
-            &mut *opt.offset((2                            libc::c_uint).wrapping_add(0
-                                                                              libc::c_uint)
-                                )         Vec<u8>;
-        fqdn_flags = *op;
-        len_1 -= 3;
-        op = op.offset(3);
-        pp = op;
-        /* NB, the following always sets at least one bit */
-        if daemon.options[(36 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (36 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-            if fqdn_flags & 0x1 != 0 {
-                fqdn_flags =
-                    (fqdn_flags | 0x2) ;
-                fqdn_flags =
-                    (fqdn_flags & !(0x1))  /* set O */
-                /* clear S */
-            }
-            fqdn_flags =
-                (fqdn_flags | 0x8)              u8
-            /* set N */
-        } else {
-            if fqdn_flags & 0x1 == 0 {
-                fqdn_flags =
-                    (fqdn_flags | 0x3)
-            }
-            fqdn_flags =
-                (fqdn_flags & !(0x8))              u8 /* set S and O */
-            /* clear N */
-        }
-        if fqdn_flags & 0x4 != 0 {
-            while *op != 0 &&
-                      (op.offset(*op ).wrapping_offset_from(pp)                     i32) < len_1 {
-                memcpy(pq,
-                       op.offset(1)    *op);
-                pq = pq.offsetop;
-                op =
-                    op.offset((*op + 1)                            );
-                let fresh6 = pq;
-                pq = pq.offset(1);
-                *fresh6 = '.'
-            }
-        } else {
-            memcpy(pq, op,
-                   len_1);
-            if len_1 > 0 &&
-                   *op.offset((len_1 - 1)) == 0 {
-                borken_opt = 1
-            }
-            pq = pq.offset((len_1 + 1))
-        }
-        if pq != daemon.dhcp_buff { pq = pq.offset(-1) }
-        *pq = 0;
-        if legal_hostname(daemon.dhcp_buff) != 0 {
-            client_hostname = daemon.dhcp_buff;
-            offer_hostname = client_hostname
-        }
-    } else {
-        opt = option_find(mess, sz, 12, 1);
-        if !opt.is_null() {
-            let mut len_2: i32 =
-                *opt.offset(1);
-            memcpy(daemon.dhcp_buff,
-                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0
-                                                                                            libc::c_uint)
-                                       )                Vec<u8>, len_2);
-            /* Microsoft clients are broken, and need zero-terminated strings
+      
+  if ((opt = option_find(mess, sz, OPTION_CLIENT_FQDN, 3)))
+    {
+      /* http://tools.ietf.org/wg/dhc/draft-ietf-dhc-fqdn-option/draft-ietf-dhc-fqdn-option-10.txt */
+      int len = option_len(opt);
+      char *pq = daemon->dhcp_buff;
+      unsigned char *pp, *op = option_ptr(opt, 0);
+      
+      fqdn_flags = *op;
+      len -= 3;
+      op += 3;
+      pp = op;
+      
+      /* NB, the following always sets at least one bit */
+      if (option_bool(OPT_FQDN_UPDATE))
+	{
+	  if (fqdn_flags & 0x01)
+	    {
+	      fqdn_flags |= 0x02; /* set O */
+	      fqdn_flags &= ~0x01; /* clear S */
+	    }
+	  fqdn_flags |= 0x08; /* set N */
+	}
+      else 
+	{
+	  if (!(fqdn_flags & 0x01))
+	    fqdn_flags |= 0x03; /* set S and O */
+	  fqdn_flags &= ~0x08; /* clear N */
+	}
+      
+      if (fqdn_flags & 0x04)
+	while (*op != 0 && ((op + (*op)) - pp) < len)
+	  {
+	    memcpy(pq, op+1, *op);
+	    pq += *op;
+	    op += (*op)+1;
+	    *(pq++) = '.';
+	  }
+      else
+	{
+	  memcpy(pq, op, len);
+	  if (len > 0 && op[len-1] == 0)
+	    borken_opt = 1;
+	  pq += len + 1;
+	}
+      
+      if (pq != daemon->dhcp_buff)
+	pq--;
+      
+      *pq = 0;
+      
+      if (legal_hostname(daemon->dhcp_buff))
+	offer_hostname = client_hostname = daemon->dhcp_buff;
+    }
+  else if ((opt = option_find(mess, sz, OPTION_HOSTNAME, 1)))
+    {
+      int len = option_len(opt);
+      memcpy(daemon->dhcp_buff, option_ptr(opt, 0), len);
+      /* Microsoft clients are broken, and need zero-terminated strings
 	 in options. We detect this state here, and do the same in
 	 any options we send */
-            if len_2 > 0 &&
-                   *daemon.dhcp_buff.offset((len_2 -
-                                                            1)
-                                                          ) == 0 {
-                borken_opt = 1
-            } else {
-                *daemon.dhcp_buff.offset(len_2) =
-                    0
-            }
-            if legal_hostname(daemon.dhcp_buff) != 0 {
-                client_hostname = daemon.dhcp_buff
-            }
-        }
+      if (len > 0 && daemon->dhcp_buff[len-1] == 0)
+	borken_opt = 1;
+      else
+	daemon->dhcp_buff[len] = 0;
+      if (legal_hostname(daemon->dhcp_buff))
+	client_hostname = daemon->dhcp_buff;
     }
-    if !client_hostname.is_null() {
-        let mut m: DhcpMatchName = 0 ;
-        let mut nl: usize = strlen(client_hostname);
-        if daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-            my_syslog((3) << 3 |
-                          6,
-                      "%u client provides name: %s", __bswap_32(mess.xid),
-                      client_hostname);
-        }
-        m = daemon.dhcp_name_match;
-        while !m.is_null() {
-            let mut ml: usize = strlen(m.name);
-            let mut save: libc::c_char = 0;
-            if !(nl < ml) {
-                if nl > ml {
-                    save = *client_hostname.offset(ml);
-                    *client_hostname.offset(ml) =
-                        0
-                }
-                if hostname_isequal(client_hostname, m.name) != 0 &&
-                       (save == 0 ||
-                            m.wildcard != 0) {
-                    (*m.netid).next = netid;
-                    netid = m.netid
-                }
-                if save != 0 {
-                    *client_hostname.offset(ml) = save
-                }
-            }
-            m = m.next
-        }
+
+  if (client_hostname)
+    {
+      struct dhcp_match_name *m;
+      size_t nl = strlen(client_hostname);
+      
+      if (option_bool(OPT_LOG_OPTS))
+	my_syslog(MS_DHCP | LOG_INFO, _("%u client provides name: %s"), ntohl(mess->xid), client_hostname);
+      for (m = daemon->dhcp_name_match; m; m = m->next)
+	{
+	  size_t ml = strlen(m->name);
+	  char save = 0;
+	  
+	  if (nl < ml)
+	    continue;
+	  if (nl > ml)
+	    {
+	      save = client_hostname[ml];
+	      client_hostname[ml] = 0;
+	    }
+	  
+	  if (hostname_isequal(client_hostname, m->name) &&
+	      (save == 0 || m->wildcard))
+	    {
+	      m->netid->next = netid;
+	      netid = m->netid;
+	    }
+	  
+	  if (save != 0)
+	    client_hostname[ml] = save;
+	}
     }
-    if !config.is_null() &&
-           config.flags & 16 != 0 {
-        hostname = config.hostname;
-        domain = config.domain;
-        hostname_auth = 1;
-        /* be careful not to send an OFFER with a hostname not matching the DISCOVER. */
-        if fqdn_flags != 0 ||
-               client_hostname.is_null() ||
-               hostname_isequal(hostname, client_hostname) != 0 {
-            offer_hostname = hostname
-        }
-    } else if !client_hostname.is_null() {
-        domain = strip_hostname(client_hostname);
-        if strlen(client_hostname) != 0 {
-            hostname = client_hostname;
-            if config.is_null() {
-                /* Search again now we have a hostname. 
+  
+  if (have_config(config, CONFIG_NAME))
+    {
+      hostname = config->hostname;
+      domain = config->domain;
+      hostname_auth = 1;
+      /* be careful not to send an OFFER with a hostname not matching the DISCOVER. */
+      if (fqdn_flags != 0 || !client_hostname || hostname_isequal(hostname, client_hostname))
+        offer_hostname = hostname;
+    }
+  else if (client_hostname)
+    {
+      domain = strip_hostname(client_hostname);
+      
+      if (strlen(client_hostname) != 0)
+	{
+	  hostname = client_hostname;
+	  
+	  if (!config)
+	    {
+	      /* Search again now we have a hostname. 
 		 Only accept configs without CLID and HWADDR here, (they won't match)
 		 to avoid impersonation by name. */
-                let mut new: DhcpConfig =
-                    find_config(daemon.dhcp_conf, context,
-                                0, 0,
-                                mess.chaddr.as_mut_ptr(),
-                                mess.hlen,
-                                mess.htype, hostname,
-                                run_tag_if(netid));
-                if !new.is_null() &&
-                       !(!new.is_null() &&
-                             new.flags & 2
-                                 != 0) && new.hwaddr.is_null() {
-                    config = new;
-                    /* set "known" tag for known hosts */
-                    known_id.net =
-                        "known";
-                    known_id.next = netid;
-                    netid = &mut known_id
-                }
-            }
-        }
+	      struct dhcp_config *new = find_config(daemon->dhcp_conf, context, NULL, 0,
+						    mess->chaddr, mess->hlen, 
+						    mess->htype, hostname, run_tag_if(netid));
+	      if (new && !have_config(new, CONFIG_CLID) && !new->hwaddr)
+		{
+		  config = new;
+		  /* set "known" tag for known hosts */
+		  known_id.net = "known";
+		  known_id.next = netid;
+		  netid = &known_id;
+		}
+	    }
+	}
     }
-    if !config.is_null() {
-        let mut list_0: DhcpNetIdList = 0;
-        list_0 = config.netid;
-        while !list_0.is_null() {
-            (*list_0.list).next = netid;
-            netid = list_0.list;
-            list_0 = list_0.next
-        }
+  
+  if (config)
+    {
+      struct dhcp_netid_list *list;
+      
+      for (list = config->netid; list; list = list->next)
+	{
+	  list->list->next = netid;
+	  netid = list->list;
+	}
     }
-    tagif_netid = run_tag_if(netid);
-    /* if all the netids in the ignore list are present, ignore this client */
-    id_list = daemon.dhcp_ignore;
-    while !id_list.is_null() {
-        if match_netid(id_list.list, tagif_netid, 0) != 0 {
-            ignore = 1
-        }
-        id_list = id_list.next
-    }
-    /* If configured, we can override the server-id to be the address of the relay, 
+  
+  tagif_netid = run_tag_if(netid);
+  
+  /* if all the netids in the ignore list are present, ignore this client */
+  for (id_list = daemon->dhcp_ignore; id_list; id_list = id_list->next)
+    if (match_netid(id_list->list, tagif_netid, 0))
+      ignore = 1;
+
+  /* If configured, we can override the server-id to be the address of the relay, 
      so that all traffic goes via the relay and can pick up agent-id info. This can be
      configured for all relays, or by address. */
-    if daemon.override_0 != 0 &&
-           mess.giaddr.s_addr != 0 &&
-           override_0.s_addr == 0 {
-        if daemon.override_relays.is_null() {
-            override_0 = mess.giaddr
-        } else {
-            let mut l: AddrList2 = 0 2;
-            l = daemon.override_relays;
-            while !l.is_null() {
-                if l.addr.s_addr == mess.giaddr.s_addr { break ; }
-                l = l.next
-            }
-            if !l.is_null() { override_0 = mess.giaddr }
-        }
+  if (daemon->override && mess->giaddr.s_addr != 0 && override.s_addr == 0)
+    {
+      if (!daemon->override_relays)
+	override = mess->giaddr;
+      else
+	{
+	  struct addr_list *l;
+	  for (l = daemon->override_relays; l; l = l->next)
+	    if (l->addr.s_addr == mess->giaddr.s_addr)
+	      break;
+	  if (l)
+	    override = mess->giaddr;
+	}
     }
-    /* Can have setting to ignore the client ID for a particular MAC address or hostname */
-    if !config.is_null() &&
-           config.flags & 128 != 0 {
-        clid = 0
-    }
-    /* Check if client is PXE client. */
-    if daemon.enable_pxe != 0 &&
-           is_pxe_client(mess, sz, &mut pxevendor) != 0 {
-        opt = option_find(mess, sz, 97, 17);
-        if !opt.is_null() {
-            memcpy(pxe_uuid.as_mut_ptr(),
-                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0
-                                                                                            libc::c_uint)
-                                       )                Vec<u8>, 17);
-            uuid = pxe_uuid.as_mut_ptr()
-        }
-        /* Check if this is really a PXE bootserver request, and handle specially if so. */
-        if (mess_type == 3 ||
-                mess_type == 8) &&
-               {
-                   opt =
-                       option_find(mess, sz, 43,
-                                   1);
-                   !opt.is_null()
-               } &&
-               {
-                   opt =
-                       option_find1(&mut *opt.offset((2       libc::c_uint).wrapping_add(0  libc::c_uint)
-                                                        )                                  mut Vec<u8>                                 Vec<u8>                                  mut Vec<u8>,
-                                    &mut *opt.offset((2       libc::c_uint).wrapping_add(*opt.offset(1                                                  )  libc::c_uint)
-                                                        )                                  mut Vec<u8>                                 Vec<u8>                                  mut Vec<u8>, 71,
-                                    4);
-                   !opt.is_null()
-               } {
-            let mut service: PxeService = 0 ;
-            let mut type_0: i32 =
-                option_uint(opt, 0, 2) ;
-            let mut layer: i32 =
-                option_uint(opt, 2, 2) ;
-            let mut save71: [u8; 4] = [0; 4];
-            let mut opt71: DhcpOpt =
-                DhcpOpt {opt: 0,
-                         len: 0,
-                         flags: 0,
-                         u: C2rustUnnamed9 {encap: 0,},
-                         val: 0,
-                         netid: 0 ,
-                         next: 0 ,};
-            if ignore != 0 { return 0  }
-            if layer & 0x8000 != 0 {
-                my_syslog((3) << 3 |
-                              3,
-                          "PXE BIS not supported" );
-                return 0
-            }
-            memcpy(save71.as_mut_ptr(),
-                   &mut *opt.offset((2                                   libc::c_uint).wrapping_add(0
-                                                                                            libc::c_uint)
-                                       )                Vec<u8>, 4);
-            service = daemon.pxe_services;
-            while !service.is_null() {
-                if service.type_0 == type_0 { break ; }
-                service = service.next
-            }
-            while !context.is_null() {
-                if match_netid(context.filter, tagif_netid,
-                               1) != 0 &&
-                       is_same_net4(mess.ciaddr, context.start,
-                                    context.netmask) != 0 {
-                    break ;
-                }
-                context = context.current
-            }
-            if service.is_null() || service.basename.is_null() ||
-                   context.is_null() {
-                return 0
-            }
-            clear_packet(mess, end);
-            mess.yiaddr = mess.ciaddr;
-            mess.ciaddr.s_addr = 0;
-            if !service.sname.is_null() {
-                mess.siaddr = a_record_from_hosts(service.sname, now)
-            } else if service.server.s_addr !=
-                          0 {
-                mess.siaddr = service.server
-            } else { mess.siaddr = context.local }
-            if !strchr(service.basename, '.' as i32).is_null() {
-                snprintf(mess.file.as_mut_ptr() ,
-                         ::std::mem::size_of::<[u8; 128]>(),
-                         "%s" ,
-                         service.basename);
-            } else {
-                snprintf(mess.file.as_mut_ptr() ,
-                         ::std::mem::size_of::<[u8; 128]>(),
-                         "%s.%d" ,
-                         service.basename, layer);
-            }
-            option_put(mess, end, 53, 1,
-                       5);
-            option_put(mess, end, 54, 4,
-                       __bswap_32(context.local.s_addr));
-            pxe_misc(mess, end, uuid, pxevendor);
-            prune_vendor_opts(tagif_netid);
-            opt71.val = save71.as_mut_ptr();
-            opt71.opt = 71;
-            opt71.len = 4;
-            opt71.flags = 1024;
-            opt71.netid = 0 ;
-            opt71.next = daemon.dhcp_opts;
-            do_encap_opts(&mut opt71, 43, 1024,
-                          mess, end, 0);
-            log_packet("PXE"                      &mut String,
-                       &mut mess.yiaddr                    Vec<u8>, emac, emac_len, iface_name,
-                       mess.file.as_mut_ptr() ,
-                       0 , mess.xid);
-            log_tags(tagif_netid, __bswap_32(mess.xid));
-            return dhcp_packet_size(mess, agent_id, real_end)
-        }
-        opt = option_find(mess, sz, 93, 2);
-        if !opt.is_null() {
-            pxearch =
-                option_uint(opt, 0, 2) ;
-            /* proxy DHCP here. */
-            if mess_type == 1 ||
-                   pxe != 0 && mess_type == 3 {
-                let mut tmp_0: DhcpContext = 0;
-                let mut workaround: i32 = 0;
-                tmp_0 = context;
-                while !tmp_0.is_null() {
-                    if tmp_0.flags &
-                           (1) << 3 != 0 &&
-                           match_netid(tmp_0.filter, tagif_netid,
-                                       1) != 0 {
-                        break ;
-                    }
-                    tmp_0 = tmp_0.current
-                }
-                if !tmp_0.is_null() {
-                    let mut boot: DhcpBoot = 0 ;
-                    let mut redirect4011: i32 = 0;
-                    if !tmp_0.netid.net.is_null() {
-                        tmp_0.netid.next = netid;
-                        tagif_netid = run_tag_if(&mut tmp_0.netid)
-                    }
-                    boot = find_boot(tagif_netid);
-                    mess.yiaddr.s_addr = 0;
-                    if mess_type == 1 ||
-                           mess.ciaddr.s_addr ==
-                               0 {
-                        mess.ciaddr.s_addr = 0;
-                        mess.flags =
-                            (mess.flags |
-                                 __bswap_16(0x8000                                          u16))                          u16
-                        /* broadcast */
-                    }
-                    clear_packet(mess, end);
-                    /* Redirect EFI clients to port 4011 */
-                    if pxearch >= 6 {
-                        redirect4011 = 1;
-                        mess.siaddr = tmp_0.local
-                    }
-                    /* Returns true if only one matching service is available. On port 4011, 
+
+  /* Can have setting to ignore the client ID for a particular MAC address or hostname */
+  if (have_config(config, CONFIG_NOCLID))
+    clid = NULL;
+          
+  /* Check if client is PXE client. */
+  if (daemon->enable_pxe &&
+      is_pxe_client(mess, sz, &pxevendor))
+    {
+      if ((opt = option_find(mess, sz, OPTION_PXE_UUID, 17)))
+	{
+	  memcpy(pxe_uuid, option_ptr(opt, 0), 17);
+	  uuid = pxe_uuid;
+	}
+
+      /* Check if this is really a PXE bootserver request, and handle specially if so. */
+      if ((mess_type == DHCPREQUEST || mess_type == DHCPINFORM) &&
+	  (opt = option_find(mess, sz, OPTION_VENDOR_CLASS_OPT, 1)) &&
+	  (opt = option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_PXE_BOOT_ITEM, 4)))
+	{
+	  struct pxe_service *service;
+	  int type = option_uint(opt, 0, 2);
+	  int layer = option_uint(opt, 2, 2);
+	  unsigned char save71[4];
+	  struct dhcp_opt opt71;
+
+	  if (ignore)
+	    return 0;
+
+	  if (layer & 0x8000)
+	    {
+	      my_syslog(MS_DHCP | LOG_ERR, _("PXE BIS not supported"));
+	      return 0;
+	    }
+
+	  memcpy(save71, option_ptr(opt, 0), 4);
+	  
+	  for (service = daemon->pxe_services; service; service = service->next)
+	    if (service->type == type)
+	      break;
+	  
+	  for (; context; context = context->current)
+	    if (match_netid(context->filter, tagif_netid, 1) &&
+		is_same_net(mess->ciaddr, context->start, context->netmask))
+	      break;
+	  
+	  if (!service || !service->basename || !context)
+	    return 0;
+	  	  
+	  clear_packet(mess, end);
+	  
+	  mess->yiaddr = mess->ciaddr;
+	  mess->ciaddr.s_addr = 0;
+	  if (service->sname)
+	    mess->siaddr = a_record_from_hosts(service->sname, now);
+	  else if (service->server.s_addr != 0)
+	    mess->siaddr = service->server; 
+	  else
+	    mess->siaddr = context->local; 
+	  
+	  if (strchr(service->basename, '.'))
+	    snprintf((char *)mess->file, sizeof(mess->file),
+		"%s", service->basename);
+	  else
+	    snprintf((char *)mess->file, sizeof(mess->file),
+		"%s.%d", service->basename, layer);
+	  
+	  option_put(mess, end, OPTION_MESSAGE_TYPE, 1, DHCPACK);
+	  option_put(mess, end, OPTION_SERVER_IDENTIFIER, INADDRSZ, htonl(context->local.s_addr));
+	  pxe_misc(mess, end, uuid, pxevendor);
+	  
+	  prune_vendor_opts(tagif_netid);
+	  opt71.val = save71;
+	  opt71.opt = SUBOPT_PXE_BOOT_ITEM;
+	  opt71.len = 4;
+	  opt71.flags = DHOPT_VENDOR_MATCH;
+	  opt71.netid = NULL;
+	  opt71.next = daemon->dhcp_opts;
+	  do_encap_opts(&opt71, OPTION_VENDOR_CLASS_OPT, DHOPT_VENDOR_MATCH, mess, end, 0);
+	  
+	  log_packet("PXE", &mess->yiaddr, emac, emac_len, iface_name, (char *)mess->file, NULL, mess->xid);
+	  log_tags(tagif_netid, ntohl(mess->xid));
+	  return dhcp_packet_size(mess, agent_id, real_end);	  
+	}
+      
+      if ((opt = option_find(mess, sz, OPTION_ARCH, 2)))
+	{
+	  pxearch = option_uint(opt, 0, 2);
+
+	  /* proxy DHCP here. */
+	  if ((mess_type == DHCPDISCOVER || (pxe && mess_type == DHCPREQUEST)))
+	    {
+	      struct dhcp_context *tmp;
+	      int workaround = 0;
+	      
+	      for (tmp = context; tmp; tmp = tmp->current)
+		if ((tmp->flags & CONTEXT_PROXY) &&
+		    match_netid(tmp->filter, tagif_netid, 1))
+		  break;
+	      
+	      if (tmp)
+		{
+		  struct dhcp_boot *boot;
+		  int redirect4011 = 0;
+
+		  if (tmp->netid.net)
+		    {
+		      tmp->netid.next = netid;
+		      tagif_netid = run_tag_if(&tmp->netid);
+		    }
+		  
+		  boot = find_boot(tagif_netid);
+		  
+		  mess->yiaddr.s_addr = 0;
+		  if  (mess_type == DHCPDISCOVER || mess->ciaddr.s_addr == 0)
+		    {
+		      mess->ciaddr.s_addr = 0;
+		      mess->flags |= htons(0x8000); /* broadcast */
+		    }
+		  
+		  clear_packet(mess, end);
+		  
+		  /* Redirect EFI clients to port 4011 */
+		  if (pxearch >= 6)
+		    {
+		      redirect4011 = 1;
+		      mess->siaddr = tmp->local;
+		    }
+		  
+		  /* Returns true if only one matching service is available. On port 4011, 
 		     it also inserts the boot file and server name. */
-                    workaround =
-                        pxe_uefi_workaround(pxearch, tagif_netid, mess,
-                                            tmp_0.local, now, pxe);
-                    if workaround == 0 && !boot.is_null() {
-                        /* Provide the bootfile here, for iPXE, and in case we have no menu items
+		  workaround = pxe_uefi_workaround(pxearch, tagif_netid, mess, tmp->local, now, pxe);
+		  
+		  if (!workaround && boot)
+		    {
+		      /* Provide the bootfile here, for iPXE, and in case we have no menu items
 			 and set discovery_control = 8 */
-                        if boot.next_server.s_addr != 0 {
-                            mess.siaddr = boot.next_server
-                        } else if !boot.tftp_sname.is_null() {
-                            mess.siaddr =
-                                a_record_from_hosts(boot.tftp_sname, now)
-                        }
-                        if !boot.file.is_null() {
-                            safe_strncpy(mess.file.as_mut_ptr()                                       &mut String, boot.file,
-                                         ::std::mem::size_of::<[u8; 128]>()
-                                            );
-                        }
-                    }
-                    option_put(mess, end, 53, 1,
-                               if mess_type ==
-                                      1 {
-                                   2
-                               } else { 5 });
-                    option_put(mess, end, 54, 4,
-                               __bswap_32(tmp_0.local.s_addr));
-                    pxe_misc(mess, end, uuid, pxevendor);
-                    prune_vendor_opts(tagif_netid);
-                    if pxe != 0 && workaround == 0 || redirect4011 == 0 {
-                        do_encap_opts(pxe_opts(pxearch, tagif_netid,
-                                               tmp_0.local, now),
-                                      43, 1024,
-                                      mess, end, 0);
-                    }
-                    daemon.metrics[METRIC_PXE                                            usize] =
-                        daemon.metrics[METRIC_PXE   usize].wrapping_add(1);
-                    log_packet("PXE"
-                                   ,
-                               0, emac, emac_len,
-                               iface_name,
-                               if ignore != 0 {
-                                   "proxy-ignored"                                  *const libc::c_char
-                               } else {
-                                   "proxy"                                  *const libc::c_char
-                               } , 0 ,
-                               mess.xid);
-                    log_tags(tagif_netid, __bswap_32(mess.xid));
-                    if ignore == 0 {
-                        apply_delay(mess.xid, recvtime, tagif_netid);
-                    }
-                    return if ignore != 0 {
-                               0
-                           } else {
-                               dhcp_packet_size(mess, agent_id, real_end)
-                           }
-                }
-            }
-        }
+		      if (boot->next_server.s_addr) 
+			mess->siaddr = boot->next_server;
+		      else if (boot->tftp_sname) 
+			mess->siaddr = a_record_from_hosts(boot->tftp_sname, now);
+		      
+		      if (boot->file)
+			safe_strncpy((char *)mess->file, boot->file, sizeof(mess->file));
+		    }
+		  
+		  option_put(mess, end, OPTION_MESSAGE_TYPE, 1, 
+			     mess_type == DHCPDISCOVER ? DHCPOFFER : DHCPACK);
+		  option_put(mess, end, OPTION_SERVER_IDENTIFIER, INADDRSZ, htonl(tmp->local.s_addr));
+		  pxe_misc(mess, end, uuid, pxevendor);
+		  prune_vendor_opts(tagif_netid);
+		  if ((pxe && !workaround) || !redirect4011)
+		    do_encap_opts(pxe_opts(pxearch, tagif_netid, tmp->local, now), OPTION_VENDOR_CLASS_OPT, DHOPT_VENDOR_MATCH, mess, end, 0);
+	    
+		  daemon->metrics[METRIC_PXE]++;
+		  log_packet("PXE", NULL, emac, emac_len, iface_name, ignore ? "proxy-ignored" : "proxy", NULL, mess->xid);
+		  log_tags(tagif_netid, ntohl(mess->xid));
+		  if (!ignore)
+		    apply_delay(mess->xid, recvtime, tagif_netid);
+		  return ignore ? 0 : dhcp_packet_size(mess, agent_id, real_end);	  
+		}
+	    }
+	}
     }
-    /* if we're just a proxy server, go no further */
-    if context.flags &
-           (1) << 3 != 0 || pxe != 0 {
-        return 0
-    }
-    opt = option_find(mess, sz, 55, 0);
-    if !opt.is_null() {
-        req_options = daemon.dhcp_buff2;
-        memcpy(req_options,
-               &mut *opt.offset((2                               libc::c_uint).wrapping_add(0))
-                                   )            Vec<u8>,
-               *opt.offset(1));
-        *req_options.offset(*opt.offset(1)                          ) =
-            255
-    }
-    's_3991:
-        {
-            match mess_type {
-                4 => {
-                    opt =
-                        option_find(mess, sz, 54,
-                                    4);
-                    if opt.is_null() ||
-                           option_addr(opt).s_addr !=
-                               server_id(context, override_0, fallback).s_addr
-                       {
-                        return 0
-                    }
-                    /* sanitise any message. Paranoid? Moi? */
-                    sanitise(option_find(mess, sz, 56,
-                                         1),
-                             daemon.dhcp_buff);
-                    opt =
-                        option_find(mess, sz, 50,
-                                    4);
-                    if opt.is_null() { return 0  }
-                    daemon.metrics[METRIC_DHCPDECLINE                                             ] =
-                        daemon.metrics[METRIC_DHCPDECLINE      usize].wrapping_add(1);
-                    log_packet("DHCPDECLINE",
-                               &mut *opt.offset((2  libc::c_uint).wrapping_add(0
 
-                                                                                                                    libc::c_uint)
-                                                   )                             mut Vec<u8>,
-                               emac, emac_len, iface_name,
-                               0 ,
-                               daemon.dhcp_buff, mess.xid);
-                    if !lease.is_null() &&
-                           lease.addr.s_addr == option_addr(opt).s_addr {
-                        lease_prune(lease, now);
-                    }
-                    if !config.is_null() &&
-                           config.flags & 32
-                               != 0 &&
-                           config.addr.s_addr == option_addr(opt).s_addr {
-                        prettyprint_time(daemon.dhcp_buff,
-                                         600);
-                        my_syslog((3) << 3 |
-                                      4,
-                                  "disabling DHCP static address %s for %s"
-                                      ,
-                                  inet_ntoa(config.addr),
-                                  daemon.dhcp_buff);
-                        config.flags |=
-                            1024;
-                        config.decline_time = now
-                    } else {
-                        /* make sure this host gets a different address next time. */
-                        while !context.is_null() {
-                            context.addr_epoch =
-                                context.addr_epoch.wrapping_add(1);
-                            context = context.current
-                        }
-                    }
-                    return 0
-                }
-                7 => {
-                    context =
-                        narrow_context(context, mess.ciaddr, tagif_netid);
-                    if context.is_null() ||
-                           {
-                               opt =
-                                   option_find(mess, sz, 54,
-                                               4);
-                               opt.is_null()
-                           } ||
-                           option_addr(opt).s_addr !=
-                               server_id(context, override_0, fallback).s_addr
-                       {
-                        return 0
-                    }
-                    if !lease.is_null() &&
-                           lease.addr.s_addr == mess.ciaddr.s_addr {
-                        lease_prune(lease, now);
-                    } else {
-                        message =
-                            "unknown lease"                           *const libc::c_char
-                    }
-                    daemon.metrics[METRIC_DHCPRELEASE                                             ] =
-                        daemon.metrics[METRIC_DHCPRELEASE      usize].wrapping_add(1);
-                    log_packet("DHCPRELEASE",
-                               &mut mess.ciaddr                            Vec<u8>, emac, emac_len,
-                               iface_name, 0 , message,
-                               mess.xid);
-                    return 0
-                }
-                1 => {
-                    if ignore != 0 ||
-                           !config.is_null() &&
-                               config.flags &
-                                   1 != 0 {
-                        if daemon.options[(42).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                           ).wrapping_mul(8
-                                                                                                                           ))
-                                                         ] &
-                               (1) <<
-                                   (42 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                       ).wrapping_mul(8))
-                               != 0 {
-                            return 0
-                        }
-                        message =
-                            "ignored"
-                                ;
-                        opt = 0
-                    } else {
-                        let mut addr_0: NetAddress = NetAddress {s_addr: 0,};
-                        let mut conf: NetAddress = NetAddress {s_addr: 0,};
-                        conf.s_addr = 0;
-                        addr_0.s_addr = conf.s_addr;
-                        opt =
-                            option_find(mess, sz, 50,
-                                        4);
-                        if !opt.is_null() { addr_0 = option_addr(opt) }
-                        if !config.is_null() &&
-                               config.flags &
-                                   32 != 0 {
-                            let mut addrs: &mut String =
-                                inet_ntoa(config.addr);
-                            ltmp = lease_find_by_addr(config.addr);
-                            if !ltmp.is_null() && ltmp != lease &&
-                                   config_has_mac(config,
-                                                  ltmp.hwaddr.as_mut_ptr(),
-                                                  ltmp.hwaddr_len,
-                                                  ltmp.hwaddr_type) == 0 {
-                                let mut len_3: i32 = 0;
-                                let mut mac_0: mut Vec<u8> =
-                                    extended_hwaddr(ltmp.hwaddr_type,
-                                                    ltmp.hwaddr_len,
-                                                    ltmp.hwaddr.as_mut_ptr(),
-                                                    ltmp.clid_len,
-                                                    ltmp.clid, &mut len_3);
-                                my_syslog((3) <<
-                                              3 |
-                                              4,
-                                          "not using configured address %s because it is leased to %s"
-                                                                                      *const libc::c_char, addrs,
-                                          print_mac(daemon.namebuff,
-                                                    mac_0, len_3));
-                            } else {
-                                let mut tmp_1: DhcpContext =
-                                    0;
-                                tmp_1 = context;
-                                while !tmp_1.is_null() {
-                                    if context.router.s_addr ==
-                                           config.addr.s_addr {
-                                        break ;
-                                    }
-                                    tmp_1 = tmp_1.current
-                                }
-                                if !tmp_1.is_null() {
-                                    my_syslog((3) <<
-                                                  3 |
-                                                  4,
-                                              "not using configured address %s because it is in use by the server or relay"
-                                                                                              *const libc::c_char, addrs);
-                                } else if !config.is_null() &&
-                                              config.flags &
-                                                  1024   libc::c_uint != 0 &&
-                                              difftime(now,
-                                                       config.decline_time)
-                                                  <
-                                                  600   libc::c_float   libc::c_double {
-                                    my_syslog((3) <<
-                                                  3 |
-                                                  4,
-                                              "not using configured address %s because it was previously declined"
-                                                                                              *const libc::c_char, addrs);
-                                } else { conf = config.addr }
-                            }
-                        }
-                        if conf.s_addr != 0 {
-                            mess.yiaddr = conf
-                        } else if !lease.is_null() &&
-                                      !address_available(context,
-                                                         lease.addr,
-                                                         tagif_netid).is_null()
-                                      &&
-                                      config_find_by_address(daemon.dhcp_conf,
-                                                             lease.addr).is_null()
-                         {
-                            mess.yiaddr = lease.addr
-                        } else if !opt.is_null() &&
-                                      !address_available(context, addr_0,
-                                                         tagif_netid).is_null()
-                                      && lease_find_by_addr(addr_0).is_null()
-                                      &&
-                                      config_find_by_address(daemon.dhcp_conf,
-                                                             addr_0).is_null()
-                                      &&
-                                      !do_icmp_ping(now, addr_0,
-                                                    0     libc::c_uint,
-                                                    loopback).is_null() {
-                            mess.yiaddr = addr_0
-                        } else if emac_len == 0 {
-                            message =
-                                "no unique-id"                               *const libc::c_char
-                        } else if address_allocate(context,
-                                                   &mut mess.yiaddr, emac,
-                                                   emac_len, tagif_netid, now,
-                                                   loopback) == 0 {
-                            message =
-                                "no address available"                               *const libc::c_char
-                        }
-                    }
-                    daemon.metrics[METRIC_DHCPDISCOVER                                             ] =
-                        daemon.metrics[METRIC_DHCPDISCOVER      usize].wrapping_add(1);
-                    log_packet("DHCPDISCOVER",
-                               if !opt.is_null() {
-                                   &mut *opt.offset((2      libc::c_uint).wrapping_add(0
+  /* if we're just a proxy server, go no further */
+  if ((context->flags & CONTEXT_PROXY) || pxe)
+    return 0;
+  
+  if ((opt = option_find(mess, sz, OPTION_REQUESTED_OPTIONS, 0)))
+    {
+      req_options = (unsigned char *)daemon->dhcp_buff2;
+      memcpy(req_options, option_ptr(opt, 0), option_len(opt));
+      req_options[option_len(opt)] = OPTION_END;
+    }
+  
+  switch (mess_type)
+    {
+    case DHCPDECLINE:
+      if (!(opt = option_find(mess, sz, OPTION_SERVER_IDENTIFIER, INADDRSZ)) ||
+	  option_addr(opt).s_addr != server_id(context, override, fallback).s_addr)
+	return 0;
+      
+      /* sanitise any message. Paranoid? Moi? */
+      sanitise(option_find(mess, sz, OPTION_MESSAGE, 1), daemon->dhcp_buff);
+      
+      if (!(opt = option_find(mess, sz, OPTION_REQUESTED_IP, INADDRSZ)))
+	return 0;
+      
+      daemon->metrics[METRIC_DHCPDECLINE]++;
+      log_packet("DHCPDECLINE", option_ptr(opt, 0), emac, emac_len, iface_name, NULL, daemon->dhcp_buff, mess->xid);
+      
+      if (lease && lease->addr.s_addr == option_addr(opt).s_addr)
+	lease_prune(lease, now);
+      
+      if (have_config(config, CONFIG_ADDR) && 
+	  config->addr.s_addr == option_addr(opt).s_addr)
+	{
+	  prettyprint_time(daemon->dhcp_buff, DECLINE_BACKOFF);
+	  my_syslog(MS_DHCP | LOG_WARNING, _("disabling DHCP static address %s for %s"), 
+		    inet_ntoa(config->addr), daemon->dhcp_buff);
+	  config->flags |= CONFIG_DECLINED;
+	  config->decline_time = now;
+	}
+      else
+	/* make sure this host gets a different address next time. */
+	for (; context; context = context->current)
+	  context->addr_epoch++;
+      
+      return 0;
 
-                                                                                                                            libc::c_uint)
-                                                       )                                 mut Vec<u8>
-                               } else { 0 }, emac,
-                               emac_len, iface_name, 0 ,
-                               message, mess.xid);
-                    if !message.is_null() ||
-                           {
-                               context =
-                                   narrow_context(context, mess.yiaddr,
-                                                  tagif_netid);
-                               context.is_null()
-                           } {
-                        return 0
-                    }
-                    if !context.netid.net.is_null() {
-                        context.netid.next = netid;
-                        tagif_netid = run_tag_if(&mut context.netid)
-                    }
-                    log_tags(tagif_netid, __bswap_32(mess.xid));
-                    apply_delay(mess.xid, recvtime, tagif_netid);
-                    if daemon.options[(57   libc::c_ulong).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                   ).wrapping_mul(8                                                                                                                   ))
-                                                     ] &
-                           (1) <<
-                               (57                       ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                               ).wrapping_mul(8                                           ))
-                           != 0 &&
-                           !option_find(mess, sz, 80,
-                                        0).is_null() {
-                        rapid_commit = 1
-                    } else {
-                        daemon.metrics[METRIC_DHCPOFFER    ] =
-                            daemon.metrics[METRIC_DHCPOFFER              usize].wrapping_add(1);
-                        log_packet("DHCPOFFER",
-                                   &mut mess.yiaddr                                Vec<u8>, emac, emac_len,
-                                   iface_name, 0 ,
-                                   0 , mess.xid);
-                        time =
-                            calc_time(context, config,
-                                      option_find(mess, sz, 51,
-                                                  4));
-                        clear_packet(mess, end);
-                        option_put(mess, end, 53,
-                                   1,
-                                   2);
-                        option_put(mess, end, 54,
-                                   4,
-                                   __bswap_32(server_id(context, override_0,
-                                                        fallback).s_addr));
-                        option_put(mess, end, 51,
-                                   4, time);
-                        /* T1 and T2 are required in DHCPOFFER by HP's wacky Jetdirect client. */
-                        do_options(context, mess, end, req_options,
-                                   offer_hostname, get_domain(mess.yiaddr),
-                                   netid, subnet_addr, fqdn_flags, borken_opt,
-                                   pxearch, uuid, vendor_class_len, now, time,
-                                   fuzz, pxevendor);
-                        return dhcp_packet_size(mess, agent_id, real_end)
-                    }
-                }
-                3 => {
-                    if ignore != 0 ||
-                           !config.is_null() &&
-                               config.flags &
-                                   1 != 0 {
-                        return 0
-                    }
-                    opt =
-                        option_find(mess, sz, 50,
-                                    4);
-                    if !opt.is_null() {
-                        /* SELECTING  or INIT_REBOOT */
-                        mess.yiaddr = option_addr(opt);
-                        /* send vendor and user class info for new or recreated lease */
-                        do_classes = 1;
-                        opt =
-                            option_find(mess, sz, 54,
-                                        4);
-                        if !opt.is_null() {
-                            /* SELECTING */
-                            selecting = 1;
-                            if override_0.s_addr !=
-                                   0 {
-                                if option_addr(opt).s_addr !=
-                                       override_0.s_addr {
-                                    return 0
-                                }
-                            } else {
-                                while !context.is_null() {
-                                    if context.local.s_addr ==
-                                           option_addr(opt).s_addr {
-                                        break ;
-                                    }
-                                    context = context.current
-                                }
-                                if context.is_null() {
-                                    /* Handle very strange configs where clients have more than one route to the server.
+    case DHCPRELEASE:
+      if (!(context = narrow_context(context, mess->ciaddr, tagif_netid)) ||
+	  !(opt = option_find(mess, sz, OPTION_SERVER_IDENTIFIER, INADDRSZ)) ||
+	  option_addr(opt).s_addr != server_id(context, override, fallback).s_addr)
+	return 0;
+      
+      if (lease && lease->addr.s_addr == mess->ciaddr.s_addr)
+	lease_prune(lease, now);
+      else
+	message = _("unknown lease");
+
+      daemon->metrics[METRIC_DHCPRELEASE]++;
+      log_packet("DHCPRELEASE", &mess->ciaddr, emac, emac_len, iface_name, NULL, message, mess->xid);
+	
+      return 0;
+      
+    case DHCPDISCOVER:
+      if (ignore || have_config(config, CONFIG_DISABLE))
+	{
+	  if (option_bool(OPT_QUIET_DHCP))
+	    return 0;
+	  message = _("ignored");
+	  opt = NULL;
+	}
+      else 
+	{
+	  struct in_addr addr, conf;
+	  
+	  addr.s_addr = conf.s_addr = 0;
+
+	  if ((opt = option_find(mess, sz, OPTION_REQUESTED_IP, INADDRSZ)))	 
+	    addr = option_addr(opt);
+	  
+	  if (have_config(config, CONFIG_ADDR))
+	    {
+	      char *addrs = inet_ntoa(config->addr);
+	      
+	      if ((ltmp = lease_find_by_addr(config->addr)) && 
+		  ltmp != lease &&
+		  !config_has_mac(config, ltmp->hwaddr, ltmp->hwaddr_len, ltmp->hwaddr_type))
+		{
+		  int len;
+		  unsigned char *mac = extended_hwaddr(ltmp->hwaddr_type, ltmp->hwaddr_len,
+						       ltmp->hwaddr, ltmp->clid_len, ltmp->clid, &len);
+		  my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address %s because it is leased to %s"),
+			    addrs, print_mac(daemon->namebuff, mac, len));
+		}
+	      else
+		{
+		  struct dhcp_context *tmp;
+		  for (tmp = context; tmp; tmp = tmp->current)
+		    if (context->router.s_addr == config->addr.s_addr)
+		      break;
+		  if (tmp)
+		    my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address %s because it is in use by the server or relay"), addrs);
+		  else if (have_config(config, CONFIG_DECLINED) &&
+			   difftime(now, config->decline_time) < (float)DECLINE_BACKOFF)
+		    my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address %s because it was previously declined"), addrs);
+		  else
+		    conf = config->addr;
+		}
+	    }
+	  
+	  if (conf.s_addr)
+	    mess->yiaddr = conf;
+	  else if (lease && 
+		   address_available(context, lease->addr, tagif_netid) && 
+		   !config_find_by_address(daemon->dhcp_conf, lease->addr))
+	    mess->yiaddr = lease->addr;
+	  else if (opt && address_available(context, addr, tagif_netid) && !lease_find_by_addr(addr) && 
+		   !config_find_by_address(daemon->dhcp_conf, addr) && do_icmp_ping(now, addr, 0, loopback))
+	    mess->yiaddr = addr;
+	  else if (emac_len == 0)
+	    message = _("no unique-id");
+	  else if (!address_allocate(context, &mess->yiaddr, emac, emac_len, tagif_netid, now, loopback))
+	    message = _("no address available");      
+	}
+      
+      daemon->metrics[METRIC_DHCPDISCOVER]++;
+      log_packet("DHCPDISCOVER", opt ? option_ptr(opt, 0) : NULL, emac, emac_len, iface_name, NULL, message, mess->xid); 
+
+      if (message || !(context = narrow_context(context, mess->yiaddr, tagif_netid)))
+	return 0;
+
+      if (context->netid.net)
+	{
+	  context->netid.next = netid;
+	  tagif_netid = run_tag_if(&context->netid);
+	}
+
+      log_tags(tagif_netid, ntohl(mess->xid));
+      apply_delay(mess->xid, recvtime, tagif_netid);
+
+      if (option_bool(OPT_RAPID_COMMIT) && option_find(mess, sz, OPTION_RAPID_COMMIT, 0))
+	{
+	  rapid_commit = 1;
+	  goto rapid_commit;
+	}
+      
+      daemon->metrics[METRIC_DHCPOFFER]++;
+      log_packet("DHCPOFFER" , &mess->yiaddr, emac, emac_len, iface_name, NULL, NULL, mess->xid);
+      
+      time = calc_time(context, config, option_find(mess, sz, OPTION_LEASE_TIME, 4));
+      clear_packet(mess, end);
+      option_put(mess, end, OPTION_MESSAGE_TYPE, 1, DHCPOFFER);
+      option_put(mess, end, OPTION_SERVER_IDENTIFIER, INADDRSZ, ntohl(server_id(context, override, fallback).s_addr));
+      option_put(mess, end, OPTION_LEASE_TIME, 4, time);
+      /* T1 and T2 are required in DHCPOFFER by HP's wacky Jetdirect client. */
+      do_options(context, mess, end, req_options, offer_hostname, get_domain(mess->yiaddr), 
+		 netid, subnet_addr, fqdn_flags, borken_opt, pxearch, uuid, vendor_class_len, now, time, fuzz, pxevendor);
+      
+      return dhcp_packet_size(mess, agent_id, real_end);
+	
+
+    case DHCPREQUEST:
+      if (ignore || have_config(config, CONFIG_DISABLE))
+	return 0;
+      if ((opt = option_find(mess, sz, OPTION_REQUESTED_IP, INADDRSZ)))
+	{
+	  /* SELECTING  or INIT_REBOOT */
+	  mess->yiaddr = option_addr(opt);
+	  
+	  /* send vendor and user class info for new or recreated lease */
+	  do_classes = 1;
+	  
+	  if ((opt = option_find(mess, sz, OPTION_SERVER_IDENTIFIER, INADDRSZ)))
+	    {
+	      /* SELECTING */
+	      selecting = 1;
+	      
+	      if (override.s_addr != 0)
+		{
+		  if (option_addr(opt).s_addr != override.s_addr)
+		    return 0;
+		}
+	      else 
+		{
+		  for (; context; context = context->current)
+		    if (context->local.s_addr == option_addr(opt).s_addr)
+		      break;
+		  
+		  if (!context)
+		    {
+		      /* Handle very strange configs where clients have more than one route to the server.
 			 If a clients idea of its server-id matches any of our DHCP interfaces, we let it pass.
 			 Have to set override to make sure we echo back the correct server-id */
-                                    let mut intr: Irec = 0 ;
-                                    enumerate_interfaces(0);
-                                    intr = daemon.interfaces;
-                                    while !intr.is_null() {
-                                        if intr.addr.sa.sa_family                                          == 2
-                                               &&
-                                               intr.addr.in_0.sin_addr.s_addr
-                                                   == option_addr(opt).s_addr
-                                               && intr.tftp_ok != 0 {
-                                            break ;
-                                        }
-                                        intr = intr.next
-                                    }
-                                    if !intr.is_null() {
-                                        override_0 =
-                                            intr.addr.in_0.sin_addr
-                                    } else {
-                                        /* In auth mode, a REQUEST sent to the wrong server
+		      struct irec *intr;
+		      
+		      enumerate_interfaces(0);
+
+		      for (intr = daemon->interfaces; intr; intr = intr->next)
+			if (intr->addr.sa.sa_family == AF_INET &&
+			    intr->addr.in.sin_addr.s_addr == option_addr(opt).s_addr &&
+			    intr->tftp_ok)
+			  break;
+
+		      if (intr)
+			override = intr->addr.in.sin_addr;
+		      else
+			{
+			  /* In auth mode, a REQUEST sent to the wrong server
 			     should be faulted, so that the client establishes 
 			     communication with us, otherwise, silently ignore. */
-                                        if daemon.options[(17
-                                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()                              ).wrapping_mul(8                                                                                                                                                                                                   ))
-                                                                                              usize]
-                                               &
-                                               (1) <<
-                                                   (17     libc::c_ulong).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                                       ).wrapping_mul(8                                                                                                                           ))
-                                               == 0 {
-                                            return 0
-                                        }
-                                        message =
-                                            "wrong server-ID"                                          *const u8                                          *const libc::c_char                                          &mut String
-                                    }
-                                }
-                            }
-                            /* If a lease exists for this host and another address, squash it. */
-                            if !lease.is_null() &&
-                                   lease.addr.s_addr !=
-                                       mess.yiaddr.s_addr {
-                                lease_prune(lease, now);
-                                lease = 0
-                            }
-                        } else {
-                            /* INIT-REBOOT */
-                            if lease.is_null() &&
-                                   daemon.options[(17
-                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                                                                                                   ))
-                                                                 ] &
-                                       (1) <<
-                                           (17                                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                       ).wrapping_mul(8                                                                                           ))
-                                       == 0 {
-                                return 0
-                            }
-                            if !lease.is_null() &&
-                                   lease.addr.s_addr !=
-                                       mess.yiaddr.s_addr {
-                                message =
-                                    "wrong address"                                   *const libc::c_char                                  &mut String
-                            }
-                        }
-                    } else {
-                        /* RENEWING or REBINDING */ 
+			  if (!option_bool(OPT_AUTHORITATIVE))
+			    return 0;
+			  message = _("wrong server-ID");
+			}
+		    }
+		}
+
+	      /* If a lease exists for this host and another address, squash it. */
+	      if (lease && lease->addr.s_addr != mess->yiaddr.s_addr)
+		{
+		  lease_prune(lease, now);
+		  lease = NULL;
+		}
+	    }
+	  else
+	    {
+	      /* INIT-REBOOT */
+	      if (!lease && !option_bool(OPT_AUTHORITATIVE))
+		return 0;
+	      
+	      if (lease && lease->addr.s_addr != mess->yiaddr.s_addr)
+		message = _("wrong address");
+	    }
+	}
+      else
+	{
+	  /* RENEWING or REBINDING */ 
 	  /* Check existing lease for this address.
 	     We allow it to be missing if dhcp-authoritative mode
 	     as long as we can allocate the lease now - checked below.
 	     This makes for a smooth recovery from a lost lease DB */
-                        if !lease.is_null() &&
-                               mess.ciaddr.s_addr != lease.addr.s_addr
-                               ||
-                               lease.is_null() &&
-                                   daemon.options[(17
-                                                                         ).wrapping_div((::std::mem::size_of::<libc::c_uint>()              ).wrapping_mul(8                                                                                                                                                                   ))
-                                                                 ] &
-                                       (1) <<
-                                           (17                                   ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                                                                       ).wrapping_mul(8                                                                                           ))
-                                       == 0 {
-                            /* A client rebinding will broadcast the request, so we may see it even 
+	  if ((lease && mess->ciaddr.s_addr != lease->addr.s_addr) ||
+	      (!lease && !option_bool(OPT_AUTHORITATIVE)))
+	    {
+	      /* A client rebinding will broadcast the request, so we may see it even 
 		 if the lease is held by another server. Just ignore it in that case. 
 		 If the request is unicast to us, then somethings wrong, NAK */
-                            if unicast_dest == 0 {
-                                return 0
-                            }
-                            message =
-                                "lease not found"                               *const libc::c_char ;
-                            /* ensure we broadcast NAK */
-                            unicast_dest = 0
-                        }
-                        /* desynchronise renewals */
-                        fuzz = rand16();
-                        mess.yiaddr = mess.ciaddr
-                    }
-                    daemon.metrics[METRIC_DHCPREQUEST                                             ] =
-                        daemon.metrics[METRIC_DHCPREQUEST      usize].wrapping_add(1);
-                    log_packet("DHCPREQUEST",
-                               &mut mess.yiaddr                            Vec<u8>, emac, emac_len,
-                               iface_name, 0 ,
-                               0 , mess.xid);
-                }
-                8 => {
-                    if ignore != 0 ||
-                           !config.is_null() &&
-                               config.flags &
-                                   1 != 0 {
-                        message =
-                            "ignored"
+	      if (!unicast_dest)
+		return 0;
+	      message = _("lease not found");
+	      /* ensure we broadcast NAK */
+	      unicast_dest = 0;
+	    }
 
-                    }
-                    daemon.metrics[METRIC_DHCPINFORM
-                                                  ] =
-                        daemon.metrics[METRIC_DHCPINFORM      usize].wrapping_add(1);
-                    log_packet("DHCPINFORM",
-                               &mut mess.ciaddr                            Vec<u8>, emac, emac_len,
-                               iface_name, message, 0 ,
-                               mess.xid);
-                    if !message.is_null() ||
-                           mess.ciaddr.s_addr ==
-                               0 {
-                        return 0
-                    }
-                    /* For DHCPINFORM only, cope without a valid context */
-                    context =
-                        narrow_context(context, mess.ciaddr, tagif_netid);
-                    /* Find a least based on IP address if we didn't
+	  /* desynchronise renewals */
+	  fuzz = rand16();
+	  mess->yiaddr = mess->ciaddr;
+	}
+
+      daemon->metrics[METRIC_DHCPREQUEST]++;
+      log_packet("DHCPREQUEST", &mess->yiaddr, emac, emac_len, iface_name, NULL, NULL, mess->xid);
+      
+    rapid_commit:
+      if (!message)
+	{
+	  struct dhcp_config *addr_config;
+	  struct dhcp_context *tmp = NULL;
+	  
+	  if (have_config(config, CONFIG_ADDR))
+	    for (tmp = context; tmp; tmp = tmp->current)
+	      if (context->router.s_addr == config->addr.s_addr)
+		break;
+	  
+	  if (!(context = narrow_context(context, mess->yiaddr, tagif_netid)))
+	    {
+	      /* If a machine moves networks whilst it has a lease, we catch that here. */
+	      message = _("wrong network");
+	      /* ensure we broadcast NAK */
+	      unicast_dest = 0;
+	    }
+	  
+	  /* Check for renewal of a lease which is outside the allowed range. */
+	  else if (!address_available(context, mess->yiaddr, tagif_netid) &&
+		   (!have_config(config, CONFIG_ADDR) || config->addr.s_addr != mess->yiaddr.s_addr))
+	    message = _("address not available");
+	  
+	  /* Check if a new static address has been configured. Be very sure that
+	     when the client does DISCOVER, it will get the static address, otherwise
+	     an endless protocol loop will ensue. */
+	  else if (!tmp && !selecting &&
+		   have_config(config, CONFIG_ADDR) && 
+		   (!have_config(config, CONFIG_DECLINED) ||
+		    difftime(now, config->decline_time) > (float)DECLINE_BACKOFF) &&
+		   config->addr.s_addr != mess->yiaddr.s_addr &&
+		   (!(ltmp = lease_find_by_addr(config->addr)) || ltmp == lease))
+	    message = _("static lease available");
+
+	  /* Check to see if the address is reserved as a static address for another host */
+	  else if ((addr_config = config_find_by_address(daemon->dhcp_conf, mess->yiaddr)) && addr_config != config)
+	    message = _("address reserved");
+
+	  else if (!lease && (ltmp = lease_find_by_addr(mess->yiaddr)))
+	    {
+	      /* If a host is configured with more than one MAC address, it's OK to 'nix 
+		 a lease from one of it's MACs to give the address to another. */
+	      if (config && config_has_mac(config, ltmp->hwaddr, ltmp->hwaddr_len, ltmp->hwaddr_type))
+		{
+		  my_syslog(MS_DHCP | LOG_INFO, _("abandoning lease to %s of %s"),
+			    print_mac(daemon->namebuff, ltmp->hwaddr, ltmp->hwaddr_len), 
+			    inet_ntoa(ltmp->addr));
+		  lease = ltmp;
+		}
+	      else
+		message = _("address in use");
+	    }
+
+	  if (!message)
+	    {
+	      if (emac_len == 0)
+		message = _("no unique-id");
+	      
+	      else if (!lease)
+		{	     
+		  if ((lease = lease4_allocate(mess->yiaddr)))
+		    do_classes = 1;
+		  else
+		    message = _("no leases left");
+		}
+	    }
+	}
+
+      if (message)
+	{
+	  daemon->metrics[rapid_commit ? METRIC_NOANSWER : METRIC_DHCPNAK]++;
+	  log_packet(rapid_commit ? "NOANSWER" : "DHCPNAK", &mess->yiaddr, emac, emac_len, iface_name, NULL, message, mess->xid);
+
+	  /* rapid commit case: lease allocate failed but don't send DHCPNAK */
+	  if (rapid_commit)
+	    return 0;
+	  
+	  mess->yiaddr.s_addr = 0;
+	  clear_packet(mess, end);
+	  option_put(mess, end, OPTION_MESSAGE_TYPE, 1, DHCPNAK);
+	  option_put(mess, end, OPTION_SERVER_IDENTIFIER, INADDRSZ, ntohl(server_id(context, override, fallback).s_addr));
+	  option_put_string(mess, end, OPTION_MESSAGE, message, borken_opt);
+	  /* This fixes a problem with the DHCP spec, broadcasting a NAK to a host on 
+	     a distant subnet which unicast a REQ to us won't work. */
+	  if (!unicast_dest || mess->giaddr.s_addr != 0 || 
+	      mess->ciaddr.s_addr == 0 || is_same_net(context->local, mess->ciaddr, context->netmask))
+	    {
+	      mess->flags |= htons(0x8000); /* broadcast */
+	      mess->ciaddr.s_addr = 0;
+	    }
+	}
+      else
+	{
+	  if (context->netid.net)
+	    {
+	      context->netid.next = netid;
+	      tagif_netid = run_tag_if( &context->netid);
+	    }
+
+	  log_tags(tagif_netid, ntohl(mess->xid));
+	  
+	  if (do_classes)
+	    {
+	      /* pick up INIT-REBOOT events. */
+	      lease->flags |= LEASE_CHANGED;
+
+#ifdef HAVE_SCRIPT
+	      if (daemon->lease_change_command)
+		{
+		  struct dhcp_netid *n;
+		  
+		  if (mess->giaddr.s_addr)
+		    lease->giaddr = mess->giaddr;
+		  
+		  free(lease->extradata);
+		  lease->extradata = NULL;
+		  lease->extradata_size = lease->extradata_len = 0;
+		  
+		  add_extradata_opt(lease, option_find(mess, sz, OPTION_VENDOR_ID, 1));
+		  add_extradata_opt(lease, option_find(mess, sz, OPTION_HOSTNAME, 1));
+		  add_extradata_opt(lease, oui);
+		  add_extradata_opt(lease, serial);
+		  add_extradata_opt(lease, class);
+
+		  if ((opt = option_find(mess, sz, OPTION_AGENT_ID, 1)))
+		    {
+		      add_extradata_opt(lease, option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_CIRCUIT_ID, 1));
+		      add_extradata_opt(lease, option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_SUBSCR_ID, 1));
+		      add_extradata_opt(lease, option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_REMOTE_ID, 1));
+		    }
+		  else
+		    {
+		      add_extradata_opt(lease, NULL);
+		      add_extradata_opt(lease, NULL);
+		      add_extradata_opt(lease, NULL);
+		    }
+
+		  /* DNSMASQ_REQUESTED_OPTIONS */
+		  if ((opt = option_find(mess, sz, OPTION_REQUESTED_OPTIONS, 1)))
+		    {
+		      int len = option_len(opt);
+		      unsigned char *rop = option_ptr(opt, 0);
+		      char *q = daemon->namebuff;
+		      int i;
+		      for (i = 0; i < len; i++)
+		        {
+		          q += snprintf(q, MAXDNAME - (q - daemon->namebuff), "%d%s", rop[i], i + 1 == len ? "" : ",");
+		        }
+		      lease_add_extradata(lease, (unsigned char *)daemon->namebuff, (q - daemon->namebuff), 0); 
+		    }
+		  else
+		    {
+		      add_extradata_opt(lease, NULL);
+		    }
+
+		  /* space-concat tag set */
+		  if (!tagif_netid)
+		    add_extradata_opt(lease, NULL);
+		  else
+		    for (n = tagif_netid; n; n = n->next)
+		      {
+			struct dhcp_netid *n1;
+			/* kill dupes */
+			for (n1 = n->next; n1; n1 = n1->next)
+			  if (strcmp(n->net, n1->net) == 0)
+			    break;
+			if (!n1)
+			  lease_add_extradata(lease, (unsigned char *)n->net, strlen(n->net), n->next ? ' ' : 0); 
+		      }
+		  
+		  if ((opt = option_find(mess, sz, OPTION_USER_CLASS, 1)))
+		    {
+		      int len = option_len(opt);
+		      unsigned char *ucp = option_ptr(opt, 0);
+		      /* If the user-class option started as counted strings, the first byte will be zero. */
+		      if (len != 0 && ucp[0] == 0)
+			ucp++, len--;
+		      lease_add_extradata(lease, ucp, len, -1);
+		    }
+		}
+#endif
+	    }
+	  
+	  if (!hostname_auth && (client_hostname = host_from_dns(mess->yiaddr)))
+	    {
+	      domain = get_domain(mess->yiaddr);
+	      hostname = client_hostname;
+	      hostname_auth = 1;
+	    }
+	  
+	  time = calc_time(context, config, option_find(mess, sz, OPTION_LEASE_TIME, 4));
+	  lease_set_hwaddr(lease, mess->chaddr, clid, mess->hlen, mess->htype, clid_len, now, do_classes);
+	  
+	  /* if all the netids in the ignore_name list are present, ignore client-supplied name */
+	  if (!hostname_auth)
+	    {
+	      for (id_list = daemon->dhcp_ignore_names; id_list; id_list = id_list->next)
+		if ((!id_list->list) || match_netid(id_list->list, tagif_netid, 0))
+		  break;
+	      if (id_list)
+		hostname = NULL;
+	    }
+	  
+	  /* Last ditch, if configured, generate hostname from mac address */
+	  if (!hostname && emac_len != 0)
+	    {
+	      for (id_list = daemon->dhcp_gen_names; id_list; id_list = id_list->next)
+		if ((!id_list->list) || match_netid(id_list->list, tagif_netid, 0))
+		  break;
+	      if (id_list)
+		{
+		  int i;
+
+		  hostname = daemon->dhcp_buff;
+		  /* buffer is 256 bytes, 3 bytes per octet */
+		  for (i = 0; (i < emac_len) && (i < 80); i++)
+		    hostname += sprintf(hostname, "%.2x%s", emac[i], (i == emac_len - 1) ? "" : "-");
+		  hostname = daemon->dhcp_buff;
+		}
+	    }
+
+	  if (hostname)
+	    lease_set_hostname(lease, hostname, hostname_auth, get_domain(lease->addr), domain);
+	  
+	  lease_set_expires(lease, time, now);
+	  lease_set_interface(lease, int_index, now);
+
+	  if (override.s_addr != 0)
+	    lease->override = override;
+	  else
+	    override = lease->override;
+
+	  daemon->metrics[METRIC_DHCPACK]++;
+	  log_packet("DHCPACK", &mess->yiaddr, emac, emac_len, iface_name, hostname, NULL, mess->xid);  
+
+	  clear_packet(mess, end);
+	  option_put(mess, end, OPTION_MESSAGE_TYPE, 1, DHCPACK);
+	  option_put(mess, end, OPTION_SERVER_IDENTIFIER, INADDRSZ, ntohl(server_id(context, override, fallback).s_addr));
+	  option_put(mess, end, OPTION_LEASE_TIME, 4, time);
+	  if (rapid_commit)
+	     option_put(mess, end, OPTION_RAPID_COMMIT, 0, 0);
+	   do_options(context, mess, end, req_options, hostname, get_domain(mess->yiaddr), 
+		     netid, subnet_addr, fqdn_flags, borken_opt, pxearch, uuid, vendor_class_len, now, time, fuzz, pxevendor);
+	}
+
+      return dhcp_packet_size(mess, agent_id, real_end); 
+      
+    case DHCPINFORM:
+      if (ignore || have_config(config, CONFIG_DISABLE))
+	message = _("ignored");
+      
+      daemon->metrics[METRIC_DHCPINFORM]++;
+      log_packet("DHCPINFORM", &mess->ciaddr, emac, emac_len, iface_name, message, NULL, mess->xid);
+     
+      if (message || mess->ciaddr.s_addr == 0)
+	return 0;
+
+      /* For DHCPINFORM only, cope without a valid context */
+      context = narrow_context(context, mess->ciaddr, tagif_netid);
+      
+      /* Find a least based on IP address if we didn't
 	 get one from MAC address/client-d */
-                    if lease.is_null() &&
-                           {
-                               lease = lease_find_by_addr(mess.ciaddr);
-                               !lease.is_null()
-                           } && !lease.hostname.is_null() {
-                        hostname = lease.hostname
-                    }
-                    if hostname.is_null() {
-                        hostname = host_from_dns(mess.ciaddr)
-                    }
-                    if !context.is_null() && !context.netid.net.is_null() {
-                        context.netid.next = netid;
-                        tagif_netid = run_tag_if(&mut context.netid)
-                    }
-                    log_tags(tagif_netid, __bswap_32(mess.xid));
-                    daemon.metrics[METRIC_DHCPACK                                            usize] =
-                        daemon.metrics[METRIC_DHCPACK      usize].wrapping_add(1);
-                    log_packet("DHCPACK",
-                               &mut mess.ciaddr                            Vec<u8>, emac, emac_len,
-                               iface_name, hostname, 0 ,
-                               mess.xid);
-                    if !lease.is_null() {
-                        lease_set_interface(lease, int_index, now);
-                        if override_0.s_addr !=
-                               0 {
-                            lease.override_0 = override_0
-                        } else { override_0 = lease.override_0 }
-                    }
-                    clear_packet(mess, end);
-                    option_put(mess, end, 53, 1,
-                               5);
-                    option_put(mess, end, 54, 4,
-                               __bswap_32(server_id(context, override_0,
-                                                    fallback).s_addr));
-                    /* RFC 2131 says that DHCPINFORM shouldn't include lease-time parameters, but 
+      if (!lease &&
+	  (lease = lease_find_by_addr(mess->ciaddr)) && 
+	  lease->hostname)
+	hostname = lease->hostname;
+      
+      if (!hostname)
+	hostname = host_from_dns(mess->ciaddr);
+      
+      if (context && context->netid.net)
+	{
+	  context->netid.next = netid;
+	  tagif_netid = run_tag_if(&context->netid);
+	}
+
+      log_tags(tagif_netid, ntohl(mess->xid));
+      
+      daemon->metrics[METRIC_DHCPACK]++;
+      log_packet("DHCPACK", &mess->ciaddr, emac, emac_len, iface_name, hostname, NULL, mess->xid);
+      
+      if (lease)
+	{
+	  lease_set_interface(lease, int_index, now);
+	  if (override.s_addr != 0)
+	    lease->override = override;
+	  else
+	    override = lease->override;
+	}
+
+      clear_packet(mess, end);
+      option_put(mess, end, OPTION_MESSAGE_TYPE, 1, DHCPACK);
+      option_put(mess, end, OPTION_SERVER_IDENTIFIER, INADDRSZ, ntohl(server_id(context, override, fallback).s_addr));
+     
+      /* RFC 2131 says that DHCPINFORM shouldn't include lease-time parameters, but 
 	 we supply a utility which makes DHCPINFORM requests to get this information.
 	 Only include lease time if OPTION_LEASE_TIME is in the parameter request list,
 	 which won't be true for ordinary clients, but will be true for the 
 	 dhcp_lease_time utility. */
-                    if !lease.is_null() &&
-                           in_list(req_options, 51) != 0 {
-                        if lease.expires ==
-                               0 {
-                            time = 0xffffffff
-                        } else {
-                            time =
-                                difftime(lease.expires, now)                              libc::c_uint
-                        } /* handle reply differently */
-                        option_put(mess, end, 51,
-                                   4, time);
-                    }
-                    do_options(context, mess, end, req_options, hostname,
-                               get_domain(mess.ciaddr), netid, subnet_addr,
-                               fqdn_flags, borken_opt, pxearch, uuid,
-                               vendor_class_len, now,
-                               0xffffffff,
-                               0 , pxevendor);
-                    *is_inform = 1;
-                    return dhcp_packet_size(mess, agent_id, real_end)
-                }
-                _ => { break 's_3991 ; }
-            }
-            if message.is_null() {
-                let mut addr_config: DhcpConfig = 0;
-                let mut tmp_2: DhcpContext = 0;
-                if !config.is_null() &&
-                       config.flags & 32 !=
-                           0 {
-                    tmp_2 = context;
-                    while !tmp_2.is_null() {
-                        if context.router.s_addr == config.addr.s_addr {
-                            break ;
-                        }
-                        tmp_2 = tmp_2.current
-                    }
-                }
-                context =
-                    narrow_context(context, mess.yiaddr, tagif_netid);
-                if context.is_null() {
-                    /* If a machine moves networks whilst it has a lease, we catch that here. */
-                    message =
-                        "wrong network"  ;
-                    /* ensure we broadcast NAK */
-                    unicast_dest = 0
-                } else if address_available(context, mess.yiaddr,
-                                            tagif_netid).is_null() &&
-                              (!(!config.is_null() &&
-                                     config.flags &
-                                         32 !=
-                                         0) ||
-                                   config.addr.s_addr !=
-                                       mess.yiaddr.s_addr) {
-                    message =
-                        "address not available"
-                } else if tmp_2.is_null() && selecting == 0 &&
-                              (!config.is_null() &&
-                                   config.flags &
-                                       32 != 0)
-                              &&
-                              (!(!config.is_null() &&
-                                     config.flags &
-                                         1024
-                                         != 0) ||
-                                   difftime(now, config.decline_time) >
-                                       600                                      libc::c_double) &&
-                              config.addr.s_addr != mess.yiaddr.s_addr
-                              &&
-                              {
-                                  ltmp = lease_find_by_addr(config.addr);
-                                  (ltmp.is_null()) || ltmp == lease
-                              } {
-                    message =
-                        "static lease available"
-                } else {
-                    /* Check for renewal of a lease which is outside the allowed range. */
-                    /* Check if a new static address has been configured. Be very sure that
-	     when the client does DISCOVER, it will get the static address, otherwise
-	     an endless protocol loop will ensue. */
-                    /* Check to see if the address is reserved as a static address for another host */
-                    addr_config =
-                        config_find_by_address(daemon.dhcp_conf,
-                                               mess.yiaddr);
-                    if !addr_config.is_null() && addr_config != config {
-                        message =
-                            "address reserved"                           *const libc::c_char
-                    } else if lease.is_null() &&
-                                  {
-                                      ltmp =
-                                          lease_find_by_addr(mess.yiaddr);
-                                      !ltmp.is_null()
-                                  } {
-                        /* If a host is configured with more than one MAC address, it's OK to 'nix 
-		 a lease from one of it's MACs to give the address to another. */
-                        if !config.is_null() &&
-                               config_has_mac(config,
-                                              ltmp.hwaddr.as_mut_ptr(),
-                                              ltmp.hwaddr_len,
-                                              ltmp.hwaddr_type) != 0 {
-                            my_syslog((3) << 3 |
-                                          6,
-                                      "abandoning lease to %s of %s"                                    *const u8,
-                                      print_mac(daemon.namebuff,
-                                                ltmp.hwaddr.as_mut_ptr(),
-                                                ltmp.hwaddr_len),
-                                      inet_ntoa(ltmp.addr));
-                            lease = ltmp
-                        } else {
-                            message =
-                                "address in use"                               *const libc::c_char
-                        }
-                    }
-                }
-                if message.is_null() {
-                    if emac_len == 0 {
-                        message =
-                            "no unique-id"                           *const libc::c_char
-                    } else if lease.is_null() {
-                        lease = lease4_allocate(mess.yiaddr);
-                        if !lease.is_null() {
-                            do_classes = 1
-                        } else {
-                            message =
-                                "no leases left"                               *const libc::c_char
-                        }
-                    }
-                }
-            }
-            if !message.is_null() {
-                daemon.metrics[if rapid_commit != 0 {
-                                              METRIC_NOANSWER
-                                          } else {
-                                              METRIC_DHCPNAK
-                                          } ] =
-                    daemon.metrics[if rapid_commit != 0 {
-                                                  METRIC_NOANSWER
-                                              } else {
-                                                  METRIC_DHCPNAK
-                                              } ].wrapping_add(1);
-                log_packet(if rapid_commit != 0 {
-                               "NOANSWER"                              *const libc::c_char
-                           } else {
-                               "DHCPNAK"                              *const libc::c_char
-                           } ,
-                           &mut mess.yiaddr, emac, emac_len, iface_name,
-                           0 , message, mess.xid);
-                /* rapid commit case: lease allocate failed but don't send DHCPNAK */
-                if rapid_commit != 0 { return 0  }
-                mess.yiaddr.s_addr = 0;
-                clear_packet(mess, end);
-                option_put(mess, end, 53, 1,
-                           6);
-                option_put(mess, end, 54, 4,
-                           __bswap_32(server_id(context, override_0,
-                                                fallback).s_addr));
-                option_put_string(mess, end, 56, message,
-                                  borken_opt);
-                /* This fixes a problem with the DHCP spec, broadcasting a NAK to a host on 
-	     a distant subnet which unicast a REQ to us won't work. */
-                if unicast_dest == 0 ||
-                       mess.giaddr.s_addr !=
-                           0 ||
-                       mess.ciaddr.s_addr ==
-                           0 ||
-                       is_same_net4(context.local, mess.ciaddr,
-                                    context.netmask) != 0 {
-                    mess.flags =
-                        (mess.flags |
-                             __bswap_16(0x8000)
-                                ); /* broadcast */
-                    mess.ciaddr.s_addr = 0
-                }
-            } else {
-                if !context.netid.net.is_null() {
-                    context.netid.next = netid;
-                    tagif_netid = run_tag_if(&mut context.netid)
-                }
-                log_tags(tagif_netid, __bswap_32(mess.xid));
-                if do_classes != 0 {
-                    /* pick up INIT-REBOOT events. */
-                    lease.flags |= 2;
-                    if !daemon.lease_change_command.is_null() {
-                        let mut n: DhcpNetId = 0 ;
-                        if mess.giaddr.s_addr != 0 {
-                            lease.giaddr = mess.giaddr
-                        }
-                        // free(lease.extradata);
-                        lease.extradata = 0;
-                        lease.extradata_len =
-                            0;
-                        lease.extradata_size = lease.extradata_len;
-                        add_extradata_opt(lease,
-                                          option_find(mess, sz,
-                                                      60,
-                                                      1));
-                        add_extradata_opt(lease,
-                                          option_find(mess, sz,
-                                                      12,
-                                                      1));
-                        add_extradata_opt(lease, oui);
-                        add_extradata_opt(lease, serial);
-                        add_extradata_opt(lease, class);
-                        opt =
-                            option_find(mess, sz, 82,
-                                        1);
-                        if !opt.is_null() {
-                            add_extradata_opt(lease,
-                                              option_find1(&mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(0                                                                                              libc::c_uint)
-                                                                      )
-                                                                          mut Vec<u8>
-                                                                         Vec<u8>
-                                                                          mut Vec<u8>,
-                                                           &mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                                                        )                                                                                              libc::c_uint)
-                                                                      )
-                                                                          mut Vec<u8>
-                                                                         Vec<u8>
-                                                                          mut Vec<u8>,
-                                                           1,
-                                                           1));
-                            add_extradata_opt(lease,
-                                              option_find1(&mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(0                                                                                              libc::c_uint)
-                                                                      )
-                                                                          mut Vec<u8>
-                                                                         Vec<u8>
-                                                                          mut Vec<u8>,
-                                                           &mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                                                        )                                                                                              libc::c_uint)
-                                                                      )
-                                                                          mut Vec<u8>
-                                                                         Vec<u8>
-                                                                          mut Vec<u8>,
-                                                           6,
-                                                           1));
-                            add_extradata_opt(lease,
-                                              option_find1(&mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(0                                                                                              libc::c_uint)
-                                                                      )
-                                                                          mut Vec<u8>
-                                                                         Vec<u8>
-                                                                          mut Vec<u8>,
-                                                           &mut *opt.offset((2
-                                                                                                              libc::c_uint).wrapping_add(*opt.offset(1                                                                                                        )                                                                                              libc::c_uint)
-                                                                      )
-                                                                          mut Vec<u8>
-                                                                         Vec<u8>
-                                                                          mut Vec<u8>,
-                                                           2,
-                                                           1));
-                        } else {
-                            add_extradata_opt(lease, 0);
-                            add_extradata_opt(lease, 0);
-                            add_extradata_opt(lease, 0);
-                        }
-                        /* DNSMASQ_REQUESTED_OPTIONS */
-                        opt =
-                            option_find(mess, sz, 55,
-                                        1);
-                        if !opt.is_null() {
-                            let mut len_4: i32 =
-                                *opt.offset(1)                              ;
-                            let mut rop: mut Vec<u8> =
-                                &mut *opt.offset((2   libc::c_uint).wrapping_add(0
+      if (lease && in_list(req_options, OPTION_LEASE_TIME))
+	{
+	  if (lease->expires == 0)
+	    time = 0xffffffff;
+	  else
+	    time = (unsigned int)difftime(lease->expires, now);
+	  option_put(mess, end, OPTION_LEASE_TIME, 4, time);
+	}
 
-                                                                                                                      libc::c_uint)
-                                                    )                              mut Vec<u8>                              mut Vec<u8>;
-                            let mut q: &mut String =
-                                daemon.namebuff;
-                            let mut i_0: i32 = 0;
-                            i_0 = 0;
-                            while i_0 < len_4 {
-                                q =
-                                    q.offset(snprintf(q,
-                                                      (1025        i32 -
-                                                           q.wrapping_offset_from(daemon.namebuff)
-                                                                          i32)
-                                                         ,
-                                                      "%d%s"                                   *const libc::c_char,
-                                                      *rop.offset(i_0                   )
-                                                         ,
-                                                      if i_0 +
-                                                             1
-                                                             == len_4 {
-                                                          ""                                           *const libc::c_char
-                                                      } else {
-                                                          ","           *const u8           *const libc::c_char
-                                                      }));
-                                i_0 += 1
-                            }
-                            lease_add_extradata(lease,
-                                                daemon.namebuff mut Vec<u8>,
-                                                q.wrapping_offset_from(daemon.namebuff)
-                                                    libc::c_uint,
-                                                0);
-                        } else {
-                            add_extradata_opt(lease, 0);
-                        }
-                        /* space-concat tag set */
-                        if tagif_netid.is_null() {
-                            add_extradata_opt(lease, 0);
-                        } else {
-                            n = tagif_netid;
-                            while !n.is_null() {
-                                let mut n1: DhcpNetId =
-                                    0 ;
-                                /* kill dupes */
-                                n1 = n.next;
-                                while !n1.is_null() {
-                                    if strcmp(n.net, n1.net) ==
-                                           0 {
-                                        break ;
-                                    }
-                                    n1 = n1.next
-                                }
-                                if n1.is_null() {
-                                    lease_add_extradata(lease,
-                                                        n.net         mut Vec<u8>,
-                                                        strlen(n.net)         libc::c_uint,
-                                                        if !n.next.is_null()
-                                                           {
-                                                            ' ' as i32
-                                                        } else {
-                                                            0
-                                                        });
-                                }
-                                n = n.next
-                            }
-                        }
-                        opt =
-                            option_find(mess, sz, 77,
-                                        1);
-                        if !opt.is_null() {
-                            let mut len_5: i32 =
-                                *opt.offset(1)                              ;
-                            let mut ucp_0: mut Vec<u8> =
-                                &mut *opt.offset((2   libc::c_uint).wrapping_add(0
-
-                                                                                                                      libc::c_uint)
-                                                    )                              mut Vec<u8>                              mut Vec<u8>;
-                            /* If the user-class option started as counted strings, the first byte will be zero. */
-                            if len_5 != 0 &&
-                                   *ucp_0.offset(0)                                  == 0 {
-                                ucp_0 = ucp_0.offset(1);
-                                len_5 -= 1
-                            }
-                            lease_add_extradata(lease, ucp_0,
-                                                len_5,
-                                                -(1));
-                        }
-                    }
-                }
-                if hostname_auth == 0 &&
-                       {
-                           client_hostname = host_from_dns(mess.yiaddr);
-                           !client_hostname.is_null()
-                       } {
-                    domain = get_domain(mess.yiaddr);
-                    hostname = client_hostname;
-                    hostname_auth = 1
-                }
-                time =
-                    calc_time(context, config,
-                              option_find(mess, sz, 51,
-                                          4));
-                lease_set_hwaddr(lease, mess.chaddr.as_mut_ptr(), clid,
-                                 mess.hlen,
-                                 mess.htype, clid_len, now,
-                                 do_classes);
-                /* if all the netids in the ignore_name list are present, ignore client-supplied name */
-                if hostname_auth == 0 {
-                    id_list = daemon.dhcp_ignore_names;
-                    while !id_list.is_null() {
-                        if id_list.list.is_null() ||
-                               match_netid(id_list.list, tagif_netid,
-                                           0) != 0 {
-                            break ;
-                        }
-                        id_list = id_list.next
-                    }
-                    if !id_list.is_null() {
-                        hostname = 0
-                    }
-                }
-                /* Last ditch, if configured, generate hostname from mac address */
-                if hostname.is_null() && emac_len != 0 {
-                    id_list = daemon.dhcp_gen_names;
-                    while !id_list.is_null() {
-                        if id_list.list.is_null() ||
-                               match_netid(id_list.list, tagif_netid,
-                                           0) != 0 {
-                            break ;
-                        }
-                        id_list = id_list.next
-                    }
-                    if !id_list.is_null() {
-                        let mut i_1: i32 = 0;
-                        hostname = daemon.dhcp_buff;
-                        /* buffer is 256 bytes, 3 bytes per octet */
-                        i_1 = 0;
-                        while i_1 < emac_len && i_1 < 80 {
-                            hostname =
-                                hostname.offset(sprintf(hostname,
-                                                        "%.2x%s"         *const u8         *const libc::c_char,
-                                                        *emac.offset(i_1                      )
-                                                           ,
-                                                        if i_1 ==
-                                                               emac_len -
-                                                                   1
-                                                           {
-                                                            ""             *const u8             *const libc::c_char
-                                                        } else {
-                                                            "-"             *const u8             *const libc::c_char
-                                                        }));
-                            i_1 += 1
-                        }
-                        hostname = daemon.dhcp_buff
-                    }
-                }
-                if !hostname.is_null() {
-                    lease_set_hostname(lease, hostname, hostname_auth,
-                                       get_domain(lease.addr), domain);
-                }
-                lease_set_expires(lease, time, now);
-                lease_set_interface(lease, int_index, now);
-                if override_0.s_addr != 0 {
-                    lease.override_0 = override_0
-                } else { override_0 = lease.override_0 }
-                daemon.metrics[METRIC_DHCPACK                                        usize] =
-                    daemon.metrics[METRIC_DHCPACK                                            usize].wrapping_add(1);
-                log_packet("DHCPACK"
-                               ,
-                           &mut mess.yiaddr, emac, emac_len, iface_name,
-                           hostname, 0 , mess.xid);
-                clear_packet(mess, end);
-                option_put(mess, end, 53, 1,
-                           5);
-                option_put(mess, end, 54, 4,
-                           __bswap_32(server_id(context, override_0,
-                                                fallback).s_addr));
-                option_put(mess, end, 51, 4,
-                           time);
-                if rapid_commit != 0 {
-                    option_put(mess, end, 80, 0,
-                               0);
-                }
-                do_options(context, mess, end, req_options, hostname,
-                           get_domain(mess.yiaddr), netid, subnet_addr,
-                           fqdn_flags, borken_opt, pxearch, uuid,
-                           vendor_class_len, now, time, fuzz, pxevendor);
-            }
-            return dhcp_packet_size(mess, agent_id, real_end)
-        }
-    return 0 ;
+      do_options(context, mess, end, req_options, hostname, get_domain(mess->ciaddr),
+		 netid, subnet_addr, fqdn_flags, borken_opt, pxearch, uuid, vendor_class_len, now, 0xffffffff, 0, pxevendor);
+      
+      *is_inform = 1; /* handle reply differently */
+      return dhcp_packet_size(mess, agent_id, real_end); 
+    }
+  
+  return 0;
 }
+
 /* find a good value to use as MAC address for logging and address-allocation hashing.
    This is normally just the chaddr field from the DHCP packet,
    but eg Firewire will have hlen == 0 and use the client-id instead. 
@@ -2312,1641 +1585,1211 @@ pub fn dhcp_reply(mut context: DhcpContext,
    then the client-id is using the usual encoding and use the rest of the 
    client-id: if not we can use the whole client-id. This should give
    sane MAC address logs. */
+unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr, 
+				      int clid_len, unsigned char *clid, int *len_out)
+{
+  if (hwlen == 0 && clid && clid_len > 3)
+    {
+      if (clid[0]  == hwtype)
+	{
+	  *len_out = clid_len - 1 ;
+	  return clid + 1;
+	}
 
-pub fn extended_hwaddr(mut hwtype: i32,
-                                         mut hwlen: i32,
-                                         mut hwaddr: mut Vec<u8>,
-                                         mut clid_len: i32,
-                                         mut clid: mut Vec<u8>,
-                                         mut len_out: )
- -> mut Vec<u8> {
-    if hwlen == 0 && !clid.is_null() &&
-           clid_len > 3 {
-        if *clid.offset(0) == hwtype {
-            *len_out = clid_len - 1; /* sanity */
-            return clid.offset(1)
-        } /* add terminator */
-        if *clid.offset(0) ==
-               27 && hwtype == 24 {
-            *len_out = clid_len - 1;
-            return clid.offset(1)
-        }
-        *len_out = clid_len;
-        return clid
+#if defined(ARPHRD_EUI64) && defined(ARPHRD_IEEE1394)
+      if (clid[0] ==  ARPHRD_EUI64 && hwtype == ARPHRD_IEEE1394)
+	{
+	  *len_out = clid_len - 1 ;
+	  return clid + 1;
+	}
+#endif
+      
+      *len_out = clid_len;
+      return clid;
     }
-    *len_out = hwlen;
-    return hwaddr;
+  
+  *len_out = hwlen;
+  return hwaddr;
 }
-fn calc_time(mut context: DhcpContext,
-                               mut config: &mut DhcpConfig,
-                               mut opt: mut Vec<u8>) -> libc::c_uint {
-    let mut time: u32 =
-        if !config.is_null() &&
-               config.flags & 8 != 0 {
-            config.lease_time
-        } else { context.lease_time };
-    if !opt.is_null() {
-        let mut req_time: u32 =
-            option_uint(opt, 0, 4);
-        if req_time < 120 {
-            req_time = 120
-        }
-        if time == 0xffffffff ||
-               req_time != 0xffffffff && req_time < time {
-            time = req_time
-        }
-    }
-    return time;
-}
-fn server_id(mut context: DhcpContext,
-                               mut override_0: NetAddress, mut fallback: NetAddress)
-                               -> NetAddress {
-    if override_0.s_addr != 0 {
-        return override_0
-    } else if !context.is_null() &&
-                  context.local.s_addr != 0
-     {
-        return context.local
-    } else { return fallback };
-}
-fn sanitise(mut opt: mut Vec<u8>,
-                              mut buf: &mut String) -> i32 {
-    let mut p: &mut String = 0 ;
-    let mut i: i32 = 0;
-    *buf = 0;
-    if opt.is_null() { return 0 }
-    p =
-        &mut *opt.offset((2                        libc::c_uint).wrapping_add(0          libc::c_uint)                       )
-            ;
-    i = *opt.offset(1);
-    while i > 0 {
-        let fresh7 = p;
-        p = p.offset(1);
-        let mut c: libc::c_char = *fresh7;
-        if *(*__ctype_b_loc()).offset(c)  &
-               _ISPRINT  != 0 {
-            let fresh8 = buf;
-            buf = buf.offset(1);
-            *fresh8 = c
-        }
-        i -= 1
-    }
-    *buf = 0;
-    return 1;
-}
-fn add_extradata_opt(mut lease: DhcpLease,
-                                       mut opt: mut Vec<u8>) {
-    if opt.is_null() {
-        lease_add_extradata(lease, 0,
-                            0,
-                            0);
-    } else {
-        lease_add_extradata(lease,
-                            &mut *opt.offset((2                                            libc::c_uint).wrapping_add(0
 
-                                                                                                              libc::c_uint)
-                                                )                          mut Vec<u8>                          mut Vec<u8>,
-                            *opt.offset(1)                          ,
-                            0);
-    };
-}
-fn log_packet(mut type_0: &mut String,
-                                mut addr:Vec<u8>,
-                                mut ext_mac: mut Vec<u8>,
-                                mut mac_len: i32,
-                                mut interface: &mut String,
-                                mut string: &mut String,
-                                mut err: &mut String, mut xid: u32) {
-    let mut a: NetAddress = NetAddress {s_addr: 0,};
-    if err.is_null() &&
-           daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               == 0 &&
-           daemon.options[(42 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (42 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-        return
+static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt)
+{
+  unsigned int time = have_config(config, CONFIG_TIME) ? config->lease_time : context->lease_time;
+  
+  if (opt)
+    { 
+      unsigned int req_time = option_uint(opt, 0, 4);
+      if (req_time < 120 )
+	req_time = 120; /* sanity */
+      if (time == 0xffffffff || (req_time != 0xffffffff && req_time < time))
+	time = req_time;
     }
-    /* addr may be misaligned */
-    if !addr.is_null() {
-        memcpy(&mut a, addr,
-               ::std::mem::size_of::<NetAddress>()); /* malformed packet */
-    } /* malformed packet */
-    print_mac(daemon.namebuff, ext_mac, mac_len);
-    if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
 
-                                                                                                               ))
-           != 0 {
-        my_syslog((3) << 3 | 6,
-                  "%u %s(%s) %s%s%s %s%s", __bswap_32(xid), type_0, interface,
-                  if !addr.is_null() {
-                      inet_ntoa(a)
-                  } else { ""  },
-                  if !addr.is_null() {
-                      " "
-                  } else { ""  },
-                  daemon.namebuff,
-                  if !string.is_null() {
-                      string
-                  } else { ""  },
-                  if !err.is_null() {
-                      err
-                  } else { ""  });
-    } else {
-        my_syslog((3) << 3 | 6,
-                  "%s(%s) %s%s%s %s%s", type_0, interface,
-                  if !addr.is_null() {
-                      inet_ntoa(a)
-                  } else { ""  },
-                  if !addr.is_null() {
-                      " "
-                  } else { ""  },
-                  daemon.namebuff,
-                  if !string.is_null() {
-                      string
-                  } else { ""  },
-                  if !err.is_null() {
-                      err
-                  } else { ""  });
-    };
+  return time;
 }
-fn log_options(mut start: mut Vec<u8>,
-                                 mut xid: u32) {
-    while *start != 255 {
-        let mut optname: &mut String =
-            option_string(2,
-                          *start.offset(0)                        libc::c_uint,
-                          &mut *start.offset((2                                            libc::c_uint).wrapping_add(0
 
-                                                                                                              libc::c_uint)
-                                                ),
-                          *start.offset(1), daemon.namebuff,
-                          1025);
-        my_syslog((3) << 3 | 6,
-                  "%u sent size:%3d option:%3d %s  %s", __bswap_32(xid),
-                  *start.offset(1),
-                  *start.offset(0),
-                  optname, daemon.namebuff);
-        start =
-            start.offset((*start.offset(1) + 2))
-    };
+static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback)
+{
+  if (override.s_addr != 0)
+    return override;
+  else if (context && context->local.s_addr != 0)
+    return context->local;
+  else
+    return fallback;
 }
-fn option_find1(mut p: mut Vec<u8>,
-                                  mut end: mut Vec<u8>,
-                                  mut opt: i32,
-                                  mut minsize: i32)
- -> mut Vec<u8> {
-    loop  {
-        if p >= end {
-            return 0
-        } else {
-            if *p == 255 {
-                return if opt == 255 {
-                           p
-                       } else { 0 }
-            } else {
-                if *p == 0 {
-                    p = p.offset(1)
-                } else {
-                    let mut opt_len: i32 = 0;
-                    if p > end.offset(-(2)) {
-                        return 0
-                    }
-                    opt_len =
-                        *p.offset(1);
-                    if p >
-                           end.offset(-((2 + opt_len))) {
-                        return 0
-                    }
-                    if *p == opt && opt_len >= minsize {
-                        return p
-                    }
-                    p = p.offset((opt_len + 2))
-                }
-            }
-        }
-    };
-}
-fn option_find(mut mess: DhcpPacket, mut size: usize,
-                                 mut opt_type: i32,
-                                 mut minsize: i32)
-                                 -> mut Vec<u8> {
-    let mut ret: mut Vec<u8> = 0;
-    let mut overload: mut Vec<u8> = 0;
-    /* skip over DHCP cookie; */
-    ret =
-        option_find1((&mut *mess.options.as_mut_ptr().offset(0
-                                                                   )
-                                              &mut u8) .offset(::std::mem::size_of::<u32>()                                   ),
-                     (mess).offset(size),
-                     opt_type, minsize);
-    if !ret.is_null() { return ret }
-    /* look for overload option. */
-    overload =
-        option_find1((&mut *mess.options.as_mut_ptr().offset(0
-                                                                   )
-                                              &mut u8) .offset(::std::mem::size_of::<u32>()                                   ),
-                     (mess).offset(size),
-                     52, 1);
-    if overload.is_null() { return 0 }
-    /* Can we look in filename area ? */
-    if *overload.offset(2) &
-           1 != 0 &&
-           {
-               ret =
-                   option_find1(&mut *mess.file.as_mut_ptr().offset(0
-                                                            ),
-                                &mut *mess.file.as_mut_ptr().offset(128
-                                                            ),
-                                opt_type, minsize);
-               !ret.is_null()
-           } {
-        return ret
-    }
-    /* finally try sname area */
-    if *overload.offset(2) &
-           2 != 0 &&
-           {
-               ret =
-                   option_find1(&mut *mess.sname.as_mut_ptr().offset(0
-                                                              ),
-                                &mut *mess.sname.as_mut_ptr().offset(64
-                                                              ),
-                                opt_type, minsize);
-               !ret.is_null()
-           } {
-        return ret
-    }
+
+static int sanitise(unsigned char *opt, char *buf)
+{
+  char *p;
+  int i;
+  
+  *buf = 0;
+  
+  if (!opt)
     return 0;
+
+  p = option_ptr(opt, 0);
+
+  for (i = option_len(opt); i > 0; i--)
+    {
+      char c = *p++;
+      if (isprint((int)c))
+	*buf++ = c;
+    }
+  *buf = 0; /* add terminator */
+  
+  return 1;
 }
-fn option_addr(mut opt: mut Vec<u8>) -> NetAddress {
-    /* this worries about unaligned data in the option. */
+
+#ifdef HAVE_SCRIPT
+static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
+{
+  if (!opt)
+    lease_add_extradata(lease, NULL, 0, 0);
+  else
+    lease_add_extradata(lease, option_ptr(opt, 0), option_len(opt), 0); 
+}
+#endif
+
+static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
+		       int mac_len, char *interface, char *string, char *err, u32 xid)
+{
+  struct in_addr a;
+ 
+  if (!err && !option_bool(OPT_LOG_OPTS) && option_bool(OPT_QUIET_DHCP))
+    return;
+  
+  /* addr may be misaligned */
+  if (addr)
+    memcpy(&a, addr, sizeof(a));
+  
+  print_mac(daemon->namebuff, ext_mac, mac_len);
+  
+  if(option_bool(OPT_LOG_OPTS))
+     my_syslog(MS_DHCP | LOG_INFO, "%u %s(%s) %s%s%s %s%s",
+	       ntohl(xid), 
+	       type,
+	       interface, 
+	       addr ? inet_ntoa(a) : "",
+	       addr ? " " : "",
+	       daemon->namebuff,
+	       string ? string : "",
+	       err ? err : "");
+  else
+    my_syslog(MS_DHCP | LOG_INFO, "%s(%s) %s%s%s %s%s",
+	      type,
+	      interface, 
+	      addr ? inet_ntoa(a) : "",
+	      addr ? " " : "",
+	      daemon->namebuff,
+	      string ? string : "",
+	      err ? err : "");
+
+#ifdef HAVE_UBUS
+	if (!strcmp(type, "DHCPACK"))
+		ubus_event_bcast("dhcp.ack", daemon->namebuff, addr ? inet_ntoa(a) : NULL, string ? string : NULL, interface);
+	else if (!strcmp(type, "DHCPRELEASE"))
+		ubus_event_bcast("dhcp.release", daemon->namebuff, addr ? inet_ntoa(a) : NULL, string ? string : NULL, interface);
+#endif
+}
+
+static void log_options(unsigned char *start, u32 xid)
+{
+  while (*start != OPTION_END)
+    {
+      char *optname = option_string(AF_INET, start[0], option_ptr(start, 0), option_len(start), daemon->namebuff, MAXDNAME);
+      
+      my_syslog(MS_DHCP | LOG_INFO, "%u sent size:%3d option:%3d %s  %s", 
+		ntohl(xid), option_len(start), start[0], optname, daemon->namebuff);
+      start += start[1] + 2;
+    }
+}
+
+static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize)
+{
+  while (1) 
+    {
+      if (p >= end)
+	return NULL;
+      else if (*p == OPTION_END)
+	return opt == OPTION_END ? p : NULL;
+      else if (*p == OPTION_PAD)
+	p++;
+      else 
+	{ 
+	  int opt_len;
+	  if (p > end - 2)
+	    return NULL; /* malformed packet */
+	  opt_len = option_len(p);
+	  if (p > end - (2 + opt_len))
+	    return NULL; /* malformed packet */
+	  if (*p == opt && opt_len >= minsize)
+	    return p;
+	  p += opt_len + 2;
+	}
+    }
+}
+ 
+static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize)
+{
+  unsigned char *ret, *overload;
+  
+  /* skip over DHCP cookie; */
+  if ((ret = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + size, opt_type, minsize)))
+    return ret;
+
+  /* look for overload option. */
+  if (!(overload = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + size, OPTION_OVERLOAD, 1)))
+    return NULL;
+  
+  /* Can we look in filename area ? */
+  if ((overload[2] & 1) &&
+      (ret = option_find1(&mess->file[0], &mess->file[128], opt_type, minsize)))
+    return ret;
+
+  /* finally try sname area */
+  if ((overload[2] & 2) &&
+      (ret = option_find1(&mess->sname[0], &mess->sname[64], opt_type, minsize)))
+    return ret;
+
+  return NULL;
+}
+
+static struct in_addr option_addr(unsigned char *opt)
+{
+   /* this worries about unaligned data in the option. */
   /* struct in_addr is network byte order */
-    let mut ret: NetAddress = NetAddress {s_addr: 0,};
-    memcpy(&mut ret,
-           &mut *opt.offset((2                           libc::c_uint).wrapping_add(0
-                                                                            libc::c_uint)
-                               )        Vec<u8>, 4);
-    return ret;
-}
-fn option_uint(mut opt: mut Vec<u8>,
-                                 mut offset: i32,
-                                 mut size: i32) -> libc::c_uint {
-    /* this worries about unaligned data and byte order */
-    let mut ret: u32 = 0;
-    let mut i: i32 = 0;
-    let mut p: mut Vec<u8> =
-        &mut *opt.offset((2                        libc::c_uint).wrapping_add(offset          libc::c_uint)                       )
-           ;
-    i = 0;
-    while i < size {
-        let fresh9 = p;
-        p = p.offset(1);
-        ret = ret << 8 | *fresh9;
-        i += 1
-    }
-    return ret;
-}
-fn dhcp_skip_opts(mut start: mut Vec<u8>)
- -> mut Vec<u8> {
-    while *start != 0 {
-        start =
-            start.offset((*start.offset(1) + 2))
-    }
-    return start;
-}
-/* only for use when building packet: doesn't check for bad data. */
-fn find_overload(mut mess: DhcpPacket)
- -> mut Vec<u8> {
-    let mut p: mut Vec<u8> =
-        (&mut *mess.options.as_mut_ptr().offset(0)
-                    &mut u8) .offset(::std::mem::size_of::<u32>()
-                                  );
-    while *p != 0 {
-        if *p == 52 { return p }
-        p =
-            p.offset((*p.offset(1) +
-                          2))
-    }
-    return 0;
-}
-fn dhcp_packet_size(
-    daemon: &mut DnsmasqDaemon,
-    mut mess: DhcpPacket,
-                                      mut agent_id: &mut Vec<u8>,
-                                      mut real_end: &mut Vec<u8>)
-                                      -> usize {
-    let mut p: Vec<u8> = dhcp_skip_opts((&mut *mess.options.as_mut_ptr().offset(0)).offset(::std::mem::size_of::<u32>()));
-    let mut overload: Vec<u8> = Vec::new();
-    let mut ret: usize = 0;
-    /* move agent_id back down to the end of the packet */
-    if !agent_id.is_null() {
-        // memmove(p, agent_id, real_end.wrapping_offset_from(agent_id));
-        p = agent_id[0..real_end.wrapping_offset_from(agent_id)].into_vec();
-        p = p.offset(real_end.wrapping_offset_from(agent_id));
-        /* in case of overlap */
-    }
-    /* add END options to the regions. */
-    overload = find_overload(mess);
-    if !overload.is_null() && option_uint(overload, 0, 1) & 1 != 0 {
-        *dhcp_skip_opts(mess.file.as_mut_ptr()) = 255;
-        if daemon.options[28] != 0 {
-            log_options(mess.file.as_mut_ptr(), mess.xid);
-        }
-    } else if daemon.options[28] != 0 &&
-                  strlen(mess.file.as_mut_ptr() ) !=
-                      0 {
-        my_syslog((3) << 3 | 6,
-                  "%u bootfile name: %s", __bswap_32(mess.xid),
-                  mess.file.as_mut_ptr() );
-    }
-    if !overload.is_null() &&
-           option_uint(overload, 0, 1) &
-               2 != 0 {
-        *dhcp_skip_opts(mess.sname.as_mut_ptr()) =
-            255;
-        if daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (28 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-            log_options(mess.sname.as_mut_ptr(), mess.xid);
-        }
-    } else if daemon.options[(28 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                 ).wrapping_mul(8))
-                                            ] &
-                  (1) <<
-                      (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                             ).wrapping_mul(8))
-                  != 0 &&
-                  strlen(mess.sname.as_mut_ptr() ) !=
-                      0 {
-        my_syslog((3) << 3 | 6,
-                  "%u server name: %s", __bswap_32(mess.xid),
-                  mess.sname.as_mut_ptr() );
-    }
-    let fresh10 = p;
-    p = p.offset(1);
-    *fresh10 = 255;
-    if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+  struct in_addr ret;
 
-                                                                                                               ))
-           != 0 {
-        if mess.siaddr.s_addr != 0 {
-            my_syslog((3) << 3 |
-                          6,
-                      "%u next server: %s", __bswap_32(mess.xid),
-                      inet_ntoa(mess.siaddr));
-        }
-        if mess.flags &
-               __bswap_16(0x8000)
-               != 0 &&
-               mess.ciaddr.s_addr == 0 {
-            my_syslog((3) << 3 |
-                          6,
-                      "%u broadcast response", __bswap_32(mess.xid));
-        }
-        log_options((&mut *mess.options.as_mut_ptr().offset(0
-                                                                  )
-                                            &mut u8) .offset(::std::mem::size_of::<u32>()),
-                    mess.xid);
-    }
-    ret =
-        p.wrapping_offset_from(mess)      usize;
-    if ret < 300 {
-        ret = 300
-    }
-    return ret;
+  memcpy(&ret, option_ptr(opt, 0), INADDRSZ);
+
+  return ret;
 }
-fn free_space(mut mess: DhcpPacket,
-                                mut end: mut Vec<u8>,
-                                mut opt: i32, mut len: i32)
-                                -> mut Vec<u8> {
-    let mut p: mut Vec<u8> =
-        dhcp_skip_opts((&mut *mess.options.as_mut_ptr().offset(0
-                                                  )
-                                                  &mut u8) .offset(::std::mem::size_of::<u32>()
-                                                 ));
-    if p.offset(len).offset(3) >= end {
-        /* not enough space in options area, try and use overload, if poss */
-        let mut overload: mut Vec<u8> = 0;
-        overload = find_overload(mess);
-        if overload.is_null() &&
-               (mess.file[0 ] ==
-                    0 ||
-                    mess.sname[0 ] ==
-                        0) {
-            /* attempt to overload fname and sname areas, we've reserved space for the
+
+static unsigned int option_uint(unsigned char *opt, int offset, int size)
+{
+  /* this worries about unaligned data and byte order */
+  unsigned int ret = 0;
+  int i;
+  unsigned char *p = option_ptr(opt, offset);
+  
+  for (i = 0; i < size; i++)
+    ret = (ret << 8) | *p++;
+
+  return ret;
+}
+
+static unsigned char *dhcp_skip_opts(unsigned char *start)
+{
+  while (*start != 0)
+    start += start[1] + 2;
+  return start;
+}
+
+/* only for use when building packet: doesn't check for bad data. */ 
+static unsigned char *find_overload(struct dhcp_packet *mess)
+{
+  unsigned char *p = &mess->options[0] + sizeof(u32);
+  
+  while (*p != 0)
+    {
+      if (*p == OPTION_OVERLOAD)
+	return p;
+      p += p[1] + 2;
+    }
+  return NULL;
+}
+
+static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end)
+{
+  unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
+  unsigned char *overload;
+  size_t ret;
+  
+  /* move agent_id back down to the end of the packet */
+  if (agent_id)
+    {
+      memmove(p, agent_id, real_end - agent_id);
+      p += real_end - agent_id;
+      memset(p, 0, real_end - p); /* in case of overlap */
+    }
+  
+  /* add END options to the regions. */
+  overload = find_overload(mess);
+  
+  if (overload && (option_uint(overload, 0, 1) & 1))
+    {
+      *dhcp_skip_opts(mess->file) = OPTION_END;
+      if (option_bool(OPT_LOG_OPTS))
+	log_options(mess->file, mess->xid);
+    }
+  else if (option_bool(OPT_LOG_OPTS) && strlen((char *)mess->file) != 0)
+    my_syslog(MS_DHCP | LOG_INFO, _("%u bootfile name: %s"), ntohl(mess->xid), (char *)mess->file);
+  
+  if (overload && (option_uint(overload, 0, 1) & 2))
+    {
+      *dhcp_skip_opts(mess->sname) = OPTION_END;
+      if (option_bool(OPT_LOG_OPTS))
+	log_options(mess->sname, mess->xid);
+    }
+  else if (option_bool(OPT_LOG_OPTS) && strlen((char *)mess->sname) != 0)
+    my_syslog(MS_DHCP | LOG_INFO, _("%u server name: %s"), ntohl(mess->xid), (char *)mess->sname);
+
+
+  *p++ = OPTION_END;
+  
+  if (option_bool(OPT_LOG_OPTS))
+    {
+      if (mess->siaddr.s_addr != 0)
+	my_syslog(MS_DHCP | LOG_INFO, _("%u next server: %s"), ntohl(mess->xid), inet_ntoa(mess->siaddr));
+      
+      if ((mess->flags & htons(0x8000)) && mess->ciaddr.s_addr == 0)
+	my_syslog(MS_DHCP | LOG_INFO, _("%u broadcast response"), ntohl(mess->xid));
+      
+      log_options(&mess->options[0] + sizeof(u32), mess->xid);
+    } 
+  
+  ret = (size_t)(p - (unsigned char *)mess);
+  
+  if (ret < MIN_PACKETSZ)
+    ret = MIN_PACKETSZ;
+  
+  return ret;
+}
+
+static unsigned char *free_space(struct dhcp_packet *mess, unsigned char *end, int opt, int len)
+{
+  unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
+  
+  if (p + len + 3 >= end)
+    /* not enough space in options area, try and use overload, if poss */
+    {
+      unsigned char *overload;
+      
+      if (!(overload = find_overload(mess)) &&
+	  (mess->file[0] == 0 || mess->sname[0] == 0))
+	{
+	  /* attempt to overload fname and sname areas, we've reserved space for the
 	     overflow option previuously. */
-            overload = p;
-            let fresh11 = p;
-            p = p.offset(1);
-            *fresh11 = 52;
-            let fresh12 = p;
-            p = p.offset(1);
-            *fresh12 = 1
-        }
-        p = 0;
-        /* using filename field ? */
-        if !overload.is_null() {
-            if mess.file[0 ] ==
-                   0 {
-                let ref mut fresh13 =
-                    *overload.offset(2);
-                *fresh13 =
-                    (*fresh13 | 1)
-            }
-            if *overload.offset(2) &
-                   1 != 0 {
-                p = dhcp_skip_opts(mess.file.as_mut_ptr());
-                if p.offset(len).offset(3) >=
-                       mess.file.as_mut_ptr().offset(::std::mem::size_of::<[u8; 128]>()
+	  overload = p;
+	  *(p++) = OPTION_OVERLOAD;
+	  *(p++) = 1;
+	}
+      
+      p = NULL;
+      
+      /* using filename field ? */
+      if (overload)
+	{
+	  if (mess->file[0] == 0)
+	    overload[2] |= 1;
+	  
+	  if (overload[2] & 1)
+	    {
+	      p = dhcp_skip_opts(mess->file);
+	      if (p + len + 3 >= mess->file + sizeof(mess->file))
+		p = NULL;
+	    }
+	  
+	  if (!p)
+	    {
+	      /* try to bring sname into play (it may be already) */
+	      if (mess->sname[0] == 0)
+		overload[2] |= 2;
+	      
+	      if (overload[2] & 2)
+		{
+		  p = dhcp_skip_opts(mess->sname);
+		  if (p + len + 3 >= mess->sname + sizeof(mess->sname))
+		    p = NULL;
+		}
+	    }
+	}
+      
+      if (!p)
+	my_syslog(MS_DHCP | LOG_WARNING, _("cannot send DHCP/BOOTP option %d: no space left in packet"), opt);
+    }
+ 
+  if (p)
+    {
+      *(p++) = opt;
+      *(p++) = len;
+    }
 
-                                                           ) {
-                    p = 0
-                }
-            }
-            if p.is_null() {
-                /* try to bring sname into play (it may be already) */
-                if mess.sname[0 ] ==
-                       0 {
-                    let ref mut fresh14 =
-                        *overload.offset(2);
-                    *fresh14 =
-                        (*fresh14 | 2)                      u8
-                }
-                if *overload.offset(2)
-                       & 2 != 0 {
-                    p = dhcp_skip_opts(mess.sname.as_mut_ptr());
-                    if p.offset(len                              ).offset(3)
-                           >=
-                           mess.sname.as_mut_ptr().offset(::std::mem::size_of::<[u8; 64]>()
-                                                                              libc::c_ulong
-                                                                ) {
-                        p = 0
-                    }
-                }
-            }
-        }
-        if p.is_null() {
-            my_syslog((3) << 3 |
-                          4,
-                      "cannot send DHCP/BOOTP option %d: no space left in packet"
-                          , opt);
-        }
-    }
-    if !p.is_null() {
-        let fresh15 = p;
-        p = p.offset(1);
-        *fresh15 = opt;
-        let fresh16 = p;
-        p = p.offset(1);
-        *fresh16 = len
-    }
-    return p;
+  return p;
 }
-fn option_put(mut mess: DhcpPacket,
-                                mut end: mut Vec<u8>,
-                                mut opt: i32, mut len: i32,
-                                mut val: u32) {
-    let mut i: i32 = 0;
-    let mut p: mut Vec<u8> = free_space(mess, end, opt, len);
-    if !p.is_null() {
-        i = 0;
-        while i < len {
-            let fresh17 = p;
-            p = p.offset(1);
-            *fresh17 =
-                (val >> 8 * (len - (i + 1)))              u8;
-            i += 1
-        }
-    };
+	      
+static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val)
+{
+  int i;
+  unsigned char *p = free_space(mess, end, opt, len);
+  
+  if (p) 
+    for (i = 0; i < len; i++)
+      *(p++) = val >> (8 * (len - (i + 1)));
 }
-fn option_put_string(mut mess: DhcpPacket,
-                                       mut end: mut Vec<u8>,
-                                       mut opt: i32,
-                                       mut string: *const libc::c_char,
-                                       mut null_term: i32) {
-    let mut p: mut Vec<u8> = 0;
-    let mut len: usize = strlen(string);
-    if null_term != 0 && len != 255 {
-        len = len.wrapping_add(1)
-    }
-    p = free_space(mess, end, opt, len);
-    if !p.is_null() {
-        memcpy(p, string, len);
-    };
+
+static void option_put_string(struct dhcp_packet *mess, unsigned char *end, int opt, 
+			      const char *string, int null_term)
+{
+  unsigned char *p;
+  size_t len = strlen(string);
+
+  if (null_term && len != 255)
+    len++;
+
+  if ((p = free_space(mess, end, opt, len)))
+    memcpy(p, string, len);
 }
+
 /* return length, note this only does the data part */
-fn do_opt(mut opt: &mut DhcpOpt, mut p: mut Vec<u8>,
-                            mut context: DhcpContext,
-                            mut null_term: i32) -> i32 {
-    let mut len: i32 = opt.len;
-    if opt.flags & 2 != 0 && null_term != 0 &&
-           len != 255 {
-        len += 1
-    }
-    if !p.is_null() && len != 0 {
-        if !context.is_null() && opt.flags & 1 != 0 {
-            let mut j: i32 = 0;
-            let mut a: NetAddress = opt.val;
-            j = 0;
-            while j < opt.len {
-                /* zero means "self" (but not in vendorclass options.) */
-                if a.s_addr == 0 {
-                    memcpy(p,
-                           &mut context.local
-                           4);
-                } else {
-                    memcpy(p, a,
-                           4);
-                }
-                p = p.offset(4);
-                j += 4;
-                a = a.offset(1)
-            }
-        } else {
-            /* empty string may be extended to "\0" by null_term */
-            memcpy(p,
-                   if !opt.val.is_null() {
-                       opt.val
-                   } else {
-                       ""                      mut Vec<u8>
-                   }, len);
-        }
-    }
-    return len;
+static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *context, int null_term)
+{
+  int len = opt->len;
+  
+  if ((opt->flags & DHOPT_STRING) && null_term && len != 255)
+    len++;
+
+  if (p && len != 0)
+    {
+      if (context && (opt->flags & DHOPT_ADDR))
+	{
+	  int j;
+	  struct in_addr *a = (struct in_addr *)opt->val;
+	  for (j = 0; j < opt->len; j+=INADDRSZ, a++)
+	    {
+	      /* zero means "self" (but not in vendorclass options.) */
+	      if (a->s_addr == 0)
+		memcpy(p, &context->local, INADDRSZ);
+	      else
+		memcpy(p, a, INADDRSZ);
+	      p += INADDRSZ;
+	    }
+	}
+      else
+	/* empty string may be extended to "\0" by null_term */
+	memcpy(p, opt->val ? opt->val : (unsigned char *)"", len);
+    }  
+  return len;
 }
-fn in_list(mut list: mut Vec<u8>,
-                             mut opt: i32) -> i32 {
-    let mut i: i32 = 0;
-    /* If no requested options, send everything, not nothing. */
-    if list.is_null() { return 1 }
-    i = 0;
-    while *list.offset(i) != 255 {
-        if opt == *list.offset(i) {
-            return 1
-        }
-        i += 1
-    }
-    return 0;
+
+static int in_list(unsigned char *list, int opt)
+{
+  int i;
+
+   /* If no requested options, send everything, not nothing. */
+  if (!list)
+    return 1;
+  
+  for (i = 0; list[i] != OPTION_END; i++)
+    if (opt == list[i])
+      return 1;
+
+  return 0;
 }
-fn option_find2(mut opt: i32) -> DhcpOpt {
-    let mut opts: DhcpOpt = 0 ;
-    opts = daemon.dhcp_opts;
-    while !opts.is_null() {
-        if opts.opt == opt && opts.flags & 4096 != 0 {
-            return opts
-        }
-        opts = opts.next
-    }
-    return 0 ;
+
+static struct dhcp_opt *option_find2(int opt)
+{
+  struct dhcp_opt *opts;
+  
+  for (opts = daemon->dhcp_opts; opts; opts = opts->next)
+    if (opts->opt == opt && (opts->flags & DHOPT_TAGOK))
+      return opts;
+  
+  return NULL;
 }
+
 /* mark vendor-encapsulated options which match the client-supplied  or
    config-supplied vendor class */
-fn match_vendor_opts(mut opt: mut Vec<u8>,
-                                       mut dopt: &mut DhcpOpt) {
-    while !dopt.is_null() {
-        dopt.flags &= !(1024);
-        if !opt.is_null() && dopt.flags & 256 != 0 {
-            let mut pv: *const DhcpPxeVendor = 0 ;
-            let mut dummy_vendor: DhcpPxeVendor =
-                {
-                    let mut init =
-                        DhcpPxeVendor {data:
-                                            dopt.u.vendor_class                                          &mut String,
-                                        next: 0 ,};
-                    init
-                };
-            if dopt.flags & 16384 != 0 {
-                pv = daemon.dhcp_pxe_vendors
-            } else { pv = &mut dummy_vendor }
-            while !pv.is_null() {
-                let mut i: i32 = 0;
-                let mut len: i32 = 0;
-                let mut matched: i32 = 0;
-                if !pv.data.is_null() {
-                    len = strlen(pv.data)
-                }
-                i = 0;
-                while i <=
-                          *opt.offset(1) - len {
-                    if len == 0 ||
-                           memcmp(pv.data,
-                                  &mut *opt.offset((2     libc::c_uint).wrapping_add(i
-                                                                                                                          libc::c_uint)
-                                                      )                                mut Vec<u8>,
-                                  len) == 0 {
-                        matched = 1;
-                        break ;
-                    } else { i += 1 }
-                }
-                if matched != 0 {
-                    dopt.flags |= 1024;
-                    break ;
-                } else { pv = pv.next }
-            }
-        }
-        dopt = dopt.next
-    };
-}
-fn do_encap_opts(mut opt: &mut DhcpOpt,
-                                   mut encap: i32,
-                                   mut flag: i32,
-                                   mut mess: DhcpPacket,
-                                   mut end: mut Vec<u8>,
-                                   mut null_term: i32)
-                                   -> i32 {
-    let mut len: i32 = 0;
-    let mut enc_len: i32 = 0;
-    let mut ret: i32 = 0;
-    let mut start: DhcpOpt = 0 ;
-    let mut p: mut Vec<u8> = 0;
-    /* find size in advance */
-    enc_len = 0;
-    start = opt;
-    while !opt.is_null() {
-        if opt.flags & flag != 0 {
-            let mut new: i32 =
-                do_opt(opt, 0, 0,
-                       null_term) + 2;
-            ret = 1;
-            if enc_len + new <= 255 {
-                enc_len += new
-            } else {
-                p = free_space(mess, end, encap, enc_len);
-                while !start.is_null() && start != opt {
-                    if !p.is_null() && start.flags & flag != 0 {
-                        len =
-                            do_opt(start, p.offset(2),
-                                   0, null_term);
-                        let fresh18 = p;
-                        p = p.offset(1);
-                        *fresh18 = start.opt;
-                        let fresh19 = p;
-                        p = p.offset(1);
-                        *fresh19 = len;
-                        p = p.offset(len)
-                    }
-                    start = start.next
-                }
-                enc_len = new;
-                start = opt
-            }
-        }
-        opt = opt.next
+static void match_vendor_opts(unsigned char *opt, struct dhcp_opt *dopt)
+{
+  for (; dopt; dopt = dopt->next)
+    {
+      dopt->flags &= ~DHOPT_VENDOR_MATCH;
+      if (opt && (dopt->flags & DHOPT_VENDOR))
+	{
+	  const struct dhcp_pxe_vendor *pv;
+	  struct dhcp_pxe_vendor dummy_vendor = {
+	    .data = (char *)dopt->u.vendor_class,
+	    .next = NULL,
+	  };
+	  if (dopt->flags & DHOPT_VENDOR_PXE)
+	    pv = daemon->dhcp_pxe_vendors;
+	  else
+	    pv = &dummy_vendor;
+	  for (; pv; pv = pv->next)
+	    {
+	      int i, len = 0, matched = 0;
+	      if (pv->data)
+	        len = strlen(pv->data);
+	      for (i = 0; i <= (option_len(opt) - len); i++)
+	        if (len == 0 || memcmp(pv->data, option_ptr(opt, i), len) == 0)
+	          {
+		    matched = 1;
+	            break;
+	          }
+	      if (matched)
+		{
+	          dopt->flags |= DHOPT_VENDOR_MATCH;
+		  break;
+		}
+	    }
+	}
     }
-    if enc_len != 0 &&
-           {
-               p = free_space(mess, end, encap, enc_len + 1);
-               !p.is_null()
-           } {
-        while !start.is_null() {
-            if start.flags & flag != 0 {
-                len =
-                    do_opt(start, p.offset(2),
-                           0, null_term);
-                let fresh20 = p;
-                p = p.offset(1);
-                *fresh20 = start.opt;
-                let fresh21 = p;
-                p = p.offset(1);
-                *fresh21 = len;
-                p = p.offset(len)
-            }
-            start = start.next
-        }
-        *p = 255
-    }
-    return ret;
 }
-fn pxe_misc(mut mess: DhcpPacket,
-                              mut end: mut Vec<u8>,
-                              mut uuid: mut Vec<u8>,
-                              mut pxevendor: *const libc::c_char) {
-    let mut p: mut Vec<u8> = 0;
-    if pxevendor.is_null() {
-        pxevendor = "PXEClient"
+
+static int do_encap_opts(struct dhcp_opt *opt, int encap, int flag,  
+			 struct dhcp_packet *mess, unsigned char *end, int null_term)
+{
+  int len, enc_len, ret = 0;
+  struct dhcp_opt *start;
+  unsigned char *p;
+    
+  /* find size in advance */
+  for (enc_len = 0, start = opt; opt; opt = opt->next)
+    if (opt->flags & flag)
+      {
+	int new = do_opt(opt, NULL, NULL, null_term) + 2;
+	ret  = 1;
+	if (enc_len + new <= 255)
+	  enc_len += new;
+	else
+	  {
+	    p = free_space(mess, end, encap, enc_len);
+	    for (; start && start != opt; start = start->next)
+	      if (p && (start->flags & flag))
+		{
+		  len = do_opt(start, p + 2, NULL, null_term);
+		  *(p++) = start->opt;
+		  *(p++) = len;
+		  p += len;
+		}
+	    enc_len = new;
+	    start = opt;
+	  }
+      }
+  
+  if (enc_len != 0 &&
+      (p = free_space(mess, end, encap, enc_len + 1)))
+    {
+      for (; start; start = start->next)
+	if (start->flags & flag)
+	  {
+	    len = do_opt(start, p + 2, NULL, null_term);
+	    *(p++) = start->opt;
+	    *(p++) = len;
+	    p += len;
+	  }
+      *p = OPTION_END;
     }
-    option_put_string(mess, end, 60, pxevendor,
-                      0);
-    if !uuid.is_null() &&
-           {
-               p =
-                   free_space(mess, end, 97,
-                              17);
-               !p.is_null()
-           } {
-        memcpy(p, uuid,
-               17);
-    };
+
+  return ret;
 }
-fn prune_vendor_opts(mut netid: &mut DhcpNetId)
- -> i32 {
-    let mut force: i32 = 0;
-    let mut opt: DhcpOpt = 0 ;
-    /* prune vendor-encapsulated options based on netid, and look if we're forcing them to be sent */
-    opt = daemon.dhcp_opts;
-    while !opt.is_null() {
-        if opt.flags & 1024 != 0 {
-            if match_netid(opt.netid, netid, 1) == 0 {
-                opt.flags &= !(1024)
-            } else if opt.flags & 16 != 0 {
-                force = 1
-            }
-        }
-        opt = opt.next
-    }
-    return force;
+
+static void pxe_misc(struct dhcp_packet *mess, unsigned char *end, unsigned char *uuid, const char *pxevendor)
+{
+  unsigned char *p;
+
+  if (!pxevendor)
+    pxevendor="PXEClient";
+  option_put_string(mess, end, OPTION_VENDOR_ID, pxevendor, 0);
+  if (uuid && (p = free_space(mess, end, OPTION_PXE_UUID, 17)))
+    memcpy(p, uuid, 17);
 }
+
+static int prune_vendor_opts(struct dhcp_netid *netid)
+{
+  int force = 0;
+  struct dhcp_opt *opt;
+
+  /* prune vendor-encapsulated options based on netid, and look if we're forcing them to be sent */
+  for (opt = daemon->dhcp_opts; opt; opt = opt->next)
+    if (opt->flags & DHOPT_VENDOR_MATCH)
+      {
+	if (!match_netid(opt->netid, netid, 1))
+	  opt->flags &= ~DHOPT_VENDOR_MATCH;
+	else if (opt->flags & DHOPT_FORCE)
+	  force = 1;
+      }
+  return force;
+}
+
+
 /* Many UEFI PXE implementations have badly broken menu code.
    If there's exactly one relevant menu item, we abandon the menu system,
    and jamb the data direct into the DHCP file, siaddr and sname fields.
    Note that in this case, we have to assume that layer zero would be requested
    by the client PXE stack. */
-fn pxe_uefi_workaround(mut pxe_arch: i32,
-                                         mut netid: &mut DhcpNetId,
-                                         mut mess: DhcpPacket,
-                                         mut local: NetAddress, mut now: time::Instant,
-                                         mut pxe: i32)
-                                         -> i32 {
-    let mut service: PxeService = 0 ;
-    let mut found: PxeService = 0 ;
-    /* Only workaround UEFI archs. */
-    if pxe_arch < 6 {
-        return 0
-    } /* More than one relevant menu item */
-    found = 0 ; /* No relevant menu items. */
-    service = daemon.pxe_services;
-    while !service.is_null() {
-        if pxe_arch == service.csa &&
-               !service.basename.is_null() &&
-               match_netid(service.netid, netid, 1) != 0 {
-            if !found.is_null() { return 0 }
-            found = service
-        }
-        service = service.next
-    }
-    if found.is_null() { return 0 }
-    if pxe == 0 { return 1 }
-    if !found.sname.is_null() {
-        mess.siaddr = a_record_from_hosts(found.sname, now);
-        snprintf(mess.sname.as_mut_ptr() ,
-                 ::std::mem::size_of::<[u8; 64]>(),
-                 "%s" ,
-                 found.sname);
-    } else {
-        if found.server.s_addr != 0 {
-            mess.siaddr = found.server
-        } else { mess.siaddr = local }
-        inet_ntop(2,
-                  &mut mess.siaddr,
-                  mess.sname.as_mut_ptr() ,
-                  16);
-    }
-    snprintf(mess.file.as_mut_ptr() ,
-             ::std::mem::size_of::<[u8; 128]>(),
-             if !strchr(found.basename, '.' as i32).is_null() {
-                 "%s"
-             } else { "%s.0"  },
-             found.basename);
-    return 1;
-}
-fn pxe_opts(mut pxe_arch: i32,
-                              mut netid: &mut DhcpNetId, mut local: NetAddress,
-                              mut now: time::Instant) -> DhcpOpt {
-    let mut p: mut Vec<u8> = 0;
-    let mut q: mut Vec<u8> = 0;
-    let mut service: PxeService = 0 ;
-    static mut o: DhcpOpt = 0  ;
-    static mut ret: DhcpOpt = 0  ;
-    let mut i: i32 = 0;
-    let mut j: i32 = 4 - 1;
-    let mut boot_server: NetAddress = NetAddress {s_addr: 0,};
-    /* We pass back references to these, hence they are declared static */
-    static mut discovery_control: u8 = 0;
-    static mut fake_prompt: [u8; 4] =
-        [0, 'P' as i32,
-         'X' as i32, 'E' as i32];
-    static mut fake_opts: DhcpOpt =
-        0  ;
-    /* Disable multicast, since we don't support it, and broadcast
-     unless we need it */
-    discovery_control = 3;
-    ret = daemon.dhcp_opts;
-    if fake_opts.is_null() &&
-           {
-               // fake_opts =
-               //     whine_malloc((4                        ).wrapping_mul(::std::mem::size_of::<DhcpOpt>()
-               //                                                                 ))
-               //         ;
-               // fake_opts.is_null()
-               true
-           } {
-        return ret
-    }
-    i = 0;
-    while i < 4 {
-        (*fake_opts.offset(i)).flags = 1024;
-        let ref mut fresh22 = (*fake_opts.offset(i)).netid;
-        *fresh22 = 0 ;
-        let ref mut fresh23 = (*fake_opts.offset(i)).next;
-        *fresh23 =
-            if i == 4 - 1 {
-                ret
-            } else {
-                &mut *fake_opts.offset((i + 1))              &mut DhcpOpt
-            };
-        i += 1
-    }
-    /* create the data for the PXE_MENU and PXE_SERVERS options. */
-    p = daemon.dhcp_buff;
-    q = daemon.dhcp_buff3;
-    i = 0;
-    service = daemon.pxe_services;
-    while !service.is_null() {
-        if pxe_arch == service.csa &&
-               match_netid(service.netid, netid, 1) != 0 {
-            's_185:
-                {
-                    let mut current_block_29: u64;
-                    let mut len: usize = strlen(service.menu);
-                    /* opt 43 max size is 255. encapsulated option has type and length
-	   bytes, so its max size is 253. */
-                    if (p.wrapping_offset_from(daemon.dhcp_buffmut Vec<u8>)                      i32 ).wrapping_add(len).wrapping_add(3
-                                                                                                 )
-                           < 253 {
-                        let fresh24 = p;
-                        p = p.offset(1);
-                        *fresh24 =
-                            (service.type_0 >>
-                                 8);
-                        let fresh25 = p;
-                        p = p.offset(1);
-                        *fresh25 = service.type_0;
-                        let fresh26 = p;
-                        p = p.offset(1);
-                        *fresh26 = len;
-                        memcpy(p,
-                               service.menu, len);
-                        p = p.offset(len);
-                        i += 1;
-                        boot_server =
-                            if !service.basename.is_null() {
-                                local
-                            } else if !service.sname.is_null() {
-                                a_record_from_hosts(service.sname, now)
-                            } else { service.server };
-                        if boot_server.s_addr !=
-                               0 {
-                            if q.wrapping_offset_from(daemon.dhcp_buff3
-                                                                mut Vec<u8>)
-                                   +
-                                   3 +
-                                   4 >=
-                                   253 {
-                                current_block_29 = 14257305712396241914;
-                            } else {
-                                /* Boot service with known address - give it */
-                                let fresh27 = q;
-                                q = q.offset(1);
-                                *fresh27 =
-                                    (service.type_0 >>
-                                         8);
-                                let fresh28 = q;
-                                q = q.offset(1);
-                                *fresh28 = service.type_0;
-                                let fresh29 = q;
-                                q = q.offset(1);
-                                *fresh29 = 1;
-                                /* dest misaligned */
-                                memcpy(q,
-                                       &mut boot_server.s_addr                                     &mut InAddrT
-                                       4);
-                                q = q.offset(4);
-                                current_block_29 = 6450636197030046351;
-                            }
-                        } else {
-                            if service.type_0 !=
-                                   0 {
-                                /* We don't know the server for a service type, so we'll
-	     allow the client to broadcast for it */
-                                discovery_control =
-                                    2
-                            }
-                            current_block_29 = 6450636197030046351;
-                        }
-                        match current_block_29 {
-                            14257305712396241914 => { }
-                            _ => { break 's_185 ; }
-                        }
-                    }
-                    my_syslog((3) << 3 |
-                                  3,
-                              "PXE menu too large");
-                    return daemon.dhcp_opts
-                }
-        }
-        service = service.next
-    }
-    /* if no prompt, wait forever if there's a choice */
-    fake_prompt[0 ] =
-        if i > 1 {
-            255
-        } else { 0 }      u8; /* no menu - just use use mess->filename */
-    if i == 0 {
-        discovery_control = 8
-    } else {
-        let fresh30 = j;
-        j = j - 1;
-        ret = &mut *fake_opts.offset(fresh30) ;
-        ret.len =
-            p.wrapping_offset_from(daemon.dhcp_buff                                 mut Vec<u8>) ;
-        ret.val = daemon.dhcp_buff;
-        ret.opt = 9;
-        if q.wrapping_offset_from(daemon.dhcp_buff3                                mut Vec<u8>) !=
-               0 {
-            let fresh31 = j;
-            j = j - 1;
-            ret = &mut *fake_opts.offset(fresh31) ;
-            ret.len =
-                q.wrapping_offset_from(daemon.dhcp_buff3                                     mut Vec<u8>)
-                   ;
-            ret.val = daemon.dhcp_buff3;
-            ret.opt = 8
-        }
-    }
-    o = daemon.dhcp_opts;
-    while !o.is_null() {
-        if o.flags & 1024 != 0 &&
-               o.opt == 10 {
-            break ;
-        }
-        o = o.next
-    }
-    if o.is_null() {
-        let fresh32 = j;
-        j = j - 1;
-        ret = &mut *fake_opts.offset(fresh32) ;
-        ret.len =
-            ::std::mem::size_of::<[u8; 4]>() ;
-        ret.val = fake_prompt.as_mut_ptr();
-        ret.opt = 10
-    }
-    let fresh33 = j;
-    j = j - 1;
-    ret = &mut *fake_opts.offset(fresh33) ;
-    ret.len = 1;
-    ret.opt = 6;
-    ret.val = discovery_control;
-    return ret;
-}
-fn clear_packet(mut mess: DhcpPacket, mut end: &mut Vec<u8>) {
-    mess.siaddr.s_addr = 0;
-}
+static int pxe_uefi_workaround(int pxe_arch, struct dhcp_netid *netid, struct dhcp_packet *mess, struct in_addr local, time_t now, int pxe)
+{
+  struct pxe_service *service, *found;
 
-pub fn find_boot(mut netid: &mut DhcpNetId)
- -> DhcpBoot {
-    let mut boot: DhcpBoot = 0 ;
-    /* decide which dhcp-boot option we're using */
-    boot = daemon.boot_config;
-    while !boot.is_null() {
-        if match_netid(boot.netid, netid, 0) != 0 {
-            break ;
-        }
-        boot = boot.next
-    }
-    if boot.is_null() {
-        /* No match, look for one without a netid */
-        boot = daemon.boot_config;
-        while !boot.is_null() {
-            if match_netid(boot.netid, netid, 1) != 0 {
-                break ;
-            }
-            boot = boot.next
-        }
-    }
-    return boot;
-}
-fn is_pxe_client(mut mess: DhcpPacket, mut sz: usize,
-                                   mut pxe_vendor: &mut libc::c_char)
-                                   -> i32 {
-    let mut opt: *const u8 = 0 ;
-    let mut conf_len: susize = 0 as susize;
-    let mut conf: *const DhcpPxeVendor = daemon.dhcp_pxe_vendors;
-    opt = option_find(mess, sz, 60, 0);
-    if opt.is_null() { return 0 }
-    while !conf.is_null() {
-        conf_len = strlen(conf.data) as susize;
-        if !((*(opt).offset(1)
-                 ) < conf_len) {
-            if strncmp(&mut *(opt                            mut Vec<u8>).offset((2               libc::c_uint).wrapping_add(0                                  libc::c_uint)
-                                                                )                     mut Vec<u8>                     *const libc::c_char, conf.data,
-                       conf_len) == 0 {
-                if !pxe_vendor.is_null() { *pxe_vendor = conf.data }
-                return 1
-            }
-        }
-        conf = conf.next
-    }
+  /* Only workaround UEFI archs. */
+  if (pxe_arch < 6)
     return 0;
-}
-fn do_options(mut context: DhcpContext,
-                                mut mess: DhcpPacket,
-                                mut end: mut Vec<u8>,
-                                mut req_options: mut Vec<u8>,
-                                mut hostname: &mut String,
-                                mut domain: &mut String,
-                                mut netid: &mut DhcpNetId,
-                                mut subnet_addr: NetAddress,
-                                mut fqdn_flags: u8,
-                                mut null_term: i32,
-                                mut pxe_arch: i32,
-                                mut uuid: mut Vec<u8>,
-                                mut vendor_class_len: i32,
-                                mut now: time::Instant, mut lease_time: u32,
-                                mut fuzz: u16,
-                                mut pxevendor: *const libc::c_char) {
-    let mut opt: DhcpOpt = 0 ;
-    let mut config_opts: DhcpOpt = daemon.dhcp_opts;
-    let mut boot: DhcpBoot = 0 ;
-    let mut p: mut Vec<u8> = 0;
-    let mut i: i32 = 0;
-    let mut len: i32 = 0;
-    let mut force_encap: i32 = 0;
-    let mut f0: u8 = 0;
-    let mut s0: u8 = 0;
-    let mut done_file: i32 = 0;
-    let mut done_server: i32 = 0;
-    let mut done_vendor_class: i32 = 0;
-    let mut tagif: DhcpNetId = 0 ;
-    let mut id_list: DhcpNetIdList = 0;
-    /* filter options based on tags, those we want get DHOPT_TAGOK bit set */
-    if !context.is_null() { context.netid.next = 0  }
-    tagif =
-        option_filter(netid,
-                      if !context.is_null() && !context.netid.net.is_null()
-                         {
-                          &mut context.netid
-                      } else { 0  }, config_opts);
-    /* logging */
-    if daemon.options[(28).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                   ).wrapping_mul(8                                                   ))
-                                     ] &
-           (1) <<
-               (28).wrapping_rem((::std::mem::size_of::<libc::c_uint>()).wrapping_mul(8
+  
+  for (found = NULL, service = daemon->pxe_services; service; service = service->next)
+    if (pxe_arch == service->CSA && service->basename && match_netid(service->netid, netid, 1))
+      {
+	if (found)
+	  return 0; /* More than one relevant menu item */
+	  
+	found = service;
+      }
 
-                                                                                                               ))
-           != 0 && !req_options.is_null() {
-        let mut q: &mut String =
-            daemon.namebuff; /* force broadcast */
-        i = 0;
-        while *req_options.offset(i) !=
-                  255 {
-            let mut s: &mut String =
-                option_string(2,
-                              *req_options.offset(i),
-                              0, 0,
-                              0 , 0);
-            q =
-                q.offset(snprintf(q,
-                                  (1025 -
-                                       q.wrapping_offset_from(daemon.namebuff)
-                                          ),
-                                  "%d%s%s%s",
-                                  *req_options.offset(i)                                ,
-                                  if strlen(s) !=
-                                         0 {
-                                      ":"                                     *const libc::c_char
-                                  } else {
-                                      ""                                     *const libc::c_char
-                                  }, s,
-                                  if *req_options.offset((i +
-                                                              1               )
-                                                            )                                    == 255 {
-                                      ""                                     *const libc::c_char
-                                  } else {
-                                      ", "                                     *const libc::c_char
-                                  }));
-            if *req_options.offset((i + 1))              == 255 ||
-                   q.wrapping_offset_from(daemon.namebuff)                 i32 > 40 {
-                q = daemon.namebuff;
-                my_syslog((3) << 3 |
-                              6,
-                          "%u requested options: %s" , __bswap_32(mess.xid),
-                          daemon.namebuff);
-            }
-            i += 1
+  if (!found)
+    return 0; /* No relevant menu items. */
+  
+  if (!pxe)
+     return 1;
+  
+  if (found->sname)
+    {
+      mess->siaddr = a_record_from_hosts(found->sname, now);
+      snprintf((char *)mess->sname, sizeof(mess->sname), "%s", found->sname);
+    }
+  else 
+    {
+      if (found->server.s_addr != 0)
+	mess->siaddr = found->server; 
+      else
+	mess->siaddr = local;
+  
+      inet_ntop(AF_INET, &mess->siaddr, (char *)mess->sname, INET_ADDRSTRLEN);
+    }
+  
+  snprintf((char *)mess->file, sizeof(mess->file), 
+	   strchr(found->basename, '.') ? "%s" : "%s.0", found->basename);
+  
+  return 1;
+}
+
+static struct dhcp_opt *pxe_opts(int pxe_arch, struct dhcp_netid *netid, struct in_addr local, time_t now)
+{
+pub const NUM_OPTS: u32 = 4;  
+
+  unsigned  char *p, *q;
+  struct pxe_service *service;
+  static struct dhcp_opt *o, *ret;
+  int i, j = NUM_OPTS - 1;
+  struct in_addr boot_server;
+  
+  /* We pass back references to these, hence they are declared static */
+  static unsigned char discovery_control;
+  static unsigned char fake_prompt[] = { 0, 'P', 'X', 'E' }; 
+  static struct dhcp_opt *fake_opts = NULL;
+  
+  /* Disable multicast, since we don't support it, and broadcast
+     unless we need it */
+  discovery_control = 3;
+  
+  ret = daemon->dhcp_opts;
+  
+  if (!fake_opts && !(fake_opts = whine_malloc(NUM_OPTS * sizeof(struct dhcp_opt))))
+    return ret;
+
+  for (i = 0; i < NUM_OPTS; i++)
+    {
+      fake_opts[i].flags = DHOPT_VENDOR_MATCH;
+      fake_opts[i].netid = NULL;
+      fake_opts[i].next = i == (NUM_OPTS - 1) ? ret : &fake_opts[i+1];
+    }
+  
+  /* create the data for the PXE_MENU and PXE_SERVERS options. */
+  p = (unsigned char *)daemon->dhcp_buff;
+  q = (unsigned char *)daemon->dhcp_buff3;
+
+  for (i = 0, service = daemon->pxe_services; service; service = service->next)
+    if (pxe_arch == service->CSA && match_netid(service->netid, netid, 1))
+      {
+	size_t len = strlen(service->menu);
+	/* opt 43 max size is 255. encapsulated option has type and length
+	   bytes, so its max size is 253. */
+	if (p - (unsigned char *)daemon->dhcp_buff + len + 3 < 253)
+	  {
+	    *(p++) = service->type >> 8;
+	    *(p++) = service->type;
+	    *(p++) = len;
+	    memcpy(p, service->menu, len);
+	    p += len;
+	    i++;
+	  }
+	else
+	  {
+	  toobig:
+	    my_syslog(MS_DHCP | LOG_ERR, _("PXE menu too large"));
+	    return daemon->dhcp_opts;
+	  }
+	
+	boot_server = service->basename ? local : 
+	  (service->sname ? a_record_from_hosts(service->sname, now) : service->server);
+	
+	if (boot_server.s_addr != 0)
+	  {
+	    if (q - (unsigned char *)daemon->dhcp_buff3 + 3 + INADDRSZ >= 253)
+	      goto toobig;
+	    
+	    /* Boot service with known address - give it */
+	    *(q++) = service->type >> 8;
+	    *(q++) = service->type;
+	    *(q++) = 1;
+	    /* dest misaligned */
+	    memcpy(q, &boot_server.s_addr, INADDRSZ);
+	    q += INADDRSZ;
+	  }
+	else if (service->type != 0)
+	  /* We don't know the server for a service type, so we'll
+	     allow the client to broadcast for it */
+	  discovery_control = 2;
+      }
+
+  /* if no prompt, wait forever if there's a choice */
+  fake_prompt[0] = (i > 1) ? 255 : 0;
+  
+  if (i == 0)
+    discovery_control = 8; /* no menu - just use use mess->filename */
+  else
+    {
+      ret = &fake_opts[j--];
+      ret->len = p - (unsigned char *)daemon->dhcp_buff;
+      ret->val = (unsigned char *)daemon->dhcp_buff;
+      ret->opt = SUBOPT_PXE_MENU;
+
+      if (q - (unsigned char *)daemon->dhcp_buff3 != 0)
+	{
+	  ret = &fake_opts[j--]; 
+	  ret->len = q - (unsigned char *)daemon->dhcp_buff3;
+	  ret->val = (unsigned char *)daemon->dhcp_buff3;
+	  ret->opt = SUBOPT_PXE_SERVERS;
+	}
+    }
+
+  for (o = daemon->dhcp_opts; o; o = o->next)
+    if ((o->flags & DHOPT_VENDOR_MATCH) && o->opt == SUBOPT_PXE_MENU_PROMPT)
+      break;
+  
+  if (!o)
+    {
+      ret = &fake_opts[j--]; 
+      ret->len = sizeof(fake_prompt);
+      ret->val = fake_prompt;
+      ret->opt = SUBOPT_PXE_MENU_PROMPT;
+    }
+  
+  ret = &fake_opts[j--]; 
+  ret->len = 1;
+  ret->opt = SUBOPT_PXE_DISCOVERY;
+  ret->val= &discovery_control;
+ 
+  return ret;
+}
+  
+static void clear_packet(struct dhcp_packet *mess, unsigned char *end)
+{
+  memset(mess->sname, 0, sizeof(mess->sname));
+  memset(mess->file, 0, sizeof(mess->file));
+  memset(&mess->options[0] + sizeof(u32), 0, end - (&mess->options[0] + sizeof(u32)));
+  mess->siaddr.s_addr = 0;
+}
+
+struct dhcp_boot *find_boot(struct dhcp_netid *netid)
+{
+  struct dhcp_boot *boot;
+
+  /* decide which dhcp-boot option we're using */
+  for (boot = daemon->boot_config; boot; boot = boot->next)
+    if (match_netid(boot->netid, netid, 0))
+      break;
+  if (!boot)
+    /* No match, look for one without a netid */
+    for (boot = daemon->boot_config; boot; boot = boot->next)
+      if (match_netid(boot->netid, netid, 1))
+	break;
+
+  return boot;
+}
+
+static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_vendor)
+{
+  const unsigned char *opt = NULL;
+  ssize_t conf_len = 0;
+  const struct dhcp_pxe_vendor *conf = daemon->dhcp_pxe_vendors;
+  opt = option_find(mess, sz, OPTION_VENDOR_ID, 0);
+  if (!opt) 
+    return 0;
+  for (; conf; conf = conf->next)
+    {
+      conf_len = strlen(conf->data);
+      if (option_len(opt) < conf_len)
+        continue;
+      if (strncmp(option_ptr(opt, 0), conf->data, conf_len) == 0)
+        {
+          if (pxe_vendor)
+            *pxe_vendor = conf->data;
+          return 1;
         }
     }
-    id_list = daemon.force_broadcast;
-    while !id_list.is_null() {
-        if id_list.list.is_null() ||
-               match_netid(id_list.list, netid, 0) != 0 {
-            break ;
-        }
-        id_list = id_list.next
+  return 0;
+}
+
+static void do_options(struct dhcp_context *context,
+		       struct dhcp_packet *mess,
+		       unsigned char *end, 
+		       unsigned char *req_options,
+		       char *hostname, 
+		       char *domain,
+		       struct dhcp_netid *netid,
+		       struct in_addr subnet_addr,
+		       unsigned char fqdn_flags,
+		       int null_term, int pxe_arch,
+		       unsigned char *uuid,
+		       int vendor_class_len,
+		       time_t now,
+		       unsigned int lease_time,
+		       unsigned short fuzz,
+		       const char *pxevendor)
+{
+  struct dhcp_opt *opt, *config_opts = daemon->dhcp_opts;
+  struct dhcp_boot *boot;
+  unsigned char *p;
+  int i, len, force_encap = 0;
+  unsigned char f0 = 0, s0 = 0;
+  int done_file = 0, done_server = 0;
+  int done_vendor_class = 0;
+  struct dhcp_netid *tagif;
+  struct dhcp_netid_list *id_list;
+
+  /* filter options based on tags, those we want get DHOPT_TAGOK bit set */
+  if (context)
+    context->netid.next = NULL;
+  tagif = option_filter(netid, context && context->netid.net ? &context->netid : NULL, config_opts);
+	
+  /* logging */
+  if (option_bool(OPT_LOG_OPTS) && req_options)
+    {
+      char *q = daemon->namebuff;
+      for (i = 0; req_options[i] != OPTION_END; i++)
+	{
+	  char *s = option_string(AF_INET, req_options[i], NULL, 0, NULL, 0);
+	  q += snprintf(q, MAXDNAME - (q - daemon->namebuff),
+			"%d%s%s%s", 
+			req_options[i],
+			strlen(s) != 0 ? ":" : "",
+			s, 
+			req_options[i+1] == OPTION_END ? "" : ", ");
+	  if (req_options[i+1] == OPTION_END || (q - daemon->namebuff) > 40)
+	    {
+	      q = daemon->namebuff;
+	      my_syslog(MS_DHCP | LOG_INFO, _("%u requested options: %s"), ntohl(mess->xid), daemon->namebuff);
+	    }
+	}
     }
-    if !id_list.is_null() {
-        mess.flags =
-            (mess.flags |
-                 __bswap_16(0x8000) )
-    }
-    if !context.is_null() { mess.siaddr = context.local }
-    /* See if we can send the boot stuff as options.
+      
+  for (id_list = daemon->force_broadcast; id_list; id_list = id_list->next)
+    if ((!id_list->list) || match_netid(id_list->list, netid, 0))
+      break;
+  if (id_list)
+    mess->flags |= htons(0x8000); /* force broadcast */
+  
+  if (context)
+    mess->siaddr = context->local;
+  
+  /* See if we can send the boot stuff as options.
      To do this we need a requested option list, BOOTP
      and very old DHCP clients won't have this, we also 
      provide a manual option to disable it.
      Some PXE ROMs have bugs (surprise!) and need zero-terminated 
      names, so we always send those.  */
-    boot = find_boot(tagif);
-    if !boot.is_null() {
-        if !boot.sname.is_null() {
-            if daemon.options[(30                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                                                                   ))
-                                             ] &
-                   (1) <<
-                       (30 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8           ))
-                   == 0 && !req_options.is_null() &&
-                   in_list(req_options, 66) != 0 {
-                option_put_string(mess, end, 66, boot.sname,
-                                  1);
-            } else {
-                safe_strncpy(mess.sname.as_mut_ptr() ,
-                             boot.sname,
-                             ::std::mem::size_of::<[u8; 64]>()));
-            }
-        }
-        if !boot.file.is_null() {
-            if daemon.options[(30                                 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                                   ).wrapping_mul(8                                                                                   ))
-                                             ] &
-                   (1) <<
-                       (30 ).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                               ).wrapping_mul(8           ))
-                   == 0 && !req_options.is_null() &&
-                   in_list(req_options, 67) != 0 {
-                option_put_string(mess, end, 67, boot.file,
-                                  1);
-            } else {
-                safe_strncpy(mess.file.as_mut_ptr() ,
-                             boot.file,
-                             ::std::mem::size_of::<[u8; 128]>()));
-            }
-        }
-        if boot.next_server.s_addr != 0 {
-            mess.siaddr = boot.next_server
-        } else if !boot.tftp_sname.is_null() {
-            mess.siaddr = a_record_from_hosts(boot.tftp_sname, now)
-        }
-    } else {
-        /* Use the values of the relevant options if no dhcp-boot given and
+  if ((boot = find_boot(tagif)))
+    {
+      if (boot->sname)
+	{	  
+	  if (!option_bool(OPT_NO_OVERRIDE) &&
+	      req_options && 
+	      in_list(req_options, OPTION_SNAME))
+	    option_put_string(mess, end, OPTION_SNAME, boot->sname, 1);
+	  else
+	    safe_strncpy((char *)mess->sname, boot->sname, sizeof(mess->sname));
+	}
+      
+      if (boot->file)
+	{
+	  if (!option_bool(OPT_NO_OVERRIDE) &&
+	      req_options && 
+	      in_list(req_options, OPTION_FILENAME))
+	    option_put_string(mess, end, OPTION_FILENAME, boot->file, 1);
+	  else
+	    safe_strncpy((char *)mess->file, boot->file, sizeof(mess->file));
+	}
+      
+      if (boot->next_server.s_addr) 
+	mess->siaddr = boot->next_server;
+      else if (boot->tftp_sname)
+	mess->siaddr = a_record_from_hosts(boot->tftp_sname, now);
+    }
+  else
+    /* Use the values of the relevant options if no dhcp-boot given and
        they're not explicitly asked for as options. OPTION_END is used
        as an internal way to specify siaddr without using dhcp-boot, for use in
        dhcp-optsfile. */
-        if (req_options.is_null() ||
-                in_list(req_options, 67) == 0) &&
-               { opt = option_find2(67); !opt.is_null() } &&
-               opt.flags & 16 == 0 {
-            safe_strncpy(mess.file.as_mut_ptr() ,
-                         opt.val ,
-                         ::std::mem::size_of::<[u8; 128]>());
-            done_file = 1
-        }
-        if (req_options.is_null() ||
-                in_list(req_options, 66) == 0) &&
-               { opt = option_find2(66); !opt.is_null() } &&
-               opt.flags & 16 == 0 {
-            safe_strncpy(mess.sname.as_mut_ptr() ,
-                         opt.val ,
-                         ::std::mem::size_of::<[u8; 64]>());
-            done_server = 1
-        }
-        opt = option_find2(255);
-        if !opt.is_null() {
-            mess.siaddr.s_addr = (*(opt.val)).s_addr
-        }
+    {
+      if ((!req_options || !in_list(req_options, OPTION_FILENAME)) &&
+	  (opt = option_find2(OPTION_FILENAME)) && !(opt->flags & DHOPT_FORCE))
+	{
+	  safe_strncpy((char *)mess->file, (char *)opt->val, sizeof(mess->file));
+	  done_file = 1;
+	}
+      
+      if ((!req_options || !in_list(req_options, OPTION_SNAME)) &&
+	  (opt = option_find2(OPTION_SNAME)) && !(opt->flags & DHOPT_FORCE))
+	{
+	  safe_strncpy((char *)mess->sname, (char *)opt->val, sizeof(mess->sname));
+	  done_server = 1;
+	}
+      
+      if ((opt = option_find2(OPTION_END)))
+	mess->siaddr.s_addr = ((struct in_addr *)opt->val)->s_addr;	
     }
-    /* We don't want to do option-overload for BOOTP, so make the file and sname
+        
+  /* We don't want to do option-overload for BOOTP, so make the file and sname
      fields look like they are in use, even when they aren't. This gets restored
      at the end of this function. */
-    if req_options.is_null() ||
-           daemon.options[(30 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (30 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-        f0 = mess.file[0 ];
-        mess.file[0 ] = 1 as u8;
-        s0 = mess.sname[0 ];
-        mess.sname[0 ] = 1 as u8
+
+  if (!req_options || option_bool(OPT_NO_OVERRIDE))
+    {
+      f0 = mess->file[0];
+      mess->file[0] = 1;
+      s0 = mess->sname[0];
+      mess->sname[0] = 1;
     }
-    /* At this point, if mess->sname or mess->file are zeroed, they are available
+      
+  /* At this point, if mess->sname or mess->file are zeroed, they are available
      for option overload, reserve space for the overload option. */
-    if mess.file[0 ] ==
-           0 ||
-           mess.sname[0 ] ==
-               0 {
-        end = end.offset(-(3))
+  if (mess->file[0] == 0 || mess->sname[0] == 0)
+    end -= 3;
+
+  /* rfc3011 says this doesn't need to be in the requested options list. */
+  if (subnet_addr.s_addr)
+    option_put(mess, end, OPTION_SUBNET_SELECT, INADDRSZ, ntohl(subnet_addr.s_addr));
+   
+  if (lease_time != 0xffffffff)
+    { 
+      unsigned int t1val = lease_time/2; 
+      unsigned int t2val = (lease_time*7)/8;
+      unsigned int hval;
+      
+      /* If set by user, sanity check, so not longer than lease. */
+      if ((opt = option_find2(OPTION_T1)))
+	{
+	  hval = ntohl(*((unsigned int *)opt->val));
+	  if (hval < lease_time && hval > 2)
+	    t1val = hval;
+	}
+
+       if ((opt = option_find2(OPTION_T2)))
+	{
+	  hval = ntohl(*((unsigned int *)opt->val));
+	  if (hval < lease_time && hval > 2)
+	    t2val = hval;
+	}
+       	  
+       /* ensure T1 is still < T2 */
+       if (t2val <= t1val)
+	 t1val = t2val - 1; 
+
+       while (fuzz > (t1val/8))
+	 fuzz = fuzz/2;
+	 
+       t1val -= fuzz;
+       t2val -= fuzz;
+       
+       option_put(mess, end, OPTION_T1, 4, t1val);
+       option_put(mess, end, OPTION_T2, 4, t2val);
     }
-    /* rfc3011 says this doesn't need to be in the requested options list. */
-    if subnet_addr.s_addr != 0 {
-        option_put(mess, end, 118, 4,
-                   __bswap_32(subnet_addr.s_addr));
-    }
-    if lease_time != 0xffffffff {
-        let mut t1val: u32 =
-            lease_time.wrapping_div(2);
-        let mut t2val: u32 =
-            lease_time.wrapping_mul(7                                  libc::c_uint).wrapping_div(8
-                                                                                          libc::c_uint);
-        let mut hval: u32 = 0;
-        /* If set by user, sanity check, so not longer than lease. */
-        opt = option_find2(58);
-        if !opt.is_null() {
-            hval = __bswap_32(*(opt.val));
-            if hval < lease_time && hval > 2 {
-                t1val = hval
-            }
-        }
-        opt = option_find2(59);
-        if !opt.is_null() {
-            hval = __bswap_32(*(opt.val));
-            if hval < lease_time && hval > 2 {
-                t2val = hval
-            }
-        }
-        /* ensure T1 is still < T2 */
-        if t2val <= t1val {
-            t1val = t2val.wrapping_sub(1)
-        }
-        while fuzz >
-                  t1val.wrapping_div(8) {
-            fuzz = (fuzz / 2)
-        }
-        t1val = t1val.wrapping_sub(fuzz);
-        t2val = t2val.wrapping_sub(fuzz);
-        option_put(mess, end, 58, 4, t1val);
-        option_put(mess, end, 59, 4, t2val);
-    }
-    /* replies to DHCPINFORM may not have a valid context */
-    if !context.is_null() {
-        if option_find2(1).is_null() {
-            option_put(mess, end, 1, 4,
-                       __bswap_32(context.netmask.s_addr));
-        }
-        /* May not have a "guessed" broadcast address if we got no packets via a relay
+
+  /* replies to DHCPINFORM may not have a valid context */
+  if (context)
+    {
+      if (!option_find2(OPTION_NETMASK))
+	option_put(mess, end, OPTION_NETMASK, INADDRSZ, ntohl(context->netmask.s_addr));
+  
+      /* May not have a "guessed" broadcast address if we got no packets via a relay
 	 from this net yet (ie just unicast renewals after a restart */
-        if context.broadcast.s_addr != 0 &&
-               option_find2(28).is_null() {
-            option_put(mess, end, 28, 4,
-                       __bswap_32(context.broadcast.s_addr));
-        }
-        /* Same comments as broadcast apply, and also may not be able to get a sensible
+      if (context->broadcast.s_addr &&
+	  !option_find2(OPTION_BROADCAST))
+	option_put(mess, end, OPTION_BROADCAST, INADDRSZ, ntohl(context->broadcast.s_addr));
+      
+      /* Same comments as broadcast apply, and also may not be able to get a sensible
 	 default when using subnet select.  User must configure by steam in that case. */
-        if context.router.s_addr != 0 &&
-               in_list(req_options, 3) != 0 &&
-               option_find2(3).is_null() {
-            option_put(mess, end, 3, 4,
-                       __bswap_32(context.router.s_addr));
-        }
-        if daemon.port == 53 &&
-               in_list(req_options, 6) != 0 &&
-               option_find2(6).is_null() {
-            option_put(mess, end, 6, 4,
-                       __bswap_32(context.local.s_addr));
-        }
+      if (context->router.s_addr &&
+	  in_list(req_options, OPTION_ROUTER) &&
+	  !option_find2(OPTION_ROUTER))
+	option_put(mess, end, OPTION_ROUTER, INADDRSZ, ntohl(context->router.s_addr));
+      
+      if (daemon->port == NAMESERVER_PORT &&
+	  in_list(req_options, OPTION_DNSSERVER) &&
+	  !option_find2(OPTION_DNSSERVER))
+	option_put(mess, end, OPTION_DNSSERVER, INADDRSZ, ntohl(context->local.s_addr));
     }
-    if !domain.is_null() && in_list(req_options, 15) != 0 &&
-           option_find2(15).is_null() {
-        option_put_string(mess, end, 15, domain, null_term);
-    }
-    /* Note that we ignore attempts to set the fqdn using --dhc-option=81,<name> */
-    if !hostname.is_null() {
-        if in_list(req_options, 12) != 0 &&
-               option_find2(12).is_null() {
-            option_put_string(mess, end, 12, hostname,
-                              null_term); /* MBZ bits to zero */
-        }
-        if fqdn_flags != 0 {
-            len =
-                strlen(hostname).wrapping_add(3 ) ;
-            if fqdn_flags & 0x4 != 0 {
-                len += 2
-            } else if null_term != 0 { len += 1 }
-            if !domain.is_null() {
-                len =
-                    (len).wrapping_add(strlen(domain).wrapping_add(1
 
-                                                                                                               ))
+  if (domain && in_list(req_options, OPTION_DOMAINNAME) && 
+      !option_find2(OPTION_DOMAINNAME))
+    option_put_string(mess, end, OPTION_DOMAINNAME, domain, null_term);
+ 
+  /* Note that we ignore attempts to set the fqdn using --dhc-option=81,<name> */
+  if (hostname)
+    {
+      if (in_list(req_options, OPTION_HOSTNAME) &&
+	  !option_find2(OPTION_HOSTNAME))
+	option_put_string(mess, end, OPTION_HOSTNAME, hostname, null_term);
+      
+      if (fqdn_flags != 0)
+	{
+	  len = strlen(hostname) + 3;
+	  
+	  if (fqdn_flags & 0x04)
+	    len += 2;
+	  else if (null_term)
+	    len++;
 
-            } else if fqdn_flags & 0x4 != 0 {
-                len -= 1
-            }
-            p = free_space(mess, end, 81, len);
-            if !p.is_null() {
-                let fresh34 = p;
-                p = p.offset(1);
-                *fresh34 =
-                    (fqdn_flags & 0xf) ;
-                let fresh35 = p;
-                p = p.offset(1);
-                *fresh35 = 255;
-                let fresh36 = p;
-                p = p.offset(1);
-                *fresh36 = 255;
-                if fqdn_flags & 0x4 != 0 {
-                    p = do_rfc1035_name(p, hostname, 0 );
-                    if !domain.is_null() {
-                        p =
-                            do_rfc1035_name(p, domain,
-                                            0 );
-                        let fresh37 = p;
-                        p = p.offset(1);
-                        *fresh37 = 0
-                    }
-                } else {
-                    memcpy(p,
-                           hostname, strlen(hostname));
-                    p = p.offset(strlen(hostname));
-                    if !domain.is_null() {
-                        let fresh38 = p;
-                        p = p.offset(1);
-                        *fresh38 = '.' as i32;
-                        memcpy(p,
-                               domain, strlen(domain));
-                        p = p.offset(strlen(domain))
-                    }
-                    if null_term != 0 {
-                        let fresh39 = p;
-                        p = p.offset(1);
-                        *fresh39 = 0
-                    }
-                }
-            }
-        }
-    }
-    opt = config_opts;
-    while !opt.is_null() {
-        let mut optno: i32 = opt.opt;
-        /* netids match and not encapsulated? */
-        if !(opt.flags & 4096 == 0) {
-            /* was it asked for, or are we sending it anyway? */
-            if !(opt.flags & 16 == 0 &&
-                     in_list(req_options, optno) == 0) {
-                /* prohibit some used-internally options. T1 and T2 already handled. */
-                if !(optno == 81 || optno == 57
-                         || optno == 52 ||
-                         optno == 0 ||
-                         optno == 255 ||
-                         optno == 58 ||
-                         optno == 59) {
-                    if !(optno == 66 && done_server != 0) {
-                        if !(optno == 67 && done_file != 0) {
-                            /* For the options we have default values on
+	  if (domain)
+	    len += strlen(domain) + 1;
+	  else if (fqdn_flags & 0x04)
+	    len--;
+
+	  if ((p = free_space(mess, end, OPTION_CLIENT_FQDN, len)))
+	    {
+	      *(p++) = fqdn_flags & 0x0f; /* MBZ bits to zero */ 
+	      *(p++) = 255;
+	      *(p++) = 255;
+
+	      if (fqdn_flags & 0x04)
+		{
+		  p = do_rfc1035_name(p, hostname, NULL);
+		  if (domain)
+		    {
+		      p = do_rfc1035_name(p, domain, NULL);
+		      *p++ = 0;
+		    }
+		}
+	      else
+		{
+		  memcpy(p, hostname, strlen(hostname));
+		  p += strlen(hostname);
+		  if (domain)
+		    {
+		      *(p++) = '.';
+		      memcpy(p, domain, strlen(domain));
+		      p += strlen(domain);
+		    }
+		  if (null_term)
+		    *(p++) = 0;
+		}
+	    }
+	}
+    }      
+
+  for (opt = config_opts; opt; opt = opt->next)
+    {
+      int optno = opt->opt;
+
+      /* netids match and not encapsulated? */
+      if (!(opt->flags & DHOPT_TAGOK))
+	continue;
+      
+      /* was it asked for, or are we sending it anyway? */
+      if (!(opt->flags & DHOPT_FORCE) && !in_list(req_options, optno))
+	continue;
+      
+      /* prohibit some used-internally options. T1 and T2 already handled. */
+      if (optno == OPTION_CLIENT_FQDN ||
+	  optno == OPTION_MAXMESSAGE ||
+	  optno == OPTION_OVERLOAD ||
+	  optno == OPTION_PAD ||
+	  optno == OPTION_END ||
+	  optno == OPTION_T1 ||
+	  optno == OPTION_T2)
+	continue;
+
+      if (optno == OPTION_SNAME && done_server)
+	continue;
+
+      if (optno == OPTION_FILENAME && done_file)
+	continue;
+      
+      /* For the options we have default values on
 	 dhc-option=<optionno> means "don't include this option"
 	 not "include a zero-length option" */
-                            if !(opt.len == 0 &&
-                                     (optno == 1 ||
-                                          optno == 28 ||
-                                          optno == 3 ||
-                                          optno == 6 ||
-                                          optno == 15 ||
-                                          optno == 12)) {
-                                /* vendor-class comes from elsewhere for PXE */
-                                if !(pxe_arch != -(1) &&
-                                         optno == 60) {
-                                    /* always force null-term for filename and servername - buggy PXE again. */
-                                    len =
-                                        do_opt(opt, 0,
-                                               context,
-                                               if optno == 66
-                                                      ||
-                                                      optno ==
-                                                          67 {
-                                                   1
-                                               } else { null_term });
-                                    p = free_space(mess, end, optno, len);
-                                    if !p.is_null() {
-                                        do_opt(opt, p, context,
-                                               if optno == 66
-                                                      ||
-                                                      optno ==
-                                                          67 {
-                                                   1
-                                               } else { null_term });
-                                        /* If we send a vendor-id, revisit which vendor-ops we consider 
+      if (opt->len == 0 && 
+	  (optno == OPTION_NETMASK ||
+	   optno == OPTION_BROADCAST ||
+	   optno == OPTION_ROUTER ||
+	   optno == OPTION_DNSSERVER || 
+	   optno == OPTION_DOMAINNAME ||
+	   optno == OPTION_HOSTNAME))
+	continue;
+
+      /* vendor-class comes from elsewhere for PXE */
+      if (pxe_arch != -1 && optno == OPTION_VENDOR_ID)
+	continue;
+      
+      /* always force null-term for filename and servername - buggy PXE again. */
+      len = do_opt(opt, NULL, context, 
+		   (optno == OPTION_SNAME || optno == OPTION_FILENAME) ? 1 : null_term);
+
+      if ((p = free_space(mess, end, optno, len)))
+	{
+	  do_opt(opt, p, context, 
+		 (optno == OPTION_SNAME || optno == OPTION_FILENAME) ? 1 : null_term);
+	  
+	  /* If we send a vendor-id, revisit which vendor-ops we consider 
 	     it appropriate to send. */
-                                        if optno == 60 {
-                                            match_vendor_opts(p.offset(-(2
-                                                                )),
-                                                              config_opts);
-                                            done_vendor_class =
-                                                1
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        opt = opt.next
+	  if (optno == OPTION_VENDOR_ID)
+	    {
+	      match_vendor_opts(p - 2, config_opts);
+	      done_vendor_class = 1;
+	    }
+	}  
     }
-    /* Now send options to be encapsulated in arbitrary options, 
+
+  /* Now send options to be encapsulated in arbitrary options, 
      eg dhcp-option=encap:172,17,.......
      Also handle vendor-identifying vendor-encapsulated options,
      dhcp-option = vi-encap:13,17,.......
      The may be more that one "outer" to do, so group
      all the options which match each outer in turn. */
-    opt = config_opts;
-    while !opt.is_null() {
-        opt.flags &= !(64);
-        opt = opt.next
+  for (opt = config_opts; opt; opt = opt->next)
+    opt->flags &= ~DHOPT_ENCAP_DONE;
+  
+  for (opt = config_opts; opt; opt = opt->next)
+    {
+      int flags;
+      
+      if ((flags = (opt->flags & (DHOPT_ENCAPSULATE | DHOPT_RFC3925))))
+	{
+	  int found = 0;
+	  struct dhcp_opt *o;
+
+	  if (opt->flags & DHOPT_ENCAP_DONE)
+	    continue;
+
+	  for (len = 0, o = config_opts; o; o = o->next)
+	    {
+	      int outer = flags & DHOPT_ENCAPSULATE ? o->u.encap : OPTION_VENDOR_IDENT_OPT;
+
+	      o->flags &= ~DHOPT_ENCAP_MATCH;
+	      
+	      if (!(o->flags & flags) || opt->u.encap != o->u.encap)
+		continue;
+	      
+	      o->flags |= DHOPT_ENCAP_DONE;
+	      if (match_netid(o->netid, tagif, 1) &&
+		  ((o->flags & DHOPT_FORCE) || in_list(req_options, outer)))
+		{
+		  o->flags |= DHOPT_ENCAP_MATCH;
+		  found = 1;
+		  len += do_opt(o, NULL, NULL, 0) + 2;
+		}
+	    } 
+	  
+	  if (found)
+	    { 
+	      if (flags & DHOPT_ENCAPSULATE)
+		do_encap_opts(config_opts, opt->u.encap, DHOPT_ENCAP_MATCH, mess, end, null_term);
+	      else if (len > 250)
+		my_syslog(MS_DHCP | LOG_WARNING, _("cannot send RFC3925 option: too many options for enterprise number %d"), opt->u.encap);
+	      else if ((p = free_space(mess, end,  OPTION_VENDOR_IDENT_OPT, len + 5)))
+		{
+		  int swap_ent = htonl(opt->u.encap);
+		  memcpy(p, &swap_ent, 4);
+		  p += 4;
+		  *(p++) = len;
+		  for (o = config_opts; o; o = o->next)
+		    if (o->flags & DHOPT_ENCAP_MATCH)
+		      {
+			len = do_opt(o, p + 2, NULL, 0);
+			*(p++) = o->opt;
+			*(p++) = len;
+			p += len;
+		      }     
+		}
+	    }
+	}
+    }      
+
+  force_encap = prune_vendor_opts(tagif);
+  
+  if (context && pxe_arch != -1)
+    {
+      pxe_misc(mess, end, uuid, pxevendor);
+      if (!pxe_uefi_workaround(pxe_arch, tagif, mess, context->local, now, 0))
+	config_opts = pxe_opts(pxe_arch, tagif, context->local, now);
     }
-    opt = config_opts;
-    while !opt.is_null() {
-        let mut flags: i32 = 0;
-        flags = opt.flags & (4 | 2048);
-        if flags != 0 {
-            let mut found: i32 = 0;
-            let mut o: DhcpOpt = 0 ;
-            if !(opt.flags & 64 != 0) {
-                len = 0;
-                o = config_opts;
-                while !o.is_null() {
-                    let mut outer: i32 =
-                        if flags & 4 != 0 {
-                            o.u.encap
-                        } else { 125 };
-                    o.flags &= !(8);
-                    if !(o.flags & flags == 0 ||
-                             opt.u.encap != o.u.encap) {
-                        o.flags |= 64;
-                        if match_netid(o.netid, tagif, 1) !=
-                               0 &&
-                               (o.flags & 16 != 0 ||
-                                    in_list(req_options, outer) != 0) {
-                            o.flags |= 8;
-                            found = 1;
-                            len +=
-                                do_opt(o, 0,
-                                       0,
-                                       0) + 2
-                        }
-                    }
-                    o = o.next
-                }
-                if found != 0 {
-                    if flags & 4 != 0 {
-                        do_encap_opts(config_opts, opt.u.encap,
-                                      8, mess, end, null_term);
-                    } else if len > 250 {
-                        my_syslog((3) << 3 |
-                                      4,
-                                  "cannot send RFC3925 option: too many options for enterprise number %d"
-                                      ,
-                                  opt.u.encap);
-                    } else {
-                        p =
-                            free_space(mess, end, 125,
-                                       len + 5);
-                        if !p.is_null() {
-                            let mut swap_ent: i32 =
-                                __bswap_32(opt.u.encap)                              ;
-                            memcpy(p,
-                                   &mut swap_ent as
-                                   4);
-                            p = p.offset(4);
-                            let fresh40 = p;
-                            p = p.offset(1);
-                            *fresh40 = len;
-                            o = config_opts;
-                            while !o.is_null() {
-                                if o.flags & 8 != 0 {
-                                    len =
-                                        do_opt(o,
-                                               p.offset(2         ),
-                                               0,
-                                               0);
-                                    let fresh41 = p;
-                                    p = p.offset(1);
-                                    *fresh41 = o.opt;
-                                    let fresh42 = p;
-                                    p = p.offset(1);
-                                    *fresh42 = len;
-                                    p = p.offset(len)
-                                }
-                                o = o.next
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        opt = opt.next
-    }
-    force_encap = prune_vendor_opts(tagif);
-    if !context.is_null() && pxe_arch != -(1) {
-        pxe_misc(mess, end, uuid, pxevendor);
-        if pxe_uefi_workaround(pxe_arch, tagif, mess, context.local, now,
-                               0) == 0 {
-            config_opts = pxe_opts(pxe_arch, tagif, context.local, now)
-        }
-    }
-    if (force_encap != 0 || in_list(req_options, 43) != 0) &&
-           do_encap_opts(config_opts, 43, 1024,
-                         mess, end, null_term) != 0 &&
-           pxe_arch == -(1) && done_vendor_class == 0 &&
-           vendor_class_len != 0 &&
-           {
-               p = free_space(mess, end, 60, vendor_class_len);
-               !p.is_null()
-           } {
-        /* If we send vendor encapsulated options, and haven't already sent option 60,
+
+  if ((force_encap || in_list(req_options, OPTION_VENDOR_CLASS_OPT)) &&
+      do_encap_opts(config_opts, OPTION_VENDOR_CLASS_OPT, DHOPT_VENDOR_MATCH, mess, end, null_term) && 
+      pxe_arch == -1 && !done_vendor_class && vendor_class_len != 0 &&
+      (p = free_space(mess, end, OPTION_VENDOR_ID, vendor_class_len)))
+    /* If we send vendor encapsulated options, and haven't already sent option 60,
        echo back the value we got from the client. */
-        memcpy(p,
-               daemon.dhcp_buff3,
-               vendor_class_len);
+    memcpy(p, daemon->dhcp_buff3, vendor_class_len);	    
+   
+   /* restore BOOTP anti-overload hack */
+  if (!req_options || option_bool(OPT_NO_OVERRIDE))
+    {
+      mess->file[0] = f0;
+      mess->sname[0] = s0;
     }
-    /* restore BOOTP anti-overload hack */
-    if req_options.is_null() ||
-           daemon.options[(30 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (30 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               != 0 {
-        mess.file[0 ] = f0;
-        mess.sname[0 ] = s0
-    };
 }
-fn apply_delay(mut xid: u32, mut recvtime: time::Instant,
-                                 mut netid: &mut DhcpNetId) {
-    let mut delay_conf: DelayConfig = 0 ;
-    /* Decide which delay_config option we're using */
-    delay_conf = daemon.delay_conf;
-    while !delay_conf.is_null() {
-        if match_netid(delay_conf.netid, netid, 0) != 0 {
-            break ;
-        }
-        delay_conf = delay_conf.next
+
+static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid)
+{
+  struct delay_config *delay_conf;
+  
+  /* Decide which delay_config option we're using */
+  for (delay_conf = daemon->delay_conf; delay_conf; delay_conf = delay_conf->next)
+    if (match_netid(delay_conf->netid, netid, 0))
+      break;
+  
+  if (!delay_conf)
+    /* No match, look for one without a netid */
+    for (delay_conf = daemon->delay_conf; delay_conf; delay_conf = delay_conf->next)
+      if (match_netid(delay_conf->netid, netid, 1))
+        break;
+
+  if (delay_conf)
+    {
+      if (!option_bool(OPT_QUIET_DHCP))
+	my_syslog(MS_DHCP | LOG_INFO, _("%u reply delay: %d"), ntohl(xid), delay_conf->delay);
+      delay_dhcp(recvtime, delay_conf->delay, -1, 0, 0);
     }
-    if delay_conf.is_null() {
-        /* No match, look for one without a netid */
-        delay_conf = daemon.delay_conf;
-        while !delay_conf.is_null() {
-            if match_netid(delay_conf.netid, netid, 1) != 0
-               {
-                break ;
-            }
-            delay_conf = delay_conf.next
-        }
-    }
-    if !delay_conf.is_null() {
-        if daemon.options[(42 ).wrapping_div((::std::mem::size_of::<libc::c_uint>()
-                                                                                           ).wrapping_mul(8                                                                   ))
-                                         ] &
-               (1) <<
-                   (42 )).wrapping_rem((::std::mem::size_of::<libc::c_uint>()
-                                                       ).wrapping_mul(8
-                                                                                                                       ))
-               == 0 {
-            my_syslog((3) << 3 |
-                          6,
-                      "%u reply delay: %d", __bswap_32(xid),
-                      delay_conf.delay);
-        }
-        delay_dhcp(recvtime, delay_conf.delay, -(1),
-                   0,
-                   0 );
-    };
 }
+
+#endif
+  
+
+  
+  
+
+
+  
