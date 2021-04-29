@@ -66,24 +66,24 @@ char *netlink_init(void)
     addr.nl_groups |= RTMGRP_IPV6_IFADDR;
 
 #ifdef HAVE_DHCP6
-  if (daemon->doing_ra || daemon->doing_dhcp6)
+  if (daemon.doing_ra || daemon.doing_dhcp6)
     addr.nl_groups |= RTMGRP_IPV6_IFADDR;
 #endif
   
   /* May not be able to have permission to set multicast groups don't die in that case */
-  if ((daemon->netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) != -1)
+  if ((daemon.netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) != -1)
     {
-      if (bind(daemon->netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+      if (bind(daemon.netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
 	{
 	  addr.nl_groups = 0;
-	  if (errno != EPERM || bind(daemon->netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-	    daemon->netlinkfd = -1;
+	  if (errno != EPERM || bind(daemon.netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+	    daemon.netlinkfd = -1;
 	}
     }
   
-  if (daemon->netlinkfd == -1 || 
-      getsockname(daemon->netlinkfd, (struct sockaddr *)&addr, &slen) == -1)
-    die(_("cannot create netlink socket: %s"), NULL, EC_MISC);
+  if (daemon.netlinkfd == -1 || 
+      getsockname(daemon.netlinkfd, (struct sockaddr *)&addr, &slen) == -1)
+    die(_("cannot create netlink socket: {}"), NULL, EC_MISC);
   
   
   /* save pid assigned by bind() and retrieved by getsockname() */ 
@@ -92,8 +92,8 @@ char *netlink_init(void)
   iov.iov_len = 100;
   iov.iov_base = safe_malloc(iov.iov_len);
   
-  if (daemon->kernel_version >= KERNEL_VERSION(2,6,30) &&
-      setsockopt(daemon->netlinkfd, SOL_NETLINK, NETLINK_NO_ENOBUFS, &opt, sizeof(opt)) == -1)
+  if (daemon.kernel_version >= KERNEL_VERSION(2,6,30) &&
+      setsockopt(daemon.netlinkfd, SOL_NETLINK, NETLINK_NO_ENOBUFS, &opt, sizeof(opt)) == -1)
     return _("warning: failed to set NETLINK_NO_ENOBUFS on netlink socket");
   
   return NULL;
@@ -115,7 +115,7 @@ static ssize_t netlink_recv(void)
       msg.msg_iovlen = 1;
       msg.msg_flags = 0;
       
-      while ((rc = recvmsg(daemon->netlinkfd, &msg, MSG_PEEK | MSG_TRUNC)) == -1 && errno == EINTR);
+      while ((rc = recvmsg(daemon.netlinkfd, &msg, MSG_PEEK | MSG_TRUNC)) == -1 && errno == EINTR);
       
       /* make buffer big enough */
       if (rc != -1 && (msg.msg_flags & MSG_TRUNC))
@@ -132,7 +132,7 @@ static ssize_t netlink_recv(void)
 
       /* read it for real */
       msg.msg_flags = 0;
-      while ((rc = recvmsg(daemon->netlinkfd, &msg, 0)) == -1 && errno == EINTR);
+      while ((rc = recvmsg(daemon.netlinkfd, &msg, 0)) == -1 && errno == EINTR);
       
       /* Make sure this is from the kernel */
       if (rc == -1 || nladdr.nl_pid == 0)
@@ -185,7 +185,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
   req.g.rtgen_family = family; 
 
   /* Don't block in recvfrom if send fails */
-  while(retry_send(sendto(daemon->netlinkfd, (void *)&req, sizeof(req), 0, 
+  while(retry_send(sendto(daemon.netlinkfd, (void *)&req, sizeof(req), 0, 
 			  (struct sockaddr *)&addr, sizeof(addr))));
 
   if (errno != 0)
@@ -204,54 +204,54 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	}
 
       for (h = (struct nlmsghdr *)iov.iov_base; NLMSG_OK(h, (size_t)len); h = NLMSG_NEXT(h, len))
-	if (h->nlmsg_pid != netlink_pid || h->nlmsg_type == NLMSG_ERROR)
+	if (h.nlmsg_pid != netlink_pid || h.nlmsg_type == NLMSG_ERROR)
 	  {
 	    /* May be multicast arriving async */
 	    nl_async(h);
 	  }
-	else if (h->nlmsg_seq != seq)
+	else if (h.nlmsg_seq != seq)
 	  {
 	    /* May be part of incomplete response to previous request after
 	       ENOBUFS. Drop it. */
 	    continue;
 	  }
-	else if (h->nlmsg_type == NLMSG_DONE)
+	else if (h.nlmsg_type == NLMSG_DONE)
 	  return callback_ok;
-	else if (h->nlmsg_type == RTM_NEWADDR && family != AF_UNSPEC && family != AF_LOCAL)
+	else if (h.nlmsg_type == RTM_NEWADDR && family != AF_UNSPEC && family != AF_LOCAL)
 	  {
 	    struct ifaddrmsg *ifa = NLMSG_DATA(h);  
 	    struct rtattr *rta = IFA_RTA(ifa);
-	    unsigned int len1 = h->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
+	    unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
 	    
-	    if (ifa->ifa_family == family)
+	    if (ifa.ifa_family == family)
 	      {
-		if (ifa->ifa_family == AF_INET)
+		if (ifa.ifa_family == AF_INET)
 		  {
 		    struct in_addr netmask, addr, broadcast;
 		    char *label = NULL;
 
-		    netmask.s_addr = htonl(~(in_addr_t)0 << (32 - ifa->ifa_prefixlen));
+		    netmask.s_addr = htonl(~(in_addr_t)0 << (32 - ifa.ifa_prefixlen));
 
 		    addr.s_addr = 0;
 		    broadcast.s_addr = 0;
 		    
 		    while (RTA_OK(rta, len1))
 		      {
-			if (rta->rta_type == IFA_LOCAL)
+			if (rta.rta_type == IFA_LOCAL)
 			  addr = *((struct in_addr *)(rta+1));
-			else if (rta->rta_type == IFA_BROADCAST)
+			else if (rta.rta_type == IFA_BROADCAST)
 			  broadcast = *((struct in_addr *)(rta+1));
-			else if (rta->rta_type == IFA_LABEL)
+			else if (rta.rta_type == IFA_LABEL)
 			  label = RTA_DATA(rta);
 			
 			rta = RTA_NEXT(rta, len1);
 		      }
 		    
 		    if (addr.s_addr && callback_ok)
-		      if (!((*callback)(addr, ifa->ifa_index, label,  netmask, broadcast, parm)))
+		      if (!((*callback)(addr, ifa.ifa_index, label,  netmask, broadcast, parm)))
 			callback_ok = 0;
 		  }
-		else if (ifa->ifa_family == AF_INET6)
+		else if (ifa.ifa_family == AF_INET6)
 		  {
 		    struct in6_addr *addrp = NULL;
 		    u32 valid = 0, preferred = 0;
@@ -259,82 +259,82 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		    
 		    while (RTA_OK(rta, len1))
 		      {
-			if (rta->rta_type == IFA_ADDRESS)
+			if (rta.rta_type == IFA_ADDRESS)
 			  addrp = ((struct in6_addr *)(rta+1)); 
-			else if (rta->rta_type == IFA_CACHEINFO)
+			else if (rta.rta_type == IFA_CACHEINFO)
 			  {
 			    struct ifa_cacheinfo *ifc = (struct ifa_cacheinfo *)(rta+1);
-			    preferred = ifc->ifa_prefered;
-			    valid = ifc->ifa_valid;
+			    preferred = ifc.ifa_prefered;
+			    valid = ifc.ifa_valid;
 			  }
 			rta = RTA_NEXT(rta, len1);
 		      }
 		    
-		    if (ifa->ifa_flags & IFA_F_TENTATIVE)
+		    if (ifa.ifa_flags & IFA_F_TENTATIVE)
 		      flags |= IFACE_TENTATIVE;
 		    
-		    if (ifa->ifa_flags & IFA_F_DEPRECATED)
+		    if (ifa.ifa_flags & IFA_F_DEPRECATED)
 		      flags |= IFACE_DEPRECATED;
 		    
-		    if (!(ifa->ifa_flags & IFA_F_TEMPORARY))
+		    if (!(ifa.ifa_flags & IFA_F_TEMPORARY))
 		      flags |= IFACE_PERMANENT;
     		    
 		    if (addrp && callback_ok)
-		      if (!((*callback)(addrp, (int)(ifa->ifa_prefixlen), (int)(ifa->ifa_scope), 
-					(int)(ifa->ifa_index), flags, 
+		      if (!((*callback)(addrp, (int)(ifa.ifa_prefixlen), (int)(ifa.ifa_scope), 
+					(int)(ifa.ifa_index), flags, 
 					(int) preferred, (int)valid, parm)))
 			callback_ok = 0;
 		  }
 	      }
 	  }
-	else if (h->nlmsg_type == RTM_NEWNEIGH && family == AF_UNSPEC)
+	else if (h.nlmsg_type == RTM_NEWNEIGH && family == AF_UNSPEC)
 	  {
 	    struct ndmsg *neigh = NLMSG_DATA(h);  
 	    struct rtattr *rta = NDA_RTA(neigh);
-	    unsigned int len1 = h->nlmsg_len - NLMSG_LENGTH(sizeof(*neigh));
+	    unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*neigh));
 	    size_t maclen = 0;
 	    char *inaddr = NULL, *mac = NULL;
 	    
 	    while (RTA_OK(rta, len1))
 	      {
-		if (rta->rta_type == NDA_DST)
+		if (rta.rta_type == NDA_DST)
 		  inaddr = (char *)(rta+1);
-		else if (rta->rta_type == NDA_LLADDR)
+		else if (rta.rta_type == NDA_LLADDR)
 		  {
-		    maclen = rta->rta_len - sizeof(struct rtattr);
+		    maclen = rta.rta_len - sizeof(struct rtattr);
 		    mac = (char *)(rta+1);
 		  }
 		
 		rta = RTA_NEXT(rta, len1);
 	      }
 
-	    if (!(neigh->ndm_state & (NUD_NOARP | NUD_INCOMPLETE | NUD_FAILED)) &&
+	    if (!(neigh.ndm_state & (NUD_NOARP | NUD_INCOMPLETE | NUD_FAILED)) &&
 		inaddr && mac && callback_ok)
-	      if (!((*callback)(neigh->ndm_family, inaddr, mac, maclen, parm)))
+	      if (!((*callback)(neigh.ndm_family, inaddr, mac, maclen, parm)))
 		callback_ok = 0;
 	  }
 #ifdef HAVE_DHCP6
-	else if (h->nlmsg_type == RTM_NEWLINK && family == AF_LOCAL)
+	else if (h.nlmsg_type == RTM_NEWLINK && family == AF_LOCAL)
 	  {
 	    struct ifinfomsg *link =  NLMSG_DATA(h);
 	    struct rtattr *rta = IFLA_RTA(link);
-	    unsigned int len1 = h->nlmsg_len - NLMSG_LENGTH(sizeof(*link));
+	    unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*link));
 	    char *mac = NULL;
 	    size_t maclen = 0;
 
 	    while (RTA_OK(rta, len1))
 	      {
-		if (rta->rta_type == IFLA_ADDRESS)
+		if (rta.rta_type == IFLA_ADDRESS)
 		  {
-		    maclen = rta->rta_len - sizeof(struct rtattr);
+		    maclen = rta.rta_len - sizeof(struct rtattr);
 		    mac = (char *)(rta+1);
 		  }
 		
 		rta = RTA_NEXT(rta, len1);
 	      }
 
-	    if (mac && callback_ok && !((link->ifi_flags & (IFF_LOOPBACK | IFF_POINTOPOINT))) && 
-		!((*callback)((int)link->ifi_index, (unsigned int)link->ifi_type, mac, maclen, parm)))
+	    if (mac && callback_ok && !((link.ifi_flags & (IFF_LOOPBACK | IFF_POINTOPOINT))) && 
+		!((*callback)((int)link.ifi_index, (unsigned int)link.ifi_type, mac, maclen, parm)))
 	      callback_ok = 0;
 	  }
 #endif
@@ -348,8 +348,8 @@ void netlink_multicast(void)
   int flags;
   
   /* don't risk blocking reading netlink messages here. */
-  if ((flags = fcntl(daemon->netlinkfd, F_GETFL)) == -1 ||
-      fcntl(daemon->netlinkfd, F_SETFL, flags | O_NONBLOCK) == -1) 
+  if ((flags = fcntl(daemon.netlinkfd, F_GETFL)) == -1 ||
+      fcntl(daemon.netlinkfd, F_SETFL, flags | O_NONBLOCK) == -1) 
     return;
   
   if ((len = netlink_recv()) != -1)
@@ -357,18 +357,18 @@ void netlink_multicast(void)
       nl_async(h);
   
   /* restore non-blocking status */
-  fcntl(daemon->netlinkfd, F_SETFL, flags);
+  fcntl(daemon.netlinkfd, F_SETFL, flags);
 }
 
 static void nl_async(struct nlmsghdr *h)
 {
-  if (h->nlmsg_type == NLMSG_ERROR)
+  if (h.nlmsg_type == NLMSG_ERROR)
     {
       struct nlmsgerr *err = NLMSG_DATA(h);
-      if (err->error != 0)
-	my_syslog(LOG_ERR, _("netlink returns error: %s"), strerror(-(err->error)));
+      if (err.error != 0)
+	my_syslog(LOG_ERR, _("netlink returns error: {}"), strerror(-(err.error)));
     }
-  else if (h->nlmsg_pid == 0 && h->nlmsg_type == RTM_NEWROUTE) 
+  else if (h.nlmsg_pid == 0 && h.nlmsg_type == RTM_NEWROUTE) 
     {
       /* We arrange to receive netlink multicast messages whenever the network route is added.
 	 If this happens and we still have a DNS packet in the buffer, we re-send it.
@@ -377,12 +377,12 @@ static void nl_async(struct nlmsghdr *h)
 	 failing. */ 
       struct rtmsg *rtm = NLMSG_DATA(h);
       
-      if (rtm->rtm_type == RTN_UNICAST && rtm->rtm_scope == RT_SCOPE_LINK &&
-	  (rtm->rtm_table == RT_TABLE_MAIN ||
-	   rtm->rtm_table == RT_TABLE_LOCAL))
+      if (rtm.rtm_type == RTN_UNICAST && rtm.rtm_scope == RT_SCOPE_LINK &&
+	  (rtm.rtm_table == RT_TABLE_MAIN ||
+	   rtm.rtm_table == RT_TABLE_LOCAL))
 	queue_event(EVENT_NEWROUTE);
     }
-  else if (h->nlmsg_type == RTM_NEWADDR || h->nlmsg_type == RTM_DELADDR) 
+  else if (h.nlmsg_type == RTM_NEWADDR || h.nlmsg_type == RTM_DELADDR) 
     queue_event(EVENT_NEWADDR);
 }
 #endif

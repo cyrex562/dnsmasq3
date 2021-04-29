@@ -288,7 +288,7 @@ pub const EC_INIT_OFFSET: u32 = 10;
 
 // #define OPTION_BITS (sizeof(unsigned int)*8)
 // #define OPTION_SIZE ( (OPT_LAST/OPTION_BITS)+((OPT_LAST%OPTION_BITS)!=0) )
-// #define option_var(x) (daemon->options[(x) / OPTION_BITS])
+// #define option_var(x) (daemon.options[(x) / OPTION_BITS])
 // #define option_val(x) ((1u) << ((x) % OPTION_BITS))
 // #define option_bool(x) (option_var(x) & option_val(x))
 
@@ -473,7 +473,7 @@ pub struct cname {
 //   struct ds_config *next;
 // };
 #[derive(Copy,Clone,Debug,Default)]
-pub struct ds_config {
+pub struct DsConfig {
     pub name: String,
     pub digest: String,
     pub digestlen: i32,
@@ -484,7 +484,7 @@ pub struct ds_config {
     // next
 }
 
-impl ds_config {
+impl DsConfig {
   pub fn new() -> Self {
     ds_config {
       name: String::new(),
@@ -925,7 +925,7 @@ pub struct frec_src {
 
 pub struct frec {
     pub frec_src: frec_src,
-    pub sentto: server,
+    pub sentto: Server,
     pub rfd4: randfd,
     pub rfd6: randfd,
     pub new_id: u16,
@@ -951,7 +951,7 @@ pub const OT_CSTRING: u32 = 0x0800;
 pub const OT_DEC: u32 = 0x0400 ;
 pub const OT_TIME: u32 = 0x0200;
 
-/* actions in the daemon->helper RPC */
+/* actions in the daemon.helper RPC */
 pub const ACTION_DEL: u32 = 1;
 pub const ACTION_OLD_HOSTNAME: u32 = 2;
 pub const ACTION_OLD: u32 = 3;
@@ -994,7 +994,7 @@ pub const LEASE_EXP_CHANGED: u32 = 256;  /* Lease expiry time changed */
 //   struct slaac_address {
 //     struct in6_addr addr;
 //     time_t ping_time;
-//     int backoff; /* zero -> confirmed */
+//     int backoff; /* zero . confirmed */
 //     struct slaac_address *next;
 //   } *slaac_address;
 //   int vendorclass_count;
@@ -1124,7 +1124,7 @@ pub struct dhcp_config {
     // next
 }
 
-// #define have_config(config, mask) ((config) && ((config)->flags & (mask))) 
+// #define have_config(config, mask) ((config) && ((config).flags & (mask))) 
 
 pub const CONFIG_DISABLE: u32 = 1;
 pub const CONFIG_CLID: u32 = 2;
@@ -1534,7 +1534,7 @@ pub struct DnsmasqDaemon {
   pub bogus_addr: bogus_addr,
   pub ignore_addr: bogus_addr,
   // struct server *servers;
-  pub servers: server,
+  pub servers: Vec<Server>,
   // struct ipsets *ipsets;
   pub ipsets: ipsets,
   // int log_fac; /* log facility */
@@ -1632,7 +1632,7 @@ pub struct DnsmasqDaemon {
   // char *tftp_prefix; 
   pub tftp_prefix: String,
   // struct tftp_prefix *if_prefix; /* per-interface TFTP prefixes */
-  pub if_prefix: tftp_prefix,
+  pub if_prefix: Vec<tftp_prefix>,
   // unsigned int duid_enterprise, duid_config_len;
   pub duid_enterprise: u32,
   pub duid_config_len: u32,
@@ -1655,7 +1655,7 @@ pub struct DnsmasqDaemon {
   pub metrics: [u32;__METRIC_MAX],
 // #ifdef HAVE_DNSSEC
   // struct ds_config *ds;
-  pub ds: ds_config,
+  pub ds: Vec<DsConfig>,
   // char *timestamp_file;
   pub timestamp_file: String,
 // #endif
@@ -1693,13 +1693,13 @@ pub struct DnsmasqDaemon {
   // struct listener *listeners;
   pub listeners: listener,
   // struct server *last_server;
-  pub last_server: server,
+  pub last_server: Server,
   // time_t forwardtime;
   pub forwardtime: time::Instant,
   // int forwardcount;
   pub forwardcount: i32,
   // struct server *srv_save; /* Used for resend on DoD */
-  pub srv_save: server,
+  pub srv_save: Server,
   // size_t packet_len;       /*      "        "        */
   pub packet_len: usize,
   // struct randfd *rfd_save; /*      "        "        */
@@ -2423,7 +2423,7 @@ pub struct serverfd {
     // next
 }
 
-pub struct server {
+pub struct Server {
     //   union mysockaddr addr, source_addr;
     pub addr: net::IpAddr,
     pub source_addr: net::IpAddr,

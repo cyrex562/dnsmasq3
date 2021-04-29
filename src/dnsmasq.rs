@@ -67,7 +67,7 @@ mod list_container;
 
 use dnsmasq_h::{InterfaceParams, passwd, DnsmasqDaemon};
 
-use crate::{dnsmasq_h::ds_config, util::rand_init};
+use crate::{dnsmasq_h::DsConfig, util::rand_init};
 
 // #define DNSMASQ_COMPILE_OPTS
 
@@ -259,7 +259,7 @@ pub fn main () -> Result<(), io::Error>
     if (daemon.opt_dnssec_valid)
     {
         // #ifdef HAVE_DNSSEC
-        let mut ds: ListContainer<ds_config> = ListContainer::new();
+        let mut ds: ListContainer<DsConfig> = ListContainer::new();
 
         /* Must have at least a root trust anchor, or the DNSSEC code
         can loop forever. */
@@ -294,7 +294,7 @@ pub fn main () -> Result<(), io::Error>
     panic!("loop detection not available: set HAVE_LOOP in src/config.h");
     }
 
-    if (option_bool(OPT_UBUS)) {
+    if (daemon.opt_ubus) {
     panic!("Ubus not available: set HAVE_UBUS in src/config.h");
     }
     
@@ -521,27 +521,29 @@ pub fn main () -> Result<(), io::Error>
         if we have yet to bind ports because of DAD, 
         or we're doing it dynamically, we need CAP_NET_BIND_SERVICE. */
         if ((is_dad_listeners() ||daemon.opt_cleverbind) &&
-        (daemon.opt_tftp || (daemon.port != 0 && daemon.port <= 1024)))
-        need_cap_net_bind_service = 1;
+        (daemon.opt_tftp || (daemon.port != 0 && daemon.port <= 1024))) {
+        need_cap_net_bind_service = 1;}
         
         /* usptream servers which bind to an interface call SO_BINDTODEVICE
         for each TCP connection, so need CAP_NET_RAW */
-        for (serv = daemon.servers; serv; serv = serv->next)
-        if (serv->interface[0] != 0)
-        need_cap_net_raw = 1;
-        
+        // for (serv = daemon.servers; serv; serv = serv.next) {
+        // if (serv.interface[0] != 0) {
+        // need_cap_net_raw = 1;}}
+        for serv in daemon.servers {
+            if serv.interface[0] != 0 {
+                need_cap_net_raw = 1;
+            }
+        }
+
         /* If we're doing Dbus or UBus, the above can be set dynamically,
         (as can ports) so always (potentially) needed. */
-        // #ifdef HAVE_DBUS
-        if (option_bool(OPT_DBUS))
+        if (daemon.opt_dbus)
         {
             need_cap_net_bind_service = 1;
             need_cap_net_raw = 1;
         }
-        // #endif
-        
-        // #ifdef HAVE_UBUS
-        if (option_bool(OPT_UBUS))
+
+        if (daemon.opt_ubus)
         {
             need_cap_net_bind_service = 1;
             need_cap_net_raw = 1;
@@ -550,48 +552,51 @@ pub fn main () -> Result<(), io::Error>
         
         /* determine capability API version here, while we can still
         call safe_malloc */
-        int capsize = 1; /* for header version 1 */
-        char *fail = NULL;
-        
-        hdr = safe_malloc(sizeof(*hdr));
+        let capsize = 1; /* for header version 1 */
+        // char *fail = NULL;
+        let fail: Option<String> = None;
+
+        // hdr = safe_malloc(sizeof(*hdr));
         
         /* find version supported by kernel */
-        memset(hdr, 0, sizeof(*hdr));
+        // memset(hdr, 0, sizeof(*hdr));
         capget(hdr, NULL);
         
-        if (hdr->version != LINUX_CAPABILITY_VERSION_1)
+        if (hdr.version != LINUX_CAPABILITY_VERSION_1)
         {
             /* if unknown version, use largest supported version (3) */
-            if (hdr->version != LINUX_CAPABILITY_VERSION_2)
-            hdr->version = LINUX_CAPABILITY_VERSION_3;
+            if (hdr.version != LINUX_CAPABILITY_VERSION_2){
+            hdr.version = LINUX_CAPABILITY_VERSION_3;}
             capsize = 2;
         }
         
-        data = safe_malloc(sizeof(*data) * capsize);
+        // data = safe_malloc(sizeof(*data) * capsize);
         capget(hdr, data); /* Get current values, for verification */
         
-        if (need_cap_net_admin && !(data->permitted & (1 << CAP_NET_ADMIN)))
-        fail = "NET_ADMIN";
-        else if (need_cap_net_raw && !(data->permitted & (1 << CAP_NET_RAW)))
-        fail = "NET_RAW";
-        else if (need_cap_net_bind_service && !(data->permitted & (1 << CAP_NET_BIND_SERVICE)))
-        fail = "NET_BIND_SERVICE";
+        if (need_cap_net_admin && !(data.permitted & (1 << CAP_NET_ADMIN))) {
+        fail = "NET_ADMIN".to_string();}
+        else if (need_cap_net_raw && !(data.permitted & (1 << CAP_NET_RAW))) {
+        fail = "NET_RAW".to_string();}
+        else if (need_cap_net_bind_service && !(data.permitted & (1 << CAP_NET_BIND_SERVICE))) {
+        fail = "NET_BIND_SERVICE".to_string();}
         
-        if (fail)
-        die(_("process is missing required capability %s"), fail, EC_MISC);
+        if (fail) {
+            panic!("process is missing required capability");
+        }
         
         /* Now set bitmaps to set caps after daemonising */
-        memset(data, 0, sizeof(*data) * capsize);
+        // memset(data, 0, sizeof(*data) * capsize);
         
-        if (need_cap_net_admin)
-        data->effective |= (1 << CAP_NET_ADMIN);
-        if (need_cap_net_raw)
-        data->effective |= (1 << CAP_NET_RAW);
-        if (need_cap_net_bind_service)
-        data->effective |= (1 << CAP_NET_BIND_SERVICE);
+        if (need_cap_net_admin) {
+        data.effective |= (1 << CAP_NET_ADMIN);}
+        if (need_cap_net_raw) {
+        data.effective |= (1 << CAP_NET_RAW);}
+        if (need_cap_net_bind_service) {
+        data.effective |= (1 << CAP_NET_BIND_SERVICE);
+        }
         
-        data->permitted = data->effective;  
-        #endif
+        data.permitted = data.effective;  
+
         
         /* Use a pipe to carry signals and other events back to the event loop 
         in a race-free manner and another to carry errors to daemon-invoking process */
@@ -604,37 +609,40 @@ pub fn main () -> Result<(), io::Error>
         
         err_pipe[1] = -1;
         
-        if (!option_bool(OPT_DEBUG))   
+        if (!daemon.opt_debug)   
         {
             /* The following code "daemonizes" the process. 
             See Stevens section 12.4 */
             
-            if (chdir("/") != 0)
-            die(_("cannot chdir to filesystem root: %s"), NULL, EC_MISC); 
+            if (chdir("/") != 0) {
+                panic!("cannot chdir to filesystem root"); 
+            }
             
-            if (!option_bool(OPT_NO_FORK))
+            if (!daemon.opt_no_fork)
             {
-                pid_t pid;
+                let mut pid: pid_t;
                 
                 /* pipe to carry errors back to original process.
                 When startup is complete we close this and the process terminates. */
                 safe_pipe(err_pipe, 0);
                 
-                if ((pid = fork()) == -1)
+                if ((pid = fork()) == -1) {
                 /* fd == -1 since we've not forked, never returns. */
-                send_event(-1, EVENT_FORK_ERR, errno, NULL);
+                send_event(-1, EVENT_FORK_ERR, errno, NULL);}
                 
                 if (pid != 0)
                 {
-                    struct event_desc ev;
-                    char *msg;
+                    // struct event_desc ev;
+                    let ev: event_desc = Default::default();
+                    // char *msg;
+                    let msg: String;
                     
                     /* close our copy of write-end */
                     close(err_pipe[1]);
                     
                     /* check for errors after the fork */
-                    if (read_event(err_pipe[0], &ev, &msg))
-                    fatal_event(&ev, msg);
+                    if (read_event(err_pipe[0], &ev, &msg)) {
+                    fatal_event(&ev, msg);}
                     
                     _exit(EC_GOOD);
                 } 
@@ -645,20 +653,24 @@ pub fn main () -> Result<(), io::Error>
                 
                 setsid();
                 
-                if ((pid = fork()) == -1)
-                send_event(err_pipe[1], EVENT_FORK_ERR, errno, NULL);
+                if ((pid = fork()) == -1) {
+                send_event(err_pipe[1], EVENT_FORK_ERR, errno, NULL);}
                 
-                if (pid != 0)
-                _exit(0);
+                if (pid != 0) {
+                _exit(0);}
             }
             
             /* write pidfile _after_ forking ! */
             if (daemon.runfile)
             {
-                int fd, err = 0;
-                
-                sprintf(daemon.namebuff, "%d\n", (int) getpid());
-                
+                // int fd, err = 0;
+                let fd = 0;
+                let err = 0;
+
+                // sprintf(daemon.namebuff, "{}\n", (int) getpid());
+                daemon.namebuff = format!("{}\n", getpid());
+
+
                 /* Explanation: Some installations of dnsmasq (eg Debian/Ubuntu) locate the pid-file
                 in a directory which is writable by the non-privileged user that dnsmasq runs as. This
                 allows the daemon to delete the file as part of its shutdown. This is a security hole to the 
@@ -683,8 +695,8 @@ pub fn main () -> Result<(), io::Error>
                 if ((fd = open(daemon.runfile, O_WRONLY|O_CREAT|O_TRUNC|O_EXCL, S_IWUSR|S_IRUSR|S_IRGRP|S_IROTH)) == -1)
                 {
                     /* only complain if started as root */
-                    if (getuid() == 0)
-                    err = 1;
+                    if (getuid() == 0) {
+                    err = 1;}
                 }
                 else
                 {
@@ -694,15 +706,15 @@ pub fn main () -> Result<(), io::Error>
                     of the directory containing the file. That directory will
                     need to by owned by the dnsmasq user, and the ownership of the
                     file has to match, to keep systemd >273 happy. */
-                    if (getuid() == 0 && ent_pw && ent_pw->pw_uid != 0 && fchown(fd, ent_pw->pw_uid, ent_pw->pw_gid) == -1)
-                    chown_warn = errno;
+                    if (getuid() == 0 && ent_pw && ent_pw.pw_uid != 0 && fchown(fd, ent_pw.pw_uid, ent_pw.pw_gid) == -1) {
+                    chown_warn = errno;}
                     
-                    if (!read_write(fd, (unsigned char *)daemon.namebuff, strlen(daemon.namebuff), 0))
-                    err = 1;
+                    if (!read_write(fd, daemon.namebuff, daemon.namebuff.len(), 0)) {
+                    err = 1;}
                     else
                     {
-                        if (close(fd) == -1)
-                        err = 1;
+                        if (close(fd) == -1) {
+                        err = 1;}
                     }
                 }
                 
@@ -716,10 +728,10 @@ pub fn main () -> Result<(), io::Error>
         
         log_err = log_start(ent_pw, err_pipe[1]);
         
-        if (!option_bool(OPT_DEBUG)) 
+        if (!daemon.opt_debug) 
         {       
             /* open  stdout etc to /dev/null */
-            int nullfd = open("/dev/null", O_RDWR);
+            let nullfd = open("/dev/null", O_RDWR);
             if (nullfd != -1)
             {
                 dup2(nullfd, STDOUT_FILENO);
@@ -731,57 +743,34 @@ pub fn main () -> Result<(), io::Error>
         
         /* if we are to run scripts, we need to fork a helper before dropping root. */
         daemon.helperfd = -1;
-        // #ifdef HAVE_SCRIPT 
         if ((daemon.dhcp || daemon.dhcp6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP)) && 
-        (daemon.lease_change_command || daemon.luascript))
-        daemon.helperfd = create_helper(pipewrite, err_pipe[1], script_uid, script_gid, max_fd);
-        // #endif
+        (daemon.lease_change_command || daemon.luascript)) {
+        daemon.helperfd = create_helper(pipewrite, err_pipe[1], script_uid, script_gid, max_fd);}
         
-        if (!option_bool(OPT_DEBUG) && getuid() == 0)   
+        if (!daemon.opt_debug && getuid() == 0)   
         {
-            int bad_capabilities = 0;
-            gid_t dummy;
+            let bad_capabilities = 0;
+            let dummy: gid_t;
             
             /* remove all supplementary groups */
             if (gp && 
                 (setgroups(0, &dummy) == -1 ||
-                setgid(gp->gr_gid) == -1))
+                setgid(gp.gr_gid) == -1))
                 {
                     send_event(err_pipe[1], EVENT_GROUP_ERR, errno, daemon.groupname);
                     _exit(0);
                 }
                 
-                if (ent_pw && ent_pw->pw_uid != 0)
+                if (ent_pw && ent_pw.pw_uid != 0)
                 {     
                     // #if defined(HAVE_LINUX_NETWORK)	  
                     /* Need to be able to drop root. */
-                    data->effective |= (1 << CAP_SETUID);
-                    data->permitted |= (1 << CAP_SETUID);
+                    data.effective |= (1 << CAP_SETUID);
+                    data.permitted |= (1 << CAP_SETUID);
                     /* Tell kernel to not clear capabilities when dropping root */
-                    if (capset(hdr, data) == -1 || prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0) == -1)
-                    bad_capabilities = errno;
-                    
-                    #elif defined(HAVE_SOLARIS_NETWORK)
-                    /* http://developers.sun.com/solaris/articles/program_privileges.html */
-                    // priv_set_t *priv_set;
-                    
-                    // if (!(priv_set = priv_str_to_set("basic", ",", NULL)) ||
-                    // priv_addset(priv_set, PRIV_NET_ICMPACCESS) == -1 ||
-                    // priv_addset(priv_set, PRIV_SYS_NET_CONFIG) == -1)
-                    // bad_capabilities = errno;
-                    
-                    // if (priv_set && bad_capabilities == 0)
-                    // {
-                    //     priv_inverse(priv_set);
-                        
-                    //     if (setppriv(PRIV_OFF, PRIV_LIMIT, priv_set) == -1)
-                    //     bad_capabilities = errno;
-                    // }
-                    
-                    // if (priv_set)
-                    // priv_freeset(priv_set);
-                    
-                    //#endif    
+                    if (capset(hdr, data) == -1 || prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0) == -1) {
+                    bad_capabilities = errno;}
+
                     
                     if (bad_capabilities != 0)
                     {
@@ -790,15 +779,15 @@ pub fn main () -> Result<(), io::Error>
                     }
                     
                     /* finally drop root */
-                    if (setuid(ent_pw->pw_uid) == -1)
+                    if (setuid(ent_pw.pw_uid) == -1)
                     {
                         send_event(err_pipe[1], EVENT_USER_ERR, errno, daemon.username);
                         _exit(0);
                     }     
                     
                     // #ifdef HAVE_LINUX_NETWORK
-                    data->effective &= ~(1 << CAP_SETUID);
-                    data->permitted &= ~(1 << CAP_SETUID);
+                    data.effective &= !(1 << CAP_SETUID);
+                    data.permitted &= !(1 << CAP_SETUID);
                     
                     /* lose the setuid capability */
                     if (capset(hdr, data) == -1)
@@ -806,24 +795,24 @@ pub fn main () -> Result<(), io::Error>
                         send_event(err_pipe[1], EVENT_CAP_ERR, errno, NULL);
                         _exit(0);
                     }
-                    // #endif
+
                     
                 }
             }
-            
-            // #ifdef HAVE_LINUX_NETWORK
-            free(hdr);
-            free(data);
-            if (option_bool(OPT_DEBUG)) 
+
+            // free(hdr);
+            // free(data);
+            if (daemon.opt_debug)  {
             prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
-            // #endif
-            
-            // #ifdef HAVE_TFTP
-            if (option_bool(OPT_TFTP))
+            }
+
+            if (daemon.opt_tftp)
             {
-                DIR *dir;
-                struct tftp_prefix *p;
-                
+                // DIR *dir;
+                // struct tftp_prefix *p;
+                let dir: DIR;
+                let p: tftp_prefix;
+
                 if (daemon.tftp_prefix)
                 {
                     if (!((dir = opendir(daemon.tftp_prefix))))
@@ -835,75 +824,74 @@ pub fn main () -> Result<(), io::Error>
                             _exit(0);
                         }
                     }
-                    else
-                    closedir(dir);
+                    else {
+                    closedir(dir);}
                 }
                 
-                for (p = daemon.if_prefix; p; p = p->next)
+                // for (p = daemon.if_prefix; p; p = p.next)
+                for p in daemon.if_prefix
                 {
-                    p->missing = 0;
-                    if (!((dir = opendir(p->prefix))))
+                    p.missing = 0;
+                    if (!((dir = opendir(p.prefix))))
                     {
-                        p->missing = 1;
-                        if (!option_bool(OPT_TFTP_NO_FAIL))
+                        p.missing = 1;
+                        if (!daemon.opt_tftp_no_fail)
                         {
-                            send_event(err_pipe[1], EVENT_TFTP_ERR, errno, p->prefix);
+                            send_event(err_pipe[1], EVENT_TFTP_ERR, errno, p.prefix);
                             _exit(0);
                         }
                     }
-                    else
-                    closedir(dir);
+                    else {
+                    closedir(dir);}
                 }
             }
             // #endif
             
-            if (daemon.port == 0)
-            my_syslog(LOG_INFO, _("started, version %s DNS disabled"), VERSION);
+            if (daemon.port == 0) {
+            my_syslog(LOG_INFO, format!("started, version {} DNS disabled", VERSION));}
             else 
             {
                 if (daemon.cachesize != 0)
                 {
-                    my_syslog(LOG_INFO, _("started, version %s cachesize %d"), VERSION, daemon.cachesize);
-                    if (daemon.cachesize > 10000)
-                    my_syslog(LOG_WARNING, _("cache size greater than 10000 may cause performance issues, and is unlikely to be useful."));
+                    my_syslog(LOG_INFO, format!("started, version {} cachesize {}", VERSION, daemon.cachesize));
+                    if (daemon.cachesize > 10000){
+                    my_syslog(LOG_WARNING, format!("cache size greater than 10000 may cause performance issues, and is unlikely to be useful."));}
                 }
-                else
-                my_syslog(LOG_INFO, _("started, version %s cache disabled"), VERSION);
+                else {
+                my_syslog(LOG_INFO, format!("started, version {} cache disabled", VERSION));}
                 
-                if (option_bool(OPT_LOCAL_SERVICE))
-                my_syslog(LOG_INFO, _("DNS service limited to local subnets"));
+                if (daemon.opt_local_service) {
+                my_syslog(LOG_INFO, format!("DNS service limited to local subnets"));
+                }
             }
             
-            my_syslog(LOG_INFO, _("compile time options: %s"), compile_opts);
+            my_syslog(LOG_INFO, format!("compile time options: {}", compile_opts));
             
-            if (chown_warn != 0)
-            my_syslog(LOG_WARNING, "chown of PID file %s failed: %s", daemon.runfile, strerror(chown_warn));
-            
-            // #ifdef HAVE_DBUS
-            if (option_bool(OPT_DBUS))
+            if (chown_warn != 0) {
+            my_syslog(LOG_WARNING, format!("chown of PID file {} failed: {}", daemon.runfile, strerror(chown_warn)));}
+
+            if (daemon.opt_dbus)
             {
-                if (daemon.dbus)
-                my_syslog(LOG_INFO, _("DBus support enabled: connected to system bus"));
-                else
-                my_syslog(LOG_INFO, _("DBus support enabled: bus connection pending"));
+                if (daemon.dbus) {
+                my_syslog(LOG_INFO, format!("DBus support enabled: connected to system bus"));}
+                else {
+                my_syslog(LOG_INFO, format!("DBus support enabled: bus connection pending"));}
             }
-            // #endif
-            
-            // #ifdef HAVE_UBUS
-            if (option_bool(OPT_UBUS))
+
+            if (daemon.opt_ubus)
             {
-                if (daemon.ubus)
-                my_syslog(LOG_INFO, _("UBus support enabled: connected to system bus"));
-                else
-                my_syslog(LOG_INFO, _("UBus support enabled: bus connection pending"));
+                if (daemon.ubus) {
+                my_syslog(LOG_INFO, format!("UBus support enabled: connected to system bus"));}
+                else {
+                my_syslog(LOG_INFO, format!("UBus support enabled: bus connection pending"));}
             }
-            // #endif
-            
-            // #ifdef HAVE_DNSSEC
-            if (option_bool(OPT_DNSSEC_VALID))
+
+            if (daemon.opt_dnssec_valid)
             {
-                int rc;
-                struct ds_config *ds;
+                // int rc;
+                // struct ds_config *ds;
+                let rc: i32;
+                let ds: DsConfig = Default::default();
                 
                 /* Delay creating the timestamp file until here, after we've changed user, so that
                 it has the correct owner to allow updating the mtime later. 
@@ -914,30 +902,33 @@ pub fn main () -> Result<(), io::Error>
                     _exit(0);
                 }
                 
-                if (option_bool(OPT_DNSSEC_IGN_NS))
-                my_syslog(LOG_INFO, _("DNSSEC validation enabled but all unsigned answers are trusted"));
-                else
-                my_syslog(LOG_INFO, _("DNSSEC validation enabled"));
+                if (daemon.opt_dnssec_ign_ns) {
+                my_syslog(LOG_INFO, format!("DNSSEC validation enabled but all unsigned answers are trusted"));}
+                else {
+                my_syslog(LOG_INFO, _("DNSSEC validation enabled"));}
                 
-                daemon.dnssec_no_time_check = option_bool(OPT_DNSSEC_TIME);
-                if (option_bool(OPT_DNSSEC_TIME) && !daemon.back_to_the_future)
-                my_syslog(LOG_INFO, _("DNSSEC signature timestamps not checked until receipt of SIGINT"));
+                daemon.dnssec_no_time_check = daemon.opt_dnssec_time;
+                if (daemon.opt_dnssec_time && !daemon.back_to_the_future)
+                my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until receipt of SIGINT"));
                 
-                if (rc == 1)
-                my_syslog(LOG_INFO, _("DNSSEC signature timestamps not checked until system time valid"));
+                if (rc == 1) {
+                my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until system time valid"));}
                 
-                for (ds = daemon.ds; ds; ds = ds->next)
-                my_syslog(LOG_INFO, _("configured with trust anchor for %s keytag %u"),
-                ds->name[0] == 0 ? "<root>" : ds->name, ds->keytag);
+                // for (ds = daemon.ds; ds; ds = ds.next) 
+                for ds in daemon.ds
+                {
+                    my_syslog(LOG_INFO, format!("configured with trust anchor for {} keytag {}",
+                    if ds.name[0] == 0 { "<root>"} else {ds.name}, ds.keytag));
+                }
             }
-            // #endif
+
             
-            if (log_err != 0)
-            my_syslog(LOG_WARNING, _("warning: failed to change owner of %s: %s"), 
-            daemon.log_file, strerror(log_err));
+            if (log_err != 0) {
+            my_syslog(LOG_WARNING, format!("warning: failed to change owner of {}: {}", 
+            daemon.log_file, strerror(log_err)));}
             
-            if (bind_fallback)
-            my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));
+            if (bind_fallback) {
+            my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));}
             
             if (option_bool(OPT_NOWILD))
             warn_bound_listeners();
@@ -947,13 +938,13 @@ pub fn main () -> Result<(), io::Error>
             warn_int_names();
             
             if (!option_bool(OPT_NOWILD)) 
-            for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp->next)
-            if (if_tmp->name && !if_tmp->used)
-            my_syslog(LOG_WARNING, _("warning: interface %s does not currently exist"), if_tmp->name);
+            for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp.next)
+            if (if_tmp.name && !if_tmp.used)
+            my_syslog(LOG_WARNING, _("warning: interface {} does not currently exist"), if_tmp.name);
             
             if (daemon.port != 0 && option_bool(OPT_NO_RESOLV))
             {
-                if (daemon.resolv_files && !daemon.resolv_files->is_default)
+                if (daemon.resolv_files && !daemon.resolv_files.is_default)
                 my_syslog(LOG_WARNING, _("warning: ignoring resolv-file flag because no-resolv is set"));
                 daemon.resolv_files = NULL;
                 if (!daemon.servers)
@@ -961,21 +952,21 @@ pub fn main () -> Result<(), io::Error>
             } 
             
             if (daemon.max_logs != 0)
-            my_syslog(LOG_INFO, _("asynchronous logging enabled, queue limit is %d messages"), daemon.max_logs);
+            my_syslog(LOG_INFO, _("asynchronous logging enabled, queue limit is {} messages"), daemon.max_logs);
             
             
             // #ifdef HAVE_DHCP
-            for (context = daemon.dhcp; context; context = context->next)
+            for (context = daemon.dhcp; context; context = context.next)
             log_context(AF_INET, context);
             
-            for (relay = daemon.relay4; relay; relay = relay->next)
+            for (relay = daemon.relay4; relay; relay = relay.next)
             log_relay(AF_INET, relay);
             
             // #  ifdef HAVE_DHCP6
-            for (context = daemon.dhcp6; context; context = context->next)
+            for (context = daemon.dhcp6; context; context = context.next)
             log_context(AF_INET6, context);
             
-            for (relay = daemon.relay6; relay; relay = relay->next)
+            for (relay = daemon.relay6; relay; relay = relay.next)
             log_relay(AF_INET6, relay);
             
             if (daemon.doing_dhcp6 || daemon.doing_ra)
@@ -987,7 +978,7 @@ pub fn main () -> Result<(), io::Error>
             
             // #  ifdef HAVE_LINUX_NETWORK
             if (did_bind)
-            my_syslog(MS_DHCP | LOG_INFO, _("DHCP, sockets bound exclusively to interface %s"), bound_device);
+            my_syslog(MS_DHCP | LOG_INFO, _("DHCP, sockets bound exclusively to interface {}"), bound_device);
             
             if (netlink_warn)
             my_syslog(LOG_WARNING, netlink_warn);
@@ -1003,18 +994,18 @@ pub fn main () -> Result<(), io::Error>
             {
                 struct tftp_prefix *p;
                 
-                my_syslog(MS_TFTP | LOG_INFO, "TFTP %s%s %s %s", 
+                my_syslog(MS_TFTP | LOG_INFO, "TFTP {}{} {} {}", 
                 daemon.tftp_prefix ? _("root is ") : _("enabled"),
                 daemon.tftp_prefix ? daemon.tftp_prefix : "",
                 option_bool(OPT_TFTP_SECURE) ? _("secure mode") : "",
                 option_bool(OPT_SINGLE_PORT) ? _("single port mode") : "");
                 
                 if (tftp_prefix_missing)
-                my_syslog(MS_TFTP | LOG_WARNING, _("warning: %s inaccessible"), daemon.tftp_prefix);
+                my_syslog(MS_TFTP | LOG_WARNING, _("warning: {} inaccessible"), daemon.tftp_prefix);
                 
-                for (p = daemon.if_prefix; p; p = p->next)
-                if (p->missing)
-                my_syslog(MS_TFTP | LOG_WARNING, _("warning: TFTP directory %s inaccessible"), p->prefix);
+                for (p = daemon.if_prefix; p; p = p.next)
+                if (p.missing)
+                my_syslog(MS_TFTP | LOG_WARNING, _("warning: TFTP directory {} inaccessible"), p.prefix);
                 
                 /* This is a guess, it assumes that for small limits, 
                 disjoint files might be served, but for large limits, 
@@ -1040,7 +1031,7 @@ pub fn main () -> Result<(), io::Error>
                         {
                             daemon.tftp_max = max_fd;
                             my_syslog(MS_TFTP | LOG_WARNING, 
-                                _("restricting maximum simultaneous TFTP transfers to %d"), 
+                                _("restricting maximum simultaneous TFTP transfers to {}"), 
                                 daemon.tftp_max);
                             }
                         }
@@ -1078,7 +1069,7 @@ pub fn main () -> Result<(), io::Error>
                             
                             /* Whilst polling for the dbus, or doing a tftp transfer, wake every quarter second */
                             if (daemon.tftp_trans ||
-                                (option_bool(OPT_DBUS) && !daemon.dbus))
+                                (daemon.opt_dbus && !daemon.dbus))
                                 timeout = 250;
                                 
                                 /* Wake every second whilst waiting for DAD to complete */
@@ -1090,7 +1081,7 @@ pub fn main () -> Result<(), io::Error>
                                 // #endif
                                 
                                 // #ifdef HAVE_UBUS
-                                if (option_bool(OPT_UBUS))
+                                if (daemon.opt_ubus)
                                 set_ubus_listeners();
                                 // #endif
                                 
@@ -1174,7 +1165,7 @@ pub fn main () -> Result<(), io::Error>
                                 if (is_dad_listeners())
                                 {
                                     enumerate_interfaces(0);
-                                    /* NB, is_dad_listeners() == 1 --> we're binding interfaces */
+                                    /* NB, is_dad_listeners() == 1 -. we're binding interfaces */
                                     create_bound_listeners(0);
                                     warn_bound_listeners();
                                 }
@@ -1213,11 +1204,11 @@ pub fn main () -> Result<(), io::Error>
                                     
                                     //#ifdef HAVE_DBUS
                                     /* if we didn't create a DBus connection, retry now. */ 
-                                    if (option_bool(OPT_DBUS) && !daemon.dbus)
+                                    if (daemon.opt_dbus && !daemon.dbus)
                                     {
                                         char *err;
                                         if ((err = dbus_init()))
-                                        my_syslog(LOG_WARNING, _("DBus error: %s"), err);
+                                        my_syslog(LOG_WARNING, _("DBus error: {}"), err);
                                         if (daemon.dbus)
                                         my_syslog(LOG_INFO, _("connected to system DBus"));
                                     }
@@ -1225,7 +1216,7 @@ pub fn main () -> Result<(), io::Error>
                                     // #endif
                                     
                                     // #ifdef HAVE_UBUS
-                                    if (option_bool(OPT_UBUS))
+                                    if (daemon.opt_ubus)
                                     {
                                         /* if we didn't create a UBus connection, retry now. */
                                         if (!daemon.ubus)
@@ -1320,7 +1311,7 @@ pub fn main () -> Result<(), io::Error>
                                 }
                             }
                             
-                            /* now == 0 -> queue immediate callback */
+                            /* now == 0 . queue immediate callback */
                             void send_alarm(time_t event, time_t now)
                             {
                                 if (now == 0 || event != 0)
@@ -1372,11 +1363,11 @@ pub fn main () -> Result<(), io::Error>
                                 
                                 *msg = NULL;
                                 
-                                if (evp->msg_sz != 0 && 
-                                    (buf = malloc(evp->msg_sz + 1)) &&
-                                    read_write(fd, (unsigned char *)buf, evp->msg_sz, 1))
+                                if (evp.msg_sz != 0 && 
+                                    (buf = malloc(evp.msg_sz + 1)) &&
+                                    read_write(fd, (unsigned char *)buf, evp.msg_sz, 1))
                                     {
-                                        buf[evp->msg_sz] = 0;
+                                        buf[evp.msg_sz] = 0;
                                         *msg = buf;
                                     }
                                     
@@ -1385,51 +1376,51 @@ pub fn main () -> Result<(), io::Error>
                                 
                                 static void fatal_event(struct event_desc *ev, char *msg)
                                 {
-                                    errno = ev->data;
+                                    errno = ev.data;
                                     
-                                    switch (ev->event)
+                                    switch (ev.event)
                                     {
                                         case EVENT_DIE:
                                         exit(0);
                                         
                                         case EVENT_FORK_ERR:
-                                        die(_("cannot fork into background: %s"), NULL, EC_MISC);
+                                        die(_("cannot fork into background: {}"), NULL, EC_MISC);
                                         
                                         /* fall through */
                                         case EVENT_PIPE_ERR:
-                                        die(_("failed to create helper: %s"), NULL, EC_MISC);
+                                        die(_("failed to create helper: {}"), NULL, EC_MISC);
                                         
                                         /* fall through */
                                         case EVENT_CAP_ERR:
-                                        die(_("setting capabilities failed: %s"), NULL, EC_MISC);
+                                        die(_("setting capabilities failed: {}"), NULL, EC_MISC);
                                         
                                         /* fall through */
                                         case EVENT_USER_ERR:
-                                        die(_("failed to change user-id to %s: %s"), msg, EC_MISC);
+                                        die(_("failed to change user-id to {}: {}"), msg, EC_MISC);
                                         
                                         /* fall through */
                                         case EVENT_GROUP_ERR:
-                                        die(_("failed to change group-id to %s: %s"), msg, EC_MISC);
+                                        die(_("failed to change group-id to {}: {}"), msg, EC_MISC);
                                         
                                         /* fall through */
                                         case EVENT_PIDFILE:
-                                        die(_("failed to open pidfile %s: %s"), msg, EC_FILE);
+                                        die(_("failed to open pidfile {}: {}"), msg, EC_FILE);
                                         
                                         /* fall through */
                                         case EVENT_LOG_ERR:
-                                        die(_("cannot open log %s: %s"), msg, EC_FILE);
+                                        die(_("cannot open log {}: {}"), msg, EC_FILE);
                                         
                                         /* fall through */
                                         case EVENT_LUA_ERR:
-                                        die(_("failed to load Lua script: %s"), msg, EC_MISC);
+                                        die(_("failed to load Lua script: {}"), msg, EC_MISC);
                                         
                                         /* fall through */
                                         case EVENT_TFTP_ERR:
-                                        die(_("TFTP directory %s inaccessible: %s"), msg, EC_FILE);
+                                        die(_("TFTP directory {} inaccessible: {}"), msg, EC_FILE);
                                         
                                         /* fall through */
                                         case EVENT_TIME_ERR:
-                                        die(_("cannot create timestamp file %s: %s" ), msg, EC_BADCONF);
+                                        die(_("cannot create timestamp file {}: {}" ), msg, EC_BADCONF);
                                     }
                                 }	
                                 
@@ -1458,7 +1449,7 @@ pub fn main () -> Result<(), io::Error>
                                         {
                                             if (daemon.resolv_files && option_bool(OPT_NO_POLL))
                                             {
-                                                reload_servers(daemon.resolv_files->name);
+                                                reload_servers(daemon.resolv_files.name);
                                                 check = 1;
                                             }
                                             
@@ -1513,20 +1504,20 @@ pub fn main () -> Result<(), io::Error>
                                         
                                         #if defined(HAVE_SCRIPT)	
                                         case EVENT_KILLED:
-                                        my_syslog(LOG_WARNING, _("script process killed by signal %d"), ev.data);
+                                        my_syslog(LOG_WARNING, _("script process killed by signal {}"), ev.data);
                                         break;
                                         
                                         case EVENT_EXITED:
-                                        my_syslog(LOG_WARNING, _("script process exited with status %d"), ev.data);
+                                        my_syslog(LOG_WARNING, _("script process exited with status {}"), ev.data);
                                         break;
                                         
                                         case EVENT_EXEC_ERR:
-                                        my_syslog(LOG_ERR, _("failed to execute %s: %s"), 
+                                        my_syslog(LOG_ERR, _("failed to execute {}: {}"), 
                                         daemon.lease_change_command, strerror(ev.data));
                                         break;
                                         
                                         case EVENT_SCRIPT_LOG:
-                                        my_syslog(MS_SCRIPT | LOG_DEBUG, "%s", msg ? msg : "");
+                                        my_syslog(MS_SCRIPT | LOG_DEBUG, "{}", msg ? msg : "");
                                         free(msg);
                                         msg = NULL;
                                         break;
@@ -1559,7 +1550,7 @@ pub fn main () -> Result<(), io::Error>
                                         
                                         case EVENT_TIME:
                                         #ifdef HAVE_DNSSEC
-                                        if (daemon.dnssec_no_time_check && option_bool(OPT_DNSSEC_VALID) && option_bool(OPT_DNSSEC_TIME))
+                                        if (daemon.dnssec_no_time_check && daemon.opt_dnssec_valid && daemon.opt_dnssec_time)
                                         {
                                             my_syslog(LOG_INFO, _("now checking DNSSEC signature timestamps"));
                                             daemon.dnssec_no_time_check = 0;
@@ -1596,7 +1587,7 @@ pub fn main () -> Result<(), io::Error>
                                         if (daemon.back_to_the_future)
                                         {
                                             if (utimes(daemon.timestamp_file, NULL) == -1)
-                                            my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon.timestamp_file, strerror(errno));
+                                            my_syslog(LOG_ERR, _("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
                                         }
                                         #endif
                                         
@@ -1626,20 +1617,20 @@ pub fn main () -> Result<(), io::Error>
                                     if (daemon.port == 0 || option_bool(OPT_NO_POLL))
                                     return;
                                     
-                                    for (latest = NULL, res = daemon.resolv_files; res; res = res->next)
-                                    if (stat(res->name, &statbuf) == -1)
+                                    for (latest = NULL, res = daemon.resolv_files; res; res = res.next)
+                                    if (stat(res.name, &statbuf) == -1)
                                     {
                                         if (force)
                                         {
-                                            res->mtime = 0; 
+                                            res.mtime = 0; 
                                             continue;
                                         }
                                         
-                                        if (!res->logged)
-                                        my_syslog(LOG_WARNING, _("failed to access %s: %s"), res->name, strerror(errno));
-                                        res->logged = 1;
+                                        if (!res.logged)
+                                        my_syslog(LOG_WARNING, _("failed to access {}: {}"), res.name, strerror(errno));
+                                        res.logged = 1;
                                         
-                                        if (res->mtime != 0)
+                                        if (res.mtime != 0)
                                         { 
                                             /* existing file evaporated, force selection of the latest
                                             file even if its mtime hasn't changed since we last looked */
@@ -1649,10 +1640,10 @@ pub fn main () -> Result<(), io::Error>
                                     }
                                     else
                                     {
-                                        res->logged = 0;
-                                        if (force || (statbuf.st_mtime != res->mtime))
+                                        res.logged = 0;
+                                        if (force || (statbuf.st_mtime != res.mtime))
                                         {
-                                            res->mtime = statbuf.st_mtime;
+                                            res.mtime = statbuf.st_mtime;
                                             if (difftime(statbuf.st_mtime, last_change) > 0.0)
                                             {
                                                 last_change = statbuf.st_mtime;
@@ -1664,9 +1655,9 @@ pub fn main () -> Result<(), io::Error>
                                     if (latest)
                                     {
                                         static int warned = 0;
-                                        if (reload_servers(latest->name))
+                                        if (reload_servers(latest.name))
                                         {
-                                            my_syslog(LOG_INFO, _("reading %s"), latest->name);
+                                            my_syslog(LOG_INFO, _("reading {}"), latest.name);
                                             warned = 0;
                                             check_servers();
                                             if (option_bool(OPT_RELOAD) && do_reload)
@@ -1674,10 +1665,10 @@ pub fn main () -> Result<(), io::Error>
                                         }
                                         else 
                                         {
-                                            latest->mtime = 0;
+                                            latest.mtime = 0;
                                             if (!warned)
                                             {
-                                                my_syslog(LOG_WARNING, _("no servers found in %s, will retry"), latest->name);
+                                                my_syslog(LOG_WARNING, _("no servers found in {}, will retry"), latest.name);
                                                 warned = 1;
                                             }
                                         }
@@ -1721,10 +1712,10 @@ pub fn main () -> Result<(), io::Error>
                                     int  tftp = 0;
                                     struct tftp_transfer *transfer;
                                     if (!option_bool(OPT_SINGLE_PORT))
-                                    for (transfer = daemon.tftp_trans; transfer; transfer = transfer->next)
+                                    for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
                                     {
                                         tftp++;
-                                        poll_listen(transfer->sockfd, POLLIN);
+                                        poll_listen(transfer.sockfd, POLLIN);
                                     }
                                     #endif
                                     
@@ -1732,34 +1723,34 @@ pub fn main () -> Result<(), io::Error>
                                     if (daemon.port != 0)
                                     get_new_frec(now, &wait, NULL);
                                     
-                                    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp->next)
-                                    poll_listen(serverfdp->fd, POLLIN);
+                                    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+                                    poll_listen(serverfdp.fd, POLLIN);
                                     
                                     if (daemon.port != 0 && !daemon.osport)
                                     for (i = 0; i < RANDOM_SOCKS; i++)
                                     if (daemon.randomsocks[i].refcount != 0)
                                     poll_listen(daemon.randomsocks[i].fd, POLLIN);
                                     
-                                    for (listener = daemon.listeners; listener; listener = listener->next)
+                                    for (listener = daemon.listeners; listener; listener = listener.next)
                                     {
                                         /* only listen for queries if we have resources */
-                                        if (listener->fd != -1 && wait == 0)
-                                        poll_listen(listener->fd, POLLIN);
+                                        if (listener.fd != -1 && wait == 0)
+                                        poll_listen(listener.fd, POLLIN);
                                         
                                         /* death of a child goes through the select loop, so
                                         we don't need to explicitly arrange to wake up here */
-                                        if  (listener->tcpfd != -1)
+                                        if  (listener.tcpfd != -1)
                                         for (i = 0; i < MAX_PROCS; i++)
                                         if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
                                         {
-                                            poll_listen(listener->tcpfd, POLLIN);
+                                            poll_listen(listener.tcpfd, POLLIN);
                                             break;
                                         }
                                         
                                         #ifdef HAVE_TFTP
                                         /* tftp == 0 in single-port mode. */
-                                        if (tftp <= daemon.tftp_max && listener->tftpfd != -1)
-                                        poll_listen(listener->tftpfd, POLLIN);
+                                        if (tftp <= daemon.tftp_max && listener.tftpfd != -1)
+                                        poll_listen(listener.tftpfd, POLLIN);
                                         #endif
                                         
                                     }
@@ -1779,9 +1770,9 @@ pub fn main () -> Result<(), io::Error>
                                     int i;
                                     int pipefd[2];
                                     
-                                    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp->next)
-                                    if (poll_check(serverfdp->fd, POLLIN))
-                                    reply_query(serverfdp->fd, serverfdp->source_addr.sa.sa_family, now);
+                                    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+                                    if (poll_check(serverfdp.fd, POLLIN))
+                                    reply_query(serverfdp.fd, serverfdp.source_addr.sa.sa_family, now);
                                     
                                     if (daemon.port != 0 && !daemon.osport)
                                     for (i = 0; i < RANDOM_SOCKS; i++)
@@ -1806,17 +1797,17 @@ pub fn main () -> Result<(), io::Error>
                                                 daemon.tcp_pipes[i] = -1;	
                                             }
                                             
-                                            for (listener = daemon.listeners; listener; listener = listener->next)
+                                            for (listener = daemon.listeners; listener; listener = listener.next)
                                             {
-                                                if (listener->fd != -1 && poll_check(listener->fd, POLLIN))
+                                                if (listener.fd != -1 && poll_check(listener.fd, POLLIN))
                                                 receive_query(listener, now); 
                                                 
                                                 #ifdef HAVE_TFTP     
-                                                if (listener->tftpfd != -1 && poll_check(listener->tftpfd, POLLIN))
+                                                if (listener.tftpfd != -1 && poll_check(listener.tftpfd, POLLIN))
                                                 tftp_request(listener, now);
                                                 #endif
                                                 
-                                                if (listener->tcpfd != -1 && poll_check(listener->tcpfd, POLLIN))
+                                                if (listener.tcpfd != -1 && poll_check(listener.tcpfd, POLLIN))
                                                 {
                                                     int confd, client_ok = 1;
                                                     struct irec *iface = NULL;
@@ -1824,7 +1815,7 @@ pub fn main () -> Result<(), io::Error>
                                                     union mysockaddr tcp_addr;
                                                     socklen_t tcp_len = sizeof(union mysockaddr);
                                                     
-                                                    while ((confd = accept(listener->tcpfd, NULL, NULL)) == -1 && errno == EINTR);
+                                                    while ((confd = accept(listener.tcpfd, NULL, NULL)) == -1 && errno == EINTR);
                                                     
                                                     if (confd == -1)
                                                     continue;
@@ -1849,7 +1840,7 @@ pub fn main () -> Result<(), io::Error>
                                                     enumerate_interfaces(0);
                                                     
                                                     if (option_bool(OPT_NOWILD))
-                                                    iface = listener->iface; /* May be NULL */
+                                                    iface = listener.iface; /* May be NULL */
                                                     else 
                                                     {
                                                         int if_index;
@@ -1857,7 +1848,7 @@ pub fn main () -> Result<(), io::Error>
                                                         
                                                         /* if we can find the arrival interface, check it's one that's allowed */
                                                         if ((if_index = tcp_interface(confd, tcp_addr.sa.sa_family)) != 0 &&
-                                                        indextoname(listener->tcpfd, if_index, intr_name))
+                                                        indextoname(listener.tcpfd, if_index, intr_name))
                                                         {
                                                             union all_addr addr;
                                                             
@@ -1866,17 +1857,17 @@ pub fn main () -> Result<(), io::Error>
                                                             else
                                                             addr.addr4 = tcp_addr.in.sin_addr;
                                                             
-                                                            for (iface = daemon.interfaces; iface; iface = iface->next)
-                                                            if (iface->index == if_index &&
-                                                                iface->addr.sa.sa_family == tcp_addr.sa.sa_family)
+                                                            for (iface = daemon.interfaces; iface; iface = iface.next)
+                                                            if (iface.index == if_index &&
+                                                                iface.addr.sa.sa_family == tcp_addr.sa.sa_family)
                                                                 break;
                                                                 
-                                                                if (!iface && !loopback_exception(listener->tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
+                                                                if (!iface && !loopback_exception(listener.tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
                                                                 client_ok = 0;
                                                             }
                                                             
                                                             if (option_bool(OPT_CLEVERBIND))
-                                                            iface = listener->iface; /* May be NULL */
+                                                            iface = listener.iface; /* May be NULL */
                                                             else
                                                             {
                                                                 /* Check for allowed interfaces when binding the wildcard address:
@@ -1885,8 +1876,8 @@ pub fn main () -> Result<(), io::Error>
                                                                 an allowed interface. As a side effect, we get the netmask of the
                                                                 interface too, for localisation. */
                                                                 
-                                                                for (iface = daemon.interfaces; iface; iface = iface->next)
-                                                                if (sockaddr_isequal(&iface->addr, &tcp_addr))
+                                                                for (iface = daemon.interfaces; iface; iface = iface.next)
+                                                                if (sockaddr_isequal(&iface.addr, &tcp_addr))
                                                                 break;
                                                                 
                                                                 if (!iface)
@@ -1949,8 +1940,8 @@ pub fn main () -> Result<(), io::Error>
                                                             
                                                             if (iface)
                                                             {
-                                                                netmask = iface->netmask;
-                                                                auth_dns = iface->dns_auth;
+                                                                netmask = iface.netmask;
+                                                                auth_dns = iface.dns_auth;
                                                             }
                                                             else
                                                             {
@@ -1975,8 +1966,8 @@ pub fn main () -> Result<(), io::Error>
                                                             }
                                                             
                                                             /* start with no upstream connections. */
-                                                            for (s = daemon.servers; s; s = s->next)
-                                                            s->tcpfd = -1; 
+                                                            for (s = daemon.servers; s; s = s.next)
+                                                            s.tcpfd = -1; 
                                                             
                                                             /* The connected socket inherits non-blocking
                                                             attribute from the listening socket. 
@@ -1992,11 +1983,11 @@ pub fn main () -> Result<(), io::Error>
                                                             if (buff)
                                                             free(buff);
                                                             
-                                                            for (s = daemon.servers; s; s = s->next)
-                                                            if (s->tcpfd != -1)
+                                                            for (s = daemon.servers; s; s = s.next)
+                                                            if (s.tcpfd != -1)
                                                             {
-                                                                shutdown(s->tcpfd, SHUT_RDWR);
-                                                                close(s->tcpfd);
+                                                                shutdown(s.tcpfd, SHUT_RDWR);
+                                                                close(s.tcpfd);
                                                             }
                                                             
                                                             if (!option_bool(OPT_DEBUG))

@@ -25,7 +25,7 @@ pub const SERIAL_EQ: u32 = 0;
 pub const SERIAL_GT: u32 = 1;
 
 /* Convert from presentation format to wire format, in place.
-   Also map UC -> LC.
+   Also map UC . LC.
    Note that using extract_name to get presentation format
    then calling to_wire() removes compression and maps case,
    thus generating names in canonical form.
@@ -133,9 +133,9 @@ static int serial_compare_32(u32 s1, u32 s2)
 
 /* Called at startup. If the timestamp file is configured and exists, put its mtime on
    timestamp_time. If it doesn't exist, create it, and set the mtime to 1-1-2015.
-   return -1 -> Cannot create file.
-           0 -> not using timestamp, or timestamp exists and is in past.
-           1 -> timestamp exists and is in future.
+   return -1 . Cannot create file.
+           0 . not using timestamp, or timestamp exists and is in past.
+           1 . timestamp exists and is in future.
 */
 
 static time_t timestamp_time;
@@ -144,21 +144,21 @@ int setup_timestamp(void)
 {
   struct stat statbuf;
   
-  daemon->back_to_the_future = 0;
+  daemon.back_to_the_future = 0;
   
-  if (!daemon->timestamp_file)
+  if (!daemon.timestamp_file)
     return 0;
   
-  if (stat(daemon->timestamp_file, &statbuf) != -1)
+  if (stat(daemon.timestamp_file, &statbuf) != -1)
     {
       timestamp_time = statbuf.st_mtime;
     check_and_exit:
       if (difftime(timestamp_time, time(0)) <=  0)
 	{
 	  /* time already OK, update timestamp, and do key checking from the start. */
-	  if (utimes(daemon->timestamp_file, NULL) == -1)
-	    my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon->timestamp_file, strerror(errno));
-	  daemon->back_to_the_future = 1;
+	  if (utimes(daemon.timestamp_file, NULL) == -1)
+	    my_syslog(LOG_ERR, _("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
+	  daemon.back_to_the_future = 1;
 	  return 0;
 	}
       return 1;
@@ -167,7 +167,7 @@ int setup_timestamp(void)
   if (errno == ENOENT)
     {
       /* NB. for explanation of O_EXCL flag, see comment on pidfile in dnsmasq.c */ 
-      int fd = open(daemon->timestamp_file, O_WRONLY | O_CREAT | O_NONBLOCK | O_EXCL, 0666);
+      int fd = open(daemon.timestamp_file, O_WRONLY | O_CREAT | O_NONBLOCK | O_EXCL, 0666);
       if (fd != -1)
 	{
 	  struct timeval tv[2];
@@ -177,7 +177,7 @@ int setup_timestamp(void)
 	  timestamp_time = 1420070400; /* 1-1-2015 */
 	  tv[0].tv_sec = tv[1].tv_sec = timestamp_time;
 	  tv[0].tv_usec = tv[1].tv_usec = 0;
-	  if (utimes(daemon->timestamp_file, tv) == 0)
+	  if (utimes(daemon.timestamp_file, tv) == 0)
 	    goto check_and_exit;
 	}
     }
@@ -196,23 +196,23 @@ static int is_check_date(unsigned long curtime)
      key timestamps. As soon as the current time is
      later then the timestamp, update the timestamp
      and start checking keys */
-  if (daemon->timestamp_file)
+  if (daemon.timestamp_file)
     {
-      if (daemon->back_to_the_future == 0 && difftime(timestamp_time, curtime) <= 0)
+      if (daemon.back_to_the_future == 0 && difftime(timestamp_time, curtime) <= 0)
 	{
-	  if (utimes(daemon->timestamp_file, NULL) != 0)
-	    my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon->timestamp_file, strerror(errno));
+	  if (utimes(daemon.timestamp_file, NULL) != 0)
+	    my_syslog(LOG_ERR, _("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
 	  
 	  my_syslog(LOG_INFO, _("system time considered valid, now checking DNSSEC signature timestamps."));
-	  daemon->back_to_the_future = 1;
-	  daemon->dnssec_no_time_check = 0;
+	  daemon.back_to_the_future = 1;
+	  daemon.dnssec_no_time_check = 0;
 	  queue_event(EVENT_RELOAD); /* purge cache */
 	} 
 
-      return daemon->back_to_the_future;
+      return daemon.back_to_the_future;
     }
   else
-    return !daemon->dnssec_no_time_check;
+    return !daemon.dnssec_no_time_check;
 }
 
 /* Check whether today/now is between date_start and date_end */
@@ -224,12 +224,12 @@ static int check_date_range(unsigned long curtime, u32 date_start, u32 date_end)
 }
 
 /* Return bytes of canonicalised rrdata one by one.
-   Init state->ip with the RR, and state->end with the end of same.
-   Init state->op to NULL.
-   Init state->desc to RR descriptor.
-   Init state->buff with a MAXDNAME * 2 buffer.
+   Init state.ip with the RR, and state.end with the end of same.
+   Init state.op to NULL.
+   Init state.desc to RR descriptor.
+   Init state.buff with a MAXDNAME * 2 buffer.
    
-   After each call which returns 1, state->op points to the next byte of data.
+   After each call which returns 1, state.op points to the next byte of data.
    On returning 0, the end has been reached.
 */
 struct rdata_state {
@@ -243,56 +243,56 @@ static int get_rdata(struct dns_header *header, size_t plen, struct rdata_state 
 {
   int d;
   
-  if (state->op && state->c != 1)
+  if (state.op && state.c != 1)
     {
-      state->op++;
-      state->c--;
+      state.op++;
+      state.c--;
       return 1;
     }
 
   while (1)
     {
-      d = *(state->desc);
+      d = *(state.desc);
       
       if (d == (u16)-1)
 	{
 	  /* all the bytes to the end. */
-	  if ((state->c = state->end - state->ip) != 0)
+	  if ((state.c = state.end - state.ip) != 0)
 	    {
-	      state->op = state->ip;
-	      state->ip = state->end;;
+	      state.op = state.ip;
+	      state.ip = state.end;;
 	    }
 	  else
 	    return 0;
 	}
       else
 	{
-	  state->desc++;
+	  state.desc++;
 	  
 	  if (d == (u16)0)
 	    {
 	      /* domain-name, canonicalise */
 	      int len;
 	      
-	      if (!extract_name(header, plen, &state->ip, state->buff, 1, 0) ||
-		  (len = to_wire(state->buff)) == 0)
+	      if (!extract_name(header, plen, &state.ip, state.buff, 1, 0) ||
+		  (len = to_wire(state.buff)) == 0)
 		continue;
 	      
-	      state->c = len;
-	      state->op = (unsigned char *)state->buff;
+	      state.c = len;
+	      state.op = (unsigned char *)state.buff;
 	    }
 	  else
 	    {
 	      /* plain data preceding a domain-name, don't run off the end of the data */
-	      if ((state->end - state->ip) < d)
-		d = state->end - state->ip;
+	      if ((state.end - state.ip) < d)
+		d = state.end - state.ip;
 	      
 	      if (d == 0)
 		continue;
 		  
-	      state->op = state->ip;
-	      state->c = d;
-	      state->ip += d;
+	      state.op = state.ip;
+	      state.c = d;
+	      state.ip += d;
 	    }
 	}
       
@@ -414,7 +414,7 @@ static int explore_rrset(struct dns_header *header, size_t plen, int class, int 
     return 0;
 
    /* look for RRSIGs for this RRset and get pointers to each RR in the set. */
-  for (rrsetidx = 0, sigidx = 0, j = ntohs(header->ancount) + ntohs(header->nscount); 
+  for (rrsetidx = 0, sigidx = 0, j = ntohs(header.ancount) + ntohs(header.nscount); 
        j != 0; j--) 
     {
       unsigned char *pstart, *pdata;
@@ -544,9 +544,9 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
   name_labels = count_labels(name); /* For 4035 5.3.2 check */
 
   /* Sort RRset records into canonical order. 
-     Note that at this point keyname and daemon->workspacename buffs are
+     Note that at this point keyname and daemon.workspacename buffs are
      unused, and used as workspace by the sort. */
-  rrsetidx = sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon->workspacename, keyname);
+  rrsetidx = sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon.workspacename, keyname);
          
   /* Now try all the sigs to try and find one which validates */
   for (j = 0; j <sigidx; j++)
@@ -601,9 +601,9 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
               
       nsigttl = htonl(orig_ttl);
       
-      hash->update(ctx, 18, psav);
+      hash.update(ctx, 18, psav);
       wire_len = to_wire(keyname);
-      hash->update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
+      hash.update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
       from_wire(keyname);
 
 pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
@@ -641,9 +641,9 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	    }
 	  
 	  wire_len = to_wire(name_start);
-	  hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name_start);
-	  hash->update(ctx, 4, p); /* class and type */
-	  hash->update(ctx, 4, (unsigned char *)&nsigttl);
+	  hash.update(ctx, (unsigned int)wire_len, (unsigned char *)name_start);
+	  hash.update(ctx, 4, p); /* class and type */
+	  hash.update(ctx, 4, (unsigned char *)&nsigttl);
 
 	  p += 8; /* skip type, class, ttl */
 	  GETSHORT(rdlen, p);
@@ -660,8 +660,8 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	  if (*rr_desc == (u16)-1)
 	    {
 	      len = htons(rdlen);
-	      hash->update(ctx, 2, (unsigned char *)&len);
-	      hash->update(ctx, rdlen, p);
+	      hash.update(ctx, 2, (unsigned char *)&len);
+	      hash.update(ctx, rdlen, p);
 	    }
 	  else
 	    {
@@ -678,7 +678,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 		  rrbuf[j] = *state.op;
 	      
 	      len = htons((u16)j);
-	      hash->update(ctx, 2, (unsigned char *)&len); 
+	      hash.update(ctx, 2, (unsigned char *)&len); 
 	      
 	      /* If the RR is shorter than RRBUFLEN (most of them, in practice)
 		 then we can just digest it now. If it exceeds RRBUFLEN we have to
@@ -695,18 +695,18 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 		      
 		      if (j == RRBUFLEN - 1)
 			{
-			  hash->update(ctx, RRBUFLEN, rrbuf);
+			  hash.update(ctx, RRBUFLEN, rrbuf);
 			  j = -1;
 			}
 		    }
 		}
 	      
 	      if (j != 0)
-		hash->update(ctx, j, rrbuf);
+		hash.update(ctx, j, rrbuf);
 	    }
 	}
      
-      hash->digest(ctx, hash->digest_size, digest);
+      hash.digest(ctx, hash.digest_size, digest);
       
       /* namebuff used for workspace above, restore to leave unchanged on exit */
       p = (unsigned char*)(rrset[0]);
@@ -715,17 +715,17 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
       if (key)
 	{
 	  if (algo_in == algo && keytag_in == key_tag &&
-	      verify(key, keylen, sig, sig_len, digest, hash->digest_size, algo))
+	      verify(key, keylen, sig, sig_len, digest, hash.digest_size, algo))
 	    return STAT_SECURE;
 	}
       else
 	{
 	  /* iterate through all possible keys 4035 5.3.1 */
 	  for (; crecp; crecp = cache_find_by_name(crecp, keyname, now, F_DNSKEY))
-	    if (crecp->addr.key.algo == algo && 
-		crecp->addr.key.keytag == key_tag &&
-		crecp->uid == (unsigned int)class &&
-		verify(crecp->addr.key.keydata, crecp->addr.key.keylen, sig, sig_len, digest, hash->digest_size, algo))
+	    if (crecp.addr.key.algo == algo && 
+		crecp.addr.key.keytag == key_tag &&
+		crecp.uid == (unsigned int)class &&
+		verify(crecp.addr.key.keydata, crecp.addr.key.keylen, sig, sig_len, digest, hash.digest_size, algo))
 	      return (labels < name_labels) ? STAT_SECURE_WILDCARD : STAT_SECURE;
 	}
     }
@@ -752,7 +752,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
   struct blockdata *key;
   union all_addr a;
 
-  if (ntohs(header->qdcount) != 1 ||
+  if (ntohs(header.qdcount) != 1 ||
       RCODE(header) == SERVFAIL || RCODE(header) == REFUSED ||
       !extract_name(header, plen, &p, name, 1, 4))
     return STAT_BOGUS;
@@ -760,7 +760,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
   GETSHORT(qtype, p);
   GETSHORT(qclass, p);
   
-  if (qtype != T_DNSKEY || qclass != class || ntohs(header->ancount) == 0)
+  if (qtype != T_DNSKEY || qclass != class || ntohs(header.ancount) == 0)
     return STAT_BOGUS;
 
   /* See if we have cached a DS record which validates this key */
@@ -771,7 +771,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
     }
   
   /* NOTE, we need to find ONE DNSKEY which matches the DS */
-  for (valid = 0, j = ntohs(header->ancount); j != 0 && !valid; j--) 
+  for (valid = 0, j = ntohs(header.ancount); j != 0 && !valid; j--) 
     {
       /* Ensure we have type, class  TTL and length */
       if (!(rc = extract_name(header, plen, &p, name, 0, 10)))
@@ -824,10 +824,10 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
 	  const struct nettle_hash *hash;
 	  int sigcnt, rrcnt;
 
-	  if (recp1->addr.ds.algo == algo && 
-	      recp1->addr.ds.keytag == keytag &&
-	      recp1->uid == (unsigned int)class &&
-	      (hash = hash_find(ds_digest_name(recp1->addr.ds.digest))) &&
+	  if (recp1.addr.ds.algo == algo && 
+	      recp1.addr.ds.keytag == keytag &&
+	      recp1.uid == (unsigned int)class &&
+	      (hash = hash_find(ds_digest_name(recp1.addr.ds.digest))) &&
 	      hash_init(hash, &ctx, &digest))
 	    
 	    {
@@ -835,16 +835,16 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
 	      
 	      /* Note that digest may be different between DSs, so 
 		 we can't move this outside the loop. */
-	      hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name);
-	      hash->update(ctx, (unsigned int)rdlen, psave);
-	      hash->digest(ctx, hash->digest_size, digest);
+	      hash.update(ctx, (unsigned int)wire_len, (unsigned char *)name);
+	      hash.update(ctx, (unsigned int)rdlen, psave);
+	      hash.digest(ctx, hash.digest_size, digest);
 	      
 	      from_wire(name);
 	      
-	      if (!(recp1->flags & F_NEG) &&
-		  recp1->addr.ds.keylen == (int)hash->digest_size &&
-		  (ds_digest = blockdata_retrieve(recp1->addr.ds.keydata, recp1->addr.ds.keylen, NULL)) &&
-		  memcmp(ds_digest, digest, recp1->addr.ds.keylen) == 0 &&
+	      if (!(recp1.flags & F_NEG) &&
+		  recp1.addr.ds.keylen == (int)hash.digest_size &&
+		  (ds_digest = blockdata_retrieve(recp1.addr.ds.keydata, recp1.addr.ds.keylen, NULL)) &&
+		  memcmp(ds_digest, digest, recp1.addr.ds.keylen) == 0 &&
 		  explore_rrset(header, plen, class, T_DNSKEY, name, keyname, &sigcnt, &rrcnt) &&
 		  sigcnt != 0 && rrcnt != 0 &&
 		  validate_rrset(now, header, plen, class, T_DNSKEY, sigcnt, rrcnt, name, keyname, 
@@ -865,7 +865,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
       
       p = skip_questions(header, plen);
 
-      for (j = ntohs(header->ancount); j != 0; j--) 
+      for (j = ntohs(header.ancount); j != 0; j--) 
 	{
 	  /* Ensure we have type, class  TTL and length */
 	  if (!(rc = extract_name(header, plen, &p, name, 0, 10)))
@@ -959,7 +959,7 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
   unsigned long ttl;
   union all_addr a;
 
-  if (ntohs(header->qdcount) != 1 ||
+  if (ntohs(header.qdcount) != 1 ||
       !(p = skip_name(p, header, plen, 4)))
     return STAT_BOGUS;
   
@@ -973,7 +973,7 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
   
   if (rc == STAT_INSECURE)
     {
-      my_syslog(LOG_WARNING, _("Insecure DS reply received for %s, check domain configuration and upstream DNS server DNSSEC support"), name);
+      my_syslog(LOG_WARNING, _("Insecure DS reply received for {}, check domain configuration and upstream DNS server DNSSEC support"), name);
       rc = STAT_BOGUS;
     }
   
@@ -997,7 +997,7 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
     {
       cache_start_insert();
       
-      for (i = 0; i < ntohs(header->ancount); i++)
+      for (i = 0; i < ntohs(header.ancount); i++)
 	{
 	  if (!(rc = extract_name(header, plen, &p, name, 0, 10)))
 	    return STAT_BOGUS; /* bad packet */
@@ -1274,21 +1274,21 @@ static int hash_name(char *in, unsigned char **out, struct nettle_hash const *ha
   if (!hash_init(hash, &ctx, &digest))
     return 0;
  
-  hash->update(ctx, to_wire(in), (unsigned char *)in);
-  hash->update(ctx, salt_len, salt);
-  hash->digest(ctx, hash->digest_size, digest);
+  hash.update(ctx, to_wire(in), (unsigned char *)in);
+  hash.update(ctx, salt_len, salt);
+  hash.digest(ctx, hash.digest_size, digest);
 
   for(i = 0; i < iterations; i++)
     {
-      hash->update(ctx, hash->digest_size, digest);
-      hash->update(ctx, salt_len, salt);
-      hash->digest(ctx, hash->digest_size, digest);
+      hash.update(ctx, hash.digest_size, digest);
+      hash.update(ctx, salt_len, salt);
+      hash.digest(ctx, hash.digest_size, digest);
     }
    
   from_wire(in);
 
   *out = digest;
-  return hash->digest_size;
+  return hash.digest_size;
 }
 
 /* Decode base32 to first "." or end of string */
@@ -1602,16 +1602,16 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
   unsigned long ttl;
   
   /* Move to NS section */
-  if (!p || !(p = skip_section(p, ntohs(header->ancount), header, plen)))
+  if (!p || !(p = skip_section(p, ntohs(header.ancount), header, plen)))
     return 0;
 
   auth_start = p;
   
-  for (nsecs_found = 0, i = 0; i < ntohs(header->nscount); i++)
+  for (nsecs_found = 0, i = 0; i < ntohs(header.nscount); i++)
     {
       unsigned char *pstart = p;
       
-      if (!extract_name(header, plen, &p, daemon->workspacename, 1, 10))
+      if (!extract_name(header, plen, &p, daemon.workspacename, 1, 10))
 	return 0;
 	  
       GETSHORT(type, p); 
@@ -1624,8 +1624,8 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 	  if (nsec_ttl)
 	    {
 	      /* Limit TTL with sig TTL */
-	      if (daemon->rr_status[ntohs(header->ancount) + i] < ttl)
-		ttl = daemon->rr_status[ntohs(header->ancount) + i];
+	      if (daemon.rr_status[ntohs(header.ancount) + i] < ttl)
+		ttl = daemon.rr_status[ntohs(header.ancount) + i];
 	      *nsec_ttl = ttl;
 	    }
 	  
@@ -1655,9 +1655,9 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 	      
 	      rrsig_labels[nsecs_found] = NULL;
 	      
-	      for (j = ntohs(header->nscount); j != 0; j--)
+	      for (j = ntohs(header.nscount); j != 0; j--)
 		{
-		  if (!(res = extract_name(header, plen, &p1, daemon->workspacename, 0, 10)))
+		  if (!(res = extract_name(header, plen, &p1, daemon.workspacename, 0, 10)))
 		    return 0;
 
 		   GETSHORT(type1, p1); 
@@ -1708,9 +1708,9 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
     }
   
   if (type_found == T_NSEC)
-    return prove_non_existence_nsec(header, plen, nsecset, rrsig_labels, nsecs_found, daemon->workspacename, keyname, name, qtype, nons);
+    return prove_non_existence_nsec(header, plen, nsecset, rrsig_labels, nsecs_found, daemon.workspacename, keyname, name, qtype, nons);
   else if (type_found == T_NSEC3)
-    return prove_non_existence_nsec3(header, plen, nsecset, nsecs_found, daemon->workspacename, keyname, name, qtype, wildname, nons);
+    return prove_non_existence_nsec3(header, plen, nsecset, nsecs_found, daemon.workspacename, keyname, name, qtype, wildname, nons);
   else
     return 0;
 }
@@ -1758,9 +1758,9 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
 	  but that's because there's no NS record either, ie this isn't the start
 	  of a zone. We only prove that the DNS tree below a node is unsigned when
 	  we prove that we're at a zone cut AND there's no DS record. */
-      if (crecp->flags & F_NEG)
+      if (crecp.flags & F_NEG)
 	{
-	  if (crecp->flags & F_DNSSECOK)
+	  if (crecp.flags & F_DNSSECOK)
 	    return STAT_INSECURE; /* proved no DS here */
 	}
       else
@@ -1775,9 +1775,9 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
 	  */
 	  do 
 	    {
-	      if (crecp->uid == (unsigned int)class &&
-		  ds_digest_name(crecp->addr.ds.digest) &&
-		  algo_digest_name(crecp->addr.ds.algo))
+	      if (crecp.uid == (unsigned int)class &&
+		  ds_digest_name(crecp.addr.ds.digest) &&
+		  algo_digest_name(crecp.addr.ds.algo))
 		break;
 	    }
 	  while ((crecp = cache_find_by_name(crecp, keyname, now, F_DS)));
@@ -1808,7 +1808,7 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
    STAT_NEED_KEY need DNSKEY to complete validation (name is returned in keyname, class in *class)
    STAT_NEED_DS  need DS to complete validation (name is returned in keyname)
 
-   daemon->rr_status points to a char array which corressponds to the RRs in the 
+   daemon.rr_status points to a char array which corressponds to the RRs in the 
    answer and auth sections. This is set to 1 for each RR which is validated, and 0 for any which aren't.
 
    When validating replies to DS records, we're only interested in the NSEC{3} RRs in the auth section.
@@ -1827,24 +1827,24 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
   int secure = STAT_SECURE;
 
   /* extend rr_status if necessary */
-  if (daemon->rr_status_sz < ntohs(header->ancount) + ntohs(header->nscount))
+  if (daemon.rr_status_sz < ntohs(header.ancount) + ntohs(header.nscount))
     {
-      unsigned long *new = whine_malloc(sizeof(*daemon->rr_status) * (ntohs(header->ancount) + ntohs(header->nscount) + 64));
+      unsigned long *new = whine_malloc(sizeof(*daemon.rr_status) * (ntohs(header.ancount) + ntohs(header.nscount) + 64));
 
       if (!new)
 	return STAT_BOGUS;
 
-      free(daemon->rr_status);
-      daemon->rr_status = new;
-      daemon->rr_status_sz = ntohs(header->ancount) + ntohs(header->nscount) + 64;
+      free(daemon.rr_status);
+      daemon.rr_status = new;
+      daemon.rr_status_sz = ntohs(header.ancount) + ntohs(header.nscount) + 64;
     }
   
-  memset(daemon->rr_status, 0, sizeof(*daemon->rr_status) * daemon->rr_status_sz);
+  memset(daemon.rr_status, 0, sizeof(*daemon.rr_status) * daemon.rr_status_sz);
   
   if (neganswer)
     *neganswer = 0;
   
-  if (RCODE(header) == SERVFAIL || ntohs(header->qdcount) != 1)
+  if (RCODE(header) == SERVFAIL || ntohs(header.qdcount) != 1)
     return STAT_BOGUS;
   
   if (RCODE(header) != NXDOMAIN && RCODE(header) != NOERROR)
@@ -1874,7 +1874,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
     return STAT_INSECURE;
   
   if (qtype != T_CNAME)
-    for (j = ntohs(header->ancount); j != 0; j--) 
+    for (j = ntohs(header.ancount); j != 0; j--) 
       {
 	if (!(p1 = skip_name(p1, header, plen, 10)))
 	  return STAT_BOGUS; /* bad packet */
@@ -1895,7 +1895,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 	  return STAT_BOGUS;
       }
   
-  for (p1 = ans_start, i = 0; i < ntohs(header->ancount) + ntohs(header->nscount); i++)
+  for (p1 = ans_start, i = 0; i < ntohs(header.ancount) + ntohs(header.nscount); i++)
     {
       if (i != 0 && !ADD_RDLEN(header, p1, plen, rdlen1))
 	return STAT_BOGUS;
@@ -1932,7 +1932,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
       
       /* Done already: copy the validation status */
       if (j != i)
-	daemon->rr_status[i] = daemon->rr_status[j];
+	daemon.rr_status[i] = daemon.rr_status[j];
       else
 	{
 	  /* Not done, validate now */
@@ -1948,7 +1948,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 	      /* NSEC and NSEC3 records must be signed. We make this assumption elsewhere. */
 	      if (type1 == T_NSEC || type1 == T_NSEC3)
 		rc = STAT_INSECURE;
-	      else if (nons && i >= ntohs(header->ancount))
+	      else if (nons && i >= ntohs(header.ancount))
 		/* If we're validating a DS reply, rather than looking for the value of AD bit,
 		   we only care that NSEC and NSEC3 RRs in the auth section are signed. 
 		   Return SECURE even if others (SOA....) are not. */
@@ -1956,7 +1956,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 	      else
 		{
 		  /* unsigned RRsets in auth section are not BOGUS, but do make reply insecure. */
-		  if (check_unsigned && i < ntohs(header->ancount))
+		  if (check_unsigned && i < ntohs(header.ancount))
 		    {
 		      rc = zone_status(name, class1, keyname, now);
 		      if (rc == STAT_SECURE)
@@ -1975,8 +1975,8 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 	    {
 	      /* explore_rrset() gives us key name from sigs in keyname.
 		 Can't overwrite name here. */
-	      strcpy(daemon->workspacename, keyname);
-	      rc = zone_status(daemon->workspacename, class1, keyname, now);
+	      strcpy(daemon.workspacename, keyname);
+	      rc = zone_status(daemon.workspacename, class1, keyname, now);
 	      
 	      if (rc == STAT_BOGUS || rc == STAT_NEED_KEY || rc == STAT_NEED_DS)
 		{
@@ -2002,7 +2002,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 		  /* rc is now STAT_SECURE or STAT_SECURE_WILDCARD */
 		  
 		  /* Note that RR is validated */
-		  daemon->rr_status[i] = sig_ttl;
+		  daemon.rr_status[i] = sig_ttl;
 		   
 		  /* Note if we've validated either the answer to the question
 		     or the target of a CNAME. Any not noted will need NSEC or
@@ -2102,16 +2102,16 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
   unsigned char *p;
   size_t ret;
 
-  header->qdcount = htons(1);
-  header->ancount = htons(0);
-  header->nscount = htons(0);
-  header->arcount = htons(0);
+  header.qdcount = htons(1);
+  header.ancount = htons(0);
+  header.nscount = htons(0);
+  header.arcount = htons(0);
 
-  header->hb3 = HB3_RD; 
+  header.hb3 = HB3_RD; 
   SET_OPCODE(header, QUERY);
   /* For debugging, set Checking Disabled, otherwise, have the upstream check too,
      this allows it to select auth servers when one is returning bad data. */
-  header->hb4 = option_bool(OPT_DNSSEC_DEBUG) ? HB4_CD : 0;
+  header.hb4 = option_bool(OPT_DNSSEC_DEBUG) ? HB4_CD : 0;
 
   /* ID filled in later */
 

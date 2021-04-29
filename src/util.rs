@@ -255,7 +255,7 @@ unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
             return NULL;
 
 #ifdef HAVE_DNSSEC
-	  if (option_bool(OPT_DNSSEC_VALID) && *sval == NAME_ESCAPE)
+	  if (daemon.opt_dnssec_valid && *sval == NAME_ESCAPE)
 	    *p++ = (*(++sval))-1;
 	  else
 #endif		
@@ -297,7 +297,7 @@ void safe_pipe(int *fd, int read_noblock)
   if (pipe(fd) == -1 || 
       !fix_fd(fd[1]) ||
       (read_noblock && !fix_fd(fd[0])))
-    die(_("cannot create pipe: %s"), NULL, EC_MISC);
+    die(_("cannot create pipe: {}"), NULL, EC_MISC);
 }
 
 void *whine_malloc(size_t size)
@@ -305,24 +305,24 @@ void *whine_malloc(size_t size)
   void *ret = calloc(1, size);
 
   if (!ret)
-    my_syslog(LOG_ERR, _("failed to allocate %d bytes"), (int) size);
+    my_syslog(LOG_ERR, _("failed to allocate {} bytes"), (int) size);
   
   return ret;
 }
 
 int sockaddr_isequal(union mysockaddr *s1, union mysockaddr *s2)
 {
-  if (s1->sa.sa_family == s2->sa.sa_family)
+  if (s1.sa.sa_family == s2.sa.sa_family)
     { 
-      if (s1->sa.sa_family == AF_INET &&
-	  s1->in.sin_port == s2->in.sin_port &&
-	  s1->in.sin_addr.s_addr == s2->in.sin_addr.s_addr)
+      if (s1.sa.sa_family == AF_INET &&
+	  s1.in.sin_port == s2.in.sin_port &&
+	  s1.in.sin_addr.s_addr == s2.in.sin_addr.s_addr)
 	return 1;
       
-      if (s1->sa.sa_family == AF_INET6 &&
-	  s1->in6.sin6_port == s2->in6.sin6_port &&
-	  s1->in6.sin6_scope_id == s2->in6.sin6_scope_id &&
-	  IN6_ARE_ADDR_EQUAL(&s1->in6.sin6_addr, &s2->in6.sin6_addr))
+      if (s1.sa.sa_family == AF_INET6 &&
+	  s1.in6.sin6_port == s2.in6.sin6_port &&
+	  s1.in6.sin6_scope_id == s2.in6.sin6_scope_id &&
+	  IN6_ARE_ADDR_EQUAL(&s1.in6.sin6_addr, &s2.in6.sin6_addr))
 	return 1;
     }
   return 0;
@@ -331,12 +331,12 @@ int sockaddr_isequal(union mysockaddr *s1, union mysockaddr *s2)
 int sa_len(union mysockaddr *addr)
 {
 #ifdef HAVE_SOCKADDR_SA_LEN
-  return addr->sa.sa_len;
+  return addr.sa.sa_len;
 #else
-  if (addr->sa.sa_family == AF_INET6)
-    return sizeof(addr->in6);
+  if (addr.sa.sa_family == AF_INET6)
+    return sizeof(addr.in6);
   else
-    return sizeof(addr->in); 
+    return sizeof(addr.in); 
 #endif
 }
 
@@ -437,11 +437,11 @@ int is_same_net6(struct in6_addr *a, struct in6_addr *b, int prefixlen)
   int pfbytes = prefixlen >> 3;
   int pfbits = prefixlen & 7;
 
-  if (memcmp(&a->s6_addr, &b->s6_addr, pfbytes) != 0)
+  if (memcmp(&a.s6_addr, &b.s6_addr, pfbytes) != 0)
     return 0;
 
   if (pfbits == 0 ||
-      (a->s6_addr[pfbytes] >> (8 - pfbits) == b->s6_addr[pfbytes] >> (8 - pfbits)))
+      (a.s6_addr[pfbytes] >> (8 - pfbits) == b.s6_addr[pfbytes] >> (8 - pfbits)))
     return 1;
 
   return 0;
@@ -454,7 +454,7 @@ u64 addr6part(struct in6_addr *addr)
   u64 ret = 0;
 
   for (i = 8; i < 16; i++)
-    ret = (ret << 8) + addr->s6_addr[i];
+    ret = (ret << 8) + addr.s6_addr[i];
 
   return ret;
 }
@@ -465,7 +465,7 @@ void setaddr6part(struct in6_addr *addr, u64 host)
 
   for (i = 15; i >= 8; i--)
     {
-      addr->s6_addr[i] = host;
+      addr.s6_addr[i] = host;
       host = host >> 8;
     }
 }
@@ -476,23 +476,23 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
 {
   int port = 0;
   
-  if (addr->sa.sa_family == AF_INET)
+  if (addr.sa.sa_family == AF_INET)
     {
-      inet_ntop(AF_INET, &addr->in.sin_addr, buf, ADDRSTRLEN);
-      port = ntohs(addr->in.sin_port);
+      inet_ntop(AF_INET, &addr.in.sin_addr, buf, ADDRSTRLEN);
+      port = ntohs(addr.in.sin_port);
     }
-  else if (addr->sa.sa_family == AF_INET6)
+  else if (addr.sa.sa_family == AF_INET6)
     {
       char name[IF_NAMESIZE];
-      inet_ntop(AF_INET6, &addr->in6.sin6_addr, buf, ADDRSTRLEN);
-      if (addr->in6.sin6_scope_id != 0 &&
-	  if_indextoname(addr->in6.sin6_scope_id, name) &&
+      inet_ntop(AF_INET6, &addr.in6.sin6_addr, buf, ADDRSTRLEN);
+      if (addr.in6.sin6_scope_id != 0 &&
+	  if_indextoname(addr.in6.sin6_scope_id, name) &&
 	  strlen(buf) + strlen(name) + 2 <= ADDRSTRLEN)
 	{
 	  strcat(buf, "%");
 	  strcat(buf, name);
 	}
-      port = ntohs(addr->in6.sin6_port);
+      port = ntohs(addr.in6.sin6_port);
     }
   
   return port;
@@ -506,13 +506,13 @@ void prettyprint_time(char *buf, unsigned int t)
     {
       unsigned int x, p = 0;
        if ((x = t/86400))
-	p += sprintf(&buf[p], "%ud", x);
+	p += sprintf(&buf[p], "{}", x);
        if ((x = (t/3600)%24))
-	p += sprintf(&buf[p], "%uh", x);
+	p += sprintf(&buf[p], "{}h", x);
       if ((x = (t/60)%60))
-	p += sprintf(&buf[p], "%um", x);
+	p += sprintf(&buf[p], "{}m", x);
       if ((x = t%60))
-	p += sprintf(&buf[p], "%us", x);
+	p += sprintf(&buf[p], "{}", x);
     }
 }
 
@@ -607,7 +607,7 @@ int expand_buf(struct iovec *iov, size_t size)
 {
   void *new;
 
-  if (size <= (size_t)iov->iov_len)
+  if (size <= (size_t)iov.iov_len)
     return 1;
 
   if (!(new = whine_malloc(size)))
@@ -616,14 +616,14 @@ int expand_buf(struct iovec *iov, size_t size)
       return 0;
     }
 
-  if (iov->iov_base)
+  if (iov.iov_base)
     {
-      memcpy(new, iov->iov_base, iov->iov_len);
-      free(iov->iov_base);
+      memcpy(new, iov.iov_base, iov.iov_len);
+      free(iov.iov_base);
     }
 
-  iov->iov_base = new;
-  iov->iov_len = size;
+  iov.iov_base = new;
+  iov.iov_len = size;
 
   return 1;
 }
@@ -637,7 +637,7 @@ char *print_mac(char *buff, unsigned char *mac, int len)
     sprintf(p, "<null>");
   else
     for (i = 0; i < len; i++)
-      p += sprintf(p, "%.2x%s", mac[i], (i == len - 1) ? "" : ":");
+      p += sprintf(p, "%.2x{}", mac[i], (i == len - 1) ? "" : ":");
   
   return buff;
 }
@@ -722,7 +722,7 @@ void close_fds(long max_fd, int spare1, int spare2, int spare3)
 	  char *e = NULL;
 	  
 	  errno = 0;
-	  fd = strtol(de->d_name, &e, 10);
+	  fd = strtol(de.d_name, &e, 10);
 	  	  
       	  if (errno != 0 || !e || *e || fd == dirfd(d) ||
 	      fd == STDOUT_FILENO || fd == STDERR_FILENO || fd == STDIN_FILENO ||
@@ -789,7 +789,7 @@ int kernel_version(void)
   char *split;
   
   if (uname(&utsname) < 0)
-    die(_("failed to find kernel version: %s"), NULL, EC_MISC);
+    die(_("failed to find kernel version: {}"), NULL, EC_MISC);
   
   split = strtok(utsname.release, ".");
   version = (split ? atoi(split) : 0);

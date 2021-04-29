@@ -34,21 +34,21 @@ int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, i
   if ((ct = nfct_new())) 
     {
       nfct_set_attr_u8(ct, ATTR_L4PROTO, istcp ? IPPROTO_TCP : IPPROTO_UDP);
-      nfct_set_attr_u16(ct, ATTR_PORT_DST, htons(daemon->port));
+      nfct_set_attr_u16(ct, ATTR_PORT_DST, htons(daemon.port));
       
-      if (peer_addr->sa.sa_family == AF_INET6)
+      if (peer_addr.sa.sa_family == AF_INET6)
 	{
 	  nfct_set_attr_u8(ct, ATTR_L3PROTO, AF_INET6);
-	  nfct_set_attr(ct, ATTR_IPV6_SRC, peer_addr->in6.sin6_addr.s6_addr);
-	  nfct_set_attr_u16(ct, ATTR_PORT_SRC, peer_addr->in6.sin6_port);
-	  nfct_set_attr(ct, ATTR_IPV6_DST, local_addr->addr6.s6_addr);
+	  nfct_set_attr(ct, ATTR_IPV6_SRC, peer_addr.in6.sin6_addr.s6_addr);
+	  nfct_set_attr_u16(ct, ATTR_PORT_SRC, peer_addr.in6.sin6_port);
+	  nfct_set_attr(ct, ATTR_IPV6_DST, local_addr.addr6.s6_addr);
 	}
       else
 	{
 	  nfct_set_attr_u8(ct, ATTR_L3PROTO, AF_INET);
-	  nfct_set_attr_u32(ct, ATTR_IPV4_SRC, peer_addr->in.sin_addr.s_addr);
-	  nfct_set_attr_u16(ct, ATTR_PORT_SRC, peer_addr->in.sin_port);
-	  nfct_set_attr_u32(ct, ATTR_IPV4_DST, local_addr->addr4.s_addr);
+	  nfct_set_attr_u32(ct, ATTR_IPV4_SRC, peer_addr.in.sin_addr.s_addr);
+	  nfct_set_attr_u16(ct, ATTR_PORT_SRC, peer_addr.in.sin_port);
+	  nfct_set_attr_u32(ct, ATTR_IPV4_DST, local_addr.addr4.s_addr);
 	}
       
       
@@ -60,7 +60,7 @@ int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, i
 	      static int warned = 0;
 	      if (!warned)
 		{
-		  my_syslog(LOG_ERR, _("Conntrack connection mark retrieval failed: %s"), strerror(errno));
+		  my_syslog(LOG_ERR, _("Conntrack connection mark retrieval failed: {}"), strerror(errno));
 		  warned = 1;
 		}
 	    }

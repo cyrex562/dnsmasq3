@@ -61,18 +61,18 @@ int log_start(struct passwd *ent_pw, int errfd)
 
   echo_stderr = option_bool(OPT_DEBUG);
 
-  if (daemon->log_fac != -1)
-    log_fac = daemon->log_fac;
+  if (daemon.log_fac != -1)
+    log_fac = daemon.log_fac;
 #ifdef LOG_LOCAL0
   else if (option_bool(OPT_DEBUG))
     log_fac = LOG_LOCAL0;
 #endif
 
-  if (daemon->log_file)
+  if (daemon.log_file)
     { 
       log_to_file = 1;
-      daemon->max_logs = 0;
-      if (strcmp(daemon->log_file, "-") == 0)
+      daemon.max_logs = 0;
+      if (strcmp(daemon.log_file, "-") == 0)
 	{
 	  log_stderr = 1;
 	  echo_stderr = 0;
@@ -80,11 +80,11 @@ int log_start(struct passwd *ent_pw, int errfd)
 	}
     }
   
-  max_logs = daemon->max_logs;
+  max_logs = daemon.max_logs;
 
-  if (!log_reopen(daemon->log_file))
+  if (!log_reopen(daemon.log_file))
     {
-      send_event(errfd, EVENT_LOG_ERR, errno, daemon->log_file ? daemon->log_file : "");
+      send_event(errfd, EVENT_LOG_ERR, errno, daemon.log_file ? daemon.log_file : "");
       _exit(0);
     }
 
@@ -93,7 +93,7 @@ int log_start(struct passwd *ent_pw, int errfd)
   if (max_logs == 0)
     {  
       free_entries = safe_malloc(sizeof(struct log_entry));
-      free_entries->next = NULL;
+      free_entries.next = NULL;
       entries_alloced = 1;
     }
 
@@ -101,8 +101,8 @@ int log_start(struct passwd *ent_pw, int errfd)
      change the ownership here so that the file is always owned by
      the dnsmasq user. Then logrotate can just copy the owner.
      Failure of the chown call is OK, (for instance when started as non-root) */
-  if (log_to_file && !log_stderr && ent_pw && ent_pw->pw_uid != 0 && 
-      fchown(log_fd, ent_pw->pw_uid, -1) != 0)
+  if (log_to_file && !log_stderr && ent_pw && ent_pw.pw_uid != 0 && 
+      fchown(log_fd, ent_pw.pw_uid, -1) != 0)
     ret = errno;
 
   return ret;
@@ -143,8 +143,8 @@ int log_reopen(char *log_file)
 static void free_entry(void)
 {
   struct log_entry *tmp = entries;
-  entries = tmp->next;
-  tmp->next = free_entries;
+  entries = tmp.next;
+  tmp.next = free_entries;
   free_entries = tmp;
 }      
 
@@ -163,12 +163,12 @@ static void log_write(void)
       int len_adjust = 0;
 
       if (log_to_file)
-	entries->payload[entries->offset + entries->length - 1] = '\n';
+	entries.payload[entries.offset + entries.length - 1] = '\n';
       else if (connection_type == SOCK_DGRAM)
 	len_adjust = 1;
 
       /* Avoid duplicates over a fork() */
-      if (entries->pid != getpid())
+      if (entries.pid != getpid())
 	{
 	  free_entry();
 	  continue;
@@ -176,18 +176,18 @@ static void log_write(void)
 
       connection_good = 1;
 
-      if ((rc = write(log_fd, entries->payload + entries->offset, entries->length - len_adjust)) != -1)
+      if ((rc = write(log_fd, entries.payload + entries.offset, entries.length - len_adjust)) != -1)
 	{
-	  entries->length -= rc;
-	  entries->offset += rc;
-	  if (entries->length == len_adjust)
+	  entries.length -= rc;
+	  entries.offset += rc;
+	  if (entries.length == len_adjust)
 	    {
 	      free_entry();
 	      if (entries_lost != 0)
 		{
 		  int e = entries_lost;
 		  entries_lost = 0; /* avoid wild recursion */
-		  my_syslog(LOG_WARNING, _("overflow: %d log entries lost"), e);
+		  my_syslog(LOG_WARNING, _("overflow: {} log entries lost"), e);
 		}	  
 	    }
 	  continue;
@@ -222,8 +222,8 @@ static void log_write(void)
 	    {
 	      /* socket went (syslogd down?), try and reconnect. If we fail,
 		 stop trying until the next call to my_syslog() 
-		 ECONNREFUSED -> connection went down
-		 ENOTCONN -> nobody listening
+		 ECONNREFUSED . connection went down
+		 ENOTCONN . nobody listening
 		 (ECONNRESET, EDESTADDRREQ are *BSD equivalents) */
 	      
 	      struct sockaddr_un logaddr;
@@ -265,7 +265,7 @@ static void log_write(void)
       /* give up - fall back to syslog() - this handles out-of-space
 	 when logging to a file, for instance. */
       log_fd = -1;
-      my_syslog(LOG_CRIT, _("log failed: %s"), strerror(errno));
+      my_syslog(LOG_CRIT, _("log failed: {}"), strerror(errno));
       return;
     }
 }
@@ -300,7 +300,7 @@ void my_syslog(int priority, const char *format, ...)
 
   if (echo_stderr) 
     {
-      fprintf(stderr, "dnsmasq%s: ", func);
+      fprintf(stderr, "dnsmasq{}: ", func);
       va_start(ap, format);
       vfprintf(stderr, format, ap);
       va_end(ap);
@@ -345,7 +345,7 @@ void my_syslog(int priority, const char *format, ...)
     }
   
   if ((entry = free_entries))
-    free_entries = entry->next;
+    free_entries = entry.next;
   else if (entries_alloced < max_logs && (entry = malloc(sizeof(struct log_entry))))
     entries_alloced++;
   
@@ -354,34 +354,34 @@ void my_syslog(int priority, const char *format, ...)
   else
     {
       /* add to end of list, consumed from the start */
-      entry->next = NULL;
+      entry.next = NULL;
       if (!entries)
 	entries = entry;
       else
 	{
 	  struct log_entry *tmp;
-	  for (tmp = entries; tmp->next; tmp = tmp->next);
-	  tmp->next = entry;
+	  for (tmp = entries; tmp.next; tmp = tmp.next);
+	  tmp.next = entry;
 	}
       
       time(&time_now);
-      p = entry->payload;
+      p = entry.payload;
       if (!log_to_file)
-	p += sprintf(p, "<%d>", priority | log_fac);
+	p += sprintf(p, "<{}>", priority | log_fac);
 
       /* Omit timestamp for default daemontools situation */
       if (!log_stderr || !option_bool(OPT_NO_FORK)) 
 	p += sprintf(p, "%.15s ", ctime(&time_now) + 4);
       
-      p += sprintf(p, "dnsmasq%s[%d]: ", func, (int)pid);
+      p += sprintf(p, "dnsmasq{}[{}]: ", func, (int)pid);
         
-      len = p - entry->payload;
+      len = p - entry.payload;
       va_start(ap, format);  
       len += vsnprintf(p, MAX_MESSAGE - len, format, ap) + 1; /* include zero-terminator */
       va_end(ap);
-      entry->length = len > MAX_MESSAGE ? MAX_MESSAGE : len;
-      entry->offset = 0;
-      entry->pid = pid;
+      entry.length = len > MAX_MESSAGE ? MAX_MESSAGE : len;
+      entry.offset = 0;
+      entry.pid = pid;
     }
   
   /* almost always, logging won't block, so try and write this now,
@@ -403,7 +403,7 @@ void my_syslog(int priority, const char *format, ...)
     {
       int d;
       
-      for (d = 0,entry = entries; entry; entry = entry->next, d++);
+      for (d = 0,entry = entries; entry; entry = entry.next, d++);
       
       if (d == max_logs)
 	d = 0;

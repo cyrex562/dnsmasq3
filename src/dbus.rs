@@ -29,7 +29,7 @@ const char* introspection_xml_template =
 "      <arg name=\"data\" direction=\"out\" type=\"s\"/>\n"
 "    </method>\n"
 "  </interface>\n"
-"  <interface name=\"%s\">\n"
+"  <interface name=\"{}\">\n"
 "    <method name=\"ClearCache\">\n"
 "    </method>\n"
 "    <method name=\"GetVersion\">\n"
@@ -103,16 +103,16 @@ static dbus_bool_t add_watch(DBusWatch *watch, void *data)
 {
   struct watch *w;
 
-  for (w = daemon->watches; w; w = w->next)
-    if (w->watch == watch)
+  for (w = daemon.watches; w; w = w.next)
+    if (w.watch == watch)
       return TRUE;
 
   if (!(w = whine_malloc(sizeof(struct watch))))
     return FALSE;
 
-  w->watch = watch;
-  w->next = daemon->watches;
-  daemon->watches = w;
+  w.watch = watch;
+  w.next = daemon.watches;
+  daemon.watches = w;
 
   w = data; /* no warning */
   return TRUE;
@@ -122,16 +122,16 @@ static void remove_watch(DBusWatch *watch, void *data)
 {
   struct watch **up, *w, *tmp;  
   
-  for (up = &(daemon->watches), w = daemon->watches; w; w = tmp)
+  for (up = &(daemon.watches), w = daemon.watches; w; w = tmp)
     {
-      tmp = w->next;
-      if (w->watch == watch)
+      tmp = w.next;
+      if (w.watch == watch)
 	{
 	  *up = tmp;
 	  free(w);
 	}
       else
-	up = &(w->next);
+	up = &(w.next);
     }
 
   w = data; /* no warning */
@@ -165,7 +165,7 @@ static void dbus_read_servers(DBusMessage *message)
 	  source_addr.in.sin_family = addr.in.sin_family = AF_INET;
 	  addr.in.sin_port = htons(NAMESERVER_PORT);
 	  source_addr.in.sin_addr.s_addr = INADDR_ANY;
-	  source_addr.in.sin_port = htons(daemon->query_port);
+	  source_addr.in.sin_port = htons(daemon.query_port);
 	}
       else if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_BYTE)
 	{
@@ -196,7 +196,7 @@ static void dbus_read_servers(DBusMessage *message)
               source_addr.in6.sin6_flowinfo = addr.in6.sin6_flowinfo = 0;
 	      source_addr.in6.sin6_scope_id = addr.in6.sin6_scope_id = 0;
               source_addr.in6.sin6_addr = in6addr_any;
-              source_addr.in6.sin6_port = htons(daemon->query_port);
+              source_addr.in6.sin6_port = htons(daemon.query_port);
 	      skip = 0;
 	    }
 	}
@@ -234,11 +234,11 @@ static DBusMessage *dbus_reply_server_loop(DBusMessage *message)
   dbus_message_iter_init_append (reply, &args);
   dbus_message_iter_open_container (&args, DBUS_TYPE_ARRAY,DBUS_TYPE_STRING_AS_STRING, &args_iter);
 
-  for (serv = daemon->servers; serv; serv = serv->next)
-    if (serv->flags & SERV_LOOP)
+  for (serv = daemon.servers; serv; serv = serv.next)
+    if (serv.flags & SERV_LOOP)
       {
-	(void)prettyprint_addr(&serv->addr, daemon->addrbuff);
-	dbus_message_iter_append_basic (&args_iter, DBUS_TYPE_STRING, &daemon->addrbuff);
+	(void)prettyprint_addr(&serv.addr, daemon.addrbuff);
+	dbus_message_iter_append_basic (&args_iter, DBUS_TYPE_STRING, &daemon.addrbuff);
       }
   
   dbus_message_iter_close_container (&args, &args_iter);
@@ -308,7 +308,7 @@ static DBusMessage* dbus_read_servers_ex(DBusMessage *message, int strings)
 		{
 		  error = dbus_message_new_error_printf(message,
 							DBUS_ERROR_INVALID_ARGS,
-							"No domain terminator '%s'",
+							"No domain terminator '{}'",
 							str);
 		  break;
 		}
@@ -369,7 +369,7 @@ static DBusMessage* dbus_read_servers_ex(DBusMessage *message, int strings)
       if ((addr_err = parse_server(str_addr, &addr, &source_addr, (char *) &interface, &flags)))
 	{
           error = dbus_message_new_error_printf(message, DBUS_ERROR_INVALID_ARGS,
-                                                "Invalid IP address '%s': %s",
+                                                "Invalid IP address '{}': {}",
                                                 str, addr_err);
           break;
         }
@@ -435,12 +435,12 @@ static DBusMessage *dbus_set_bool(DBusMessage *message, int flag, char *name)
 
   if (enabled)
     { 
-      my_syslog(LOG_INFO, _("Enabling --%s option from D-Bus"), name);
+      my_syslog(LOG_INFO, _("Enabling --{} option from D-Bus"), name);
       set_option_bool(flag);
     }
   else
     {
-      my_syslog(LOG_INFO, _("Disabling --%s option from D-Bus"), name);
+      my_syslog(LOG_INFO, _("Disabling --{} option from D-Bus"), name);
       reset_option_bool(flag);
     }
 
@@ -546,7 +546,7 @@ static DBusMessage *dbus_add_lease(DBusMessage* message)
 #endif
   else
     return dbus_message_new_error_printf(message, DBUS_ERROR_INVALID_ARGS,
-					 "Invalid IP address '%s'", ipaddr);
+					 "Invalid IP address '{}'", ipaddr);
    
   hw_len = parse_hex((char*)hwaddr, dhcp_chaddr, DHCP_CHADDR_MAX, NULL, &hw_type);
   if (hw_type == 0 && hw_len != 0)
@@ -556,7 +556,7 @@ static DBusMessage *dbus_add_lease(DBusMessage* message)
                    clid_len, now, 0);
   lease_set_expires(lease, expires, now);
   if (hostname_len != 0)
-    lease_set_hostname(lease, hostname, 0, get_domain(lease->addr), NULL);
+    lease_set_hostname(lease, hostname, 0, get_domain(lease.addr), NULL);
   
   lease_update_file(now);
   lease_update_dns(0);
@@ -592,7 +592,7 @@ static DBusMessage *dbus_del_lease(DBusMessage* message)
 #endif
   else
     return dbus_message_new_error_printf(message, DBUS_ERROR_INVALID_ARGS,
-					 "Invalid IP address '%s'", ipaddr);
+					 "Invalid IP address '{}'", ipaddr);
     
   if (lease)
     {
@@ -623,7 +623,7 @@ static DBusMessage *dbus_get_metrics(DBusMessage* message)
 
   for (i = 0; i < __METRIC_MAX; i++) {
     const char *key     = get_metric_name(i);
-    dbus_uint32_t value = daemon->metrics[i];
+    dbus_uint32_t value = daemon.metrics[i];
 
     dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, NULL, &dict);
     dbus_message_iter_append_basic(&dict, DBUS_TYPE_STRING, &key);
@@ -646,10 +646,10 @@ DBusHandlerResult message_handler(DBusConnection *connection,
     
   if (dbus_message_is_method_call(message, DBUS_INTERFACE_INTROSPECTABLE, "Introspect"))
     {
-      /* string length: "%s" provides space for termination zero */
+      /* string length: "{}" provides space for termination zero */
       if (!introspection_xml && 
-	  (introspection_xml = whine_malloc(strlen(introspection_xml_template) + strlen(daemon->dbus_name))))
-	sprintf(introspection_xml, introspection_xml_template, daemon->dbus_name);
+	  (introspection_xml = whine_malloc(strlen(introspection_xml_template) + strlen(daemon.dbus_name))))
+	sprintf(introspection_xml, introspection_xml_template, daemon.dbus_name);
     
       if (introspection_xml)
 	{
@@ -755,7 +755,7 @@ char *dbus_init(void)
   dbus_connection_set_watch_functions(connection, add_watch, remove_watch, 
 				      NULL, NULL, NULL);
   dbus_error_init (&dbus_error);
-  dbus_bus_request_name (connection, daemon->dbus_name, 0, &dbus_error);
+  dbus_bus_request_name (connection, daemon.dbus_name, 0, &dbus_error);
   if (dbus_error_is_set (&dbus_error))
     return (char *)dbus_error.message;
   
@@ -763,9 +763,9 @@ char *dbus_init(void)
 					    &dnsmasq_vtable, NULL))
     return _("could not register a DBus message handler");
   
-  daemon->dbus = connection; 
+  daemon.dbus = connection; 
   
-  if ((message = dbus_message_new_signal(DNSMASQ_PATH, daemon->dbus_name, "Up")))
+  if ((message = dbus_message_new_signal(DNSMASQ_PATH, daemon.dbus_name, "Up")))
     {
       dbus_connection_send(connection, message, NULL);
       dbus_message_unref(message);
@@ -779,11 +779,11 @@ void set_dbus_listeners(void)
 {
   struct watch *w;
   
-  for (w = daemon->watches; w; w = w->next)
-    if (dbus_watch_get_enabled(w->watch))
+  for (w = daemon.watches; w; w = w.next)
+    if (dbus_watch_get_enabled(w.watch))
       {
-	unsigned int flags = dbus_watch_get_flags(w->watch);
-	int fd = dbus_watch_get_unix_fd(w->watch);
+	unsigned int flags = dbus_watch_get_flags(w.watch);
+	int fd = dbus_watch_get_unix_fd(w.watch);
 	
 	if (flags & DBUS_WATCH_READABLE)
 	  poll_listen(fd, POLLIN);
@@ -797,14 +797,14 @@ void set_dbus_listeners(void)
 
 void check_dbus_listeners()
 {
-  DBusConnection *connection = (DBusConnection *)daemon->dbus;
+  DBusConnection *connection = (DBusConnection *)daemon.dbus;
   struct watch *w;
 
-  for (w = daemon->watches; w; w = w->next)
-    if (dbus_watch_get_enabled(w->watch))
+  for (w = daemon.watches; w; w = w.next)
+    if (dbus_watch_get_enabled(w.watch))
       {
 	unsigned int flags = 0;
-	int fd = dbus_watch_get_unix_fd(w->watch);
+	int fd = dbus_watch_get_unix_fd(w.watch);
 	
 	if (poll_check(fd, POLLIN))
 	  flags |= DBUS_WATCH_READABLE;
@@ -816,7 +816,7 @@ void check_dbus_listeners()
 	  flags |= DBUS_WATCH_ERROR;
 
 	if (flags != 0)
-	  dbus_watch_handle(w->watch, flags);
+	  dbus_watch_handle(w.watch, flags);
       }
 
   if (connection)
@@ -830,10 +830,10 @@ void check_dbus_listeners()
 #ifdef HAVE_DHCP
 void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
 {
-  DBusConnection *connection = (DBusConnection *)daemon->dbus;
+  DBusConnection *connection = (DBusConnection *)daemon.dbus;
   DBusMessage* message = NULL;
   DBusMessageIter args;
-  char *action_str, *mac = daemon->namebuff;
+  char *action_str, *mac = daemon.namebuff;
   unsigned char *p;
   int i;
 
@@ -844,18 +844,18 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
     hostname = "";
   
 #ifdef HAVE_DHCP6
-   if (lease->flags & (LEASE_TA | LEASE_NA))
+   if (lease.flags & (LEASE_TA | LEASE_NA))
      {
-       print_mac(mac, lease->clid, lease->clid_len);
-       inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
+       print_mac(mac, lease.clid, lease.clid_len);
+       inet_ntop(AF_INET6, &lease.addr6, daemon.addrbuff, ADDRSTRLEN);
      }
    else
 #endif
      {
-       p = extended_hwaddr(lease->hwaddr_type, lease->hwaddr_len,
-			   lease->hwaddr, lease->clid_len, lease->clid, &i);
+       p = extended_hwaddr(lease.hwaddr_type, lease.hwaddr_len,
+			   lease.hwaddr, lease.clid_len, lease.clid, &i);
        print_mac(mac, p, i);
-       inet_ntop(AF_INET, &lease->addr, daemon->addrbuff, ADDRSTRLEN);
+       inet_ntop(AF_INET, &lease.addr, daemon.addrbuff, ADDRSTRLEN);
      }
 
   if (action == ACTION_DEL)
@@ -867,12 +867,12 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
   else
     return;
 
-  if (!(message = dbus_message_new_signal(DNSMASQ_PATH, daemon->dbus_name, action_str)))
+  if (!(message = dbus_message_new_signal(DNSMASQ_PATH, daemon.dbus_name, action_str)))
     return;
   
   dbus_message_iter_init_append(message, &args);
   
-  if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &daemon->addrbuff) &&
+  if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &daemon.addrbuff) &&
       dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &mac) &&
       dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &hostname))
     dbus_connection_send(connection, message, NULL);

@@ -111,7 +111,7 @@ static int check_rrs(unsigned char *p, struct dns_header *header, size_t plen, i
   int i, j, type, class, rdlen;
   unsigned char *pp;
   
-  for (i = 0; i < ntohs(header->ancount) + ntohs(header->nscount) + ntohs(header->arcount); i++)
+  for (i = 0; i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount); i++)
     {
       pp = p;
 
@@ -165,7 +165,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
   unsigned char *p = (unsigned char *)(header+1);
   int i, rdlen, qtype, qclass, rr_found, chop_an, chop_ns, chop_ar;
 
-  if (ntohs(header->qdcount) != 1 ||
+  if (ntohs(header.qdcount) != 1 ||
       !(p = skip_name(p, header, plen, 4)))
     return plen;
   
@@ -175,7 +175,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
   /* First pass, find pointers to start and end of all the records we wish to elide:
      records added for DNSSEC, unless explicitly queried for */
   for (rr_found = 0, chop_ns = 0, chop_an = 0, chop_ar = 0, i = 0; 
-       i < ntohs(header->ancount) + ntohs(header->nscount) + ntohs(header->arcount);
+       i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount);
        i++)
     {
       unsigned char *pstart = p;
@@ -193,13 +193,13 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
 	return plen;
 
       /* Don't remove the answer. */
-      if (i < ntohs(header->ancount) && type == qtype && class == qclass)
+      if (i < ntohs(header.ancount) && type == qtype && class == qclass)
 	continue;
       
       if (mode == 0) /* EDNS */
 	{
 	  /* EDNS mode, remove T_OPT from additional section only */
-	  if (i < (ntohs(header->nscount) + ntohs(header->ancount)) || type != T_OPT)
+	  if (i < (ntohs(header.nscount) + ntohs(header.ancount)) || type != T_OPT)
 	    continue;
 	}
       else if (type != T_NSEC && type != T_NSEC3 && type != T_RRSIG)
@@ -213,9 +213,9 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
       rrs[rr_found++] = pstart;
       rrs[rr_found++] = p;
       
-      if (i < ntohs(header->ancount))
+      if (i < ntohs(header.ancount))
 	chop_an++;
-      else if (i < (ntohs(header->nscount) + ntohs(header->ancount)))
+      else if (i < (ntohs(header.nscount) + ntohs(header.ancount)))
 	chop_ns++;
       else
 	chop_ar++;
@@ -258,9 +258,9 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
     }
      
   plen = p - (unsigned char *)header;
-  header->ancount = htons(ntohs(header->ancount) - chop_an);
-  header->nscount = htons(ntohs(header->nscount) - chop_ns);
-  header->arcount = htons(ntohs(header->arcount) - chop_ar);
+  header.ancount = htons(ntohs(header.ancount) - chop_an);
+  header.nscount = htons(ntohs(header.nscount) - chop_ns);
+  header.arcount = htons(ntohs(header.arcount) - chop_ar);
 
   return plen;
 }
@@ -269,9 +269,9 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
 u16 *rrfilter_desc(int type)
 {
   /* List of RRtypes which include domains in the data.
-     0 -> domain
-     integer -> no. of plain bytes
-     -1 -> end
+     0 . domain
+     integer . no. of plain bytes
+     -1 . end
 
      zero is not a valid RRtype, so the final entry is returned for
      anything which needs no mangling.

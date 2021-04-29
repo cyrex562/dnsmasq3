@@ -45,32 +45,32 @@ static int filter_mac(int family, char *addrp, char *mac, size_t maclen, void *p
     return 1;
 
   /* Look for existing entry */
-  for (arp = arps; arp; arp = arp->next)
+  for (arp = arps; arp; arp = arp.next)
     {
-      if (family != arp->family || arp->status == ARP_NEW)
+      if (family != arp.family || arp.status == ARP_NEW)
 	continue;
       
       if (family == AF_INET)
 	{
-	  if (arp->addr.addr4.s_addr != ((struct in_addr *)addrp)->s_addr)
+	  if (arp.addr.addr4.s_addr != ((struct in_addr *)addrp).s_addr)
 	    continue;
 	}
       else
 	{
-	  if (!IN6_ARE_ADDR_EQUAL(&arp->addr.addr6, (struct in6_addr *)addrp))
+	  if (!IN6_ARE_ADDR_EQUAL(&arp.addr.addr6, (struct in6_addr *)addrp))
 	    continue;
 	}
 
-      if (arp->status == ARP_EMPTY)
+      if (arp.status == ARP_EMPTY)
 	{
 	  /* existing address, was negative. */
-	  arp->status = ARP_NEW;
-	  arp->hwlen = maclen;
-	  memcpy(arp->hwaddr, mac, maclen);
+	  arp.status = ARP_NEW;
+	  arp.hwlen = maclen;
+	  memcpy(arp.hwaddr, mac, maclen);
 	}
-      else if (arp->hwlen == maclen && memcmp(arp->hwaddr, mac, maclen) == 0)
+      else if (arp.hwlen == maclen && memcmp(arp.hwaddr, mac, maclen) == 0)
 	/* Existing entry matches - confirm. */
-	arp->status = ARP_FOUND;
+	arp.status = ARP_FOUND;
       else
 	continue;
       
@@ -83,21 +83,21 @@ static int filter_mac(int family, char *addrp, char *mac, size_t maclen, void *p
       if (freelist)
 	{
 	  arp = freelist;
-	  freelist = freelist->next;
+	  freelist = freelist.next;
 	}
       else if (!(arp = whine_malloc(sizeof(struct arp_record))))
 	return 1;
       
-      arp->next = arps;
+      arp.next = arps;
       arps = arp;
-      arp->status = ARP_NEW;
-      arp->hwlen = maclen;
-      arp->family = family;
-      memcpy(arp->hwaddr, mac, maclen);
+      arp.status = ARP_NEW;
+      arp.hwlen = maclen;
+      arp.family = family;
+      memcpy(arp.hwaddr, mac, maclen);
       if (family == AF_INET)
-	arp->addr.addr4.s_addr = ((struct in_addr *)addrp)->s_addr;
+	arp.addr.addr4.s_addr = ((struct in_addr *)addrp).s_addr;
       else
-	memcpy(&arp->addr.addr6, addrp, IN6ADDRSZ);
+	memcpy(&arp.addr.addr6, addrp, IN6ADDRSZ);
     }
   
   return 1;
@@ -114,29 +114,29 @@ int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
   /* If the database is less then INTERVAL old, look in there */
   if (difftime(now, last) < INTERVAL)
     {
-      /* addr == NULL -> just make cache up-to-date */
+      /* addr == NULL . just make cache up-to-date */
       if (!addr)
 	return 0;
 
-      for (arp = arps; arp; arp = arp->next)
+      for (arp = arps; arp; arp = arp.next)
 	{
-	  if (addr->sa.sa_family != arp->family)
+	  if (addr.sa.sa_family != arp.family)
 	    continue;
 	    
-	  if (arp->family == AF_INET &&
-	      arp->addr.addr4.s_addr != addr->in.sin_addr.s_addr)
+	  if (arp.family == AF_INET &&
+	      arp.addr.addr4.s_addr != addr.in.sin_addr.s_addr)
 	    continue;
 	    
-	  if (arp->family == AF_INET6 && 
-	      !IN6_ARE_ADDR_EQUAL(&arp->addr.addr6, &addr->in6.sin6_addr))
+	  if (arp.family == AF_INET6 && 
+	      !IN6_ARE_ADDR_EQUAL(&arp.addr.addr6, &addr.in6.sin6_addr))
 	    continue;
 	  
 	  /* Only accept positive entries unless in lazy mode. */
-	  if (arp->status != ARP_EMPTY || lazy || updated)
+	  if (arp.status != ARP_EMPTY || lazy || updated)
 	    {
-	      if (mac && arp->hwlen != 0)
-		memcpy(mac, arp->hwaddr, arp->hwlen);
-	      return arp->hwlen;
+	      if (mac && arp.hwlen != 0)
+		memcpy(mac, arp.hwaddr, arp.hwlen);
+	      return arp.hwlen;
 	    }
 	}
     }
@@ -148,25 +148,25 @@ int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
        last = now;
 
        /* Mark all non-negative entries */
-       for (arp = arps; arp; arp = arp->next)
-	 if (arp->status != ARP_EMPTY)
-	   arp->status = ARP_MARK;
+       for (arp = arps; arp; arp = arp.next)
+	 if (arp.status != ARP_EMPTY)
+	   arp.status = ARP_MARK;
        
        iface_enumerate(AF_UNSPEC, NULL, filter_mac);
        
        /* Remove all unconfirmed entries to old list. */
        for (arp = arps, up = &arps; arp; arp = tmp)
 	 {
-	   tmp = arp->next;
+	   tmp = arp.next;
 	   
-	   if (arp->status == ARP_MARK)
+	   if (arp.status == ARP_MARK)
 	     {
-	       *up = arp->next;
-	       arp->next = old;
+	       *up = arp.next;
+	       arp.next = old;
 	       old = arp;
 	     }
 	   else
-	     up = &arp->next;
+	     up = &arp.next;
 	 }
 
        goto again;
@@ -177,23 +177,23 @@ int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
   if (freelist)
     {
       arp = freelist;
-      freelist = freelist->next;
+      freelist = freelist.next;
     }
   else
     arp = whine_malloc(sizeof(struct arp_record));
   
   if (arp)
     {      
-      arp->next = arps;
+      arp.next = arps;
       arps = arp;
-      arp->status = ARP_EMPTY;
-      arp->family = addr->sa.sa_family;
-      arp->hwlen = 0;
+      arp.status = ARP_EMPTY;
+      arp.family = addr.sa.sa_family;
+      arp.hwlen = 0;
 
-      if (addr->sa.sa_family == AF_INET)
-	arp->addr.addr4.s_addr = addr->in.sin_addr.s_addr;
+      if (addr.sa.sa_family == AF_INET)
+	arp.addr.addr4.s_addr = addr.in.sin_addr.s_addr;
       else
-	memcpy(&arp->addr.addr6, &addr->in6.sin6_addr, IN6ADDRSZ);
+	memcpy(&arp.addr.addr6, &addr.in6.sin6_addr, IN6ADDRSZ);
     }
 	  
    return 0;
@@ -208,23 +208,23 @@ int do_arp_script_run(void)
     {
 #ifdef HAVE_SCRIPT
       if (option_bool(OPT_SCRIPT_ARP))
-	queue_arp(ACTION_ARP_DEL, old->hwaddr, old->hwlen, old->family, &old->addr);
+	queue_arp(ACTION_ARP_DEL, old.hwaddr, old.hwlen, old.family, &old.addr);
 #endif
       arp = old;
-      old = arp->next;
-      arp->next = freelist;
+      old = arp.next;
+      arp.next = freelist;
       freelist = arp;
       return 1;
     }
 
-  for (arp = arps; arp; arp = arp->next)
-    if (arp->status == ARP_NEW)
+  for (arp = arps; arp; arp = arp.next)
+    if (arp.status == ARP_NEW)
       {
 #ifdef HAVE_SCRIPT
 	if (option_bool(OPT_SCRIPT_ARP))
-	  queue_arp(ACTION_ARP, arp->hwaddr, arp->hwlen, arp->family, &arp->addr);
+	  queue_arp(ACTION_ARP, arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
 #endif
-	arp->status = ARP_FOUND;
+	arp.status = ARP_FOUND;
 	return 1;
       }
 

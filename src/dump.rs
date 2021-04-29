@@ -47,7 +47,7 @@ void dump_init(void)
 
   packet_count = 0;
   
-  if (stat(daemon->dump_file, &buf) == -1)
+  if (stat(daemon.dump_file, &buf) == -1)
     {
       /* doesn't exist, create and add header */
       header.magic_number = 0xa1b2c3d4;
@@ -55,25 +55,25 @@ void dump_init(void)
       header.version_minor = 4;
       header.thiszone = 0;
       header.sigfigs = 0;
-      header.snaplen = daemon->edns_pktsz + 200; /* slop for IP/UDP headers */
+      header.snaplen = daemon.edns_pktsz + 200; /* slop for IP/UDP headers */
       header.network = 101; /* DLT_RAW http://www.tcpdump.org/linktypes.html */
 
       if (errno != ENOENT ||
-	  (daemon->dumpfd = creat(daemon->dump_file, S_IRUSR | S_IWUSR)) == -1 ||
-	  !read_write(daemon->dumpfd, (void *)&header, sizeof(header), 0))
-	die(_("cannot create %s: %s"), daemon->dump_file, EC_FILE);
+	  (daemon.dumpfd = creat(daemon.dump_file, S_IRUSR | S_IWUSR)) == -1 ||
+	  !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 0))
+	die(_("cannot create {}: {}"), daemon.dump_file, EC_FILE);
     }
-  else if ((daemon->dumpfd = open(daemon->dump_file, O_APPEND | O_RDWR)) == -1 ||
-	   !read_write(daemon->dumpfd, (void *)&header, sizeof(header), 1))
-    die(_("cannot access %s: %s"), daemon->dump_file, EC_FILE);
+  else if ((daemon.dumpfd = open(daemon.dump_file, O_APPEND | O_RDWR)) == -1 ||
+	   !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 1))
+    die(_("cannot access {}: {}"), daemon.dump_file, EC_FILE);
   else if (header.magic_number != 0xa1b2c3d4)
-    die(_("bad header in %s"), daemon->dump_file, EC_FILE);
+    die(_("bad header in {}"), daemon.dump_file, EC_FILE);
   else
     {
       /* count existing records */
-      while (read_write(daemon->dumpfd, (void *)&pcap_header, sizeof(pcap_header), 1))
+      while (read_write(daemon.dumpfd, (void *)&pcap_header, sizeof(pcap_header), 1))
 	{
-	  lseek(daemon->dumpfd, pcap_header.incl_len, SEEK_CUR);
+	  lseek(daemon.dumpfd, pcap_header.incl_len, SEEK_CUR);
 	  packet_count++;
 	}
     }
@@ -97,16 +97,16 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
   size_t ipsz;
   int rc;
   
-  if (daemon->dumpfd == -1 || !(mask & daemon->dump_mask))
+  if (daemon.dumpfd == -1 || !(mask & daemon.dump_mask))
     return;
   
   /* So wireshark can Id the packet. */
   udp.uh_sport = udp.uh_dport = htons(NAMESERVER_PORT);
 
   if (src)
-    family = src->sa.sa_family;
+    family = src.sa.sa_family;
   else
-    family = dst->sa.sa_family;
+    family = dst.sa.sa_family;
 
   if (family == AF_INET6)
     {
@@ -121,14 +121,14 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
 
       if (src)
 	{
-	  memcpy(&ip6.ip6_src, &src->in6.sin6_addr, IN6ADDRSZ);
-	  udp.uh_sport = src->in6.sin6_port;
+	  memcpy(&ip6.ip6_src, &src.in6.sin6_addr, IN6ADDRSZ);
+	  udp.uh_sport = src.in6.sin6_port;
 	}
       
       if (dst)
 	{
-	  memcpy(&ip6.ip6_dst, &dst->in6.sin6_addr, IN6ADDRSZ);
-	  udp.uh_dport = dst->in6.sin6_port;
+	  memcpy(&ip6.ip6_dst, &dst.in6.sin6_addr, IN6ADDRSZ);
+	  udp.uh_dport = dst.in6.sin6_port;
 	}
             
       /* start UDP checksum */
@@ -153,14 +153,14 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
       
       if (src)
 	{
-	  ip.ip_src = src->in.sin_addr;
-	  udp.uh_sport = src->in.sin_port;
+	  ip.ip_src = src.in.sin_addr;
+	  udp.uh_sport = src.in.sin_port;
 	}
 
       if (dst)
 	{
-	  ip.ip_dst = dst->in.sin_addr;
-	  udp.uh_dport = dst->in.sin_port;
+	  ip.ip_dst = dst.in.sin_addr;
+	  udp.uh_dport = dst.in.sin_port;
 	}
       
       ip.ip_sum = 0;
@@ -198,13 +198,13 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
   pcap_header.incl_len = pcap_header.orig_len = ipsz + sizeof(udp) + len;
   
   if (rc == -1 ||
-      !read_write(daemon->dumpfd, (void *)&pcap_header, sizeof(pcap_header), 0) ||
-      !read_write(daemon->dumpfd, iphdr, ipsz, 0) ||
-      !read_write(daemon->dumpfd, (void *)&udp, sizeof(udp), 0) ||
-      !read_write(daemon->dumpfd, (void *)packet, len, 0))
+      !read_write(daemon.dumpfd, (void *)&pcap_header, sizeof(pcap_header), 0) ||
+      !read_write(daemon.dumpfd, iphdr, ipsz, 0) ||
+      !read_write(daemon.dumpfd, (void *)&udp, sizeof(udp), 0) ||
+      !read_write(daemon.dumpfd, (void *)packet, len, 0))
     my_syslog(LOG_ERR, _("failed to write packet dump"));
   else
-    my_syslog(LOG_INFO, _("dumping UDP packet %u mask 0x%04x"), ++packet_count, mask);
+    my_syslog(LOG_INFO, _("dumping UDP packet {} mask 0x%04x"), ++packet_count, mask);
 
 }
 

@@ -100,11 +100,11 @@ pub const HB4_AD: u32 = 0;x20 /* Authenticated Data */
 pub const HB4_CD: u32 = 0;x10 /* Checking Disabled */
 pub const HB4_RCODE: u32 = 0;x0f
 
-#define OPCODE(x)          (((x)->hb3 & HB3_OPCODE) >> 3)
-#define SET_OPCODE(x, code) (x)->hb3 = ((x)->hb3 & ~HB3_OPCODE) | code
+#define OPCODE(x)          (((x).hb3 & HB3_OPCODE) >> 3)
+#define SET_OPCODE(x, code) (x).hb3 = ((x).hb3 & ~HB3_OPCODE) | code
 
-#define RCODE(x)           ((x)->hb4 & HB4_RCODE)
-#define SET_RCODE(x, code) (x)->hb4 = ((x)->hb4 & ~HB4_RCODE) | code
+#define RCODE(x)           ((x).hb4 & HB4_RCODE)
+#define SET_RCODE(x, code) (x).hb4 = ((x).hb4 & ~HB4_RCODE) | code
   
 #define GETSHORT(s, cp) { \
 	unsigned char *t_cp = (unsigned char *)(cp); \

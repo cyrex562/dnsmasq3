@@ -23,7 +23,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
      Finally, check to see if a packet is signed. If it is we cannot change a single bit before
      forwarding. We look for TSIG in the addition section, and TKEY queries (for GSS-TSIG) */
   
-  int i, arcount = ntohs(header->arcount);
+  int i, arcount = ntohs(header.arcount);
   unsigned char *ansp = (unsigned char *)(header+1);
   unsigned short rdlen, type, class;
   unsigned char *ret = NULL;
@@ -34,7 +34,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
 
       if (OPCODE(header) == QUERY)
 	{
-	  for (i = ntohs(header->qdcount); i != 0; i--)
+	  for (i = ntohs(header.qdcount); i != 0; i--)
 	    {
 	      if (!(ansp = skip_name(ansp, header, plen, 4)))
 		return NULL;
@@ -56,7 +56,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
   if (arcount == 0)
     return NULL;
   
-  if (!(ansp = skip_section(ansp, ntohs(header->ancount) + ntohs(header->nscount), header, plen)))
+  if (!(ansp = skip_section(ansp, ntohs(header.ancount) + ntohs(header.nscount), header, plen)))
     return NULL; 
   
   for (i = 0; i < arcount; i++)
@@ -96,7 +96,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
 }
  
 
-/* replace == 2 ->delete existing option only. */
+/* replace == 2 .delete existing option only. */
 size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *limit, 
 			unsigned short udp_sz, int optno, unsigned char *opt, size_t optlen, int set_do, int replace)
 { 
@@ -190,7 +190,7 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
       /* We are (re)adding the pseudoheader */
       if (!(p = skip_questions(header, plen)) ||
 	  !(p = skip_section(p, 
-			     ntohs(header->ancount) + ntohs(header->nscount) + ntohs(header->arcount), 
+			     ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount), 
 			     header, plen)))
       {
 	free(buff);
@@ -224,7 +224,7 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
       
       /* Only bump arcount if RR is going to fit */ 
       if (((ssize_t)optlen) <= (limit - (p + 4)))
-	header->arcount = htons(ntohs(header->arcount) + 1);
+	header.arcount = htons(ntohs(header.arcount) + 1);
     }
   
   if (((ssize_t)optlen) > (limit - (p + 4)))
@@ -314,9 +314,9 @@ struct subnet_opt {
 static void *get_addrp(union mysockaddr *addr, const short family) 
 {
   if (family == AF_INET6)
-    return &addr->in6.sin6_addr;
+    return &addr.in6.sin6_addr;
 
-  return &addr->in.sin_addr;
+  return &addr.in.sin_addr;
 }
 
 static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, int *cacheablep)
@@ -325,46 +325,46 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, 
   
   int len;
   void *addrp = NULL;
-  int sa_family = source->sa.sa_family;
+  int sa_family = source.sa.sa_family;
   int cacheable = 0;
   
-  opt->source_netmask = 0;
-  opt->scope_netmask = 0;
+  opt.source_netmask = 0;
+  opt.scope_netmask = 0;
     
-  if (source->sa.sa_family == AF_INET6 && daemon->add_subnet6)
+  if (source.sa.sa_family == AF_INET6 && daemon.add_subnet6)
     {
-      opt->source_netmask = daemon->add_subnet6->mask;
-      if (daemon->add_subnet6->addr_used) 
+      opt.source_netmask = daemon.add_subnet6.mask;
+      if (daemon.add_subnet6.addr_used) 
 	{
-	  sa_family = daemon->add_subnet6->addr.sa.sa_family;
-	  addrp = get_addrp(&daemon->add_subnet6->addr, sa_family);
+	  sa_family = daemon.add_subnet6.addr.sa.sa_family;
+	  addrp = get_addrp(&daemon.add_subnet6.addr, sa_family);
 	  cacheable = 1;
 	} 
       else 
-	addrp = &source->in6.sin6_addr;
+	addrp = &source.in6.sin6_addr;
     }
 
-  if (source->sa.sa_family == AF_INET && daemon->add_subnet4)
+  if (source.sa.sa_family == AF_INET && daemon.add_subnet4)
     {
-      opt->source_netmask = daemon->add_subnet4->mask;
-      if (daemon->add_subnet4->addr_used)
+      opt.source_netmask = daemon.add_subnet4.mask;
+      if (daemon.add_subnet4.addr_used)
 	{
-	  sa_family = daemon->add_subnet4->addr.sa.sa_family;
-	  addrp = get_addrp(&daemon->add_subnet4->addr, sa_family);
+	  sa_family = daemon.add_subnet4.addr.sa.sa_family;
+	  addrp = get_addrp(&daemon.add_subnet4.addr, sa_family);
 	  cacheable = 1; /* Address is constant */
 	} 
 	else 
-	  addrp = &source->in.sin_addr;
+	  addrp = &source.in.sin_addr;
     }
   
-  opt->family = htons(sa_family == AF_INET6 ? 2 : 1);
+  opt.family = htons(sa_family == AF_INET6 ? 2 : 1);
   
-  if (addrp && opt->source_netmask != 0)
+  if (addrp && opt.source_netmask != 0)
     {
-      len = ((opt->source_netmask - 1) >> 3) + 1;
-      memcpy(opt->addr, addrp, len);
-      if (opt->source_netmask & 7)
-	opt->addr[len-1] &= 0xff << (8 - (opt->source_netmask & 7));
+      len = ((opt.source_netmask - 1) >> 3) + 1;
+      memcpy(opt.addr, addrp, len);
+      if (opt.source_netmask & 7)
+	opt.addr[len-1] &= 0xff << (8 - (opt.source_netmask & 7));
     }
   else
     {
@@ -442,9 +442,9 @@ size_t add_edns0_config(struct dns_header *header, size_t plen, unsigned char *l
   if (option_bool(OPT_MAC_B64) || option_bool(OPT_MAC_HEX))
     plen = add_dns_client(header, plen, limit, source, now, cacheable);
   
-  if (daemon->dns_client_id)
+  if (daemon.dns_client_id)
     plen = add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_NOMCPEID, 
-			    (unsigned char *)daemon->dns_client_id, strlen(daemon->dns_client_id), 0, 1);
+			    (unsigned char *)daemon.dns_client_id, strlen(daemon.dns_client_id), 0, 1);
   
   if (option_bool(OPT_CLIENT_SUBNET))
     {
