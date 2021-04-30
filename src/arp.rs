@@ -206,10 +206,10 @@ int do_arp_script_run(void)
   /* Notify any which went, then move to free list */
   if (old)
     {
-#ifdef HAVE_SCRIPT
-      if (option_bool(OPT_SCRIPT_ARP))
+ HAVE_SCRIPT
+      if (daemon.opt_script_arp)
 	queue_arp(ACTION_ARP_DEL, old.hwaddr, old.hwlen, old.family, &old.addr);
-#endif
+
       arp = old;
       old = arp.next;
       arp.next = freelist;
@@ -220,10 +220,10 @@ int do_arp_script_run(void)
   for (arp = arps; arp; arp = arp.next)
     if (arp.status == ARP_NEW)
       {
-#ifdef HAVE_SCRIPT
-	if (option_bool(OPT_SCRIPT_ARP))
+ HAVE_SCRIPT
+	if (daemon.opt_script_arp)
 	  queue_arp(ACTION_ARP, arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
-#endif
+
 	arp.status = ARP_FOUND;
 	return 1;
       }

@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
 
 static u32 packet_count;
 
@@ -61,13 +61,13 @@ void dump_init(void)
       if (errno != ENOENT ||
 	  (daemon.dumpfd = creat(daemon.dump_file, S_IRUSR | S_IWUSR)) == -1 ||
 	  !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 0))
-	die(_("cannot create {}: {}"), daemon.dump_file, EC_FILE);
+	die(format!("cannot create {}: {}"), daemon.dump_file, EC_FILE);
     }
   else if ((daemon.dumpfd = open(daemon.dump_file, O_APPEND | O_RDWR)) == -1 ||
 	   !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 1))
-    die(_("cannot access {}: {}"), daemon.dump_file, EC_FILE);
+    die(format!("cannot access {}: {}"), daemon.dump_file, EC_FILE);
   else if (header.magic_number != 0xa1b2c3d4)
-    die(_("bad header in {}"), daemon.dump_file, EC_FILE);
+    die(format!("bad header in {}"), daemon.dump_file, EC_FILE);
   else
     {
       /* count existing records */
@@ -202,10 +202,10 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
       !read_write(daemon.dumpfd, iphdr, ipsz, 0) ||
       !read_write(daemon.dumpfd, (void *)&udp, sizeof(udp), 0) ||
       !read_write(daemon.dumpfd, (void *)packet, len, 0))
-    my_syslog(LOG_ERR, _("failed to write packet dump"));
+    my_syslog(LOG_ERR, format!("failed to write packet dump"));
   else
-    my_syslog(LOG_INFO, _("dumping UDP packet {} mask 0x%04x"), ++packet_count, mask);
+    my_syslog(LOG_INFO, format!("dumping UDP packet {} mask 0x%04x"), ++packet_count, mask);
 
 }
 
-#endif
+

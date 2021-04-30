@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 
 struct iface_param {
   struct dhcp_context *current;
@@ -44,61 +44,61 @@ static int make_fd(int port)
   int oneopt = 1;
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
   int mtu = IP_PMTUDISC_DONT;
-#endif
+
 #if defined(IP_TOS) && defined(IPTOS_CLASS_CS6)
   int tos = IPTOS_CLASS_CS6;
-#endif
+
 
   if (fd == -1)
-    die (_("cannot create DHCP socket: {}"), NULL, EC_BADNET);
+    die (format!("cannot create DHCP socket: {}"), NULL, EC_BADNET);
   
   if (!fix_fd(fd) ||
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
       setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER, &mtu, sizeof(mtu)) == -1 ||
-#endif
+
 #if defined(IP_TOS) && defined(IPTOS_CLASS_CS6)
       setsockopt(fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) == -1 ||
-#endif
+
 #if defined(HAVE_LINUX_NETWORK)
       setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &oneopt, sizeof(oneopt)) == -1 ||
-#else
+
       setsockopt(fd, IPPROTO_IP, IP_RECVIF, &oneopt, sizeof(oneopt)) == -1 ||
-#endif
+
       setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &oneopt, sizeof(oneopt)) == -1)  
-    die(_("failed to set options on DHCP socket: {}"), NULL, EC_BADNET);
+    die(format!("failed to set options on DHCP socket: {}"), NULL, EC_BADNET);
   
   /* When bind-interfaces is set, there might be more than one dnsmasq
      instance binding port 67. That's OK if they serve different networks.
      Need to set REUSEADDR|REUSEPORT to make this possible.
      Handle the case that REUSEPORT is defined, but the kernel doesn't 
      support it. This handles the introduction of REUSEPORT on Linux. */
-  if (option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_nowild || daemon.opt_cleverbind)
     {
       int rc = 0;
 
-#ifdef SO_REUSEPORT
+ SO_REUSEPORT
       if ((rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt))) == -1 && 
 	  errno == ENOPROTOOPT)
 	rc = 0;
-#endif
+
       
       if (rc != -1)
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt));
       
       if (rc == -1)
-	die(_("failed to set SO_REUSE{ADDR|PORT} on DHCP socket: {}"), NULL, EC_BADNET);
+	die(format!("failed to set SO_REUSE{ADDR|PORT} on DHCP socket: {}"), NULL, EC_BADNET);
     }
   
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family = AF_INET;
   saddr.sin_port = htons(port);
   saddr.sin_addr.s_addr = INADDR_ANY;
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
   saddr.sin_len = sizeof(struct sockaddr_in);
-#endif
+
 
   if (bind(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in)))
-    die(_("failed to bind DHCP server socket: {}"), NULL, EC_BADNET);
+    die(format!("failed to bind DHCP server socket: {}"), NULL, EC_BADNET);
 
   return fd;
 }
@@ -107,7 +107,7 @@ void dhcp_init(void)
 {
 #if defined(HAVE_BSD_NETWORK)
   int oneopt = 1;
-#endif
+
 
   daemon.dhcpfd = make_fd(daemon.dhcp_server_port);
   if (daemon.enable_pxe)
@@ -124,11 +124,11 @@ void dhcp_init(void)
     daemon.dhcp_icmp_fd = -1;
   else if ((daemon.dhcp_icmp_fd = make_icmp_sock()) == -1 ||
 	   setsockopt(daemon.dhcp_icmp_fd, SOL_SOCKET, SO_RCVBUF, &oneopt, sizeof(oneopt)) == -1 )
-    die(_("cannot create ICMP raw socket: {}."), NULL, EC_BADNET);
+    die(format!("cannot create ICMP raw socket: {}."), NULL, EC_BADNET);
   
   /* Make BPF raw send socket */
   init_bpf();
-#endif  
+  
 }
 
 void dhcp_packet(time_t now, int pxe_fd)
@@ -150,10 +150,10 @@ void dhcp_packet(time_t now, int pxe_fd)
   struct in_addr iface_addr;
   struct iface_param parm;
   time_t recvtime = now;
-#ifdef HAVE_LINUX_NETWORK
+ HAVE_LINUX_NETWORK
   struct arpreq arp_req;
   struct timeval tv;
-#endif
+
   
   union {
     struct cmsghdr align; /* this ensures alignment */
@@ -163,7 +163,7 @@ void dhcp_packet(time_t now, int pxe_fd)
     char control[CMSG_SPACE(sizeof(unsigned int))];
 #elif defined(HAVE_BSD_NETWORK) 
     char control[CMSG_SPACE(sizeof(struct sockaddr_dl))];
-#endif
+
   } control_u;
   struct dhcp_bridge *bridge, *alias;
 
@@ -221,7 +221,7 @@ void dhcp_packet(time_t now, int pxe_fd)
 	  p.c = CMSG_DATA(cmptr);
 	  iface_index = *(p.i);
 	}
-#endif
+
 	
   if (!indextoname(daemon.dhcpfd, iface_index, ifr.ifr_name) ||
       ioctl(daemon.dhcpfd, SIOCGIFFLAGS, &ifr) != 0)
@@ -230,10 +230,10 @@ void dhcp_packet(time_t now, int pxe_fd)
   mess = (struct dhcp_packet *)daemon.dhcp_packet.iov_base;
   loopback = !mess.giaddr.s_addr && (ifr.ifr_flags & IFF_LOOPBACK);
   
-#ifdef HAVE_LINUX_NETWORK
+ HAVE_LINUX_NETWORK
   /* ARP fiddling uses original interface even if we pretend to use a different one. */
   safe_strncpy(arp_req.arp_dev, ifr.ifr_name, sizeof(arp_req.arp_dev));
-#endif 
+ 
 
   /* If the interface on which the DHCP request was received is an
      alias of some other interface (as specified by the
@@ -249,7 +249,7 @@ void dhcp_packet(time_t now, int pxe_fd)
 	    if (!(iface_index = if_nametoindex(bridge.iface)))
 	      {
 		my_syslog(MS_DHCP | LOG_WARNING,
-			  _("unknown interface {} in bridge-interface"),
+			  format!("unknown interface {} in bridge-interface"),
 			  bridge.iface);
 		return;
 	      }
@@ -264,11 +264,11 @@ void dhcp_packet(time_t now, int pxe_fd)
 	break;
     }
 
-#ifdef MSG_BCAST
+ MSG_BCAST
   /* OpenBSD tells us when a packet was broadcast */
   if (!(msg.msg_flags & MSG_BCAST))
     unicast_dest = 1;
-#endif
+
   
   if ((relay = relay_reply4((struct dhcp_packet *)daemon.dhcp_packet.iov_base, ifr.ifr_name)))
     {
@@ -278,9 +278,9 @@ void dhcp_packet(time_t now, int pxe_fd)
 	return;
       is_relay_reply = 1; 
       iov.iov_len = sz;
-#ifdef HAVE_LINUX_NETWORK
+ HAVE_LINUX_NETWORK
       safe_strncpy(arp_req.arp_dev, ifr.ifr_name, sizeof(arp_req.arp_dev));
-#endif 
+ 
     }
   else
     {
@@ -290,7 +290,7 @@ void dhcp_packet(time_t now, int pxe_fd)
       else
 	{
 	  if (iface_check(AF_INET, NULL, ifr.ifr_name, NULL))
-	    my_syslog(MS_DHCP | LOG_WARNING, _("DHCP packet received on {} which has no address"), ifr.ifr_name);
+	    my_syslog(MS_DHCP | LOG_WARNING, format!("DHCP packet received on {} which has no address"), ifr.ifr_name);
 	  return;
 	}
       
@@ -362,9 +362,9 @@ void dhcp_packet(time_t now, int pxe_fd)
   /* packet buffer may have moved */
   mess = (struct dhcp_packet *)daemon.dhcp_packet.iov_base;
   
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
   dest.sin_len = sizeof(struct sockaddr_in);
-#endif
+
   
   if (pxe_fd)
     { 
@@ -425,7 +425,7 @@ void dhcp_packet(time_t now, int pxe_fd)
           /* interface name already copied in */
           arp_req.arp_flags = ATF_COM;
           if (ioctl(daemon.dhcpfd, SIOCSARP, &arp_req) == -1)
-            my_syslog(MS_DHCP | LOG_ERR, _("ARP-cache injection failed: {}"), strerror(errno));
+            my_syslog(MS_DHCP | LOG_ERR, format!("ARP-cache injection failed: {}"), strerror(errno));
         }
     }
 #elif defined(HAVE_SOLARIS_NETWORK)
@@ -458,17 +458,17 @@ void dhcp_packet(time_t now, int pxe_fd)
       send_via_bpf(mess, iov.iov_len, iface_addr, &ifr);
       return;
     }
-#endif
+
    
-#ifdef HAVE_SOLARIS_NETWORK
+ HAVE_SOLARIS_NETWORK
   setsockopt(fd, IPPROTO_IP, IP_BOUND_IF, &iface_index, sizeof(iface_index));
-#endif
+
   
   while(retry_send(sendmsg(fd, &msg, 0)));
 
   /* This can fail when, eg, iptables DROPS destination 255.255.255.255 */
   if (errno != 0)
-    my_syslog(MS_DHCP | LOG_WARNING, _("Error sending DHCP packet to {}: {}"),
+    my_syslog(MS_DHCP | LOG_WARNING, format!("Error sending DHCP packet to {}: {}"),
 	      inet_ntoa(dest.sin_addr), strerror(errno));
 }
 
@@ -523,7 +523,7 @@ static void guess_range_netmask(struct in_addr addr, struct in_addr netmask)
 	  {
 	    strcpy(daemon.dhcp_buff, inet_ntoa(context.start));
 	    strcpy(daemon.dhcp_buff2, inet_ntoa(context.end));
-	    my_syslog(MS_DHCP | LOG_WARNING, _("DHCP range {} -- {} is not consistent with netmask {}"),
+	    my_syslog(MS_DHCP | LOG_WARNING, format!("DHCP range {} -- {} is not consistent with netmask {}"),
 		      daemon.dhcp_buff, daemon.dhcp_buff2, inet_ntoa(netmask));
 	  }	
 	context.netmask = netmask;
@@ -543,10 +543,10 @@ static int complete_context(struct in_addr local, int if_index, char *label,
   for (share = daemon.shared_networks; share; share = share.next)
     {
       
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
       if (share.shared_addr.s_addr == 0)
 	continue;
-#endif
+
       
       if (share.if_index != 0)
 	{
@@ -873,7 +873,7 @@ void dhcp_read_ethers(void)
   
   if (!f)
     {
-      my_syslog(MS_DHCP | LOG_ERR, _("failed to read {}: {}"), ETHERSFILE, strerror(errno));
+      my_syslog(MS_DHCP | LOG_ERR, format!("failed to read {}: {}"), ETHERSFILE, strerror(errno));
       return;
     }
 
@@ -911,7 +911,7 @@ void dhcp_read_ethers(void)
 	*ip = 0;
       if (!*ip || parse_hex(buff, hwaddr, ETHER_ADDR_LEN, NULL, NULL) != ETHER_ADDR_LEN)
 	{
-	  my_syslog(MS_DHCP | LOG_ERR, _("bad line at {} line {}"), ETHERSFILE, lineno); 
+	  my_syslog(MS_DHCP | LOG_ERR, format!("bad line at {} line {}"), ETHERSFILE, lineno); 
 	  continue;
 	}
       
@@ -924,7 +924,7 @@ void dhcp_read_ethers(void)
 	{
 	  if ((addr.s_addr = inet_addr(ip)) == (in_addr_t)-1)
 	    {
-	      my_syslog(MS_DHCP | LOG_ERR, _("bad address at {} line {}"), ETHERSFILE, lineno); 
+	      my_syslog(MS_DHCP | LOG_ERR, format!("bad address at {} line {}"), ETHERSFILE, lineno); 
 	      continue;
 	    }
 
@@ -940,7 +940,7 @@ void dhcp_read_ethers(void)
 	  if (!(host = canonicalise(ip, &nomem)) || !legal_hostname(host))
 	    {
 	      if (!nomem)
-		my_syslog(MS_DHCP | LOG_ERR, _("bad name at {} line {}"), ETHERSFILE, lineno); 
+		my_syslog(MS_DHCP | LOG_ERR, format!("bad name at {} line {}"), ETHERSFILE, lineno); 
 	      free(host);
 	      continue;
 	    }
@@ -954,7 +954,7 @@ void dhcp_read_ethers(void)
 
       if (config && (config.flags & CONFIG_FROM_ETHERS))
 	{
-	  my_syslog(MS_DHCP | LOG_ERR, _("ignoring {} line {}, duplicate name or IP address"), ETHERSFILE, lineno); 
+	  my_syslog(MS_DHCP | LOG_ERR, format!("ignoring {} line {}, duplicate name or IP address"), ETHERSFILE, lineno); 
 	  continue;
 	}
 	
@@ -1015,7 +1015,7 @@ void dhcp_read_ethers(void)
   
   fclose(f);
 
-  my_syslog(MS_DHCP | LOG_INFO, _("read {} - {} addresses"), ETHERSFILE, count);
+  my_syslog(MS_DHCP | LOG_INFO, format!("read {} - {} addresses"), ETHERSFILE, count);
 }
 
 
@@ -1097,7 +1097,7 @@ static int  relay_upstream4(struct dhcp_relay *relay, struct dhcp_packet *mess, 
       if (option_bool(OPT_LOG_OPTS))
 	{
 	  inet_ntop(AF_INET, &relay.local, daemon.addrbuff, ADDRSTRLEN);
-	  my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay {} . {}"), daemon.addrbuff, inet_ntoa(relay.server.addr4));
+	  my_syslog(MS_DHCP | LOG_INFO, format!("DHCP relay {} . {}"), daemon.addrbuff, inet_ntoa(relay.server.addr4));
 	}
       
       /* Save this for replies */
@@ -1127,4 +1127,4 @@ static struct dhcp_relay *relay_reply4(struct dhcp_packet *mess, char *arrival_i
   return NULL;	 
 }     
 
-#endif
+

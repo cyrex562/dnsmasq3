@@ -39,7 +39,7 @@ int send_from(int fd, int nowild, char *packet, size_t len,
     char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
 #elif defined(IP_SENDSRCADDR)
     char control[CMSG_SPACE(sizeof(struct in_addr))];
-#endif
+
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
   } control_u;
   
@@ -78,7 +78,7 @@ int send_from(int fd, int nowild, char *packet, size_t len,
 	  cmptr.cmsg_len = CMSG_LEN(sizeof(struct in_addr));
 	  cmptr.cmsg_level = IPPROTO_IP;
 	  cmptr.cmsg_type = IP_SENDSRCADDR;
-#endif
+
 	}
       else
 	{
@@ -97,11 +97,11 @@ int send_from(int fd, int nowild, char *packet, size_t len,
 
   if (errno != 0)
     {
-#ifdef HAVE_LINUX_NETWORK
+ HAVE_LINUX_NETWORK
       /* If interface is still in DAD, EINVAL results - ignore that. */
       if (errno != EINVAL)
-	my_syslog(LOG_ERR, _("failed to send packet: {}"), strerror(errno));
-#endif
+	my_syslog(LOG_ERR, format!("failed to send packet: {}"), strerror(errno));
+
       return 0;
     }
   
@@ -260,9 +260,9 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
   unsigned int fwd_flags = 0;
   struct server *start = NULL;
   void *hash = hash_questions(header, plen, daemon.namebuff);
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
   int do_dnssec = 0;
-#endif
+
   unsigned int gotname = extract_request(header, plen, daemon.namebuff, NULL);
   unsigned char *oph = find_pseudoheader(header, plen, NULL, NULL, NULL, NULL);
   (void)do_bit;
@@ -273,10 +273,10 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
     fwd_flags |= FREC_AD_QUESTION;
   if (oph)
     fwd_flags |= FREC_HAS_PHEADER;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
   if (do_bit)
     fwd_flags |= FREC_DO_QUESTION;
-#endif
+
   
   /* may be no servers available. */
   if (forward || (forward = lookup_frec_by_sender(ntohs(header.id), udpaddr, hash)))
@@ -287,7 +287,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 	 for this server */
       forward.flags |= FREC_TEST_PKTSZ;
       
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       /* If we've already got an answer to this query, but we're awaiting keys for validation,
 	 there's no point retrying the query, retry the key query instead...... */
       if (forward.blocking_query)
@@ -329,7 +329,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 	  
 	  return 1;
 	}
-#endif
+
 
       /* retry on existing query, send to all available servers  */
       domain = forward.sentto.domain;
@@ -340,9 +340,9 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 	  daemon.last_server = NULL;
 	}
       type = forward.sentto.flags & SERV_TYPE;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       do_dnssec = forward.sentto.flags & SERV_DO_DNSSEC;
-#endif
+
 
       if (!(start = forward.sentto.next))
 	start = daemon.servers; /* at end of list, recycle */
@@ -387,9 +387,9 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
       if (gotname)
 	flags = search_servers(now, &addrp, gotname, daemon.namebuff, &type, &domain, &norebind);
       
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       do_dnssec = type & SERV_DO_DNSSEC;
-#endif
+
       type &= ~SERV_DO_DNSSEC;      
       
       if (daemon.servers && !flags)
@@ -414,11 +414,11 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 	    forward.flags |= FREC_CHECKING_DISABLED;
 	  if (ad_reqd)
 	    forward.flags |= FREC_AD_QUESTION;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	  forward.work_counter = DNSSEC_WORK;
 	  if (do_bit)
 	    forward.flags |= FREC_DO_QUESTION;
-#endif
+
 	  
 	  header.id = htons(forward.new_id);
 	  
@@ -472,7 +472,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
       if (!cacheable)
 	forward.flags |= FREC_NO_CACHE;
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       if (daemon.opt_dnssec_valid && do_dnssec)
 	{
 	  plen = add_do_bit(header, plen, ((unsigned char *) header) + PACKETSZ);
@@ -483,7 +483,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 	    header.hb4 |= HB4_CD;
 
 	}
-#endif
+
 
       if (find_pseudoheader(header, plen, &edns0_len, &pheader, NULL, NULL))
 	{
@@ -534,7 +534,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 		      fd = forward.rfd4.fd;
 		    }
 
-#ifdef HAVE_CONNTRACK
+ HAVE_CONNTRACK
 		  /* Copy connection mark of incoming query to outgoing connection. */
 		  if (option_bool(OPT_CONNTRACK))
 		    {
@@ -542,10 +542,10 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 		      if (get_incoming_mark(&forward.frec_src.source, &forward.frec_src.dest, 0, &mark))
 			setsockopt(fd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
 		    }
-#endif
+
 		}
 	      
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	      if (daemon.opt_dnssec_valid && (forward.flags & FREC_ADDED_PHEADER))
 		{
 		  /* Difficult one here. If our client didn't send EDNS0, we will have set the UDP
@@ -559,7 +559,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 		  if (find_pseudoheader(header, plen, NULL, &pheader, &is_sign, NULL) && !is_sign)
 		    PUTSHORT(start.edns_pktsz, pheader);
 		}
-#endif
+
 
 	      if (retry_send(sendto(fd, (char *)header, plen, 0,
 				    &start.addr.sa,
@@ -568,9 +568,9 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 	    
 	      if (errno == 0)
 		{
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
 		  dump_packet(DUMP_UP_QUERY, (void *)header, plen, NULL, &start.addr);
-#endif
+
 		  
 		  /* Keep info in case we want to re-send this packet */
 		  daemon.srv_save = start;
@@ -614,7 +614,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
       plen = setup_reply(header, plen, addrp, flags, daemon.local_ttl);
       if (oph)
 	plen = add_pseudoheader(header, plen, ((unsigned char *) header) + PACKETSZ, daemon.edns_pktsz, 0, NULL, 0, do_bit, 0);
-      send_from(udpfd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND), (char *)header, plen, udpaddr, dst_addr, dst_iface);
+      send_from(udpfd, daemon.opt_nowild || daemon.opt_cleverbind, (char *)header, plen, udpaddr, dst_addr, dst_iface);
     }
 
   return 0;
@@ -634,7 +634,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
   (void)do_bit;
   (void)bogusanswer;
 
-#ifdef HAVE_IPSET
+ HAVE_IPSET
   if (daemon.ipsets && extract_request(header, n, daemon.namebuff, NULL))
     {
       /* Similar algorithm to search_servers. */
@@ -654,7 +654,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
 	    }
 	}
     }
-#endif
+
 
   if ((pheader = find_pseudoheader(header, n, &plen, &sizep, &is_sign, NULL)))
     {
@@ -663,7 +663,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
 
       if (check_subnet && !check_source(header, plen, pheader, query_source))
 	{
-	  my_syslog(LOG_WARNING, _("discarding DNS reply: subnet option mismatch"));
+	  my_syslog(LOG_WARNING, format!("discarding DNS reply: subnet option mismatch"));
 	  return 0;
 	}
       
@@ -689,7 +689,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
 		  PUTSHORT(daemon.edns_pktsz, sizep);
 		}
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	      /* If the client didn't set the do bit, but we did, reset it. */
 	      if (daemon.opt_dnssec_valid && !do_bit)
 		{
@@ -700,7 +700,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
 		  sizep -= 2;
 		  PUTSHORT(flags, sizep);
 		}
-#endif
+
 	    }
 	}
     }
@@ -726,7 +726,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
       server && !(server.flags & SERV_WARNED_RECURSIVE))
     {
       (void)prettyprint_addr(&server.addr, daemon.namebuff);
-      my_syslog(LOG_WARNING, _("nameserver {} refused to do a recursive query"), daemon.namebuff);
+      my_syslog(LOG_WARNING, format!("nameserver {} refused to do a recursive query"), daemon.namebuff);
       if (!option_bool(OPT_LOG))
 	server.flags |= SERV_WARNED_RECURSIVE;
     }  
@@ -758,7 +758,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
       
       if (extract_addresses(header, n, daemon.namebuff, now, sets, is_sign, check_rebind, no_cache, cache_secure, &doctored))
 	{
-	  my_syslog(LOG_WARNING, _("possible DNS-rebind attack detected: {}"), daemon.namebuff);
+	  my_syslog(LOG_WARNING, format!("possible DNS-rebind attack detected: {}"), daemon.namebuff);
 	  munged = 1;
 	  cache_secure = 0;
 	}
@@ -767,7 +767,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
 	cache_secure = 0;
     }
   
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
   if (bogusanswer && !(header.hb4 & HB4_CD) && !option_bool(OPT_DNSSEC_DEBUG))
     {
       /* Bogus reply, turn into SERVFAIL */
@@ -786,7 +786,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
       if (!do_bit)
 	n = rrfilter(header, n, 1);
     }
-#endif
+
 
   /* do this after extract_addresses. Ensure NODATA reply and remove
      nameserver info. */
@@ -849,10 +849,10 @@ void reply_query(int fd, int family, time_t now)
   if (!(forward = lookup_frec(ntohs(header.id), fd, family, hash)))
     return;
   
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
   dump_packet((forward.flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY)) ? DUMP_SEC_REPLY : DUMP_UP_REPLY,
 	      (void *)header, n, &serveraddr, NULL);
-#endif
+
 
   /* log_query gets called indirectly all over the place, so 
      pass these in global variables - sorry. */
@@ -874,7 +874,7 @@ void reply_query(int fd, int family, time_t now)
       size_t plen;
       int is_sign;
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       if (forward.flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY))
 	{
 	  struct server *start;
@@ -924,9 +924,9 @@ void reply_query(int fd, int family, time_t now)
 	  if (fd == -1)
 	    return;
 	  
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
 	  dump_packet(DUMP_SEC_QUERY, (void *)header, (size_t)plen, NULL, &start.addr);
-#endif
+
 
 	  while (retry_send(sendto(fd, (char *)header, plen, 0,
 				   &start.addr.sa,
@@ -939,7 +939,7 @@ void reply_query(int fd, int family, time_t now)
 	  
 	  return;
 	}
-#endif
+
       
       /* In strict order mode, there must be a server later in the chain
 	 left to send to, otherwise without the forwardall mechanism,
@@ -1005,7 +1005,7 @@ void reply_query(int fd, int family, time_t now)
       forward.sentto.edns_pktsz = SAFE_PKTSZ;
       forward.sentto.pktsz_reduced = now;
       (void)prettyprint_addr(&forward.sentto.addr, daemon.addrbuff);
-      my_syslog(LOG_WARNING, _("reducing DNS packet size for nameserver {} to {}"), daemon.addrbuff, SAFE_PKTSZ);
+      my_syslog(LOG_WARNING, format!("reducing DNS packet size for nameserver {} to {}"), daemon.addrbuff, SAFE_PKTSZ);
     }
 
     
@@ -1025,7 +1025,7 @@ void reply_query(int fd, int family, time_t now)
       if ((header.hb4 & HB4_CD) || (forward.flags & FREC_CHECKING_DISABLED))
 	no_cache_dnssec = 1;
       
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       if ((forward.sentto.flags & SERV_DO_DNSSEC) && 
 	  daemon.opt_dnssec_valid && !(forward.flags & FREC_CHECKING_DISABLED))
 	{
@@ -1058,11 +1058,11 @@ void reply_query(int fd, int family, time_t now)
 		    status = dnssec_validate_reply(now, header, n, daemon.namebuff, daemon.keyname, &forward.class, 
 						   !daemon.opt_dnssec_ign_ns && (forward.sentto.flags & SERV_DO_DNSSEC),
 						   NULL, NULL, NULL);
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
 		  if (status == STAT_BOGUS)
 		    dump_packet((forward.flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY)) ? DUMP_SEC_BOGUS : DUMP_BOGUS,
 				header, (size_t)n, &serveraddr, NULL);
-#endif
+
 		}
 	      
 	      /* Can't validate, as we're missing key data. Put this
@@ -1189,7 +1189,7 @@ void reply_query(int fd, int family, time_t now)
 		      
 		      if (fd != -1)
 			{
-#ifdef HAVE_CONNTRACK
+ HAVE_CONNTRACK
 			  /* Copy connection mark of incoming query to outgoing connection. */
 			  if (option_bool(OPT_CONNTRACK))
 			    {
@@ -1197,11 +1197,11 @@ void reply_query(int fd, int family, time_t now)
 			      if (get_incoming_mark(&orig.frec_src.source, &orig.frec_src.dest, 0, &mark))
 				setsockopt(fd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
 			    }
-#endif
+
 			  
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
 			  dump_packet(DUMP_SEC_QUERY, (void *)header, (size_t)nn, NULL, &server.addr);
-#endif
+
 			  
 			  while (retry_send(sendto(fd, (char *)header, nn, 0, 
 						   &server.addr.sa, 
@@ -1258,7 +1258,7 @@ void reply_query(int fd, int family, time_t now)
 	    }
 	}
 
-#endif
+
 
       /* restore CD bit to the value in the query */
       if (forward.flags & FREC_CHECKING_DISABLED)
@@ -1279,7 +1279,7 @@ void reply_query(int fd, int family, time_t now)
 
 	  header.id = htons(forward.frec_src.orig_id);
 	  header.hb4 |= HB4_RA; /* recursion if available */
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	  /* We added an EDNSO header for the purpose of getting DNSSEC RRs, and set the value of the UDP payload size
 	     greater than the no-EDNS0-implied 512 to have space for the RRSIGS. If, having stripped them and the EDNS0
              header, the answer is still bigger than 512, truncate it and mark it so. The client then retries with TCP. */
@@ -1291,17 +1291,17 @@ void reply_query(int fd, int family, time_t now)
 	      header.hb3 |= HB3_TC;
 	      nn = resize_packet(header, nn, NULL, 0);
 	    }
-#endif
+
 
 	  for (src = &forward.frec_src; src; src = src.next)
 	    {
 	      header.id = htons(src.orig_id);
 	      
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
 	      dump_packet(DUMP_REPLY, daemon.packet, (size_t)nn, NULL, &src.source);
-#endif
+
 	      
-	      send_from(src.fd, option_bool(OPT_NOWILD) || option_bool (OPT_CLEVERBIND), daemon.packet, nn, 
+	      send_from(src.fd, daemon.opt_nowild || option_bool (OPT_CLEVERBIND), daemon.packet, nn, 
 			&src.source, &src.dest, src.iface);
 
 	      if (option_bool(OPT_EXTRALOG) && src != &forward.frec_src)
@@ -1329,9 +1329,9 @@ void receive_query(struct listener *listen, time_t now)
   size_t m;
   ssize_t n;
   int if_index = 0, auth_dns = 0, do_bit = 0, have_pseudoheader = 0;
-#ifdef HAVE_AUTH
+ HAVE_AUTH
   int local_auth = 0;
-#endif
+
   struct iovec iov[1];
   struct msghdr msg;
   struct cmsghdr *cmptr;
@@ -1346,11 +1346,11 @@ void receive_query(struct listener *listen, time_t now)
 #elif defined(IP_RECVDSTADDR)
     char control[CMSG_SPACE(sizeof(struct in_addr)) +
 		 CMSG_SPACE(sizeof(struct sockaddr_dl))];
-#endif
+
   } control_u;
   int family = listen.addr.sa.sa_family;
    /* Can always get recvd interface for IPv6 */
-  int check_dst = !option_bool(OPT_NOWILD) || family == AF_INET6;
+  int check_dst = !daemon.opt_nowild || family == AF_INET6;
 
   /* packet buffer overwritten */
   daemon.srv_save = NULL;
@@ -1358,7 +1358,7 @@ void receive_query(struct listener *listen, time_t now)
   dst_addr_4.s_addr = dst_addr.addr4.s_addr = 0;
   netmask.s_addr = 0;
   
-  if (option_bool(OPT_NOWILD) && listen.iface)
+  if (daemon.opt_nowild && listen.iface)
     {
       auth_dns = listen.iface.dns_auth;
      
@@ -1437,7 +1437,7 @@ void receive_query(struct listener *listen, time_t now)
 	  static int warned = 0;
 	  if (!warned)
 	    {
-	      my_syslog(LOG_WARNING, _("Ignoring query from non-local network"));
+	      my_syslog(LOG_WARNING, format!("Ignoring query from non-local network"));
 	      warned = 1;
 	    }
 	  return;
@@ -1475,20 +1475,20 @@ void receive_query(struct listener *listen, time_t now)
 		struct in_addr *a;
 #ifndef HAVE_SOLARIS_NETWORK
 		struct sockaddr_dl *s;
-#endif
+
 	      } p;
 	       p.c = CMSG_DATA(cmptr);
 	       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVDSTADDR)
 		 dst_addr_4 = dst_addr.addr4 = *(p.a);
 	       else if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVIF)
-#ifdef HAVE_SOLARIS_NETWORK
+ HAVE_SOLARIS_NETWORK
 		 if_index = *(p.i);
-#else
+
   	         if_index = p.s.sdl_index;
-#endif
+
 	    }
 	}
-#endif
+
       
       if (family == AF_INET6)
 	{
@@ -1513,7 +1513,7 @@ void receive_query(struct listener *listen, time_t now)
       
       if (!iface_check(family, &dst_addr, ifr.ifr_name, &auth_dns))
 	{
-	   if (!option_bool(OPT_CLEVERBIND))
+	   if (!daemon.opt_cleverbind)
 	     enumerate_interfaces(0); 
 	   if (!loopback_exception(listen.fd, family, &dst_addr, ifr.ifr_name) &&
 	       !label_exception(if_index, family, &dst_addr))
@@ -1533,7 +1533,7 @@ void receive_query(struct listener *listen, time_t now)
 	      break;
 	  
 	  /* interface may be new */
-	  if (!iface && !option_bool(OPT_CLEVERBIND))
+	  if (!iface && !daemon.opt_cleverbind)
 	    enumerate_interfaces(0); 
 	  
 	  for (iface = daemon.interfaces; iface; iface = iface.next)
@@ -1554,15 +1554,15 @@ void receive_query(struct listener *listen, time_t now)
   daemon.log_display_id = ++daemon.log_id;
   daemon.log_source_addr = &source_addr;
 
-#ifdef HAVE_DUMPFILE
+ HAVE_DUMPFILE
   dump_packet(DUMP_QUERY, daemon.packet, (size_t)n, &source_addr, NULL);
-#endif
+
 	  
   if (extract_request(header, (size_t)n, daemon.namebuff, &type))
     {
-#ifdef HAVE_AUTH
+ HAVE_AUTH
       struct auth_zone *zone;
-#endif
+
       char *types = querystr(auth_dns ? "auth" : "query", type);
       
       if (family == AF_INET) 
@@ -1572,7 +1572,7 @@ void receive_query(struct listener *listen, time_t now)
 	log_query(F_QUERY | F_IPV6 | F_FORWARD, daemon.namebuff, 
 		  (union all_addr *)&source_addr.in6.sin6_addr, types);
 
-#ifdef HAVE_AUTH
+ HAVE_AUTH
       /* find queries for zones we're authoritative for, and answer them directly */
       if (!auth_dns && !option_bool(OPT_LOCALISE))
 	for (zone = daemon.auth_zones; zone; zone = zone.next)
@@ -1582,13 +1582,13 @@ void receive_query(struct listener *listen, time_t now)
 	      local_auth = 1;
 	      break;
 	    }
-#endif
+
       
-#ifdef HAVE_LOOP
+ HAVE_LOOP
       /* Check for forwarding loop */
       if (detect_loop(daemon.namebuff, type))
 	return;
-#endif
+
     }
   
   if (find_pseudoheader(header, (size_t)n, NULL, &pheader, NULL, NULL))
@@ -1612,20 +1612,20 @@ void receive_query(struct listener *listen, time_t now)
 	udp_size = PACKETSZ; /* Sanity check - can't reduce below default. RFC 6891 6.2.3 */
     }
 
-#ifdef HAVE_AUTH
+ HAVE_AUTH
   if (auth_dns)
     {
       m = answer_auth(header, ((char *) header) + udp_size, (size_t)n, now, &source_addr, 
 		      local_auth, do_bit, have_pseudoheader);
       if (m >= 1)
 	{
-	  send_from(listen.fd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND),
+	  send_from(listen.fd, daemon.opt_nowild || daemon.opt_cleverbind,
 		    (char *)header, m, &source_addr, &dst_addr, if_index);
 	  daemon.metrics[METRIC_DNS_AUTH_ANSWERED]++;
 	}
     }
   else
-#endif
+
     {
       int ad_reqd = do_bit;
        /* RFC 6840 5.7 */
@@ -1637,7 +1637,7 @@ void receive_query(struct listener *listen, time_t now)
       
       if (m >= 1)
 	{
-	  send_from(listen.fd, option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND),
+	  send_from(listen.fd, daemon.opt_nowild || daemon.opt_cleverbind,
 		    (char *)header, m, &source_addr, &dst_addr, if_index);
 	  daemon.metrics[METRIC_DNS_LOCAL_ANSWERED]++;
 	}
@@ -1649,7 +1649,7 @@ void receive_query(struct listener *listen, time_t now)
     }
 }
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 /* Recurse up the key hierarchy */
 static int tcp_key_recurse(time_t now, int status, struct dns_header *header, size_t n, 
 			   int class, char *name, char *keyname, struct server *server, 
@@ -1744,11 +1744,11 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
 	      if ((server.tcpfd = socket(server.addr.sa.sa_family, SOCK_STREAM, 0)) == -1)
 		continue; /* No good, next server */
 	      
-#ifdef HAVE_CONNTRACK
+ HAVE_CONNTRACK
 	      /* Copy connection mark of incoming query to outgoing connection. */
 	      if (have_mark)
 		setsockopt(server.tcpfd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
-#endif	
+	
 	      
 	      if (!local_bind(server.tcpfd,  &server.source_addr, server.interface, 0, 1))
 		{
@@ -1757,13 +1757,13 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
 		  continue; /* No good, next server */
 		}
 	      
-#ifdef MSG_FASTOPEN
+ MSG_FASTOPEN
 	      while(retry_send(sendto(server.tcpfd, packet, m + sizeof(u16),
 				      MSG_FASTOPEN, &server.addr.sa, sa_len(&server.addr))));
 	      
 	      if (errno == 0)
 		data_sent = 1;
-#endif
+
 	      
 	      if (!data_sent && connect(server.tcpfd, &server.addr.sa, sa_len(&server.addr)) == -1)
 		{
@@ -1815,7 +1815,7 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
     
   return new_status;
 }
-#endif
+
 
 
 /* The daemon forks before calling this: it should deal with one connection,
@@ -1827,9 +1827,9 @@ unsigned char *tcp_request(int confd, time_t now,
 {
   size_t size = 0;
   int norebind = 0;
-#ifdef HAVE_AUTH
+ HAVE_AUTH
   int local_auth = 0;
-#endif
+
   int checking_disabled, do_bit, added_pheader = 0, have_pseudoheader = 0;
   int check_subnet, cacheable, no_cache_dnssec = 0, cache_secure = 0, bogusanswer = 0;
   size_t m;
@@ -1857,7 +1857,7 @@ unsigned char *tcp_request(int confd, time_t now,
   if (getpeername(confd, (struct sockaddr *)&peer_addr, &peer_len) == -1)
     return packet;
 
-#ifdef HAVE_CONNTRACK
+ HAVE_CONNTRACK
   /* Get connection mark of incoming query to set on outgoing connections. */
   if (option_bool(OPT_CONNTRACK))
     {
@@ -1870,7 +1870,7 @@ unsigned char *tcp_request(int confd, time_t now,
       
       have_mark = get_incoming_mark(&peer_addr, &local, 1, &mark);
     }
-#endif	
+	
 
   /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
   if (option_bool(OPT_LOCAL_SERVICE))
@@ -1897,7 +1897,7 @@ unsigned char *tcp_request(int confd, time_t now,
 	}
       if (!addr)
 	{
-	  my_syslog(LOG_WARNING, _("Ignoring query from non-local network"));
+	  my_syslog(LOG_WARNING, format!("Ignoring query from non-local network"));
 	  return packet;
 	}
     }
@@ -1931,9 +1931,9 @@ unsigned char *tcp_request(int confd, time_t now,
        
       if ((gotname = extract_request(header, (unsigned int)size, daemon.namebuff, &qtype)))
 	{
-#ifdef HAVE_AUTH
+ HAVE_AUTH
 	  struct auth_zone *zone;
-#endif
+
 	  char *types = querystr(auth_dns ? "auth" : "query", qtype);
 	  
 	  if (peer_addr.sa.sa_family == AF_INET) 
@@ -1943,7 +1943,7 @@ unsigned char *tcp_request(int confd, time_t now,
 	    log_query(F_QUERY | F_IPV6 | F_FORWARD, daemon.namebuff, 
 		      (union all_addr *)&peer_addr.in6.sin6_addr, types);
 	  
-#ifdef HAVE_AUTH
+ HAVE_AUTH
 	  /* find queries for zones we're authoritative for, and answer them directly */
 	  if (!auth_dns && !option_bool(OPT_LOCALISE))
 	    for (zone = daemon.auth_zones; zone; zone = zone.next)
@@ -1953,7 +1953,7 @@ unsigned char *tcp_request(int confd, time_t now,
 		  local_auth = 1;
 		  break;
 		}
-#endif
+
 	}
       
       if (local_addr.sa.sa_family == AF_INET)
@@ -1975,12 +1975,12 @@ unsigned char *tcp_request(int confd, time_t now,
 	    do_bit = 1; /* do bit */ 
 	}
 
-#ifdef HAVE_AUTH
+ HAVE_AUTH
       if (auth_dns)
 	m = answer_auth(header, ((char *) header) + 65536, (size_t)size, now, &peer_addr, 
 			local_auth, do_bit, have_pseudoheader);
       else
-#endif
+
 	{
 	   int ad_reqd = do_bit;
 	   /* RFC 6840 5.7 */
@@ -2007,7 +2007,7 @@ unsigned char *tcp_request(int confd, time_t now,
 	      if (gotname)
 		flags = search_servers(now, &addrp, gotname, daemon.namebuff, &type, &domain, &norebind);
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	      if (daemon.opt_dnssec_valid && (type & SERV_DO_DNSSEC))
 		{
 		  size = add_do_bit(header, size, ((unsigned char *) header) + 65536);
@@ -2017,7 +2017,7 @@ unsigned char *tcp_request(int confd, time_t now,
 		  if (option_bool(OPT_DNSSEC_DEBUG))
 		    header.hb4 |= HB4_CD;
 		}
-#endif
+
 
 	      /* Check if we added a pheader on forwarding - may need to
 		 strip it from the reply. */
@@ -2069,11 +2069,11 @@ unsigned char *tcp_request(int confd, time_t now,
 			  if ((last_server.tcpfd = socket(last_server.addr.sa.sa_family, SOCK_STREAM, 0)) == -1)
 			    continue;
 			  
-#ifdef HAVE_CONNTRACK
+ HAVE_CONNTRACK
 			  /* Copy connection mark of incoming query to outgoing connection. */
 			  if (have_mark)
 			    setsockopt(last_server.tcpfd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
-#endif			  
+			  
 		      
 			  if ((!local_bind(last_server.tcpfd,  &last_server.source_addr, last_server.interface, 0, 1)))
 			    {
@@ -2082,13 +2082,13 @@ unsigned char *tcp_request(int confd, time_t now,
 			      continue;
 			    }
 			  
-#ifdef MSG_FASTOPEN
+ MSG_FASTOPEN
 			    while(retry_send(sendto(last_server.tcpfd, packet, size + sizeof(u16),
 						    MSG_FASTOPEN, &last_server.addr.sa, sa_len(&last_server.addr))));
 			    
 			    if (errno == 0)
 			      data_sent = 1;
-#endif
+
 			    
 			    if (!data_sent && connect(last_server.tcpfd, &last_server.addr.sa, sa_len(&last_server.addr)) == -1)
 			    {
@@ -2131,7 +2131,7 @@ unsigned char *tcp_request(int confd, time_t now,
 			log_query(F_SERVER | F_IPV6 | F_FORWARD, daemon.namebuff, 
 				  (union all_addr *)&last_server.addr.in6.sin6_addr, NULL);
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 		      if (daemon.opt_dnssec_valid && !checking_disabled && (last_server.flags & SERV_DO_DNSSEC))
 			{
 			  int keycount = DNSSEC_WORK; /* Limit to number of DNSSEC questions, to catch loops and avoid filling cache. */
@@ -2161,7 +2161,7 @@ unsigned char *tcp_request(int confd, time_t now,
 			  if (status == STAT_SECURE)
 			    cache_secure = 1;
 			}
-#endif
+
 
 		      /* restore CD bit to the value in the query */
 		      if (checking_disabled)
@@ -2225,11 +2225,11 @@ static struct frec *allocate_frec(time_t now)
       f.rfd4 = NULL;
       f.flags = 0;
       f.rfd6 = NULL;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       f.dependent = NULL;
       f.blocking_query = NULL;
       f.stash = NULL;
-#endif
+
       daemon.frec_list = f;
     }
 
@@ -2298,7 +2298,7 @@ static void free_frec(struct frec *f)
   free_rfd(f.rfd6);
   f.rfd6 = NULL;
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
   if (f.stash)
     {
       blockdata_free(f.stash);
@@ -2310,7 +2310,7 @@ static void free_frec(struct frec *f)
     free_frec(f.blocking_query);
   f.blocking_query = NULL;
   f.dependent = NULL;
-#endif
+
 }
 
 
@@ -2335,12 +2335,12 @@ struct frec *get_new_frec(time_t now, int *wait, struct frec *force)
       target = f;
     else 
       {
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	    /* Don't free DNSSEC sub-queries here, as we may end up with
 	       dangling references to them. They'll go when their "real" query 
 	       is freed. */
 	    if (!f.dependent && f != force)
-#endif
+
 	      {
 		if (difftime(now, f.time) >= 4*TIMEOUT)
 		  {
@@ -2390,7 +2390,7 @@ struct frec *get_new_frec(time_t now, int *wait, struct frec *force)
       if ((int)difftime(now, last_log) > 5)
 	{
 	  last_log = now;
-	  my_syslog(LOG_WARNING, _("Maximum number of concurrent DNS queries reached (max: {})"), daemon.ftabsize);
+	  my_syslog(LOG_WARNING, format!("Maximum number of concurrent DNS queries reached (max: {})"), daemon.ftabsize);
 	}
 
       return NULL;

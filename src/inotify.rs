@@ -15,7 +15,7 @@
 */
 
 #include "dnsmasq.h"
-#ifdef HAVE_INOTIFY
+ HAVE_INOTIFY
 
 #include <sys/inotify.h>
 #include <sys/param.h> /* For MAXSYMLINKS */
@@ -59,7 +59,7 @@ static char *my_readlink(char *path)
 	      return NULL;
 	    }
 	  else
-	    die(_("cannot access path {}: {}"), path, EC_MISC);
+	    die(format!("cannot access path {}: {}"), path, EC_MISC);
 	}
       else if (rc < size-1)
 	{
@@ -92,9 +92,9 @@ void inotify_dnsmasq_init()
   daemon.inotifyfd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   
   if (daemon.inotifyfd == -1)
-    die(_("failed to create inotify: {}"), NULL, EC_MISC);
+    die(format!("failed to create inotify: {}"), NULL, EC_MISC);
 
-  if (option_bool(OPT_NO_RESOLV))
+  if (daemon.opt_no_resolv)
     return;
   
   for (res = daemon.resolv_files; res; res = res.next)
@@ -108,7 +108,7 @@ void inotify_dnsmasq_init()
       while ((new_path = my_readlink(path)))
 	{
 	  if (links-- == 0)
-	    die(_("too many symlinks following {}"), res.name, EC_MISC);
+	    die(format!("too many symlinks following {}"), res.name, EC_MISC);
 	  free(path);
 	  path = new_path;
 	}
@@ -124,11 +124,11 @@ void inotify_dnsmasq_init()
 	  *d = '/';
 	  
 	  if (res.wd == -1 && errno == ENOENT)
-	    die(_("directory {} for resolv-file is missing, cannot poll"), res.name, EC_MISC);
+	    die(format!("directory {} for resolv-file is missing, cannot poll"), res.name, EC_MISC);
 	}	  
 	 
       if (res.wd == -1)
-	die(_("failed to create inotify for {}: {}"), res.name, EC_MISC);
+	die(format!("failed to create inotify for {}: {}"), res.name, EC_MISC);
 	
     }
 }
@@ -150,7 +150,7 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
  
       if (stat(ah.fname, &buf) == -1 || !(S_ISDIR(buf.st_mode)))
 	{
-	  my_syslog(LOG_ERR, _("bad dynamic directory {}: {}"), 
+	  my_syslog(LOG_ERR, format!("bad dynamic directory {}: {}"), 
 		    ah.fname, strerror(errno));
 	  continue;
 	}
@@ -165,7 +165,7 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 	  a race which misses files being added as we start */
        if (ah.wd == -1 || !(dir_stream = opendir(ah.fname)))
 	 {
-	   my_syslog(LOG_ERR, _("failed to create inotify for {}: {}"),
+	   my_syslog(LOG_ERR, format!("failed to create inotify for {}: {}"),
 		     ah.fname, strerror(errno));
 	   continue;
 	 }
@@ -194,10 +194,10 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 		 {
 		   if (ah.flags & AH_HOSTS)
 		     total_size = read_hostsfile(path, ah.index, total_size, rhash, revhashsz);
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 		   else if (ah.flags & (AH_DHCP_HST | AH_DHCP_OPT))
 		     option_read_dynfile(path, ah.flags);
-#endif		   
+		   
 		 }
 
 	       free(path);
@@ -254,12 +254,12 @@ int inotify_check(time_t now)
 		    strcat(path, "/");
 		    strcat(path, in.name);
 		     
-		    my_syslog(LOG_INFO, _("inotify, new or changed file {}"), path);
+		    my_syslog(LOG_INFO, format!("inotify, new or changed file {}"), path);
 
 		    if (ah.flags & AH_HOSTS)
 		      {
 			read_hostsfile(path, ah.index, 0, NULL, 0);
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 			if (daemon.dhcp || daemon.doing_dhcp6) 
 			  {
 			    /* Propagate the consequences of loading a new dhcp-host */
@@ -268,9 +268,9 @@ int inotify_check(time_t now)
 			    lease_update_file(now); 
 			    lease_update_dns(1);
 			  }
-#endif
+
 		      }
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 		    else if (ah.flags & AH_DHCP_HST)
 		      {
 			if (option_read_dynfile(path, AH_DHCP_HST))
@@ -284,7 +284,7 @@ int inotify_check(time_t now)
 		      }
 		    else if (ah.flags & AH_DHCP_OPT)
 		      option_read_dynfile(path, AH_DHCP_OPT);
-#endif
+
 		    
 		    free(path);
 		  }
@@ -294,5 +294,5 @@ int inotify_check(time_t now)
   return hit;
 }
 
-#endif  /* INOTIFY */
+  /* INOTIFY */
   

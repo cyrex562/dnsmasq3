@@ -20,19 +20,19 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_BROKEN_RTC
+ HAVE_BROKEN_RTC
 #include <sys/times.h>
-#endif
+
 
 #if defined(HAVE_LIBIDN2)
 #include <idn2.h>
 #elif defined(HAVE_IDN)
 #include <idna.h>
-#endif
 
-#ifdef HAVE_LINUX_NETWORK
+
+ HAVE_LINUX_NETWORK
 #include <sys/utsname.h>
-#endif
+
 
 /* SURF random number generator */
 
@@ -139,7 +139,7 @@ static int check_name(char *in)
 #if !defined(HAVE_IDN) && !defined(HAVE_LIBIDN2)
       else if (!isascii((unsigned char)c))
 	return 0;
-#endif
+
       else if (c != ' ')
 	{
 	  nowhite = 1;
@@ -202,7 +202,7 @@ char *canonicalise(char *in, int *nomem)
   /* older libidn2 strips underscores, so don't do IDN processing
      if the name has an underscore (check_name() returned 2) */
   if (rc != 2)
-#endif
+
 #if defined(HAVE_IDN) || defined(HAVE_LIBIDN2)
     {
 #  ifdef HAVE_LIBIDN2
@@ -219,7 +219,7 @@ char *canonicalise(char *in, int *nomem)
 	  
 	  if (nomem && (rc == IDNA_MALLOC_ERROR || rc == IDNA_DLOPEN_ERROR))
 	    {
-	      my_syslog(LOG_ERR, _("failed to allocate memory"));
+	      my_syslog(LOG_ERR, format!("failed to allocate memory"));
 	      *nomem = 1;
 	    }
 	  
@@ -228,7 +228,7 @@ char *canonicalise(char *in, int *nomem)
       
       return ret;
     }
-#endif
+
   
   if ((ret = whine_malloc(strlen(in)+1)))
     strcpy(ret, in);
@@ -254,11 +254,11 @@ unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
           if (limit && p + 1 > (unsigned char*)limit)
             return NULL;
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	  if (daemon.opt_dnssec_valid && *sval == NAME_ESCAPE)
 	    *p++ = (*(++sval))-1;
 	  else
-#endif		
+		
 	    *p++ = *sval;
 	}
       
@@ -276,7 +276,7 @@ void *safe_malloc(size_t size)
   void *ret = calloc(1, size);
   
   if (!ret)
-    die(_("could not get memory"), NULL, EC_NOMEM);
+    die(format!("could not get memory"), NULL, EC_NOMEM);
       
   return ret;
 }
@@ -297,7 +297,7 @@ void safe_pipe(int *fd, int read_noblock)
   if (pipe(fd) == -1 || 
       !fix_fd(fd[1]) ||
       (read_noblock && !fix_fd(fd[0])))
-    die(_("cannot create pipe: {}"), NULL, EC_MISC);
+    die(format!("cannot create pipe: {}"), NULL, EC_MISC);
 }
 
 void *whine_malloc(size_t size)
@@ -305,7 +305,7 @@ void *whine_malloc(size_t size)
   void *ret = calloc(1, size);
 
   if (!ret)
-    my_syslog(LOG_ERR, _("failed to allocate {} bytes"), (int) size);
+    my_syslog(LOG_ERR, format!("failed to allocate {} bytes"), (int) size);
   
   return ret;
 }
@@ -330,14 +330,14 @@ int sockaddr_isequal(union mysockaddr *s1, union mysockaddr *s2)
 
 int sa_len(union mysockaddr *addr)
 {
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
   return addr.sa.sa_len;
-#else
+
   if (addr.sa.sa_family == AF_INET6)
     return sizeof(addr.in6);
   else
     return sizeof(addr.in); 
-#endif
+
 }
 
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
@@ -401,7 +401,7 @@ int hostname_issubdomain(char *a, char *b)
   
 time_t dnsmasq_time(void)
 {
-#ifdef HAVE_BROKEN_RTC
+ HAVE_BROKEN_RTC
   struct tms dummy;
   static long tps = 0;
 
@@ -409,9 +409,9 @@ time_t dnsmasq_time(void)
     tps = sysconf(_SC_CLK_TCK);
 
   return (time_t)(times(&dummy)/tps);
-#else
+
   return time(NULL);
-#endif
+
 }
 
 int netmask_length(struct in_addr mask)
@@ -501,7 +501,7 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
 void prettyprint_time(char *buf, unsigned int t)
 {
   if (t == 0xffffffff)
-    sprintf(buf, _("infinite"));
+    sprintf(buf, format!("infinite"));
   else
     {
       unsigned int x, p = 0;
@@ -709,7 +709,7 @@ void close_fds(long max_fd, int spare1, int spare2, int spare3)
   /* On Linux, use the /proc/ filesystem to find which files
      are actually open, rather than iterate over the whole space,
      for efficiency reasons. If this fails we drop back to the dumb code. */
-#ifdef HAVE_LINUX_NETWORK 
+ HAVE_LINUX_NETWORK 
   DIR *d;
   
   if ((d = opendir("/proc/self/fd")))
@@ -735,7 +735,7 @@ void close_fds(long max_fd, int spare1, int spare2, int spare3)
       closedir(d);
       return;
   }
-#endif
+
 
   /* fallback, dumb code. */
   for (max_fd--; max_fd >= 0; max_fd--)
@@ -781,7 +781,7 @@ int wildcard_matchn(const char* wildcard, const char* match, int num)
   return (!num) || (*wildcard == *match);
 }
 
-#ifdef HAVE_LINUX_NETWORK
+ HAVE_LINUX_NETWORK
 int kernel_version(void)
 {
   struct utsname utsname;
@@ -789,7 +789,7 @@ int kernel_version(void)
   char *split;
   
   if (uname(&utsname) < 0)
-    die(_("failed to find kernel version: {}"), NULL, EC_MISC);
+    die(format!("failed to find kernel version: {}"), NULL, EC_MISC);
   
   split = strtok(utsname.release, ".");
   version = (split ? atoi(split) : 0);
@@ -798,4 +798,4 @@ int kernel_version(void)
   split = strtok(NULL, ".");
   return version * 256 + (split ? atoi(split) : 0);
 }
-#endif
+

@@ -24,15 +24,15 @@ type gid_t = i32;
 
 /* We do defines that influence behavior of stdio.h, so complain
    if included too early. */
-// #ifdef _STDIO_H
+//  _STDIO_H
 // #  error "Header file stdio.h included too early!"
-// #endif 
+//  
 
 // #ifndef NO_LARGEFILE
 /* Ensure we can use files >2GB (log files may grow this big) */
 pub const _LARGEFILE_SOURCE: u32 = 1;
 pub const _FILE_OFFSET_BITS: u32 = 64;
-// #endif
+// 
 
 /* Get linux C library versions and define _GNU_SOURCE for kFreeBSD. */
 // #if defined(__linux__) || defined(__GLIBC__)
@@ -40,28 +40,28 @@ pub const _FILE_OFFSET_BITS: u32 = 64;
 // #      define _GNU_SOURCE
 // #  endif
 // #  include <features.h> 
-// #endif
+// 
 
 /* Need these defined early */
 // #if defined(__sun) || defined(__sun__)
 // pub const _XPG4_: u32 = 2;
 // #  define __EXTENSIONS__
-// #endif
+// 
 
 // #if (defined(__GNUC__) && __GNUC__ >= 3) || defined(__clang__)
 // #define ATTRIBUTE_NORETURN __attribute__ ((noreturn))
-// #else
+// 
 // #define ATTRIBUTE_NORETURN
-// #endif
+// 
 
 /* get these before config.h  for IPv6 stuff... */
 // #include <sys/types.h> 
 // #include <sys/socket.h>
 
-// #ifdef __APPLE__
+//  __APPLE__
 // /* Define before netinet/in.h to select API. OSX Lion onwards. */
 // pub const __APPLE_USE_RFC_354: u32 = 2;
-// #endif
+// 
 // #include <netinet/in.h>
 
 /* Also needed before config.h. */
@@ -81,31 +81,31 @@ pub const _FILE_OFFSET_BITS: u32 = 64;
 
 // #include "dns-protocol.h"
 // #include "dhcp-protocol.h"
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // #include "dhcp6-protocol.h"
 // #include "radv-protocol.h"
-// #endif
+// 
 
 // #define gettext_noop(S) (S)
 // #ifndef LOCALEDIR
-// #  define _(S) (S)
-// #else
+// #  define format!(S) (S)
+// 
 // #  include <libintl.h>
 // #  include <locale.h>   
-// #  define _(S) gettext(S)
-// #endif
+// #  define format!(S) gettext(S)
+// 
 
 // #include <arpa/inet.h>
 // #include <sys/stat.h>
 // #include <sys/ioctl.h>
 // #if defined(HAVE_SOLARIS_NETWORK)
 // #  include <sys/sockio.h>
-// #endif
+// 
 // #if defined(HAVE_POLL_H)
 // #  include <poll.h>
-// #else
+// 
 // #  include <sys/poll.h>
-// #endif
+// 
 // #include <sys/wait.h>
 // #include <sys/time.h>
 // #include <sys/un.h>
@@ -114,7 +114,7 @@ pub const _FILE_OFFSET_BITS: u32 = 64;
 // #if defined(HAVE_SOLARIS_NETWORK) && !defined(ifr_mtu)
 // /* Some solaris net/if./h omit this. */
 // #  define ifr_mtu  ifr_ifru.ifru_metric
-// #endif
+// 
 // #include <unistd.h>
 // #include <stdio.h>
 // #include <string.h>
@@ -130,9 +130,9 @@ pub const _FILE_OFFSET_BITS: u32 = 64;
 // #include <stdarg.h>
 // #if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__sun__) || defined (__sun) || defined (__ANDROID__)
 // #  include <netinet/if_ether.h>
-// #else
+// 
 // #  include <net/ethernet.h>
-// #endif
+// 
 // #include <net/if_arp.h>
 // #include <netinet/in_systm.h>
 // #include <netinet/ip.h>
@@ -144,7 +144,7 @@ pub const _FILE_OFFSET_BITS: u32 = 64;
 // #include <dirent.h>
 // #ifndef HAVE_LINUX_NETWORK
 // #  include <net/if_dl.h>
-// #endif
+// 
 
 // #if defined(HAVE_LINUX_NETWORK)
 // #include <linux/version.h>
@@ -161,15 +161,15 @@ pub const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
 // #include <sys/prctl.h>
 // #elif defined(HAVE_SOLARIS_NETWORK)
 // #include <priv.h>
-// #endif
+// 
 
 /* Backwards compat with 2.83 */
 // #if defined(HAVE_NETTLEHASH)
 // #  define HAVE_CRYPTOHASH
-// #endif
+// 
 // #if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 // #  include <nettle/nettle-meta.h>
-// #endif
+// 
 
 /* daemon is function in the C library.... */
 // #define daemon dnsmasq_daemon
@@ -424,7 +424,7 @@ pub const TXT_STAT_MISSES: u32 = 4;
 pub const TXT_STAT_HITS: u32 = 5;
 pub const TXT_STAT_AUTH: u32 = 6;
 pub const TXT_STAT_SERVERS: u32 = 7;
-// #endif
+// 
 
 // struct txt_record {
 //   char *name;
@@ -809,10 +809,10 @@ pub struct mysubnet {
 //   int is_default, logged;
 //   time_t mtime;
 //   char *name;
-// #ifdef HAVE_INOTIFY
+//  HAVE_INOTIFY
 //   int wd; /* inotify watch descriptor */
 //   char *file; /* pointer to file part if path */
-// #endif
+// 
 // };
 pub struct resolvc {
     // next
@@ -836,9 +836,9 @@ pub const AH_DHCP_OPT: u32 = 32;
 //   struct hostsfile *next;
 //   int flags;
 //   char *fname;
-// #ifdef HAVE_INOTIFY
+//  HAVE_INOTIFY
 //   int wd; /* inotify watch descriptor */
-// #endif
+// 
 //   unsigned int index; /* matches to cache entries for logging */
 // };
 pub struct hostsfile {
@@ -902,13 +902,13 @@ pub const HASH_SIZE: u32 = 32; /* SHA-256 digest size */
 //   int forwardall, flags;
 //   time_t time;
 //   unsigned char *hash[HASH_SIZE];
-// #ifdef HAVE_DNSSEC 
+//  HAVE_DNSSEC 
 //   int class, work_counter;
 //   struct blockdata *stash; /* Saved reply, whilst we validate */
 //   size_t stash_len;
 //   struct frec *dependent; /* Query awaiting internally-generated DNSKEY or DS query */
 //   struct frec *blocking_query; /* Query which is blocking us. */
-// #endif
+// 
 //   struct frec *next;
 // };
 pub struct frec_src {
@@ -977,9 +977,9 @@ pub const LEASE_EXP_CHANGED: u32 = 256;  /* Lease expiry time changed */
 //   char *old_hostname;    /* hostname before it moved to another lease */
 //   int flags;
 //   time_t expires;        /* lease expiry */
-// #ifdef HAVE_BROKEN_RTC
+//  HAVE_BROKEN_RTC
 //   unsigned int length;
-// #endif
+// 
 //   int hwaddr_len, hwaddr_type;
 //   unsigned char hwaddr[DHCP_CHADDR_MAX]; 
 //   struct in_addr addr, override, giaddr;
@@ -988,7 +988,7 @@ pub const LEASE_EXP_CHANGED: u32 = 256;  /* Lease expiry time changed */
 //   int last_interface;
 //   int new_interface;     /* save possible originated interface */
 //   int new_prefixlen;     /* and its prefix length */
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 //   struct in6_addr addr6;
 //   unsigned int iaid;
 //   struct slaac_address {
@@ -998,7 +998,7 @@ pub const LEASE_EXP_CHANGED: u32 = 256;  /* Lease expiry time changed */
 //     struct slaac_address *next;
 //   } *slaac_address;
 //   int vendorclass_count;
-// #endif
+// 
 //   struct dhcp_lease *next;
 // };
 
@@ -1099,9 +1099,9 @@ pub struct hwaddr_config {
 //   char *hostname, *domain;
 //   struct dhcp_netid_list *netid;
 //   struct dhcp_netid *filter;
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 //   struct addrlist *addr6;
-// #endif
+// 
 //   struct in_addr addr;
 //   time_t decline_time;
 //   unsigned int lease_time;
@@ -1318,10 +1318,10 @@ pub struct ra_interface {
 // struct shared_network {
 //   int if_index;
 //   struct in_addr match_addr, shared_addr;
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 //   /* shared_addr == 0 for IP6 entries. */
 //   struct in6_addr match_addr6, shared_addr6;
-// #endif
+// 
 //   struct shared_network *next;
 // };
 pub struct shared_network {
@@ -1653,12 +1653,12 @@ pub struct DnsmasqDaemon {
   pub soa_expiry: libc::c_ulong,
   // u32 metrics[__METRIC_MAX];
   pub metrics: [u32;__METRIC_MAX],
-// #ifdef HAVE_DNSSEC
+//  HAVE_DNSSEC
   // struct ds_config *ds;
   pub ds: Vec<DsConfig>,
   // char *timestamp_file;
   pub timestamp_file: String,
-// #endif
+// 
   /* globally used stuff for DNS */
   // char *packet; /* packet buffer */
   pub packet: String,
@@ -1666,7 +1666,7 @@ pub struct DnsmasqDaemon {
   pub packet_buff_sz: i32,
   // char *namebuff; /* MAXDNAME size buffer */
   pub namebuff: String,
-// #ifdef HAVE_DNSSEC
+//  HAVE_DNSSEC
   // char *keyname; /* MAXDNAME size buffer */
   pub keyname: String,
   // char *workspacename; /* ditto */
@@ -1679,7 +1679,7 @@ pub struct DnsmasqDaemon {
   pub dnssec_no_time_check: i32,
   // int back_to_the_future;
   pub back_to_the_future: i32,
-  // #endif
+  // 
   // struct frec *frec_list;
   pub frec_list: frec,
   // struct frec_src *free_frec_src;
@@ -1725,10 +1725,10 @@ pub struct DnsmasqDaemon {
   pub dhcpfd: i32,
   pub helperfd: i32,
   pub pxefd: i32, 
-// #ifdef HAVE_INOTIFY
+//  HAVE_INOTIFY
   // int inotifyfd;
   pub inotifyfd: i32,
-// #endif
+// 
 // #if defined(HAVE_LINUX_NETWORK)
   // int netlinkfd, kernel_version;
   pub netlinkfd: i32,
@@ -1738,7 +1738,7 @@ pub struct DnsmasqDaemon {
   pub dhcp_raw_fd: i32,
   pub dhcp_icmp_fd: i32,
   pub routefd: i32,
-// #endif
+// 
   // struct iovec dhcp_packet;
   pub dhcp_packet: Vec<u8>,
   // char *dhcp_buff, *dhcp_buff2, *dhcp_buff3;
@@ -1753,7 +1753,7 @@ pub struct DnsmasqDaemon {
   pub bridges: dhcp_bridge,
   // struct shared_network *shared_networks;
   pub shared_networks: shared_network,
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
   // int duid_len;
   pub duid_len: i32,
   //  unsigned char *duid;
@@ -1763,21 +1763,21 @@ pub struct DnsmasqDaemon {
   // int dhcp6fd, icmp6fd;
   pub dhcp6fd: i32,
   pub icmp6fd: i32,
-// #endif
+// 
   /* DBus stuff */
   /* void * here to avoid depending on dbus headers outside dbus.c */
   // void *dbus;
   pub dbus: *mut libc::c_void,
-// #ifdef HAVE_DBUS
+//  HAVE_DBUS
   // struct watch *watches;
   pub watches: watch,
-// #endif
+// 
   /* UBus stuff */
-// #ifdef HAVE_UBUS
+//  HAVE_UBUS
   /* void * here to avoid depending on ubus headers outside ubus.c */
   // void *ubus;
   pub ubus: *mut libc::c_void,
-// #endif
+// 
 
   /* TFTP stuff */
   // struct tftp_transfer *tftp_trans, *tftp_done_trans;
@@ -1788,7 +1788,7 @@ pub struct DnsmasqDaemon {
   pub addrbuff: String,
   // char *addrbuff2; /* only allocated when OPT_EXTRALOG */
   pub addrbuff2: String,
-// #ifdef HAVE_DUMPFILE
+//  HAVE_DUMPFILE
   /* file for packet dumps. */
   // int dumpfd;
   pub dumpfd: i32,
@@ -1855,7 +1855,7 @@ pub struct DnsmasqDaemon {
   pub opt_single_port: bool,
   pub opt_lease_renew: bool,
   pub opt_last: bool
-// #endif
+// 
 }
 
 
@@ -1883,7 +1883,7 @@ pub struct DnsmasqDaemon {
 // void dump_cache(time_t now);
 // #ifndef NO_ID
 // int cache_make_stat(struct txt_record *t);
-// #endif
+// 
 // char *cache_get_name(struct crec *crecp);
 // char *cache_get_cname_target(struct crec *crecp);
 // struct crec *cache_enumerate(int init);
@@ -1935,12 +1935,12 @@ pub struct DnsmasqDaemon {
 // int private_net(struct in_addr addr, int ban_localhost);
 
 /* auth.c */
-// #ifdef HAVE_AUTH
+//  HAVE_AUTH
 // size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, 
 //        time_t now, union mysockaddr *peer_addr, int local_query,
 //        int do_bit, int have_pseudoheader);
 // int in_zone(struct auth_zone *zone, char *name, char **cut);
-// #endif
+// 
 
 /* dnssec.c */
 // size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char *name, int class, int type, int edns_pktsz);
@@ -2000,9 +2000,9 @@ pub struct DnsmasqDaemon {
 // void close_fds(long max_fd, int spare1, int spare2, int spare3);
 // int wildcard_match(const char* wildcard, const char* match);
 // int wildcard_matchn(const char* wildcard, const char* match, int num);
-// #ifdef HAVE_LINUX_NETWORK
+//  HAVE_LINUX_NETWORK
 // int kernel_version(void);
-// #endif
+// 
 
 /* log.c */
 // void die(char *message, char *arg1, int exit_code) ATTRIBUTE_NORETURN;
@@ -2069,16 +2069,16 @@ pub struct DnsmasqDaemon {
 // int fix_fd(int fd);
 // int tcp_interface(int fd, int af);
 // int set_ipv6pktinfo(int fd);
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // void join_multicast(int dienow);
-// #endif
+// 
 // #if defined(HAVE_LINUX_NETWORK) || defined(HAVE_BSD_NETWORK)
 // void newaddress(time_t now);
-// #endif
+// 
 
 
 /* dhcp.c */
-// #ifdef HAVE_DHCP
+//  HAVE_DHCP
 // void dhcp_init(void);
 // void dhcp_packet(time_t now, int pxe_fd);
 // struct dhcp_context *address_available(struct dhcp_context *context, 
@@ -2095,15 +2095,15 @@ pub struct DnsmasqDaemon {
 // void dhcp_read_ethers(void);
 // struct dhcp_config *config_find_by_address(struct dhcp_config *configs, struct in_addr addr);
 // char *host_from_dns(struct in_addr addr);
-// #endif
+// 
 
 /* lease.c */
-// #ifdef HAVE_DHCP
+//  HAVE_DHCP
 // void lease_update_file(time_t now);
 // void lease_update_dns(int force);
 // void lease_init(time_t now);
 // struct dhcp_lease *lease4_allocate(struct in_addr addr);
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // struct dhcp_lease *lease6_allocate(struct in6_addr *addrp, int lease_type);
 // struct dhcp_lease *lease6_find(unsigned char *clid, int clid_len, 
 //              int lease_type, unsigned int iaid, struct in6_addr *addr);
@@ -2116,7 +2116,7 @@ pub struct DnsmasqDaemon {
 // void lease_update_slaac(time_t now);
 // void lease_set_iaid(struct dhcp_lease *lease, unsigned int iaid);
 // void lease_make_duid(time_t now);
-// #endif
+// 
 // void lease_set_hwaddr(struct dhcp_lease *lease, const unsigned char *hwaddr,
 //           const unsigned char *clid, int hw_len, int hw_type,
 //           int clid_len, time_t now, int force);
@@ -2132,73 +2132,73 @@ pub struct DnsmasqDaemon {
 // int do_script_run(time_t now);
 // void rerun_scripts(void);
 // void lease_find_interfaces(time_t now);
-// #ifdef HAVE_SCRIPT
+//  HAVE_SCRIPT
 // void lease_add_extradata(struct dhcp_lease *lease, unsigned char *data, 
 //        unsigned int len, int delim);
-// #endif
-// #endif
+// 
+// 
 
 /* rfc2131.c */
-// #ifdef HAVE_DHCP
+//  HAVE_DHCP
 // size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 //       size_t sz, time_t now, int unicast_dest, int loopback,
 //       int *is_inform, int pxe, struct in_addr fallback, time_t recvtime);
 // unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr, 
 //              int clid_len, unsigned char *clid, int *len_out);
-// #endif
+// 
 
 /* dnsmasq.c */
-// #ifdef HAVE_DHCP
+//  HAVE_DHCP
 // int make_icmp_sock(void);
 // int icmp_ping(struct in_addr addr);
 // int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
-// #endif
+// 
 // void queue_event(int event);
 // void send_alarm(time_t event, time_t now);
 // void send_event(int fd, int event, int data, char *msg);
 // void clear_cache_and_reload(time_t now);
 
 /* netlink.c */
-// #ifdef HAVE_LINUX_NETWORK
+//  HAVE_LINUX_NETWORK
 // char *netlink_init(void);
 // void netlink_multicast(void);
-// #endif
+// 
 
 /* bpf.c */
-// #ifdef HAVE_BSD_NETWORK
+//  HAVE_BSD_NETWORK
 // void init_bpf(void);
 // void send_via_bpf(struct dhcp_packet *mess, size_t len,
 //       struct in_addr iface_addr, struct ifreq *ifr);
 // void route_init(void);
 // void route_sock(void);
-// #endif
+// 
 
 /* bpf.c or netlink.c */
 // int iface_enumerate(int family, void *parm, int (callback)());
 
 /* dbus.c */
-// #ifdef HAVE_DBUS
+//  HAVE_DBUS
 // char *dbus_init(void);
 // void check_dbus_listeners(void);
 // void set_dbus_listeners(void);
 // #  ifdef HAVE_DHCP
 // void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname);
 // #  endif
-// #endif
+// 
 
 /* ubus.c */
-// #ifdef HAVE_UBUS
+//  HAVE_UBUS
 // void ubus_init(void);
 // void set_ubus_listeners(void);
 // void check_ubus_listeners(void);
 // void ubus_event_bcast(const char *type, const char *mac, const char *ip, const char *name, const char *interface);
-// #endif
+// 
 
 /* ipset.c */
-// #ifdef HAVE_IPSET
+//  HAVE_IPSET
 // void ipset_init(void);
 // int add_to_ipset(const char *setname, const union all_addr *ipaddr, int flags, int remove);
-// #endif
+// 
 
 /* helper.c */
 // #if defined(HAVE_SCRIPT)
@@ -2206,29 +2206,29 @@ pub struct DnsmasqDaemon {
 // void helper_write(void);
 // void queue_script(int action, struct dhcp_lease *lease, 
 //       char *hostname, time_t now);
-// #ifdef HAVE_TFTP
+//  HAVE_TFTP
 // void queue_tftp(off_t file_len, char *filename, union mysockaddr *peer);
-// #endif
+// 
 // void queue_arp(int action, unsigned char *mac, int maclen,
 //          int family, union all_addr *addr);
 // int helper_buf_empty(void);
-// #endif
+// 
 
 /* tftp.c */
-// #ifdef HAVE_TFTP
+//  HAVE_TFTP
 // void tftp_request(struct listener *listen, time_t now);
 // void check_tftp_listeners(time_t now);
 // int do_tftp_script_run(void);
-// #endif
+// 
 
 /* conntrack.c */
-// #ifdef HAVE_CONNTRACK
+//  HAVE_CONNTRACK
 // int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr,
 //           int istcp, unsigned int *markp);
-// #endif
+// 
 
 /* dhcp6.c */
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // void dhcp6_init(void);
 // void dhcp6_packet(time_t now);
 // struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned char *clid, int clid_len, int temp_addr,
@@ -2247,10 +2247,10 @@ pub struct DnsmasqDaemon {
 // void dhcp_construct_contexts(time_t now);
 // void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, 
 //         unsigned int *maclenp, unsigned int *mactypep, time_t now);
-// #endif
+// 
   
 /* rfc3315.c */
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *iface_name,  
 //          struct in6_addr *fallback, struct in6_addr *ll_addr, struct in6_addr *ula_addr,
 //          size_t sz, struct in6_addr *client_addr, time_t now);
@@ -2258,10 +2258,10 @@ pub struct DnsmasqDaemon {
 //          u32 scope_id, time_t now);
 
 // unsigned short relay_reply6( struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface);
-// #endif
+// 
 
 /* dhcp-common.c */
-// #ifdef HAVE_DHCP
+//  HAVE_DHCP
 // void dhcp_common_init(void);
 // ssize_t recv_dhcp_packet(int fd, struct msghdr *msg);
 // struct dhcp_netid *run_tag_if(struct dhcp_netid *tags);
@@ -2282,19 +2282,19 @@ pub struct DnsmasqDaemon {
 //         int hw_type, char *hostname,
 //         struct dhcp_netid *filter);
 // int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, int type);
-// #ifdef HAVE_LINUX_NETWORK
+//  HAVE_LINUX_NETWORK
 // char *whichdevice(void);
 // void bindtodevice(char *device, int fd);
-// #endif
+// 
 // #  ifdef HAVE_DHCP6
 // void display_opts6(void);
 // #  endif
 // void log_context(int family, struct dhcp_context *context);
 // void log_relay(int family, struct dhcp_relay *relay);
-// #endif
+// 
 
 /* outpacket.c */
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // void end_opt6(int container);
 // void reset_counter(void);
 // int save_counter(int newval);
@@ -2305,35 +2305,35 @@ pub struct DnsmasqDaemon {
 // void put_opt6_short(unsigned int val);
 // void put_opt6_char(unsigned int val);
 // void put_opt6_string(char *s);
-// #endif
+// 
 
 /* radv.c */
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // void ra_init(time_t now);
 // void icmp6_packet(time_t now);
 // time_t periodic_ra(time_t now);
 // void ra_start_unsolicited(time_t now, struct dhcp_context *context);
-// #endif
+// 
 
 /* slaac.c */ 
-// #ifdef HAVE_DHCP6
+//  HAVE_DHCP6
 // void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force);
 // time_t periodic_slaac(time_t now, struct dhcp_lease *leases);
 // void slaac_ping_reply(struct in6_addr *sender, unsigned char *packet, char *interface, struct dhcp_lease *leases);
-// #endif
+// 
 
 /* loop.c */
-// #ifdef HAVE_LOOP
+//  HAVE_LOOP
 // void loop_send_probes(void);
 // int detect_loop(char *query, int type);
-// #endif
+// 
 
 /* inotify.c */
-// #ifdef HAVE_INOTIFY
+//  HAVE_INOTIFY
 // void inotify_dnsmasq_init(void);
 // int inotify_check(time_t now);
 // void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revhashsz);
-// #endif
+// 
 
 /* poll.c */
 // void poll_reset(void);
@@ -2361,10 +2361,10 @@ pub struct DnsmasqDaemon {
 // int do_arp_script_run(void);
 
 /* dump.c */
-// #ifdef HAVE_DUMPFILE
+//  HAVE_DUMPFILE
 // void dump_init(void);
 // void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, union mysockaddr *dst);
-// #endif
+// 
 
 
 // struct passwd {

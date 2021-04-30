@@ -89,7 +89,7 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
 	    if (isExtract)
 	      {
 		unsigned char c = *p;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 		if (daemon.opt_dnssec_valid)
 		  {
 		    if (c == 0 || c == '.' || c == NAME_ESCAPE)
@@ -101,7 +101,7 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
 		      *cp++ = c; 
 		  }
 		else
-#endif
+
 		if (c != 0 && c != '.')
 		  *cp++ = c;
 		else
@@ -118,10 +118,10 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
 		    cp++;
 		    if (c1 >= 'A' && c1 <= 'Z')
 		      c1 += 'a' - 'A';
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 		    if (daemon.opt_dnssec_valid && c1 == NAME_ESCAPE)
 		      c1 = (*cp++)-1;
-#endif
+
 		    
 		    if (c2 >= 'A' && c2 <= 'Z')
 		      c2 += 'a' - 'A';
@@ -537,11 +537,11 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
   int i, j, qtype, qclass, aqtype, aqclass, ardlen, res, searched_soa = 0;
   unsigned long ttl = 0;
   union all_addr addr;
-#ifdef HAVE_IPSET
+ HAVE_IPSET
   char **ipsets_cur;
-#else
+
   (void)ipsets; /* unused */
-#endif
+
 
   
   cache_start_insert();
@@ -556,12 +556,12 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 	{
 	  if (secure)
 	    return 0;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 	  if (daemon.opt_dnssec_valid)
 	    for (i = 0; i < ntohs(header.ancount); i++)
 	      if (daemon.rr_status[i] != 0)
 		return 0;
-#endif
+
 	}
     }
   
@@ -573,9 +573,9 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
       int found = 0, cname_count = CNAME_CHAIN;
       struct crec *cpp = NULL;
       int flags = RCODE(header) == NXDOMAIN ? F_NXDOMAIN : 0;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
       int cname_short = 0;
-#endif
+
       unsigned long cttl = ULONG_MAX, attl;
 
       namep = p;
@@ -631,7 +631,7 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 		    {
 		      if (!extract_name(header, qlen, &p1, name, 1, 0))
 			return 0;
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 		      if (daemon.opt_dnssec_valid && daemon.rr_status[j] != 0)
 			{
 			  /* validated RR anywhere in CNAME chain, don't cache. */
@@ -643,15 +643,15 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 			  if (daemon.rr_status[j] < cttl)
 			    cttl = daemon.rr_status[j];
 			}
-#endif
+
 
 		      if (aqtype == T_CNAME)
 			{
 			  if (!cname_count--)
 			    return 0; /* looped CNAMES, we can't cache. */
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 			  cname_short = 1;
-#endif
+
 			  goto cname_loop;
 			}
 		      
@@ -721,7 +721,7 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 	      
 	      if (aqclass == C_IN && res != 2 && (aqtype == T_CNAME || aqtype == qtype))
 		{
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 		  if (daemon.opt_dnssec_valid && daemon.rr_status[j] != 0)
 		    {
 		      secflag = F_DNSSECOK;
@@ -730,7 +730,7 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 		      if (daemon.rr_status[j] < attl)
 			attl = daemon.rr_status[j];
 		    }
-#endif		  
+		  
 		  if (aqtype == T_CNAME)
 		    {
 		      if (!cname_count--)
@@ -819,7 +819,7 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 				}
 			    }
 
-#ifdef HAVE_IPSET
+ HAVE_IPSET
 			  if (ipsets && (flags & (F_IPV4 | F_IPV6)))
 			    {
 			      ipsets_cur = ipsets;
@@ -829,7 +829,7 @@ int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t
 				  add_to_ipset(*ipsets_cur++, &addr, flags, 0);
 				}
 			    }
-#endif
+
 			}
 		      
 		      newc = cache_insert(name, &addr, C_IN, now, attl, flags | F_FORWARD | secflag);
@@ -1385,7 +1385,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 			  if (!cache_make_stat(t))
 			    ok = 0;
 			}
-#endif
+
 		      if (ok)
 			{
 			  log_query(F_CONFIG | F_RRNAME, name, NULL, "<TXT>");

@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_LOOP
+ HAVE_LOOP
 static ssize_t loop_make_probe(u32 uid);
 
 void loop_send_probes()
@@ -114,4 +114,4 @@ int detect_loop(char *query, int type)
   return 0;
 }
 
-#endif
+

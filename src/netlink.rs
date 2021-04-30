@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_LINUX_NETWORK
+ HAVE_LINUX_NETWORK
 
 #include <linux/types.h>
 #include <linux/netlink.h>
@@ -25,11 +25,11 @@
 /* Blergh. Radv does this, so that's our excuse. */
 #ifndef SOL_NETLINK
 pub const SOL_NETLINK: u32 = 270;
-#endif
+
 
 #ifndef NETLINK_NO_ENOBUFS
 pub const NETLINK_NO_ENOBUFS: u32 = 5;
-#endif
+
 
 /* linux 2.6.19 buggers up the headers, patch it up here. */ 
 #ifndef IFA_RTA
@@ -37,11 +37,11 @@ pub const NETLINK_NO_ENOBUFS: u32 = 5;
        ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
 
 #  include <linux/if_addr.h>
-#endif
+
 
 #ifndef NDA_RTA
 #  define NDA_RTA(r) ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ndmsg)))) 
-#endif 
+ 
 
 
 static struct iovec iov;
@@ -59,16 +59,16 @@ char *netlink_init(void)
   addr.nl_pad = 0;
   addr.nl_pid = 0; /* autobind */
   addr.nl_groups = RTMGRP_IPV4_ROUTE;
-  if (option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_cleverbind)
     addr.nl_groups |= RTMGRP_IPV4_IFADDR;  
   addr.nl_groups |= RTMGRP_IPV6_ROUTE;
-  if (option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_cleverbind)
     addr.nl_groups |= RTMGRP_IPV6_IFADDR;
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (daemon.doing_ra || daemon.doing_dhcp6)
     addr.nl_groups |= RTMGRP_IPV6_IFADDR;
-#endif
+
   
   /* May not be able to have permission to set multicast groups don't die in that case */
   if ((daemon.netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) != -1)
@@ -83,7 +83,7 @@ char *netlink_init(void)
   
   if (daemon.netlinkfd == -1 || 
       getsockname(daemon.netlinkfd, (struct sockaddr *)&addr, &slen) == -1)
-    die(_("cannot create netlink socket: {}"), NULL, EC_MISC);
+    die(format!("cannot create netlink socket: {}"), NULL, EC_MISC);
   
   
   /* save pid assigned by bind() and retrieved by getsockname() */ 
@@ -94,7 +94,7 @@ char *netlink_init(void)
   
   if (daemon.kernel_version >= KERNEL_VERSION(2,6,30) &&
       setsockopt(daemon.netlinkfd, SOL_NETLINK, NETLINK_NO_ENOBUFS, &opt, sizeof(opt)) == -1)
-    return _("warning: failed to set NETLINK_NO_ENOBUFS on netlink socket");
+    return format!("warning: failed to set NETLINK_NO_ENOBUFS on netlink socket");
   
   return NULL;
 }
@@ -313,7 +313,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	      if (!((*callback)(neigh.ndm_family, inaddr, mac, maclen, parm)))
 		callback_ok = 0;
 	  }
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 	else if (h.nlmsg_type == RTM_NEWLINK && family == AF_LOCAL)
 	  {
 	    struct ifinfomsg *link =  NLMSG_DATA(h);
@@ -337,7 +337,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		!((*callback)((int)link.ifi_index, (unsigned int)link.ifi_type, mac, maclen, parm)))
 	      callback_ok = 0;
 	  }
-#endif
+
     }
 }
 
@@ -366,7 +366,7 @@ static void nl_async(struct nlmsghdr *h)
     {
       struct nlmsgerr *err = NLMSG_DATA(h);
       if (err.error != 0)
-	my_syslog(LOG_ERR, _("netlink returns error: {}"), strerror(-(err.error)));
+	my_syslog(LOG_ERR, format!("netlink returns error: {}"), strerror(-(err.error)));
     }
   else if (h.nlmsg_pid == 0 && h.nlmsg_type == RTM_NEWROUTE) 
     {
@@ -385,6 +385,6 @@ static void nl_async(struct nlmsghdr *h)
   else if (h.nlmsg_type == RTM_NEWADDR || h.nlmsg_type == RTM_DELADDR) 
     queue_event(EVENT_NEWADDR);
 }
-#endif
+
 
       

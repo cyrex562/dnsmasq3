@@ -37,7 +37,7 @@ static unsigned char *digest;
 void hash_questions_init(void)
 {
   if (!(hash = hash_find("sha256")))
-    die(_("Failed to create SHA-256 hash object"), NULL, EC_MISC);
+    die(format!("Failed to create SHA-256 hash object"), NULL, EC_MISC);
 
   ctx = safe_malloc(hash.context_size);
   digest = safe_malloc(hash.digest_size);
@@ -74,7 +74,7 @@ unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name
   return digest;
 }
 
-#else /* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
+ /* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
 
 pub const SHA256_BLOCK_SIZE: u32 = 32;            // SHA256 outputs a 32 byte digest
 typedef unsigned char BYTE;             // 8-bit byte
@@ -281,4 +281,4 @@ static void sha256_final(SHA256_CTX *ctx, BYTE hash[])
     }
 }
 
-#endif
+

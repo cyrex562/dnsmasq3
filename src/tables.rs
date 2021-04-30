@@ -58,7 +58,7 @@ void ipset_init(void)
   if (dev == -1)
     {
       err(1, "{}", pf_device);
-      die (_("failed to access pf devices: {}"), NULL, EC_MISC);
+      die (format!("failed to access pf devices: {}"), NULL, EC_MISC);
     }
 }
 
@@ -71,7 +71,7 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr,
 
   if (dev == -1) 
     {
-      my_syslog(LOG_ERR, _("warning: no opened pf devices {}"), pf_device);
+      my_syslog(LOG_ERR, format!("warning: no opened pf devices {}"), pf_device);
       return -1;
     }
 
@@ -79,7 +79,7 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr,
   table.pfrt_flags |= PFR_TFLAG_PERSIST;
   if (strlen(setname) >= PF_TABLE_NAME_SIZE)
     {
-      my_syslog(LOG_ERR, _("error: cannot use table name {}"), setname);
+      my_syslog(LOG_ERR, format!("error: cannot use table name {}"), setname);
       errno = ENAMETOOLONG;
       return -1;
     }
@@ -87,7 +87,7 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr,
   if (strlcpy(table.pfrt_name, setname,
 	      sizeof(table.pfrt_name)) >= sizeof(table.pfrt_name)) 
     {
-      my_syslog(LOG_ERR, _("error: cannot strlcpy table name {}"), setname);
+      my_syslog(LOG_ERR, format!("error: cannot strlcpy table name {}"), setname);
       return -1;
     }
   
@@ -98,14 +98,14 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr,
   io.pfrio_size = 1;
   if (ioctl(dev, DIOCRADDTABLES, &io))
     {
-      my_syslog(LOG_WARNING, _("IPset: error:{}"), pfr_strerror(errno));
+      my_syslog(LOG_WARNING, format!("IPset: error:{}"), pfr_strerror(errno));
       
       return -1;
     }
   
   table.pfrt_flags &= ~PFR_TFLAG_PERSIST;
   if (io.pfrio_nadd)
-    my_syslog(LOG_INFO, _("info: table created"));
+    my_syslog(LOG_INFO, format!("info: table created"));
  
   bzero(&addr, sizeof(addr));
 
@@ -130,15 +130,15 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr,
   io.pfrio_size = 1;
   if (ioctl(dev, ( remove ? DIOCRDELADDRS : DIOCRADDADDRS ), &io)) 
     {
-      my_syslog(LOG_WARNING, _("warning: DIOCR{}ADDRS: {}"), ( remove ? "DEL" : "ADD" ), pfr_strerror(errno));
+      my_syslog(LOG_WARNING, format!("warning: DIOCR{}ADDRS: {}"), ( remove ? "DEL" : "ADD" ), pfr_strerror(errno));
       return -1;
     }
   
-  my_syslog(LOG_INFO, _("{} addresses {}"),
+  my_syslog(LOG_INFO, format!("{} addresses {}"),
             io.pfrio_nadd, ( remove ? "removed" : "added" ));
   
   return io.pfrio_nadd;
 }
 
 
-#endif
+

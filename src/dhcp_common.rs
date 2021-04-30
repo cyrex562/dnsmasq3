@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 
 void dhcp_common_init(void)
 {
@@ -30,10 +30,10 @@ void dhcp_common_init(void)
      sizeof(struct dhcp_packet) is as good an initial size as any,
      even for v6 */
   expand_buf(&daemon.dhcp_packet, sizeof(struct dhcp_packet));
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (daemon.dhcp6)
     expand_buf(&daemon.outpacket, sizeof(struct dhcp_packet));
-#endif
+
 }
 
 ssize_t recv_dhcp_packet(int fd, struct msghdr *msg)
@@ -151,7 +151,7 @@ struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *con
 	if (!tmp)
 	  opt.flags |= DHOPT_TAGOK;
 	else if (!tmp.netid)
-	  my_syslog(MS_DHCP | LOG_WARNING, _("Ignoring duplicate dhcp-option {}"), tmp.opt); 
+	  my_syslog(MS_DHCP | LOG_WARNING, format!("Ignoring duplicate dhcp-option {}"), tmp.opt); 
       }
 
   /* Finally, eliminate duplicate options later in the chain, and therefore earlier in the config file. */
@@ -228,7 +228,7 @@ void log_tags(struct dhcp_netid *netid, u32 xid)
 		strncat (s, ", ", (MAXDNAME-1) - strlen(s));
 	    }
 	}
-      my_syslog(MS_DHCP | LOG_INFO, _("{} tags: {}"), xid, s);
+      my_syslog(MS_DHCP | LOG_INFO, format!("{} tags: {}"), xid, s);
     } 
 }   
   
@@ -281,7 +281,7 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
   if (!context) /* called via find_config() from lease_update_from_configs() */
     return 1; 
   
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (context.flags & CONTEXT_V6)
     {
        struct addrlist *addr_list;
@@ -300,7 +300,7 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
 	    }
     }
   else
-#endif
+
     {
       if (!(config.flags & CONFIG_ADDR))
 	return 1;
@@ -414,15 +414,15 @@ void dhcp_update_configs(struct dhcp_config *configs)
   {
     if (config.flags & CONFIG_ADDR_HOSTS)
       config.flags &= ~(CONFIG_ADDR | CONFIG_ADDR_HOSTS);
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
     if (config.flags & CONFIG_ADDR6_HOSTS)
       config.flags &= ~(CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS);
-#endif
+
   }
 
-#ifdef HAVE_DHCP6 
+ HAVE_DHCP6 
  again:  
-#endif
+
 
   if (daemon.port != 0)
     for (config = configs; config; config = config.next)
@@ -430,13 +430,13 @@ void dhcp_update_configs(struct dhcp_config *configs)
 	int conflags = CONFIG_ADDR;
 	int cacheflags = F_IPV4;
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 	if (prot == AF_INET6)
 	  {
 	    conflags = CONFIG_ADDR6;
 	    cacheflags = F_IPV6;
 	  }
-#endif
+
 	if (!(config.flags & conflags) &&
 	    (config.flags & CONFIG_NAME) && 
 	    (crec = cache_find_by_name(NULL, config.hostname, 0, cacheflags)) &&
@@ -450,7 +450,7 @@ void dhcp_update_configs(struct dhcp_config *configs)
 		if (!crec)
 		  continue; /* should be never */
 		inet_ntop(prot, &crec.addr, daemon.addrbuff, ADDRSTRLEN);
-		my_syslog(MS_DHCP | LOG_WARNING, _("{} has more than one address in hostsfile, using {} for DHCP"), 
+		my_syslog(MS_DHCP | LOG_WARNING, format!("{} has more than one address in hostsfile, using {} for DHCP"), 
 			  config.hostname, daemon.addrbuff);
 	      }
 	    
@@ -462,7 +462,7 @@ void dhcp_update_configs(struct dhcp_config *configs)
 		continue;
 	      }
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 	    if (prot == AF_INET6 && 
 		(!(conf_tmp = config_find_by_address6(configs, NULL, 0, &crec.addr.addr6)) || conf_tmp == config))
 	      {
@@ -481,27 +481,27 @@ void dhcp_update_configs(struct dhcp_config *configs)
 	    
 		continue;
 	      }
-#endif
+
 
 	    inet_ntop(prot, &crec.addr, daemon.addrbuff, ADDRSTRLEN);
-	    my_syslog(MS_DHCP | LOG_WARNING, _("duplicate IP address {} ({}) in dhcp-config directive"), 
+	    my_syslog(MS_DHCP | LOG_WARNING, format!("duplicate IP address {} ({}) in dhcp-config directive"), 
 		      daemon.addrbuff, config.hostname);
 	    
 	    
 	  }
       }
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (prot == AF_INET)
     {
       prot = AF_INET6;
       goto again;
     }
-#endif
+
 
 }
 
-#ifdef HAVE_LINUX_NETWORK 
+ HAVE_LINUX_NETWORK 
 char *whichdevice(void)
 {
   /* If we are doing DHCP on exactly one interface, and running linux, do SO_BINDTODEVICE
@@ -548,9 +548,9 @@ void  bindtodevice(char *device, int fd)
   /* only allowed by root. */
   if (setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, device, len) == -1 &&
       errno != EPERM)
-    die(_("failed to set SO_BINDTODEVICE on DHCP socket: {}"), NULL, EC_BADNET);
+    die(format!("failed to set SO_BINDTODEVICE on DHCP socket: {}"), NULL, EC_BADNET);
 }
-#endif
+
 
 static const struct opttab_t {
   char *name;
@@ -632,7 +632,7 @@ static const struct opttab_t {
   { NULL, 0, 0 }
 };
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 static const struct opttab_t opttab6[] = {
   { "client-id", 1, OT_INTERNAL },
   { "server-id", 2, OT_INTERNAL },
@@ -663,7 +663,7 @@ static const struct opttab_t opttab6[] = {
   { "bootfile-param", 60, OT_CSTRING },
   { NULL, 0, 0 }
 };
-#endif
+
 
 
 
@@ -671,24 +671,24 @@ void display_opts(void)
 {
   int i;
   
-  printf(_("Known DHCP options:\n"));
+  printf(format!("Known DHCP options:\n"));
   
   for (i = 0; opttab[i].name; i++)
     if (!(opttab[i].size & OT_INTERNAL))
       printf("%3d {}\n", opttab[i].val, opttab[i].name);
 }
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 void display_opts6(void)
 {
   int i;
-  printf(_("Known DHCPv6 options:\n"));
+  printf(format!("Known DHCPv6 options:\n"));
   
   for (i = 0; opttab6[i].name; i++)
     if (!(opttab6[i].size & OT_INTERNAL))
       printf("%3d {}\n", opttab6[i].val, opttab6[i].name);
 }
-#endif
+
 
 int lookup_dhcp_opt(int prot, char *name)
 {
@@ -697,11 +697,11 @@ int lookup_dhcp_opt(int prot, char *name)
 
   (void)prot;
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (prot == AF_INET6)
     t = opttab6;
   else
-#endif
+
     t = opttab;
 
   for (i = 0; t[i].name; i++)
@@ -718,11 +718,11 @@ int lookup_dhcp_len(int prot, int val)
 
   (void)prot;
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (prot == AF_INET6)
     t = opttab6;
   else
-#endif
+
     t = opttab;
 
   for (i = 0; t[i].name; i++)
@@ -737,10 +737,10 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
   int o, i, j, nodecode = 0;
   const struct opttab_t *ot = opttab;
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (prot == AF_INET6)
     ot = opttab6;
-#endif
+
 
   for (o = 0; ot[o].name; o++)
     if (ot[o].val == opt)
@@ -754,10 +754,10 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		union all_addr addr;
 		int addr_len = INADDRSZ;
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 		if (prot == AF_INET6)
 		  addr_len = IN6ADDRSZ;
-#endif
+
 		for (buf[0]= 0, i = 0; i <= opt_len - addr_len; i += addr_len) 
 		  {
 		    if (i != 0)
@@ -775,7 +775,7 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		    if (isprint((int)c))
 		      buf[j++] = c;
 		  }
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 	    /* We don't handle compressed rfc1035 names, so no good in IPv4 land */
 	    else if ((ot[o].size & OT_RFC1035_NAME) && prot == AF_INET6)
 	      {
@@ -818,7 +818,7 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		      buf[j++] = ',';
 		  }
 	      }	      
-#endif
+
 	    else if ((ot[o].size & (OT_DEC | OT_TIME)) && opt_len != 0)
 	      {
 		unsigned int dec = 0;
@@ -866,7 +866,7 @@ void log_context(int family, struct dhcp_context *context)
   
   *p = 0;
     
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (family == AF_INET6)
     {
       struct in6_addr subnet = context.start6;
@@ -876,18 +876,18 @@ void log_context(int family, struct dhcp_context *context)
       start = &context.start6;
       end = &context.end6;
     }
-#endif
+
 
   if (family != AF_INET && (context.flags & CONTEXT_DEPRECATE))
-    strcpy(daemon.namebuff, _(", prefix deprecated"));
+    strcpy(daemon.namebuff, format!(", prefix deprecated"));
   else
     {
-      p += sprintf(p, _(", lease time "));
+      p += sprintf(p, format!(", lease time "));
       prettyprint_time(p, context.lease_time);
       p += strlen(p);
     }	
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (context.flags & CONTEXT_CONSTRUCTED)
     {
       char ifrn_name[IFNAMSIZ];
@@ -905,12 +905,12 @@ void log_context(int family, struct dhcp_context *context)
       
       sprintf(p, "template for {}", context.template_interface);  
     }
-#endif
+
      
   if (!(context.flags & CONTEXT_OLD) &&
       ((context.flags & CONTEXT_DHCP) || family == AF_INET)) 
     {
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
       if (context.flags & CONTEXT_RA_STATELESS)
 	{
 	  if (context.flags & CONTEXT_TEMPLATE)
@@ -919,22 +919,22 @@ void log_context(int family, struct dhcp_context *context)
 	    strcpy(daemon.dhcp_buff, daemon.addrbuff);
 	}
       else 
-#endif
+
 	inet_ntop(family, start, daemon.dhcp_buff, DHCP_BUFF_SZ);
       inet_ntop(family, end, daemon.dhcp_buff3, DHCP_BUFF_SZ);
       my_syslog(MS_DHCP | LOG_INFO, 
 		(context.flags & CONTEXT_RA_STATELESS) ? 
-		_("{} stateless on {}%.0s%.0s{}") :
+		format!("{} stateless on {}%.0s%.0s{}") :
 		(context.flags & CONTEXT_STATIC) ? 
-		_("{}, static leases only on %.0s{}{}%.0s") :
+		format!("{}, static leases only on %.0s{}{}%.0s") :
 		(context.flags & CONTEXT_PROXY) ?
-		_("{}, proxy on subnet %.0s{}%.0s%.0s") :
-		_("{}, IP range {} -- {}{}%.0s"),
+		format!("{}, proxy on subnet %.0s{}%.0s%.0s") :
+		format!("{}, IP range {} -- {}{}%.0s"),
 		(family != AF_INET) ? "DHCPv6" : "DHCP",
 		daemon.dhcp_buff, daemon.dhcp_buff3, daemon.namebuff, template);
     }
   
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
   if (context.flags & CONTEXT_TEMPLATE)
     {
       strcpy(daemon.addrbuff, context.template_interface);
@@ -942,11 +942,11 @@ void log_context(int family, struct dhcp_context *context)
     }
 
   if ((context.flags & CONTEXT_RA_NAME) && !(context.flags & CONTEXT_OLD))
-    my_syslog(MS_DHCP | LOG_INFO, _("DHCPv4-derived IPv6 names on {}{}"), daemon.addrbuff, template);
+    my_syslog(MS_DHCP | LOG_INFO, format!("DHCPv4-derived IPv6 names on {}{}"), daemon.addrbuff, template);
   
   if ((context.flags & CONTEXT_RA) || (option_bool(OPT_RA) && (context.flags & CONTEXT_DHCP) && family == AF_INET6)) 
-    my_syslog(MS_DHCP | LOG_INFO, _("router advertisement on {}{}"), daemon.addrbuff, template);
-#endif
+    my_syslog(MS_DHCP | LOG_INFO, format!("router advertisement on {}{}"), daemon.addrbuff, template);
+
 
 }
 
@@ -956,9 +956,9 @@ void log_relay(int family, struct dhcp_relay *relay)
   inet_ntop(family, &relay.server, daemon.namebuff, ADDRSTRLEN); 
 
   if (relay.interface)
-    my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from {} to {} via {}"), daemon.addrbuff, daemon.namebuff, relay.interface);
+    my_syslog(MS_DHCP | LOG_INFO, format!("DHCP relay from {} to {} via {}"), daemon.addrbuff, daemon.namebuff, relay.interface);
   else
-    my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from {} to {}"), daemon.addrbuff, daemon.namebuff);
+    my_syslog(MS_DHCP | LOG_INFO, format!("DHCP relay from {} to {}"), daemon.addrbuff, daemon.namebuff);
 }
    
-#endif
+

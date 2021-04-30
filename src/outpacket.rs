@@ -17,7 +17,7 @@
 
 #include "dnsmasq.h"
  
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 
 static size_t outpacket_counter;
 
@@ -115,4 +115,4 @@ void put_opt6_string(char *s)
   put_opt6(s, strlen(s));
 }
 
-#endif
+

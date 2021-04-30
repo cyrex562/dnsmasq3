@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_UBUS
+ HAVE_UBUS
 
 #include <libubus.h>
 
@@ -49,7 +49,7 @@ static void ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj)
 {
   (void)ctx;
 
-  my_syslog(LOG_DEBUG, _("UBus subscription callback: {} subscriber(s)"), obj.has_subscribers ? "1" : "0");
+  my_syslog(LOG_DEBUG, format!("UBus subscription callback: {} subscriber(s)"), obj.has_subscribers ? "1" : "0");
   notify = obj.has_subscribers;
 }
 
@@ -70,7 +70,7 @@ static void ubus_disconnect_cb(struct ubus_context *ubus)
   ret = ubus_reconnect(ubus, NULL);
   if (ret)
     {
-      my_syslog(LOG_ERR, _("Cannot reconnect to UBus: {}"), ubus_strerror(ret));
+      my_syslog(LOG_ERR, format!("Cannot reconnect to UBus: {}"), ubus_strerror(ret));
 
       ubus_destroy(ubus);
     }
@@ -86,7 +86,7 @@ void ubus_init()
     {
       if (!error_logged)
         {
-          my_syslog(LOG_ERR, _("Cannot initialize UBus: connection failed"));
+          my_syslog(LOG_ERR, format!("Cannot initialize UBus: connection failed"));
           error_logged = 1;
         }
 
@@ -100,7 +100,7 @@ void ubus_init()
     {
       if (!error_logged)
         {
-          my_syslog(LOG_ERR, _("Cannot add object to UBus: {}"), ubus_strerror(ret));
+          my_syslog(LOG_ERR, format!("Cannot add object to UBus: {}"), ubus_strerror(ret));
           error_logged = 1;
         }
       ubus_destroy(ubus);
@@ -111,7 +111,7 @@ void ubus_init()
   daemon.ubus = ubus;
   error_logged = 0;
 
-  my_syslog(LOG_INFO, _("Connected to system UBus"));
+  my_syslog(LOG_INFO, format!("Connected to system UBus"));
 }
 
 void set_ubus_listeners()
@@ -121,7 +121,7 @@ void set_ubus_listeners()
     {
       if (!error_logged)
         {
-          my_syslog(LOG_ERR, _("Cannot set UBus listeners: no connection"));
+          my_syslog(LOG_ERR, format!("Cannot set UBus listeners: no connection"));
           error_logged = 1;
         }
       return;
@@ -141,7 +141,7 @@ void check_ubus_listeners()
     {
       if (!error_logged)
         {
-          my_syslog(LOG_ERR, _("Cannot poll UBus listeners: no connection"));
+          my_syslog(LOG_ERR, format!("Cannot poll UBus listeners: no connection"));
           error_logged = 1;
         }
       return;
@@ -154,7 +154,7 @@ void check_ubus_listeners()
   
   if (poll_check(ubus.sock.fd, POLLHUP | POLLERR))
     {
-      my_syslog(LOG_INFO, _("Disconnecting from UBus"));
+      my_syslog(LOG_INFO, format!("Disconnecting from UBus"));
 
       ubus_destroy(ubus);
     }
@@ -198,8 +198,8 @@ void ubus_event_bcast(const char *type, const char *mac, const char *ip, const c
   
   ret = ubus_notify(ubus, &ubus_object, type, b.head, -1);
   if (!ret)
-    my_syslog(LOG_ERR, _("Failed to send UBus event: {}"), ubus_strerror(ret));
+    my_syslog(LOG_ERR, format!("Failed to send UBus event: {}"), ubus_strerror(ret));
 }
 
 
-#endif /* HAVE_UBUS */
+ /* HAVE_UBUS */

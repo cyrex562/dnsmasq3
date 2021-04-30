@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_TFTP
+ HAVE_TFTP
 
 static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len);
 static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix);
@@ -55,7 +55,7 @@ void tftp_request(struct listener *listen, time_t now)
   int port = daemon.start_tftp_port; /* may be zero to use ephemeral port */
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
   int mtuflag = IP_PMTUDISC_DONT;
-#endif
+
   char namebuff[IF_NAMESIZE];
   char *name = NULL;
   char *prefix = daemon.tftp_prefix;
@@ -63,7 +63,7 @@ void tftp_request(struct listener *listen, time_t now)
   union all_addr addra;
   int family = listen.addr.sa.sa_family;
   /* Can always get recvd interface for IPv6 */
-  int check_dest = !option_bool(OPT_NOWILD) || family == AF_INET6;
+  int check_dest = !daemon.opt_nowild || family == AF_INET6;
   union {
     struct cmsghdr align; /* this ensures alignment */
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -75,7 +75,7 @@ void tftp_request(struct listener *listen, time_t now)
 #elif defined(IP_RECVDSTADDR) && defined(IP_RECVIF)
     char control[CMSG_SPACE(sizeof(struct in_addr)) +
 		 CMSG_SPACE(sizeof(struct sockaddr_dl))];
-#endif
+
   } control_u; 
 
   msg.msg_controllen = sizeof(control_u);
@@ -170,7 +170,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      if_index = p.s.sdl_index;
 	  }
 	  
-#endif
+
 
       if (family == AF_INET6)
         {
@@ -213,19 +213,19 @@ void tftp_request(struct listener *listen, time_t now)
 	  /* Do the same as DHCP */
 	  if (!iface_check(family, &addra, name, NULL))
 	    {
-	      if (!option_bool(OPT_CLEVERBIND))
+	      if (!daemon.opt_cleverbind)
 		enumerate_interfaces(0); 
 	      if (!loopback_exception(listen.tftpfd, family, &addra, name) &&
 		  !label_exception(if_index, family, &addra))
 		return;
 	    }
 	  
-#ifdef HAVE_DHCP      
+ HAVE_DHCP      
 	  /* allowed interfaces are the same as for DHCP */
 	  for (tmp = daemon.dhcp_except; tmp; tmp = tmp.next)
 	    if (tmp.name && wildcard_match(tmp.name, name))
 	      return;
-#endif
+
 	}
 
       safe_strncpy(ifr.ifr_name, name, IF_NAMESIZE);
@@ -242,7 +242,7 @@ void tftp_request(struct listener *listen, time_t now)
     mtu = daemon.tftp_mtu;
 
   /* data transfer via server listening socket */
-  if (option_bool(OPT_SINGLE_PORT))
+  if (daemon.opt_single_port)
     {
       int tftp_cnt;
 
@@ -285,25 +285,25 @@ void tftp_request(struct listener *listen, time_t now)
   if (family == AF_INET)
     {
       addr.in.sin_port = htons(port);
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
       addr.in.sin_len = sizeof(addr.in);
-#endif
+
     }
   else
     {
       addr.in6.sin6_port = htons(port);
       addr.in6.sin6_flowinfo = 0;
       addr.in6.sin6_scope_id = 0;
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
       addr.in6.sin6_len = sizeof(addr.in6);
-#endif
+
     }
 
   /* May reuse struct transfer from abandoned transfer in single port mode. */
   if (!transfer && !(transfer = whine_malloc(sizeof(struct tftp_transfer))))
     return;
   
-  if (option_bool(OPT_SINGLE_PORT))
+  if (daemon.opt_single_port)
     transfer.sockfd = listen.tftpfd;
   else if ((transfer.sockfd = socket(family, SOCK_DGRAM, 0)) == -1)
     {
@@ -326,12 +326,12 @@ void tftp_request(struct listener *listen, time_t now)
   (void)prettyprint_addr(&peer, daemon.addrbuff);
   
   /* if we have a nailed-down range, iterate until we find a free one. */
-  while (!option_bool(OPT_SINGLE_PORT))
+  while (!daemon.opt_single_port)
     {
       if (bind(transfer.sockfd, &addr.sa, sa_len(&addr)) == -1 ||
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
 	  setsockopt(transfer.sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &mtuflag, sizeof(mtuflag)) == -1 ||
-#endif
+
 	  !fix_fd(transfer.sockfd))
 	{
 	  if (errno == EADDRINUSE && daemon.start_tftp_port != 0)
@@ -345,7 +345,7 @@ void tftp_request(struct listener *listen, time_t now)
 		  
 		  continue;
 		}
-	      my_syslog(MS_TFTP | LOG_ERR, _("unable to get free port for TFTP"));
+	      my_syslog(MS_TFTP | LOG_ERR, format!("unable to get free port for TFTP"));
 	    }
 	  free_transfer(transfer);
 	  return;
@@ -361,7 +361,7 @@ void tftp_request(struct listener *listen, time_t now)
       !(mode = next(&p, end)) ||
       (strcasecmp(mode, "octet") != 0 && strcasecmp(mode, "netascii") != 0))
     {
-      len = tftp_err(ERR_ILL, packet, _("unsupported request from {}"), daemon.addrbuff);
+      len = tftp_err(ERR_ILL, packet, format!("unsupported request from {}"), daemon.addrbuff);
       is_err = 1;
     }
   else
@@ -429,7 +429,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      unsigned char *macaddr = NULL;
 	      unsigned char macbuf[DHCP_CHADDR_MAX];
 	      
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 	      if (daemon.dhcp && peer.sa.sa_family == AF_INET)
 	        {
 		  /* Check if the client IP is in our lease database */
@@ -437,7 +437,7 @@ void tftp_request(struct listener *listen, time_t now)
 		  if (lease && lease.hwaddr_type == ARPHRD_ETHER && lease.hwaddr_len == ETHER_ADDR_LEN)
 		    macaddr = lease.hwaddr;
 		}
-#endif
+
 	      
 	      /* If no luck, try to find in ARP table. This only works if client is in same (V)LAN */
 	      if (!macaddr && find_mac(&peer, macbuf, 1, now) > 0)
@@ -480,7 +480,7 @@ void tftp_request(struct listener *listen, time_t now)
 	}
     }
 
-  send_from(transfer.sockfd, !option_bool(OPT_SINGLE_PORT), packet, len, &peer, &addra, if_index);
+  send_from(transfer.sockfd, !daemon.opt_single_port, packet, len, &peer, &addra, if_index);
   
   if (is_err)
     free_transfer(transfer);
@@ -508,7 +508,7 @@ static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix)
     {
       if (errno == ENOENT)
 	{
-	  *len = tftp_err(ERR_FNF, packet, _("file {} not found"), namebuff);
+	  *len = tftp_err(ERR_FNF, packet, format!("file {} not found"), namebuff);
 	  return NULL;
 	}
       else if (errno == EACCES)
@@ -528,7 +528,7 @@ static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix)
 	goto perm;
     }
   /* in secure mode, must be owned by user running dnsmasq */
-  else if (option_bool(OPT_TFTP_SECURE) && uid != statbuf.st_uid)
+  else if (daemon.opt_tftp_secure && uid != statbuf.st_uid)
     goto perm;
       
   /* If we're doing many transfers from the same file, only 
@@ -562,7 +562,7 @@ static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix)
   
  perm:
   errno = EACCES;
-  *len =  tftp_err(ERR_PERM, packet, _("cannot access {}: {}"), namebuff);
+  *len =  tftp_err(ERR_PERM, packet, format!("cannot access {}: {}"), namebuff);
   if (fd != -1)
     close(fd);
   return NULL;
@@ -579,7 +579,7 @@ void check_tftp_listeners(time_t now)
   struct tftp_transfer *transfer, *tmp, **up;
   
   /* In single port mode, all packets come via port 69 and tftp_request() */
-  if (!option_bool(OPT_SINGLE_PORT))
+  if (!daemon.opt_single_port)
     for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
       if (poll_check(transfer.sockfd, POLLIN))
 	{
@@ -618,7 +618,7 @@ void check_tftp_listeners(time_t now)
 	    }
 
 	  if (len != 0)
-	    send_from(transfer.sockfd, !option_bool(OPT_SINGLE_PORT), daemon.packet, len,
+	    send_from(transfer.sockfd, !daemon.opt_single_port, daemon.packet, len,
 		      &transfer.peer, &transfer.source, transfer.if_index);
 	  	  
 	  if (endcon || len == 0)
@@ -626,7 +626,7 @@ void check_tftp_listeners(time_t now)
 	      strcpy(daemon.namebuff, transfer.file.filename);
 	      sanitise(daemon.namebuff);
 	      (void)prettyprint_addr(&transfer.peer, daemon.addrbuff);
-	      my_syslog(MS_TFTP | LOG_INFO, endcon ? _("failed sending {} to {}") : _("sent {} to {}"), daemon.namebuff, daemon.addrbuff);
+	      my_syslog(MS_TFTP | LOG_INFO, endcon ? format!("failed sending {} to {}") : format!("sent {} to {}"), daemon.namebuff, daemon.addrbuff);
 	      /* unlink */
 	      *up = tmp;
 	      if (endcon)
@@ -676,7 +676,7 @@ static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len)
 	  else
 	    sanitise(err);
 	  
-	  my_syslog(MS_TFTP | LOG_ERR, _("error {} {} received from {}"),
+	  my_syslog(MS_TFTP | LOG_ERR, format!("error {} {} received from {}"),
 		    (int)ntohs(mess.block), err, 
 		    daemon.addrbuff);	
 	  
@@ -689,7 +689,7 @@ static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len)
 
 static void free_transfer(struct tftp_transfer *transfer)
 {
-  if (!option_bool(OPT_SINGLE_PORT))
+  if (!daemon.opt_single_port)
     close(transfer.sockfd);
 
   if (transfer.file && (--transfer.file.refcount) == 0)
@@ -752,7 +752,7 @@ static ssize_t tftp_err_oops(char *packet, char *file)
 {
   /* May have >1 refs to file, so potentially mangle a copy of the name */
   strcpy(daemon.namebuff, file);
-  return tftp_err(ERR_NOTDEF, packet, _("cannot read {}: {}"), daemon.namebuff);
+  return tftp_err(ERR_NOTDEF, packet, format!("cannot read {}: {}"), daemon.namebuff);
 }
 
 /* return -1 for error, zero for done. */
@@ -847,13 +847,13 @@ int do_tftp_script_run(void)
   if ((transfer = daemon.tftp_done_trans))
     {
       daemon.tftp_done_trans = transfer.next;
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
       queue_tftp(transfer.file.size, transfer.file.filename, &transfer.peer);
-#endif
+
       free_transfer(transfer);
       return 1;
     }
 
   return 0;
 }
-#endif
+

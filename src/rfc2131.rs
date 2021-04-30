@@ -16,14 +16,14 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP
+ HAVE_DHCP
 
 #define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
 #define option_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2u+(unsigned int)(i)]))
 
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
 static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
-#endif
+
 
 static int sanitise(unsigned char *opt, char *buf);
 static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback);
@@ -100,9 +100,9 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
   struct dhcp_opt *o;
   unsigned char pxe_uuid[17];
   unsigned char *oui = NULL, *serial = NULL;
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
   unsigned char *class = NULL;
-#endif
+
 
   subnet_addr.s_addr = override.s_addr = 0;
 
@@ -166,9 +166,9 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  unsigned char *y = option_ptr(opt, offset + elen + 5);
 		  oui = option_find1(x, y, 1, 1);
 		  serial = option_find1(x, y, 2, 1);
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
 		  class = option_find1(x, y, 3, 1);		  
-#endif
+
 		  /* If TR069-id is present set the tag "cpewan-id" to facilitate echoing 
 		     the gateway id back. Note that the device class is optional */
 		  if (oui && serial)
@@ -328,10 +328,10 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	      if (via_relay)
 		for (share = daemon.shared_networks; share; share = share.next)
 		  {
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 		    if (share.shared_addr.s_addr == 0)
 		      continue;
-#endif
+
 		    if (share.if_index != 0 ||
 			share.match_addr.s_addr != mess.giaddr.s_addr)
 		      continue;
@@ -372,8 +372,8 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
   
   if (!context)
     {
-      my_syslog(MS_DHCP | LOG_WARNING, _("no address range available for DHCP request {} {}"), 
-		subnet_addr.s_addr ? _("with subnet selector") : _("via"),
+      my_syslog(MS_DHCP | LOG_WARNING, format!("no address range available for DHCP request {} {}"), 
+		subnet_addr.s_addr ? format!("with subnet selector") : format!("via"),
 		subnet_addr.s_addr ? inet_ntoa(subnet_addr) : (mess.giaddr.s_addr ? inet_ntoa(mess.giaddr) : iface_name));
       return 0;
     }
@@ -385,10 +385,10 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	{
 	  strcpy(daemon.namebuff, inet_ntoa(context_tmp.start));
 	  if (context_tmp.flags & (CONTEXT_STATIC | CONTEXT_PROXY))
-	    my_syslog(MS_DHCP | LOG_INFO, _("{} available DHCP subnet: {}/{}"),
+	    my_syslog(MS_DHCP | LOG_INFO, format!("{} available DHCP subnet: {}/{}"),
 		      ntohl(mess.xid), daemon.namebuff, inet_ntoa(context_tmp.netmask));
 	  else
-	    my_syslog(MS_DHCP | LOG_INFO, _("{} available DHCP range: {} -- {}"), 
+	    my_syslog(MS_DHCP | LOG_INFO, format!("{} available DHCP range: {} -- {}"), 
 		      ntohl(mess.xid), daemon.namebuff, inet_ntoa(context_tmp.end));
 	}
     }
@@ -499,9 +499,9 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
   if (option_bool(OPT_LOG_OPTS))
     {
       if (sanitise(opt, daemon.namebuff))
-	my_syslog(MS_DHCP | LOG_INFO, _("{} vendor class: {}"), ntohl(mess.xid), daemon.namebuff);
+	my_syslog(MS_DHCP | LOG_INFO, format!("{} vendor class: {}"), ntohl(mess.xid), daemon.namebuff);
       if (sanitise(option_find(mess, sz, OPTION_USER_CLASS, 1), daemon.namebuff))
-	my_syslog(MS_DHCP | LOG_INFO, _("{} user class: {}"), ntohl(mess.xid), daemon.namebuff);
+	my_syslog(MS_DHCP | LOG_INFO, format!("{} user class: {}"), ntohl(mess.xid), daemon.namebuff);
     }
 
   mess.op = BOOTREPLY;
@@ -535,7 +535,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	return 0;
       
       if (have_config(config, CONFIG_DISABLE))
-	message = _("disabled");
+	message = format!("disabled");
 
       end = mess.options + 64; /* BOOTP vend area is only 64 bytes */
             
@@ -576,7 +576,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 
       for (id_list = daemon.dhcp_ignore; id_list; id_list = id_list.next)
 	if (match_netid(id_list.list, tagif_netid, 0))
-	  message = _("ignored");
+	  message = format!("ignored");
       
       if (!message)
 	{
@@ -591,7 +591,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  (lease.hwaddr_len != mess.hlen ||
 		   lease.hwaddr_type != mess.htype ||
 		   memcmp(lease.hwaddr, mess.chaddr, lease.hwaddr_len) != 0))
-		message = _("address in use");
+		message = format!("address in use");
 	    }
 	  else
 	    {
@@ -605,14 +605,14 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		       lease = NULL;
 		     }
 		   if (!address_allocate(context, &mess.yiaddr, mess.chaddr, mess.hlen, tagif_netid, now, loopback))
-		     message = _("no address available");
+		     message = format!("no address available");
 		}
 	      else
 		mess.yiaddr = lease.addr;
 	    }
 	  
 	  if (!message && !(context = narrow_context(context, mess.yiaddr, netid)))
-	    message = _("wrong network");
+	    message = format!("wrong network");
 	  else if (context.netid.net)
 	    {
 	      context.netid.next = netid;
@@ -627,13 +627,13 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		if ((!id_list.list) || match_netid(id_list.list, tagif_netid, 0))
 		  break;
 	      if (!id_list)
-		message = _("no address configured");
+		message = format!("no address configured");
 	    }
 
 	  if (!message && 
 	      !lease && 
 	      (!(lease = lease4_allocate(mess.yiaddr))))
-	    message = _("no leases left");
+	    message = format!("no leases left");
 	  
 	  if (!message)
 	    {
@@ -734,7 +734,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
       size_t nl = strlen(client_hostname);
       
       if (option_bool(OPT_LOG_OPTS))
-	my_syslog(MS_DHCP | LOG_INFO, _("{} client provides name: {}"), ntohl(mess.xid), client_hostname);
+	my_syslog(MS_DHCP | LOG_INFO, format!("{} client provides name: {}"), ntohl(mess.xid), client_hostname);
       for (m = daemon.dhcp_name_match; m; m = m.next)
 	{
 	  size_t ml = strlen(m.name);
@@ -863,7 +863,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 
 	  if (layer & 0x8000)
 	    {
-	      my_syslog(MS_DHCP | LOG_ERR, _("PXE BIS not supported"));
+	      my_syslog(MS_DHCP | LOG_ERR, format!("PXE BIS not supported"));
 	      return 0;
 	    }
 
@@ -1031,7 +1031,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	  config.addr.s_addr == option_addr(opt).s_addr)
 	{
 	  prettyprint_time(daemon.dhcp_buff, DECLINE_BACKOFF);
-	  my_syslog(MS_DHCP | LOG_WARNING, _("disabling DHCP static address {} for {}"), 
+	  my_syslog(MS_DHCP | LOG_WARNING, format!("disabling DHCP static address {} for {}"), 
 		    inet_ntoa(config.addr), daemon.dhcp_buff);
 	  config.flags |= CONFIG_DECLINED;
 	  config.decline_time = now;
@@ -1052,7 +1052,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
       if (lease && lease.addr.s_addr == mess.ciaddr.s_addr)
 	lease_prune(lease, now);
       else
-	message = _("unknown lease");
+	message = format!("unknown lease");
 
       daemon.metrics[METRIC_DHCPRELEASE]++;
       log_packet("DHCPRELEASE", &mess.ciaddr, emac, emac_len, iface_name, NULL, message, mess.xid);
@@ -1064,7 +1064,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	{
 	  if (option_bool(OPT_QUIET_DHCP))
 	    return 0;
-	  message = _("ignored");
+	  message = format!("ignored");
 	  opt = NULL;
 	}
       else 
@@ -1087,7 +1087,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  int len;
 		  unsigned char *mac = extended_hwaddr(ltmp.hwaddr_type, ltmp.hwaddr_len,
 						       ltmp.hwaddr, ltmp.clid_len, ltmp.clid, &len);
-		  my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address {} because it is leased to {}"),
+		  my_syslog(MS_DHCP | LOG_WARNING, format!("not using configured address {} because it is leased to {}"),
 			    addrs, print_mac(daemon.namebuff, mac, len));
 		}
 	      else
@@ -1097,10 +1097,10 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		    if (context.router.s_addr == config.addr.s_addr)
 		      break;
 		  if (tmp)
-		    my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address {} because it is in use by the server or relay"), addrs);
+		    my_syslog(MS_DHCP | LOG_WARNING, format!("not using configured address {} because it is in use by the server or relay"), addrs);
 		  else if (have_config(config, CONFIG_DECLINED) &&
 			   difftime(now, config.decline_time) < (float)DECLINE_BACKOFF)
-		    my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address {} because it was previously declined"), addrs);
+		    my_syslog(MS_DHCP | LOG_WARNING, format!("not using configured address {} because it was previously declined"), addrs);
 		  else
 		    conf = config.addr;
 		}
@@ -1116,9 +1116,9 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		   !config_find_by_address(daemon.dhcp_conf, addr) && do_icmp_ping(now, addr, 0, loopback))
 	    mess.yiaddr = addr;
 	  else if (emac_len == 0)
-	    message = _("no unique-id");
+	    message = format!("no unique-id");
 	  else if (!address_allocate(context, &mess.yiaddr, emac, emac_len, tagif_netid, now, loopback))
-	    message = _("no address available");      
+	    message = format!("no address available");      
 	}
       
       daemon.metrics[METRIC_DHCPDISCOVER]++;
@@ -1208,7 +1208,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 			     communication with us, otherwise, silently ignore. */
 			  if (!option_bool(OPT_AUTHORITATIVE))
 			    return 0;
-			  message = _("wrong server-ID");
+			  message = format!("wrong server-ID");
 			}
 		    }
 		}
@@ -1227,7 +1227,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		return 0;
 	      
 	      if (lease && lease.addr.s_addr != mess.yiaddr.s_addr)
-		message = _("wrong address");
+		message = format!("wrong address");
 	    }
 	}
       else
@@ -1245,7 +1245,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		 If the request is unicast to us, then somethings wrong, NAK */
 	      if (!unicast_dest)
 		return 0;
-	      message = _("lease not found");
+	      message = format!("lease not found");
 	      /* ensure we broadcast NAK */
 	      unicast_dest = 0;
 	    }
@@ -1272,7 +1272,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	  if (!(context = narrow_context(context, mess.yiaddr, tagif_netid)))
 	    {
 	      /* If a machine moves networks whilst it has a lease, we catch that here. */
-	      message = _("wrong network");
+	      message = format!("wrong network");
 	      /* ensure we broadcast NAK */
 	      unicast_dest = 0;
 	    }
@@ -1280,7 +1280,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	  /* Check for renewal of a lease which is outside the allowed range. */
 	  else if (!address_available(context, mess.yiaddr, tagif_netid) &&
 		   (!have_config(config, CONFIG_ADDR) || config.addr.s_addr != mess.yiaddr.s_addr))
-	    message = _("address not available");
+	    message = format!("address not available");
 	  
 	  /* Check if a new static address has been configured. Be very sure that
 	     when the client does DISCOVER, it will get the static address, otherwise
@@ -1291,11 +1291,11 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		    difftime(now, config.decline_time) > (float)DECLINE_BACKOFF) &&
 		   config.addr.s_addr != mess.yiaddr.s_addr &&
 		   (!(ltmp = lease_find_by_addr(config.addr)) || ltmp == lease))
-	    message = _("static lease available");
+	    message = format!("static lease available");
 
 	  /* Check to see if the address is reserved as a static address for another host */
 	  else if ((addr_config = config_find_by_address(daemon.dhcp_conf, mess.yiaddr)) && addr_config != config)
-	    message = _("address reserved");
+	    message = format!("address reserved");
 
 	  else if (!lease && (ltmp = lease_find_by_addr(mess.yiaddr)))
 	    {
@@ -1303,26 +1303,26 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		 a lease from one of it's MACs to give the address to another. */
 	      if (config && config_has_mac(config, ltmp.hwaddr, ltmp.hwaddr_len, ltmp.hwaddr_type))
 		{
-		  my_syslog(MS_DHCP | LOG_INFO, _("abandoning lease to {} of {}"),
+		  my_syslog(MS_DHCP | LOG_INFO, format!("abandoning lease to {} of {}"),
 			    print_mac(daemon.namebuff, ltmp.hwaddr, ltmp.hwaddr_len), 
 			    inet_ntoa(ltmp.addr));
 		  lease = ltmp;
 		}
 	      else
-		message = _("address in use");
+		message = format!("address in use");
 	    }
 
 	  if (!message)
 	    {
 	      if (emac_len == 0)
-		message = _("no unique-id");
+		message = format!("no unique-id");
 	      
 	      else if (!lease)
 		{	     
 		  if ((lease = lease4_allocate(mess.yiaddr)))
 		    do_classes = 1;
 		  else
-		    message = _("no leases left");
+		    message = format!("no leases left");
 		}
 	    }
 	}
@@ -1365,7 +1365,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	      /* pick up INIT-REBOOT events. */
 	      lease.flags |= LEASE_CHANGED;
 
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
 	      if (daemon.lease_change_command)
 		{
 		  struct dhcp_netid *n;
@@ -1439,7 +1439,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		      lease_add_extradata(lease, ucp, len, -1);
 		    }
 		}
-#endif
+
 	    }
 	  
 	  if (!hostname_auth && (client_hostname = host_from_dns(mess.yiaddr)))
@@ -1508,7 +1508,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
       
     case DHCPINFORM:
       if (ignore || have_config(config, CONFIG_DISABLE))
-	message = _("ignored");
+	message = format!("ignored");
       
       daemon.metrics[METRIC_DHCPINFORM]++;
       log_packet("DHCPINFORM", &mess.ciaddr, emac, emac_len, iface_name, message, NULL, mess.xid);
@@ -1602,7 +1602,7 @@ unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr,
 	  *len_out = clid_len - 1 ;
 	  return clid + 1;
 	}
-#endif
+
       
       *len_out = clid_len;
       return clid;
@@ -1661,7 +1661,7 @@ static int sanitise(unsigned char *opt, char *buf)
   return 1;
 }
 
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
 static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
 {
   if (!opt)
@@ -1669,7 +1669,7 @@ static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
   else
     lease_add_extradata(lease, option_ptr(opt, 0), option_len(opt), 0); 
 }
-#endif
+
 
 static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
 		       int mac_len, char *interface, char *string, char *err, u32 xid)
@@ -1705,12 +1705,12 @@ static void log_packet(char *type, void *addr, unsigned char *ext_mac,
 	      string ? string : "",
 	      err ? err : "");
 
-#ifdef HAVE_UBUS
+ HAVE_UBUS
 	if (!strcmp(type, "DHCPACK"))
 		ubus_event_bcast("dhcp.ack", daemon.namebuff, addr ? inet_ntoa(a) : NULL, string ? string : NULL, interface);
 	else if (!strcmp(type, "DHCPRELEASE"))
 		ubus_event_bcast("dhcp.release", daemon.namebuff, addr ? inet_ntoa(a) : NULL, string ? string : NULL, interface);
-#endif
+
 }
 
 static void log_options(unsigned char *start, u32 xid)
@@ -1844,7 +1844,7 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
 	log_options(mess.file, mess.xid);
     }
   else if (option_bool(OPT_LOG_OPTS) && strlen((char *)mess.file) != 0)
-    my_syslog(MS_DHCP | LOG_INFO, _("{} bootfile name: {}"), ntohl(mess.xid), (char *)mess.file);
+    my_syslog(MS_DHCP | LOG_INFO, format!("{} bootfile name: {}"), ntohl(mess.xid), (char *)mess.file);
   
   if (overload && (option_uint(overload, 0, 1) & 2))
     {
@@ -1853,7 +1853,7 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
 	log_options(mess.sname, mess.xid);
     }
   else if (option_bool(OPT_LOG_OPTS) && strlen((char *)mess.sname) != 0)
-    my_syslog(MS_DHCP | LOG_INFO, _("{} server name: {}"), ntohl(mess.xid), (char *)mess.sname);
+    my_syslog(MS_DHCP | LOG_INFO, format!("{} server name: {}"), ntohl(mess.xid), (char *)mess.sname);
 
 
   *p++ = OPTION_END;
@@ -1861,10 +1861,10 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
   if (option_bool(OPT_LOG_OPTS))
     {
       if (mess.siaddr.s_addr != 0)
-	my_syslog(MS_DHCP | LOG_INFO, _("{} next server: {}"), ntohl(mess.xid), inet_ntoa(mess.siaddr));
+	my_syslog(MS_DHCP | LOG_INFO, format!("{} next server: {}"), ntohl(mess.xid), inet_ntoa(mess.siaddr));
       
       if ((mess.flags & htons(0x8000)) && mess.ciaddr.s_addr == 0)
-	my_syslog(MS_DHCP | LOG_INFO, _("{} broadcast response"), ntohl(mess.xid));
+	my_syslog(MS_DHCP | LOG_INFO, format!("{} broadcast response"), ntohl(mess.xid));
       
       log_options(&mess.options[0] + sizeof(u32), mess.xid);
     } 
@@ -1927,7 +1927,7 @@ static unsigned char *free_space(struct dhcp_packet *mess, unsigned char *end, i
 	}
       
       if (!p)
-	my_syslog(MS_DHCP | LOG_WARNING, _("cannot send DHCP/BOOTP option {}: no space left in packet"), opt);
+	my_syslog(MS_DHCP | LOG_WARNING, format!("cannot send DHCP/BOOTP option {}: no space left in packet"), opt);
     }
  
   if (p)
@@ -2237,7 +2237,7 @@ pub const NUM_OPTS: u32 = 4;
 	else
 	  {
 	  toobig:
-	    my_syslog(MS_DHCP | LOG_ERR, _("PXE menu too large"));
+	    my_syslog(MS_DHCP | LOG_ERR, format!("PXE menu too large"));
 	    return daemon.dhcp_opts;
 	  }
 	
@@ -2400,7 +2400,7 @@ static void do_options(struct dhcp_context *context,
 	  if (req_options[i+1] == OPTION_END || (q - daemon.namebuff) > 40)
 	    {
 	      q = daemon.namebuff;
-	      my_syslog(MS_DHCP | LOG_INFO, _("{} requested options: {}"), ntohl(mess.xid), daemon.namebuff);
+	      my_syslog(MS_DHCP | LOG_INFO, format!("{} requested options: {}"), ntohl(mess.xid), daemon.namebuff);
 	    }
 	}
     }
@@ -2717,7 +2717,7 @@ static void do_options(struct dhcp_context *context,
 	      if (flags & DHOPT_ENCAPSULATE)
 		do_encap_opts(config_opts, opt.u.encap, DHOPT_ENCAP_MATCH, mess, end, null_term);
 	      else if (len > 250)
-		my_syslog(MS_DHCP | LOG_WARNING, _("cannot send RFC3925 option: too many options for enterprise number {}"), opt.u.encap);
+		my_syslog(MS_DHCP | LOG_WARNING, format!("cannot send RFC3925 option: too many options for enterprise number {}"), opt.u.encap);
 	      else if ((p = free_space(mess, end,  OPTION_VENDOR_IDENT_OPT, len + 5)))
 		{
 		  int swap_ent = htonl(opt.u.encap);
@@ -2780,12 +2780,12 @@ static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid)
   if (delay_conf)
     {
       if (!option_bool(OPT_QUIET_DHCP))
-	my_syslog(MS_DHCP | LOG_INFO, _("{} reply delay: {}"), ntohl(xid), delay_conf.delay);
+	my_syslog(MS_DHCP | LOG_INFO, format!("{} reply delay: {}"), ntohl(xid), delay_conf.delay);
       delay_dhcp(recvtime, delay_conf.delay, -1, 0, 0);
     }
 }
 
-#endif
+
   
 
   

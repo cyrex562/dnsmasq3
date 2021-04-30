@@ -141,17 +141,17 @@ pub fn main () -> Result<(), io::Error>
     // struct dhcp_relay *relay;
     let mut dhcp_relay: relay;
     
-    // #endif
-    // #ifdef HAVE_TFTP
+    // 
+    //  HAVE_TFTP
     // int tftp_prefix_missing = 0;
     let mut tftp_prefix_missing = 0;
-    // #endif
+    // 
     
-    // #ifdef LOCALEDIR
+    //  LOCALEDIR
     // setlocale(LC_ALL, "");
     // bindtextdomain("dnsmasq", LOCALEDIR); 
     // textdomain("dnsmasq");
-    // #endif
+    // 
     
     if cfg(target="linux") {
         sigact.sa_handler = sig_handler;
@@ -258,7 +258,7 @@ pub fn main () -> Result<(), io::Error>
     
     if (daemon.opt_dnssec_valid)
     {
-        // #ifdef HAVE_DNSSEC
+        //  HAVE_DNSSEC
         let mut ds: ListContainer<DsConfig> = ListContainer::new();
 
         /* Must have at least a root trust anchor, or the DNSSEC code
@@ -415,7 +415,7 @@ pub fn main () -> Result<(), io::Error>
                     did_bind = 1;
                 }
             }
-            // #endif
+            // 
             
             // #if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP6)
             if (daemon.doing_dhcp6 && !daemon.relay6 && bound_device)
@@ -423,7 +423,7 @@ pub fn main () -> Result<(), io::Error>
                 bindtodevice(bound_device, daemon.dhcp6fd);
                 did_bind = 1;
             }
-            // #endif
+            // 
         }
         else {
         create_wildcard_listeners();}
@@ -548,7 +548,7 @@ pub fn main () -> Result<(), io::Error>
             need_cap_net_bind_service = 1;
             need_cap_net_raw = 1;
         }
-        // #endif
+        // 
         
         /* determine capability API version here, while we can still
         call safe_malloc */
@@ -743,7 +743,7 @@ pub fn main () -> Result<(), io::Error>
         
         /* if we are to run scripts, we need to fork a helper before dropping root. */
         daemon.helperfd = -1;
-        if ((daemon.dhcp || daemon.dhcp6 || option_bool(OPT_TFTP) || option_bool(OPT_SCRIPT_ARP)) && 
+        if ((daemon.dhcp || daemon.dhcp6 || daemon.opt_tftp || daemon.opt_script_arp) && 
         (daemon.lease_change_command || daemon.luascript)) {
         daemon.helperfd = create_helper(pipewrite, err_pipe[1], script_uid, script_gid, max_fd);}
         
@@ -785,7 +785,7 @@ pub fn main () -> Result<(), io::Error>
                         _exit(0);
                     }     
                     
-                    // #ifdef HAVE_LINUX_NETWORK
+                    //  HAVE_LINUX_NETWORK
                     data.effective &= !(1 << CAP_SETUID);
                     data.permitted &= !(1 << CAP_SETUID);
                     
@@ -845,7 +845,7 @@ pub fn main () -> Result<(), io::Error>
                     closedir(dir);}
                 }
             }
-            // #endif
+            // 
             
             if (daemon.port == 0) {
             my_syslog(LOG_INFO, format!("started, version {} DNS disabled", VERSION));}
@@ -905,11 +905,11 @@ pub fn main () -> Result<(), io::Error>
                 if (daemon.opt_dnssec_ign_ns) {
                 my_syslog(LOG_INFO, format!("DNSSEC validation enabled but all unsigned answers are trusted"));}
                 else {
-                my_syslog(LOG_INFO, _("DNSSEC validation enabled"));}
+                my_syslog(LOG_INFO, format!("DNSSEC validation enabled"));}
                 
                 daemon.dnssec_no_time_check = daemon.opt_dnssec_time;
-                if (daemon.opt_dnssec_time && !daemon.back_to_the_future)
-                my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until receipt of SIGINT"));
+                if (daemon.opt_dnssec_time && !daemon.back_to_the_future) {
+                my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until receipt of SIGINT"));}
                 
                 if (rc == 1) {
                 my_syslog(LOG_INFO, format!("DNSSEC signature timestamps not checked until system time valid"));}
@@ -928,84 +928,95 @@ pub fn main () -> Result<(), io::Error>
             daemon.log_file, strerror(log_err)));}
             
             if (bind_fallback) {
-            my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));}
+            my_syslog(LOG_WARNING, format!("setting --bind-interfaces option because of OS limitations"));}
             
-            if (option_bool(OPT_NOWILD))
-            warn_bound_listeners();
-            else if (!option_bool(OPT_CLEVERBIND))
-            warn_wild_labels();
+            if (daemon.opt_nowild) {
+            warn_bound_listeners();}
+            else if (!daemon.opt_cleverbind) {
+            warn_wild_labels();}
             
             warn_int_names();
             
-            if (!option_bool(OPT_NOWILD)) 
-            for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp.next)
-            if (if_tmp.name && !if_tmp.used)
-            my_syslog(LOG_WARNING, _("warning: interface {} does not currently exist"), if_tmp.name);
+            if (!daemon.opt_nowild) {
+            // for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp.next) {
+            for if_tmp in daemon.if_names {
+                if (if_tmp.name && !if_tmp.used) {
+            my_syslog(LOG_WARNING, format!("warning: interface {} does not currently exist"), if_tmp.name);}}}
             
-            if (daemon.port != 0 && option_bool(OPT_NO_RESOLV))
+            if (daemon.port != 0 && daemon.opt_no_resolv)
             {
-                if (daemon.resolv_files && !daemon.resolv_files.is_default)
-                my_syslog(LOG_WARNING, _("warning: ignoring resolv-file flag because no-resolv is set"));
+                if (daemon.resolv_files && !daemon.resolv_files.is_default) {
+                my_syslog(LOG_WARNING, format!("warning: ignoring resolv-file flag because no-resolv is set"));}
                 daemon.resolv_files = NULL;
-                if (!daemon.servers)
-                my_syslog(LOG_WARNING, _("warning: no upstream servers configured"));
+                if (!daemon.servers) {
+                my_syslog(LOG_WARNING, format!("warning: no upstream servers configured"));}
             } 
             
-            if (daemon.max_logs != 0)
-            my_syslog(LOG_INFO, _("asynchronous logging enabled, queue limit is {} messages"), daemon.max_logs);
+            if (daemon.max_logs != 0) {
+            my_syslog(LOG_INFO, format!("asynchronous logging enabled, queue limit is {} messages"), daemon.max_logs);
+            }
             
             
-            // #ifdef HAVE_DHCP
-            for (context = daemon.dhcp; context; context = context.next)
-            log_context(AF_INET, context);
+            //  HAVE_DHCP
+            // for (context = daemon.dhcp; context; context = context.next)
+            // log_context(AF_INET, context);
             
-            for (relay = daemon.relay4; relay; relay = relay.next)
+            // for (relay = daemon.relay4; relay; relay = relay.next)
             log_relay(AF_INET, relay);
             
             // #  ifdef HAVE_DHCP6
-            for (context = daemon.dhcp6; context; context = context.next)
-            log_context(AF_INET6, context);
+            // for (context = daemon.dhcp6; context; context = context.next)
+            // log_context(AF_INET6, context);
             
-            for (relay = daemon.relay6; relay; relay = relay.next)
-            log_relay(AF_INET6, relay);
+            // for (relay = daemon.relay6; relay; relay = relay.next)
+            // log_relay(AF_INET6, relay);
             
-            if (daemon.doing_dhcp6 || daemon.doing_ra)
-            dhcp_construct_contexts(now);
+            if (daemon.doing_dhcp6 || daemon.doing_ra) {
+                dhcp_construct_contexts(now);
+            }
             
-            if (option_bool(OPT_RA))
-            my_syslog(MS_DHCP | LOG_INFO, _("IPv6 router advertisement enabled"));
+            if (option_bool(OPT_RA)) {
+                my_syslog(MS_DHCP | LOG_INFO, format!("IPv6 router advertisement enabled"));
+            }
             // #  endif
             
             // #  ifdef HAVE_LINUX_NETWORK
-            if (did_bind)
-            my_syslog(MS_DHCP | LOG_INFO, _("DHCP, sockets bound exclusively to interface {}"), bound_device);
+            if (did_bind) {
+                my_syslog(MS_DHCP | LOG_INFO, format!("DHCP, sockets bound exclusively to interface {}", bound_device));
+            }
             
-            if (netlink_warn)
-            my_syslog(LOG_WARNING, netlink_warn);
+            if (netlink_warn) {
+                my_syslog(LOG_WARNING, netlink_warn);
+            }
             // #  endif
             
             /* after dhcp_construct_contexts */
-            if (daemon.dhcp || daemon.doing_dhcp6)
-            lease_find_interfaces(now);
-            // #endif
+            if (daemon.dhcp || daemon.doing_dhcp6) {
+                lease_find_interfaces(now);
+            }
+            // 
             
-            // #ifdef HAVE_TFTP
-            if (option_bool(OPT_TFTP))
+            //  HAVE_TFTP
+            if (daemon.opt_tftp)
             {
-                struct tftp_prefix *p;
+                // struct tftp_prefix *p;
+                let mut p: tftp_prefix;
+
+                my_syslog(MS_TFTP | LOG_INFO, 
+                    format!("TFTP {}{} {} {}", 
+                    if daemon.tftp_prefix { "root is " } else { "enabled" },
+                    if daemon.tftp_prefix { daemon.tftp_prefix } else { ""},
+                    if daemon.opt_tftp_secure { "secure mode" } else {""},
+                    if daemon.opt_single_port { "single port mode" } else {""}));
                 
-                my_syslog(MS_TFTP | LOG_INFO, "TFTP {}{} {} {}", 
-                daemon.tftp_prefix ? _("root is ") : _("enabled"),
-                daemon.tftp_prefix ? daemon.tftp_prefix : "",
-                option_bool(OPT_TFTP_SECURE) ? _("secure mode") : "",
-                option_bool(OPT_SINGLE_PORT) ? _("single port mode") : "");
+                if (tftp_prefix_missing) {
+                    my_syslog(MS_TFTP | LOG_WARNING, format!("warning: {} inaccessible", daemon.tftp_prefix));
+                }
                 
-                if (tftp_prefix_missing)
-                my_syslog(MS_TFTP | LOG_WARNING, _("warning: {} inaccessible"), daemon.tftp_prefix);
-                
-                for (p = daemon.if_prefix; p; p = p.next)
-                if (p.missing)
-                my_syslog(MS_TFTP | LOG_WARNING, _("warning: TFTP directory {} inaccessible"), p.prefix);
+                // for (p = daemon.if_prefix; p; p = p.next) {
+                for p in daemon.if_prefix {
+                    if (p.missing) {
+                        my_syslog(MS_TFTP | LOG_WARNING, format!("warning: TFTP directory {} inaccessible"), p.prefix);}}
                 
                 /* This is a guess, it assumes that for small limits, 
                 disjoint files might be served, but for large limits, 
@@ -1014,1143 +1025,1083 @@ pub fn main () -> Result<(), io::Error>
                     
                     max_fd -= 30; /* use other than TFTP */
                     
-                    if (max_fd < 0)
-                    max_fd = 5;
-                    else if (max_fd < 100 && !option_bool(OPT_SINGLE_PORT))
-                    max_fd = max_fd/2;
-                    else
-                    max_fd = max_fd - 20;
+                    if (max_fd < 0) {
+                        max_fd = 5;
+                    }
+                    else if max_fd < 100 && !daemon.opt_single_port {
+                        max_fd = max_fd/2;
+                    }
+                    else {
+                        max_fd = max_fd - 20;
+                    }
                     
                     /* if we have to use a limited range of ports, 
                     that will limit the number of transfers */
                     if (daemon.start_tftp_port != 0 &&
-                        daemon.end_tftp_port - daemon.start_tftp_port + 1 < max_fd)
+                        daemon.end_tftp_port - daemon.start_tftp_port + 1 < max_fd) {
                         max_fd = daemon.end_tftp_port - daemon.start_tftp_port + 1;
+                    }
                         
-                        if (daemon.tftp_max > max_fd)
-                        {
-                            daemon.tftp_max = max_fd;
-                            my_syslog(MS_TFTP | LOG_WARNING, 
-                                _("restricting maximum simultaneous TFTP transfers to {}"), 
-                                daemon.tftp_max);
-                            }
+                    if (daemon.tftp_max > max_fd)
+                    {
+                        daemon.tftp_max = max_fd;
+                        my_syslog(MS_TFTP | LOG_WARNING, 
+                            format!("restricting maximum simultaneous TFTP transfers to {}", 
+                            daemon.tftp_max));
                         }
-                        // #endif
+        }
                         
-                        /* finished start-up - release original process */
-                        if (err_pipe[1] != -1)
-                        close(err_pipe[1]);
+        /* finished start-up - release original process */
+        if (err_pipe[1] != -1) {
+            close(err_pipe[1]);
+        }
+        
+        if (daemon.port != 0) {
+            check_servers();
+        }
                         
-                        if (daemon.port != 0)
-                        check_servers();
+        pid = getpid();
+        
+        daemon.pipe_to_parent = -1;
+        for i in 0..MAX_PROCS {
+            daemon.tcp_pipes[i] = -1;
+        }
                         
-                        pid = getpid();
-                        
-                        daemon.pipe_to_parent = -1;
-                        for (i = 0; i < MAX_PROCS; i++)
-                        daemon.tcp_pipes[i] = -1;
-                        
-                        // #ifdef HAVE_INOTIFY
-                        /* Using inotify, have to select a resolv file at startup */
-                        poll_resolv(1, 0, now);
-                        // #endif
-                        
-                        while (1)
-                        {
-                            int t, timeout = -1;
+        /* Using inotify, have to select a resolv file at startup */
+        poll_resolv(1, 0, now);
+     
+        loop
+        {
+            // int t, timeout = -1;
+            let mut t: i32;
+            let mut timeout: i32;
+
+            poll_reset();
+            
+            /* if we are out of resources, find how long we have to wait
+            for some to come free, we'll loop around then and restart
+            listening for queries */
+            if ((t = set_dns_listeners(now)) != 0) {
+                timeout = t * 1000;
+            }
                             
-                            poll_reset();
+            /* Whilst polling for the dbus, or doing a tftp transfer, wake every quarter second */
+            if (daemon.tftp_trans ||
+                (daemon.opt_dbus && !daemon.dbus)) {
+                timeout = 250;
+            }
+                                
+            /* Wake every second whilst waiting for DAD to complete */
+            else if (is_dad_listeners()) {
+                timeout = 1000;
+            }
+
+            set_dbus_listeners();
+
+            if (daemon.opt_ubus) {
+                set_ubus_listeners();
+            }
+
+            if (daemon.dhcp || daemon.relay4)
+            {
+                poll_listen(daemon.dhcpfd, POLLIN);
+                if (daemon.pxefd != -1) {
+                    poll_listen(daemon.pxefd, POLLIN);
+                }
+            }
+
+            if (daemon.doing_dhcp6 || daemon.relay6) {
+                poll_listen(daemon.dhcp6fd, POLLIN);
+            }
+            
+            if (daemon.doing_ra) {
+                poll_listen(daemon.icmp6fd, POLLIN);
+            } 
+
+            if (daemon.inotifyfd != -1) {
+                poll_listen(daemon.inotifyfd, POLLIN);
+            }
+
+            poll_listen(daemon.netlinkfd, POLLIN);
+            
+            poll_listen(piperead, POLLIN);
+
+            // while (helper_buf_empty() && do_script_run(now));
+            loop {
+                helper_buf_empty() && do_script_run(now)
+            } 
+
+            /* Refresh cache */
+            if (daemon.opt_script_arp) {
+                find_mac(NULL, NULL, 0, now);
+            }
+            loop {helper_buf_empty() && do_arp_script_run()}
+
+            loop {helper_buf_empty() && do_tftp_script_run()};
+            
+            if (!helper_buf_empty()) {
+                poll_listen(daemon.helperfd, POLLOUT);
+            }
+            /* need this for other side-effects */
+
+            loop {do_script_run(now)}
+
+            loop {do_arp_script_run()}
+
+            loop {do_tftp_script_run()}
+
+            /* must do this just before do_poll(), when we know no
+            more calls to my_syslog() can occur */
+            set_log_writer();
+            
+            if (do_poll(timeout) < 0) {
+                continue;
+            }
+                                
+            now = dnsmasq_time();
+            
+            check_log_writer(0);
+            
+            /* prime. */
+            enumerate_interfaces(1);
+            
+            /* Check the interfaces to see if any have exited DAD state
+            and if so, bind the address. */
+            if (is_dad_listeners())
+            {
+                enumerate_interfaces(0);
+                /* NB, is_dad_listeners() == 1 -. we're binding interfaces */
+                create_bound_listeners(0);
+                warn_bound_listeners();
+            }
+            
+            if (poll_check(daemon.netlinkfd, POLLIN)) {
+                netlink_multicast();
+            }
+
+            if  (daemon.inotifyfd != -1 && 
+                poll_check(daemon.inotifyfd, POLLIN) && 
+                inotify_check(now))
+            {
+                if (daemon.port != 0 && !daemon.opt_no_poll) {
+                    poll_resolv(1, 1, now);
+                }
+            } 	  
+                
+                if (poll_check(piperead, POLLIN)) {
+                    async_event(piperead, now);
+                }
+
+                /* if we didn't create a DBus connection, retry now. */ 
+                if (daemon.opt_dbus && !daemon.dbus)
+                {
+                    char *err;
+                    if ((err = dbus_init())) {
+                    my_syslog(LOG_WARNING, format!("DBus error: {}", err));
+                    }
+                    if (daemon.dbus) {
+                    my_syslog(LOG_INFO, format!("connected to system DBus"));
+                    }
+                }
+                check_dbus_listeners();
+
+                if (daemon.opt_ubus)
+                {
+                    /* if we didn't create a UBus connection, retry now. */
+                    if (!daemon.ubus)
+                    {
+                        ubus_init();
+                    }
+                    
+                    check_ubus_listeners();
+                }
+                
+                check_dns_listeners(now);
+
+                check_tftp_listeners(now);
+
+                if (daemon.dhcp || daemon.relay4)
+                {
+                    if (poll_check(daemon.dhcpfd, POLLIN)) {
+                        dhcp_packet(now, 0);
+                    }
+                    if (daemon.pxefd != -1 && poll_check(daemon.pxefd, POLLIN)) {
+                        dhcp_packet(now, 1);
+                    }
+                }
+
+                if ((daemon.doing_dhcp6 || daemon.relay6) && poll_check(daemon.dhcp6fd, POLLIN)) {
+                    dhcp6_packet(now);
+                }
+                
+                if (daemon.doing_ra && poll_check(daemon.icmp6fd, POLLIN)) {
+                    icmp6_packet(now);
+                }
+
+                if (daemon.helperfd != -1 && poll_check(daemon.helperfd, POLLOUT)) {
+                    helper_write();
+                }
+            }
+        
+                      
+        Ok(())
+    }
+
                             
-                            /* if we are out of resources, find how long we have to wait
-                            for some to come free, we'll loop around then and restart
-                            listening for queries */
-                            if ((t = set_dns_listeners(now)) != 0)
-                            timeout = t * 1000;
-                            
-                            /* Whilst polling for the dbus, or doing a tftp transfer, wake every quarter second */
-                            if (daemon.tftp_trans ||
-                                (daemon.opt_dbus && !daemon.dbus))
-                                timeout = 250;
-                                
-                                /* Wake every second whilst waiting for DAD to complete */
-                                else if (is_dad_listeners())
-                                timeout = 1000;
-                                
-                                // #ifdef HAVE_DBUS
-                                set_dbus_listeners();
-                                // #endif
-                                
-                                // #ifdef HAVE_UBUS
-                                if (daemon.opt_ubus)
-                                set_ubus_listeners();
-                                // #endif
-                                
-                                // #ifdef HAVE_DHCP
-                                if (daemon.dhcp || daemon.relay4)
-                                {
-                                    poll_listen(daemon.dhcpfd, POLLIN);
-                                    if (daemon.pxefd != -1)
-                                    poll_listen(daemon.pxefd, POLLIN);
-                                }
-                                // #endif
-                                
-                                // #ifdef HAVE_DHCP6
-                                if (daemon.doing_dhcp6 || daemon.relay6)
-                                poll_listen(daemon.dhcp6fd, POLLIN);
-                                
-                                if (daemon.doing_ra)
-                                poll_listen(daemon.icmp6fd, POLLIN); 
-                                // #endif
-                                
-                                // #ifdef HAVE_INOTIFY
-                                if (daemon.inotifyfd != -1)
-                                poll_listen(daemon.inotifyfd, POLLIN);
-                                // #endif
-                                
-                                // #if defined(HAVE_LINUX_NETWORK)
-                                poll_listen(daemon.netlinkfd, POLLIN);
-                                // #elif defined(HAVE_BSD_NETWORK)
-                                // poll_listen(daemon.routefd, POLLIN);
-                                // #endif
-                                
-                                poll_listen(piperead, POLLIN);
-                                
-                                // #ifdef HAVE_SCRIPT
-                                // #    ifdef HAVE_DHCP
-                                while (helper_buf_empty() && do_script_run(now)); 
-                                // #    endif
-                                
-                                /* Refresh cache */
-                                if (option_bool(OPT_SCRIPT_ARP))
-                                find_mac(NULL, NULL, 0, now);
-                                while (helper_buf_empty() && do_arp_script_run());
-                                
-                                // #    ifdef HAVE_TFTP
-                                while (helper_buf_empty() && do_tftp_script_run());
-                                // #    endif
-                                
-                                if (!helper_buf_empty())
-                                poll_listen(daemon.helperfd, POLLOUT);
-                                // #else
-                                /* need this for other side-effects */
-                                // #    ifdef HAVE_DHCP
-                                while (do_script_run(now));
-                                // #    endif
-                                
-                                while (do_arp_script_run());
-                                
-                                // #    ifdef HAVE_TFTP 
-                                while (do_tftp_script_run());
-                                // #    endif
-                                
-                                // #endif
-                                
-                                
-                                /* must do this just before do_poll(), when we know no
-                                more calls to my_syslog() can occur */
-                                set_log_writer();
-                                
-                                if (do_poll(timeout) < 0)
-                                continue;
-                                
-                                now = dnsmasq_time();
-                                
-                                check_log_writer(0);
-                                
-                                /* prime. */
-                                enumerate_interfaces(1);
-                                
-                                /* Check the interfaces to see if any have exited DAD state
-                                and if so, bind the address. */
-                                if (is_dad_listeners())
-                                {
-                                    enumerate_interfaces(0);
-                                    /* NB, is_dad_listeners() == 1 -. we're binding interfaces */
-                                    create_bound_listeners(0);
-                                    warn_bound_listeners();
-                                }
-                                
-                                // #if defined(HAVE_LINUX_NETWORK)
-                                if (poll_check(daemon.netlinkfd, POLLIN))
-                                netlink_multicast();
-                                // #elif defined(HAVE_BSD_NETWORK)
-                                // if (poll_check(daemon.routefd, POLLIN))
-                                // route_sock();
-                                // #endif
-                                
-                                // #ifdef HAVE_INOTIFY
-                                if  (daemon.inotifyfd != -1 && poll_check(daemon.inotifyfd, POLLIN) && inotify_check(now))
-                                {
-                                    if (daemon.port != 0 && !option_bool(OPT_NO_POLL))
-                                    poll_resolv(1, 1, now);
-                                } 	  
-                                // #else
-                                // /* Check for changes to resolv files once per second max. */
-                                // /* Don't go silent for long periods if the clock goes backwards. */
-                                // if (daemon.last_resolv == 0 || 
-                                //     difftime(now, daemon.last_resolv) > 1.0 || 
-                                //     difftime(now, daemon.last_resolv) < -1.0)
-                                //     {
-                                //         /* poll_resolv doesn't need to reload first time through, since 
-                                //         that's queued anyway. */
-                                        
-                                //         poll_resolv(0, daemon.last_resolv != 0, now); 	  
-                                //         daemon.last_resolv = now;
-                                //     }
-                                //     #endif
-                                    
-                                    if (poll_check(piperead, POLLIN))
-                                    async_event(piperead, now);
-                                    
-                                    //#ifdef HAVE_DBUS
-                                    /* if we didn't create a DBus connection, retry now. */ 
-                                    if (daemon.opt_dbus && !daemon.dbus)
-                                    {
-                                        char *err;
-                                        if ((err = dbus_init()))
-                                        my_syslog(LOG_WARNING, _("DBus error: {}"), err);
-                                        if (daemon.dbus)
-                                        my_syslog(LOG_INFO, _("connected to system DBus"));
-                                    }
-                                    check_dbus_listeners();
-                                    // #endif
-                                    
-                                    // #ifdef HAVE_UBUS
-                                    if (daemon.opt_ubus)
-                                    {
-                                        /* if we didn't create a UBus connection, retry now. */
-                                        if (!daemon.ubus)
-                                        {
-                                            ubus_init();
-                                        }
-                                        
-                                        check_ubus_listeners();
-                                    }
-                                    // #endif
-                                    
-                                    check_dns_listeners(now);
-                                    
-                                    // #ifdef HAVE_TFTP
-                                    check_tftp_listeners(now);
-                                    // #endif      
-                                    
-                                    // #ifdef HAVE_DHCP
-                                    if (daemon.dhcp || daemon.relay4)
-                                    {
-                                        if (poll_check(daemon.dhcpfd, POLLIN))
-                                        dhcp_packet(now, 0);
-                                        if (daemon.pxefd != -1 && poll_check(daemon.pxefd, POLLIN))
-                                        dhcp_packet(now, 1);
-                                    }
-                                    
-                                    // #ifdef HAVE_DHCP6
-                                    if ((daemon.doing_dhcp6 || daemon.relay6) && poll_check(daemon.dhcp6fd, POLLIN))
-                                    dhcp6_packet(now);
-                                    
-                                    if (daemon.doing_ra && poll_check(daemon.icmp6fd, POLLIN))
-                                    icmp6_packet(now);
-                                    // #endif
-                                    
-                                    // #  ifdef HAVE_SCRIPT
-                                    if (daemon.helperfd != -1 && poll_check(daemon.helperfd, POLLOUT))
-                                    helper_write();
-                                    // #  endif
-                                    #endif
-                                    
-                                }
-                                
-                                Ok(())
-                            }
-                            
-                            static void sig_handler(int sig)
+                            pub fn sig_handler(sig: i32)
                             {
                                 if (pid == 0)
                                 {
                                     /* ignore anything other than TERM during startup
                                     and in helper proc. (helper ignore TERM too) */
-                                    if (sig == SIGTERM || sig == SIGINT)
-                                    exit(EC_MISC);
+                                    if (sig == SIGTERM || sig == SIGINT) {
+                                        exit(EC_MISC);
+                                    }
                                 }
                                 else if (pid != getpid())
                                 {
                                     /* alarm is used to kill TCP children after a fixed time. */
-                                    if (sig == SIGALRM)
-                                    _exit(0);
+                                    if (sig == SIGALRM) {
+                                        _exit(0);
+                                    }
                                 }
                                 else
                                 {
                                     /* master process */
-                                    int event, errsave = errno;
+                                    // int event, errsave = errno;
+                                    let mut event: i32;
+                                    let mut errsave: i32;
                                     
-                                    if (sig == SIGHUP)
-                                    event = EVENT_RELOAD;
-                                    else if (sig == SIGCHLD)
-                                    event = EVENT_CHILD;
-                                    else if (sig == SIGALRM)
-                                    event = EVENT_ALARM;
-                                    else if (sig == SIGTERM)
-                                    event = EVENT_TERM;
-                                    else if (sig == SIGUSR1)
-                                    event = EVENT_DUMP;
-                                    else if (sig == SIGUSR2)
-                                    event = EVENT_REOPEN;
+                                    if (sig == SIGHUP) {
+                                    event = EVENT_RELOAD; }
+                                    else if (sig == SIGCHLD) {
+                                    event = EVENT_CHILD; }
+                                    else if (sig == SIGALRM) {
+                                    event = EVENT_ALARM;}
+                                    else if (sig == SIGTERM) {
+                                    event = EVENT_TERM;}
+                                    else if (sig == SIGUSR1) {
+                                    event = EVENT_DUMP;}
+                                    else if (sig == SIGUSR2) {
+                                    event = EVENT_REOPEN;}
                                     else if (sig == SIGINT)
                                     {
                                         /* Handle SIGINT normally in debug mode, so
                                         ctrl-c continues to operate. */
-                                        if (option_bool(OPT_DEBUG))
-                                        exit(EC_MISC);
-                                        else
+                                        if (daemon.opt_debug) {
+                                        exit(EC_MISC);}
+                                        else {
                                         event = EVENT_TIME;
+                                        }
                                     }
-                                    else
+                                    else {
                                     return;
+                                    }
                                     
                                     send_event(pipewrite, event, 0, NULL); 
                                     errno = errsave;
                                 }
                             }
                             
-                            /* now == 0 . queue immediate callback */
-                            void send_alarm(time_t event, time_t now)
-                            {
-                                if (now == 0 || event != 0)
-                                {
-                                    /* alarm(0) or alarm(-ve) doesn't do what we want.... */
-                                    if ((now == 0 || difftime(event, now) <= 0.0))
-                                    send_event(pipewrite, EVENT_ALARM, 0, NULL);
-                                    else 
-                                    alarm((unsigned)difftime(event, now)); 
-                                }
+/* now == 0 . queue immediate callback */
+pub fn send_alarm(event: time::Instant, now: time::Instant)
+{
+    if (now == 0 || event != 0)
+    {
+        /* alarm(0) or alarm(-ve) doesn't do what we want.... */
+        if ((now == 0 || difftime(event, now) <= 0.0)) {
+            send_event(pipewrite, EVENT_ALARM, 0, NULL);
+        }
+        else { 
+            alarm(difftime(event, now)); 
+        }
+    }
+}
+                            
+pub fn queue_event(event: i32)
+{
+    send_event(pipewrite, event, 0, NULL);
+}
+                            
+pub fn send_event(fd: i32, event: i32, data: i32, msg: &String)
+{
+    // struct event_desc ev;
+    let mut ev: event_desc;
+    // struct iovec iov[2];
+    let mut iov: [iovec;2];
+
+    ev.event = event;
+    ev.data = data;
+
+    if msg {
+        ev.msg_sz = msg.len()
+    } else {
+        ev.msg_sz = 0;
+    }
+
+    iov[0].iov_base = &ev;
+    iov[0].iov_len = sizeof(ev);
+    iov[1].iov_base = msg;
+    iov[1].iov_len = ev.msg_sz;
+    
+    /* error pipe, debug mode. */
+    if (fd == -1) {
+        fatal_event(&ev, msg);
+    }
+    else {
+    /* pipe is non-blocking and struct event_desc is smaller than
+    PIPE_BUF, so this either fails or writes everything */
+        while {
+            writev(fd, iov, if msg {2} else {1}) == -1 && errno == EINTR
+        }
+    }
+}
+                            
+/* NOTE: the memory used to return msg is leaked: use msgs in events only
+to describe fatal errors. */
+pub fn read_event(fd: i32, evp: &mut event_desc, msg: &mut Vec<String>) -> i32
+{
+    let mut buf: String;
+
+    if (!read_write(fd, evp, mem::sizeof(event_desc), 1)) {
+        return 0;
+    }
+
+    // *msg = NULL;
+
+    if (evp.msg_sz != 0) {
+        buf = String::new();
+        if (read_write(fd, buf, evp.msg_sz, 1)) {
+            buf[evp.msg_sz] = 0;
+            *msg = buf;
+        }
+    }
+
+    return 1;
+}
+
+pub fn fatal_event(ev: &mut event_desc, msg: &mut String)
+{
+    errno = ev.data;
+    
+    match (ev.event)
+    {
+        EVENT_DIE => exit(0),
+        EVENT_FORK_ERR => panic!(format!("cannot fork into background: {}", NULL, EC_MISC)),
+        EVENT_PIPE_ERR => panic!(format!("failed to create helper: {}", NULL, EC_MISC)),
+        EVENT_CAP_ERR => panic!(format!("setting capabilities failed: {}", NULL, EC_MISC)),
+        EVENT_USER_ERR => panic!(format!("failed to change user-id to {}: {}", msg, EC_MISC)),
+        EVENT_GROUP_ERR => panic!(format!("failed to change group-id to {}: {}", msg, EC_MISC)),
+        EVENT_PIDFILE => panic!(format!("failed to open pidfile {}: {}", msg, EC_FILE)),
+        EVENT_LOG_ERR => panic!(format!("cannot open log {}: {}", msg, EC_FILE)),
+        EVENT_LUA_ERR => panic!(format!("failed to load Lua script: {}", msg, EC_MISC)),
+        EVENT_TFTP_ERR => panic!(format!("TFTP directory {} inaccessible: {}", msg, EC_FILE)),
+        EVENT_TIME_ERR => panic!(format!("cannot create timestamp file {}: {}" , msg, EC_BADCONF))
+    }
+}	
+                                
+pub fn async_event(pipe: u32, now: time::Instant)
+{
+    // pid_t p;
+    let mut p: pid_t;
+    // struct event_desc ev;
+    let mut ev: event_desc;
+    // int i, check = 0;
+    let mut i: i32 = 0;
+    let mut check: i32 = 0;
+    // char *msg;
+    let mut msg: String;
+
+    /* NOTE: the memory used to return msg is leaked: use msgs in events only
+    to describe fatal errors. */
+    
+    if (read_event(pipe, &ev, &msg)) {
+    match (ev.event)
+    {
+        EVENT_RELOAD => daemon.soa_sn += 1, /* Bump zone serial, as it may have changed. */
+        /* fall through */
+        EVENT_INIT=> { 
+            clear_cache_and_reload(now);
+        
+            if (daemon.port != 0)
+            {
+                if (daemon.resolv_files && daemon.opt_no_poll)
+                {
+                    reload_servers(daemon.resolv_files.name);
+                    check = 1;
+                }
+                
+                if (daemon.servers_file)
+                {
+                    read_servers_file();
+                    check = 1;
+                }
+                
+                if (check) {
+                    check_servers();
+                }
+            }
+
+            rerun_scripts();
+
+        },
+        EVENT_DUMP => {
+            if (daemon.port != 0) {
+                dump_cache(now);
+            }
+        },
+        EVENT_ALARM => {
+            if (daemon.dhcp || daemon.doing_dhcp6)
+            {
+                lease_prune(NULL, now);
+                lease_update_file(now);
+            }
+            else if (daemon.doing_ra) {
+            /* Not doing DHCP, so no lease system, manage alarms for ra only */
+                send_alarm(periodic_ra(now), now);
+            }},
+        EVENT_CHILD => {
+            /* See Stevens 5.10 */
+            while {
+                p = waitpid(-1, NULL, WNOHANG) != 0
+            }
+            if (p == -1)
+            {
+                if (errno != EINTR) {
+                }
+            }      
+            else {
+                for i in 0..MAX_PROCS {
+                    if (daemon.tcp_pids[i] == p) {
+                        daemon.tcp_pids[i] = 0;
+                    }
+                }
+            }
+        },
+        EVENT_KILLED => my_syslog(LOG_WARNING, format!("script process killed by signal {}"), ev.data),
+        EVENT_EXITED => my_syslog(LOG_WARNING, format!("script process exited with status {}"), ev.data),
+        EVENT_EXEC_ERR => {
+            my_syslog(LOG_ERR, format!("failed to execute {}: {}"), 
+            daemon.lease_change_command, strerror(ev.data));
+        },
+        EVENT_SCRIPT_LOG => my_syslog(MS_SCRIPT | LOG_DEBUG, "{}", msg ? msg : ""),
+        /* necessary for fatal errors in helper */
+        EVENT_USER_ERR => {},
+        EVENT_DIE => {},
+        EVENT_LUA_ERR => fatal_event(&ev, msg),
+        EVENT_REOPEN => {
+        /* Note: this may leave TCP-handling processes with the old file still open.
+        Since any such process will die in CHILD_LIFETIME or probably much sooner,
+        we leave them logging to the old file. */
+        if (daemon.log_file != NULL) {
+        log_reopen(daemon.log_file);}},
+        EVENT_NEWADDR => newaddress(now),
+        EVENT_NEWROUTE => {
+        resend_query();
+        /* Force re-reading resolv file right now, for luck. */
+        poll_resolv(0, 1, now);
+        },
+        EVENT_TIME => {
+            if (daemon.dnssec_no_time_check && daemon.opt_dnssec_valid && daemon.opt_dnssec_time)
+            {
+                my_syslog(LOG_INFO, format!("now checking DNSSEC signature timestamps"));
+                daemon.dnssec_no_time_check = 0;
+                clear_cache_and_reload(now);
+            }},
+        EVENT_TERM => {
+        /* Knock all our children on the head. */
+        for (i = 0; i < MAX_PROCS; i++)
+        if (daemon.tcp_pids[i] != 0)
+        kill(daemon.tcp_pids[i], SIGALRM);
+        }
+    }
+        
+        #if defined(HAVE_SCRIPT) && defined(HAVE_DHCP)
+        /* handle pending lease transitions */
+        if (daemon.helperfd != -1)
+        {
+            /* block in writes until all done */
+            if ((i = fcntl(daemon.helperfd, F_GETFL)) != -1)
+            fcntl(daemon.helperfd, F_SETFL, i & ~O_NONBLOCK); 
+            do {
+                helper_write();
+            } while (!helper_buf_empty() || do_script_run(now));
+            close(daemon.helperfd);
+        }
+        
+        
+        if (daemon.lease_stream)
+        fclose(daemon.lease_stream);
+        
+         HAVE_DNSSEC
+        /* update timestamp file on TERM if time is considered valid */
+        if (daemon.back_to_the_future)
+        {
+            if (utimes(daemon.timestamp_file, NULL) == -1)
+            my_syslog(LOG_ERR, format!("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
+        }
+        
+        
+        if (daemon.runfile)
+        unlink(daemon.runfile);
+        
+         HAVE_DUMPFILE
+        if (daemon.dumpfd != -1)
+        close(daemon.dumpfd);
+        
+        
+        my_syslog(LOG_INFO, format!("exiting on receipt of SIGTERM"));
+        flush_log();
+        exit(EC_GOOD);
+    }
+}
+                                
+static void poll_resolv(int force, int do_reload, time_t now)
+{
+    struct resolvc *res, *latest;
+    struct stat statbuf;
+    time_t last_change = 0;
+    /* There may be more than one possible file. 
+    Go through and find the one which changed _last_.
+    Warn of any which can't be read. */
+    
+    if (daemon.port == 0 || daemon.opt_no_poll)
+    return;
+    
+    for (latest = NULL, res = daemon.resolv_files; res; res = res.next)
+    if (stat(res.name, &statbuf) == -1)
+    {
+        if (force)
+        {
+            res.mtime = 0; 
+            continue;
+        }
+        
+        if (!res.logged)
+        my_syslog(LOG_WARNING, format!("failed to access {}: {}"), res.name, strerror(errno));
+        res.logged = 1;
+        
+        if (res.mtime != 0)
+        { 
+            /* existing file evaporated, force selection of the latest
+            file even if its mtime hasn't changed since we last looked */
+            poll_resolv(1, do_reload, now);
+            return;
+        }
+    }
+    else
+    {
+        res.logged = 0;
+        if (force || (statbuf.st_mtime != res.mtime))
+        {
+            res.mtime = statbuf.st_mtime;
+            if (difftime(statbuf.st_mtime, last_change) > 0.0)
+            {
+                last_change = statbuf.st_mtime;
+                latest = res;
+            }
+        }
+    }
+    
+    if (latest)
+    {
+        static int warned = 0;
+        if (reload_servers(latest.name))
+        {
+            my_syslog(LOG_INFO, format!("reading {}"), latest.name);
+            warned = 0;
+            check_servers();
+            if (option_bool(OPT_RELOAD) && do_reload)
+            clear_cache_and_reload(now);
+        }
+        else 
+        {
+            latest.mtime = 0;
+            if (!warned)
+            {
+                my_syslog(LOG_WARNING, format!("no servers found in {}, will retry"), latest.name);
+                warned = 1;
+            }
+        }
+    }
+}       
+                                
+void clear_cache_and_reload(time_t now)
+{
+    (void)now;
+    
+    if (daemon.port != 0)
+    cache_reload();
+    
+     HAVE_DHCP
+    if (daemon.dhcp || daemon.doing_dhcp6)
+    {
+        if (option_bool(OPT_ETHERS))
+        dhcp_read_ethers();
+        reread_dhcp();
+        dhcp_update_configs(daemon.dhcp_conf);
+        lease_update_from_configs(); 
+        lease_update_file(now); 
+        lease_update_dns(1);
+    }
+     HAVE_DHCP6
+    else if (daemon.doing_ra)
+    /* Not doing DHCP, so no lease system, manage 
+    alarms for ra only */
+    send_alarm(periodic_ra(now), now);
+    
+    
+}
+                                
+static int set_dns_listeners(time_t now)
+{
+    struct serverfd *serverfdp;
+    struct listener *listener;
+    int wait = 0, i;
+    
+     HAVE_TFTP
+    int  tftp = 0;
+    struct tftp_transfer *transfer;
+    if (!daemon.opt_single_port)
+    for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
+    {
+        tftp++;
+        poll_listen(transfer.sockfd, POLLIN);
+    }
+    
+    
+    /* will we be able to get memory? */
+    if (daemon.port != 0)
+    get_new_frec(now, &wait, NULL);
+    
+    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    poll_listen(serverfdp.fd, POLLIN);
+    
+    if (daemon.port != 0 && !daemon.osport)
+    for (i = 0; i < RANDOM_SOCKS; i++)
+    if (daemon.randomsocks[i].refcount != 0)
+    poll_listen(daemon.randomsocks[i].fd, POLLIN);
+    
+    for (listener = daemon.listeners; listener; listener = listener.next)
+    {
+        /* only listen for queries if we have resources */
+        if (listener.fd != -1 && wait == 0)
+        poll_listen(listener.fd, POLLIN);
+        
+        /* death of a child goes through the select loop, so
+        we don't need to explicitly arrange to wake up here */
+        if  (listener.tcpfd != -1)
+        for (i = 0; i < MAX_PROCS; i++)
+        if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
+        {
+            poll_listen(listener.tcpfd, POLLIN);
+            break;
+        }
+        
+         HAVE_TFTP
+        /* tftp == 0 in single-port mode. */
+        if (tftp <= daemon.tftp_max && listener.tftpfd != -1)
+        poll_listen(listener.tftpfd, POLLIN);
+        
+        
+    }
+    
+    if (!daemon.opt_debug)
+    for (i = 0; i < MAX_PROCS; i++)
+    if (daemon.tcp_pipes[i] != -1)
+    poll_listen(daemon.tcp_pipes[i], POLLIN);
+    
+    return wait;
+}
+                                
+static void check_dns_listeners(time_t now)
+{
+    struct serverfd *serverfdp;
+    struct listener *listener;
+    int i;
+    int pipefd[2];
+    
+    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    if (poll_check(serverfdp.fd, POLLIN))
+    reply_query(serverfdp.fd, serverfdp.source_addr.sa.sa_family, now);
+    
+    if (daemon.port != 0 && !daemon.osport)
+    for (i = 0; i < RANDOM_SOCKS; i++)
+    if (daemon.randomsocks[i].refcount != 0 && 
+        poll_check(daemon.randomsocks[i].fd, POLLIN))
+        reply_query(daemon.randomsocks[i].fd, daemon.randomsocks[i].family, now);
+        
+        /* Races. The child process can die before we read all of the data from the
+        pipe, or vice versa. Therefore send tcp_pids to zero when we wait() the 
+        process, and tcp_pipes to -1 and close the FD when we read the last
+        of the data - indicated by cache_recv_insert returning zero.
+        The order of these events is indeterminate, and both are needed
+        to free the process slot. Once the child process has gone, poll()
+        returns POLLHUP, not POLLIN, so have to check for both here. */
+        if (!daemon.opt_debug)
+        for (i = 0; i < MAX_PROCS; i++)
+        if (daemon.tcp_pipes[i] != -1 &&
+            poll_check(daemon.tcp_pipes[i], POLLIN | POLLHUP) &&
+            !cache_recv_insert(now, daemon.tcp_pipes[i]))
+            {
+                close(daemon.tcp_pipes[i]);
+                daemon.tcp_pipes[i] = -1;	
+            }
+            
+            for (listener = daemon.listeners; listener; listener = listener.next)
+            {
+                if (listener.fd != -1 && poll_check(listener.fd, POLLIN))
+                receive_query(listener, now); 
+                
+                 HAVE_TFTP     
+                if (listener.tftpfd != -1 && poll_check(listener.tftpfd, POLLIN))
+                tftp_request(listener, now);
+                
+                
+                if (listener.tcpfd != -1 && poll_check(listener.tcpfd, POLLIN))
+                {
+                    int confd, client_ok = 1;
+                    struct irec *iface = NULL;
+                    pid_t p;
+                    union mysockaddr tcp_addr;
+                    socklen_t tcp_len = sizeof(union mysockaddr);
+                    
+                    while ((confd = accept(listener.tcpfd, NULL, NULL)) == -1 && errno == EINTR);
+                    
+                    if (confd == -1)
+                    continue;
+                    
+                    if (getsockname(confd, (struct sockaddr *)&tcp_addr, &tcp_len) == -1)
+                    {
+                        close(confd);
+                        continue;
+                    }
+                    
+                    /* Make sure that the interface list is up-to-date.
+                    
+                    We do this here as we may need the results below, and
+                    the DNS code needs them for --interface-name stuff.
+                    
+                    Multiple calls to enumerate_interfaces() per select loop are
+                    inhibited, so calls to it in the child process (which doesn't select())
+                    have no effect. This avoids two processes reading from the same
+                    netlink fd and screwing the pooch entirely.
+                    */
+                    
+                    enumerate_interfaces(0);
+                    
+                    if (daemon.opt_nowild)
+                    iface = listener.iface; /* May be NULL */
+                    else 
+                    {
+                        int if_index;
+                        char intr_name[IF_NAMESIZE];
+                        
+                        /* if we can find the arrival interface, check it's one that's allowed */
+                        if ((if_index = tcp_interface(confd, tcp_addr.sa.sa_family)) != 0 &&
+                        indextoname(listener.tcpfd, if_index, intr_name))
+                        {
+                            union all_addr addr;
+                            
+                            if (tcp_addr.sa.sa_family == AF_INET6)
+                            addr.addr6 = tcp_addr.in6.sin6_addr;
+                            else
+                            addr.addr4 = tcp_addr.in.sin_addr;
+                            
+                            for (iface = daemon.interfaces; iface; iface = iface.next)
+                            if (iface.index == if_index &&
+                                iface.addr.sa.sa_family == tcp_addr.sa.sa_family)
+                                break;
+                                
+                                if (!iface && !loopback_exception(listener.tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
+                                client_ok = 0;
                             }
                             
-                            void queue_event(int event)
+                            if (daemon.opt_cleverbind)
+                            iface = listener.iface; /* May be NULL */
+                            else
                             {
-                                send_event(pipewrite, event, 0, NULL);
+                                /* Check for allowed interfaces when binding the wildcard address:
+                                we do this by looking for an interface with the same address as 
+                                the local address of the TCP connection, then looking to see if that's
+                                an allowed interface. As a side effect, we get the netmask of the
+                                interface too, for localisation. */
+                                
+                                for (iface = daemon.interfaces; iface; iface = iface.next)
+                                if (sockaddr_isequal(&iface.addr, &tcp_addr))
+                                break;
+                                
+                                if (!iface)
+                                client_ok = 0;
+                            }
+                        }
+                        
+                        if (!client_ok)
+                        {
+                            shutdown(confd, SHUT_RDWR);
+                            close(confd);
+                        }
+                        else if (!daemon.opt_debug && pipe(pipefd) == 0 && (p = fork()) != 0)
+                        {
+                            close(pipefd[1]); /* parent needs read pipe end. */
+                            if (p == -1)
+                            close(pipefd[0]);
+                            else
+                            {
+                                int i;
+                                 HAVE_LINUX_NETWORK
+                                /* The child process inherits the netlink socket, 
+                                which it never uses, but when the parent (us) 
+                                uses it in the future, the answer may go to the 
+                                child, resulting in the parent blocking
+                                forever awaiting the result. To avoid this
+                                the child closes the netlink socket, but there's
+                                a nasty race, since the parent may use netlink
+                                before the child has done the close.
+                                
+                                To avoid this, the parent blocks here until a 
+                                single byte comes back up the pipe, which
+                                is sent by the child after it has closed the
+                                netlink socket. */
+                                
+                                unsigned char a;
+                                read_write(pipefd[0], &a, 1, 1);
+                                
+                                
+                                for (i = 0; i < MAX_PROCS; i++)
+                                if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
+                                {
+                                    daemon.tcp_pids[i] = p;
+                                    daemon.tcp_pipes[i] = pipefd[0];
+                                    break;
+                                }
+                            }
+                            close(confd);
+                            
+                            /* The child can use up to TCP_MAX_QUERIES ids, so skip that many. */
+                            daemon.log_id += TCP_MAX_QUERIES;
+                        }
+                        else
+                        {
+                            unsigned char *buff;
+                            struct server *s; 
+                            int flags;
+                            struct in_addr netmask;
+                            int auth_dns;
+                            
+                            if (iface)
+                            {
+                                netmask = iface.netmask;
+                                auth_dns = iface.dns_auth;
+                            }
+                            else
+                            {
+                                netmask.s_addr = 0;
+                                auth_dns = 0;
                             }
                             
-                            void send_event(int fd, int event, int data, char *msg)
+                            /* Arrange for SIGALRM after CHILD_LIFETIME seconds to
+                            terminate the process. */
+                            if (!daemon.opt_debug)
                             {
-                                struct event_desc ev;
-                                struct iovec iov[2];
+                                 HAVE_LINUX_NETWORK
+                                /* See comment above re: netlink socket. */
+                                unsigned char a = 0;
                                 
-                                ev.event = event;
-                                ev.data = data;
-                                ev.msg_sz = msg ? strlen(msg) : 0;
-                                
-                                iov[0].iov_base = &ev;
-                                iov[0].iov_len = sizeof(ev);
-                                iov[1].iov_base = msg;
-                                iov[1].iov_len = ev.msg_sz;
-                                
-                                /* error pipe, debug mode. */
-                                if (fd == -1)
-                                fatal_event(&ev, msg);
-                                else
-                                /* pipe is non-blocking and struct event_desc is smaller than
-                                PIPE_BUF, so this either fails or writes everything */
-                                while (writev(fd, iov, msg ? 2 : 1) == -1 && errno == EINTR);
+                                close(daemon.netlinkfd);
+                                read_write(pipefd[1], &a, 1, 0);
+                                		  
+                                alarm(CHILD_LIFETIME);
+                                close(pipefd[0]); /* close read end in child. */
+                                daemon.pipe_to_parent = pipefd[1];
                             }
                             
-                            /* NOTE: the memory used to return msg is leaked: use msgs in events only
-                            to describe fatal errors. */
-                            static int read_event(int fd, struct event_desc *evp, char **msg)
+                            /* start with no upstream connections. */
+                            for (s = daemon.servers; s; s = s.next)
+                            s.tcpfd = -1; 
+                            
+                            /* The connected socket inherits non-blocking
+                            attribute from the listening socket. 
+                            Reset that here. */
+                            if ((flags = fcntl(confd, F_GETFL, 0)) != -1)
+                            fcntl(confd, F_SETFL, flags & ~O_NONBLOCK);
+                            
+                            buff = tcp_request(confd, now, &tcp_addr, netmask, auth_dns);
+                            
+                            shutdown(confd, SHUT_RDWR);
+                            close(confd);
+                            
+                            if (buff)
+                            free(buff);
+                            
+                            for (s = daemon.servers; s; s = s.next)
+                            if (s.tcpfd != -1)
                             {
-                                char *buf;
-                                
-                                if (!read_write(fd, (unsigned char *)evp, sizeof(struct event_desc), 1))
-                                return 0;
-                                
-                                *msg = NULL;
-                                
-                                if (evp.msg_sz != 0 && 
-                                    (buf = malloc(evp.msg_sz + 1)) &&
-                                    read_write(fd, (unsigned char *)buf, evp.msg_sz, 1))
-                                    {
-                                        buf[evp.msg_sz] = 0;
-                                        *msg = buf;
-                                    }
-                                    
-                                    return 1;
-                                }
-                                
-                                static void fatal_event(struct event_desc *ev, char *msg)
-                                {
-                                    errno = ev.data;
-                                    
-                                    switch (ev.event)
-                                    {
-                                        case EVENT_DIE:
-                                        exit(0);
-                                        
-                                        case EVENT_FORK_ERR:
-                                        die(_("cannot fork into background: {}"), NULL, EC_MISC);
-                                        
-                                        /* fall through */
-                                        case EVENT_PIPE_ERR:
-                                        die(_("failed to create helper: {}"), NULL, EC_MISC);
-                                        
-                                        /* fall through */
-                                        case EVENT_CAP_ERR:
-                                        die(_("setting capabilities failed: {}"), NULL, EC_MISC);
-                                        
-                                        /* fall through */
-                                        case EVENT_USER_ERR:
-                                        die(_("failed to change user-id to {}: {}"), msg, EC_MISC);
-                                        
-                                        /* fall through */
-                                        case EVENT_GROUP_ERR:
-                                        die(_("failed to change group-id to {}: {}"), msg, EC_MISC);
-                                        
-                                        /* fall through */
-                                        case EVENT_PIDFILE:
-                                        die(_("failed to open pidfile {}: {}"), msg, EC_FILE);
-                                        
-                                        /* fall through */
-                                        case EVENT_LOG_ERR:
-                                        die(_("cannot open log {}: {}"), msg, EC_FILE);
-                                        
-                                        /* fall through */
-                                        case EVENT_LUA_ERR:
-                                        die(_("failed to load Lua script: {}"), msg, EC_MISC);
-                                        
-                                        /* fall through */
-                                        case EVENT_TFTP_ERR:
-                                        die(_("TFTP directory {} inaccessible: {}"), msg, EC_FILE);
-                                        
-                                        /* fall through */
-                                        case EVENT_TIME_ERR:
-                                        die(_("cannot create timestamp file {}: {}" ), msg, EC_BADCONF);
-                                    }
-                                }	
-                                
-                                static void async_event(int pipe, time_t now)
-                                {
-                                    pid_t p;
-                                    struct event_desc ev;
-                                    int i, check = 0;
-                                    char *msg;
-                                    
-                                    /* NOTE: the memory used to return msg is leaked: use msgs in events only
-                                    to describe fatal errors. */
-                                    
-                                    if (read_event(pipe, &ev, &msg))
-                                    switch (ev.event)
-                                    {
-                                        case EVENT_RELOAD:
-                                        daemon.soa_sn++; /* Bump zone serial, as it may have changed. */
-                                        
-                                        /* fall through */
-                                        
-                                        case EVENT_INIT:
-                                        clear_cache_and_reload(now);
-                                        
-                                        if (daemon.port != 0)
-                                        {
-                                            if (daemon.resolv_files && option_bool(OPT_NO_POLL))
-                                            {
-                                                reload_servers(daemon.resolv_files.name);
-                                                check = 1;
-                                            }
+                                shutdown(s.tcpfd, SHUT_RDWR);
+                                close(s.tcpfd);
+                            }
+                            
+                            if (!daemon.opt_debug)
+                            {
+                                close(daemon.pipe_to_parent);
+                                flush_log();
+                                _exit(0);
+                            }
+                        }
+                    }
+                }
+            }
+            
+             HAVE_DHCP
+            int make_icmp_sock(void)
+            {
+                int fd;
+                int zeroopt = 0;
+                
+                if ((fd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) != -1)
+                {
+                    if (!fix_fd(fd) ||
+                    setsockopt(fd, SOL_SOCKET, SO_DONTROUTE, &zeroopt, sizeof(zeroopt)) == -1)
+                    {
+                        close(fd);
+                        fd = -1;
+                    }
+                }
+                
+                return fd;
+            }
                                             
-                                            if (daemon.servers_file)
-                                            {
-                                                read_servers_file();
-                                                check = 1;
-                                            }
+int icmp_ping(struct in_addr addr)
+{
+    /* Try and get an ICMP echo from a machine. */
+    
+    int fd;
+    struct sockaddr_in saddr;
+    struct { 
+        struct ip ip;
+        struct icmp icmp;
+    } packet;
+    unsigned short id = rand16();
+    unsigned int i, j;
+    int gotreply = 0;
+    
+    #if defined(HAVE_LINUX_NETWORK) || defined (HAVE_SOLARIS_NETWORK)
+    if ((fd = make_icmp_sock()) == -1)
+    return 0;
+    
+    int opt = 2000;
+    fd = daemon.dhcp_icmp_fd;
+    setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
+    
+    
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = 0;
+    saddr.sin_addr = addr;
+     HAVE_SOCKADDR_SA_LEN
+    saddr.sin_len = sizeof(struct sockaddr_in);
+    
+    
+    memset(&packet.icmp, 0, sizeof(packet.icmp));
+    packet.icmp.icmp_type = ICMP_ECHO;
+    packet.icmp.icmp_id = id;
+    for (j = 0, i = 0; i < sizeof(struct icmp) / 2; i++)
+    j += ((u16 *)&packet.icmp)[i];
+    while (j>>16)
+    j = (j & 0xffff) + (j >> 16);  
+    packet.icmp.icmp_cksum = (j == 0xffff) ? j : ~j;
+    
+    while (retry_send(sendto(fd, (char *)&packet.icmp, sizeof(struct icmp), 0, 
+    (struct sockaddr *)&saddr, sizeof(saddr))));
+    
+    gotreply = delay_dhcp(dnsmasq_time(), PING_WAIT, fd, addr.s_addr, id);
+    
+    #if defined(HAVE_LINUX_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
+    close(fd);
+    
+    opt = 1;
+    setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
+    
+    
+    return gotreply;
+}
                                             
-                                            if (check)
-                                            check_servers();
-                                        }
-                                        
-                                        #ifdef HAVE_DHCP
-                                        rerun_scripts();
-                                        #endif
-                                        break;
-                                        
-                                        case EVENT_DUMP:
-                                        if (daemon.port != 0)
-                                        dump_cache(now);
-                                        break;
-                                        
-                                        case EVENT_ALARM:
-                                        #ifdef HAVE_DHCP
-                                        if (daemon.dhcp || daemon.doing_dhcp6)
-                                        {
-                                            lease_prune(NULL, now);
-                                            lease_update_file(now);
-                                        }
-                                        #ifdef HAVE_DHCP6
-                                        else if (daemon.doing_ra)
-                                        /* Not doing DHCP, so no lease system, manage alarms for ra only */
-                                        send_alarm(periodic_ra(now), now);
-                                        #endif
-                                        #endif
-                                        break;
-                                        
-                                        case EVENT_CHILD:
-                                        /* See Stevens 5.10 */
-                                        while ((p = waitpid(-1, NULL, WNOHANG)) != 0)
-                                        if (p == -1)
-                                        {
-                                            if (errno != EINTR)
-                                            break;
-                                        }      
-                                        else 
-                                        for (i = 0 ; i < MAX_PROCS; i++)
-                                        if (daemon.tcp_pids[i] == p)
-                                        daemon.tcp_pids[i] = 0;
-                                        break;
-                                        
-                                        #if defined(HAVE_SCRIPT)	
-                                        case EVENT_KILLED:
-                                        my_syslog(LOG_WARNING, _("script process killed by signal {}"), ev.data);
-                                        break;
-                                        
-                                        case EVENT_EXITED:
-                                        my_syslog(LOG_WARNING, _("script process exited with status {}"), ev.data);
-                                        break;
-                                        
-                                        case EVENT_EXEC_ERR:
-                                        my_syslog(LOG_ERR, _("failed to execute {}: {}"), 
-                                        daemon.lease_change_command, strerror(ev.data));
-                                        break;
-                                        
-                                        case EVENT_SCRIPT_LOG:
-                                        my_syslog(MS_SCRIPT | LOG_DEBUG, "{}", msg ? msg : "");
-                                        free(msg);
-                                        msg = NULL;
-                                        break;
-                                        
-                                        /* necessary for fatal errors in helper */
-                                        case EVENT_USER_ERR:
-                                        case EVENT_DIE:
-                                        case EVENT_LUA_ERR:
-                                        fatal_event(&ev, msg);
-                                        break;
-                                        #endif
-                                        
-                                        case EVENT_REOPEN:
-                                        /* Note: this may leave TCP-handling processes with the old file still open.
-                                        Since any such process will die in CHILD_LIFETIME or probably much sooner,
-                                        we leave them logging to the old file. */
-                                        if (daemon.log_file != NULL)
-                                        log_reopen(daemon.log_file);
-                                        break;
-                                        
-                                        case EVENT_NEWADDR:
-                                        newaddress(now);
-                                        break;
-                                        
-                                        case EVENT_NEWROUTE:
-                                        resend_query();
-                                        /* Force re-reading resolv file right now, for luck. */
-                                        poll_resolv(0, 1, now);
-                                        break;
-                                        
-                                        case EVENT_TIME:
-                                        #ifdef HAVE_DNSSEC
-                                        if (daemon.dnssec_no_time_check && daemon.opt_dnssec_valid && daemon.opt_dnssec_time)
-                                        {
-                                            my_syslog(LOG_INFO, _("now checking DNSSEC signature timestamps"));
-                                            daemon.dnssec_no_time_check = 0;
-                                            clear_cache_and_reload(now);
-                                        }
-                                        #endif
-                                        break;
-                                        
-                                        case EVENT_TERM:
-                                        /* Knock all our children on the head. */
-                                        for (i = 0; i < MAX_PROCS; i++)
-                                        if (daemon.tcp_pids[i] != 0)
-                                        kill(daemon.tcp_pids[i], SIGALRM);
-                                        
-                                        #if defined(HAVE_SCRIPT) && defined(HAVE_DHCP)
-                                        /* handle pending lease transitions */
-                                        if (daemon.helperfd != -1)
-                                        {
-                                            /* block in writes until all done */
-                                            if ((i = fcntl(daemon.helperfd, F_GETFL)) != -1)
-                                            fcntl(daemon.helperfd, F_SETFL, i & ~O_NONBLOCK); 
-                                            do {
-                                                helper_write();
-                                            } while (!helper_buf_empty() || do_script_run(now));
-                                            close(daemon.helperfd);
-                                        }
-                                        #endif
-                                        
-                                        if (daemon.lease_stream)
-                                        fclose(daemon.lease_stream);
-                                        
-                                        #ifdef HAVE_DNSSEC
-                                        /* update timestamp file on TERM if time is considered valid */
-                                        if (daemon.back_to_the_future)
-                                        {
-                                            if (utimes(daemon.timestamp_file, NULL) == -1)
-                                            my_syslog(LOG_ERR, _("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
-                                        }
-                                        #endif
-                                        
-                                        if (daemon.runfile)
-                                        unlink(daemon.runfile);
-                                        
-                                        #ifdef HAVE_DUMPFILE
-                                        if (daemon.dumpfd != -1)
-                                        close(daemon.dumpfd);
-                                        #endif
-                                        
-                                        my_syslog(LOG_INFO, _("exiting on receipt of SIGTERM"));
-                                        flush_log();
-                                        exit(EC_GOOD);
-                                    }
-                                }
-                                
-                                static void poll_resolv(int force, int do_reload, time_t now)
-                                {
-                                    struct resolvc *res, *latest;
-                                    struct stat statbuf;
-                                    time_t last_change = 0;
-                                    /* There may be more than one possible file. 
-                                    Go through and find the one which changed _last_.
-                                    Warn of any which can't be read. */
-                                    
-                                    if (daemon.port == 0 || option_bool(OPT_NO_POLL))
-                                    return;
-                                    
-                                    for (latest = NULL, res = daemon.resolv_files; res; res = res.next)
-                                    if (stat(res.name, &statbuf) == -1)
-                                    {
-                                        if (force)
-                                        {
-                                            res.mtime = 0; 
-                                            continue;
-                                        }
-                                        
-                                        if (!res.logged)
-                                        my_syslog(LOG_WARNING, _("failed to access {}: {}"), res.name, strerror(errno));
-                                        res.logged = 1;
-                                        
-                                        if (res.mtime != 0)
-                                        { 
-                                            /* existing file evaporated, force selection of the latest
-                                            file even if its mtime hasn't changed since we last looked */
-                                            poll_resolv(1, do_reload, now);
-                                            return;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        res.logged = 0;
-                                        if (force || (statbuf.st_mtime != res.mtime))
-                                        {
-                                            res.mtime = statbuf.st_mtime;
-                                            if (difftime(statbuf.st_mtime, last_change) > 0.0)
-                                            {
-                                                last_change = statbuf.st_mtime;
-                                                latest = res;
-                                            }
-                                        }
-                                    }
-                                    
-                                    if (latest)
-                                    {
-                                        static int warned = 0;
-                                        if (reload_servers(latest.name))
-                                        {
-                                            my_syslog(LOG_INFO, _("reading {}"), latest.name);
-                                            warned = 0;
-                                            check_servers();
-                                            if (option_bool(OPT_RELOAD) && do_reload)
-                                            clear_cache_and_reload(now);
-                                        }
-                                        else 
-                                        {
-                                            latest.mtime = 0;
-                                            if (!warned)
-                                            {
-                                                my_syslog(LOG_WARNING, _("no servers found in {}, will retry"), latest.name);
-                                                warned = 1;
-                                            }
-                                        }
-                                    }
-                                }       
-                                
-                                void clear_cache_and_reload(time_t now)
-                                {
-                                    (void)now;
-                                    
-                                    if (daemon.port != 0)
-                                    cache_reload();
-                                    
-                                    #ifdef HAVE_DHCP
-                                    if (daemon.dhcp || daemon.doing_dhcp6)
-                                    {
-                                        if (option_bool(OPT_ETHERS))
-                                        dhcp_read_ethers();
-                                        reread_dhcp();
-                                        dhcp_update_configs(daemon.dhcp_conf);
-                                        lease_update_from_configs(); 
-                                        lease_update_file(now); 
-                                        lease_update_dns(1);
-                                    }
-                                    #ifdef HAVE_DHCP6
-                                    else if (daemon.doing_ra)
-                                    /* Not doing DHCP, so no lease system, manage 
-                                    alarms for ra only */
-                                    send_alarm(periodic_ra(now), now);
-                                    #endif
-                                    #endif
-                                }
-                                
-                                static int set_dns_listeners(time_t now)
-                                {
-                                    struct serverfd *serverfdp;
-                                    struct listener *listener;
-                                    int wait = 0, i;
-                                    
-                                    #ifdef HAVE_TFTP
-                                    int  tftp = 0;
-                                    struct tftp_transfer *transfer;
-                                    if (!option_bool(OPT_SINGLE_PORT))
-                                    for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
-                                    {
-                                        tftp++;
-                                        poll_listen(transfer.sockfd, POLLIN);
-                                    }
-                                    #endif
-                                    
-                                    /* will we be able to get memory? */
-                                    if (daemon.port != 0)
-                                    get_new_frec(now, &wait, NULL);
-                                    
-                                    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
-                                    poll_listen(serverfdp.fd, POLLIN);
-                                    
-                                    if (daemon.port != 0 && !daemon.osport)
-                                    for (i = 0; i < RANDOM_SOCKS; i++)
-                                    if (daemon.randomsocks[i].refcount != 0)
-                                    poll_listen(daemon.randomsocks[i].fd, POLLIN);
-                                    
-                                    for (listener = daemon.listeners; listener; listener = listener.next)
-                                    {
-                                        /* only listen for queries if we have resources */
-                                        if (listener.fd != -1 && wait == 0)
-                                        poll_listen(listener.fd, POLLIN);
-                                        
-                                        /* death of a child goes through the select loop, so
-                                        we don't need to explicitly arrange to wake up here */
-                                        if  (listener.tcpfd != -1)
-                                        for (i = 0; i < MAX_PROCS; i++)
-                                        if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
-                                        {
-                                            poll_listen(listener.tcpfd, POLLIN);
-                                            break;
-                                        }
-                                        
-                                        #ifdef HAVE_TFTP
-                                        /* tftp == 0 in single-port mode. */
-                                        if (tftp <= daemon.tftp_max && listener.tftpfd != -1)
-                                        poll_listen(listener.tftpfd, POLLIN);
-                                        #endif
-                                        
-                                    }
-                                    
-                                    if (!option_bool(OPT_DEBUG))
-                                    for (i = 0; i < MAX_PROCS; i++)
-                                    if (daemon.tcp_pipes[i] != -1)
-                                    poll_listen(daemon.tcp_pipes[i], POLLIN);
-                                    
-                                    return wait;
-                                }
-                                
-                                static void check_dns_listeners(time_t now)
-                                {
-                                    struct serverfd *serverfdp;
-                                    struct listener *listener;
-                                    int i;
-                                    int pipefd[2];
-                                    
-                                    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
-                                    if (poll_check(serverfdp.fd, POLLIN))
-                                    reply_query(serverfdp.fd, serverfdp.source_addr.sa.sa_family, now);
-                                    
-                                    if (daemon.port != 0 && !daemon.osport)
-                                    for (i = 0; i < RANDOM_SOCKS; i++)
-                                    if (daemon.randomsocks[i].refcount != 0 && 
-                                        poll_check(daemon.randomsocks[i].fd, POLLIN))
-                                        reply_query(daemon.randomsocks[i].fd, daemon.randomsocks[i].family, now);
-                                        
-                                        /* Races. The child process can die before we read all of the data from the
-                                        pipe, or vice versa. Therefore send tcp_pids to zero when we wait() the 
-                                        process, and tcp_pipes to -1 and close the FD when we read the last
-                                        of the data - indicated by cache_recv_insert returning zero.
-                                        The order of these events is indeterminate, and both are needed
-                                        to free the process slot. Once the child process has gone, poll()
-                                        returns POLLHUP, not POLLIN, so have to check for both here. */
-                                        if (!option_bool(OPT_DEBUG))
-                                        for (i = 0; i < MAX_PROCS; i++)
-                                        if (daemon.tcp_pipes[i] != -1 &&
-                                            poll_check(daemon.tcp_pipes[i], POLLIN | POLLHUP) &&
-                                            !cache_recv_insert(now, daemon.tcp_pipes[i]))
-                                            {
-                                                close(daemon.tcp_pipes[i]);
-                                                daemon.tcp_pipes[i] = -1;	
-                                            }
-                                            
-                                            for (listener = daemon.listeners; listener; listener = listener.next)
-                                            {
-                                                if (listener.fd != -1 && poll_check(listener.fd, POLLIN))
-                                                receive_query(listener, now); 
-                                                
-                                                #ifdef HAVE_TFTP     
-                                                if (listener.tftpfd != -1 && poll_check(listener.tftpfd, POLLIN))
-                                                tftp_request(listener, now);
-                                                #endif
-                                                
-                                                if (listener.tcpfd != -1 && poll_check(listener.tcpfd, POLLIN))
-                                                {
-                                                    int confd, client_ok = 1;
-                                                    struct irec *iface = NULL;
-                                                    pid_t p;
-                                                    union mysockaddr tcp_addr;
-                                                    socklen_t tcp_len = sizeof(union mysockaddr);
-                                                    
-                                                    while ((confd = accept(listener.tcpfd, NULL, NULL)) == -1 && errno == EINTR);
-                                                    
-                                                    if (confd == -1)
-                                                    continue;
-                                                    
-                                                    if (getsockname(confd, (struct sockaddr *)&tcp_addr, &tcp_len) == -1)
-                                                    {
-                                                        close(confd);
-                                                        continue;
-                                                    }
-                                                    
-                                                    /* Make sure that the interface list is up-to-date.
-                                                    
-                                                    We do this here as we may need the results below, and
-                                                    the DNS code needs them for --interface-name stuff.
-                                                    
-                                                    Multiple calls to enumerate_interfaces() per select loop are
-                                                    inhibited, so calls to it in the child process (which doesn't select())
-                                                    have no effect. This avoids two processes reading from the same
-                                                    netlink fd and screwing the pooch entirely.
-                                                    */
-                                                    
-                                                    enumerate_interfaces(0);
-                                                    
-                                                    if (option_bool(OPT_NOWILD))
-                                                    iface = listener.iface; /* May be NULL */
-                                                    else 
-                                                    {
-                                                        int if_index;
-                                                        char intr_name[IF_NAMESIZE];
-                                                        
-                                                        /* if we can find the arrival interface, check it's one that's allowed */
-                                                        if ((if_index = tcp_interface(confd, tcp_addr.sa.sa_family)) != 0 &&
-                                                        indextoname(listener.tcpfd, if_index, intr_name))
-                                                        {
-                                                            union all_addr addr;
-                                                            
-                                                            if (tcp_addr.sa.sa_family == AF_INET6)
-                                                            addr.addr6 = tcp_addr.in6.sin6_addr;
-                                                            else
-                                                            addr.addr4 = tcp_addr.in.sin_addr;
-                                                            
-                                                            for (iface = daemon.interfaces; iface; iface = iface.next)
-                                                            if (iface.index == if_index &&
-                                                                iface.addr.sa.sa_family == tcp_addr.sa.sa_family)
-                                                                break;
-                                                                
-                                                                if (!iface && !loopback_exception(listener.tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
-                                                                client_ok = 0;
-                                                            }
-                                                            
-                                                            if (option_bool(OPT_CLEVERBIND))
-                                                            iface = listener.iface; /* May be NULL */
-                                                            else
-                                                            {
-                                                                /* Check for allowed interfaces when binding the wildcard address:
-                                                                we do this by looking for an interface with the same address as 
-                                                                the local address of the TCP connection, then looking to see if that's
-                                                                an allowed interface. As a side effect, we get the netmask of the
-                                                                interface too, for localisation. */
-                                                                
-                                                                for (iface = daemon.interfaces; iface; iface = iface.next)
-                                                                if (sockaddr_isequal(&iface.addr, &tcp_addr))
-                                                                break;
-                                                                
-                                                                if (!iface)
-                                                                client_ok = 0;
-                                                            }
-                                                        }
-                                                        
-                                                        if (!client_ok)
-                                                        {
-                                                            shutdown(confd, SHUT_RDWR);
-                                                            close(confd);
-                                                        }
-                                                        else if (!option_bool(OPT_DEBUG) && pipe(pipefd) == 0 && (p = fork()) != 0)
-                                                        {
-                                                            close(pipefd[1]); /* parent needs read pipe end. */
-                                                            if (p == -1)
-                                                            close(pipefd[0]);
-                                                            else
-                                                            {
-                                                                int i;
-                                                                #ifdef HAVE_LINUX_NETWORK
-                                                                /* The child process inherits the netlink socket, 
-                                                                which it never uses, but when the parent (us) 
-                                                                uses it in the future, the answer may go to the 
-                                                                child, resulting in the parent blocking
-                                                                forever awaiting the result. To avoid this
-                                                                the child closes the netlink socket, but there's
-                                                                a nasty race, since the parent may use netlink
-                                                                before the child has done the close.
-                                                                
-                                                                To avoid this, the parent blocks here until a 
-                                                                single byte comes back up the pipe, which
-                                                                is sent by the child after it has closed the
-                                                                netlink socket. */
-                                                                
-                                                                unsigned char a;
-                                                                read_write(pipefd[0], &a, 1, 1);
-                                                                #endif
-                                                                
-                                                                for (i = 0; i < MAX_PROCS; i++)
-                                                                if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
-                                                                {
-                                                                    daemon.tcp_pids[i] = p;
-                                                                    daemon.tcp_pipes[i] = pipefd[0];
-                                                                    break;
-                                                                }
-                                                            }
-                                                            close(confd);
-                                                            
-                                                            /* The child can use up to TCP_MAX_QUERIES ids, so skip that many. */
-                                                            daemon.log_id += TCP_MAX_QUERIES;
-                                                        }
-                                                        else
-                                                        {
-                                                            unsigned char *buff;
-                                                            struct server *s; 
-                                                            int flags;
-                                                            struct in_addr netmask;
-                                                            int auth_dns;
-                                                            
-                                                            if (iface)
-                                                            {
-                                                                netmask = iface.netmask;
-                                                                auth_dns = iface.dns_auth;
-                                                            }
-                                                            else
-                                                            {
-                                                                netmask.s_addr = 0;
-                                                                auth_dns = 0;
-                                                            }
-                                                            
-                                                            /* Arrange for SIGALRM after CHILD_LIFETIME seconds to
-                                                            terminate the process. */
-                                                            if (!option_bool(OPT_DEBUG))
-                                                            {
-                                                                #ifdef HAVE_LINUX_NETWORK
-                                                                /* See comment above re: netlink socket. */
-                                                                unsigned char a = 0;
-                                                                
-                                                                close(daemon.netlinkfd);
-                                                                read_write(pipefd[1], &a, 1, 0);
-                                                                #endif		  
-                                                                alarm(CHILD_LIFETIME);
-                                                                close(pipefd[0]); /* close read end in child. */
-                                                                daemon.pipe_to_parent = pipefd[1];
-                                                            }
-                                                            
-                                                            /* start with no upstream connections. */
-                                                            for (s = daemon.servers; s; s = s.next)
-                                                            s.tcpfd = -1; 
-                                                            
-                                                            /* The connected socket inherits non-blocking
-                                                            attribute from the listening socket. 
-                                                            Reset that here. */
-                                                            if ((flags = fcntl(confd, F_GETFL, 0)) != -1)
-                                                            fcntl(confd, F_SETFL, flags & ~O_NONBLOCK);
-                                                            
-                                                            buff = tcp_request(confd, now, &tcp_addr, netmask, auth_dns);
-                                                            
-                                                            shutdown(confd, SHUT_RDWR);
-                                                            close(confd);
-                                                            
-                                                            if (buff)
-                                                            free(buff);
-                                                            
-                                                            for (s = daemon.servers; s; s = s.next)
-                                                            if (s.tcpfd != -1)
-                                                            {
-                                                                shutdown(s.tcpfd, SHUT_RDWR);
-                                                                close(s.tcpfd);
-                                                            }
-                                                            
-                                                            if (!option_bool(OPT_DEBUG))
-                                                            {
-                                                                close(daemon.pipe_to_parent);
-                                                                flush_log();
-                                                                _exit(0);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            
-                                            #ifdef HAVE_DHCP
-                                            int make_icmp_sock(void)
-                                            {
-                                                int fd;
-                                                int zeroopt = 0;
-                                                
-                                                if ((fd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) != -1)
-                                                {
-                                                    if (!fix_fd(fd) ||
-                                                    setsockopt(fd, SOL_SOCKET, SO_DONTROUTE, &zeroopt, sizeof(zeroopt)) == -1)
-                                                    {
-                                                        close(fd);
-                                                        fd = -1;
-                                                    }
-                                                }
-                                                
-                                                return fd;
-                                            }
-                                            
-                                            int icmp_ping(struct in_addr addr)
-                                            {
-                                                /* Try and get an ICMP echo from a machine. */
-                                                
-                                                int fd;
-                                                struct sockaddr_in saddr;
-                                                struct { 
-                                                    struct ip ip;
-                                                    struct icmp icmp;
-                                                } packet;
-                                                unsigned short id = rand16();
-                                                unsigned int i, j;
-                                                int gotreply = 0;
-                                                
-                                                #if defined(HAVE_LINUX_NETWORK) || defined (HAVE_SOLARIS_NETWORK)
-                                                if ((fd = make_icmp_sock()) == -1)
-                                                return 0;
-                                                #else
-                                                int opt = 2000;
-                                                fd = daemon.dhcp_icmp_fd;
-                                                setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
-                                                #endif
-                                                
-                                                saddr.sin_family = AF_INET;
-                                                saddr.sin_port = 0;
-                                                saddr.sin_addr = addr;
-                                                #ifdef HAVE_SOCKADDR_SA_LEN
-                                                saddr.sin_len = sizeof(struct sockaddr_in);
-                                                #endif
-                                                
-                                                memset(&packet.icmp, 0, sizeof(packet.icmp));
-                                                packet.icmp.icmp_type = ICMP_ECHO;
-                                                packet.icmp.icmp_id = id;
-                                                for (j = 0, i = 0; i < sizeof(struct icmp) / 2; i++)
-                                                j += ((u16 *)&packet.icmp)[i];
-                                                while (j>>16)
-                                                j = (j & 0xffff) + (j >> 16);  
-                                                packet.icmp.icmp_cksum = (j == 0xffff) ? j : ~j;
-                                                
-                                                while (retry_send(sendto(fd, (char *)&packet.icmp, sizeof(struct icmp), 0, 
-                                                (struct sockaddr *)&saddr, sizeof(saddr))));
-                                                
-                                                gotreply = delay_dhcp(dnsmasq_time(), PING_WAIT, fd, addr.s_addr, id);
-                                                
-                                                #if defined(HAVE_LINUX_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
-                                                close(fd);
-                                                #else
-                                                opt = 1;
-                                                setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
-                                                #endif
-                                                
-                                                return gotreply;
-                                            }
-                                            
-                                            int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id)
-                                            {
-                                                /* Delay processing DHCP packets for "sec" seconds counting from "start".
-                                                If "fd" is not -1 it will stop waiting if an ICMP echo reply is received
-                                                from "addr" with ICMP ID "id" and return 1 */
-                                                
-                                                /* Note that whilst waiting, we check for
-                                                (and service) events on the DNS and TFTP  sockets, (so doing that
-                                                    better not use any resources our caller has in use...)
-                                                    but we remain deaf to signals or further DHCP packets. */
-                                                    
-                                                    /* There can be a problem using dnsmasq_time() to end the loop, since
-                                                    it's not monotonic, and can go backwards if the system clock is
-                                                    tweaked, leading to the code getting stuck in this loop and
-                                                    ignoring DHCP requests. To fix this, we check to see if select returned
-                                                    as a result of a timeout rather than a socket becoming available. We
-                                                    only allow this to happen as many times as it takes to get to the wait time
-                                                    in quarter-second chunks. This provides a fallback way to end loop. */
-                                                    
-                                                    int rc, timeout_count;
-                                                    time_t now;
-                                                    
-                                                    for (now = dnsmasq_time(), timeout_count = 0;
-                                                    (difftime(now, start) <= (float)sec) && (timeout_count < sec * 4);)
-                                                    {
-                                                        poll_reset();
-                                                        if (fd != -1)
-                                                        poll_listen(fd, POLLIN);
-                                                        set_dns_listeners(now);
-                                                        set_log_writer();
-                                                        
-                                                        #ifdef HAVE_DHCP6
-                                                        if (daemon.doing_ra)
-                                                        poll_listen(daemon.icmp6fd, POLLIN); 
-                                                        #endif
-                                                        
-                                                        rc = do_poll(250);
-                                                        
-                                                        if (rc < 0)
-                                                        continue;
-                                                        else if (rc == 0)
-                                                        timeout_count++;
-                                                        
-                                                        now = dnsmasq_time();
-                                                        
-                                                        check_log_writer(0);
-                                                        check_dns_listeners(now);
-                                                        
-                                                        #ifdef HAVE_DHCP6
-                                                        if (daemon.doing_ra && poll_check(daemon.icmp6fd, POLLIN))
-                                                        icmp6_packet(now);
-                                                        #endif
-                                                        
-                                                        #ifdef HAVE_TFTP
-                                                        check_tftp_listeners(now);
-                                                        #endif
-                                                        
-                                                        if (fd != -1)
-                                                        {
-                                                            struct {
-                                                                struct ip ip;
-                                                                struct icmp icmp;
-                                                            } packet;
-                                                            struct sockaddr_in faddr;
-                                                            socklen_t len = sizeof(faddr);
-                                                            
-                                                            if (poll_check(fd, POLLIN) &&
-                                                            recvfrom(fd, &packet, sizeof(packet), 0, (struct sockaddr *)&faddr, &len) == sizeof(packet) &&
-                                                            addr == faddr.sin_addr.s_addr &&
-                                                            packet.icmp.icmp_type == ICMP_ECHOREPLY &&
-                                                            packet.icmp.icmp_seq == 0 &&
-                                                            packet.icmp.icmp_id == id)
-                                                            return 1;
-                                                        }
-                                                    }
-                                                    
-                                                    return 0;
-                                                }
-                                                #endif /* HAVE_DHCP */
+int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id)
+{
+/* Delay processing DHCP packets for "sec" seconds counting from "start".
+If "fd" is not -1 it will stop waiting if an ICMP echo reply is received
+from "addr" with ICMP ID "id" and return 1 */
+
+/* Note that whilst waiting, we check for
+(and service) events on the DNS and TFTP  sockets, (so doing that
+    better not use any resources our caller has in use...)
+    but we remain deaf to signals or further DHCP packets. */
+    
+    /* There can be a problem using dnsmasq_time() to end the loop, since
+    it's not monotonic, and can go backwards if the system clock is
+    tweaked, leading to the code getting stuck in this loop and
+    ignoring DHCP requests. To fix this, we check to see if select returned
+    as a result of a timeout rather than a socket becoming available. We
+    only allow this to happen as many times as it takes to get to the wait time
+    in quarter-second chunks. This provides a fallback way to end loop. */
+    
+    int rc, timeout_count;
+    time_t now;
+    
+    for (now = dnsmasq_time(), timeout_count = 0;
+    (difftime(now, start) <= (float)sec) && (timeout_count < sec * 4);)
+    {
+        poll_reset();
+        if (fd != -1)
+        poll_listen(fd, POLLIN);
+        set_dns_listeners(now);
+        set_log_writer();
+        
+         HAVE_DHCP6
+        if (daemon.doing_ra)
+        poll_listen(daemon.icmp6fd, POLLIN); 
+        
+        
+        rc = do_poll(250);
+        
+        if (rc < 0)
+        continue;
+        else if (rc == 0)
+        timeout_count++;
+        
+        now = dnsmasq_time();
+        
+        check_log_writer(0);
+        check_dns_listeners(now);
+        
+         HAVE_DHCP6
+        if (daemon.doing_ra && poll_check(daemon.icmp6fd, POLLIN))
+        icmp6_packet(now);
+        
+        
+         HAVE_TFTP
+        check_tftp_listeners(now);
+        
+        
+        if (fd != -1)
+        {
+            struct {
+                struct ip ip;
+                struct icmp icmp;
+            } packet;
+            struct sockaddr_in faddr;
+            socklen_t len = sizeof(faddr);
+            
+            if (poll_check(fd, POLLIN) &&
+            recvfrom(fd, &packet, sizeof(packet), 0, (struct sockaddr *)&faddr, &len) == sizeof(packet) &&
+            addr == faddr.sin_addr.s_addr &&
+            packet.icmp.icmp_type == ICMP_ECHOREPLY &&
+            packet.icmp.icmp_seq == 0 &&
+            packet.icmp.icmp_id == id)
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+
                                                 

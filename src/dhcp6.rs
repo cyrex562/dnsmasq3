@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 
 #include <netinet/icmp6.h>
 
@@ -39,50 +39,50 @@ void dhcp6_init(void)
   struct sockaddr_in6 saddr;
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
   int class = IPTOS_CLASS_CS6;
-#endif
+
   int oneopt = 1;
 
   if ((fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1 ||
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
       setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &class, sizeof(class)) == -1 ||
-#endif
+
       setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &oneopt, sizeof(oneopt)) == -1 ||
       !fix_fd(fd) ||
       !set_ipv6pktinfo(fd))
-    die (_("cannot create DHCPv6 socket: {}"), NULL, EC_BADNET);
+    die (format!("cannot create DHCPv6 socket: {}"), NULL, EC_BADNET);
   
  /* When bind-interfaces is set, there might be more than one dnsmasq
      instance binding port 547. That's OK if they serve different networks.
      Need to set REUSEADDR|REUSEPORT to make this possible.
      Handle the case that REUSEPORT is defined, but the kernel doesn't 
      support it. This handles the introduction of REUSEPORT on Linux. */
-  if (option_bool(OPT_NOWILD) || option_bool(OPT_CLEVERBIND))
+  if (daemon.opt_nowild || daemon.opt_cleverbind)
     {
       int rc = 0;
 
-#ifdef SO_REUSEPORT
+ SO_REUSEPORT
       if ((rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt))) == -1 &&
 	  errno == ENOPROTOOPT)
 	rc = 0;
-#endif
+
       
       if (rc != -1)
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt));
       
       if (rc == -1)
-	die(_("failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: {}"), NULL, EC_BADNET);
+	die(format!("failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: {}"), NULL, EC_BADNET);
     }
   
   memset(&saddr, 0, sizeof(saddr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
   saddr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+
   saddr.sin6_family = AF_INET6;
   saddr.sin6_addr = in6addr_any;
   saddr.sin6_port = htons(DHCPV6_SERVER_PORT);
   
   if (bind(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in6)))
-    die(_("failed to bind DHCPv6 server socket: {}"), NULL, EC_BADNET);
+    die(format!("failed to bind DHCPv6 server socket: {}"), NULL, EC_BADNET);
   
   daemon.dhcp6fd = fd;
 }
@@ -177,7 +177,7 @@ void dhcp6_packet(time_t now)
 		if (!parm.ind)
 		  {
 		    my_syslog(MS_DHCP | LOG_WARNING,
-			      _("unknown interface {} in bridge-interface"),
+			      format!("unknown interface {} in bridge-interface"),
 			      bridge.iface);
 		    return;
 		  }
@@ -277,9 +277,9 @@ void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsi
   neigh.checksum = 0;
    
   memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
   addr.in6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+
   addr.in6.sin6_family = AF_INET6;
   addr.in6.sin6_port = htons(IPPROTO_ICMPV6);
   addr.in6.sin6_addr = *client;
@@ -584,7 +584,7 @@ void make_duid(time_t now)
       /* rebase epoch to 1/1/2000 */
       if (!option_bool(OPT_LEASE_RO) || daemon.lease_change_command)
 	newnow = now - 946684800;
-#endif      
+      
       
       iface_enumerate(AF_LOCAL, &newnow, make_duid1);
       
@@ -825,6 +825,6 @@ void dhcp_construct_contexts(time_t now)
     }
 }
 
-#endif
+
 
 

@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_AUTH
+ HAVE_AUTH
 
 static struct addrlist *find_addrlist(struct addrlist *list, int flag, union all_addr *addr_u)
 {
@@ -436,7 +436,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 		  else
 		    inet_ntop(AF_INET6, &peer_addr.in6.sin6_addr, daemon.addrbuff, ADDRSTRLEN); 
 		  
-		  my_syslog(LOG_WARNING, _("ignoring zone transfer request from {}"), daemon.addrbuff);
+		  my_syslog(LOG_WARNING, format!("ignoring zone transfer request from {}"), daemon.addrbuff);
 		  return 0;
 		}
 	       	      
@@ -866,7 +866,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
   return ansp - (unsigned char *)header;
 }
   
-#endif  
+  
   
 
 

@@ -16,9 +16,9 @@
 
 #include "dnsmasq.h"
 
-#ifdef __ANDROID__
+ __ANDROID__
 #  include <android/log.h>
-#endif
+
 
 /* Implement logging to /dev/log asynchronously. If syslogd is 
    making DNS lookups through dnsmasq, and dnsmasq blocks awaiting
@@ -59,14 +59,14 @@ int log_start(struct passwd *ent_pw, int errfd)
 {
   int ret = 0;
 
-  echo_stderr = option_bool(OPT_DEBUG);
+  echo_stderr = daemon.opt_debug;
 
   if (daemon.log_fac != -1)
     log_fac = daemon.log_fac;
-#ifdef LOG_LOCAL0
-  else if (option_bool(OPT_DEBUG))
+ LOG_LOCAL0
+  else if (daemon.opt_debug)
     log_fac = LOG_LOCAL0;
-#endif
+
 
   if (daemon.log_file)
     { 
@@ -126,14 +126,14 @@ int log_reopen(char *log_file)
 	     Just leave log_fd == -1 and use the vsyslog call for everything.... */
 #   define _PATH_LOG ""  /* dummy */
 	  return 1;
-#else
+
 	  int flags;
 	  log_fd = socket(AF_UNIX, connection_type, 0);
 	  
 	  /* if max_logs is zero, leave the socket blocking */
 	  if (log_fd != -1 && max_logs != 0 && (flags = fcntl(log_fd, F_GETFL)) != -1)
 	    fcntl(log_fd, F_SETFL, flags | O_NONBLOCK);
-#endif
+
 	}
     }
   
@@ -187,7 +187,7 @@ static void log_write(void)
 		{
 		  int e = entries_lost;
 		  entries_lost = 0; /* avoid wild recursion */
-		  my_syslog(LOG_WARNING, _("overflow: {} log entries lost"), e);
+		  my_syslog(LOG_WARNING, format!("overflow: {} log entries lost"), e);
 		}	  
 	    }
 	  continue;
@@ -228,9 +228,9 @@ static void log_write(void)
 	      
 	      struct sockaddr_un logaddr;
 	      
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
 	      logaddr.sun_len = sizeof(logaddr) - sizeof(logaddr.sun_path) + strlen(_PATH_LOG) + 1; 
-#endif
+
 	      logaddr.sun_family = AF_UNIX;
 	      safe_strncpy(logaddr.sun_path, _PATH_LOG, sizeof(logaddr.sun_path));
 	      
@@ -265,7 +265,7 @@ static void log_write(void)
       /* give up - fall back to syslog() - this handles out-of-space
 	 when logging to a file, for instance. */
       log_fd = -1;
-      my_syslog(LOG_CRIT, _("log failed: {}"), strerror(errno));
+      my_syslog(LOG_CRIT, format!("log failed: {}"), strerror(errno));
       return;
     }
 }
@@ -291,12 +291,12 @@ void my_syslog(int priority, const char *format, ...)
   else if ((LOG_FACMASK & priority) == MS_SCRIPT)
     func = "-script";
 	    
-#ifdef LOG_PRI
+ LOG_PRI
   priority = LOG_PRI(priority);
-#else
+
   /* Solaris doesn't have LOG_PRI */
   priority &= LOG_PRIMASK;
-#endif
+
 
   if (echo_stderr) 
     {
@@ -309,7 +309,7 @@ void my_syslog(int priority, const char *format, ...)
 
   if (log_fd == -1)
     {
-#ifdef __ANDROID__
+ __ANDROID__
       /* do android-specific logging. 
 	 log_fd is always -1 on Android except when logging to a file. */
       int alog_lvl;
@@ -326,7 +326,7 @@ void my_syslog(int priority, const char *format, ...)
       va_start(ap, format);
       __android_log_vprint(alog_lvl, "dnsmasq", format, ap);
       va_end(ap);
-#else
+
       /* fall-back to syslog if we die during startup or 
 	 fail during running (always on Solaris). */
       static int isopen = 0;
@@ -339,7 +339,7 @@ void my_syslog(int priority, const char *format, ...)
       va_start(ap, format);  
       vsyslog(priority, format, ap);
       va_end(ap);
-#endif
+
 
       return;
     }
@@ -468,7 +468,7 @@ void die(char *message, char *arg1, int exit_code)
     }
   my_syslog(LOG_CRIT, message, arg1, errmess);
   echo_stderr = 0;
-  my_syslog(LOG_CRIT, _("FAILED to start up"));
+  my_syslog(LOG_CRIT, format!("FAILED to start up"));
   flush_log();
   
   exit(exit_code);

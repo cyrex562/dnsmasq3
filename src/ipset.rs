@@ -43,15 +43,15 @@ pub const IPSET_PROTOCOL: u32 = 6;
 
 #ifndef NFNETLINK_V0
 pub const NFNETLINK_V0: u32 = 0;
-#endif
+
 
 #ifndef NLA_F_NESTED
 #define NLA_F_NESTED		(1 << 15)
-#endif
+
 
 #ifndef NLA_F_NET_BYTEORDER
 #define NLA_F_NET_BYTEORDER	(1 << 14)
-#endif
+
 
 struct my_nlattr {
         __u16           nla_len;
@@ -96,7 +96,7 @@ void ipset_init(void)
       (bind(ipset_sock, (struct sockaddr *)&snl, sizeof(snl)) != -1))
     return;
   
-  die (_("failed to create IPset control socket: {}"), NULL, EC_MISC);
+  die (format!("failed to create IPset control socket: {}"), NULL, EC_MISC);
 }
 
 static int new_add_to_ipset(const char *setname, const union all_addr *ipaddr, int af, int remove)
@@ -208,9 +208,9 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr, int flags, i
     ret = old_kernel ? old_add_to_ipset(setname, ipaddr, remove) : new_add_to_ipset(setname, ipaddr, af, remove);
 
   if (ret == -1)
-     my_syslog(LOG_ERR, _("failed to update ipset {}: {}"), setname, strerror(errno));
+     my_syslog(LOG_ERR, format!("failed to update ipset {}: {}"), setname, strerror(errno));
 
   return ret;
 }
 
-#endif
+

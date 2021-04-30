@@ -17,7 +17,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+ HAVE_DHCP6
 
 struct state {
   unsigned char *clid;
@@ -170,7 +170,7 @@ static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz,
 	    {
 	      inet_ntop(AF_INET6, state.link_address, daemon.addrbuff, ADDRSTRLEN); 
 	      my_syslog(MS_DHCP | LOG_WARNING, 
-			_("no address range available for DHCPv6 request from relay at {}"),
+			format!("no address range available for DHCPv6 request from relay at {}"),
 			daemon.addrbuff);
 	      return 0;
 	    }
@@ -179,7 +179,7 @@ static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz,
       if (!state.context)
 	{
 	  my_syslog(MS_DHCP | LOG_WARNING, 
-		    _("no address range available for DHCPv6 request via {}"), state.iface_name);
+		    format!("no address range available for DHCPv6 request via {}"), state.iface_name);
 	  return 0;
 	}
 
@@ -313,10 +313,10 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	   inet_ntop(AF_INET6, &context_tmp.start6, daemon.dhcp_buff, ADDRSTRLEN); 
 	   inet_ntop(AF_INET6, &context_tmp.end6, daemon.dhcp_buff2, ADDRSTRLEN); 
 	   if (context_tmp.flags & (CONTEXT_STATIC))
-	     my_syslog(MS_DHCP | LOG_INFO, _("{} available DHCPv6 subnet: {}/{}"),
+	     my_syslog(MS_DHCP | LOG_INFO, format!("{} available DHCPv6 subnet: {}/{}"),
 		       state.xid, daemon.dhcp_buff, context_tmp.prefix);
 	   else
-	     my_syslog(MS_DHCP | LOG_INFO, _("{} available DHCP range: {} -- {}"), 
+	     my_syslog(MS_DHCP | LOG_INFO, format!("{} available DHCP range: {} -- {}"), 
 		       state.xid, daemon.dhcp_buff, daemon.dhcp_buff2);
 	}
     }
@@ -396,7 +396,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
     }
 
   if (option_bool(OPT_LOG_OPTS) && (opt = opt6_find(state.packet_options, state.end, OPTION6_VENDOR_CLASS, 4)))
-    my_syslog(MS_DHCP | LOG_INFO, _("{} vendor class: {}"), state.xid, opt6_uint(opt, 0, 4));
+    my_syslog(MS_DHCP | LOG_INFO, format!("{} vendor class: {}"), state.xid, opt6_uint(opt, 0, 4));
   
   /* dhcp-match. If we have hex-and-wildcards, look for a left-anchored match.
      Otherwise assume the option is an array, and look for a matching element. 
@@ -444,7 +444,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
       if (option_bool(OPT_LOG_OPTS))
 	{
 	  print_mac(daemon.dhcp_buff, state.mac, state.mac_len);
-	  my_syslog(MS_DHCP | LOG_INFO, _("{} client MAC address: {}"), state.xid, daemon.dhcp_buff);
+	  my_syslog(MS_DHCP | LOG_INFO, format!("{} client MAC address: {}"), state.xid, daemon.dhcp_buff);
 	}
 
       for (mac_opt = daemon.dhcp_macs; mac_opt; mac_opt = mac_opt.next)
@@ -496,7 +496,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	       state.client_hostname = daemon.dhcp_buff;
 	       
 	       if (option_bool(OPT_LOG_OPTS))
-		 my_syslog(MS_DHCP | LOG_INFO, _("{} client provides name: {}"), state.xid, state.client_hostname);
+		 my_syslog(MS_DHCP | LOG_INFO, format!("{} client provides name: {}"), state.xid, state.client_hostname);
 	       
 	       for (m = daemon.dhcp_name_match; m; m = m.next)
 		 {
@@ -629,7 +629,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	    end_opt6(o);
 	  }
 	
-  	log6_quiet(state, "DHCPSOLICIT", NULL, ignore ? _("ignored") : NULL);
+  	log6_quiet(state, "DHCPSOLICIT", NULL, ignore ? format!("ignored") : NULL);
 
       request_no_address:
 	solicit_tags = tagif;
@@ -759,7 +759,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		   containing status code NoAddrsAvail. */
 		o1 = new_opt6(OPTION6_STATUS_CODE);
 		put_opt6_short(DHCP6NOADDRS);
-		put_opt6_string(_("address unavailable"));
+		put_opt6_string(format!("address unavailable"));
 		end_opt6(o1);
 	      }
 	    
@@ -771,7 +771,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	  {
 	    o1 = new_opt6(OPTION6_STATUS_CODE);
 	    put_opt6_short(DHCP6SUCCESS);
-	    put_opt6_string(_("success"));
+	    put_opt6_string(format!("success"));
 	    end_opt6(o1);
 	    
 	    /* If --dhcp-authoritative is set, we can tell client not to wait for
@@ -786,7 +786,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	    /* no address, return error */
 	    o1 = new_opt6(OPTION6_STATUS_CODE);
 	    put_opt6_short(DHCP6NOADDRS);
-	    put_opt6_string(_("no addresses available"));
+	    put_opt6_string(format!("no addresses available"));
 	    end_opt6(o1);
 
 	    /* Some clients will ask repeatedly when we're not giving
@@ -795,7 +795,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	    for (c = state.context; c; c = c.current)
 	      if (!(c.flags & CONTEXT_RA_STATELESS))
 		{
-		  log6_packet(state, state.lease_allocate ? "DHCPREPLY" : "DHCPADVERTISE", NULL, _("no addresses available"));
+		  log6_packet(state, state.lease_allocate ? "DHCPREPLY" : "DHCPADVERTISE", NULL, format!("no addresses available"));
 		  break;
 		}
 	  }
@@ -812,7 +812,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	*outmsgtypep = DHCP6REPLY;
 	state.lease_allocate = 1;
 
-	log6_quiet(state, "DHCPREQUEST", NULL, ignore ? _("ignored") : NULL);
+	log6_quiet(state, "DHCPREQUEST", NULL, ignore ? format!("ignored") : NULL);
 	
 	if (ignore)
 	  return 0;
@@ -856,7 +856,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 			/* Static range, not configured. */
 			o1 = new_opt6(OPTION6_STATUS_CODE);
 			put_opt6_short(DHCP6NOADDRS);
-			put_opt6_string(_("address unavailable"));
+			put_opt6_string(format!("address unavailable"));
 			end_opt6(o1);
 		      }
 		    else if (!check_address(state, &req_addr))
@@ -864,7 +864,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 			/* Address leased to another DUID/IAID */
 			o1 = new_opt6(OPTION6_STATUS_CODE);
 			put_opt6_short(DHCP6UNSPEC);
-			put_opt6_string(_("address in use"));
+			put_opt6_string(format!("address in use"));
 			end_opt6(o1);
 		      } 
 		    else 
@@ -887,7 +887,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		    /* requested address not on the correct link */
 		    o1 = new_opt6(OPTION6_STATUS_CODE);
 		    put_opt6_short(DHCP6NOTONLINK);
-		    put_opt6_string(_("not on link"));
+		    put_opt6_string(format!("not on link"));
 		    end_opt6(o1);
 		  }
 	      }
@@ -900,7 +900,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	  {
 	    o1 = new_opt6(OPTION6_STATUS_CODE);
 	    put_opt6_short(DHCP6SUCCESS);
-	    put_opt6_string(_("success"));
+	    put_opt6_string(format!("success"));
 	    end_opt6(o1);
 	  }
 	else
@@ -908,9 +908,9 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	    /* no address, return error */
 	    o1 = new_opt6(OPTION6_STATUS_CODE);
 	    put_opt6_short(DHCP6NOADDRS);
-	    put_opt6_string(_("no addresses available"));
+	    put_opt6_string(format!("no addresses available"));
 	    end_opt6(o1);
-	    log6_packet(state, "DHCPREPLY", NULL, _("no addresses available"));
+	    log6_packet(state, "DHCPREPLY", NULL, format!("no addresses available"));
 	  }
 
 	tagif = add_options(state, 0);
@@ -958,11 +958,11 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		    save_counter(iacntr);
 		    t1cntr = 0;
 		    
-		    log6_packet(state, "DHCPREPLY", &req_addr, _("lease not found"));
+		    log6_packet(state, "DHCPREPLY", &req_addr, format!("lease not found"));
 		    
 		    o1 = new_opt6(OPTION6_STATUS_CODE);
 		    put_opt6_short(DHCP6NOBINDING);
-		    put_opt6_string(_("no binding found"));
+		    put_opt6_string(format!("no binding found"));
 		    end_opt6(o1);
 
 		    preferred_time = valid_time = 0;
@@ -999,12 +999,12 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		    
 		    
 		    if (preferred_time == 0)
-		      message = _("deprecated");
+		      message = format!("deprecated");
 		  }
 		else
 		  {
 		    preferred_time = valid_time = 0;
-		    message = _("address invalid");
+		    message = format!("address invalid");
 		  } 
 
 		if (message && (message != state.hostname))
@@ -1054,9 +1054,9 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		  {
 		    o1 = new_opt6(OPTION6_STATUS_CODE);
 		    put_opt6_short(DHCP6NOTONLINK);
-		    put_opt6_string(_("confirm failed"));
+		    put_opt6_string(format!("confirm failed"));
 		    end_opt6(o1);
-		    log6_quiet(state, "DHCPREPLY", &req_addr, _("confirm failed"));
+		    log6_quiet(state, "DHCPREPLY", &req_addr, format!("confirm failed"));
 		    return 1;
 		  }
 
@@ -1071,7 +1071,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
 	o1 = new_opt6(OPTION6_STATUS_CODE);
 	put_opt6_short(DHCP6SUCCESS );
-	put_opt6_string(_("all addresses still on link"));
+	put_opt6_string(format!("all addresses still on link"));
 	end_opt6(o1);
 	break;
     }
@@ -1094,7 +1094,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	else
 	  state.send_domain = get_domain6(NULL);
 
-	log6_quiet(state, "DHCPINFORMATION-REQUEST", NULL, ignore ? _("ignored") : state.hostname);
+	log6_quiet(state, "DHCPINFORMATION-REQUEST", NULL, ignore ? format!("ignored") : state.hostname);
 	if (ignore)
 	  return 0;
 	*outmsgtypep = DHCP6REPLY;
@@ -1153,7 +1153,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	      {
 		o1 = new_opt6(OPTION6_STATUS_CODE);
 		put_opt6_short(DHCP6NOBINDING);
-		put_opt6_string(_("no binding found"));
+		put_opt6_string(format!("no binding found"));
 		end_opt6(o1);
 		
 		end_opt6(o);
@@ -1162,7 +1162,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	
 	o1 = new_opt6(OPTION6_STATUS_CODE);
 	put_opt6_short(DHCP6SUCCESS);
-	put_opt6_string(_("release received"));
+	put_opt6_string(format!("release received"));
 	end_opt6(o1);
 	
 	break;
@@ -1195,7 +1195,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		  {
 		    prettyprint_time(daemon.dhcp_buff3, DECLINE_BACKOFF);
 		    inet_ntop(AF_INET6, &addr, daemon.addrbuff, ADDRSTRLEN);
-		    my_syslog(MS_DHCP | LOG_WARNING, _("disabling DHCP static address {} for {}"), 
+		    my_syslog(MS_DHCP | LOG_WARNING, format!("disabling DHCP static address {} for {}"), 
 			      daemon.addrbuff, daemon.dhcp_buff3);
 		    addr_list.flags |= ADDRLIST_DECLINED;
 		    addr_list.decline_time = now;
@@ -1234,7 +1234,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	      {
 		o1 = new_opt6(OPTION6_STATUS_CODE);
 		put_opt6_short(DHCP6NOBINDING);
-		put_opt6_string(_("no binding found"));
+		put_opt6_string(format!("no binding found"));
 		end_opt6(o1);
 		
 		end_opt6(o);
@@ -1245,7 +1245,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	/* We must answer with 'success' in global section anyway */
 	o1 = new_opt6(OPTION6_STATUS_CODE);
 	put_opt6_short(DHCP6SUCCESS);
-	put_opt6_string(_("success"));
+	put_opt6_string(format!("success"));
 	end_opt6(o1);
 	break;
       }
@@ -1484,7 +1484,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
 	  if ( i >  opt6_len(oro) - 3 || (q - daemon.namebuff) > 40)
 	    {
 	      q = daemon.namebuff;
-	      my_syslog(MS_DHCP | LOG_INFO, _("{} requested options: {}"), state.xid, daemon.namebuff);
+	      my_syslog(MS_DHCP | LOG_INFO, format!("{} requested options: {}"), state.xid, daemon.namebuff);
 	    }
 	}
     } 
@@ -1823,9 +1823,9 @@ static void calculate_times(struct dhcp_context *context, unsigned int *min_time
 static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now)
 {
   struct dhcp_lease *lease = lease6_find_by_addr(addr, 128, 0);
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
   struct dhcp_netid *tagif = run_tag_if(state.tags);
-#endif
+
 
   (void)context;
 
@@ -1846,7 +1846,7 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  lease_set_hostname(lease, state.hostname, state.hostname_auth, addr_domain, state.domain);
 	}
       
-#ifdef HAVE_SCRIPT
+ HAVE_SCRIPT
       if (daemon.lease_change_command)
 	{
 	  void *class_opt;
@@ -1911,7 +1911,7 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 		lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
 	    }
 	}
-#endif	
+	
       
     }
 }
@@ -2146,7 +2146,7 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
 	      if (!relay.interface || strchr(relay.interface, '*') ||
 		  (multicast_iface = if_nametoindex(relay.interface)) == 0 ||
 		  setsockopt(daemon.dhcp6fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &multicast_iface, sizeof(multicast_iface)) == -1)
-		my_syslog(MS_DHCP | LOG_ERR, _("Cannot multicast to DHCPv6 server without correct interface"));
+		my_syslog(MS_DHCP | LOG_ERR, format!("Cannot multicast to DHCPv6 server without correct interface"));
 	    }
 		
 	  send_from(daemon.dhcp6fd, 0, daemon.outpacket.iov_base, save_counter(-1), &to, &from, 0);
@@ -2155,7 +2155,7 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
 	    {
 	      inet_ntop(AF_INET6, &relay.local, daemon.addrbuff, ADDRSTRLEN);
 	      inet_ntop(AF_INET6, &relay.server, daemon.namebuff, ADDRSTRLEN);
-	      my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay {} . {}"), daemon.addrbuff, daemon.namebuff);
+	      my_syslog(MS_DHCP | LOG_INFO, format!("DHCP relay {} . {}"), daemon.addrbuff, daemon.namebuff);
 	    }
 
 	  /* Save this for replies */
@@ -2203,4 +2203,4 @@ unsigned short relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival
   return 0;
 }
 
-#endif
+

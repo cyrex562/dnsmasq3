@@ -17,7 +17,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 
 #define SERIAL_UNDEF  -100
 pub const SERIAL_EQ: u32 = 0;
@@ -157,7 +157,7 @@ int setup_timestamp(void)
 	{
 	  /* time already OK, update timestamp, and do key checking from the start. */
 	  if (utimes(daemon.timestamp_file, NULL) == -1)
-	    my_syslog(LOG_ERR, _("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
+	    my_syslog(LOG_ERR, format!("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
 	  daemon.back_to_the_future = 1;
 	  return 0;
 	}
@@ -201,9 +201,9 @@ static int is_check_date(unsigned long curtime)
       if (daemon.back_to_the_future == 0 && difftime(timestamp_time, curtime) <= 0)
 	{
 	  if (utimes(daemon.timestamp_file, NULL) != 0)
-	    my_syslog(LOG_ERR, _("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
+	    my_syslog(LOG_ERR, format!("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
 	  
-	  my_syslog(LOG_INFO, _("system time considered valid, now checking DNSSEC signature timestamps."));
+	  my_syslog(LOG_INFO, format!("system time considered valid, now checking DNSSEC signature timestamps."));
 	  daemon.back_to_the_future = 1;
 	  daemon.dnssec_no_time_check = 0;
 	  queue_event(EVENT_RELOAD); /* purge cache */
@@ -973,7 +973,7 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
   
   if (rc == STAT_INSECURE)
     {
-      my_syslog(LOG_WARNING, _("Insecure DS reply received for {}, check domain configuration and upstream DNS server DNSSEC support"), name);
+      my_syslog(LOG_WARNING, format!("Insecure DS reply received for {}, check domain configuration and upstream DNS server DNSSEC support"), name);
       rc = STAT_BOGUS;
     }
   
@@ -2130,4 +2130,4 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
   return ret;
 }
 
-#endif /* HAVE_DNSSEC */
+ /* HAVE_DNSSEC */

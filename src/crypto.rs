@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_DNSSEC
+ HAVE_DNSSEC
 
 #include <nettle/rsa.h>
 #include <nettle/ecdsa.h>
@@ -24,8 +24,8 @@
 #include <nettle/eddsa.h>
 #if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
 #  include <nettle/gostdsa.h>
-#endif
-#endif
+
+
 
 #if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 #include <nettle/nettle-meta.h>
@@ -118,9 +118,9 @@ const struct nettle_hash *hash_find(char *name)
      versions. It also #defines nettle_hashes, so use that to tell
      if we have the new facilities. */
   
-#ifdef nettle_hashes
+ nettle_hashes
   return nettle_lookup_hash(name);
-#else
+
   {
     int i;
 
@@ -130,7 +130,7 @@ const struct nettle_hash *hash_find(char *name)
   }
   
   return NULL;
-#endif
+
 }
 
 /* expand ctx and digest memory allocations if necessary and init hash function */
@@ -171,9 +171,9 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
   return 1;
 }
 
-#endif
 
-#ifdef HAVE_DNSSEC
+
+ HAVE_DNSSEC
   
 static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
 			      unsigned char *digest, size_t digest_len, int algo)
@@ -241,7 +241,7 @@ static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len
 #if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR < 4
 pub const nettle_get_secp_256r: u32 = 1;() (&nettle_secp_256r1)
 pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
-#endif
+
   
   if (!sig_struct)
     {
@@ -340,7 +340,7 @@ static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_l
   
   return nettle_gostdsa_verify(gost_key, digest_len, digest, sig_struct);
 }
-#endif
+
 
 static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len, 
 				unsigned char *sig, size_t sig_len,
@@ -378,7 +378,7 @@ static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len
 				   ((struct null_hash_digest *)digest).len,
 				   ((struct null_hash_digest *)digest).buff,
 				   sig);
-#endif
+
 
     }
 
@@ -402,7 +402,7 @@ static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key
 #if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
     case 12:
       return dnsmasq_gostdsa_verify;
-#endif
+
       
     case 13: case 14:
       return dnsmasq_ecdsa_verify;
@@ -479,4 +479,4 @@ char *nsec3_digest_name(int digest)
     }
 }
 
-#endif
+

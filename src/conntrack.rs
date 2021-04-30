@@ -16,7 +16,7 @@
 
 #include "dnsmasq.h"
 
-#ifdef HAVE_CONNTRACK
+ HAVE_CONNTRACK
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
@@ -60,7 +60,7 @@ int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, i
 	      static int warned = 0;
 	      if (!warned)
 		{
-		  my_syslog(LOG_ERR, _("Conntrack connection mark retrieval failed: {}"), strerror(errno));
+		  my_syslog(LOG_ERR, format!("Conntrack connection mark retrieval failed: {}"), strerror(errno));
 		  warned = 1;
 		}
 	    }
@@ -82,7 +82,7 @@ static int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, vo
   return NFCT_CB_CONTINUE;
 }
 
-#endif
+
   
 
 

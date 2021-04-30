@@ -52,7 +52,7 @@ void blockdata_init(void)
 
 void blockdata_report(void)
 {
-  my_syslog(LOG_INFO, _("pool memory in use {}, max {}, allocated {}"), 
+  my_syslog(LOG_INFO, format!("pool memory in use {}, max {}, allocated {}"), 
 	    blockdata_count * sizeof(struct blockdata),  
 	    blockdata_hwm * sizeof(struct blockdata),  
 	    blockdata_alloced * sizeof(struct blockdata));
