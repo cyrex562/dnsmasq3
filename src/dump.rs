@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#ifdef HAVE_DUMPFILE
 
-static u32 packet_count;
+ HAVE_DUMPFILE
+
+ u32 packet_count;
 
 /* https://wiki.wireshark.org/Development/LibpcapFileFormat */
 struct pcap_hdr_s {
@@ -39,7 +39,7 @@ struct pcaprec_hdr_s {
 };
 
 
-void dump_init(void)
+pub fn dump_init()
 {
   struct stat buf;
   struct pcap_hdr_s header;
@@ -61,29 +61,29 @@ void dump_init(void)
       if (errno != ENOENT ||
 	  (daemon.dumpfd = creat(daemon.dump_file, S_IRUSR | S_IWUSR)) == -1 ||
 	  !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 0))
-	die(_("cannot create {}: {}"), daemon.dump_file, EC_FILE);
+	die(format!("cannot create {}: {}"), daemon.dump_file, EC_FILE);
     }
   else if ((daemon.dumpfd = open(daemon.dump_file, O_APPEND | O_RDWR)) == -1 ||
 	   !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 1))
-    die(_("cannot access {}: {}"), daemon.dump_file, EC_FILE);
+    die(format!("cannot access {}: {}"), daemon.dump_file, EC_FILE);
   else if (header.magic_number != 0xa1b2c3d4)
-    die(_("bad header in {}"), daemon.dump_file, EC_FILE);
+    die(format!("bad header in {}"), daemon.dump_file, EC_FILE);
   else
     {
       /* count existing records */
       while (read_write(daemon.dumpfd, (void *)&pcap_header, sizeof(pcap_header), 1))
 	{
 	  lseek(daemon.dumpfd, pcap_header.incl_len, SEEK_CUR);
-	  packet_count++;
+	  packet_count +=1;
 	}
     }
 }
 
-void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, union mysockaddr *dst)
+void dump_packet(mask: i32, packet: Vec<u8>, len: usize, union mysockaddr *src, union mysockaddr *dst)
 {
   struct ip ip;
   struct ip6_hdr ip6;
-  int family;
+  let mut family: i32;
   struct udphdr {
     u16 uh_sport;               /* source port */
     u16 uh_dport;               /* destination port */
@@ -93,9 +93,9 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
   struct pcaprec_hdr_s pcap_header;
   struct timeval time;
   u32 i, sum;
-  void *iphdr;
-  size_t ipsz;
-  int rc;
+  iphdr: Vec<u8>;
+  ipsz: usize;
+  let mut rc: i32;
   
   if (daemon.dumpfd == -1 || !(mask & daemon.dump_mask))
     return;
@@ -165,7 +165,7 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
       
       ip.ip_sum = 0;
       for (sum = 0, i = 0; i < sizeof(struct ip) / 2; i++)
-	sum += ((u16 *)&ip)[i];
+	sum += (&ip)[i];
       while (sum >> 16)
 	sum = (sum & 0xffff) + (sum >> 16);  
       ip.ip_sum = (sum == 0xffff) ? sum : ~sum;
@@ -178,16 +178,16 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
     }
   
   if (len & 1)
-    ((unsigned char *)packet)[len] = 0; /* for checksum, in case length is odd. */
+    (packet)[len] = 0; /* for checksum, in case length is odd. */
 
   udp.uh_sum = 0;
   udp.uh_ulen = htons(sizeof(struct udphdr) + len);
   sum += htons(IPPROTO_UDP);
   sum += htons(sizeof(struct udphdr) + len);
   for (i = 0; i < sizeof(struct udphdr)/2; i++)
-    sum += ((u16 *)&udp)[i];
+    sum += (&udp)[i];
   for (i = 0; i < (len + 1) / 2; i++)
-    sum += ((u16 *)packet)[i];
+    sum += (packet)[i];
   while (sum >> 16)
     sum = (sum & 0xffff) + (sum >> 16);
   udp.uh_sum = (sum == 0xffff) ? sum : ~sum;
@@ -202,10 +202,10 @@ void dump_packet(int mask, void *packet, size_t len, union mysockaddr *src, unio
       !read_write(daemon.dumpfd, iphdr, ipsz, 0) ||
       !read_write(daemon.dumpfd, (void *)&udp, sizeof(udp), 0) ||
       !read_write(daemon.dumpfd, (void *)packet, len, 0))
-    my_syslog(LOG_ERR, _("failed to write packet dump"));
+    my_syslog(LOG_ERR, format!("failed to write packet dump"));
   else
-    my_syslog(LOG_INFO, _("dumping UDP packet {} mask 0x%04x"), ++packet_count, mask);
+    my_syslog(LOG_INFO, format!("dumping UDP packet {} mask 0x%04x"), ++packet_count, mask);
 
 }
 
-#endif
+

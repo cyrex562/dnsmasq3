@@ -1,3 +1,5 @@
+use crate::dhcp_protocol::DHCP_CHADDR_MAX;
+
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -14,9 +16,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#ifdef HAVE_SCRIPT
+
+ 
 
 /* This file has code to fork a helper process which receives data via a pipe 
    shared with the main process and which is responsible for calling a script when
@@ -30,59 +32,43 @@
    main process.
 */
 
-static void my_setenv(const char *name, const char *value, int *error);
-static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  char *env, int *err);
+// lua_State *lua;
 
-#ifdef HAVE_LUASCRIPT
-#define LUA_COMPAT_ALL
-#include <lua.h>  
-#include <lualib.h>  
-#include <lauxlib.h>  
-
-#ifndef lua_open
-#define lua_open()     luaL_newstate()
-#endif
-
-lua_State *lua;
-
-static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end, char *field);
-#endif
-
-
-struct script_data
+pub struct script_data
 {
-  int flags;
-  int action, hwaddr_len, hwaddr_type;
-  int clid_len, hostname_len, ed_len;
-  struct in_addr addr, giaddr;
-  unsigned int remaining_time;
-#ifdef HAVE_BROKEN_RTC
-  unsigned int length;
-#else
-  time_t expires;
-#endif
-#ifdef HAVE_TFTP
-  off_t file_len;
-#endif
-  struct in6_addr addr6;
-#ifdef HAVE_DHCP6
-  int vendorclass_count;
-  unsigned int iaid;
-#endif
-  unsigned char hwaddr[DHCP_CHADDR_MAX];
-  char interface[IF_NAMESIZE];
-};
+  pub flags: i32,
+  pub action: i32, 
+  pub hwaddr_len: i32, 
+  pub hwaddr_type: i32,
+  pub clid_len: i32, 
+  pub hostname_len: i32, 
+  pub ed_len: i32,
+  pub addr: net::IpAddr, 
+  pub giaddr: net::IpAddr,
+  pub remaining_time: u32,
+  pub length: u32,
+  pub expires: time::Instant,
+  pub file_len: off_t,
+  pub addr6: net::IpAddr,
+  pub vendorclass_count: i32,
+  pub iaid: u32,
+  pub hwaddr: [u8;DHCP_CHADDR_MAX],
+  pub interface: String,
+}
 
-static struct script_data *buf = NULL;
-static size_t bytes_in_buf = 0, buf_size = 0;
+//  struct script_data *buf = NULL;
+//  bytes_in_buf: usize = 0, buf_size = 0;
 
-int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
+pub fn create_helper(event_fd: i32, err_fd: i32, uid: uid_t, gid: gid_t , max_fd: libc::c_long) -> i32
 {
-  pid_t pid;
-  int i, pipefd[2];
-  struct sigaction sigact;
-  unsigned char *alloc_buff = NULL;
-  
+  let mut pid: pid_t;
+  //i: i32, pipefd[2];
+	let mut i: i32;
+	let mut pipefd: [i32;2];
+  //struct sigaction sigact;
+	let mut sigact: sigaction;
+  //unsigned char *alloc_buff = NULL;
+  let mut alloc_buf: Vec<u8>;
   /* create the pipe through which the main program sends us commands,
      then fork our process. */
   if (pipe(pipefd) == -1 || !fix_fd(pipefd[1]) || (pid = fork()) == -1)
@@ -106,16 +92,18 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
   sigaction(SIGALRM, &sigact, NULL);
   sigaction(SIGINT, &sigact, NULL);
 
-  if (!option_bool(OPT_DEBUG) && uid != 0)
+  if (!daemon.opt_debug && uid != 0)
     {
-      gid_t dummy;
-      if (setgroups(0, &dummy) == -1 || 
+    //   gid_t dummy;
+    let mut dummy: gid_t;  
+	if (setgroups(0, &dummy) == -1 || 
 	  setgid(gid) == -1 || 
 	  setuid(uid) == -1)
 	{
-	  if (option_bool(OPT_NO_FORK))
+	  if (daemon.opt_no_fork) {
 	    /* send error to daemon process if no-fork */
 	    send_event(event_fd, EVENT_USER_ERR, errno, daemon.scriptuser);
+	  }
 	  else
 	    {
 	      /* kill daemon */
@@ -133,59 +121,70 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
      so we don't close any lua fds. */
   close_fds(max_fd, pipefd[0], event_fd, err_fd);
   
-#ifdef HAVE_LUASCRIPT
   if (daemon.luascript)
     {
-      const char *lua_err = NULL;
-      lua = lua_open();
+    //   const char *lua_err = NULL;
+      let mut lua_err: String;
+		lua = lua_open();
       luaL_openlibs(lua);
       
       /* get Lua to load our script file */
-      if (luaL_dofile(lua, daemon.luascript) != 0)
+      if (luaL_dofile(lua, daemon.luascript) != 0) {
 	lua_err = lua_tostring(lua, -1);
+	  }
       else
 	{
 	  lua_getglobal(lua, "lease");
-	  if (lua_type(lua, -1) != LUA_TFUNCTION) 
-	    lua_err = _("lease() function missing in Lua script");
+	  if (lua_type(lua, -1) != LUA_TFUNCTION) {
+	    lua_err = String::from("lease() function missing in Lua script");
+	  }
 	}
       
       if (lua_err)
 	{
-	  if (option_bool(OPT_NO_FORK) || option_bool(OPT_DEBUG))
+	  if (daemon.opt_no_fork || daemon.opt_debug) {
 	    /* send error to daemon process if no-fork */
-	    send_event(event_fd, EVENT_LUA_ERR, 0, (char *)lua_err);
+	    send_event(event_fd, EVENT_LUA_ERR, 0, lua_err);
+	  }
 	  else
 	    {
 	      /* kill daemon */
 	      send_event(event_fd, EVENT_DIE, 0, NULL);
 	      /* return error */
-	      send_event(err_fd, EVENT_LUA_ERR, 0, (char *)lua_err);
+	      send_event(err_fd, EVENT_LUA_ERR, 0, lua_err);
 	    }
 	  _exit(0);
 	}
       
       lua_pop(lua, 1);  /* remove nil from stack */
       lua_getglobal(lua, "init");
-      if (lua_type(lua, -1) == LUA_TFUNCTION)
+      if (lua_type(lua, -1) == LUA_TFUNCTION) {
 	lua_call(lua, 0, 0);
-      else
+	  }
+      else {
 	lua_pop(lua, 1);  /* remove nil from stack */	
+	  }
     }
-#endif
+
 
   /* All init done, close our copy of the error pipe, so that main process can return */
-  if (err_fd != -1)
+  if (err_fd != -1) {
     close(err_fd);
+  }
     
   /* loop here */
-  while(1)
+  loop
     {
-      struct script_data data;
-      char *p, *action_str, *hostname = NULL, *domain = NULL;
-      unsigned char *buf = (unsigned char *)daemon.namebuff;
-      unsigned char *end, *extradata;
-      int is6, err = 0;
+      let mut data: script_data;
+    //   p: &mut String, *action_str, *hostname = NULL, *domain = NULL;
+      let p: String;
+	  let action_str: String;
+	  let hostname: String;
+	  let domain: String;
+		// unsigned char *buf = daemon.namebuff;
+		let buf = daemon.namebuff;
+      end: &mut Vec<u8>, *extradata;
+      is6: i32, err = 0;
       int pipeout[2];
 
       /* Free rarely-allocated memory from previous iteration. */
@@ -196,16 +195,16 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	}
       
       /* we read zero bytes when pipe closed: this is our signal to exit */ 
-      if (!read_write(pipefd[0], (unsigned char *)&data, sizeof(data), 1))
+      if (!read_write(pipefd[0], &data, sizeof(data), 1))
 	{
-#ifdef HAVE_LUASCRIPT
+ HAVE_LUASCRIPT
 	  if (daemon.luascript)
 	    {
 	      lua_getglobal(lua, "shutdown");
 	      if (lua_type(lua, -1) == LUA_TFUNCTION)
 		lua_call(lua, 0, 0);
 	    }
-#endif
+
 	  _exit(0);
 	}
  
@@ -265,7 +264,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	      p += sprintf(p, ":");
 	}
 
-#ifdef HAVE_DHCP6
+ 
       if (is6)
 	{
 	  /* or IAID and server DUID for IPv6 */
@@ -278,14 +277,14 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	    }
 
 	}
-#endif
+
 
       buf += data.clid_len;
 
       if (data.hostname_len != 0)
 	{
 	  char *dot;
-	  hostname = (char *)buf;
+	  hostname = buf;
 	  hostname[data.hostname_len - 1] = 0;
 	  if (data.action != ACTION_TFTP)
 	    {
@@ -306,13 +305,13 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
       else
 	inet_ntop(AF_INET6, &data.addr6, daemon.addrbuff, ADDRSTRLEN);
 
-#ifdef HAVE_TFTP
+ 
       /* file length */
       if (data.action == ACTION_TFTP)
 	sprintf(is6 ? daemon.packet : daemon.dhcp_buff, "{}", (unsigned long)data.file_len);
-#endif
 
-#ifdef HAVE_LUASCRIPT
+
+ HAVE_LUASCRIPT
       if (daemon.luascript)
 	{
 	  if (data.action == ACTION_TFTP)
@@ -377,13 +376,13 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 		  lua_setfield(lua, -2, "interface");
 		}
 	      
-#ifdef HAVE_BROKEN_RTC	
+	
 	      lua_pushnumber(lua, data.length);
 	      lua_setfield(lua, -2, "lease_length");
-#else
+
 	      lua_pushnumber(lua, data.expires);
 	      lua_setfield(lua, -2, "lease_expires");
-#endif
+
 	      
 	      if (hostname)
 		{
@@ -402,7 +401,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	      
 	      if (!is6)
 		buf = grab_extradata_lua(buf, end, "vendor_class");
-#ifdef HAVE_DHCP6
+ 
 	      else  if (data.vendorclass_count != 0)
 		{
 		  sprintf(daemon.dhcp_buff2, "vendor_class_id");
@@ -413,7 +412,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 		      buf = grab_extradata_lua(buf, end, daemon.dhcp_buff2);
 		    }
 		}
-#endif
+
 	      
 	      buf = grab_extradata_lua(buf, end, "supplied_hostname");
 	      
@@ -467,14 +466,14 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	      lua_call(lua, 2, 0);	/* pass 2 values, expect 0 */
 	    }
 	}
-#endif
+
 
       /* no script, just lua */
       if (!daemon.lease_change_command)
 	continue;
 
       /* Pipe to capture stdout and stderr from script */
-      if (!option_bool(OPT_DEBUG) && pipe(pipeout) == -1)
+      if (!daemon.opt_debug && pipe(pipeout) == -1)
 	continue;
       
       /* possible fork errors are all temporary resource problems */
@@ -483,7 +482,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 
       if (pid == -1)
         {
-	  if (!option_bool(OPT_DEBUG))
+	  if (!daemon.opt_debug)
 	    {
 	      close(pipeout[0]);
 	      close(pipeout[1]);
@@ -494,7 +493,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
       /* wait for child to complete */
       if (pid != 0)
 	{
-	  if (!option_bool(OPT_DEBUG))
+	  if (!daemon.opt_debug)
 	    {
 	      FILE *fp;
 	  
@@ -508,7 +507,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 		  while (fgets(daemon.packet, daemon.packet_buff_sz, fp))
 		    {
 		      /* do not include new lines, log will append them */
-		      size_t len = strlen(daemon.packet);
+		      len: usize = strlen(daemon.packet);
 		      if (len > 0)
 			{
 			  --len;
@@ -524,7 +523,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	  /* reap our children's children, if necessary */
 	  while (1)
 	    {
-	      int status;
+	      let mut status: i32;
 	      pid_t rc = wait(&status);
 	      
 	      if (rc == pid)
@@ -544,7 +543,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	  continue;
 	}
 
-      if (!option_bool(OPT_DEBUG))
+      if (!daemon.opt_debug)
 	{
 	  /* map stdout/stderr of script to pipeout */
 	  close(pipeout[0]);
@@ -555,22 +554,22 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
       
       if (data.action != ACTION_TFTP && data.action != ACTION_ARP)
 	{
-#ifdef HAVE_DHCP6
+ 
 	  my_setenv("DNSMASQ_IAID", is6 ? daemon.dhcp_buff3 : NULL, &err);
 	  my_setenv("DNSMASQ_SERVER_DUID", is6 ? daemon.dhcp_packet.iov_base : NULL, &err); 
 	  my_setenv("DNSMASQ_MAC", is6 && data.hwaddr_len != 0 ? daemon.dhcp_buff : NULL, &err);
-#endif
+
 	  
 	  my_setenv("DNSMASQ_CLIENT_ID", !is6 && data.clid_len != 0 ? daemon.packet : NULL, &err);
 	  my_setenv("DNSMASQ_INTERFACE", strlen(data.interface) != 0 ? data.interface : NULL, &err);
 	  
-#ifdef HAVE_BROKEN_RTC
+
 	  sprintf(daemon.dhcp_buff2, "{}", data.length);
 	  my_setenv("DNSMASQ_LEASE_LENGTH", daemon.dhcp_buff2, &err);
-#else
+
 	  sprintf(daemon.dhcp_buff2, "{}", (unsigned long)data.expires);
 	  my_setenv("DNSMASQ_LEASE_EXPIRES", daemon.dhcp_buff2, &err); 
-#endif
+
 	  
 	  my_setenv("DNSMASQ_DOMAIN", domain, &err);
 	  
@@ -579,7 +578,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	  
 	  if (!is6)
 	    buf = grab_extradata(buf, end, "DNSMASQ_VENDOR_CLASS", &err);
-#ifdef HAVE_DHCP6
+ 
 	  else
 	    {
 	      if (data.vendorclass_count != 0)
@@ -592,7 +591,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 		    }
 		}
 	    }
-#endif
+
 	  
 	  buf = grab_extradata(buf, end, "DNSMASQ_SUPPLIED_HOSTNAME", &err);
 	  
@@ -650,7 +649,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
     }
 }
 
-static void my_setenv(const char *name, const char *value, int *error)
+pub fn my_setenv(const name: &mut String, const value: &mut String, int *error)
 {
   if (*error == 0)
     {
@@ -661,7 +660,7 @@ static void my_setenv(const char *name, const char *value, int *error)
     }
 }
  
-static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  char *env, int *err)
+ pub fn grab_extradata(buf: &mut Vec<u8>, end: &mut Vec<u8>,  env: &mut String, int *err) -> &mut Vec<u8>
 {
   unsigned char *next = NULL;
   char *val = NULL;
@@ -681,9 +680,9 @@ static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  ch
 	{
 	  char *p;
 	  /* No "=" in value */
-	  if ((p = strchr((char *)buf, '=')))
+	  if ((p = strchr(buf, '=')))
 	    *p = 0;
-	  val = (char *)buf;
+	  val = buf;
 	}
     }
   
@@ -692,8 +691,8 @@ static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  ch
   return next ? next + 1 : NULL;
 }
 
-#ifdef HAVE_LUASCRIPT
-static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end, char *field)
+ HAVE_LUASCRIPT
+ pub fn grab_extradata_lua(buf: &mut Vec<u8>, end: &mut Vec<u8>, field: &mut String) -> &mut Vec<u8>
 {
   unsigned char *next;
 
@@ -706,19 +705,19 @@ static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end,
   
   if (next != buf)
     {
-      lua_pushstring(lua,  (char *)buf);
+      lua_pushstring(lua,  buf);
       lua_setfield(lua, -2, field);
     }
 
   return next + 1;
 }
-#endif
 
-static void buff_alloc(size_t size)
+
+pub fn buff_alloc(size: usize)
 {
   if (size > buf_size)
     {
-      struct script_data *new;
+      let mut new: script_data;
       
       /* start with reasonable size, will almost never need extending. */
       if (size < sizeof(struct script_data) + 200)
@@ -734,15 +733,15 @@ static void buff_alloc(size_t size)
 }
 
 /* pack up lease data into a buffer */    
-void queue_script(int action, struct dhcp_lease *lease, char *hostname, time_t now)
+void queue_script(action: i32, struct dhcp_lease *lease, hostname: &mut String, now: &time::Instant)
 {
   unsigned char *p;
   unsigned int hostname_len = 0, clid_len = 0, ed_len = 0;
   int fd = daemon.dhcpfd;
-#ifdef HAVE_DHCP6 
+  
   if (!daemon.dhcp)
     fd = daemon.dhcp6fd;
-#endif
+
 
   /* no script */
   if (daemon.helperfd == -1)
@@ -759,11 +758,11 @@ void queue_script(int action, struct dhcp_lease *lease, char *hostname, time_t n
 
   buf.action = action;
   buf.flags = lease.flags;
-#ifdef HAVE_DHCP6 
+  
   buf.vendorclass_count = lease.vendorclass_count;
   buf.addr6 = lease.addr6;
   buf.iaid = lease.iaid;
-#endif
+
   buf.hwaddr_len = lease.hwaddr_len;
   buf.hwaddr_type = lease.hwaddr_type;
   buf.clid_len = clid_len;
@@ -775,18 +774,18 @@ void queue_script(int action, struct dhcp_lease *lease, char *hostname, time_t n
   if (!indextoname(fd, lease.last_interface, buf.interface))
     buf.interface[0] = 0;
   
-#ifdef HAVE_BROKEN_RTC 
+ 
   buf.length = lease.length;
-#else
+
   buf.expires = lease.expires;
-#endif
+
 
   if (lease.expires != 0)
     buf.remaining_time = (unsigned int)difftime(lease.expires, now);
   else
     buf.remaining_time = 0;
 
-  p = (unsigned char *)(buf+1);
+  p = (buf+1);
   if (clid_len != 0)
     {
       memcpy(p, lease.clid, clid_len);
@@ -802,14 +801,14 @@ void queue_script(int action, struct dhcp_lease *lease, char *hostname, time_t n
       memcpy(p, lease.extradata, ed_len);
       p += ed_len;
     }
-  bytes_in_buf = p - (unsigned char *)buf;
+  bytes_in_buf = p - buf;
 }
 
-#ifdef HAVE_TFTP
+ 
 /* This nastily re-uses DHCP-fields for TFTP stuff */
-void queue_tftp(off_t file_len, char *filename, union mysockaddr *peer)
+void queue_tftp(off_t file_len, filename: &mut String, union mysockaddr *peer)
 {
-  unsigned int filename_len;
+  let mut filename_len: u32;
 
   /* no script */
   if (daemon.helperfd == -1)
@@ -828,17 +827,18 @@ void queue_tftp(off_t file_len, char *filename, union mysockaddr *peer)
   else
     buf.addr6 = peer.in6.sin6_addr;
 
-  memcpy((unsigned char *)(buf+1), filename, filename_len);
+  memcpy((buf+1), filename, filename_len);
   
   bytes_in_buf = sizeof(struct script_data) +  filename_len;
 }
-#endif
 
-void queue_arp(int action, unsigned char *mac, int maclen, int family, union all_addr *addr)
+
+pub fn queue_arp(action: i32, mac: &mut Vec<u8>, maclen: i32, family: i32, addr: net::IpAddr)
 {
   /* no script */
-  if (daemon.helperfd == -1)
+  if (daemon.helperfd == -1) {
     return;
+  }
   
   buff_alloc(sizeof(struct script_data));
   memset(buf, 0, sizeof(struct script_data));
@@ -846,24 +846,26 @@ void queue_arp(int action, unsigned char *mac, int maclen, int family, union all
   buf.action = action;
   buf.hwaddr_len = maclen;
   buf.hwaddr_type =  ARPHRD_ETHER; 
-  if ((buf.flags = family) == AF_INET)
+  if ((buf.flags = family) == AF_INET) {
     buf.addr = addr.addr4;
-  else
+  }
+  else {
     buf.addr6 = addr.addr6;
+	}
   
   memcpy(buf.hwaddr, mac, maclen);
   
   bytes_in_buf = sizeof(struct script_data);
 }
 
-int helper_buf_empty(void)
+int helper_buf_empty()
 {
   return bytes_in_buf == 0;
 }
 
-void helper_write(void)
+void helper_write()
 {
-  ssize_t rc;
+  src: usize;
 
   if (bytes_in_buf == 0)
     return;
@@ -882,7 +884,7 @@ void helper_write(void)
     }
 }
 
-#endif
+
 
 
 

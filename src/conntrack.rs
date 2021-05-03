@@ -14,20 +14,20 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#ifdef HAVE_CONNTRACK
+
+ HAVE_CONNTRACK
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
-static int gotit = 0; /* yuck */
+let mut gotit: i32 = 0; /* yuck */
 
-static int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data);
+ int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>);
 
-int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, int istcp, unsigned int *markp)
+int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, istcp: i32, markp: &mut u32)
 {
-  struct nf_conntrack *ct;
-  struct nfct_handle *h;
+  let mut ct: nf_conntrack;
+  let mut h: nfct_handle;
   
   gotit = 0;
   
@@ -57,10 +57,10 @@ int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, i
 	  nfct_callback_register(h, NFCT_T_ALL, callback, (void *)markp);  
 	  if (nfct_query(h, NFCT_Q_GET, ct) == -1)
 	    {
-	      static int warned = 0;
+	      let mut warned: i32 = 0;
 	      if (!warned)
 		{
-		  my_syslog(LOG_ERR, _("Conntrack connection mark retrieval failed: {}"), strerror(errno));
+		  my_syslog(LOG_ERR, format!("Conntrack connection mark retrieval failed: {}"), strerror(errno));
 		  warned = 1;
 		}
 	    }
@@ -72,17 +72,17 @@ int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, i
   return gotit;
 }
 
-static int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data)
+ int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>)
 {
-  unsigned int *ret = (unsigned int *)data;
+  ret: &mut u32 = (unsigned int *)data;
   *ret = nfct_get_attr_u32(ct, ATTR_MARK);
-  (void)type; /* eliminate warning */
+  ()type; /* eliminate warning */
   gotit = 1;
 
   return NFCT_CB_CONTINUE;
 }
 
-#endif
+
   
 
 

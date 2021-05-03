@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+
 
 #if defined(HAVE_IPSET) && defined(HAVE_LINUX_NETWORK)
 
@@ -43,15 +43,15 @@ pub const IPSET_PROTOCOL: u32 = 6;
 
 #ifndef NFNETLINK_V0
 pub const NFNETLINK_V0: u32 = 0;
-#endif
+
 
 #ifndef NLA_F_NESTED
 #define NLA_F_NESTED		(1 << 15)
-#endif
+
 
 #ifndef NLA_F_NET_BYTEORDER
 #define NLA_F_NET_BYTEORDER	(1 << 14)
-#endif
+
 
 struct my_nlattr {
         __u16           nla_len;
@@ -69,11 +69,11 @@ struct my_nfgenmsg {
 pub const BUFF_SZ: u32 = 256;
 
 #define NL_ALIGN(len) (((len)+3) & ~(3))
-static const struct sockaddr_nl snl = { .nl_family = AF_NETLINK };
-static int ipset_sock, old_kernel;
-static char *buffer;
+ const struct sockaddr_nl snl = { .nl_family = AF_NETLINK };
+ ipset_sock: i32, old_kernel;
+ char *buffer;
 
-static inline void add_attr(struct nlmsghdr *nlh, uint16_t type, size_t len, const void *data)
+ inline void add_attr(struct nlmsghdr *nlh, uint16_t type, len: usize, const data: Vec<u8>)
 {
   struct my_nlattr *attr = (void *)nlh + NL_ALIGN(nlh.nlmsg_len);
   uint16_t payload_len = NL_ALIGN(sizeof(struct my_nlattr)) + len;
@@ -83,7 +83,7 @@ static inline void add_attr(struct nlmsghdr *nlh, uint16_t type, size_t len, con
   nlh.nlmsg_len += NL_ALIGN(payload_len);
 }
 
-void ipset_init(void)
+void ipset_init()
 {
   old_kernel = (daemon.kernel_version < KERNEL_VERSION(2,6,32));
   
@@ -93,16 +93,16 @@ void ipset_init(void)
   if (!old_kernel && 
       (buffer = safe_malloc(BUFF_SZ)) &&
       (ipset_sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_NETFILTER)) != -1 &&
-      (bind(ipset_sock, (struct sockaddr *)&snl, sizeof(snl)) != -1))
+      (bind(ipset_sock, &snl, sizeof(snl)) != -1))
     return;
   
-  die (_("failed to create IPset control socket: {}"), NULL, EC_MISC);
+  die (format!("failed to create IPset control socket: {}"), NULL, EC_MISC);
 }
 
-static int new_add_to_ipset(const char *setname, const union all_addr *ipaddr, int af, int remove)
+ int new_add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, af: i32, remove: i32)
 {
-  struct nlmsghdr *nlh;
-  struct my_nfgenmsg *nfg;
+  let mut nlh: nlmsghdr;
+  let mut nfg: my_nfgenmsg;
   struct my_nlattr *nested[2];
   uint8_t proto;
   int addrsz = (af == AF_INET6) ? IN6ADDRSZ : INADDRSZ;
@@ -142,13 +142,13 @@ static int new_add_to_ipset(const char *setname, const union all_addr *ipaddr, i
   nested[0].nla_len = (void *)buffer + NL_ALIGN(nlh.nlmsg_len) - (void *)nested[0];
 	
   while (retry_send(sendto(ipset_sock, buffer, nlh.nlmsg_len, 0,
-			   (struct sockaddr *)&snl, sizeof(snl))));
+			   &snl, sizeof(snl))));
 								    
   return errno == 0 ? 0 : -1;
 }
 
 
-static int old_add_to_ipset(const char *setname, const union all_addr *ipaddr, int remove)
+ int old_add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, remove: i32)
 {
   socklen_t size;
   struct ip_set_req_adt_get {
@@ -189,7 +189,7 @@ static int old_add_to_ipset(const char *setname, const union all_addr *ipaddr, i
 
 
 
-int add_to_ipset(const char *setname, const union all_addr *ipaddr, int flags, int remove)
+int add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, flags: i32, remove: i32)
 {
   int ret = 0, af = AF_INET;
 
@@ -208,9 +208,9 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr, int flags, i
     ret = old_kernel ? old_add_to_ipset(setname, ipaddr, remove) : new_add_to_ipset(setname, ipaddr, af, remove);
 
   if (ret == -1)
-     my_syslog(LOG_ERR, _("failed to update ipset {}: {}"), setname, strerror(errno));
+     my_syslog(LOG_ERR, format!("failed to update ipset {}: {}"), setname, strerror(errno));
 
   return ret;
 }
 
-#endif
+

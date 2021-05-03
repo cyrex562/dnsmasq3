@@ -1,3 +1,5 @@
+use std::net;
+
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -25,7 +27,7 @@ pub const DHCP_BUFF_SZ: u32 = 256;
 
 pub const BOOTREQUEST: u32 = 1;
 pub const BOOTREPLY: u32 = 2;
-pub const DHCP_COOKIE: u32 = 0;x63825363
+pub const DHCP_COOKIE: u32 = 0x63825363;
 
 /* The Linux in-kernel DHCP client silently ignores any packet 
    smaller than this. Sigh...........   */
@@ -89,13 +91,28 @@ pub const DHCPINFORM: u32 = 8;
 
 pub const BRDBAND_FORUM_IANA: u32 = 3561; /* Broadband forum IANA enterprise */
 
-pub const DHCP_CHADDR_MAX: u32 = 16;
+pub const DHCP_CHADDR_MAX: usize = 16;
 
-struct dhcp_packet {
-  u8 op, htype, hlen, hops;
-  u32 xid;
-  u16 secs, flags;
-  struct in_addr ciaddr, yiaddr, siaddr, giaddr;
-  u8 chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
-  u8 options[312];
+pub struct dhcp_packet {
+  //u8 op, htype, hlen, hops;
+  pub op: u8,
+  pub htype: u8,
+  pub hlen: u8,
+  pub hops: u8,
+//   u32 xid;
+   pub xid: u32,
+//   u16 secs, flags;
+   pub secs: u16,
+   pub flags: u16,
+//   ciaddr: net::IpAddr, yiaddr, siaddr, giaddr;
+   pub ciaddr: net::IpAddr,
+   pub yiaddr: net::IpAddr,
+   pub siaddr: net::IpAddr,
+   pub giaddr: net::IpAddr,
+// u8 chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
+   pub chaddr: [u8;DHCP_CHADDR_MAX],
+   pub sname: [u8;64],
+   pub file: [u8;128],
+// u8 options[312];
+   pub options: [u8;312],
 };

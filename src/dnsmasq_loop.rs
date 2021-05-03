@@ -14,48 +14,53 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#ifdef HAVE_LOOP
-static ssize_t loop_make_probe(u32 uid);
 
-void loop_send_probes()
+
+
+pub fn loop_send_probes()
 {
-   struct server *serv;
+   let mut serv: server;
    
-   if (!option_bool(OPT_LOOP_DETECT))
+   if (!daemon.opt_loop_detect) {
      return;
+   }
 
    /* Loop through all upstream servers not for particular domains, and send a query to that server which is
       identifiable, via the uid. If we see that query back again, then the server is looping, and we should not use it. */
-   for (serv = daemon.servers; serv; serv = serv.next)
+  //  for (serv = daemon.servers; serv; serv = serv.next) 
+  for serv in daemon.servers 
+  {
      if (!(serv.flags & 
 	   (SERV_LITERAL_ADDRESS | SERV_NO_ADDR | SERV_USE_RESOLV | SERV_NO_REBIND | SERV_HAS_DOMAIN | SERV_FOR_NODOTS | SERV_LOOP)))
        {
-	 ssize_t len = loop_make_probe(serv.uid);
-	 int fd;
-	 struct randfd *rfd = NULL;
+	 let slen: usize = loop_make_probe(serv.uid);
+	 let mut fd: i32;
+	 let rfd: randfd;
 	 
-	 if (serv.sfd)
+	 if (serv.sfd) {
 	   fd = serv.sfd.fd;
+   }
 	 else 
 	   {
-	     if (!(rfd = allocate_rfd(serv.addr.sa.sa_family)))
+	     if (!(rfd = allocate_rfd(serv.addr.sa.sa_family))) {
 	       continue;
+       }
 	     fd = rfd.fd;
 	   }
 
-	 while (retry_send(sendto(fd, daemon.packet, len, 0, 
-				  &serv.addr.sa, sa_len(&serv.addr))));
+	 while {retry_send(sendto(fd, daemon.packet, len, 0, 
+				  &serv.addr.sa, sa_len(&serv.addr)))}{}
 	 
 	 free_rfd(rfd);
        }
+      }
 }
   
-static ssize_t loop_make_probe(u32 uid)
+ sloop_make_probe: usize(u32 uid)
 {
   struct dns_header *header = (struct dns_header *)daemon.packet;
-  unsigned char *p = (unsigned char *)(header+1);
+  unsigned char *p = (header+1);
 
   /* packet buffer overwritten */
   daemon.srv_save = NULL;
@@ -68,26 +73,26 @@ static ssize_t loop_make_probe(u32 uid)
   SET_OPCODE(header, QUERY);
 
   *p++ = 8;
-  sprintf((char *)p, "%.8x", uid);
+  sprintf(p, "%.8x", uid);
   p += 8;
   *p++ = strlen(LOOP_TEST_DOMAIN);
-  strcpy((char *)p, LOOP_TEST_DOMAIN); /* Add terminating zero */
+  strcpy(p, LOOP_TEST_DOMAIN); /* Add terminating zero */
   p += strlen(LOOP_TEST_DOMAIN) + 1;
 
   PUTSHORT(LOOP_TEST_TYPE, p);
   PUTSHORT(C_IN, p);
 
-  return p - (unsigned char *)header;
+  return p - header;
 }
   
 
-int detect_loop(char *query, int type)
+int detect_loop(query: &mut String, type: i32)
 {
-  int i;
+  let mut i: i32;
   u32 uid;
-  struct server *serv;
+  let mut serv: server;
   
-  if (!option_bool(OPT_LOOP_DETECT))
+  if (!daemon.opt_loop_detect)
     return 0;
 
   if (type != LOOP_TEST_TYPE ||
@@ -95,7 +100,7 @@ int detect_loop(char *query, int type)
       strstr(query, LOOP_TEST_DOMAIN) != query + 9)
     return 0;
 
-  for (i = 0; i < 8; i++)
+  for i in 0..8
     if (!isxdigit(query[i]))
       return 0;
 
@@ -114,4 +119,4 @@ int detect_loop(char *query, int type)
   return 0;
 }
 
-#endif
+

@@ -26,33 +26,33 @@
    add a dependency on Nettle, and use a stand-alone implementaion. 
 */
 
-#include "dnsmasq.h"
+
 
 #if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 
-static const struct nettle_hash *hash;
-static void *ctx;
-static unsigned char *digest;
+ const let mut hash: nettle_hash;
+pub fn *ctx;
+ unsigned char *digest;
 
-void hash_questions_init(void)
+void hash_questions_init()
 {
   if (!(hash = hash_find("sha256")))
-    die(_("Failed to create SHA-256 hash object"), NULL, EC_MISC);
+    die(format!("Failed to create SHA-256 hash object"), NULL, EC_MISC);
 
   ctx = safe_malloc(hash.context_size);
   digest = safe_malloc(hash.digest_size);
 }
 
-unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name)
+pub fn hash_questions(struct dns_header *header, plen: usize, name: &mut String) -> &mut Vec<u8>
 {
-  int q;
-  unsigned char *p = (unsigned char *)(header+1);
+  let mut q: i32;
+  unsigned char *p = (header+1);
 
   hash.init(ctx);
 
   for (q = ntohs(header.qdcount); q != 0; q--) 
     {
-      char *cp, c;
+      cp: &mut String, c;
 
       if (!extract_name(header, plen, &p, name, 1, 4))
 	break; /* bad packet */
@@ -61,7 +61,7 @@ unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name
 	 if (c >= 'A' && c <= 'Z')
 	   *cp += 'a' - 'A';
 
-      hash.update(ctx, cp - name, (unsigned char *)name);
+      hash.update(ctx, cp - name, name);
       /* CRC the class and type as well */
       hash.update(ctx, 4, p);
 
@@ -74,39 +74,34 @@ unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name
   return digest;
 }
 
-#else /* HAVE_DNSSEC  || HAVE_CRYPTOHASH */
+ /*  || HAVE_CRYPTOHASH */
 
 pub const SHA256_BLOCK_SIZE: u32 = 32;            // SHA256 outputs a 32 byte digest
-typedef unsigned char BYTE;             // 8-bit byte
-typedef unsigned int  WORD;             // 32-bit word, change to "long" for 16-bit machines
+// typedef unsigned let mut BYTE: u8;             // 8-bit byte
+// typedef unsigned int  WORD;             // 32-bit word, change to "long" for 16-bit machines
+pub struct SHA256_CTX{
+  pub data: [u8;64],
+  pub datalen: u16,
+  pub bitlen: u32,
+  pub state: [u6;8],
+}
 
-typedef struct {
-  BYTE data[64];
-  WORD datalen;
-  unsigned long long bitlen;
-  WORD state[8];
-} SHA256_CTX;
-
-static void sha256_init(SHA256_CTX *ctx);
-static void sha256_update(SHA256_CTX *ctx, const BYTE data[], size_t len);
-static void sha256_final(SHA256_CTX *ctx, BYTE hash[]);
-
-void hash_questions_init(void)
+pub fn hash_questions_init()
 {
 }
 
-unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name)
+pub fn hash_questions(header: &dns_header, plen: usize, name: &mut String) -> &mut Vec<u8>
 {
-  int q;
-  unsigned char *p = (unsigned char *)(header+1);
+  let mut q: i32;
+  unsigned char *p = (header+1);
   SHA256_CTX ctx;
-  static BYTE digest[SHA256_BLOCK_SIZE];
+   BYTE digest[SHA256_BLOCK_SIZE];
   
   sha256_init(&ctx);
     
   for (q = ntohs(header.qdcount); q != 0; q--) 
     {
-      char *cp, c;
+      cp: &mut String, c;
 
       if (!extract_name(header, plen, &p, name, 1, 4))
 	break; /* bad packet */
@@ -125,7 +120,7 @@ unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name
     }
   
   sha256_final(&ctx, digest);
-  return (unsigned char *)digest;
+  return digest;
 }
 
 /* Code from here onwards comes from https://github.com/B-Con/crypto-algorithms
@@ -148,7 +143,7 @@ pub const SIG: u32 = 0;(x) (ROTRIGHT(x,7) ^ ROTRIGHT(x,18) ^ ((x) >> 3))
 pub const SIG: u32 = 1;(x) (ROTRIGHT(x,17) ^ ROTRIGHT(x,19) ^ ((x) >> 10))
 
 /**************************** VARIABLES *****************************/
-static const WORD k[64] = {
+ const WORD k[64] = {
 			   0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
 			   0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
 			   0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
@@ -160,7 +155,7 @@ static const WORD k[64] = {
 };
 
 /*********************** FUNCTION DEFINITIONS ***********************/
-static void sha256_transform(SHA256_CTX *ctx, const BYTE data[])
+pub fn sha256_transform(SHA256_CTX *ctx, const BYTE data[])
 {
   WORD a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
   
@@ -202,7 +197,7 @@ static void sha256_transform(SHA256_CTX *ctx, const BYTE data[])
   ctx.state[7] += h;
 }
 
-static void sha256_init(SHA256_CTX *ctx)
+pub fn sha256_init(SHA256_CTX *ctx)
 {
   ctx.datalen = 0;
   ctx.bitlen = 0;
@@ -216,14 +211,14 @@ static void sha256_init(SHA256_CTX *ctx)
   ctx.state[7] = 0x5be0cd19;
 }
 
-static void sha256_update(SHA256_CTX *ctx, const BYTE data[], size_t len)
+pub fn sha256_update(SHA256_CTX *ctx, const BYTE data[], len: usize)
 {
   WORD i;
   
   for (i = 0; i < len; ++i)
     {
       ctx.data[ctx.datalen] = data[i];
-      ctx.datalen++;
+      ctx.datalen +=1;
       if (ctx.datalen == 64) {
 	sha256_transform(ctx, ctx.data);
 	ctx.bitlen += 512;
@@ -232,7 +227,7 @@ static void sha256_update(SHA256_CTX *ctx, const BYTE data[], size_t len)
     }
 }
 
-static void sha256_final(SHA256_CTX *ctx, BYTE hash[])
+pub fn sha256_final(SHA256_CTX *ctx, BYTE hash[])
 {
   WORD i;
   
@@ -281,4 +276,4 @@ static void sha256_final(SHA256_CTX *ctx, BYTE hash[])
     }
 }
 
-#endif
+

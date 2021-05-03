@@ -14,18 +14,18 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t  *len, unsigned char **p, int *is_sign, int *is_last)
+
+pub fn find_pseudoheader(struct dns_header *header, plen: usize, size_t  *len, unsigned char **p, int *is_sign, int *is_last) -> &mut Vec<u8>
 {
   /* See if packet has an RFC2671 pseudoheader, and if so return a pointer to it. 
      also return length of pseudoheader in *len and pointer to the UDP size in *p
      Finally, check to see if a packet is signed. If it is we cannot change a single bit before
      forwarding. We look for TSIG in the addition section, and TKEY queries (for GSS-TSIG) */
   
-  int i, arcount = ntohs(header.arcount);
-  unsigned char *ansp = (unsigned char *)(header+1);
-  unsigned short rdlen, type, class;
+  i: i32, arcount = ntohs(header.arcount);
+  unsigned char *ansp = (header+1);
+  u16 rdlen, type, class;
   unsigned char *ret = NULL;
 
   if (is_sign)
@@ -59,9 +59,9 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
   if (!(ansp = skip_section(ansp, ntohs(header.ancount) + ntohs(header.nscount), header, plen)))
     return NULL; 
   
-  for (i = 0; i < arcount; i++)
+  for i in 0..arcount
     {
-      unsigned char *save, *start = ansp;
+      save: &mut Vec<u8>, *start = ansp;
       if (!(ansp = skip_name(ansp, header, plen, 10)))
 	return NULL; 
 
@@ -97,12 +97,12 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
  
 
 /* replace == 2 .delete existing option only. */
-size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *limit, 
-			unsigned short udp_sz, int optno, unsigned char *opt, size_t optlen, int set_do, int replace)
+add_pseudoheader: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>, 
+			u16 udp_sz, optno: i32, opt: &mut Vec<u8>, optlen: usize, set_do: i32, replace: i32)
 { 
-  unsigned char *lenp, *datap, *p, *udp_len, *buff = NULL;
+  lenp: &mut Vec<u8>, *datap, *p, *udp_len, *buff = NULL;
   int rdlen = 0, is_sign, is_last;
-  unsigned short flags = set_do ? 0x8000 : 0, rcode = 0;
+  u16 flags = set_do ? 0x8000 : 0, rcode = 0;
 
   p = find_pseudoheader(header, plen, NULL, &udp_len, &is_sign, &is_last);
   
@@ -112,8 +112,8 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
   if (p)
     {
       /* Existing header */
-      int i;
-      unsigned short code, len;
+      let mut i: i32;
+      u16 code, len;
 
       p = udp_len;
       GETSHORT(udp_sz, p);
@@ -243,20 +243,20 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
       p += optlen;  
       PUTSHORT(p - datap, lenp);
     }
-  return p - (unsigned char *)header;
+  return p - header;
 }
 
-size_t add_do_bit(struct dns_header *header, size_t plen, unsigned char *limit)
+add_do_bit: usize(struct dns_header *header, plen: usize, unsigned char *limit)
 {
-  return add_pseudoheader(header, plen, (unsigned char *)limit, PACKETSZ, 0, NULL, 0, 1, 0);
+  return add_pseudoheader(header, plen, limit, PACKETSZ, 0, NULL, 0, 1, 0);
 }
 
-static unsigned char char64(unsigned char c)
+ unsigned char char64(unsigned char c)
 {
   return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[c & 0x3f];
 }
 
-static void encoder(unsigned char *in, char *out)
+pub fn encoder(in: &mut Vec<u8>, out: &mut String)
 {
   out[0] = char64(in[0]>>2);
   out[1] = char64((in[0]<<4) | (in[1]>>4));
@@ -264,10 +264,10 @@ static void encoder(unsigned char *in, char *out)
   out[3] = char64(in[2]);
 }
 
-static size_t add_dns_client(struct dns_header *header, size_t plen, unsigned char *limit,
-			     union mysockaddr *l3, time_t now, int *cacheablep)
+ add_dns_client: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
+			     union mysockaddr *l3, now: &time::Instant, int *cacheablep)
 {
-  int maclen, replace = 2; /* can't get mac address, just delete any incoming. */
+  maclen: i32, replace = 2; /* can't get mac address, just delete any incoming. */
   unsigned char mac[DHCP_CHADDR_MAX];
   char encode[18]; /* handle 6 byte MACs */
 
@@ -286,14 +286,14 @@ static size_t add_dns_client(struct dns_header *header, size_t plen, unsigned ch
 	}
     }
 
-  return add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_NOMDEVICEID, (unsigned char *)encode, strlen(encode), 0, replace); 
+  return add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_NOMDEVICEID, encode, strlen(encode), 0, replace); 
 }
 
 
-static size_t add_mac(struct dns_header *header, size_t plen, unsigned char *limit,
-		      union mysockaddr *l3, time_t now, int *cacheablep)
+ add_mac: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
+		      union mysockaddr *l3, now: &time::Instant, int *cacheablep)
 {
-  int maclen;
+  let mut maclen: i32;
   unsigned char mac[DHCP_CHADDR_MAX];
 
   if ((maclen = find_mac(l3, mac, 1, now)) != 0)
@@ -311,7 +311,7 @@ struct subnet_opt {
   u8 addr[IN6ADDRSZ];
 };
 
-static void *get_addrp(union mysockaddr *addr, const short family) 
+pub fn *get_addrp(union mysockaddr *addr, const short family) 
 {
   if (family == AF_INET6)
     return &addr.in6.sin6_addr;
@@ -319,14 +319,14 @@ static void *get_addrp(union mysockaddr *addr, const short family)
   return &addr.in.sin_addr;
 }
 
-static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, int *cacheablep)
+ calc_subnet_opt: usize(struct subnet_opt *opt, union mysockaddr *source, int *cacheablep)
 {
   /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
   
-  int len;
-  void *addrp = NULL;
+  let mut len: i32;
+  addrp: Vec<u8> = NULL;
   int sa_family = source.sa.sa_family;
-  int cacheable = 0;
+  let mut cacheable: i32 = 0;
   
   opt.source_netmask = 0;
   opt.scope_netmask = 0;
@@ -378,25 +378,25 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, 
   return len + 4;
 }
  
-static size_t add_source_addr(struct dns_header *header, size_t plen, unsigned char *limit, union mysockaddr *source, int *cacheable)
+ add_source_addr: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>, union mysockaddr *source, int *cacheable)
 {
   /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
   
-  int len;
+  let mut len: i32;
   struct subnet_opt opt;
   
   len = calc_subnet_opt(&opt, source, cacheable);
-  return add_pseudoheader(header, plen, (unsigned char *)limit, PACKETSZ, EDNS0_OPTION_CLIENT_SUBNET, (unsigned char *)&opt, len, 0, 0);
+  return add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_CLIENT_SUBNET, &opt, len, 0, 0);
 }
 
-int check_source(struct dns_header *header, size_t plen, unsigned char *pseudoheader, union mysockaddr *peer)
+int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, union mysockaddr *peer)
 {
   /* Section 9.2, Check that subnet option in reply matches. */
   
-  int len, calc_len;
+  len: i32, calc_len;
   struct subnet_opt opt;
   unsigned char *p;
-  int code, i, rdlen;
+  code: i32, i, rdlen;
   
   calc_len = calc_subnet_opt(&opt, peer, NULL);
    
@@ -430,8 +430,8 @@ int check_source(struct dns_header *header, size_t plen, unsigned char *pseudohe
 /* Set *check_subnet if we add a client subnet option, which needs to checked 
    in the reply. Set *cacheable to zero if we add an option which the answer
    may depend on. */
-size_t add_edns0_config(struct dns_header *header, size_t plen, unsigned char *limit, 
-			union mysockaddr *source, time_t now, int *check_subnet, int *cacheable)    
+add_edns0_config: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>, 
+			union mysockaddr *source, now: &time::Instant, int *check_subnet, int *cacheable)    
 {
   *check_subnet = 0;
   *cacheable = 1;
@@ -444,7 +444,7 @@ size_t add_edns0_config(struct dns_header *header, size_t plen, unsigned char *l
   
   if (daemon.dns_client_id)
     plen = add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_NOMCPEID, 
-			    (unsigned char *)daemon.dns_client_id, strlen(daemon.dns_client_id), 0, 1);
+			    daemon.dns_client_id, strlen(daemon.dns_client_id), 0, 1);
   
   if (option_bool(OPT_CLIENT_SUBNET))
     {

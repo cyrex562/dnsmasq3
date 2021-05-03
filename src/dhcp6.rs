@@ -14,42 +14,41 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
-
-#ifdef HAVE_DHCP6
-
-#include <netinet/icmp6.h>
-
-struct iface_param {
-  struct dhcp_context *current;
-  struct dhcp_relay *relay;
-  struct in6_addr fallback, relay_local, ll_addr, ula_addr;
-  int ind, addr_match;
-};
 
 
-static int complete_context6(struct in6_addr *local,  int prefix,
-			     int scope, int if_index, int flags, 
-			     unsigned int preferred, unsigned int valid, void *vparam);
-static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, void *parm); 
+ 
 
-void dhcp6_init(void)
+
+
+pub struct iface_param {
+  pub current: dhcp_context,
+  pub relay: dhcp_relay,
+  pub fallback: net::IpAddr,
+  pub relay_local: net::IpAddr, 
+  pub ll_addr: net::IpAddr,
+  pub ula_addr: net::IpAddr,
+  pub ind: i32,
+  pub addr_match: i32,
+}
+
+
+void dhcp6_init()
 {
-  int fd;
+  let mut fd: i32;
   struct sockaddr_in6 saddr;
-#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
+
   int class = IPTOS_CLASS_CS6;
-#endif
-  int oneopt = 1;
+
+  let mut oneopt: i32 = 1;
 
   if ((fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1 ||
-#if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
+
       setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &class, sizeof(class)) == -1 ||
-#endif
+
       setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &oneopt, sizeof(oneopt)) == -1 ||
       !fix_fd(fd) ||
       !set_ipv6pktinfo(fd))
-    die (_("cannot create DHCPv6 socket: {}"), NULL, EC_BADNET);
+    die (format!("cannot create DHCPv6 socket: {}"), NULL, EC_BADNET);
   
  /* When bind-interfaces is set, there might be more than one dnsmasq
      instance binding port 547. That's OK if they serve different networks.
@@ -58,52 +57,48 @@ void dhcp6_init(void)
      support it. This handles the introduction of REUSEPORT on Linux. */
   if (daemon.opt_nowild || daemon.opt_cleverbind)
     {
-      int rc = 0;
+      let mut rc: i32 = 0;
 
-#ifdef SO_REUSEPORT
       if ((rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt))) == -1 &&
 	  errno == ENOPROTOOPT)
 	rc = 0;
-#endif
+
       
       if (rc != -1)
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt));
       
       if (rc == -1)
-	die(_("failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: {}"), NULL, EC_BADNET);
+	die(format!("failed to set SO_REUSE{ADDR|PORT} on DHCPv6 socket: {}"), NULL, EC_BADNET);
     }
   
-  memset(&saddr, 0, sizeof(saddr));
-#ifdef HAVE_SOCKADDR_SA_LEN
-  saddr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+  // memset(&saddr, 0, mem::sizeof(saddr));
+  // saddr.sin6_len = sizeof(struct sockaddr_in6);
+    todo!();
   saddr.sin6_family = AF_INET6;
   saddr.sin6_addr = in6addr_any;
   saddr.sin6_port = htons(DHCPV6_SERVER_PORT);
-  
-  if (bind(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in6)))
-    die(_("failed to bind DHCPv6 server socket: {}"), NULL, EC_BADNET);
+ 
+  todo!();
+  // if (bind(fd, &saddr, sizeof(struct sockaddr_in6)))
+  //   die(format!("failed to bind DHCPv6 server socket: {}"), NULL, EC_BADNET);
   
   daemon.dhcp6fd = fd;
 }
 
-void dhcp6_packet(time_t now)
+pub fn dhcp6_packet(now: time::Instant)
 {
-  struct dhcp_context *context;
-  struct dhcp_relay *relay;
-  struct iface_param parm;
-  struct cmsghdr *cmptr;
-  struct msghdr msg;
-  int if_index = 0;
-  union {
-    struct cmsghdr align; /* this ensures alignment */
-    char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-  } control_u;
+  let mut context: dhcp_context;
+  let mut relay: dhcp_relay;
+  let mut parm: iface_param;
+  let mut cmptr: cmsghdr;
+  let mut msg: msghdr;
+  let mut if_index: i32 = 0;
+
   struct sockaddr_in6 from;
-  ssize_t sz; 
-  struct ifreq ifr;
-  struct iname *tmp;
-  unsigned short port;
+  ssz: usize; 
+  let mut ifr: ifreq;
+  let mut tmp: iname;
+  u16 port;
   struct in6_addr dst_addr;
 
   memset(&dst_addr, 0, sizeof(dst_addr));
@@ -124,7 +119,7 @@ void dhcp6_packet(time_t now)
       {
 	union {
 	  unsigned char *c;
-	  struct in6_pktinfo *p;
+	  let mut p: in6_pktinfo;
 	} p;
 	p.c = CMSG_DATA(cmptr);
         
@@ -139,7 +134,7 @@ void dhcp6_packet(time_t now)
     {
       from.sin6_port = htons(port);
       while (retry_send(sendto(daemon.dhcp6fd, daemon.outpacket.iov_base, 
-			       save_counter(-1), 0, (struct sockaddr *)&from, 
+			       save_counter(-1), 0, &from, 
 			       sizeof(from))));
     }
   else
@@ -177,7 +172,7 @@ void dhcp6_packet(time_t now)
 		if (!parm.ind)
 		  {
 		    my_syslog(MS_DHCP | LOG_WARNING,
-			      _("unknown interface {} in bridge-interface"),
+			      format!("unknown interface {} in bridge-interface"),
 			      bridge.iface);
 		    return;
 		  }
@@ -201,8 +196,11 @@ void dhcp6_packet(time_t now)
 	    memset(&context.local6, 0, IN6ADDRSZ);
 	  }
 
-      for (relay = daemon.relay6; relay; relay = relay.next)
+      // for (relay = daemon.relay6; relay; relay = relay.next) 
+      for relay in daemon.relay6
+      {
 	relay.current = relay;
+      }
       
       if (!iface_enumerate(AF_INET6, &parm, complete_context6))
 	return;
@@ -210,12 +208,17 @@ void dhcp6_packet(time_t now)
       if (daemon.if_names || daemon.if_addrs)
 	{
 	  
-	  for (tmp = daemon.if_names; tmp; tmp = tmp.next)
-	    if (tmp.name && wildcard_match(tmp.name, ifr.ifr_name))
+	  // for (tmp = daemon.if_names; tmp; tmp = tmp.next) 
+    for tmp in daemon.if_names
+    {
+	    if (tmp.name && wildcard_match(tmp.name, ifr.ifr_name)) {
 	      break;
+      }
+    }
 	  
-	  if (!tmp && !parm.addr_match)
+	  if (!tmp && !parm.addr_match) {
 	    return;
+    }
 	}
       
       if (parm.relay)
@@ -248,7 +251,7 @@ void dhcp6_packet(time_t now)
 	{
 	  from.sin6_port = htons(port);
 	  while (retry_send(sendto(daemon.dhcp6fd, daemon.outpacket.iov_base, 
-				   save_counter(-1), 0, (struct sockaddr *)&from, 
+				   save_counter(-1), 0, &from, 
 				   sizeof(from))));
 	}
 
@@ -259,7 +262,7 @@ void dhcp6_packet(time_t now)
     }
 }
 
-void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsigned int *maclenp, unsigned int *mactypep, time_t now)
+pub fn get_client_mac(client: &mut net::IpAddr, iface: i32, mac: &mut Vec<u8>, maclenp: &mut u32, mactypep: &mut u32, now: &time::Instant)
 {
   /* Receiving a packet from a host does not populate the neighbour
      cache, so we send a neighbour discovery request if we can't 
@@ -267,7 +270,7 @@ void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsi
   
   struct neigh_packet neigh;
   union mysockaddr addr;
-  int i, maclen;
+  i: i32, maclen;
 
   neigh.type = ND_NEIGHBOR_SOLICIT;
   neigh.code = 0;
@@ -277,15 +280,15 @@ void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsi
   neigh.checksum = 0;
    
   memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
   addr.in6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+
   addr.in6.sin6_family = AF_INET6;
   addr.in6.sin6_port = htons(IPPROTO_ICMPV6);
   addr.in6.sin6_addr = *client;
   addr.in6.sin6_scope_id = iface;
   
-  for (i = 0; i < 5; i++)
+  for i in 0..5
     {
       struct timespec ts;
       
@@ -303,17 +306,17 @@ void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsi
   *mactypep = ARPHRD_ETHER;
 }
     
-static int complete_context6(struct in6_addr *local,  int prefix,
-			     int scope, int if_index, int flags, unsigned int preferred, 
-			     unsigned int valid, void *vparam)
+ int complete_context6(local: &mut net::IpAddr,  prefix: i32,
+			     scope: i32, if_index: i32, flags: i32, unsigned preferred: i32, 
+			     unsigned valid: i32, vparam: Vec<u8>)
 {
-  struct dhcp_context *context;
-  struct shared_network *share;
-  struct dhcp_relay *relay;
+  let mut context: dhcp_context;
+  let mut share: shared_network;
+  let mut relay: dhcp_relay;
   struct iface_param *param = vparam;
-  struct iname *tmp;
+  let mut tmp: iname;
  
-  (void)scope; /* warning */
+  ()scope; /* warning */
   
   if (if_index != param.ind)
     return 1;
@@ -418,14 +421,14 @@ static int complete_context6(struct in6_addr *local,  int prefix,
   return 1;
 }
 
-struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct in6_addr *net, int prefix,  struct in6_addr *addr)
+struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, net: &mut net::IpAddr, prefix: i32,  addr: &mut net::IpAddr)
 {
-  struct dhcp_config *config;
+  let mut config: dhcp_config;
   
   for (config = configs; config; config = config.next)
     if (config.flags & CONFIG_ADDR6)
       {
-	struct addrlist *addr_list;
+	let mut addr_list: addrlist;
 	
 	for (addr_list = config.addr6; addr_list; addr_list = addr_list.next)
 	  if ((!net || is_same_net6(&addr_list.addr.addr6, net, prefix) || ((addr_list.flags & ADDRLIST_WILDCARD) && prefix == 64)) &&
@@ -436,8 +439,8 @@ struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct 
   return NULL;
 }
 
-struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned char *clid, int clid_len, int temp_addr,
-				       unsigned int iaid, int serial, struct dhcp_netid *netids, int plain_range, struct in6_addr *ans)
+struct dhcp_context *address6_allocate(struct dhcp_context *context,  clid: &mut Vec<u8>, clid_len: i32, temp_addr: i32,
+				       unsigned iaid: i32, serial: i32, struct dhcp_netid *netids, plain_range: i32, ans: &mut net::IpAddr)
 {
   /* Find a free address: exclude anything in use and anything allocated to
      a particular hwaddr/clientid/hostname in our configuration.
@@ -449,7 +452,7 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned c
 
   u64 start, addr;
   struct dhcp_context *c, *d;
-  int i, pass;
+  i: i32, pass;
   u64 j; 
 
   /* hash hwaddr: use the SDBM hashing algorithm.  This works
@@ -463,7 +466,7 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned c
   
   for (pass = 0; pass <= plain_range ? 1 : 0; pass++)
     for (c = context; c; c = c.current)
-      if (c.flags & (CONTEXT_DEPRECATE | CONTEXT_STATIC | CONTEXT_RA_STATELESS | CONTEXT_USED))
+      if (c.flags & (CONTEXT_DEPRECATE | CONTEXT_ | CONTEXT_RA_STATELESS | CONTEXT_USED))
 	continue;
       else if (!match_netid(c.filter, netids, pass))
 	continue;
@@ -508,7 +511,7 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned c
 		!config_find_by_address6(daemon.dhcp_conf, &c.start6, c.prefix, ans))
 	      return c;
 	    
-	    addr++;
+	    addr +=1;
 	    
 	    if (addr  == addr6part(&c.end6) + 1)
 	      addr = addr6part(&c.start6);
@@ -521,19 +524,19 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned c
 
 /* can dynamically allocate addr */
 struct dhcp_context *address6_available(struct dhcp_context *context, 
-					struct in6_addr *taddr,
+					taddr: &mut net::IpAddr,
 					struct dhcp_netid *netids,
 					int plain_range)
 {
   u64 start, end, addr = addr6part(taddr);
-  struct dhcp_context *tmp;
+  let mut tmp: dhcp_context;
  
   for (tmp = context; tmp; tmp = tmp.current)
     {
       start = addr6part(&tmp.start6);
       end = addr6part(&tmp.end6);
 
-      if (!(tmp.flags & (CONTEXT_STATIC | CONTEXT_RA_STATELESS)) &&
+      if (!(tmp.flags & (CONTEXT_ | CONTEXT_RA_STATELESS)) &&
           is_same_net6(&tmp.start6, taddr, tmp.prefix) &&
 	  is_same_net6(&tmp.end6, taddr, tmp.prefix) &&
 	  addr >= start &&
@@ -547,11 +550,11 @@ struct dhcp_context *address6_available(struct dhcp_context *context,
 
 /* address OK if configured */
 struct dhcp_context *address6_valid(struct dhcp_context *context, 
-				    struct in6_addr *taddr,
+				    taddr: &mut net::IpAddr,
 				    struct dhcp_netid *netids,
 				    int plain_range)
 {
-  struct dhcp_context *tmp;
+  let mut tmp: dhcp_context;
  
   for (tmp = context; tmp; tmp = tmp.current)
     if (is_same_net6(&tmp.start6, taddr, tmp.prefix) &&
@@ -561,9 +564,9 @@ struct dhcp_context *address6_valid(struct dhcp_context *context,
   return NULL;
 }
 
-void make_duid(time_t now)
+void make_duid(now: time::Instant)
 {
-  (void)now;
+  ()now;
 
   if (daemon.duid_config)
     {
@@ -577,14 +580,14 @@ void make_duid(time_t now)
     }
   else
     {
-      time_t newnow = 0;
+      let mut newnow: time::Instant = 0; 
       
       /* If we have no persistent lease database, or a non-stable RTC, use DUID_LL (newnow == 0) */
-#ifndef HAVE_BROKEN_RTC
+#ifndef
       /* rebase epoch to 1/1/2000 */
       if (!option_bool(OPT_LEASE_RO) || daemon.lease_change_command)
 	newnow = now - 946684800;
-#endif      
+      
       
       iface_enumerate(AF_LOCAL, &newnow, make_duid1);
       
@@ -593,7 +596,7 @@ void make_duid(time_t now)
     }
 }
 
-static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, void *parm)
+ int make_duid1(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
 {
   /* create DUID as specified in RFC3315. We use the MAC of the
      first interface we find that isn't loopback or P-to-P and
@@ -601,9 +604,9 @@ static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, vo
      tunnels which don't have usable MAC addresses. */
   
   unsigned char *p;
-  (void)index;
-  (void)parm;
-  time_t newnow = *((time_t *)parm);
+  ()index;
+  ()parm;
+  newnow: time::Instant = *((time_t *)parm);
   
   if (type >= 256)
     return 1;
@@ -630,23 +633,23 @@ static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, vo
 }
 
 struct cparam {
-  time_t now;
-  int newone, newname;
+  now: time::Instant;
+  newone: i32, newname;
 };
 
-static int construct_worker(struct in6_addr *local, int prefix, 
-			    int scope, int if_index, int flags, 
-			    int preferred, int valid, void *vparam)
+ int construct_worker(local: &mut net::IpAddr, prefix: i32, 
+			    scope: i32, if_index: i32, flags: i32, 
+			    preferred: i32, valid: i32, vparam: Vec<u8>)
 {
   char ifrn_name[IFNAMSIZ];
   struct in6_addr start6, end6;
   struct dhcp_context *template, *context;
-  struct iname *tmp;
+  let mut tmp: iname;
   
-  (void)scope;
-  (void)flags;
-  (void)valid;
-  (void)preferred;
+  ()scope;
+  ()flags;
+  ()valid;
+  ()preferred;
 
   struct cparam *param = vparam;
 
@@ -758,7 +761,7 @@ static int construct_worker(struct in6_addr *local, int prefix,
   return 1;
 }
 
-void dhcp_construct_contexts(time_t now)
+void dhcp_construct_contexts(now: time::Instant)
 { 
   struct dhcp_context *context, *tmp, **up;
   struct cparam param;
@@ -825,6 +828,6 @@ void dhcp_construct_contexts(time_t now)
     }
 }
 
-#endif
+
 
 

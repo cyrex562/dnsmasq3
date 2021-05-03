@@ -14,11 +14,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#ifdef __ANDROID__
-#  include <android/log.h>
-#endif
+
+
+
 
 /* Implement logging to /dev/log asynchronously. If syslogd is 
    making DNS lookups through dnsmasq, and dnsmasq blocks awaiting
@@ -33,40 +32,45 @@
 pub const MAX_MESSAGE: u32 = 1024;
 
 /* defaults in case we die() before we log_start() */
-static int log_fac = LOG_DAEMON;
-static int log_stderr = 0;
-static int echo_stderr = 0;
-static int log_fd = -1;
-static int log_to_file = 0;
-static int entries_alloced = 0;
-static int entries_lost = 0;
-static int connection_good = 1;
-static int max_logs = 0;
-static int connection_type = SOCK_DGRAM;
+//  int log_fac = LOG_DAEMON;
+// let mut log_stderr: i32 = 0;
+// let mut echo_stderr: i32 = 0;
+//  int log_fd = -1;
+// let mut log_to_file: i32 = 0;
+// let mut entries_alloced: i32 = 0;
+// let mut entries_lost: i32 = 0;
+// let mut connection_good: i32 = 1;
+// let mut max_logs: i32 = 0;
+//  int connection_type = SOCK_DGRAM;
 
-struct log_entry {
-  int offset, length;
-  pid_t pid; /* to avoid duplicates over a fork */
-  struct log_entry *next;
-  char payload[MAX_MESSAGE];
-};
+pub struct log_entry {
+  // offset: i32, length;
+  pub offset: i32,
+  pub length: i32,
+  // pid_t pid; /* to avoid duplicates over a fork */
+  pub pid: pid_t,
+  // let mut next: log_entry;
+  // char payload[MAX_MESSAGE];
+  pub payload: String,
+}
 
-static struct log_entry *entries = NULL;
-static struct log_entry *free_entries = NULL;
+//  struct log_entry *entries = NULL;
+//  struct log_entry *free_entries = NULL;
 
 
-int log_start(struct passwd *ent_pw, int errfd)
+pub fn log_start(ent_pw: passwd, errfd: i32)
 {
-  int ret = 0;
+  let mut ret: i32 = 0;
 
-  echo_stderr = option_bool(OPT_DEBUG);
+  echo_stderr = daemon.opt_debug;
 
-  if (daemon.log_fac != -1)
+  if (daemon.log_fac != -1) {
     log_fac = daemon.log_fac;
-#ifdef LOG_LOCAL0
-  else if (option_bool(OPT_DEBUG))
+  }
+  else if (daemon.opt_debug) {
     log_fac = LOG_LOCAL0;
-#endif
+  }
+
 
   if (daemon.log_file)
     { 
@@ -84,7 +88,7 @@ int log_start(struct passwd *ent_pw, int errfd)
 
   if (!log_reopen(daemon.log_file))
     {
-      send_event(errfd, EVENT_LOG_ERR, errno, daemon.log_file ? daemon.log_file : "");
+      send_event(errfd, EVENT_LOG_ERR, errno, if daemon.log_file {daemon.log_file} else { ""});
       _exit(0);
     }
 
@@ -92,8 +96,8 @@ int log_start(struct passwd *ent_pw, int errfd)
      the one required buffer now. */
   if (max_logs == 0)
     {  
-      free_entries = safe_malloc(sizeof(struct log_entry));
-      free_entries.next = NULL;
+      // free_entries = safe_malloc(mem::sizeof::<log_entry>());
+      // free_entries.next = NULL;
       entries_alloced = 1;
     }
 
@@ -108,7 +112,7 @@ int log_start(struct passwd *ent_pw, int errfd)
   return ret;
 }
 
-int log_reopen(char *log_file)
+pub fn log_reopen(log_file: &mut String)
 {
   if (!log_stderr)
     {      
@@ -121,26 +125,24 @@ int log_reopen(char *log_file)
 	log_fd = open(log_file, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP);      
       else
 	{
-#if defined(HAVE_SOLARIS_NETWORK) || defined(__ANDROID__)
 	  /* Solaris logging is "different", /dev/log is not unix-domain socket.
 	     Just leave log_fd == -1 and use the vsyslog call for everything.... */
-#   define _PATH_LOG ""  /* dummy */
 	  return 1;
-#else
-	  int flags;
+
+	  let mut flags: i32;
 	  log_fd = socket(AF_UNIX, connection_type, 0);
 	  
 	  /* if max_logs is zero, leave the socket blocking */
 	  if (log_fd != -1 && max_logs != 0 && (flags = fcntl(log_fd, F_GETFL)) != -1)
 	    fcntl(log_fd, F_SETFL, flags | O_NONBLOCK);
-#endif
+
 	}
     }
   
   return log_fd != -1;
 }
 
-static void free_entry(void)
+pub fn free_entry()
 {
   struct log_entry *tmp = entries;
   entries = tmp.next;
@@ -148,9 +150,9 @@ static void free_entry(void)
   free_entries = tmp;
 }      
 
-static void log_write(void)
+pub fn log_write()
 {
-  ssize_t rc;
+  src: usize;
    
   while (entries)
     {
@@ -160,12 +162,14 @@ static void log_write(void)
 	 datagram connection, so treat the length as one less than reality 
 	 to elide the zero. If we're logging to a file, turn the zero into 
 	 a newline, and leave the length alone. */
-      int len_adjust = 0;
+      let mut len_adjust: i32 = 0;
 
-      if (log_to_file)
+      if (log_to_file) {
 	entries.payload[entries.offset + entries.length - 1] = '\n';
-      else if (connection_type == SOCK_DGRAM)
+      }
+      else if (connection_type == SOCK_DGRAM) {
 	len_adjust = 1;
+      }
 
       /* Avoid duplicates over a fork() */
       if (entries.pid != getpid())
@@ -187,7 +191,7 @@ static void log_write(void)
 		{
 		  int e = entries_lost;
 		  entries_lost = 0; /* avoid wild recursion */
-		  my_syslog(LOG_WARNING, _("overflow: {} log entries lost"), e);
+		  my_syslog(LOG_WARNING, format!("overflow: {} log entries lost"), e);
 		}	  
 	    }
 	  continue;
@@ -228,14 +232,14 @@ static void log_write(void)
 	      
 	      struct sockaddr_un logaddr;
 	      
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
 	      logaddr.sun_len = sizeof(logaddr) - sizeof(logaddr.sun_path) + strlen(_PATH_LOG) + 1; 
-#endif
+
 	      logaddr.sun_family = AF_UNIX;
 	      safe_strncpy(logaddr.sun_path, _PATH_LOG, sizeof(logaddr.sun_path));
 	      
 	      /* Got connection back? try again. */
-	      if (connect(log_fd, (struct sockaddr *)&logaddr, sizeof(logaddr)) != -1)
+	      if (connect(log_fd, &logaddr, sizeof(logaddr)) != -1)
 		continue;
 	      
 	      /* errors from connect which mean we should keep trying */
@@ -265,7 +269,7 @@ static void log_write(void)
       /* give up - fall back to syslog() - this handles out-of-space
 	 when logging to a file, for instance. */
       log_fd = -1;
-      my_syslog(LOG_CRIT, _("log failed: {}"), strerror(errno));
+      my_syslog(LOG_CRIT, format!("log failed: {}"), strerror(errno));
       return;
     }
 }
@@ -274,13 +278,13 @@ static void log_write(void)
    OR'd to priority can be MS_TFTP, MS_DHCP, ... to be able to do log separation between
    DNS, DHCP and TFTP services.
 */
-void my_syslog(int priority, const char *format, ...)
+void my_syslog(priority: i32, const format: &mut String, ...)
 {
   va_list ap;
-  struct log_entry *entry;
-  time_t time_now;
+  let mut entry: log_entry;
+  time_now: time::Instant;
   char *p;
-  size_t len;
+  len: usize;
   pid_t pid = getpid();
   char *func = "";
 
@@ -291,12 +295,12 @@ void my_syslog(int priority, const char *format, ...)
   else if ((LOG_FACMASK & priority) == MS_SCRIPT)
     func = "-script";
 	    
-#ifdef LOG_PRI
+ LOG_PRI
   priority = LOG_PRI(priority);
-#else
+
   /* Solaris doesn't have LOG_PRI */
   priority &= LOG_PRIMASK;
-#endif
+
 
   if (echo_stderr) 
     {
@@ -309,10 +313,10 @@ void my_syslog(int priority, const char *format, ...)
 
   if (log_fd == -1)
     {
-#ifdef __ANDROID__
+ __ANDROID__
       /* do android-specific logging. 
 	 log_fd is always -1 on Android except when logging to a file. */
-      int alog_lvl;
+      let mut alog_lvl: i32;
       
       if (priority <= LOG_ERR)
 	alog_lvl = ANDROID_LOG_ERROR;
@@ -326,10 +330,10 @@ void my_syslog(int priority, const char *format, ...)
       va_start(ap, format);
       __android_log_vprint(alog_lvl, "dnsmasq", format, ap);
       va_end(ap);
-#else
+
       /* fall-back to syslog if we die during startup or 
 	 fail during running (always on Solaris). */
-      static int isopen = 0;
+      let mut isopen: i32 = 0;
 
       if (!isopen)
 	{
@@ -339,7 +343,7 @@ void my_syslog(int priority, const char *format, ...)
       va_start(ap, format);  
       vsyslog(priority, format, ap);
       va_end(ap);
-#endif
+
 
       return;
     }
@@ -347,10 +351,10 @@ void my_syslog(int priority, const char *format, ...)
   if ((entry = free_entries))
     free_entries = entry.next;
   else if (entries_alloced < max_logs && (entry = malloc(sizeof(struct log_entry))))
-    entries_alloced++;
+    entries_alloced +=1;
   
   if (!entry)
-    entries_lost++;
+    entries_lost +=1;
   else
     {
       /* add to end of list, consumed from the start */
@@ -359,7 +363,7 @@ void my_syslog(int priority, const char *format, ...)
 	entries = entry;
       else
 	{
-	  struct log_entry *tmp;
+	  let mut tmp: log_entry;
 	  for (tmp = entries; tmp.next; tmp = tmp.next);
 	  tmp.next = entry;
 	}
@@ -370,10 +374,10 @@ void my_syslog(int priority, const char *format, ...)
 	p += sprintf(p, "<{}>", priority | log_fac);
 
       /* Omit timestamp for default daemontools situation */
-      if (!log_stderr || !option_bool(OPT_NO_FORK)) 
+      if (!log_stderr || !daemon.opt_no_fork) 
 	p += sprintf(p, "%.15s ", ctime(&time_now) + 4);
       
-      p += sprintf(p, "dnsmasq{}[{}]: ", func, (int)pid);
+      p += sprintf(p, "dnsmasq{}[{}]: ", func, pid);
         
       len = p - entry.payload;
       va_start(ap, format);  
@@ -401,7 +405,7 @@ void my_syslog(int priority, const char *format, ...)
 
   if (entries && max_logs != 0)
     {
-      int d;
+      let mut d: i32;
       
       for (d = 0,entry = entries; entry; entry = entry.next, d++);
       
@@ -423,7 +427,7 @@ void my_syslog(int priority, const char *format, ...)
     } 
 }
 
-void set_log_writer(void)
+void set_log_writer()
 {
   if (entries && log_fd != -1 && connection_good)
     poll_listen(log_fd, POLLOUT);
@@ -435,7 +439,7 @@ void check_log_writer(int force)
     log_write();
 }
 
-void flush_log(void)
+void flush_log()
 {
   /* write until queue empty, but don't loop forever if there's
    no connection to the syslog in existence */
@@ -454,7 +458,7 @@ void flush_log(void)
     }
 }
 
-void die(char *message, char *arg1, int exit_code)
+void die(message: &mut String, arg1: &mut String, exit_code: i32)
 {
   char *errmess = strerror(errno);
   
@@ -468,7 +472,7 @@ void die(char *message, char *arg1, int exit_code)
     }
   my_syslog(LOG_CRIT, message, arg1, errmess);
   echo_stderr = 0;
-  my_syslog(LOG_CRIT, _("FAILED to start up"));
+  my_syslog(LOG_CRIT, format!("FAILED to start up"));
   flush_log();
   
   exit(exit_code);

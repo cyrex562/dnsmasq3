@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+
 
 /* Wrapper for poll(). Allocates and extends array of struct pollfds,
    keeps them in fd order so that we can set and test conditions on
@@ -39,13 +39,13 @@
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
 
-static struct pollfd *pollfds = NULL;
-static nfds_t nfds, arrsize = 0;
+ struct pollfd *pollfds = NULL;
+ nfds_t nfds, arrsize = 0;
 
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry
    to the left of which a new record should be inserted. */
-static nfds_t fd_search(int fd)
+ nfds_t fd_search(int fd)
 {
   nfds_t left, right, mid;
   
@@ -68,7 +68,7 @@ static nfds_t fd_search(int fd)
     }
 }
 
-void poll_reset(void)
+void poll_reset()
 {
   nfds = 0;
 }
@@ -78,7 +78,7 @@ int do_poll(int timeout)
   return poll(pollfds, nfds, timeout);
 }
 
-int poll_check(int fd, short event)
+int poll_check(fd: i32, short event)
 {
   nfds_t i = fd_search(fd);
   
@@ -88,7 +88,7 @@ int poll_check(int fd, short event)
   return 0;
 }
 
-void poll_listen(int fd, short event)
+void poll_listen(fd: i32, short event)
 {
    nfds_t i = fd_search(fd);
   
@@ -101,7 +101,7 @@ void poll_listen(int fd, short event)
        else
 	 {
 	   /* Array too small, extend. */
-	   struct pollfd *new;
+	   let mut new: pollfd;
 
 	   arrsize = (arrsize == 0) ? 64 : arrsize * 2;
 
@@ -120,6 +120,6 @@ void poll_listen(int fd, short event)
        
        pollfds[i].fd = fd;
        pollfds[i].events = event;
-       nfds++;
+       nfds +=1;
      }
 }

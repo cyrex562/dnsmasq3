@@ -15,21 +15,21 @@
 */
 
 
-#include "dnsmasq.h"
- 
-#ifdef HAVE_DHCP6
 
-static size_t outpacket_counter;
+ 
+ 
+
+ outpacket_counter: usize;
 
 void end_opt6(int container)
 {
-   void *p = daemon.outpacket.iov_base + container + 2;
+   p: Vec<u8> = daemon.outpacket.iov_base + container + 2;
    u16 len = outpacket_counter - container - 4 ;
    
    PUTSHORT(len, p);
 }
 
-void reset_counter(void)
+void reset_counter()
 {
   /* Clear out buffer when starting from beginning */
   if (daemon.outpacket.iov_base)
@@ -48,9 +48,9 @@ int save_counter(int newval)
   return ret;
 }
 
-void *expand(size_t headroom)
+expand: Vec<u8>(headroom: usize)
 {
-  void *ret;
+  ret: Vec<u8>;
 
   if (expand_buf(&daemon.outpacket, outpacket_counter + headroom))
     {
@@ -65,7 +65,7 @@ void *expand(size_t headroom)
 int new_opt6(int opt)
 {
   int ret = outpacket_counter;
-  void *p;
+  p: Vec<u8>;
 
   if ((p = expand(4)))
     {
@@ -76,9 +76,9 @@ int new_opt6(int opt)
   return ret;
 }
 
-void *put_opt6(void *data, size_t len)
+put_opt6: Vec<u8>(data: Vec<u8>, len: usize)
 {
-  void *p;
+  p: Vec<u8>;
 
   if ((p = expand(len)) && data)
     memcpy(p, data, len);   
@@ -88,7 +88,7 @@ void *put_opt6(void *data, size_t len)
   
 void put_opt6_long(unsigned int val)
 {
-  void *p;
+  p: Vec<u8>;
   
   if ((p = expand(4)))  
     PUTLONG(val, p);
@@ -96,7 +96,7 @@ void put_opt6_long(unsigned int val)
 
 void put_opt6_short(unsigned int val)
 {
-  void *p;
+  p: Vec<u8>;
 
   if ((p = expand(2)))
     PUTSHORT(val, p);   
@@ -110,9 +110,9 @@ void put_opt6_char(unsigned int val)
     *p = val;   
 }
 
-void put_opt6_string(char *s)
+void put_opt6_string(s: &mut String)
 {
   put_opt6(s, strlen(s));
 }
 
-#endif
+

@@ -1,4 +1,8 @@
-use crate::dnsmasq_h::{all_addr, ArpRecord, DnsmasqDaemon};
+use std::{net, time};
+
+use winapi::shared::ws2def::AF_UNSPEC;
+
+use crate::{bpf::iface_enumerate, dhcp_protocol::DHCP_CHADDR_MAX, dnsmasq_h::{ACTION_ARP, ACTION_ARP_DEL, ArpRecord, DnsmasqDaemon}, helper::queue_arp};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -16,7 +20,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// #include "dnsmasq.h"
+
 
 /* Time between forced re-loads from kernel. */
 pub const INTERVAL: u32 = 90;
@@ -26,164 +30,205 @@ pub const ARP_FOUND: u32 = 1; /* Confirmed */
 pub const ARP_NEW: u32 = 2; /* Newly created */
 pub const ARP_EMPTY: u32 = 3; /* No MAC addr */
 
-// static struct arp_record *arps = NULL, *old = NULL, *freelist = NULL;
-// static time_t last = 0;
 
-pub fn filter_mac(
-    daemon: &mut DnsmasqDaemon,
-    family: i32,
-    addrp: &net::IpAddr,
-    mac: &[u8],
-    maclen: usize,
-) -> i32 {
-    // struct arp_record *arp;
-    let mut arp: ArpRecord = Default::default();
 
-    if (maclen > DHCP_CHADDR_MAX) {
-        return 1;
+//  struct arp_record *arps = NULL, *old = NULL, *freelist = NULL;
+//  let mut last: time::Instant = 0; 
+
+ pub fn filter_mac(daemon: &mut DnsmasqDaemon, family: u16, addrp: &net::IpAddr, mac: &[u8], maclen: usize) -> i32
+{
+  let mut arp: ArpRecord;
+  if maclen > DHCP_CHADDR_MAX {
+    return 1;
+  }
+
+  /* Look for existing entry */
+  // for (arp = arps; arp; arp = arp.next)
+  for arp in daemon.arps
+    {
+      if family != arp.family || arp.status == ARP_NEW as u16 {
+	continue;
+      }
+      
+      if arp.addr == *addrp {
+	    continue;
     }
 
-    /* Look for existing entry */
-    for arp in daemon.arps {
-        if (family != arp.family || arp.status == ARP_NEW) {
-            continue;
-        }
-        if arp.addr == addrp {
-            continue;
-        }
-
-        if (arp.status == ARP_EMPTY) {
-            /* existing address, was negative. */
-            arp.status = ARP_NEW;
-            arp.hwlen = maclen;
-            memcpy(arp.hwaddr, mac, maclen);
-        } else if (arp.hwlen == maclen && memcmp(arp.hwaddr, mac, maclen) == 0) {
-            /* Existing entry matches - confirm. */
-            arp.status = ARP_FOUND;
-        } else {
-            continue;
-        }
-
-        break;
+      if arp.status == ARP_EMPTY as u16
+	{
+	  /* existing address, was negative. */
+	  arp.status = ARP_NEW as u16;
+	  arp.hwlen = maclen as u16;
+    arp.hwaddr = mac;
+	  // memcpy(arp.hwaddr, mac, maclen);
+	}
+      else if (arp.hwlen == maclen && arp.hwaddr == mac) == 0 {
+	/* Existing entry matches - confirm. */
+	arp.status = ARP_FOUND; }
+      else {
+	continue;}
+      
+      break;
     }
 
-    if (!arp) {
-        arp = Default::default();
-        arp.status = ARP_NEW;
-        arp.hwlen = maclen;
-        arp.family = family;
-        arp.hwaddr.clone_from_slice(mac);
-        arp.addr = addrp;
+  if (!arp)
+    {
+      /* New entry */
+  //     if (freelist)
+	// {
+	//   arp = freelist;
+	//   freelist = freelist.next;
+	// }
+  //     else if (!(arp = whine_malloc(sizeof(struct arp_record)))) {
+	// return 1;}
+      
+      // arp.next = arps;
+      // arps = arp;
+      arp.status = ARP_NEW;
+      arp.hwlen = maclen;
+      arp.family = family;
+      // memcpy(arp.hwaddr, mac, maclen);
+      arp.hwaddr = mac;
+      arp.addr = addrp;
     }
 
     return 1;
 }
 
 /* If in lazy mode, we cache absence of ARP entries. */
-pub fn find_mac(
-    daemon: &mut DnsmasqDaemon,
-    addr: &net::IpAddr,
-    mac: &[u8],
-    lazy: i32,
-    now: &time::Instsant,
-) -> i32 {
-    //struct arp_record *arp, *tmp, **up;
-    let mut arp: ArpRecord;
-    let mut tmp: ArpRecord;
-    let mut up: ArpRecord;
-    //int updated = 0;
-    let mut updated: i32 = 0;
-    //  again:
+pub fn find_mac(daemon: &mut DnsmasqDaemon, addr: &net::IpAddr, mac: &[u8], lazy: i32, now: &time::Instant) -> i32
+{
+  // struct arp_record *arp, *tmp, **up;
+  let mut arp: ArpRecord;
+  let mut tmp: ArpRecord;
+  let mut up: ArpRecord;
+  let mut updated: i32 = 0;
 
-    /* If the database is less then INTERVAL old, look in there */
-    if (difftime(now, last) < INTERVAL) {
-        /* addr == NULL . just make cache up-to-date */
-        if (!addr) {
-            return 0;
-        }
+//  again:
+  
+  /* If the database is less then INTERVAL old, look in there */
+  if now - daemon.last < INTERVAL
+    {
+      /* addr == NULL . just make cache up-to-date */
+      if !addr {
+	return 0;
+      }
 
-        for arp in daemon.arps {
-            if (addr.sa.sa_family != arp.family) {
-                continue;
-            }
-
-            if arp.addr != addr {
-                continue;
-            }
-
-            /* Only accept positive entries unless in lazy mode. */
-            if (arp.status != ARP_EMPTY || lazy || updated) {
-                if (mac && arp.hwlen != 0) {
-                    memcpy(mac, arp.hwaddr, arp.hwlen);
-                }
-                return arp.hwlen;
-            }
-        }
+      // for (arp = arps; arp; arp = arp.next)
+      for arp in daemon.arps
+	{
+	  if addr.sa.sa_family != arp.family {
+	    continue;
     }
 
-    /* Not found, try the kernel */
-    if (!updated) {
-        updated = 1;
-        last = now;
-
-        /* Mark all non-negative entries */
-        // for (arp = arps; arp; arp = arp.next)
-        for arp in daemon.arps {
-            if (arp.status != ARP_EMPTY) {
-                arp.status = ARP_MARK;
-            }
+    if arp.addr != addr {
+      continue;
+    }
+	    
+	  /* Only accept positive entries unless in lazy mode. */
+	  if arp.status != ARP_EMPTY || lazy || updated
+	    {
+	      if mac && arp.hwlen != 0 {
+		// memcpy(mac, arp.hwaddr, arp.hwlen);
+          mac = arp.hwaddr;
         }
+	      return arp.hwlen;
+	    }
+	}
+    }
 
-        iface_enumerate(AF_UNSPEC, NULL, filter_mac);
+  /* Not found, try the kernel */
+  if (!updated)
+     {
+       updated = 1;
+       daemon.last = now;
 
-        /* Remove all unconfirmed entries to old list. */
-        // for (arp = arps, up = &arps; arp; arp = tmp)
-        let up = &daemon.arps;
-        for arp in daemon.arps {
-            let tmp = arp.next;
-            if (arp.status == ARP_MARK) {
-                *up = arp.next;
-                arp.next = old;
-                old = arp;
-            } else {
-                up = &arp.next;
-            }
-        }
+       /* Mark all non-negative entries */
+      //  for (arp = arps; arp; arp = arp.next) 
+      for arp in daemon.arps 
+      {
+	 if arp.status != ARP_EMPTY {
+	   arp.status = ARP_MARK;
+   }}
+       
+       iface_enumerate(AF_UNSPEC, None, filter_mac);
+       
+       /* Remove all unconfirmed entries to old list. */
+      //  for (arp = arps, up = &arps; arp; arp = tmp)
+      for arp in daemon.arps
+	 {
+	   tmp = arp.next;
+	   
+	   if arp.status == ARP_MARK
+	     {
+	      //  *up = arp.next;
+	      //  arp.next = old;
+	      //  old = arp;
+	     }
+	   else {
+	     up = &arp.next;
+     }
+	 }
 
-        // goto again;
+      //  goto again;
+     }
 
-        /* record failure, so we don't consult the kernel each time
-        we're asked for this address */
-        if (freelist) {
-            // arp = freelist;
-            // freelist = freelist.next;
-        } else {
-            // arp = whine_malloc(sizeof(struct arp_record));
-            arp = Default::default();
-        }
-
-        if (arp) {
-            // arp.next = arps;
-            // arps = arp;
-            arp.status = ARP_EMPTY;
-            arp.family = addr.sa.sa_family;
-            arp.hwlen = 0;
-            arp.addr = addr;
-        }
+  /* record failure, so we don't consult the kernel each time
+     we're asked for this address */
+  // if (freelist)
+  //   {
+  //     arp = freelist;
+  //     freelist = freelist.next;
+  //   }
+  // else {
+  //   arp = whine_malloc(sizeof(struct ArpRecord));
+  // }
+  
+  if (arp)
+    {      
+      // arp.next = arps;
+      // arps = arp;
+      arp.status = ARP_EMPTY;
+      arp.family = addr.sa.sa_family;
+      arp.hwlen = 0;
+      arp.addr = addr;
+      daemon.arps.push(arp);
     }
 
     return 0;
 }
 
-pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32 {
-    // struct arp_record *arp;
-    let arp: ArpRecord;
+pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32
+{
+  let mut arp: ArpRecord;
+  
+  /* Notify any which went, then move to free list */
+  if daemon.old
+    {
+ 
+      if daemon.opt_script_arp {
+	queue_arp(ACTION_ARP_DEL, daemon.old.hwaddr, daemon.old.hwlen, daemon.old.family, &daemon.old.addr);}
 
-    /* Notify any which went, then move to free list */
-    if (old) {
-        if (daemon.opt_script_arp) {
-            queue_arp(ACTION_ARP_DEL, old.hwaddr, old.hwlen, old.family, &old.addr);
-        }
+      // arp = old;
+      // old = arp.next;
+      // arp.next = freelist;
+      // freelist = arp;
+      return 1;
+    }
+
+  // for (arp = arps; arp; arp = arp.next) 
+  for arp in daemon.arps
+  {
+    if arp.status == ARP_NEW
+      {
+ 
+	if (daemon.opt_script_arp) {
+	  queue_arp(ACTION_ARP, arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
+  }
+
+	arp.status = ARP_FOUND;
+	return 1;
+      }}
 
         arp = old;
         old = arp.next;

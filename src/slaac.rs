@@ -14,19 +14,19 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+
+ 
 
 #include <netinet/icmp6.h>
 
-static int ping_id = 0;
+let mut ping_id: i32 = 0;
 
-void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
+void slaac_add_addrs(struct dhcp_lease *lease, now: &time::Instant, force: i32)
 {
   struct slaac_address *slaac, *old, **up;
-  struct dhcp_context *context;
-  int dns_dirty = 0;
+  let mut context: dhcp_context;
+  let mut dns_dirty: i32 = 0;
   
   if (!(lease.flags & LEASE_HAVE_HWADDR) || 
       (lease.flags & (LEASE_TA | LEASE_NA)) ||
@@ -56,14 +56,14 @@ void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
 	else if (lease.hwaddr_len == 8 &&
 		 lease.hwaddr_type == ARPHRD_EUI64)
 	  memcpy(&addr.s6_addr[8], lease.hwaddr, 8);
-#endif
+
 #if defined(ARPHRD_IEEE1394) && defined(ARPHRD_EUI64)
 	else if (lease.clid_len == 9 && 
 		 lease.clid[0] ==  ARPHRD_EUI64 &&
 		 lease.hwaddr_type == ARPHRD_IEEE1394)
 	  /* firewire has EUI-64 identifier as clid */
 	  memcpy(&addr.s6_addr[8], &lease.clid[1], 8);
-#endif
+
 	else
 	  continue;
 	
@@ -116,12 +116,12 @@ void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
 }
 
 
-time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
+periodic_slaac: time::Instant(now: time::Instant, struct dhcp_lease *leases)
 {
-  struct dhcp_context *context;
-  struct dhcp_lease *lease;
-  struct slaac_address *slaac;
-  time_t next_event = 0;
+  let mut context: dhcp_context;
+  let mut lease: dhcp_lease;
+  let mut slaac: slaac_address;
+  let mut next_event: time::Instant = 0; 
   
   for (context = daemon.dhcp6; context; context = context.next)
     if ((context.flags & CONTEXT_RA_NAME) && !(context.flags & CONTEXT_OLD))
@@ -143,7 +143,7 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 	
 	if (difftime(slaac.ping_time, now) <= 0.0)
 	  {
-	    struct ping_packet *ping;
+	    let mut ping: ping_packet;
 	    struct sockaddr_in6 addr;
  
 	    reset_counter();
@@ -157,15 +157,15 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 	    ping.sequence_no = slaac.backoff;
 	    
 	    memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+ HAVE_SOCKADDR_SA_LEN
 	    addr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+
 	    addr.sin6_family = AF_INET6;
 	    addr.sin6_port = htons(IPPROTO_ICMPV6);
 	    addr.sin6_addr = slaac.addr;
 	    
 	    if (sendto(daemon.icmp6fd, daemon.outpacket.iov_base, save_counter(-1), 0,
-		       (struct sockaddr *)&addr,  sizeof(addr)) == -1 &&
+		       &addr,  sizeof(addr)) == -1 &&
 		errno == EHOSTUNREACH &&
 		slaac.backoff == 12)
 	      slaac.ping_time = 0; /* Give up */ 
@@ -175,7 +175,7 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 		if (slaac.backoff > 4)
 		  slaac.ping_time += rand16()/4000; /* 0 - 15 */
 		if (slaac.backoff < 12)
-		  slaac.backoff++;
+		  slaac.backoff +=1;
 	      }
 	  }
 	
@@ -188,12 +188,12 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 }
 
 
-void slaac_ping_reply(struct in6_addr *sender, unsigned char *packet, char *interface, struct dhcp_lease *leases)
+void slaac_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String, struct dhcp_lease *leases)
 {
-  struct dhcp_lease *lease;
-  struct slaac_address *slaac;
+  let mut lease: dhcp_lease;
+  let mut slaac: slaac_address;
   struct ping_packet *ping = (struct ping_packet *)packet;
-  int gotone = 0;
+  let mut gotone: i32 = 0;
   
   if (ping.identifier == ping_id)
     for (lease = leases; lease; lease = lease.next)
@@ -210,4 +210,4 @@ void slaac_ping_reply(struct in6_addr *sender, unsigned char *packet, char *inte
   lease_update_dns(gotone);
 }
 	
-#endif
+
