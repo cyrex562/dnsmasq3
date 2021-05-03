@@ -2531,8 +2531,8 @@ pub union C2rustUnnamed24 {
 
 // struct __gconv_step_data
 // {
-//   unsigned char *__outbuf;
-//   unsigned char *__outbufend;
+//   let mut __outbuf: *mut u8;
+//   let mut __outbufend: *mut u8;
 //   int __flags;
 //   int __invocation_counter;
 //   int __internal_use;

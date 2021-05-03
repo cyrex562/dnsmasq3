@@ -52,7 +52,7 @@
 }
 
 
-void ipset_init() 
+pub fn ipset_init() 
 {
   dev = open( pf_device, O_RDWR);
   if (dev == -1)

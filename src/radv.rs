@@ -98,7 +98,7 @@ pub fn ra_init(now: time::Instant)
      ra_start_unsolicited(now, NULL);
 }
 
-void ra_start_unsolicited(now: time::Instant, struct dhcp_context *context)
+pub fn ra_start_unsolicited(now: time::Instant, struct dhcp_context *context)
 {   
    /* init timers so that we do ra's for some/all soon. some ra_times will end up zeroed
      if it's not appropriate to advertise those contexts.
@@ -117,7 +117,7 @@ void ra_start_unsolicited(now: time::Instant, struct dhcp_context *context)
 	}
 }
 
-void icmp6_packet(now: time::Instant)
+pub fn icmp6_packet(now: time::Instant)
 {
   char interface[IF_NAMESIZE+1];
   ssz: usize; 
@@ -129,7 +129,7 @@ void icmp6_packet(now: time::Instant)
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
   } control_u;
   struct sockaddr_in6 from;
-  unsigned char *packet;
+  let mut packet: *mut u8;
   let mut tmp: iname;
 
   /* Note: use outpacket for input buffer */
@@ -150,7 +150,7 @@ void icmp6_packet(now: time::Instant)
     if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
       {
 	union {
-	  unsigned char *c;
+	  let mut c: *mut u8;
 	  let mut p: in6_pktinfo;
 	} p;
 	p.c = CMSG_DATA(cmptr);
@@ -569,7 +569,7 @@ pub fn send_ra(now: time::Instant, iface: i32, iface_name: &mut String, dest: &m
 	  let mut constructed: i32 = 0;
 	  let mut adv_router: i32 = 0;
 	  let mut off_link: i32 = 0;
-	  unsigned int time = 0xffffffff;
+	  let mut time: u32 = 0xffffffff;
 	  let mut context: dhcp_context;
 	  
 	  for (context = daemon.dhcp6; context; context = context.next)
@@ -931,7 +931,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
     {
       /* range 3/4 - 1 times MaxRtrAdvInterval */
       unsigned int adv_interval = calc_interval(find_iface_param(iface_name));
-      context.ra_time = now + (3 * adv_interval)/4 + ((adv_interval * (unsigned int)rand16()) >> 18);
+      context.ra_time = now + (3 * adv_interval)/4 + ((adv_interval *rand16()) >> 18);
     }
 }
 
@@ -959,7 +959,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
 	interval = 4;
     }
   
-  return (unsigned int)interval;
+  returninterval;
 }
 
  unsigned int calc_lifetime(struct ra_interface *ra)
@@ -977,7 +977,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
 	lifetime = 9000;
     }
   
-  return (unsigned int)lifetime;
+  returnlifetime;
 }
 
  unsigned int calc_prio(struct ra_interface *ra)

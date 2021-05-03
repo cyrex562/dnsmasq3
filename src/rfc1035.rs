@@ -149,7 +149,7 @@ int in_arpa_name_2_addr(namein: &mut String, union all_addr *addrp)
 {
   let mut j: i32;
   char name[MAXARPANAME+1], *cp1;
-  unsigned char *addr = addrp;
+  let mut addr: *mut u8 = addrp;
   char *lastchunk = NULL, *penchunk = NULL;
   
   if (strlen(namein) > MAXARPANAME)
@@ -387,7 +387,7 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
     ((u32 *)a)[0] == htonl(0x20010db8); /* RFC 6303 4.6 */
 }
 
- pub fn do_doctor(p: &mut Vec<u8>, count: i32, struct dns_header *header, qlen: usize, name: &mut String, int *doctored) -> &mut Vec<u8>
+ pub fn do_doctor(p: &mut Vec<u8>, count: i32, struct dns_header *header, qlen: usize, name: &mut String, doctored: &i32) -> &mut Vec<u8>
 {
   i: i32, qtype, qclass, rdlen;
 
@@ -439,13 +439,13 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
 	}
       else if (qtype == T_TXT && name && option_bool(OPT_LOG))
 	{
-	  unsigned char *p1 = p;
+	  let mut p1: *mut u8 = p;
 	  if (!CHECK_LEN(header, p1, qlen, rdlen))
 	    return 0;
 	  while ((p1 - p) < rdlen)
 	    {
 	      unsigned i: i32, len = *p1;
-	      unsigned char *p2 = p1;
+	      let mut p2: *mut u8 = p1;
 	      if ((p1 + len - p) >= rdlen)
 	        return 0; /* bad packet */
 	      /* make counted string zero-term  and sanitise */
@@ -473,9 +473,9 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
   return p; 
 }
 
- int find_soa(struct dns_header *header, qlen: usize, name: &mut String, int *doctored)
+ int find_soa(struct dns_header *header, qlen: usize, name: &mut String, doctored: &i32)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   qtype: i32, qclass, rdlen;
   unsigned ttl: i32, minttl = ULONG_MAX;
   i: i32, found_soa = 0;
@@ -533,7 +533,7 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
    Return 1 if we reject an address because it look like part of dns-rebinding attack. */
 int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String, now: &time::Instant, 
 		      char **ipsets, is_sign: i32, check_rebind: i32, no_cache_dnssec: i32,
-		      secure: i32, int *doctored)
+		      secure: i32, doctored: &i32)
 {
   p: &mut Vec<u8>, *p1, *endrr, *namep;
   i: i32, j, qtype, qclass, aqtype, aqclass, ardlen, res, searched_soa = 0;
@@ -608,7 +608,7 @@ int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
 	      for (j = 0; j < ntohs(header.ancount); j++) 
 		{
 		  let mut secflag: i32 = 0;
-		  unsigned char *tmp = namep;
+		  let mut tmp: *mut u8 = namep;
 		  /* the loop body overwrites the original name, so get it back here. */
 		  if (!extract_name(header, qlen, &tmp, name, 1, 0) ||
 		      !(res = extract_name(header, qlen, &p1, name, 0, 10)))
@@ -766,7 +766,7 @@ int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
 		      
 		      if (flags & F_SRV)
 			{
-			   unsigned char *tmp = namep;
+			   let mut tmp: *mut u8 = namep;
 
 			   if (!CHECK_LEN(header, p1, qlen, 6))
 			     return 0; /* bad packet */
@@ -931,7 +931,7 @@ unsigned int extract_request(struct dns_header *header, qlen: usize, name: &mut 
 setup_reply: usize(struct dns_header *header, qlen: usize,
 		   union all_addr *addrp, unsigned flags: i32, unsigned long ttl)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   
   if (!(p = skip_questions(header, qlen)))
     return 0;
@@ -1025,7 +1025,7 @@ int check_for_local_domain(name: &mut String, now: &time::Instant)
 int check_for_bogus_wildcard(struct dns_header *header, qlen: usize, name: &mut String, 
 			     struct bogus_addr *baddr, now: &time::Instant)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   i: i32, qtype, qclass, rdlen;
   unsigned let ttl: i32;
   let mut baddrp: bogus_addr;
@@ -1071,7 +1071,7 @@ int check_for_bogus_wildcard(struct dns_header *header, qlen: usize, name: &mut 
 
 int check_for_ignored_address(struct dns_header *header, qlen: usize, struct bogus_addr *baddr)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   i: i32, qtype, qclass, rdlen;
   let mut baddrp: bogus_addr;
 
@@ -1107,8 +1107,8 @@ int check_for_ignored_address(struct dns_header *header, qlen: usize, struct bog
 }
 
 
-int add_resource_record(struct dns_header *header, limit: &mut String, int *truncp, nameoffset: i32, unsigned char **pp, 
-			unsigned ttl: i32, int *offset, u16 type, u16 class, format: &mut String, ...)
+int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &i32, nameoffset: i32, unsigned char **pp, 
+			unsigned ttl: i32, offset: &i32, u16 type, u16 class, format: &mut String, ...)
 {
   va_list ap;
   sav: &mut Vec<u8>, *p = *pp;

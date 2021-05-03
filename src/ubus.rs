@@ -76,7 +76,7 @@ pub fn ubus_disconnect_cb(struct ubus_context *ubus)
     }
 }
 
-void ubus_init()
+pub fn ubus_init()
 {
   struct ubus_context *ubus = NULL;
   let mut ret: i32 = 0;
@@ -114,7 +114,7 @@ void ubus_init()
   my_syslog(LOG_INFO, format!("Connected to system UBus"));
 }
 
-void set_ubus_listeners()
+pub fn set_ubus_listeners()
 {
   struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
   if (!ubus)
@@ -134,7 +134,7 @@ void set_ubus_listeners()
   poll_listen(ubus.sock.fd, POLLHUP);
 }
 
-void check_ubus_listeners()
+pub fn check_ubus_listeners()
 {
   struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
   if (!ubus)
@@ -178,7 +178,7 @@ void check_ubus_listeners()
   return ubus_send_reply(ctx, req, b.head);
 }
 
-void ubus_event_bcast(const type: &mut String, const mac: &mut String, const ip: &mut String, const name: &mut String, const char *interface)
+pub fn ubus_event_bcast(const type: &mut String, const mac: &mut String, const ip: &mut String, const name: &mut String, const char *interface)
 {
   struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
   let mut ret: i32;

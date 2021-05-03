@@ -101,7 +101,7 @@ pub fn netlink_init() -> String
       if (rc != -1 && (msg.msg_flags & MSG_TRUNC))
 	{
 	  /* Very new Linux kernels return the actual size needed, older ones always return truncated size */
-	  if ((size_t)rc == iov.iov_len)
+	  if (rc == iov.iov_len)
 	    {
 	      if (expand_buf(&iov, rc + 100))
 		continue;
@@ -137,7 +137,7 @@ int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
   struct sockaddr_nl addr;
   let mut h: nlmsghdr;
   slen: usize;
-   unsigned int seq = 0;
+   let mut seq: u32 = 0;
   let mut callback_ok: i32 = 1;
 
   struct {
@@ -183,7 +183,7 @@ int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
 	  return 0;
 	}
 
-      for (h = (struct nlmsghdr *)iov.iov_base; NLMSG_OK(h, (size_t)len); h = NLMSG_NEXT(h, len))
+      for (h = (struct nlmsghdr *)iov.iov_base; NLMSG_OK(h, len); h = NLMSG_NEXT(h, len))
 	if (h.nlmsg_pid != netlink_pid || h.nlmsg_type == NLMSG_ERROR)
 	  {
 	    /* May be multicast arriving async */
@@ -314,14 +314,14 @@ int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
 	      }
 
 	    if (mac && callback_ok && !((link.ifi_flags & (IFF_LOOPBACK | IFF_POINTOPOINT))) && 
-		!((*callback)(link.ifi_index, (unsigned int)link.ifi_type, mac, maclen, parm)))
+		!((*callback)(link.ifi_index,link.ifi_type, mac, maclen, parm)))
 	      callback_ok = 0;
 	  }
 
     }
 }
 
-void netlink_multicast()
+pub fn netlink_multicast()
 {
   slen: usize;
   let mut h: nlmsghdr;
@@ -333,7 +333,7 @@ void netlink_multicast()
     return;
   
   if ((len = netlink_recv()) != -1)
-    for (h = (struct nlmsghdr *)iov.iov_base; NLMSG_OK(h, (size_t)len); h = NLMSG_NEXT(h, len))
+    for (h = (struct nlmsghdr *)iov.iov_base; NLMSG_OK(h, len); h = NLMSG_NEXT(h, len))
       nl_async(h);
   
   /* restore non-blocking status */

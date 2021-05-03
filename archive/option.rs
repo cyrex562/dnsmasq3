@@ -2500,7 +2500,7 @@ pub  fn reset_option_bool(mut opt: u32) {
             /* --dhcp-luascript */
             if option == 305 {
                 strcpy(errstr,
-                       "recompile with HAVE_LUASCRIPT defined to enable Lua scripts"
+                       "recompile with  defined to enable Lua scripts"
                            );
                 return 0
             } else {

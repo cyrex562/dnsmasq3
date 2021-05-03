@@ -32,7 +32,7 @@ pub struct iface_param {
 }
 
 
-void dhcp6_init()
+pub fn dhcp6_init()
 {
   let mut fd: i32;
   struct sockaddr_in6 saddr;
@@ -118,7 +118,7 @@ pub fn dhcp6_packet(now: time::Instant)
     if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
       {
 	union {
-	  unsigned char *c;
+	  let mut c: *mut u8;
 	  let mut p: in6_pktinfo;
 	} p;
 	p.c = CMSG_DATA(cmptr);
@@ -564,13 +564,13 @@ struct dhcp_context *address6_valid(struct dhcp_context *context,
   return NULL;
 }
 
-void make_duid(now: time::Instant)
+pub fn make_duid(now: time::Instant)
 {
   ()now;
 
   if (daemon.duid_config)
     {
-      unsigned char *p;
+      let mut p: *mut u8;
       
       daemon.duid = p = safe_malloc(daemon.duid_config_len + 6);
       daemon.duid_len = daemon.duid_config_len + 6;
@@ -603,7 +603,7 @@ void make_duid(now: time::Instant)
      has address-type < 256. Address types above 256 are things like 
      tunnels which don't have usable MAC addresses. */
   
-  unsigned char *p;
+  let mut p: *mut u8;
   ()index;
   ()parm;
   newnow: time::Instant = *((time_t *)parm);
@@ -761,7 +761,7 @@ struct cparam {
   return 1;
 }
 
-void dhcp_construct_contexts(now: time::Instant)
+pub fn dhcp_construct_contexts(now: time::Instant)
 { 
   struct dhcp_context *context, *tmp, **up;
   struct cparam param;

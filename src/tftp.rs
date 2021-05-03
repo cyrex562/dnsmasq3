@@ -40,7 +40,7 @@ pub const ERR_PERM: u32 = 2;
 pub const ERR_FULL: u32 = 3;
 pub const ERR_ILL: u32 = 4;
 
-void tftp_request(struct listener *listen, now: &time::Instant)
+pub fn tftp_request(struct listener *listen, now: &time::Instant)
 {
   slen: usize;
   char *packet = daemon.packet;
@@ -130,7 +130,7 @@ void tftp_request(struct listener *listen, now: &time::Instant)
 	  if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_PKTINFO)
 	    {
 	      union {
-		unsigned char *c;
+		let mut c: *mut u8;
 		let mut p: in_pktinfo;
 	      } p;
 	      p.c = CMSG_DATA(cmptr);
@@ -143,7 +143,7 @@ void tftp_request(struct listener *listen, now: &time::Instant)
 	for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
 	  {
 	    union {
-	      unsigned char *c;
+	      let mut c: *mut u8;
 	      let mut a: in_addr;
 	      i: &mut u32;
 	    } p;
@@ -159,7 +159,7 @@ void tftp_request(struct listener *listen, now: &time::Instant)
 	for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
 	  {
 	    union {
-	      unsigned char *c;
+	      let mut c: *mut u8;
 	      let mut a: in_addr;
 	      let mut s: sockaddr_dl;
 	    } p;
@@ -178,7 +178,7 @@ void tftp_request(struct listener *listen, now: &time::Instant)
             if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
               {
                 union {
-                  unsigned char *c;
+                  let mut c: *mut u8;
                   let mut p: in6_pktinfo;
                 } p;
                 p.c = CMSG_DATA(cmptr);
@@ -426,7 +426,7 @@ void tftp_request(struct listener *listen, now: &time::Instant)
 	  
 	  if (option_bool(OPT_TFTP_APREF_MAC))
 	    {
-	      unsigned char *macaddr = NULL;
+	      let mut macaddr: *mut u8 = NULL;
 	      unsigned char macbuf[DHCP_CHADDR_MAX];
 	      
  
@@ -574,7 +574,7 @@ void tftp_request(struct listener *listen, now: &time::Instant)
   return NULL;
 }
 
-void check_tftp_listeners(now: time::Instant)
+pub fn check_tftp_listeners(now: time::Instant)
 {
   struct tftp_transfer *transfer, *tmp, **up;
   
@@ -779,7 +779,7 @@ pub const MAXMESSAGE: u32 = 500; /* limit to make packet < 512 bytes and definit
       if (transfer.opt_transize)
 	{
 	  p += (sprintf(p,"tsize") + 1);
-	  p += (sprintf(p, "{}", (unsigned int)transfer.file.size) + 1);
+	  p += (sprintf(p, "{}",transfer.file.size) + 1);
 	}
 
       return p - packet;

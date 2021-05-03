@@ -190,7 +190,7 @@ pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_PKTINFO)
 	{
 	  union {
-	    unsigned char *c;
+	    let mut c: *mut u8;
 	    let mut p: in_pktinfo;
 	  } p;
 	  p.c = CMSG_DATA(cmptr);
@@ -207,7 +207,7 @@ pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVIF)
         {
 	  union {
-            unsigned char *c;
+            let mut c: *mut u8;
             let mut s: sockaddr_dl;
           } p;
 	  p.c = CMSG_DATA(cmptr);
@@ -219,7 +219,7 @@ pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVIF)
 	{
 	  union {
-	    unsigned char *c;
+	    let mut c: *mut u8;
 	    i: &mut u32;
 	  } p;
 	  p.c = CMSG_DATA(cmptr);
@@ -344,7 +344,7 @@ pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
 
       /* We're relaying this request */
       if  (parm.relay_local.s_addr != 0 &&
-	   relay_upstream4(parm.relay, mess, (size_t)sz, iface_index))
+	   relay_upstream4(parm.relay, mess, sz, iface_index))
 	return;
 
       /* May have configured relay, but not DHCP server */
@@ -352,7 +352,7 @@ pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
 	return;
 
       lease_prune(NULL, now); /* lose any expired leases */
-      iov.iov_len = dhcp_reply(parm.current, ifr.ifr_name, iface_index, (size_t)sz, 
+      iov.iov_len = dhcp_reply(parm.current, ifr.ifr_name, iface_index, sz, 
 			       now, unicast_dest, loopback, &is_inform, pxe_fd, iface_addr, recvtime);
       lease_update_file(now);
       lease_update_dns(0);
@@ -866,7 +866,7 @@ int address_allocate(struct dhcp_context *context,
   return 0;
 }
 
-void dhcp_read_ethers()
+pub fn dhcp_read_ethers()
 {
   FILE *f = fopen(ETHERSFILE, "r");
   let mut flags: u32;
@@ -1103,7 +1103,7 @@ char *host_from_dns(addr: net::IpAddr)
       
       send_from(daemon.dhcpfd, 0, mess, sz, &to, &from, 0);
       
-      if (option_bool(OPT_LOG_OPTS))
+      if (daemon.opt_log_opts)
 	{
 	  inet_ntop(AF_INET, &relay.local, daemon.addrbuff, ADDRSTRLEN);
 	  my_syslog(MS_DHCP | LOG_INFO, format!("DHCP relay {} . {}"), daemon.addrbuff, inet_ntoa(relay.server.addr4));

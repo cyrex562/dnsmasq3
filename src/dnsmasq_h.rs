@@ -431,7 +431,7 @@ pub const TXT_STAT_SERVERS: u32 = 7;
 
 // struct txt_record {
 //   char *name;
-//   unsigned char *txt;
+//   let mut txt: *mut u8;
 //   u16 class, len;
 //   let mut stat: i32;
 //   let mut next: txt_record;
@@ -963,7 +963,7 @@ pub const LEASE_EXP_CHANGED: u32 = 256; /* Lease expiry time changed */
 
 // struct dhcp_lease {
 //   let mut clid_len: i32;          /* length of client identifier */
-//   unsigned char *clid;   /* clientid */
+//   let mut clid: *mut u8;   /* clientid */
 //   hostname: &mut String, *fqdn; /* name from client-hostname option or config */
 //   char *old_hostname;    /* hostname before it moved to another lease */
 //   let mut flags: i32;
@@ -974,7 +974,7 @@ pub const LEASE_EXP_CHANGED: u32 = 256; /* Lease expiry time changed */
 //   hwaddr_len: i32, hwaddr_type;
 //   unsigned char hwaddr[DHCP_CHADDR_MAX];
 //   addr: net::IpAddr, override, giaddr;
-//   unsigned char *extradata;
+//   let mut extradata: *mut u8;
 //   unsigned extradata_len: i32, extradata_size;
 //   let mut last_interface: i32;
 //   let mut new_interface: i32;     /* save possible originated interface */
@@ -1084,7 +1084,7 @@ pub struct hwaddr_config {
 // struct dhcp_config {
 //   let mut flags: u32;
 //   let mut clid_len: i32;          /* length of client identifier */
-//   unsigned char *clid;   /* clientid */
+//   let mut clid: *mut u8;   /* clientid */
 //   hostname: &mut String, *domain;
 //   let mut netid: dhcp_netid_list;
 //   let mut filter: dhcp_netid;
@@ -1133,9 +1133,9 @@ pub const CONFIG_ADDR6_HOSTS: u32 = 16384; /* address added by from /etc/hosts *
 //   union {
 //     let mut encap: i32;
 //     let mut wildcard_mask: u32;
-//     unsigned char *vendor_class;
+//     let mut vendor_class: *mut u8;
 //   } u;
-//   unsigned char *val;
+//   let mut val: *mut u8;
 //   let mut netid: dhcp_netid;
 //   let mut next: dhcp_opt;
 // };
@@ -1355,13 +1355,13 @@ pub struct ping_result {
     // next
 }
 
-type off_t = usize;
+type usize = usize;
 type dev_t = u32;
 type ino_t = u32;
 
 // struct tftp_file {
 //   refcount: i32, fd;
-//   off_t size;
+//   usize size;
 //   dev_t dev;
 //   ino_t inode;
 //   char filename[];
@@ -1369,7 +1369,7 @@ type ino_t = u32;
 pub struct tftp_file {
     pub refcount: i32,
     pub fd: i32,
-    pub size: off_t,
+    pub size: usize,
     pub dev: dev_t,
     pub inode: ino_t,
     pub filename: String,
@@ -1380,7 +1380,7 @@ pub struct tftp_file {
 //   timeout: time::Instant;
 //   let mut backoff: i32;
 //   unsigned block: i32, blocksize, expansion;
-//   off_t offset;
+//   usize offset;
 //   union mysockaddr peer;
 //   union all_addr source;
 //   let mut if_index: i32;
@@ -1395,7 +1395,7 @@ pub struct tftp_transfer {
     pub block: u32,
     pub blocksize: u32,
     pub expansion: u32,
-    pub offset: off_t,
+    pub offset: usize,
     pub peer: net::IpAddr,
     pub source: net::IpAddr,
     pub if_index: i32,
@@ -1621,7 +1621,7 @@ pub struct DnsmasqDaemon {
     // unsigned duid_enterprise: i32, duid_config_len;
     pub duid_enterprise: u32,
     pub duid_config_len: u32,
-    // unsigned char *duid_config;
+    // let mut duid_config: *mut u8;
     pub duid_config: Vec<u8>,
     // char *dbus_name;
     pub dbus_name: String,
@@ -1703,7 +1703,7 @@ pub struct DnsmasqDaemon {
     // log_id: i32, log_display_id; /* ids of transactions for logging */
     pub log_id: i32,
     pub log_display_id: i32,
-    // union mysockaddr *log_source_addr;
+    // log_source_addr: &mut net::IpAddr;
     pub log_source_addr: net::IpAddr,
     /* DHCP state */
     // dhcpfd: i32, helperfd, pxefd;
@@ -1741,7 +1741,7 @@ pub struct DnsmasqDaemon {
     //
     // let mut duid_len: i32;
     pub duid_len: i32,
-    //  unsigned char *duid;
+    //  let mut duid: *mut u8;
     pub duid: Vec<u8>,
     // let mut outpacket: iovec;
     pub outpacket: Vec<u8>,
@@ -1901,7 +1901,7 @@ pub struct DnsmasqDaemon {
 //        unsigned long ttl);
 // int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
 //           now: time::Instant, char **ipsets, is_sign: i32, check_rebind: i32,
-//           no_cache_dnssec: i32, secure: i32, int *doctored);
+//           no_cache_dnssec: i32, secure: i32, doctored: &i32);
 // answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize,
 //           local_addr: net::IpAddr, local_netmask: net::IpAddr,
 //           now: time::Instant, ad_reqd: i32, do_bit: i32, have_pseudoheader: i32);
@@ -1911,16 +1911,16 @@ pub struct DnsmasqDaemon {
 // int check_for_local_domain(name: &mut String, now: &time::Instant);
 // resize_packet: usize(struct dns_header *header, plen: usize,
 //       pheader: &mut Vec<u8>, hlen: usize);
-// int add_resource_record(struct dns_header *header, limit: &mut String, int *truncp,
+// int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &i32,
 //       nameoffset: i32, unsigned char **pp, unsigned ttl: i32,
-//       int *offset, u16 type, u16 class, format: &mut String, ...);
+//       offset: &i32, u16 type, u16 class, format: &mut String, ...);
 // int in_arpa_name_2_addr(namein: &mut String, union all_addr *addrp);
 // int private_net(addr: net::IpAddr, ban_localhost: i32);
 
 /* auth.c */
 //
 // answer_auth: usize(struct dns_header *header, limit: &mut String, qlen: usize,
-//        now: time::Instant, union mysockaddr *peer_addr, local_query: i32,
+//        now: time::Instant, peer_addr: &mut net::IpAddr, local_query: i32,
 //        do_bit: i32, have_pseudoheader: i32);
 // int in_zone(struct auth_zone *zone, name: &mut String, char **cut);
 //
@@ -1929,8 +1929,8 @@ pub struct DnsmasqDaemon {
 // dnssec_generate_query: usize(struct dns_header *header, end: &mut Vec<u8>, name: &mut String, class: i32, type: i32, edns_pktsz: i32);
 // int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32);
 // int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32);
-// int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, int *class,
-//         check_unsigned: i32, int *neganswer, int *nons, int *nsec_ttl);
+// int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: &i32,
+//         check_unsigned: i32, neganswer: &i32, nons: &i32, nsec_ttl: &i32);
 // int dnskey_keytag(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32);
 // filter_rrsigs: usize(struct dns_header *header, plen: usize);
 // int setup_timestamp();
@@ -1954,14 +1954,14 @@ pub struct DnsmasqDaemon {
 // u32 rand32();
 // u64 rand64();
 // int legal_hostname(name: &mut String);
-// char *canonicalise(in: &mut String, int *nomem);
+// char *canonicalise(in: &mut String, nomem: &i32);
 // pub fn do_rfc1035_name(p: &mut Vec<u8>, sval: &mut String, limit: &mut String) -> &mut Vec<u8>;
 // safe_malloc: Vec<u8>(size: usize);
 // void safe_strncpy(dest: &mut String, const src: &mut String, size: usize);
-// void safe_pipe(int *fd, read_noblock: i32);
+// void safe_pipe(fd: &i32, read_noblock: i32);
 // whine_malloc: Vec<u8>(size: usize);
-// int sa_len(union mysockaddr *addr);
-// int sockaddr_isequal(union mysockaddr *s1, union mysockaddr *s2);
+// int sa_len(addr: &mut net::IpAddr);
+// int sockaddr_isequal(s1: &mut net::IpAddr, s2: &mut net::IpAddr);
 // int hostname_isequal(const a: &mut String, const char *b);
 // int hostname_issubdomain(a: &mut String, b: &mut String);
 // dnsmasq_time: time::Instant();
@@ -1972,9 +1972,9 @@ pub struct DnsmasqDaemon {
 // void setaddr6part(addr: &mut net::IpAddr, u64 host);
 // int retry_send(src: usize);
 // void prettyprint_time(buf: &mut String, unsigned int t);
-// int prettyprint_addr(union mysockaddr *addr, buf: &mut String);
+// int prettyprint_addr(addr: &mut net::IpAddr, buf: &mut String);
 // int parse_hex(in: &mut String, out: &mut Vec<u8>, maxlen: i32,
-//         wildcard_mask: &mut u32, int *mac_type);
+//         wildcard_mask: &mut u32, mac_type: &i32);
 // int memcmp_masked(a: &mut Vec<u8>, b: &mut Vec<u8>, len: i32,
 //       unsigned int mask);
 // int expand_buf(struct iovec *iov, size: usize);
@@ -2007,19 +2007,19 @@ pub struct DnsmasqDaemon {
 // void set_option_bool(unsigned int opt);
 // void reset_option_bool(unsigned int opt);
 // struct hostsfile *expand_filelist(struct hostsfile *list);
-// char *parse_server(arg: &mut String, union mysockaddr *addr,
-//        union mysockaddr *source_addr, interface: &mut String, int *flags);
+// char *parse_server(arg: &mut String, addr: &mut net::IpAddr,
+//        source_addr: &mut net::IpAddr, interface: &mut String, flags: &i32);
 // int option_read_dynfile(file: &mut String, flags: i32);
 
 /* forward.c */
 // void reply_query(fd: i32, family: i32, now: &time::Instant);
 // void receive_query(struct listener *listen, now: &time::Instant);
 // unsigned char *tcp_request(confd: i32, now: &time::Instant,
-//          union mysockaddr *local_addr, netmask: net::IpAddr, auth_dns: i32);
+//          local_addr: &mut net::IpAddr, netmask: net::IpAddr, auth_dns: i32);
 // void server_gone(struct server *server);
-// struct frec *get_new_frec(now: time::Instant, int *wait, struct frec *force);
+// struct frec *get_new_frec(now: time::Instant, wait: &i32, struct frec *force);
 // int send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
-//          union mysockaddr *to, union all_addr *source,
+//          to: &mut net::IpAddr, union all_addr *source,
 //          unsigned int iface);
 // void resend_query();
 // struct randfd *allocate_rfd(int family);
@@ -2027,15 +2027,15 @@ pub struct DnsmasqDaemon {
 
 /* network.c */
 // int indextoname(fd: i32, index: i32, name: &mut String);
-// int local_bind(fd: i32, union mysockaddr *addr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32);
+// int local_bind(fd: i32, addr: &mut net::IpAddr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32);
 // int random_sock(int family);
 // void pre_allocate_sfds();
 // int reload_servers(fname: &mut String);
 // void mark_servers(int flag);
 // void cleanup_servers();
 // void add_update_server(flags: i32,
-//            union mysockaddr *addr,
-//            union mysockaddr *source_addr,
+//            addr: &mut net::IpAddr,
+//            source_addr: &mut net::IpAddr,
 //            const interface: &mut String,
 //            const char *domain);
 // void check_servers();
@@ -2046,7 +2046,7 @@ pub struct DnsmasqDaemon {
 // void warn_wild_labels();
 // void warn_int_names();
 // int is_dad_listeners();
-// int iface_check(family: i32, union all_addr *addr, name: &mut String, int *auth);
+// int iface_check(family: i32, union all_addr *addr, name: &mut String, auth: &i32);
 // int loopback_exception(fd: i32, family: i32, union all_addr *addr, name: &mut String);
 // int label_exception(index: i32, family: i32, union all_addr *addr);
 // int fix_fd(int fd);
@@ -2090,32 +2090,32 @@ pub struct DnsmasqDaemon {
 // struct dhcp_lease *lease6_find(clid: &mut Vec<u8>, clid_len: i32,
 //              lease_type: i32, unsigned iaid: i32, addr: &mut net::IpAddr);
 // void lease6_reset();
-// struct dhcp_lease *lease6_find_by_client(struct dhcp_lease *first, lease_type: i32,
+// struct dhcp_lease *lease6_find_by_client(first: &mut dhcp_lease, lease_type: i32,
 //            clid: &mut Vec<u8>, clid_len: i32, unsigned int iaid);
 // struct dhcp_lease *lease6_find_by_addr(net: &mut net::IpAddr, prefix: i32, u64 addr);
 // u64 lease_find_max_addr6(struct dhcp_context *context);
 // void lease_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String);
 // void lease_update_slaac(now: time::Instant);
-// void lease_set_iaid(struct dhcp_lease *lease, unsigned int iaid);
+// void lease_set_iaid(lease: &mut dhcp_lease, unsigned int iaid);
 // void lease_make_duid(now: time::Instant);
 //
-// void lease_set_hwaddr(struct dhcp_lease *lease, const hwaddr: &mut Vec<u8>,
+// void lease_set_hwaddr(lease: &mut dhcp_lease, const hwaddr: &mut Vec<u8>,
 //           const clid: &mut Vec<u8>, hw_len: i32, hw_type: i32,
 //           clid_len: i32, now: &time::Instant, force: i32);
-// void lease_set_hostname(struct dhcp_lease *lease, const name: &mut String, auth: i32, domain: &mut String, config_domain: &mut String);
-// void lease_set_expires(struct dhcp_lease *lease, unsigned len: i32, now: &time::Instant);
-// void lease_set_interface(struct dhcp_lease *lease, interface: i32, now: &time::Instant);
+// void lease_set_hostname(lease: &mut dhcp_lease, const name: &mut String, auth: i32, domain: &mut String, config_domain: &mut String);
+// void lease_set_expires(lease: &mut dhcp_lease, unsigned len: i32, now: &time::Instant);
+// void lease_set_interface(lease: &mut dhcp_lease, interface: i32, now: &time::Instant);
 // struct dhcp_lease *lease_find_by_client(hwaddr: &mut Vec<u8>, hw_len: i32, hw_type: i32,
 //           clid: &mut Vec<u8>, clid_len: i32);
 // struct dhcp_lease *lease_find_by_addr(addr: net::IpAddr);
 // lease_find_max_addr: net::IpAddr(struct dhcp_context *context);
-// void lease_prune(struct dhcp_lease *target, now: &time::Instant);
+// void lease_prune(target: &mut dhcp_lease, now: &time::Instant);
 // void lease_update_from_configs();
 // int do_script_run(now: time::Instant);
 // void rerun_scripts();
 // void lease_find_interfaces(now: time::Instant);
 //
-// void lease_add_extradata(struct dhcp_lease *lease, data: &mut Vec<u8>,
+// void lease_add_extradata(lease: &mut dhcp_lease, data: &mut Vec<u8>,
 //        unsigned len: i32, delim: i32);
 //
 //
@@ -2124,9 +2124,9 @@ pub struct DnsmasqDaemon {
 //
 // dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_index: i32,
 //       sz: usize, now: &time::Instant, unicast_dest: i32, loopback: i32,
-//       int *is_inform, pxe: i32, fallback: net::IpAddr, recvtime: &time::Instant);
+//       is_inform: &i32, pxe: i32, fallback: net::IpAddr, recvtime: &time::Instant);
 // unsigned char *extended_hwaddr(hwtype: i32, hwlen: i32, hwaddr: &mut Vec<u8>,
-//              clid_len: i32, clid: &mut Vec<u8>, int *len_out);
+//              clid_len: i32, clid: &mut Vec<u8>, len_out: &i32);
 //
 
 /* dnsmasq.c */
@@ -2164,7 +2164,7 @@ pub struct DnsmasqDaemon {
 // void check_dbus_listeners();
 // void set_dbus_listeners();
 // #  ifdef
-// void emit_dbus_signal(action: i32, struct dhcp_lease *lease, hostname: &mut String);
+// void emit_dbus_signal(action: i32, lease: &mut dhcp_lease, hostname: &mut String);
 // #  endif
 //
 
@@ -2186,10 +2186,10 @@ pub struct DnsmasqDaemon {
 // #if defined()
 // int create_helper(event_fd: i32, err_fd: i32, uid_t uid, gid_t gid, long max_fd);
 // void helper_write();
-// void queue_script(action: i32, struct dhcp_lease *lease,
+// void queue_script(action: i32, lease: &mut dhcp_lease,
 //       hostname: &mut String, now: &time::Instant);
 //
-// void queue_tftp(off_t file_len, filename: &mut String, union mysockaddr *peer);
+// void queue_tftp(file_len: usize, filename: &mut String, peer: &mut net::IpAddr);
 //
 // void queue_arp(action: i32, mac: &mut Vec<u8>, maclen: i32,
 //          family: i32, union all_addr *addr);
@@ -2205,7 +2205,7 @@ pub struct DnsmasqDaemon {
 
 /* conntrack.c */
 //  HAVE_CONNTRACK
-// int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr,
+// int get_incoming_mark(peer_addr: &mut net::IpAddr, union all_addr *local_addr,
 //           istcp: i32, markp: &mut u32);
 //
 
@@ -2299,7 +2299,7 @@ pub struct DnsmasqDaemon {
 
 /* slaac.c */
 //
-// void slaac_add_addrs(struct dhcp_lease *lease, now: &time::Instant, force: i32);
+// void slaac_add_addrs(lease: &mut dhcp_lease, now: &time::Instant, force: i32);
 // periodic_slaac: time::Instant(now: time::Instant, struct dhcp_lease *leases);
 // void slaac_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String, struct dhcp_lease *leases);
 //
@@ -2326,26 +2326,26 @@ pub struct DnsmasqDaemon {
 /* rrfilter.c */
 // rrfilter: usize(struct dns_header *header, plen: usize, mode: i32);
 // u16 *rrfilter_desc(int type);
-// int expand_workspace(unsigned char ***wkspc, int *szp, new: i32);
+// int expand_workspace(unsigned char ***wkspc, szp: &i32, new: i32);
 
 /* edns0.c */
 // unsigned char *find_pseudoheader(struct dns_header *header, plen: usize,
-//            size_t *len, unsigned char **p, int *is_sign, int *is_last);
+//            size_t *len, unsigned char **p, is_sign: &i32, is_last: &i32);
 // add_pseudoheader: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
 //       u16 udp_sz, optno: i32, opt: &mut Vec<u8>, optlen: usize, set_do: i32, replace: i32);
 // add_do_bit: usize(struct dns_header *header, plen: usize, unsigned char *limit);
 // add_edns0_config: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
-//       union mysockaddr *source, now: &time::Instant, int *check_subnet, int *cacheable);
-// int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, union mysockaddr *peer);
+//       source: &mut net::IpAddr, now: &time::Instant, check_subnet: &i32, cacheable: &i32);
+// int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, peer: &mut net::IpAddr);
 
 /* arp.c */
-// int find_mac(union mysockaddr *addr, mac: &mut Vec<u8>, lazy: i32, now: &time::Instant);
+// int find_mac(addr: &mut net::IpAddr, mac: &mut Vec<u8>, lazy: i32, now: &time::Instant);
 // int do_arp_script_run();
 
 /* dump.c */
 //  HAVE_DUMPFILE
 // void dump_init();
-// void dump_packet(mask: i32, packet: Vec<u8>, len: usize, union mysockaddr *src, union mysockaddr *dst);
+// void dump_packet(mask: i32, packet: Vec<u8>, len: usize, src: &mut net::IpAddr, dst: &mut net::IpAddr);
 //
 
 // struct passwd {
@@ -2605,3 +2605,5 @@ pub struct rt_metrics {
     pub rmx_rttVar: libc::c_ulong,
     pub rmx_pksent: libc::c_ulong,
 }
+
+pub const ARPHRD_ETHER: u16 = 0x0806;

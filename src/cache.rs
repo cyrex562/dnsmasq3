@@ -82,9 +82,9 @@ pub fn cache_link(struct crec *crecp);
 pub fn rehash(int size);
 pub fn cache_hash(struct crec *crecp);
 
-void next_uid(struct crec *crecp)
+pub fn next_uid(struct crec *crecp)
 {
-   unsigned int uid = 0;
+   let mut uid: u32 = 0;
 
   if (crecp.uid == UID_NONE)
     {
@@ -98,7 +98,7 @@ void next_uid(struct crec *crecp)
     }
 }
 
-void cache_init()
+pub fn cache_init()
 {
   let mut crecp: crec;
   let mut i: i32;
@@ -454,7 +454,7 @@ struct crec *cache_enumerate(int init)
    but an abort can cause the cache_end_insert to be missed 
    in which can the next cache_start_insert cleans things up. */
 
-void cache_start_insert()
+pub fn cache_start_insert()
 {
   /* Free any entries which didn't get committed during the last
      insert due to error.
@@ -649,7 +649,7 @@ struct crec *cache_insert(name: &mut String, union all_addr *addr, u16 class,
 }
 
 /* after end of insertion, commit the new entries */
-void cache_end_insert()
+pub fn cache_end_insert()
 {
   if (insert_error)
     return;
@@ -833,7 +833,7 @@ struct crec *cache_find_by_name(struct crec *crecp, name: &mut String, now: &tim
       /* first search, look for relevant entries and push to top of list
 	 also free anything which has expired */
       struct crec *next, **up, **insert = NULL, **chainp = &ans;
-      unsigned int ins_flags = 0;
+      let mut ins_flags: u32 = 0;
       
       for (up = hash_bucket(name), crecp = *up; crecp; crecp = next)
 	{
@@ -1085,7 +1085,7 @@ int read_hostsfile(filename: &mut String, unsigned index: i32, cache_size: i32, 
   FILE *f = fopen(filename, "r");
   char *token = daemon.namebuff, *domain_suffix = NULL;
   int addr_count = 0, name_count = cache_size, lineno = 1;
-  unsigned int flags = 0;
+  let mut flags: u32 = 0;
   union all_addr addr;
   atnl: i32, addrlen = 0;
 
@@ -1182,7 +1182,7 @@ int read_hostsfile(filename: &mut String, unsigned index: i32, cache_size: i32, 
   return name_count;
 }
 	    
-void cache_reload()
+pub fn cache_reload()
 {
   struct crec *cache, **up, *tmp;
   revhashsz: i32, i, total_size = daemon.cachesize;
@@ -1361,7 +1361,7 @@ a_record_from_hosts: net::IpAddr(name: &mut String, now: &time::Instant)
   return ret;
 }
 
-void cache_unhash_dhcp()
+pub fn cache_unhash_dhcp()
 {
   struct crec *cache, **up;
   let mut i: i32;
@@ -1378,11 +1378,11 @@ void cache_unhash_dhcp()
 	up = &cache.hash_next;
 }
 
-void cache_add_dhcp_entry(host_name: &mut String, prot: i32,
+pub fn cache_add_dhcp_entry(host_name: &mut String, prot: i32,
 			  union all_addr *host_address, ttd: &time::Instant) 
 {
   struct crec *crec = NULL, *fail_crec = NULL;
-  unsigned int flags = F_IPV4;
+  let mut flags: u32 = F_IPV4;
   let mut in_hosts: i32 = 0;
   addrlen: usize = sizeof(struct in_addr);
 
@@ -1659,7 +1659,7 @@ int cache_make_stat(struct txt_record *t)
    mess up logging or open security holes. */
  char *sanitise(name: &mut String)
 {
-  unsigned char *r;
+  let mut r: *mut u8;
   if (name)
     for (r = name; *r; r++)
       if (!isprint(*r))
@@ -1669,11 +1669,11 @@ int cache_make_stat(struct txt_record *t)
 }
 
 
-void dump_cache(now: time::Instant)
+pub fn dump_cache(now: time::Instant)
 {
   struct server *serv, *serv1;
 
-  my_syslog(LOG_INFO, format!("time {}"), (unsigned long)now);
+  my_syslog(LOG_INFO, format!("time {}"), now);
   my_syslog(LOG_INFO, format!("cache size {}, {}/{} cache insertions re-used unexpired cache entries."), 
 	    daemon.cachesize, daemon.metrics[METRIC_DNS_CACHE_LIVE_FREED], daemon.metrics[METRIC_DNS_CACHE_INSERTED]);
   my_syslog(LOG_INFO, format!("queries forwarded {}, queries answered locally {}"), 
@@ -1779,7 +1779,7 @@ void dump_cache(now: time::Instant)
 			 cache.flags & F_HOSTS ? "H" : " ",
 			 cache.flags & F_DNSSECOK ? "V" : " ");
 
-	    p += sprintf(p, "{}", cache.flags & F_IMMORTAL ? 0: (unsigned long)(cache.ttd - now));
+	    p += sprintf(p, "{}", cache.flags & F_IMMORTAL ? 0: (cache.ttd - now));
 
 	    p += sprintf(p, "{}", cache.flags & F_IMMORTAL ? "\n" : ctime(&(cache.ttd)));
 	    /* ctime includes trailing \n - eat it */
@@ -1867,7 +1867,7 @@ char *querystr(desc: &mut String, u16 type)
   return buff ? buff : "";
 }
 
-void log_query(unsigned flags: i32, name: &mut String, union all_addr *addr, arg: &mut String)
+pub fn log_query(unsigned flags: i32, name: &mut String, union all_addr *addr, arg: &mut String)
 {
   source: &mut String, *dest = daemon.addrbuff;
   char *verb = "is";

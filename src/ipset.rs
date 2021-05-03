@@ -83,7 +83,7 @@ pub const BUFF_SZ: u32 = 256;
   nlh.nlmsg_len += NL_ALIGN(payload_len);
 }
 
-void ipset_init()
+pub fn ipset_init()
 {
   old_kernel = (daemon.kernel_version < KERNEL_VERSION(2,6,32));
   

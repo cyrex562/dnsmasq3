@@ -278,7 +278,7 @@ pub fn log_write()
    OR'd to priority can be MS_TFTP, MS_DHCP, ... to be able to do log separation between
    DNS, DHCP and TFTP services.
 */
-void my_syslog(priority: i32, const format: &mut String, ...)
+pub fn my_syslog(priority: i32, const format: &mut String, ...)
 {
   va_list ap;
   let mut entry: log_entry;
@@ -427,19 +427,19 @@ void my_syslog(priority: i32, const format: &mut String, ...)
     } 
 }
 
-void set_log_writer()
+pub fn set_log_writer()
 {
   if (entries && log_fd != -1 && connection_good)
     poll_listen(log_fd, POLLOUT);
 }
 
-void check_log_writer(int force)
+pub fn check_log_writer(int force)
 {
   if (log_fd != -1 && (force || poll_check(log_fd, POLLOUT)))
     log_write();
 }
 
-void flush_log()
+pub fn flush_log()
 {
   /* write until queue empty, but don't loop forever if there's
    no connection to the syslog in existence */
@@ -458,7 +458,7 @@ void flush_log()
     }
 }
 
-void die(message: &mut String, arg1: &mut String, exit_code: i32)
+pub fn die(message: &mut String, arg1: &mut String, exit_code: i32)
 {
   char *errmess = strerror(errno);
   

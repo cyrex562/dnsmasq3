@@ -38,7 +38,7 @@ pub fn blockdata_expand(int n)
 }
 
 /* Preallocate some blocks, proportional to cachesize, to reduce heap fragmentation. */
-void blockdata_init()
+pub fn blockdata_init()
 {
   keyblock_free = NULL;
   blockdata_alloced = 0;
@@ -50,7 +50,7 @@ void blockdata_init()
     blockdata_expand(daemon.cachesize);
 }
 
-void blockdata_report()
+pub fn blockdata_report()
 {
   my_syslog(LOG_INFO, format!("pool memory in use {}, max {}, allocated {}"), 
 	    blockdata_count * sizeof(struct blockdata),  
@@ -111,7 +111,7 @@ struct blockdata *blockdata_alloc(data: &mut String, len: usize)
   return blockdata_alloc_real(0, data, len);
 }
 
-void blockdata_free(struct blockdata *blocks)
+pub fn blockdata_free(struct blockdata *blocks)
 {
   let mut tmp: blockdata;
   
@@ -132,8 +132,8 @@ blockdata_retrieve: Vec<u8>(struct blockdata *block, len: usize, data: Vec<u8>)
   struct  blockdata *b;
   new: Vec<u8>, *d;
   
-   unsigned int buff_len = 0;
-   unsigned char *buff = NULL;
+   let mut buff_len: u32 = 0;
+   let mut buff: *mut u8 = NULL;
    
   if (!data)
     {
@@ -160,7 +160,7 @@ blockdata_retrieve: Vec<u8>(struct blockdata *block, len: usize, data: Vec<u8>)
 }
 
 
-void blockdata_write(struct blockdata *block, len: usize, fd: i32)
+pub fn blockdata_write(struct blockdata *block, len: usize, fd: i32)
 {
   for (; len > 0 && block; block = block.next)
     {

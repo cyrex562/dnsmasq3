@@ -48,7 +48,7 @@
   while (1)
     {
       buf = safe_malloc(size);
-      rc = readlink(path, buf, (size_t)size);
+      rc = readlink(path, buf, size);
       
       if (rc == -1)
 	{
@@ -85,7 +85,7 @@
     }
 }
 
-void inotify_dnsmasq_init()
+pub fn inotify_dnsmasq_init()
 {
   let mut res: resolvc;
   inotify_buffer = safe_malloc(INOTIFY_SZ);
@@ -135,7 +135,7 @@ void inotify_dnsmasq_init()
 
 
 /* initialisation for dynamic-dir. Set inotify watch for each directory, and read pre-existing files */
-void set_dynamic_inotify(flag: i32, total_size: i32, struct crec **rhash, revhashsz: i32)
+pub fn set_dynamic_inotify(flag: i32, total_size: i32, struct crec **rhash, revhashsz: i32)
 {
   let mut ah: hostsfile;
   

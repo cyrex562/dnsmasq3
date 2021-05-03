@@ -264,7 +264,7 @@ pub  fn tftp_request(daemon: &mut DnsmasqDaemon,
     transfer.backoff = 1;
     transfer.block = 1;
     transfer.blocksize = 512;
-    transfer.offset = 0 as off_t;
+    transfer.offset = 0 as usize;
     transfer.file = 0 ;
     transfer.opt_transize = 0;
     transfer.opt_blocksize = transfer.opt_transize;
@@ -992,7 +992,7 @@ pub  fn check_tftp_listeners(mut now: time::Instant) {
         mess_0.op = __bswap_16(3);
         mess_0.block = __bswap_16(transfer.block );
         if lseek((*transfer.file).fd, transfer.offset, 0)
-               == -(1) as off_t ||
+               == -(1) as usize ||
                read_write((*transfer.file).fd, mess_0.data.as_mut_ptr(),
                           size, 1) == 0 {
             return -(1)

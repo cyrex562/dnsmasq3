@@ -137,7 +137,7 @@ pub const HB4_RCODE: u32 = 0x0f;
 // }
 
 // #define CHECK_LEN(header, pp, plen, len) \
-//     ((size_t)((pp) - (header) + (len)) <= (plen))
+//     (((pp) - (header) + (len)) <= (plen))
 
 // #define ADD_RDLEN(header, pp, plen, len) \
 //   (!CHECK_LEN(header, pp, plen, len) ? 0 : (((pp) += (len)), 1))

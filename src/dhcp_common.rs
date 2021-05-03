@@ -20,7 +20,7 @@ use crate::dnsmasq_h::DHOPT_TAGOK;
 
  
 
-void dhcp_common_init()
+pub fn dhcp_common_init()
 {
   /* These each hold a DHCP option max size 255
      and get a terminating zero added */
@@ -55,7 +55,7 @@ srecv_dhcp_packet: usize(fd: i32, struct msghdr *msg)
 
       /* Very new Linux kernels return the actual size needed, 
 	 older ones always return truncated size */
-      if ((size_t)sz == msg.msg_iov.iov_len)
+      if (sz == msg.msg_iov.iov_len)
 	{
 	  if (!expand_buf(msg.msg_iov, sz + 100))
 	    return -1;
@@ -219,9 +219,9 @@ char *strip_hostname(hostname: &mut String)
   return NULL;
 }
 
-void log_tags(struct dhcp_netid *netid, u32 xid)
+pub fn log_tags(struct dhcp_netid *netid, u32 xid)
 {
-  if (netid && option_bool(OPT_LOG_OPTS))
+  if (netid && daemon.opt_log_opts)
     {
       char *s = daemon.namebuff;
       for (*s = 0; netid; netid = netid.next)
@@ -409,7 +409,7 @@ struct dhcp_config *find_config(struct dhcp_config *configs,
   return ret;
 }
 
-void dhcp_update_configs(struct dhcp_config *configs)
+pub fn dhcp_update_configs(struct dhcp_config *configs)
 {
   /* Some people like to keep all  IP addresses in /etc/hosts.
      This goes through /etc/hosts and sets  addresses for any DHCP config
@@ -552,7 +552,7 @@ char *whichdevice()
   return NULL;
 }
  
-void  bindtodevice(device: &mut String, fd: i32)
+pub fn  bindtodevice(device: &mut String, fd: i32)
 {
   len: usize = strlen(device)+1;
   if (len > IFNAMSIZ)
@@ -679,7 +679,7 @@ void  bindtodevice(device: &mut String, fd: i32)
 
 
 
-void display_opts()
+pub fn display_opts()
 {
   let mut i: i32;
   
@@ -691,7 +691,7 @@ void display_opts()
 }
 
  
-void display_opts6()
+pub fn display_opts6()
 {
   let mut i: i32;
   printf(format!("Known DHCPv6 options:\n"));
@@ -809,7 +809,7 @@ char *option_string(prot: i32, unsigned opt: i32, val: &mut Vec<u8>, opt_len: i3
 	    else if ((ot[o].size & OT_CSTRING))
 	      {
 		k: i32, len;
-		unsigned char *p;
+		let mut p: *mut u8;
 
 		i = 0, j = 0;
 		while (1)
@@ -833,7 +833,7 @@ char *option_string(prot: i32, unsigned opt: i32, val: &mut Vec<u8>, opt_len: i3
 
 	    else if ((ot[o].size & (OT_DEC | OT_TIME)) && opt_len != 0)
 	      {
-		unsigned int dec = 0;
+		let mut dec: u32 = 0;
 		
 		for i in 0..opt_len
 		  dec = (dec << 8) | val[i]; 
@@ -868,7 +868,7 @@ char *option_string(prot: i32, unsigned opt: i32, val: &mut Vec<u8>, opt_len: i3
 
 }
 
-void log_context(family: i32, struct dhcp_context *context)
+pub fn log_context(family: i32, struct dhcp_context *context)
 {
   /* Cannot use dhcp_buff* for RA contexts */
 
@@ -962,7 +962,7 @@ void log_context(family: i32, struct dhcp_context *context)
 
 }
 
-void log_relay(family: i32, struct dhcp_relay *relay)
+pub fn log_relay(family: i32, struct dhcp_relay *relay)
 {
   inet_ntop(family, &relay.local, daemon.addrbuff, ADDRSTRLEN);
   inet_ntop(family, &relay.server, daemon.namebuff, ADDRSTRLEN); 

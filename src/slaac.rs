@@ -22,7 +22,7 @@
 
 let mut ping_id: i32 = 0;
 
-void slaac_add_addrs(struct dhcp_lease *lease, now: &time::Instant, force: i32)
+pub fn slaac_add_addrs(lease: &mut dhcp_lease, now: &time::Instant, force: i32)
 {
   struct slaac_address *slaac, *old, **up;
   let mut context: dhcp_context;
@@ -188,7 +188,7 @@ periodic_slaac: time::Instant(now: time::Instant, struct dhcp_lease *leases)
 }
 
 
-void slaac_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String, struct dhcp_lease *leases)
+pub fn slaac_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String, struct dhcp_lease *leases)
 {
   let mut lease: dhcp_lease;
   let mut slaac: slaac_address;

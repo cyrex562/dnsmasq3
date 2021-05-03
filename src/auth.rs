@@ -1,4 +1,4 @@
-use std::net;
+use std::{net, time};
 
 use crate::{dnsmasq_h::{ADDRLIST_IPV6, AddrList, auth_zone}, util::hostname_isequal};
 
@@ -59,7 +59,7 @@ pub fn ind_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<A
 
   pub fn find_exclude(zone: &auth_zone, flag: i32, addr_u: net::IpAddr) -> Option<AddrList>
 {
-  if (!zone.exclude) {
+  if !zone.exclude {
     return None;
   }
   
@@ -68,7 +68,7 @@ pub fn ind_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<A
 
  pub fn filter_zone(zone: &auth_zone, flag: i32, addr_u: net::IpAddr) -> i32
 {
-  if (find_exclude(zone, flag, addr_u)) {
+  if find_exclude(zone, flag, addr_u) {
     return 0;
   }
 
@@ -155,18 +155,20 @@ let mut candidate: cname;
 let mut wclen: u32;
   
   if (ntohs(header.qdcount) == 0 || OPCODE(header) != QUERY )
-    return 0;
+    {return 0;}
 
   /* determine end of question section (we put answers there) */
   if (!(ansp = skip_questions(header, qlen)))
-    return 0; /* bad packet */
+    {return 0; /* bad packet */}
   
   /* now process each question, answers go in RRs after the question */
   p = (header+1);
 
-  for (q = ntohs(header.qdcount); q != 0; q--)
+//   for (q = ntohs(header.qdcount); q != 0; q--)
+q = header.qdcount;
+while(q != 0)
     {
-      unsigned int flag = 0;
+      let mut flag: u32 = 0;
       let mut found: i32 = 0;
       let mut cname_wildcard: i32 = 0;
   
@@ -175,7 +177,7 @@ let mut wclen: u32;
 
       /* now extract name as .-concatenated string into name */
       if (!extract_name(header, qlen, &p, name, 1, 4))
-	return 0; /* bad packet */
+	{return 0; /* bad packet */}
  
       GETSHORT(qtype, p); 
       GETSHORT(qclass, p);
@@ -192,7 +194,7 @@ let mut wclen: u32;
 	{
 	  for (zone = daemon.auth_zones; zone; zone = zone.next)
 	    if ((subnet = find_subnet(zone, flag, &addr)))
-	      break;
+	      {break;}
 	  
 	  if (!zone)
 	    {
@@ -200,41 +202,47 @@ let mut wclen: u32;
 	      continue;
 	    }
 	  else if (qtype == T_SOA)
-	    soa = 1, found = 1;
+	    {soa = 1;
+			 found = 1;}
 	  else if (qtype == T_NS)
-	    ns = 1, found = 1;
+	   { ns = 1;
+		 found = 1;}
 	}
 
       if (qtype == T_PTR && flag)
 	{
 	  intr = NULL;
 
-	  if (flag == F_IPV4)
+	  if (flag == F_IPV4) 
+	  {
 	    for (intr = daemon.int_names; intr; intr = intr.next)
 	      {
 		let mut addrlist: addrlist;
 		
 		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		{
 		  if (!(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr)
-		    break;
+		    {break;}
 		
 		if (addrlist)
-		  break;
-		else
+		  {break;}
+		else {
 		  while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
-		    intr = intr.next;
+		    {intr = intr.next;}
 	      }
-	  else if (flag == F_IPV6)
+	  else if (flag == F_IPV6) {
 	    for (intr = daemon.int_names; intr; intr = intr.next)
 	      {
 		let mut addrlist: addrlist;
 		
 		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		{
 		  if ((addrlist.flags & ADDRLIST_IPV6) && IN6_ARE_ADDR_EQUAL(&addr.addr6, &addrlist.addr.addr6))
-		    break;
+		    {break;}
 		
-		if (addrlist)
+		if (addrlist) {
 		  break;
+		}
 		else
 		  while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
 		    intr = intr.next;

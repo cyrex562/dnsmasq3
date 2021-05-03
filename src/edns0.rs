@@ -16,7 +16,7 @@
 
 
 
-pub fn find_pseudoheader(struct dns_header *header, plen: usize, size_t  *len, unsigned char **p, int *is_sign, int *is_last) -> &mut Vec<u8>
+pub fn find_pseudoheader(struct dns_header *header, plen: usize, size_t  *len, unsigned char **p, is_sign: &i32, is_last: &i32) -> &mut Vec<u8>
 {
   /* See if packet has an RFC2671 pseudoheader, and if so return a pointer to it. 
      also return length of pseudoheader in *len and pointer to the UDP size in *p
@@ -26,7 +26,7 @@ pub fn find_pseudoheader(struct dns_header *header, plen: usize, size_t  *len, u
   i: i32, arcount = ntohs(header.arcount);
   unsigned char *ansp = (header+1);
   u16 rdlen, type, class;
-  unsigned char *ret = NULL;
+  let mut ret: *mut u8 = NULL;
 
   if (is_sign)
     {
@@ -265,7 +265,7 @@ pub fn encoder(in: &mut Vec<u8>, out: &mut String)
 }
 
  add_dns_client: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
-			     union mysockaddr *l3, now: &time::Instant, int *cacheablep)
+			     l3: &mut net::IpAddr, now: &time::Instant, cacheablep: &i32)
 {
   maclen: i32, replace = 2; /* can't get mac address, just delete any incoming. */
   unsigned char mac[DHCP_CHADDR_MAX];
@@ -291,7 +291,7 @@ pub fn encoder(in: &mut Vec<u8>, out: &mut String)
 
 
  add_mac: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
-		      union mysockaddr *l3, now: &time::Instant, int *cacheablep)
+		      l3: &mut net::IpAddr, now: &time::Instant, cacheablep: &i32)
 {
   let mut maclen: i32;
   unsigned char mac[DHCP_CHADDR_MAX];
@@ -311,7 +311,7 @@ struct subnet_opt {
   u8 addr[IN6ADDRSZ];
 };
 
-pub fn *get_addrp(union mysockaddr *addr, const short family) 
+pub fn *get_addrp(addr: &mut net::IpAddr, const short family) 
 {
   if (family == AF_INET6)
     return &addr.in6.sin6_addr;
@@ -319,7 +319,7 @@ pub fn *get_addrp(union mysockaddr *addr, const short family)
   return &addr.in.sin_addr;
 }
 
- calc_subnet_opt: usize(struct subnet_opt *opt, union mysockaddr *source, int *cacheablep)
+ calc_subnet_opt: usize(struct subnet_opt *opt, source: &mut net::IpAddr, cacheablep: &i32)
 {
   /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
   
@@ -378,7 +378,7 @@ pub fn *get_addrp(union mysockaddr *addr, const short family)
   return len + 4;
 }
  
- add_source_addr: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>, union mysockaddr *source, int *cacheable)
+ add_source_addr: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>, source: &mut net::IpAddr, cacheable: &i32)
 {
   /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
   
@@ -389,13 +389,13 @@ pub fn *get_addrp(union mysockaddr *addr, const short family)
   return add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_CLIENT_SUBNET, &opt, len, 0, 0);
 }
 
-int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, union mysockaddr *peer)
+int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, peer: &mut net::IpAddr)
 {
   /* Section 9.2, Check that subnet option in reply matches. */
   
   len: i32, calc_len;
   struct subnet_opt opt;
-  unsigned char *p;
+  let mut p: *mut u8;
   code: i32, i, rdlen;
   
   calc_len = calc_subnet_opt(&opt, peer, NULL);
@@ -431,7 +431,7 @@ int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<
    in the reply. Set *cacheable to zero if we add an option which the answer
    may depend on. */
 add_edns0_config: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>, 
-			union mysockaddr *source, now: &time::Instant, int *check_subnet, int *cacheable)    
+			source: &mut net::IpAddr, now: &time::Instant, check_subnet: &i32, cacheable: &i32)    
 {
   *check_subnet = 0;
   *cacheable = 1;

@@ -109,7 +109,7 @@ int indextoname(fd: i32, index: i32, name: &mut String)
 
 
 
-int iface_check(family: i32, union all_addr *addr, name: &mut String, int *auth)
+int iface_check(family: i32, union all_addr *addr, name: &mut String, auth: &i32)
 {
   let mut tmp: iname;
   int ret = 1, match_addr = 0;
@@ -229,7 +229,7 @@ struct iface_param {
 };
 
  int iface_allowed(struct iface_param *param, if_index: i32, label: &mut String,
-			 union mysockaddr *addr, netmask: net::IpAddr, prefixlen: i32, iface_flags: i32) 
+			 addr: &mut net::IpAddr, netmask: net::IpAddr, prefixlen: i32, iface_flags: i32) 
 {
   let mut iface: irec;
   int mtu = 0, loopback;
@@ -743,7 +743,7 @@ int fix_fd(int fd)
   return 1;
 }
 
- int make_sock(union mysockaddr *addr, type: i32, dienow: i32)
+ int make_sock(addr: &mut net::IpAddr, type: i32, dienow: i32)
 {
   int family = addr.sa.sa_family;
   fd: i32, rc, opt = 1;
@@ -881,7 +881,7 @@ int tcp_interface(fd: i32, af: i32)
 	    if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_PKTINFO)
 	      {
 		union {
-		  unsigned char *c;
+		  let mut c: *mut u8;
 		  let mut p: in_pktinfo;
 		} p;
 		
@@ -912,7 +912,7 @@ int tcp_interface(fd: i32, af: i32)
             if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
               {
                 union {
-                  unsigned char *c;
+                  let mut c: *mut u8;
                   let mut p: in6_pktinfo;
                 } p;
                 p.c = CMSG_DATA(cmptr);
@@ -926,7 +926,7 @@ int tcp_interface(fd: i32, af: i32)
   return if_index;
 }
       
- struct listener *create_listeners(union mysockaddr *addr, do_tftp: i32, dienow: i32)
+ struct listener *create_listeners(addr: &mut net::IpAddr, do_tftp: i32, dienow: i32)
 {
   struct listener *l = NULL;
   int fd = -1, tcpfd = -1, tftpfd = -1;
@@ -975,7 +975,7 @@ int tcp_interface(fd: i32, af: i32)
   return l;
 }
 
-void create_wildcard_listeners()
+pub fn create_wildcard_listeners()
 {
   union mysockaddr addr;
   struct listener *l, *l6;
@@ -1007,7 +1007,7 @@ void create_wildcard_listeners()
   daemon.listeners = l;
 }
 
- struct listener *find_listener(union mysockaddr *addr)
+ struct listener *find_listener(addr: &mut net::IpAddr)
 {
   let mut l: listener;
   for (l = daemon.listeners; l; l = l.next)
@@ -1016,7 +1016,7 @@ void create_wildcard_listeners()
   return NULL;
 }
 
-void create_bound_listeners(int dienow)
+pub fn create_bound_listeners(int dienow)
 {
   let mut new: listener;
   let mut iface: irec;
@@ -1090,7 +1090,7 @@ void create_bound_listeners(int dienow)
    always done, so we don't warn about any IPv6 addresses here.
 */
 
-void warn_bound_listeners()
+pub fn warn_bound_listeners()
 {
   let mut iface: irec; 	
   let mut advice: i32 = 0;
@@ -1115,7 +1115,7 @@ void warn_bound_listeners()
     my_syslog(LOG_WARNING, format!("LOUD WARNING: use --bind-dynamic rather than --bind-interfaces to avoid DNS amplification attacks via these interface(s)")); 
 }
 
-void warn_wild_labels()
+pub fn warn_wild_labels()
 {
   let mut iface: irec;
 
@@ -1124,7 +1124,7 @@ void warn_wild_labels()
       my_syslog(LOG_WARNING, format!("warning: using interface {} instead"), iface.name);
 }
 
-void warn_int_names()
+pub fn warn_int_names()
 {
   let mut intname: interface_name;
  
@@ -1146,7 +1146,7 @@ int is_dad_listeners()
 }
 
  
-void join_multicast(int dienow)      
+pub fn join_multicast(int dienow)      
 {
   struct irec *iface, *tmp;
 
@@ -1259,7 +1259,7 @@ int random_sock(int family)
 }
   
 
-int local_bind(fd: i32, union mysockaddr *addr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32)
+int local_bind(fd: i32, addr: &mut net::IpAddr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32)
 {
   union mysockaddr addr_copy = *addr;
   u16 port;
@@ -1332,10 +1332,10 @@ int local_bind(fd: i32, union mysockaddr *addr, intname: &mut String, unsigned i
   return 1;
 }
 
- struct serverfd *allocate_sfd(union mysockaddr *addr, intname: &mut String)
+ struct serverfd *allocate_sfd(addr: &mut net::IpAddr, intname: &mut String)
 {
   let mut sfd: serverfd;
-  unsigned int ifindex = 0;
+  let mut ifindex: u32 = 0;
   let mut errsave: i32;
   let mut opt: i32 = 1;
   
@@ -1399,7 +1399,7 @@ int local_bind(fd: i32, union mysockaddr *addr, intname: &mut String, unsigned i
 
 /* create upstream sockets during startup, before root is dropped which may be needed
    this allows query_port to be a low port and interface binding */
-void pre_allocate_sfds()
+pub fn pre_allocate_sfds()
 {
   let mut srv: server;
   let mut sfd: serverfd;
@@ -1445,7 +1445,7 @@ void pre_allocate_sfds()
       }  
 }
 
-void mark_servers(int flag)
+pub fn mark_servers(int flag)
 {
   let mut serv: server;
 
@@ -1461,7 +1461,7 @@ void mark_servers(int flag)
     }
 }
 
-void cleanup_servers()
+pub fn cleanup_servers()
 {
   struct server *serv, *tmp, **up;
 
@@ -1487,9 +1487,9 @@ void cleanup_servers()
 
 }
 
-void add_update_server(flags: i32,
-		       union mysockaddr *addr,
-		       union mysockaddr *source_addr,
+pub fn add_update_server(flags: i32,
+		       addr: &mut net::IpAddr,
+		       source_addr: &mut net::IpAddr,
 		       const interface: &mut String,
 		       const char *domain)
 {
@@ -1566,7 +1566,7 @@ void add_update_server(flags: i32,
     }
 }
 
-void check_servers()
+pub fn check_servers()
 {
   let mut iface: irec;
   let mut serv: server;
@@ -1797,7 +1797,7 @@ int reload_servers(fname: &mut String)
 }
 
 /* Called when addresses are added or deleted from an interface */
-void newaddress(now: time::Instant)
+pub fn newaddress(now: time::Instant)
 {
   ()now;
   

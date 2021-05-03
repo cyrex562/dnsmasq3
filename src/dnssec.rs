@@ -407,10 +407,10 @@ struct rdata_state {
 /* Get pointers to RRset members and signature(s) for same.
    Check signatures, and return keyname associated in keyname. */
  int explore_rrset(struct dns_header *header, plen: usize, class: i32, type: i32, 
-			 name: &mut String, keyname: &mut String, int *sigcnt, int *rrcnt)
+			 name: &mut String, keyname: &mut String, sigcnt: &i32, rrcnt: &i32)
 {
    int rrset_sz = 0, sig_sz = 0; 
-  unsigned char *p;
+  let mut p: *mut u8;
   rrsetidx: i32, sigidx, j, rdlen, res;
   let mut gotkey: i32 = 0;
 
@@ -533,7 +533,7 @@ struct rdata_state {
 			  name: &mut String, keyname: &mut String, char **wildcard_out, struct blockdata *key, keylen: i32,
 			  algo_in: i32, keytag_in: i32, unsigned long *ttl_out)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   rdlen: i32, j, name_labels, algo, labels, key_tag;
   struct crec *crecp = NULL;
   u16 *rr_desc = rrfilter_desc(type);
@@ -607,7 +607,7 @@ struct rdata_state {
       
       hash.update(ctx, 18, psav);
       wire_len = to_wire(keyname);
-      hash.update(ctx, (unsigned int)wire_len, keyname);
+      hash.update(ctx,wire_len, keyname);
       from_wire(keyname);
 
 pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
@@ -645,7 +645,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	    }
 	  
 	  wire_len = to_wire(name_start);
-	  hash.update(ctx, (unsigned int)wire_len, name_start);
+	  hash.update(ctx,wire_len, name_start);
 	  hash.update(ctx, 4, p); /* class and type */
 	  hash.update(ctx, 4, &nsigttl);
 
@@ -728,7 +728,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	  for (; crecp; crecp = cache_find_by_name(crecp, keyname, now, F_DNSKEY))
 	    if (crecp.addr.key.algo == algo && 
 		crecp.addr.key.keytag == key_tag &&
-		crecp.uid == (unsigned int)class &&
+		crecp.uid ==class &&
 		verify(crecp.addr.key.keydata, crecp.addr.key.keylen, sig, sig_len, digest, hash.digest_size, algo))
 	      return (labels < name_labels) ? STAT_SECURE_WILDCARD : STAT_SECURE;
 	}
@@ -830,7 +830,7 @@ int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: u
 
 	  if (recp1.addr.ds.algo == algo && 
 	      recp1.addr.ds.keytag == keytag &&
-	      recp1.uid == (unsigned int)class &&
+	      recp1.uid ==class &&
 	      (hash = hash_find(ds_digest_name(recp1.addr.ds.digest))) &&
 	      hash_init(hash, &ctx, &digest))
 	    
@@ -839,8 +839,8 @@ int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: u
 	      
 	      /* Note that digest may be different between DSs, so 
 		 we can't move this outside the loop. */
-	      hash.update(ctx, (unsigned int)wire_len, name);
-	      hash.update(ctx, (unsigned int)rdlen, psave);
+	      hash.update(ctx,wire_len, name);
+	      hash.update(ctx,rdlen, psave);
 	      hash.digest(ctx, hash.digest_size, digest);
 	      
 	      from_wire(name);
@@ -1017,7 +1017,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 	  if (aclass == class && atype == T_DS && rc == 1)
 	    { 
 	      algo: i32, digest, keytag;
-	      unsigned char *psave = p;
+	      let mut psave: *mut u8 = p;
 	      let mut key: blockdata;
 	   
 	      if (rdlen < 4)
@@ -1153,7 +1153,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 }
 
  int prove_non_existence_nsec(struct dns_header *header, plen: usize, unsigned char **nsecs, unsigned char **labels, nsec_count: i32,
-				    workspace1_in: &mut String, workspace2: &mut String, name: &mut String, type: i32, int *nons)
+				    workspace1_in: &mut String, workspace2: &mut String, name: &mut String, type: i32, nons: &i32)
 {
   i: i32, rc, rdlen;
   p: &mut Vec<u8>, *psave;
@@ -1272,7 +1272,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 		     salt: &mut Vec<u8>, salt_len: i32, iterations: i32)
 {
   ctx: Vec<u8>;
-  unsigned char *digest;
+  let mut digest: *mut u8;
   let mut i: i32;
 
   if (!hash_init(hash, &ctx, &digest))
@@ -1299,7 +1299,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
  int base32_decode(in: &mut String, unsigned char *out)
 {
   oc: i32, on, c, mask, i;
-  unsigned char *p = out;
+  let mut p: *mut u8 = out;
  
   for (c = *in, oc = 0, on = 0; c != 0 && c != '.'; c = *++in) 
     {
@@ -1330,7 +1330,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 }
 
  int check_nsec3_coverage(struct dns_header *header, plen: usize, digest_len: i32, digest: &mut Vec<u8>, type: i32,
-				workspace1: &mut String, workspace2: &mut String, unsigned char **nsecs, nsec_count: i32, int *nons, name_labels: i32)
+				workspace1: &mut String, workspace2: &mut String, unsigned char **nsecs, nsec_count: i32, nons: &i32, name_labels: i32)
 {
   i: i32, hash_len, salt_len, base32_len, rdlen, flags;
   p: &mut Vec<u8>, *psave;
@@ -1438,7 +1438,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 }
 
  int prove_non_existence_nsec3(struct dns_header *header, plen: usize, unsigned char **nsecs, nsec_count: i32,
-				     workspace1: &mut String, workspace2: &mut String, name: &mut String, type: i32, wildname: &mut String, int *nons)
+				     workspace1: &mut String, workspace2: &mut String, name: &mut String, type: i32, wildname: &mut String, nons: &i32)
 {
   salt: &mut Vec<u8>, *p, *digest;
   digest_len: i32, i, iterations, salt_len, base32_len, algo = 0;
@@ -1595,7 +1595,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
   return 1;
 }
 
- int prove_non_existence(struct dns_header *header, plen: usize, keyname: &mut String, name: &mut String, qtype: i32, qclass: i32, wildname: &mut String, int *nons, int *nsec_ttl)
+ int prove_non_existence(struct dns_header *header, plen: usize, keyname: &mut String, name: &mut String, qtype: i32, qclass: i32, wildname: &mut String, nons: &i32, nsec_ttl: &i32)
 {
    unsigned char **nsecset = NULL, **rrsig_labels = NULL;
    int nsecset_sz = 0, rrsig_labels_sz = 0;
@@ -1613,7 +1613,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
   
   for (nsecs_found = 0, i = 0; i < ntohs(header.nscount); i++)
     {
-      unsigned char *pstart = p;
+      let mut pstart: *mut u8 = p;
       
       if (!extract_name(header, plen, &p, daemon.workspacename, 1, 10))
 	return 0;
@@ -1651,7 +1651,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 		 so if there are multiple SIGs, make sure the label value
 		 is the same in all, to avoid be duped by a rogue one.
 		 If there are no SIGs, that's an error */
-	      unsigned char *p1 = auth_start;
+	      let mut p1: *mut u8 = auth_start;
 	      res: i32, j, rdlen1, type1, class1;
 	      
 	      if (!expand_workspace(&rrsig_labels, &rrsig_labels_sz, nsecs_found))
@@ -1675,7 +1675,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 		   if (res == 1 && class1 == qclass && type1 == T_RRSIG)
 		     {
 		       let mut type_covered: i32;
-		       unsigned char *psav = p1;
+		       let mut psav: *mut u8 = p1;
 		       
 		       if (rdlen1 < 18)
 			 return 0; /* bad packet */
@@ -1779,7 +1779,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 	  */
 	  do 
 	    {
-	      if (crecp.uid == (unsigned int)class &&
+	      if (crecp.uid ==class &&
 		  ds_digest_name(crecp.addr.ds.digest) &&
 		  algo_digest_name(crecp.addr.ds.algo))
 		break;
@@ -1820,7 +1820,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
    is the nons argument is non-NULL.
 */
 int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, 
-			  int *class, check_unsigned: i32, int *neganswer, int *nons, int *nsec_ttl)
+			  class: &i32, check_unsigned: i32, neganswer: &i32, nons: &i32, nsec_ttl: &i32)
 {
    unsigned char **targets = NULL;
   let mut target_sz: i32 = 0;
@@ -2103,7 +2103,7 @@ int dnskey_keytag(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32)
 dnssec_generate_query: usize(struct dns_header *header, end: &mut Vec<u8>, name: &mut String, class: i32, 
 			     type: i32, edns_pktsz: i32)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   ret: usize;
 
   header.qdcount = htons(1);

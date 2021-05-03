@@ -3277,7 +3277,7 @@ pub struct script_data {
     pub giaddr: in_addr,
     pub remaining_time: u32,
     pub expires: time::Instant,
-    pub file_len: off_t,
+    pub file_len: usize,
     pub addr6: in6_addr,
     pub vendorclass_count: i32,
     pub iaid: u32,
@@ -6433,7 +6433,7 @@ pub struct tftp_transfer {
     pub block: u32,
     pub blocksize: u32,
     pub expansion: u32,
-    pub offset: off_t,
+    pub offset: usize,
     pub peer: NetAddress,
     pub source: all_addr,
     pub if_index: i32,
@@ -6821,7 +6821,7 @@ pub struct dhcp_boot {
 pub struct tftp_file {
     pub refcount: i32,
     pub fd: i32,
-    pub size: off_t,
+    pub size: usize,
     pub dev: dev_t,
     pub inode: ino_t,
     pub filename: [libc::c_char; 0],
@@ -7757,7 +7757,7 @@ extern "C" {
     
     fn lease_find_by_addr(addr: in_addr) -> dhcp_lease;
     
-    fn queue_tftp(file_len: off_t, filename: &mut String,
+    fn queue_tftp(file_len: usize, filename: &mut String,
                   peer: NetAddress);
     
     fn find_mac(addr: NetAddress, mac: mut Vec<u8>,

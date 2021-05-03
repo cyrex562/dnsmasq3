@@ -68,7 +68,7 @@
     }
 }
 
-void poll_reset()
+pub fn poll_reset()
 {
   nfds = 0;
 }
@@ -88,7 +88,7 @@ int poll_check(fd: i32, short event)
   return 0;
 }
 
-void poll_listen(fd: i32, short event)
+pub fn poll_listen(fd: i32, short event)
 {
    nfds_t i = fd_search(fd);
   

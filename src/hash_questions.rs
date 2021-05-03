@@ -32,9 +32,9 @@
 
  const let mut hash: nettle_hash;
 pub fn *ctx;
- unsigned char *digest;
+ let mut digest: *mut u8;
 
-void hash_questions_init()
+pub fn hash_questions_init()
 {
   if (!(hash = hash_find("sha256")))
     die(format!("Failed to create SHA-256 hash object"), NULL, EC_MISC);

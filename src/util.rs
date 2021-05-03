@@ -265,7 +265,7 @@ pub fn safe_pipe(fd: &mut i32, read_noblock: i32) {
 //   return ret;
 // }
 
-// int sockaddr_isequal(union mysockaddr *s1, union mysockaddr *s2)
+// int sockaddr_isequal(s1: &mut net::IpAddr, s2: &mut net::IpAddr)
 // {
 //   if (s1.sa.sa_family == s2.sa.sa_family)
 //     {
@@ -283,7 +283,7 @@ pub fn safe_pipe(fd: &mut i32, read_noblock: i32) {
 //   return 0;
 // }
 
-// pub fn sa_len(union mysockaddr *addr) -> i32
+// pub fn sa_len(addr: &mut net::IpAddr) -> i32
 // {
 //  HAVE_SOCKADDR_SA_LEN
 //   return addr.sa.sa_len;
@@ -387,7 +387,7 @@ pub fn setaddr6part(addr: &mut net::IpAddr, host: u64) {
 }
 
 /* returns port number from address */
-// int prettyprint_addr(union mysockaddr *addr, buf: &mut String)
+// int prettyprint_addr(addr: &mut net::IpAddr, buf: &mut String)
 // {
 //   let mut port: i32 = 0;
 
@@ -434,7 +434,7 @@ pub fn setaddr6part(addr: &mut net::IpAddr, host: u64) {
 /* in may equal out, when maxlen may be -1 (No max len).
 Return -1 for extraneous no-hex chars found. */
 // int parse_hex(in: &mut String, out: &mut Vec<u8>, maxlen: i32,
-// 	      wildcard_mask: &mut u32, int *mac_type)
+// 	      wildcard_mask: &mut u32, mac_type: &i32)
 // {
 //   int done = 0, mask = 0, i = 0;
 //   char *r;
@@ -521,7 +521,7 @@ Return -1 for extraneous no-hex chars found. */
 // {
 //   new: Vec<u8>;
 
-//   if (size <= (size_t)iov.iov_len)
+//   if (size <= iov.iov_len)
 //     return 1;
 
 //   if (!(new = whine_malloc(size)))
@@ -593,9 +593,9 @@ pub fn read_write(fd: i32, packet: &mut Vec<u8>, size: i32, rw: i32) -> i32 {
     while (done < size) {
         while {
             if (rw) {
-                n = read(fd, &packet[done], (size_t)(size - done));
+                n = read(fd, &packet[done], (size - done));
             } else {
-                n = write(fd, &packet[done], (size_t)(size - done));
+                n = write(fd, &packet[done], (size - done));
             }
 
             if (n == 0) {

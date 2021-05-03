@@ -1924,7 +1924,7 @@ pub fn check_dns_listeners(now: time::Instant)
                         }
                         else
                         {
-                            unsigned char *buff;
+                            let mut buff: *mut u8;
                             let mut s: server; 
                             let mut flags: i32;
                             netmask: net::IpAddr;

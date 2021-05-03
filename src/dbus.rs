@@ -774,7 +774,7 @@ char *dbus_init()
 }
  
 
-void set_dbus_listeners()
+pub fn set_dbus_listeners()
 {
   let mut w: watch;
   
@@ -794,7 +794,7 @@ void set_dbus_listeners()
       }
 }
 
-void check_dbus_listeners()
+pub fn check_dbus_listeners()
 {
   DBusConnection *connection = (DBusConnection *)daemon.dbus;
   let mut w: watch;
@@ -802,7 +802,7 @@ void check_dbus_listeners()
   for (w = daemon.watches; w; w = w.next)
     if (dbus_watch_get_enabled(w.watch))
       {
-	unsigned int flags = 0;
+	let mut flags: u32 = 0;
 	int fd = dbus_watch_get_unix_fd(w.watch);
 	
 	if (poll_check(fd, POLLIN))
@@ -827,13 +827,13 @@ void check_dbus_listeners()
 }
 
  
-void emit_dbus_signal(action: i32, struct dhcp_lease *lease, hostname: &mut String)
+pub fn emit_dbus_signal(action: i32, lease: &mut dhcp_lease, hostname: &mut String)
 {
   DBusConnection *connection = (DBusConnection *)daemon.dbus;
   DBusMessage* message = NULL;
   DBusMessageIter args;
   action_str: &mut String, *mac = daemon.namebuff;
-  unsigned char *p;
+  let mut p: *mut u8;
   let mut i: i32;
 
   if (!connection)

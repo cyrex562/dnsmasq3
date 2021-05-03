@@ -21,7 +21,7 @@
 
  outpacket_counter: usize;
 
-void end_opt6(int container)
+pub fn end_opt6(int container)
 {
    p: Vec<u8> = daemon.outpacket.iov_base + container + 2;
    u16 len = outpacket_counter - container - 4 ;
@@ -29,7 +29,7 @@ void end_opt6(int container)
    PUTSHORT(len, p);
 }
 
-void reset_counter()
+pub fn reset_counter()
 {
   /* Clear out buffer when starting from beginning */
   if (daemon.outpacket.iov_base)
@@ -86,7 +86,7 @@ put_opt6: Vec<u8>(data: Vec<u8>, len: usize)
   return p;
 }
   
-void put_opt6_long(unsigned int val)
+pub fn put_opt6_long(unsigned int val)
 {
   p: Vec<u8>;
   
@@ -94,7 +94,7 @@ void put_opt6_long(unsigned int val)
     PUTLONG(val, p);
 }
 
-void put_opt6_short(unsigned int val)
+pub fn put_opt6_short(unsigned int val)
 {
   p: Vec<u8>;
 
@@ -102,15 +102,15 @@ void put_opt6_short(unsigned int val)
     PUTSHORT(val, p);   
 }
 
-void put_opt6_char(unsigned int val)
+pub fn put_opt6_char(unsigned int val)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
 
   if ((p = expand(1)))
     *p = val;   
 }
 
-void put_opt6_string(s: &mut String)
+pub fn put_opt6_string(s: &mut String)
 {
   put_opt6(s, strlen(s));
 }

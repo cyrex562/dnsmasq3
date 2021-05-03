@@ -24,7 +24,7 @@ let mut gotit: i32 = 0; /* yuck */
 
  int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>);
 
-int get_incoming_mark(union mysockaddr *peer_addr, union all_addr *local_addr, istcp: i32, markp: &mut u32)
+int get_incoming_mark(peer_addr: &mut net::IpAddr, union all_addr *local_addr, istcp: i32, markp: &mut u32)
 {
   let mut ct: nf_conntrack;
   let mut h: nfct_handle;

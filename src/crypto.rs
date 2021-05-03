@@ -137,9 +137,9 @@ const struct nettle_hash *hash_find(name: &mut String)
 int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp)
 {
   pub fn *ctx = NULL;
-   unsigned char *digest = NULL;
-   unsigned int ctx_sz = 0;
-   unsigned int digest_sz = 0;
+   let mut digest: *mut u8 = NULL;
+   let mut ctx_sz: u32 = 0;
+   let mut digest_sz: u32 = 0;
 
   new: Vec<u8>;
 
@@ -178,7 +178,7 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
  int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
 			      digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   exp_len: usize;
   
    struct rsa_public_key *key = NULL;
@@ -231,7 +231,7 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
 				sig: &mut Vec<u8>, sig_len: usize,
 				digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   let mut t: u32;
   let mut key: ecc_point;
 
@@ -306,7 +306,7 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 				  sig: &mut Vec<u8>, sig_len: usize,
 				  digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
   
    struct ecc_point *gost_key = NULL;
    mpz_t x, y;
@@ -346,7 +346,7 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 				sig: &mut Vec<u8>, sig_len: usize,
 				digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
-  unsigned char *p;
+  let mut p: *mut u8;
    
   if (digest_len != sizeof(struct null_hash_digest) ||
       !(p = blockdata_retrieve(key_data, key_len, NULL)))

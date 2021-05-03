@@ -140,7 +140,7 @@
     return (items == 0 || items == EOF);
 }
 
-void lease_init(now: time::Instant)
+pub fn lease_init(now: time::Instant)
 {
   FILE *leasestream;
 
@@ -218,7 +218,7 @@ void lease_init(now: time::Instant)
   dns_dirty = 1;
 }
 
-void lease_update_from_configs()
+pub fn lease_update_from_configs()
 {
   /* changes to the config may change current leases. */
   
@@ -238,7 +238,7 @@ void lease_update_from_configs()
       lease_set_hostname(lease, name, 1, get_domain(lease.addr), NULL); /* updates auth flag only */
 }
 
-pub fn ourprintf(int *errp, format: &mut String, ...)
+pub fn ourprintf(errp: &i32, format: &mut String, ...)
 {
   va_list ap;
   
@@ -248,7 +248,7 @@ pub fn ourprintf(int *errp, format: &mut String, ...)
   va_end(ap);
 }
 
-void lease_update_file(now: time::Instant)
+pub fn lease_update_file(now: time::Instant)
 {
   let mut lease: dhcp_lease;
   next_event: time::Instant;
@@ -272,7 +272,7 @@ void lease_update_file(now: time::Instant)
 
 	  ourprintf(&err, "{} ", lease.length);
 
-	  ourprintf(&err, "{} ", (unsigned long)lease.expires);
+	  ourprintf(&err, "{} ", lease.expires);
 
 
 	  if (lease.hwaddr_type != ARPHRD_ETHER || lease.hwaddr_len == 0) 
@@ -316,7 +316,7 @@ void lease_update_file(now: time::Instant)
 
 	      ourprintf(&err, "{} ", lease.length);
 
-	      ourprintf(&err, "{} ", (unsigned long)lease.expires);
+	      ourprintf(&err, "{} ", lease.expires);
 
     
 	      inet_ntop(AF_INET6, &lease.addr6, daemon.addrbuff, ADDRSTRLEN);
@@ -435,7 +435,7 @@ void lease_update_file(now: time::Instant)
   return 1;
 }
 
-void lease_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String)
+pub fn lease_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String)
 {
   /* We may be doing RA but not DHCPv4, in which case the lease
      database may not exist and we have nothing to do anyway */
@@ -443,7 +443,7 @@ void lease_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface:
     slaac_ping_reply(sender, packet, interface, leases);
 }
 
-void lease_update_slaac(now: time::Instant)
+pub fn lease_update_slaac(now: time::Instant)
 {
   /* Called when we construct a new RA-names context, to add putative
      new SLAAC addresses to existing leases. */
@@ -462,7 +462,7 @@ void lease_update_slaac(now: time::Instant)
    we do DHCP transactions, but information about directly-connected subnets
    is useful from scrips and necessary for determining SLAAC addresses from
    start-time. */
-void lease_find_interfaces(now: time::Instant)
+pub fn lease_find_interfaces(now: time::Instant)
 {
   let mut lease: dhcp_lease;
   
@@ -480,7 +480,7 @@ void lease_find_interfaces(now: time::Instant)
 }
 
  
-void lease_make_duid(now: time::Instant)
+pub fn lease_make_duid(now: time::Instant)
 {
   /* If we're not doing DHCPv6, and there are not v6 leases, don't add the DUID to the database */
   if (!daemon.duid && daemon.doing_dhcp6)
@@ -494,7 +494,7 @@ void lease_make_duid(now: time::Instant)
 
 
 
-void lease_update_dns(int force)
+pub fn lease_update_dns(int force)
 {
   let mut lease: dhcp_lease;
 
@@ -551,9 +551,9 @@ void lease_update_dns(int force)
     }
 }
 
-void lease_prune(struct dhcp_lease *target, now: &time::Instant)
+pub fn lease_prune(target: &mut dhcp_lease, now: &time::Instant)
 {
-  struct dhcp_lease *lease, *tmp, **up;
+  lease: &mut dhcp_lease, *tmp, **up;
 
   for (lease = leases, up = &leases; lease; lease = tmp)
     {
@@ -659,7 +659,7 @@ struct dhcp_lease *lease6_find(clid: &mut Vec<u8>, clid_len: i32,
 }
 
 /* reset "USED flags */
-void lease6_reset()
+pub fn lease6_reset()
 {
   let mut lease: dhcp_lease;
   
@@ -668,7 +668,7 @@ void lease6_reset()
 }
 
 /* enumerate all leases belonging to {CLID, IAID} */
-struct dhcp_lease *lease6_find_by_client(struct dhcp_lease *first, lease_type: i32,
+struct dhcp_lease *lease6_find_by_client(first: &mut dhcp_lease, lease_type: i32,
 					 clid: &mut Vec<u8>, clid_len: i32,
 					 unsigned int iaid)
 {
@@ -812,7 +812,7 @@ struct dhcp_lease *lease6_allocate(addrp: &mut net::IpAddr, lease_type: i32)
 }
 
 
-void lease_set_expires(struct dhcp_lease *lease, unsigned len: i32, now: &time::Instant)
+pub fn lease_set_expires(lease: &mut dhcp_lease, unsigned len: i32, now: &time::Instant)
 {
   exp: time::Instant;
 
@@ -852,7 +852,7 @@ void lease_set_expires(struct dhcp_lease *lease, unsigned len: i32, now: &time::
 } 
 
  
-void lease_set_iaid(struct dhcp_lease *lease, unsigned int iaid)
+pub fn lease_set_iaid(lease: &mut dhcp_lease, unsigned int iaid)
 {
   if (lease.iaid != iaid)
     {
@@ -862,7 +862,7 @@ void lease_set_iaid(struct dhcp_lease *lease, unsigned int iaid)
 }
 
 
-void lease_set_hwaddr(struct dhcp_lease *lease, const hwaddr: &mut Vec<u8>,
+pub fn lease_set_hwaddr(lease: &mut dhcp_lease, const hwaddr: &mut Vec<u8>,
 		      const clid: &mut Vec<u8>, hw_len: i32, hw_type: i32,
 		      clid_len: i32, now: &time::Instant, force: i32)
 {
@@ -946,7 +946,7 @@ pub fn kill_name(struct dhcp_lease *lease)
   lease.hostname = lease.fqdn = NULL;
 }
 
-void lease_set_hostname(struct dhcp_lease *lease, const name: &mut String, auth: i32, domain: &mut String, config_domain: &mut String)
+pub fn lease_set_hostname(lease: &mut dhcp_lease, const name: &mut String, auth: i32, domain: &mut String, config_domain: &mut String)
 {
   let mut lease_tmp: dhcp_lease;
   char *new_name = NULL, *new_fqdn = NULL;
@@ -1039,7 +1039,7 @@ void lease_set_hostname(struct dhcp_lease *lease, const name: &mut String, auth:
   lease.flags |= LEASE_CHANGED; /* run script on change */
 }
 
-void lease_set_interface(struct dhcp_lease *lease, interface: i32, now: &time::Instant)
+pub fn lease_set_interface(lease: &mut dhcp_lease, interface: i32, now: &time::Instant)
 {
   ()now;
 
@@ -1054,7 +1054,7 @@ void lease_set_interface(struct dhcp_lease *lease, interface: i32, now: &time::I
 
 }
 
-void rerun_scripts()
+pub fn rerun_scripts()
 {
   let mut lease: dhcp_lease;
   
@@ -1161,7 +1161,7 @@ int do_script_run(now: time::Instant)
 
  
 /* delim == -1 . delim = 0, but embedded 0s, creating extra records, are OK. */
-void lease_add_extradata(struct dhcp_lease *lease, data: &mut Vec<u8>, unsigned len: i32, delim: i32)
+pub fn lease_add_extradata(lease: &mut dhcp_lease, data: &mut Vec<u8>, unsigned len: i32, delim: i32)
 {
   let mut i: u32;
   

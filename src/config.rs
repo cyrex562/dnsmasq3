@@ -89,7 +89,7 @@ HAVE_BROKEN_RTC
 
    define this to get the ability to call scripts on lease-change.
 
-HAVE_LUASCRIPT
+
    define this to get the ability to call Lua script on lease-change. (implies )
 
 HAVE_DBUS
@@ -178,7 +178,7 @@ has no library dependencies other than libc */
    You can use "make COPTS=-DHAVE_<opt>" instead of editing these.
 */
 
-/* #define HAVE_LUASCRIPT */
+/* #define  */
 /* #define HAVE_DBUS */
 /* #define HAVE_IDN */
 /* pub const HAVE_LIBIDN: u32 = 2; */

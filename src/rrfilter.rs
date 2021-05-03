@@ -38,7 +38,7 @@
 	  /* pointer for compression. */
 	  let mut offset: u32;
 	  let mut i: i32;
-	  unsigned char *p;
+	  let mut p: *mut u8;
 	  
 	  if (!CHECK_LEN(header, ansp, plen, 2))
 	    return 0;
@@ -109,7 +109,7 @@
  int check_rrs(p: &mut Vec<u8>, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
 {
   i: i32, j, type, class, rdlen;
-  unsigned char *pp;
+  let mut pp: *mut u8;
   
   for (i = 0; i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount); i++)
     {
@@ -178,7 +178,7 @@ rrfilter: usize(struct dns_header *header, plen: usize, mode: i32)
        i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount);
        i++)
     {
-      unsigned char *pstart = p;
+      let mut pstart: *mut u8 = p;
       type: i32, class;
 
       if (!(p = skip_name(p, header, plen, 10)))
@@ -310,7 +310,7 @@ u16 *rrfilter_desc(int type)
   return p+1;
 }
 
-int expand_workspace(unsigned char ***wkspc, int *szp, new: i32)
+int expand_workspace(unsigned char ***wkspc, szp: &i32, new: i32)
 {
   unsigned char **p;
   int old = *szp;

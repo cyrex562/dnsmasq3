@@ -514,7 +514,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
 
 //  char unhide_meta(char cr)
 // { 
-//   unsigned int c = cr;
+//   let mut c: u32 = cr;
   
 //   if (c < (sizeof(meta) - 1))
 //     cr = meta[c];
@@ -609,7 +609,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
 //   return ret;
 // }
 
- int atoi_check(a: &mut String, int *res)
+ int atoi_check(a: &mut String, res: &i32)
 {
   char *p;
 
@@ -626,7 +626,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
   return 1;
 }
 
- int atoi_check16(a: &mut String, int *res)
+ int atoi_check16(a: &mut String, res: &i32)
 {
   if (!(atoi_check(a, res)) ||
       *res < 0 ||
@@ -637,7 +637,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
 }
 
 
- int atoi_check8(a: &mut String, int *res)
+ int atoi_check8(a: &mut String, res: &i32)
 {
   if (!(atoi_check(a, res)) ||
       *res < 0 ||
@@ -731,7 +731,7 @@ pub fn do_usage()
 #define ret_err_free(x,m) do { strcpy(errstr, (x)); free((m)); return 0; } while (0)
 #define goto_err(x) do { strcpy(errstr, (x)); goto on_error; } while (0)
 
- char *parse_mysockaddr(arg: &mut String, union mysockaddr *addr) 
+ char *parse_mysockaddr(arg: &mut String, addr: &mut net::IpAddr) 
 {
   if (inet_pton(AF_INET, arg, &addr.in.sin_addr) > 0)
     addr.sa.sa_family = AF_INET;
@@ -743,7 +743,7 @@ pub fn do_usage()
   return NULL;
 }
 
-char *parse_server(arg: &mut String, union mysockaddr *addr, union mysockaddr *source_addr, interface: &mut String, int *flags)
+char *parse_server(arg: &mut String, addr: &mut net::IpAddr, source_addr: &mut net::IpAddr, interface: &mut String, flags: &i32)
 {
   int source_port = 0, serv_port = NAMESERVER_PORT;
   portno: &mut String, *source;
@@ -1315,7 +1315,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
       else if (is_addr && !is6)	
 	{
 	  in: net::IpAddr;
-	  unsigned char *op;
+	  let mut op: *mut u8;
 	  char *slash;
 	  /* max length of address/subnet descriptor is five bytes,
 	     add one for the option 120 enc byte too */
@@ -1360,7 +1360,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
 	}
       else if (is_addr6 && is6)
 	{
-	  unsigned char *op;
+	  let mut op: *mut u8;
 	  new.val = op = opt_malloc(16 * addrs);
 	  new.flags |= DHOPT_ADDR6;
 	  while (addrs--) 
@@ -1585,12 +1585,12 @@ on_error:
 
 
 
-void set_option_bool(unsigned int opt)
+pub fn set_option_bool(unsigned int opt)
 {
   option_var(opt) |= option_val(opt);
 }
 
-void reset_option_bool(unsigned int opt)
+pub fn reset_option_bool(unsigned int opt)
 {
   option_var(opt) &= ~(option_val(opt));
 }
@@ -1966,8 +1966,8 @@ pub fn server_list_free(struct server *list)
       ret_err(format!("recompile with  defined to enable lease-change scripts"));
 #  else
       if (option == LOPT_LUASCRIPT)
-#    if !defined(HAVE_LUASCRIPT)
-	ret_err(format!("recompile with HAVE_LUASCRIPT defined to enable Lua scripts"));
+#    if !defined()
+	ret_err(format!("recompile with  defined to enable Lua scripts"));
 #    else
         daemon.luascript = opt_string_alloc(arg);
 #    endif
@@ -1985,7 +1985,7 @@ pub fn server_list_free(struct server *list)
     case 'H':                /* --addn-hosts */
       {
 	struct hostsfile *new = opt_malloc(sizeof(struct hostsfile));
-	 unsigned int hosts_index = SRC_AH;
+	 let mut hosts_index: u32 = SRC_AH;
 	new.fname = opt_string_alloc(arg);
 	new.index = hosts_index +=1;
 	new.flags = 0;
@@ -2795,26 +2795,26 @@ pub fn server_list_free(struct server *list)
 	if (!atoi_check(arg, &ttl))
 	  ret_err(gen_err);
 	else if (option == LOPT_NEGTTL)
-	  daemon.neg_ttl = (unsigned long)ttl;
+	  daemon.neg_ttl = ttl;
 	else if (option == LOPT_MAXTTL)
-	  daemon.max_ttl = (unsigned long)ttl;
+	  daemon.max_ttl = ttl;
 	else if (option == LOPT_MINCTTL)
 	  {
 	    if (ttl > TTL_FLOOR_LIMIT)
 	      ttl = TTL_FLOOR_LIMIT;
-	    daemon.min_cache_ttl = (unsigned long)ttl;
+	    daemon.min_cache_ttl = ttl;
 	  }
 	else if (option == LOPT_MAXCTTL)
-	  daemon.max_cache_ttl = (unsigned long)ttl;
+	  daemon.max_cache_ttl = ttl;
 	else if (option == LOPT_AUTHTTL)
-	  daemon.auth_ttl = (unsigned long)ttl;
+	  daemon.auth_ttl = ttl;
 	else if (option == LOPT_DHCPTTL)
 	  {
-	    daemon.dhcp_ttl = (unsigned long)ttl;
+	    daemon.dhcp_ttl = ttl;
 	    daemon.use_dhcp_ttl = 1;
 	  }
 	else
-	  daemon.local_ttl = (unsigned long)ttl;
+	  daemon.local_ttl = ttl;
 	break;
       }
       
@@ -3761,7 +3761,7 @@ pub fn server_list_free(struct server *list)
     case LOPT_REMOTE:   /* --dhcp-remoteid */
     case LOPT_SUBSCR:   /* --dhcp-subscrid */
       {
-	 unsigned char *p;
+	 let mut p: *mut u8;
 	 let mut dig: i32 = 0;
 	 struct dhcp_vendor *new = opt_malloc(sizeof(struct dhcp_vendor));
 	 
@@ -4836,7 +4836,7 @@ struct hostsfile *expand_filelist(struct hostsfile *list)
   return list;
 }
 
-void read_servers_file()
+pub fn read_servers_file()
 {
   FILE *f;
 
@@ -4923,7 +4923,7 @@ pub fn clear_dynamic_opt()
     }
 }
 
-void reread_dhcp()
+pub fn reread_dhcp()
 {
    let mut hf: hostsfile;
 
@@ -4963,7 +4963,7 @@ void reread_dhcp()
 }
 
 
-void read_opts(argc: i32, char **argv, compile_opts: &mut String)
+pub fn read_opts(argc: i32, char **argv, compile_opts: &mut String)
 {
   argbuf_size: usize = MAXDNAME;
   char *argbuf = opt_malloc(argbuf_size);

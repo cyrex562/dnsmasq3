@@ -79,7 +79,7 @@ pub fn dump_init()
     }
 }
 
-void dump_packet(mask: i32, packet: Vec<u8>, len: usize, union mysockaddr *src, union mysockaddr *dst)
+pub fn dump_packet(mask: i32, packet: Vec<u8>, len: usize, src: &mut net::IpAddr, dst: &mut net::IpAddr)
 {
   struct ip ip;
   struct ip6_hdr ip6;

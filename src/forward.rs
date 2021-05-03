@@ -25,7 +25,7 @@
 
  struct frec *lookup_frec(u16 id, fd: i32, family: i32, hash: Vec<u8>);
  struct frec *lookup_frec_by_sender(u16 id,
-					  union mysockaddr *addr,
+					  addr: &mut net::IpAddr,
 					  hash: Vec<u8>);
  struct frec *lookup_frec_by_query(hash: Vec<u8>, unsigned int flags);
 
@@ -107,7 +107,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 }
           
  unsigned int search_servers(now: time::Instant, union all_addr **addrpp, unsigned qtype: i32,
-				   qdomain: &mut String, int *type, char **domain, int *norebind)
+				   qdomain: &mut String, type: &i32, char **domain, norebind: &i32)
 			      
 {
   /* If the query ends in the domain in one of our servers, set
@@ -115,9 +115,9 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
      domain.org and sub.domain.org to exist. */
   
   unsigned int namelen = strlen(qdomain);
-  unsigned int matchlen = 0;
+  let mut matchlen: u32 = 0;
   let mut serv: server;
-  unsigned int flags = 0;
+  let mut flags: u32 = 0;
    union all_addr zero;
   
   for (serv = daemon.servers; serv; serv=serv.next)
@@ -246,7 +246,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
   return  flags;
 }
 
- int forward_query(udpfd: i32, union mysockaddr *udpaddr,
+ int forward_query(udpfd: i32, udpaddr: &mut net::IpAddr,
 			 union all_addr *dst_addr, unsigned dst_iface: i32,
 			 struct dns_header *header, plen: usize, now: &time::Instant, 
 			 struct frec *forward, ad_reqd: i32, do_bit: i32)
@@ -254,8 +254,8 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
   char *domain = NULL;
   int type = SERV_DO_DNSSEC, norebind = 0;
   union all_addr *addrp = NULL;
-  unsigned int flags = 0;
-  unsigned int fwd_flags = 0;
+  let mut flags: u32 = 0;
+  let mut fwd_flags: u32 = 0;
   struct server *start = NULL;
   hash: Vec<u8> = hash_questions(header, plen, daemon.namebuff);
 
@@ -291,7 +291,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
       if (forward.blocking_query)
 	{
 	  fd: i32, is_sign;
-	  unsigned char *pheader;
+	  let mut pheader: *mut u8;
 	  
 	  forward.flags &= ~FREC_TEST_PKTSZ;
 	  
@@ -457,7 +457,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
       struct server *firstsentto = start;
       subnet: i32, cacheable, forwarded = 0;
       edns0_len: usize;
-      unsigned char *pheader;
+      let mut pheader: *mut u8;
       
       /* If a query is retried, use the log_id for the retry when logging the answer. */
       forward.frec_src.log_id = daemon.log_id;
@@ -552,7 +552,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 		     shrink again. So, if we added a do-bit, bump the udp packet size to the value
 		     known to be OK for this server. We check returned size after stripping and set
 		     the truncated bit if it's still too big. */		  
-		  unsigned char *pheader;
+		  let mut pheader: *mut u8;
 		  let mut is_sign: i32;
 		  if (find_pseudoheader(header, plen, NULL, &pheader, &is_sign, NULL) && !is_sign)
 		    PUTSHORT(start.edns_pktsz, pheader);
@@ -620,7 +620,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 
  process_reply: usize(struct dns_header *header, now: &time::Instant, struct server *server, n: usize, check_rebind: i32, 
 			    no_cache: i32, cache_secure: i32, bogusanswer: i32, ad_reqd: i32, do_bit: i32, added_pheader: i32, 
-			    check_subnet: i32, union mysockaddr *query_source)
+			    check_subnet: i32, query_source: &mut net::IpAddr)
 {
   pheader: &mut Vec<u8>, *sizep;
   char **sets = 0;
@@ -638,7 +638,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
       /* Similar algorithm to search_servers. */
       let mut ipset_pos: ipsets;
       unsigned int namelen = strlen(daemon.namebuff);
-      unsigned int matchlen = 0;
+      let mut matchlen: u32 = 0;
       for (ipset_pos = daemon.ipsets; ipset_pos; ipset_pos = ipset_pos.next) 
 	{
 	  unsigned int domainlen = strlen(ipset_pos.domain);
@@ -804,7 +804,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 }
 
 /* sets new last_server */
-void reply_query(fd: i32, family: i32, now: &time::Instant)
+pub fn reply_query(fd: i32, family: i32, now: &time::Instant)
 {
   /* packet from peer server, extract data for cache, and send to
      original requester */
@@ -868,7 +868,7 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
       !(forward.flags & FREC_HAS_EXTRADATA))
     /* for broken servers, attempt to send to another one. */
     {
-      unsigned char *pheader;
+      let mut pheader: *mut u8;
       plen: usize;
       let mut is_sign: i32;
 
@@ -923,7 +923,7 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
 	    return;
 	  
  HAVE_DUMPFILE
-	  dump_packet(DUMP_SEC_QUERY, (void *)header, (size_t)plen, NULL, &start.addr);
+	  dump_packet(DUMP_SEC_QUERY, (void *)header, plen, NULL, &start.addr);
 
 
 	  while (retry_send(sendto(fd, header, plen, 0,
@@ -950,13 +950,13 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
 	    break;
 
       /* recreate query from reply */
-      pheader = find_pseudoheader(header, (size_t)n, &plen, NULL, &is_sign, NULL);
+      pheader = find_pseudoheader(header, n, &plen, NULL, &is_sign, NULL);
       if (!is_sign && server)
 	{
 	  header.ancount = htons(0);
 	  header.nscount = htons(0);
 	  header.arcount = htons(0);
-	  if ((nn = resize_packet(header, (size_t)n, pheader, plen)))
+	  if ((nn = resize_packet(header, n, pheader, plen)))
 	    {
 	      header.hb3 &= ~(HB3_QR | HB3_AA | HB3_TC);
 	      header.hb4 &= ~(HB4_RA | HB4_RCODE | HB4_CD | HB4_AD);
@@ -1059,7 +1059,7 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
  HAVE_DUMPFILE
 		  if (status == STAT_BOGUS)
 		    dump_packet((forward.flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY)) ? DUMP_SEC_BOGUS : DUMP_BOGUS,
-				header, (size_t)n, &serveraddr, NULL);
+				header, n, &serveraddr, NULL);
 
 		}
 	      
@@ -1198,7 +1198,7 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
 
 			  
  HAVE_DUMPFILE
-			  dump_packet(DUMP_SEC_QUERY, (void *)header, (size_t)nn, NULL, &server.addr);
+			  dump_packet(DUMP_SEC_QUERY, (void *)header, nn, NULL, &server.addr);
 
 			  
 			  while (retry_send(sendto(fd, header, nn, 0, 
@@ -1269,7 +1269,7 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
       if (forward.flags & FREC_NO_CACHE)
 	no_cache_dnssec = 1;
       
-      if ((nn = process_reply(header, now, forward.sentto, (size_t)n, check_rebind, no_cache_dnssec, cache_secure, bogusanswer, 
+      if ((nn = process_reply(header, now, forward.sentto, n, check_rebind, no_cache_dnssec, cache_secure, bogusanswer, 
 			      forward.flags & FREC_AD_QUESTION, forward.flags & FREC_DO_QUESTION, 
 			      forward.flags & FREC_ADDED_PHEADER, forward.flags & FREC_HAS_SUBNET, &forward.frec_src.source)))
 	{
@@ -1296,7 +1296,7 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
 	      header.id = htons(src.orig_id);
 	      
  HAVE_DUMPFILE
-	      dump_packet(DUMP_REPLY, daemon.packet, (size_t)nn, NULL, &src.source);
+	      dump_packet(DUMP_REPLY, daemon.packet, nn, NULL, &src.source);
 
 	      
 	      send_from(src.fd, daemon.opt_nowild || option_bool (OPT_CLEVERBIND), daemon.packet, nn, 
@@ -1316,11 +1316,11 @@ void reply_query(fd: i32, family: i32, now: &time::Instant)
 }
 
 
-void receive_query(struct listener *listen, now: &time::Instant)
+pub fn receive_query(struct listener *listen, now: &time::Instant)
 {
   struct dns_header *header = (struct dns_header *)daemon.packet;
   union mysockaddr source_addr;
-  unsigned char *pheader;
+  let mut pheader: *mut u8;
   u16 type, udp_size = PACKETSZ; /* default if no EDNS0 */
   union all_addr dst_addr;
   netmask: net::IpAddr, dst_addr_4;
@@ -1455,7 +1455,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
 	  if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_PKTINFO)
 	    {
 	      union {
-		unsigned char *c;
+		let mut c: *mut u8;
 		let mut p: in_pktinfo;
 	      } p;
 	      p.c = CMSG_DATA(cmptr);
@@ -1468,7 +1468,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
 	  for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
 	    {
 	      union {
-		unsigned char *c;
+		let mut c: *mut u8;
 		i: &mut u32;
 		let mut a: in_addr;
 #ifndef HAVE_SOLARIS_NETWORK
@@ -1494,7 +1494,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
 	    if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
 	      {
 		union {
-		  unsigned char *c;
+		  let mut c: *mut u8;
 		  let mut p: in6_pktinfo;
 		} p;
 		p.c = CMSG_DATA(cmptr);
@@ -1553,10 +1553,10 @@ void receive_query(struct listener *listen, now: &time::Instant)
   daemon.log_source_addr = &source_addr;
 
  HAVE_DUMPFILE
-  dump_packet(DUMP_QUERY, daemon.packet, (size_t)n, &source_addr, NULL);
+  dump_packet(DUMP_QUERY, daemon.packet, n, &source_addr, NULL);
 
 	  
-  if (extract_request(header, (size_t)n, daemon.namebuff, &type))
+  if (extract_request(header, n, daemon.namebuff, &type))
     {
 
       let mut zone: auth_zone;
@@ -1589,7 +1589,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
 
     }
   
-  if (find_pseudoheader(header, (size_t)n, NULL, &pheader, NULL, NULL))
+  if (find_pseudoheader(header, n, NULL, &pheader, NULL, NULL))
     { 
       u16 flags;
       
@@ -1613,7 +1613,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
 
   if (auth_dns)
     {
-      m = answer_auth(header, ( header) + udp_size, (size_t)n, now, &source_addr, 
+      m = answer_auth(header, ( header) + udp_size, n, now, &source_addr, 
 		      local_auth, do_bit, have_pseudoheader);
       if (m >= 1)
 	{
@@ -1630,7 +1630,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
       if (header.hb4 & HB4_AD)
 	ad_reqd = 1;
 
-      m = answer_request(header, ( header) + udp_size, (size_t)n, 
+      m = answer_request(header, ( header) + udp_size, n, 
 			 dst_addr_4, netmask, now, ad_reqd, do_bit, have_pseudoheader);
       
       if (m >= 1)
@@ -1640,7 +1640,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
 	  daemon.metrics[METRIC_DNS_LOCAL_ANSWERED]++;
 	}
       else if (forward_query(listen.fd, &source_addr, &dst_addr, if_index,
-			     header, (size_t)n, now, NULL, ad_reqd, do_bit))
+			     header, n, now, NULL, ad_reqd, do_bit))
 	daemon.metrics[METRIC_DNS_QUERIES_FORWARDED]++;
       else
 	daemon.metrics[METRIC_DNS_LOCAL_ANSWERED]++;
@@ -1651,11 +1651,11 @@ void receive_query(struct listener *listen, now: &time::Instant)
 /* Recurse up the key hierarchy */
  int tcp_key_recurse(now: time::Instant, status: i32, struct dns_header *header, n: usize, 
 			   class: i32, name: &mut String, keyname: &mut String, struct server *server, 
-			   have_mark: i32, unsigned mark: i32, int *keycount)
+			   have_mark: i32, unsigned mark: i32, keycount: &i32)
 {
   let mut new_status: i32;
-  unsigned char *packet = NULL;
-  unsigned char *payload = NULL;
+  let mut packet: *mut u8 = NULL;
+  let mut payload: *mut u8 = NULL;
   struct dns_header *new_header = NULL;
   u16 *length = NULL;
  
@@ -1821,7 +1821,7 @@ void receive_query(struct listener *listen, now: &time::Instant)
    about resources for debug mode, when the fork is suppressed: that's
    done by the caller. */
 unsigned char *tcp_request(confd: i32, now: &time::Instant,
-			   union mysockaddr *local_addr, netmask: net::IpAddr, auth_dns: i32)
+			   local_addr: &mut net::IpAddr, netmask: net::IpAddr, auth_dns: i32)
 {
   size: usize = 0;
   let mut norebind: i32 = 0;
@@ -1845,8 +1845,8 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
   union mysockaddr peer_addr;
   socklen_t peer_len = sizeof(union mysockaddr);
   let mut query_count: i32 = 0;
-  unsigned char *pheader;
-  unsigned int mark = 0;
+  let mut pheader: *mut u8;
+  let mut mark: u32 = 0;
   let mut have_mark: i32 = 0;
 
   ()mark;
@@ -1927,7 +1927,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
       if ((checking_disabled = header.hb4 & HB4_CD))
 	no_cache_dnssec = 1;
        
-      if ((gotname = extract_request(header, (unsigned int)size, daemon.namebuff, &qtype)))
+      if ((gotname = extract_request(header,size, daemon.namebuff, &qtype)))
 	{
 
 	  let mut zone: auth_zone;
@@ -1961,7 +1961,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
       
       do_bit = 0;
 
-      if (find_pseudoheader(header, (size_t)size, NULL, &pheader, NULL, NULL))
+      if (find_pseudoheader(header, size, NULL, &pheader, NULL, NULL))
 	{ 
 	  u16 flags;
 	  
@@ -1975,7 +1975,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 
 
       if (auth_dns)
-	m = answer_auth(header, ( header) + 65536, (size_t)size, now, &peer_addr, 
+	m = answer_auth(header, ( header) + 65536, size, now, &peer_addr, 
 			local_auth, do_bit, have_pseudoheader);
       else
 
@@ -1986,7 +1986,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 	     ad_reqd = 1;
 	   
 	   /* m > 0 if answered from cache */
-	   m = answer_request(header, ( header) + 65536, (size_t)size, 
+	   m = answer_request(header, ( header) + 65536, size, 
 			      dst_addr_4, netmask, now, ad_reqd, do_bit, have_pseudoheader);
 	  
 	  /* Do this by steam now we're not in the select() loop */
@@ -1994,7 +1994,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 	  
 	  if (m == 0)
 	    {
-	      unsigned int flags = 0;
+	      let mut flags: u32 = 0;
 	      union all_addr *addrp = NULL;
 	      int type = SERV_DO_DNSSEC;
 	      char *domain = NULL;
@@ -2033,7 +2033,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 		{
 		  struct server *firstsendto = NULL;
 		  unsigned char hash[HASH_SIZE];
-		  memcpy(hash, hash_questions(header, (unsigned int)size, daemon.namebuff), HASH_SIZE);
+		  memcpy(hash, hash_questions(header,size, daemon.namebuff), HASH_SIZE);
 
 		  /* Loop round available servers until we succeed in connecting to one.
 		     Note that this code subtly ensures that consecutive queries on this connection
@@ -2099,7 +2099,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 			}
 		      
 		      /* get query name again for logging - may have been overwritten */
-		      if (!(gotname = extract_request(header, (unsigned int)size, daemon.namebuff, &qtype)))
+		      if (!(gotname = extract_request(header,size, daemon.namebuff, &qtype)))
 			strcpy(daemon.namebuff, "query");
 		      
 		      if ((!data_sent && !read_write(last_server.tcpfd, packet, size + sizeof(u16), 0)) ||
@@ -2173,7 +2173,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 		      /* If the crc of the question section doesn't match the crc we sent, then
 			 someone might be attempting to insert bogus values into the cache by 
 			 sending replies containing questions and bogus answers. */
-		      if (memcmp(hash, hash_questions(header, (unsigned int)m, daemon.namebuff), HASH_SIZE) != 0)
+		      if (memcmp(hash, hash_questions(header,m, daemon.namebuff), HASH_SIZE) != 0)
 			{ 
 			  m = 0;
 			  break;
@@ -2184,7 +2184,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 		      if (!cacheable)
 			no_cache_dnssec = 1;
 		      
-		      m = process_reply(header, now, last_server, (unsigned int)m, 
+		      m = process_reply(header, now, last_server,m, 
 					option_bool(OPT_NO_REBIND) && !norebind, no_cache_dnssec, cache_secure, bogusanswer,
 					ad_reqd, do_bit, added_pheader, check_subnet, &peer_addr); 
 		      
@@ -2195,7 +2195,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 	      /* In case of local answer or no connections made. */
 	      if (m == 0)
 		{
-		  m = setup_reply(header, (unsigned int)size, addrp, flags, daemon.local_ttl);
+		  m = setup_reply(header,size, addrp, flags, daemon.local_ttl);
 		  if (have_pseudoheader)
 		    m = add_pseudoheader(header, m, ( header) + 65536, daemon.edns_pktsz, 0, NULL, 0, do_bit, 0);
 		}
@@ -2270,7 +2270,7 @@ struct randfd *allocate_rfd(int family)
   return NULL; /* doom */
 }
 
-void free_rfd(struct randfd *rfd)
+pub fn free_rfd(struct randfd *rfd)
 {
   if (rfd && --(rfd.refcount) == 0)
     close(rfd.fd);
@@ -2320,7 +2320,7 @@ pub fn free_frec(struct frec *f)
    If force is non-NULL, always return a result, even if we have
    to allocate above the limit, and never free the record pointed
    to by the force argument. */
-struct frec *get_new_frec(now: time::Instant, int *wait, struct frec *force)
+struct frec *get_new_frec(now: time::Instant, wait: &i32, struct frec *force)
 {
   struct frec *f, *oldest, *target;
   let mut count: i32;
@@ -2425,7 +2425,7 @@ struct frec *get_new_frec(now: time::Instant, int *wait, struct frec *force)
 }
 
  struct frec *lookup_frec_by_sender(u16 id,
-					  union mysockaddr *addr,
+					  addr: &mut net::IpAddr,
 					  hash: Vec<u8>)
 {
   let mut f: frec;
@@ -2466,7 +2466,7 @@ struct frec *get_new_frec(now: time::Instant, int *wait, struct frec *force)
 }
 
 /* Send query packet again, if we can. */
-void resend_query()
+pub fn resend_query()
 {
   if (daemon.srv_save)
     {
@@ -2486,7 +2486,7 @@ void resend_query()
 }
 
 /* A server record is going away, remove references to it */
-void server_gone(struct server *server)
+pub fn server_gone(struct server *server)
 {
   let mut f: frec;
   
