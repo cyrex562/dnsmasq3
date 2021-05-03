@@ -14,18 +14,18 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
- HAVE_TFTP
 
-static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len);
-static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix);
-static void free_transfer(struct tftp_transfer *transfer);
-static ssize_t tftp_err(int err, char *packet, char *message, char *file);
-static ssize_t tftp_err_oops(char *packet, char *file);
-static ssize_t get_block(char *packet, struct tftp_transfer *transfer);
-static char *next(char **p, char *end);
-static void sanitise(char *buf);
+ 
+
+pub fn handle_tftp(now: time::Instant, struct tftp_transfer *transfer, slen: usize);
+ struct tftp_file *check_tftp_fileperm(ssize_t *len, prefix: &mut String);
+pub fn free_transfer(struct tftp_transfer *transfer);
+ stftp_err: usize(err: i32, packet: &mut String, message: &mut String, file: &mut String);
+ stftp_err_oops: usize(packet: &mut String, file: &mut String);
+ sget_block: usize(packet: &mut String, struct tftp_transfer *transfer);
+ char *next(char **p, end: &mut String);
+pub fn sanitise(buf: &mut String);
 
 pub const OP_RRQ: u32 = 1;
 pub const OP_WRQ: u32 = 2;
@@ -40,17 +40,17 @@ pub const ERR_PERM: u32 = 2;
 pub const ERR_FULL: u32 = 3;
 pub const ERR_ILL: u32 = 4;
 
-void tftp_request(struct listener *listen, time_t now)
+void tftp_request(struct listener *listen, now: &time::Instant)
 {
-  ssize_t len;
+  slen: usize;
   char *packet = daemon.packet;
-  char *filename, *mode, *p, *end, *opt;
+  filename: &mut String, *mode, *p, *end, *opt;
   union mysockaddr addr, peer;
-  struct msghdr msg;
-  struct iovec iov;
-  struct ifreq ifr;
+  let mut msg: msghdr;
+  let mut iov: iovec;
+  let mut ifr: ifreq;
   int is_err = 1, if_index = 0, mtu = 0;
-  struct iname *tmp;
+  let mut tmp: iname;
   struct tftp_transfer *transfer = NULL, **up;
   int port = daemon.start_tftp_port; /* may be zero to use ephemeral port */
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
@@ -59,7 +59,7 @@ void tftp_request(struct listener *listen, time_t now)
   char namebuff[IF_NAMESIZE];
   char *name = NULL;
   char *prefix = daemon.tftp_prefix;
-  struct tftp_prefix *pref;
+  let mut pref: tftp_prefix;
   union all_addr addra;
   int family = listen.addr.sa.sa_family;
   /* Can always get recvd interface for IPv6 */
@@ -111,13 +111,13 @@ void tftp_request(struct listener *listen, time_t now)
 	  /* we're listening on an address that doesn't appear on an interface,
 	     ask the kernel what the socket is bound to */
 	  socklen_t tcp_len = sizeof(union mysockaddr);
-	  if (getsockname(listen.tftpfd, (struct sockaddr *)&addr, &tcp_len) == -1)
+	  if (getsockname(listen.tftpfd, &addr, &tcp_len) == -1)
 	    return;
 	}
     }
   else
     {
-      struct cmsghdr *cmptr;
+      let mut cmptr: cmsghdr;
 
       if (msg.msg_controllen < sizeof(struct cmsghdr))
         return;
@@ -131,7 +131,7 @@ void tftp_request(struct listener *listen, time_t now)
 	    {
 	      union {
 		unsigned char *c;
-		struct in_pktinfo *p;
+		let mut p: in_pktinfo;
 	      } p;
 	      p.c = CMSG_DATA(cmptr);
 	      addr.in.sin_addr = p.p.ipi_spec_dst;
@@ -144,8 +144,8 @@ void tftp_request(struct listener *listen, time_t now)
 	  {
 	    union {
 	      unsigned char *c;
-	      struct in_addr *a;
-	      unsigned int *i;
+	      let mut a: in_addr;
+	      i: &mut u32;
 	    } p;
 	    p.c = CMSG_DATA(cmptr);
 	    if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVDSTADDR)
@@ -160,8 +160,8 @@ void tftp_request(struct listener *listen, time_t now)
 	  {
 	    union {
 	      unsigned char *c;
-	      struct in_addr *a;
-	      struct sockaddr_dl *s;
+	      let mut a: in_addr;
+	      let mut s: sockaddr_dl;
 	    } p;
 	    p.c = CMSG_DATA(cmptr);
 	    if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVDSTADDR)
@@ -179,7 +179,7 @@ void tftp_request(struct listener *listen, time_t now)
               {
                 union {
                   unsigned char *c;
-                  struct in6_pktinfo *p;
+                  let mut p: in6_pktinfo;
                 } p;
                 p.c = CMSG_DATA(cmptr);
                   
@@ -220,7 +220,7 @@ void tftp_request(struct listener *listen, time_t now)
 		return;
 	    }
 	  
- HAVE_DHCP      
+       
 	  /* allowed interfaces are the same as for DHCP */
 	  for (tmp = daemon.dhcp_except; tmp; tmp = tmp.next)
 	    if (tmp.name && wildcard_match(tmp.name, name))
@@ -244,15 +244,15 @@ void tftp_request(struct listener *listen, time_t now)
   /* data transfer via server listening socket */
   if (daemon.opt_single_port)
     {
-      int tftp_cnt;
+      let mut tftp_cnt: i32;
 
       for (tftp_cnt = 0, transfer = daemon.tftp_trans, up = &daemon.tftp_trans; transfer; up = &transfer.next, transfer = transfer.next)
 	{
-	  tftp_cnt++;
+	  tftp_cnt +=1;
 
 	  if (sockaddr_isequal(&peer, &transfer.peer))
 	    {
-	      if (ntohs(*((unsigned short *)packet)) == OP_RRQ)
+	      if (ntohs(*(packet)) == OP_RRQ)
 		{
 		  /* Handle repeated RRQ or abandoned transfer from same host and port 
 		     by unlinking and reusing the struct transfer. */
@@ -323,7 +323,7 @@ void tftp_request(struct listener *listen, time_t now)
   transfer.opt_blocksize = transfer.opt_transize = 0;
   transfer.netascii = transfer.carrylf = 0;
  
-  (void)prettyprint_addr(&peer, daemon.addrbuff);
+  ()prettyprint_addr(&peer, daemon.addrbuff);
   
   /* if we have a nailed-down range, iterate until we find a free one. */
   while (!daemon.opt_single_port)
@@ -356,7 +356,7 @@ void tftp_request(struct listener *listen, time_t now)
   p = packet + 2;
   end = packet + len;
   
-  if (ntohs(*((unsigned short *)packet)) != OP_RRQ ||
+  if (ntohs(*(packet)) != OP_RRQ ||
       !(filename = next(&p, end)) ||
       !(mode = next(&p, end)) ||
       (strcasecmp(mode, "octet") != 0 && strcasecmp(mode, "netascii") != 0))
@@ -413,7 +413,7 @@ void tftp_request(struct listener *listen, time_t now)
 
 	  if (option_bool(OPT_TFTP_APREF_IP))
 	    {
-	      size_t oldlen = strlen(daemon.namebuff);
+	      oldlen: usize = strlen(daemon.namebuff);
 	      struct stat statbuf;
 	      
 	      strncat(daemon.namebuff, daemon.addrbuff, (MAXDNAME-1) - strlen(daemon.namebuff));
@@ -429,7 +429,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      unsigned char *macaddr = NULL;
 	      unsigned char macbuf[DHCP_CHADDR_MAX];
 	      
- HAVE_DHCP
+ 
 	      if (daemon.dhcp && peer.sa.sa_family == AF_INET)
 	        {
 		  /* Check if the client IP is in our lease database */
@@ -445,7 +445,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      
 	      if (macaddr)
 	        {
-		  size_t oldlen = strlen(daemon.namebuff);
+		  oldlen: usize = strlen(daemon.namebuff);
 		  struct stat statbuf;
 
 		  snprintf(daemon.namebuff + oldlen, (MAXDNAME-1) - oldlen, "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x/",
@@ -463,7 +463,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      if (strstr(filename, daemon.namebuff) == filename)
 		daemon.namebuff[0] = 0;
 	      else
-		filename++;
+		filename +=1;
 	    }
 	}
       else if (filename[0] == '/')
@@ -491,11 +491,11 @@ void tftp_request(struct listener *listen, time_t now)
     }
 }
  
-static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix)
+ struct tftp_file *check_tftp_fileperm(ssize_t *len, prefix: &mut String)
 {
   char *packet = daemon.packet, *namebuff = daemon.namebuff;
-  struct tftp_file *file;
-  struct tftp_transfer *t;
+  let mut file: tftp_file;
+  let mut t: tftp_transfer;
   uid_t uid = geteuid();
   struct stat statbuf;
   int fd = -1;
@@ -542,7 +542,7 @@ static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix)
 	strcmp(t.file.filename, namebuff) == 0)
       {
 	close(fd);
-	t.file.refcount++;
+	t.file.refcount +=1;
 	return t.file;
       }
   
@@ -574,7 +574,7 @@ static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix)
   return NULL;
 }
 
-void check_tftp_listeners(time_t now)
+void check_tftp_listeners(now: time::Instant)
 {
   struct tftp_transfer *transfer, *tmp, **up;
   
@@ -594,8 +594,8 @@ void check_tftp_listeners(time_t now)
       
       if (difftime(now, transfer.timeout) >= 0.0)
 	{
-	  int endcon = 0;
-	  ssize_t len;
+	  let mut endcon: i32 = 0;
+	  slen: usize;
 
 	  /* timeout, retransmit */
 	  transfer.timeout += 1 + (1<<(transfer.backoff/2));
@@ -625,7 +625,7 @@ void check_tftp_listeners(time_t now)
 	    {
 	      strcpy(daemon.namebuff, transfer.file.filename);
 	      sanitise(daemon.namebuff);
-	      (void)prettyprint_addr(&transfer.peer, daemon.addrbuff);
+	      ()prettyprint_addr(&transfer.peer, daemon.addrbuff);
 	      my_syslog(MS_TFTP | LOG_INFO, endcon ? format!("failed sending {} to {}") : format!("sent {} to {}"), daemon.namebuff, daemon.addrbuff);
 	      /* unlink */
 	      *up = tmp;
@@ -646,15 +646,15 @@ void check_tftp_listeners(time_t now)
 }
 	  
 /* packet in daemon.packet as this is called. */
-static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len)
+pub fn handle_tftp(now: time::Instant, struct tftp_transfer *transfer, slen: usize)
 {
   struct ack {
-    unsigned short op, block;
+    u16 op, block;
   } *mess = (struct ack *)daemon.packet;
   
   if (len >= (ssize_t)sizeof(struct ack))
     {
-      if (ntohs(mess.op) == OP_ACK && ntohs(mess.block) == (unsigned short)transfer.block) 
+      if (ntohs(mess.op) == OP_ACK && ntohs(mess.block) == (u16)transfer.block) 
 	{
 	  /* Got ack, ensure we take the (re)transmit path */
 	  transfer.timeout = now;
@@ -668,7 +668,7 @@ static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len)
 	  char *end = daemon.packet + len;
 	  char *err = next(&p, end);
 	  
-	  (void)prettyprint_addr(&transfer.peer, daemon.addrbuff);
+	  ()prettyprint_addr(&transfer.peer, daemon.addrbuff);
 	  
 	  /* Sanitise error message */
 	  if (!err)
@@ -677,7 +677,7 @@ static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len)
 	    sanitise(err);
 	  
 	  my_syslog(MS_TFTP | LOG_ERR, format!("error {} {} received from {}"),
-		    (int)ntohs(mess.block), err, 
+		    ntohs(mess.block), err, 
 		    daemon.addrbuff);	
 	  
 	  /* Got err, ensure we take abort */
@@ -687,7 +687,7 @@ static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len)
     }
 }
 
-static void free_transfer(struct tftp_transfer *transfer)
+pub fn free_transfer(struct tftp_transfer *transfer)
 {
   if (!daemon.opt_single_port)
     close(transfer.sockfd);
@@ -701,10 +701,10 @@ static void free_transfer(struct tftp_transfer *transfer)
   free(transfer);
 }
 
-static char *next(char **p, char *end)
+ char *next(char **p, end: &mut String)
 {
   char *ret = *p;
-  size_t len;
+  len: usize;
 
   if (*(end-1) != 0 || 
       *p == end ||
@@ -715,24 +715,24 @@ static char *next(char **p, char *end)
   return ret;
 }
 
-static void sanitise(char *buf)
+pub fn sanitise(buf: &mut String)
 {
-  unsigned char *q, *r;
-  for (q = r = (unsigned char *)buf; *r; r++)
-    if (isprint((int)*r))
+  q: &mut Vec<u8>, *r;
+  for (q = r = buf; *r; r++)
+    if (isprint(*r))
       *(q++) = *r;
   *q = 0;
 
 }
 
 pub const MAXMESSAGE: u32 = 500; /* limit to make packet < 512 bytes and definitely smaller than buffer */ 
-static ssize_t tftp_err(int err, char *packet, char *message, char *file)
+ stftp_err: usize(err: i32, packet: &mut String, message: &mut String, file: &mut String)
 {
   struct errmess {
-    unsigned short op, err;
+    u16 op, err;
     char message[];
   } *mess = (struct errmess *)packet;
-  ssize_t len, ret = 4;
+  slen: usize, ret = 4;
   char *errstr = strerror(errno);
   
   memset(packet, 0, daemon.packet_buff_sz);
@@ -748,7 +748,7 @@ static ssize_t tftp_err(int err, char *packet, char *message, char *file)
   return  ret;
 }
 
-static ssize_t tftp_err_oops(char *packet, char *file)
+ stftp_err_oops: usize(packet: &mut String, file: &mut String)
 {
   /* May have >1 refs to file, so potentially mangle a copy of the name */
   strcpy(daemon.namebuff, file);
@@ -756,7 +756,7 @@ static ssize_t tftp_err_oops(char *packet, char *file)
 }
 
 /* return -1 for error, zero for done. */
-static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
+ sget_block: usize(packet: &mut String, struct tftp_transfer *transfer)
 {
   memset(packet, 0, daemon.packet_buff_sz);
   
@@ -765,7 +765,7 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
       /* send OACK */
       char *p;
       struct oackmess {
-	unsigned short op;
+	u16 op;
 	char data[];
       } *mess = (struct oackmess *)packet;
       
@@ -788,11 +788,11 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
     {
       /* send data packet */
       struct datamess {
-	unsigned short op, block;
+	u16 op, block;
 	unsigned char data[];
       } *mess = (struct datamess *)packet;
       
-      size_t size = transfer.file.size - transfer.offset; 
+      size: usize = transfer.file.size - transfer.offset; 
       
       if (transfer.offset > transfer.file.size)
 	return 0; /* finished */
@@ -801,7 +801,7 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
 	size = transfer.blocksize;
       
       mess.op = htons(OP_DATA);
-      mess.block = htons((unsigned short)(transfer.block));
+      mess.block = htons((u16)(transfer.block));
       
       if (lseek(transfer.file.fd, transfer.offset, SEEK_SET) == (off_t)-1 ||
 	  !read_write(transfer.file.fd, mess.data, size, 1))
@@ -812,16 +812,16 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
       /* Map '\n' to CR-LF in netascii mode */
       if (transfer.netascii)
 	{
-	  size_t i;
-	  int newcarrylf;
+	  i: usize;
+	  let mut newcarrylf: i32;
 
 	  for (i = 0, newcarrylf = 0; i < size; i++)
 	    if (mess.data[i] == '\n' && ( i != 0 || !transfer.carrylf))
 	      {
-		transfer.expansion++;
+		transfer.expansion +=1;
 
 		if (size != transfer.blocksize)
-		  size++; /* room in this block */
+		  size +=1; /* room in this block */
 		else  if (i == size - 1)
 		  newcarrylf = 1; /* don't expand LF again if it moves to the next block */
 		  
@@ -829,7 +829,7 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
 		memmove(&mess.data[i+1], &mess.data[i], size - (i + 1));
 		mess.data[i] = '\r';
 		
-		i++;
+		i +=1;
 	      }
 	  transfer.carrylf = newcarrylf;
 	  
@@ -840,14 +840,14 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
 }
 
 
-int do_tftp_script_run(void)
+int do_tftp_script_run()
 {
-  struct tftp_transfer *transfer;
+  let mut transfer: tftp_transfer;
 
   if ((transfer = daemon.tftp_done_trans))
     {
       daemon.tftp_done_trans = transfer.next;
- HAVE_SCRIPT
+ 
       queue_tftp(transfer.file.size, transfer.file.filename, &transfer.peer);
 
       free_transfer(transfer);

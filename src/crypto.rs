@@ -14,9 +14,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
- HAVE_DNSSEC
+
+
 
 #include <nettle/rsa.h>
 #include <nettle/ecdsa.h>
@@ -32,7 +32,7 @@
 #include <nettle/bignum.h>
 
 /* Implement a "hash-function" to the nettle API, which simply returns
-   the input data, concatenated into a single, statically maintained, buffer.
+   the input data, concatenated into a single, ally maintained, buffer.
 
    Used for the EdDSA sigs, which operate on the whole message, rather 
    than a digest. */
@@ -40,27 +40,27 @@
 struct null_hash_digest
 {
   uint8_t *buff;
-  size_t len;
+  len: usize;
 };
 
 struct null_hash_ctx
 {
-  size_t len;
+  len: usize;
 };
 
-static size_t null_hash_buff_sz = 0;
-static uint8_t *null_hash_buff = NULL;
+ null_hash_buff_sz: usize = 0;
+ uint8_t *null_hash_buff = NULL;
 pub const BUFF_INCR: u32 = 128;
 
-static void null_hash_init(void *ctx)
+pub fn null_hash_init(ctx: Vec<u8>)
 {
   ((struct null_hash_ctx *)ctx).len = 0;
 }
 
-static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
+pub fn null_hash_update(ctxv: Vec<u8>, length: usize, const uint8_t *src)
 {
   struct null_hash_ctx *ctx = ctxv;
-  size_t new_len = ctx.len + length;
+  new_len: usize = ctx.len + length;
   
   if (new_len > null_hash_buff_sz)
     {
@@ -85,15 +85,15 @@ static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
 }
  
 
-static void null_hash_digest(void *ctx, size_t length, uint8_t *dst)
+pub fn null_hash_digest(ctx: Vec<u8>, length: usize, uint8_t *dst)
 {
-  (void)length;
+  ()length;
   
   ((struct null_hash_digest *)dst).buff = null_hash_buff;
   ((struct null_hash_digest *)dst).len = ((struct null_hash_ctx *)ctx).len;
 }
 
-static struct nettle_hash null_hash = {
+ struct nettle_hash null_hash = {
   "null_hash",
   sizeof(struct null_hash_ctx),
   sizeof(struct null_hash_digest),
@@ -104,7 +104,7 @@ static struct nettle_hash null_hash = {
 };
 
 /* Find pointer to correct hash function in nettle library */
-const struct nettle_hash *hash_find(char *name)
+const struct nettle_hash *hash_find(name: &mut String)
 {
   if (!name)
     return NULL;
@@ -122,7 +122,7 @@ const struct nettle_hash *hash_find(char *name)
   return nettle_lookup_hash(name);
 
   {
-    int i;
+    let mut i: i32;
 
     for (i = 0; nettle_hashes[i]; i++)
       if (strcmp(nettle_hashes[i].name, name) == 0)
@@ -136,12 +136,12 @@ const struct nettle_hash *hash_find(char *name)
 /* expand ctx and digest memory allocations if necessary and init hash function */
 int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp)
 {
-  static void *ctx = NULL;
-  static unsigned char *digest = NULL;
-  static unsigned int ctx_sz = 0;
-  static unsigned int digest_sz = 0;
+  pub fn *ctx = NULL;
+   unsigned char *digest = NULL;
+   unsigned int ctx_sz = 0;
+   unsigned int digest_sz = 0;
 
-  void *new;
+  new: Vec<u8>;
 
   if (ctx_sz < hash.context_size)
     {
@@ -173,18 +173,18 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
 
 
 
- HAVE_DNSSEC
+
   
-static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-			      unsigned char *digest, size_t digest_len, int algo)
+ int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+			      digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
   unsigned char *p;
-  size_t exp_len;
+  exp_len: usize;
   
-  static struct rsa_public_key *key = NULL;
-  static mpz_t sig_mpz;
+   struct rsa_public_key *key = NULL;
+   mpz_t sig_mpz;
 
-  (void)digest_len;
+  ()digest_len;
   
   if (key == NULL)
     {
@@ -227,17 +227,17 @@ static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, 
   return 0;
 }  
 
-static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len, 
-				unsigned char *sig, size_t sig_len,
-				unsigned char *digest, size_t digest_len, int algo)
+ int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned key_len: i32, 
+				sig: &mut Vec<u8>, sig_len: usize,
+				digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
   unsigned char *p;
-  unsigned int t;
-  struct ecc_point *key;
+  let mut t: u32;
+  let mut key: ecc_point;
 
-  static struct ecc_point *key_256 = NULL, *key_384 = NULL;
-  static mpz_t x, y;
-  static struct dsa_signature *sig_struct;
+   struct ecc_point *key_256 = NULL, *key_384 = NULL;
+   mpz_t x, y;
+   let mut sig_struct: dsa_signature;
 #if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR < 4
 pub const nettle_get_secp_256r: u32 = 1;() (&nettle_secp_256r1)
 pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
@@ -302,15 +302,15 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 }
 
 #if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
-static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_len, 
-				  unsigned char *sig, size_t sig_len,
-				  unsigned char *digest, size_t digest_len, int algo)
+ int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned key_len: i32, 
+				  sig: &mut Vec<u8>, sig_len: usize,
+				  digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
   unsigned char *p;
   
-  static struct ecc_point *gost_key = NULL;
-  static mpz_t x, y;
-  static struct dsa_signature *sig_struct;
+   struct ecc_point *gost_key = NULL;
+   mpz_t x, y;
+   let mut sig_struct: dsa_signature;
 
   if (algo != 12 ||
       sig_len != 64 || key_len != 64 ||
@@ -342,9 +342,9 @@ static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_l
 }
 
 
-static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len, 
-				unsigned char *sig, size_t sig_len,
-				unsigned char *digest, size_t digest_len, int algo)
+ int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned key_len: i32, 
+				sig: &mut Vec<u8>, sig_len: usize,
+				digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
   unsigned char *p;
    
@@ -385,8 +385,8 @@ static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len
   return 0;
 }
 
-static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-			     unsigned char *digest, size_t digest_len, int algo)
+ int (*verify_func(int algo))(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+			     digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
     
   /* Ensure at runtime that we have support for this digest */
@@ -414,12 +414,12 @@ static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key
   return NULL;
 }
 
-int verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-	   unsigned char *digest, size_t digest_len, int algo)
+int verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+	   digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
 
-  int (*func)(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-	      unsigned char *digest, size_t digest_len, int algo);
+  int (*func)(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+	      digest: &mut Vec<u8>, digest_len: usize, algo: i32);
   
   func = verify_func(algo);
   

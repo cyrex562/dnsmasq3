@@ -15,71 +15,71 @@
 */
 
 
-#include "dnsmasq.h"
 
- HAVE_DHCP6
+
+ 
 
 struct state {
   unsigned char *clid;
-  int clid_len, ia_type, interface, hostname_auth, lease_allocate;
-  char *client_hostname, *hostname, *domain, *send_domain;
-  struct dhcp_context *context;
-  struct in6_addr *link_address, *fallback, *ll_addr, *ula_addr;
-  unsigned int xid, fqdn_flags, iaid;
+  clid_len: i32, ia_type, interface, hostname_auth, lease_allocate;
+  client_hostname: &mut String, *hostname, *domain, *send_domain;
+  let mut context: dhcp_context;
+  link_address: &mut net::IpAddr, *fallback, *ll_addr, *ula_addr;
+  unsigned xid: i32, fqdn_flags, iaid;
   char *iface_name;
-  void *packet_options, *end;
+  packet_options: Vec<u8>, *end;
   struct dhcp_netid *tags, *context_tags;
   unsigned char mac[DHCP_CHADDR_MAX];
-  unsigned int mac_len, mac_type;
+  unsigned mac_len: i32, mac_type;
 };
 
-static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz, 
-			     struct in6_addr *client_addr, int is_unicast, time_t now);
-static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_t sz, int is_unicast, time_t now);
-static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_opts);
-static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string);
-static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, char *string);
-static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize);
-static void *opt6_next(void *opts, void *end);
-static unsigned int opt6_uint(unsigned char *opt, int offset, int size);
-static void get_context_tag(struct state *state, struct dhcp_context *context);
-static int check_ia(struct state *state, void *opt, void **endp, void **ia_option);
-static int build_ia(struct state *state, int *t1cntr);
-static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz);
-static void mark_context_used(struct state *state, struct in6_addr *addr);
-static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr);
-static int check_address(struct state *state, struct in6_addr *addr);
-static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now);
-static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr);
-static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
-			unsigned int *min_time, struct in6_addr *addr, time_t now);
-static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now);
-static int add_local_addrs(struct dhcp_context *context);
-static struct dhcp_netid *add_options(struct state *state, int do_refresh);
-static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
-			    unsigned int *preferred_timep, unsigned int lease_time);
+ int dhcp6_maybe_relay(struct state *state, inbuff: Vec<u8>, sz: usize, 
+			     client_addr: &mut net::IpAddr, is_unicast: i32, now: &time::Instant);
+ int dhcp6_no_relay(struct state *state, msg_type: i32, inbuff: Vec<u8>, sz: usize, is_unicast: i32, now: &time::Instant);
+pub fn log6_opts(nest: i32, unsigned xid: i32, start_opts: Vec<u8>, end_opts: Vec<u8>);
+pub fn log6_packet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String);
+pub fn log6_quiet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String);
+pub fn *opt6_find (opts: Vec<u8>, end: Vec<u8>, unsigned search: i32, unsigned int minsize);
+pub fn *opt6_next(opts: Vec<u8>, end: Vec<u8>);
+ unsigned int opt6_uint(opt: &mut Vec<u8>, offset: i32, size: i32);
+pub fn get_context_tag(struct state *state, struct dhcp_context *context);
+ int check_ia(struct state *state, opt: Vec<u8>, void **endp, void **ia_option);
+ int build_ia(struct state *state, int *t1cntr);
+pub fn end_ia(t1cntr: i32, unsigned min_time: i32, do_fuzz: i32);
+pub fn mark_context_used(struct state *state, addr: &mut net::IpAddr);
+pub fn mark_config_used(struct dhcp_context *context, addr: &mut net::IpAddr);
+ int check_address(struct state *state, addr: &mut net::IpAddr);
+ int config_valid(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr, struct state *state, now: &time::Instant);
+ struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr);
+pub fn add_address(struct state *state, struct dhcp_context *context, unsigned lease_time: i32, ia_option: Vec<u8>, 
+			min_time: &mut u32, addr: &mut net::IpAddr, now: &time::Instant);
+pub fn update_leases(struct state *state, struct dhcp_context *context, addr: &mut net::IpAddr, unsigned lease_time: i32, now: &time::Instant);
+ int add_local_addrs(struct dhcp_context *context);
+ struct dhcp_netid *add_options(struct state *state, do_refresh: i32);
+pub fn calculate_times(struct dhcp_context *context, min_time: &mut u32, valid_timep: &mut u32, 
+			    preferred_timep: &mut u32, unsigned int lease_time);
 
-pub const opt: u32 = 6;_len(opt) ((int)(opt6_uint(opt, -2, 2)))
+pub const opt: u32 = 6;_len(opt) ((opt6_uint(opt, -2, 2)))
 pub const opt: u32 = 6;_type(opt) (opt6_uint(opt, -4, 2))
-pub const opt: u32 = 6;_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[4+(i)]))
+pub const opt: u32 = 6;_ptr(opt, i) ((void *)&(((opt))[4+(i)]))
 
-pub const opt: u32 = 6;_user_vendor_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2+(i)]))
-pub const opt: u32 = 6;_user_vendor_len(opt) ((int)(opt6_uint(opt, -4, 2)))
+pub const opt: u32 = 6;_user_vendor_ptr(opt, i) ((void *)&(((opt))[2+(i)]))
+pub const opt: u32 = 6;_user_vendor_len(opt) ((opt6_uint(opt, -4, 2)))
 pub const opt: u32 = 6;_user_vendor_next(opt, end) (opt6_next(((void *) opt) - 2, end))
  
 
-unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *iface_name,
-			   struct in6_addr *fallback,  struct in6_addr *ll_addr, struct in6_addr *ula_addr,
-			   size_t sz, struct in6_addr *client_addr, time_t now)
+u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut String,
+			   fallback: &mut net::IpAddr,  ll_addr: &mut net::IpAddr, ula_addr: &mut net::IpAddr,
+			   sz: usize, client_addr: &mut net::IpAddr, now: &time::Instant)
 {
-  struct dhcp_vendor *vendor;
-  int msg_type;
+  let mut vendor: dhcp_vendor;
+  let mut msg_type: i32;
   struct state state;
   
   if (sz <= 4)
     return 0;
   
-  msg_type = *((unsigned char *)daemon.dhcp_packet.iov_base);
+  msg_type = *(daemon.dhcp_packet.iov_base);
   
   /* Mark these so we only match each at most once, to avoid tangled linked lists */
   for (vendor = daemon.dhcp_vendors; vendor; vendor = vendor.next)
@@ -104,15 +104,15 @@ unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *if
 }
 
 /* This cost me blood to write, it will probably cost you blood to understand - srk. */
-static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz, 
-			     struct in6_addr *client_addr, int is_unicast, time_t now)
+ int dhcp6_maybe_relay(struct state *state, inbuff: Vec<u8>, sz: usize, 
+			     client_addr: &mut net::IpAddr, is_unicast: i32, now: &time::Instant)
 {
-  void *end = inbuff + sz;
-  void *opts = inbuff + 34;
-  int msg_type = *((unsigned char *)inbuff);
+  end: Vec<u8> = inbuff + sz;
+  opts: Vec<u8> = inbuff + 34;
+  int msg_type = *(inbuff);
   unsigned char *outmsgtypep;
-  void *opt;
-  struct dhcp_vendor *vendor;
+  opt: Vec<u8>;
+  let mut vendor: dhcp_vendor;
 
   /* if not an encapsulated relayed message, just do the stuff */
   if (msg_type != DHCP6RELAYFORW)
@@ -129,7 +129,7 @@ static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz,
 	get_client_mac(client_addr, state.interface, state.mac, &state.mac_len, &state.mac_type, now);
       else
 	{
-	  struct dhcp_context *c;
+	  let mut c: dhcp_context;
 	  struct shared_network *share = NULL;
 	  state.context = NULL;
 
@@ -199,7 +199,7 @@ static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz,
   /* look for relay options and set tags if found. */
   for (vendor = daemon.dhcp_vendors; vendor; vendor = vendor.next)
     {
-      int mopt;
+      let mut mopt: i32;
       
       if (vendor.match_type == MATCH_SUBSCRIBER)
 	mopt = OPTION6_SUBSCRIBER_ID;
@@ -259,18 +259,18 @@ static int dhcp6_maybe_relay(struct state *state, void *inbuff, size_t sz,
   return 1;
 }
 
-static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_t sz, int is_unicast, time_t now)
+ int dhcp6_no_relay(struct state *state, msg_type: i32, inbuff: Vec<u8>, sz: usize, is_unicast: i32, now: &time::Instant)
 {
-  void *opt;
-  int i, o, o1, start_opts;
-  struct dhcp_opt *opt_cfg;
-  struct dhcp_netid *tagif;
+  opt: Vec<u8>;
+  i: i32, o, o1, start_opts;
+  let mut opt_cfg: dhcp_opt;
+  let mut tagif: dhcp_netid;
   struct dhcp_config *config = NULL;
   struct dhcp_netid known_id, iface_id, v6_id;
   unsigned char *outmsgtypep;
-  struct dhcp_vendor *vendor;
-  struct dhcp_context *context_tmp;
-  struct dhcp_mac *mac_opt;
+  let mut vendor: dhcp_vendor;
+  let mut context_tmp: dhcp_context;
+  let mut mac_opt: dhcp_mac;
   unsigned int ignore = 0;
 
   state.packet_options = inbuff + 4;
@@ -312,7 +312,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	{
 	   inet_ntop(AF_INET6, &context_tmp.start6, daemon.dhcp_buff, ADDRSTRLEN); 
 	   inet_ntop(AF_INET6, &context_tmp.end6, daemon.dhcp_buff2, ADDRSTRLEN); 
-	   if (context_tmp.flags & (CONTEXT_STATIC))
+	   if (context_tmp.flags & (CONTEXT_))
 	     my_syslog(MS_DHCP | LOG_INFO, format!("{} available DHCPv6 subnet: {}/{}"),
 		       state.xid, daemon.dhcp_buff, context_tmp.prefix);
 	   else
@@ -358,7 +358,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
   /* match vendor and user class options */
   for (vendor = daemon.dhcp_vendors; vendor; vendor = vendor.next)
     {
-      int mopt;
+      let mut mopt: i32;
       
       if (vendor.match_type == MATCH_VENDOR)
 	mopt = OPTION6_VENDOR_CLASS;
@@ -369,8 +369,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
       if ((opt = opt6_find(state.packet_options, state.end, mopt, 2)))
 	{
-	  void *enc_opt, *enc_end = opt6_ptr(opt, opt6_len(opt));
-	  int offset = 0;
+	  enc_opt: Vec<u8>, *enc_end = opt6_ptr(opt, opt6_len(opt));
+	  let mut offset: i32 = 0;
 	  
 	  if (mopt == OPTION6_VENDOR_CLASS)
 	    {
@@ -404,7 +404,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
      V-I opts too. */
   for (opt_cfg = daemon.dhcp_match6; opt_cfg; opt_cfg = opt_cfg.next)
     {
-      int match = 0;
+      let mut match: i32 = 0;
       
       if (opt_cfg.flags & DHOPT_RFC3925)
 	{
@@ -412,8 +412,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	       opt;
 	       opt = opt6_find(opt6_next(opt, state.end), state.end, OPTION6_VENDOR_OPTS, 4))
 	    {
-	      void *vopt;
-	      void *vend = opt6_ptr(opt, opt6_len(opt));
+	      vopt: Vec<u8>;
+	      vend: Vec<u8> = opt6_ptr(opt, opt6_len(opt));
 	      
 	      for (vopt = opt6_find(opt6_ptr(opt, 4), vend, opt_cfg.opt, 0);
 		   vopt;
@@ -472,7 +472,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
        if (len != 0 && len < 255)
 	 {
-	   unsigned char *pp, *op = opt6_ptr(opt, 1);
+	   pp: &mut Vec<u8>, *op = opt6_ptr(opt, 1);
 	   char *pq = daemon.dhcp_buff;
 	   
 	   pp = op;
@@ -490,8 +490,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	   
 	   if (legal_hostname(daemon.dhcp_buff))
 	     {
-	       struct dhcp_match_name *m;
-	       size_t nl = strlen(daemon.dhcp_buff);
+	       let mut m: dhcp_match_name;
+	       nl: usize = strlen(daemon.dhcp_buff);
 	       
 	       state.client_hostname = daemon.dhcp_buff;
 	       
@@ -500,7 +500,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	       
 	       for (m = daemon.dhcp_name_match; m; m = m.next)
 		 {
-		   size_t ml = strlen(m.name);
+		   ml: usize = strlen(m.name);
 		   char save = 0;
 		   
 		   if (nl < ml)
@@ -556,7 +556,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
   if (config)
     {
-      struct dhcp_netid_list *list;
+      let mut list: dhcp_netid_list;
       
       for (list = config.netid; list; list = list.next)
         {
@@ -586,7 +586,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
   /* if all the netids in the ignore list are present, ignore this client */
   if (daemon.dhcp_ignore)
     {
-      struct dhcp_netid_list *id_list;
+      let mut id_list: dhcp_netid_list;
      
       for (id_list = daemon.dhcp_ignore; id_list; id_list = id_list.next)
 	if (match_netid(id_list.list, tagif, 0))
@@ -596,7 +596,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
   /* if all the netids in the ignore_name list are present, ignore client-supplied name */
   if (!state.hostname_auth)
     {
-       struct dhcp_netid_list *id_list;
+       let mut id_list: dhcp_netid_list;
        
        for (id_list = daemon.dhcp_ignore_names; id_list; id_list = id_list.next)
 	 if ((!id_list.list) || match_netid(id_list.list, tagif, 0))
@@ -614,10 +614,10 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
       
     case DHCP6SOLICIT:
       {
-      	int address_assigned = 0;
+      	let mut address_assigned: i32 = 0;
 	/* tags without all prefix-class tags */
-	struct dhcp_netid *solicit_tags;
-	struct dhcp_context *c;
+	let mut solicit_tags: dhcp_netid;
+	let mut c: dhcp_context;
 	
 	*outmsgtypep = DHCP6ADVERTISE;
 	
@@ -646,15 +646,15 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
 	for (opt = state.packet_options; opt; opt = opt6_next(opt, state.end))
 	  {   
-	    void *ia_option, *ia_end;
+	    ia_option: Vec<u8>, *ia_end;
 	    unsigned int min_time = 0xffffffff;
-	    int t1cntr;
-	    int ia_counter;
+	    let mut t1cntr: i32;
+	    let mut ia_counter: i32;
 	    /* set unless we're sending a particular prefix-class, when we
 	       want only dhcp-ranges with the correct tags set and not those without any tags. */
-	    int plain_range = 1;
+	    let mut plain_range: i32 = 1;
 	    u32 lease_time;
-	    struct dhcp_lease *ltmp;
+	    let mut ltmp: dhcp_lease;
 	    struct in6_addr req_addr, addr;
 	    
 	    if (!check_ia(state, opt, &ia_end, &ia_option))
@@ -805,7 +805,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
       
     case DHCP6REQUEST:
       {
-	int address_assigned = 0;
+	let mut address_assigned: i32 = 0;
 	int start = save_counter(-1);
 
 	/* set reply message type */
@@ -819,9 +819,9 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	
 	for (opt = state.packet_options; opt; opt = opt6_next(opt, state.end))
 	  {   
-	    void *ia_option, *ia_end;
+	    ia_option: Vec<u8>, *ia_end;
 	    unsigned int min_time = 0xffffffff;
-	    int t1cntr;
+	    let mut t1cntr: i32;
 	    
 	     if (!check_ia(state, opt, &ia_end, &ia_option))
 	       continue;
@@ -840,8 +840,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	      {
 		struct in6_addr req_addr;
 		struct dhcp_context *dynamic, *c;
-		unsigned int lease_time;
-		int config_ok = 0;
+		let mut lease_time: u32;
+		let mut config_ok: i32 = 0;
 
 		/* align. */
 		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
@@ -853,7 +853,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		  {
 		    if (!dynamic && !config_ok)
 		      {
-			/* Static range, not configured. */
+			/*  range, not configured. */
 			o1 = new_opt6(OPTION6_STATUS_CODE);
 			put_opt6_short(DHCP6NOADDRS);
 			put_opt6_string(format!("address unavailable"));
@@ -927,9 +927,9 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
 	for (opt = state.packet_options; opt; opt = opt6_next(opt, state.end))
 	  {
-	    void *ia_option, *ia_end;
+	    ia_option: Vec<u8>, *ia_end;
 	    unsigned int min_time = 0xffffffff;
-	    int t1cntr, iacntr;
+	    t1cntr: i32, iacntr;
 	    
 	    if (!check_ia(state, opt, &ia_end, &ia_option))
 	      continue;
@@ -944,7 +944,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		unsigned int preferred_time =  opt6_uint(ia_option, 16, 4);
 		unsigned int valid_time =  opt6_uint(ia_option, 20, 4);
 		char *message = NULL;
-		struct dhcp_context *this_context;
+		let mut this_context: dhcp_context;
 
 		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ); 
 		
@@ -973,7 +973,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		if ((this_context = address6_available(state.context, &req_addr, tagif, 1)) ||
 		    (this_context = address6_valid(state.context, &req_addr, tagif, 1)))
 		  {
-		    unsigned int lease_time;
+		    let mut lease_time: u32;
 
 		    get_context_tag(state, this_context);
 		    
@@ -1030,7 +1030,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
       
     case DHCP6CONFIRM:
       {
-	int good_addr = 0;
+	let mut good_addr: i32 = 0;
 
 	/* set reply message type */
 	*outmsgtypep = DHCP6REPLY;
@@ -1039,7 +1039,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 	
 	for (opt = state.packet_options; opt; opt = opt6_next(opt, state.end))
 	  {
-	    void *ia_option, *ia_end;
+	    ia_option: Vec<u8>, *ia_end;
 	    
 	    for (check_ia(state, opt, &ia_end, &ia_option);
 		 ia_option;
@@ -1112,14 +1112,14 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
 	for (opt = state.packet_options; opt; opt = opt6_next(opt, state.end))
 	  {
-	    void *ia_option, *ia_end;
-	    int made_ia = 0;
+	    ia_option: Vec<u8>, *ia_end;
+	    let mut made_ia: i32 = 0;
 	    	    
 	    for (check_ia(state, opt, &ia_end, &ia_option);
 		 ia_option;
 		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24)) 
 	      {
-		struct dhcp_lease *lease;
+		let mut lease: dhcp_lease;
 		struct in6_addr addr;
 
 		/* align */
@@ -1177,16 +1177,16 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
 	for (opt = state.packet_options; opt; opt = opt6_next(opt, state.end))
 	  {
-	    void *ia_option, *ia_end;
-	    int made_ia = 0;
+	    ia_option: Vec<u8>, *ia_end;
+	    let mut made_ia: i32 = 0;
 	    	    
 	    for (check_ia(state, opt, &ia_end, &ia_option);
 		 ia_option;
 		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24)) 
 	      {
-		struct dhcp_lease *lease;
+		let mut lease: dhcp_lease;
 		struct in6_addr addr;
-		struct addrlist *addr_list;
+		let mut addr_list: addrlist;
 		
 		/* align */
 		memcpy(&addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
@@ -1195,7 +1195,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		  {
 		    prettyprint_time(daemon.dhcp_buff3, DECLINE_BACKOFF);
 		    inet_ntop(AF_INET6, &addr, daemon.addrbuff, ADDRSTRLEN);
-		    my_syslog(MS_DHCP | LOG_WARNING, format!("disabling DHCP static address {} for {}"), 
+		    my_syslog(MS_DHCP | LOG_WARNING, format!("disabling DHCP  address {} for {}"), 
 			      daemon.addrbuff, daemon.dhcp_buff3);
 		    addr_list.flags |= ADDRLIST_DECLINED;
 		    addr_list.decline_time = now;
@@ -1203,7 +1203,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 		else
 		  /* make sure this host gets a different address next time. */
 		  for (context_tmp = state.context; context_tmp; context_tmp = context_tmp.current)
-		    context_tmp.addr_epoch++;
+		    context_tmp.addr_epoch +=1;
 		
 		if ((lease = lease6_find(state.clid, state.clid_len, state.ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA,
 					 state.iaid, &addr)))
@@ -1259,14 +1259,14 @@ static int dhcp6_no_relay(struct state *state, int msg_type, void *inbuff, size_
 
 }
 
-static struct dhcp_netid *add_options(struct state *state, int do_refresh)  
+ struct dhcp_netid *add_options(struct state *state, do_refresh: i32)  
 {
-  void *oro;
+  oro: Vec<u8>;
   /* filter options based on tags, those we want get DHOPT_TAGOK bit set */
   struct dhcp_netid *tagif = option_filter(state.tags, state.context_tags, daemon.dhcp_opts6);
-  struct dhcp_opt *opt_cfg;
+  let mut opt_cfg: dhcp_opt;
   int done_dns = 0, done_refresh = !do_refresh, do_encap = 0;
-  int i, o, o1;
+  i: i32, o, o1;
 
   oro = opt6_find(state.packet_options, state.end, OPTION6_ORO, 0);
   
@@ -1295,8 +1295,8 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
       
       if (opt_cfg.flags & DHOPT_ADDR6)
 	{
-	  int len, j;
-	  struct in6_addr *a;
+	  len: i32, j;
+	  let mut a: in6_addr;
 	  
 	  for (a = (struct in6_addr *)opt_cfg.val, len = opt_cfg.len, j = 0; 
 	       j < opt_cfg.len; j += IN6ADDRSZ, a++)
@@ -1311,7 +1311,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
 	      	  
 	      for (a = (struct in6_addr *)opt_cfg.val, j = 0; j < opt_cfg.len; j+=IN6ADDRSZ, a++)
 		{
-		  struct in6_addr *p = NULL;
+		  p: &mut net::IpAddr = NULL;
 
 		  if (IN6_IS_ADDR_UNSPECIFIED(a))
 		    {
@@ -1368,7 +1368,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
 
   if (state.context && !done_refresh)
     {
-      struct dhcp_context *c;
+      let mut c: dhcp_context;
       unsigned int lease_time = 0xffffffff;
       
       /* Find the smallest lease tie of all contexts,
@@ -1402,8 +1402,8 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
     { 
       if (opt_cfg.flags & DHOPT_RFC3925)
 	{
-	  int found = 0;
-	  struct dhcp_opt *oc;
+	  let mut found: i32 = 0;
+	  let mut oc: dhcp_opt;
 	  
 	  if (opt_cfg.flags & DHOPT_ENCAP_DONE)
 	    continue;
@@ -1448,7 +1448,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
   if (state.hostname)
     {
       unsigned char *p;
-      size_t len = strlen(state.hostname);
+      len: usize = strlen(state.hostname);
       
       if (state.send_domain)
 	len += strlen(state.send_domain) + 2;
@@ -1492,15 +1492,15 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
   return tagif;
 }
  
-static int add_local_addrs(struct dhcp_context *context)
+ int add_local_addrs(struct dhcp_context *context)
 {
-  int done = 0;
+  let mut done: i32 = 0;
   
   for (; context; context = context.current)
     if ((context.flags & CONTEXT_USED) && !IN6_IS_ADDR_UNSPECIFIED(&context.local6))
       {
 	/* squash duplicates */
-	struct dhcp_context *c;
+	let mut c: dhcp_context;
 	for (c = context.current; c; c = c.current)
 	  if ((c.flags & CONTEXT_USED) &&
 	      IN6_ARE_ADDR_EQUAL(&context.local6, &c.local6))
@@ -1517,7 +1517,7 @@ static int add_local_addrs(struct dhcp_context *context)
 }
 
 
-static void get_context_tag(struct state *state, struct dhcp_context *context)
+pub fn get_context_tag(struct state *state, struct dhcp_context *context)
 {
   /* get tags from context if we've not used it before */
   if (context.netid.next == &context.netid && context.netid.net)
@@ -1526,7 +1526,7 @@ static void get_context_tag(struct state *state, struct dhcp_context *context)
       state.context_tags = &context.netid;
       if (!state.hostname_auth)
 	{
-	  struct dhcp_netid_list *id_list;
+	  let mut id_list: dhcp_netid_list;
 	  
 	  for (id_list = daemon.dhcp_ignore_names; id_list; id_list = id_list.next)
 	    if ((!id_list.list) || match_netid(id_list.list, &context.netid, 0))
@@ -1537,7 +1537,7 @@ static void get_context_tag(struct state *state, struct dhcp_context *context)
     }
 } 
 
-static int check_ia(struct state *state, void *opt, void **endp, void **ia_option)
+ int check_ia(struct state *state, opt: Vec<u8>, void **endp, void **ia_option)
 {
   state.ia_type = opt6_type(opt);
   *ia_option = NULL;
@@ -1559,7 +1559,7 @@ static int check_ia(struct state *state, void *opt, void **endp, void **ia_optio
 }
 
 
-static int build_ia(struct state *state, int *t1cntr)
+ int build_ia(struct state *state, int *t1cntr)
 {
   int  o = new_opt6(state.ia_type);
  
@@ -1578,13 +1578,13 @@ static int build_ia(struct state *state, int *t1cntr)
   return o;
 }
 
-static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz)
+pub fn end_ia(t1cntr: i32, unsigned min_time: i32, do_fuzz: i32)
 {
   if (t1cntr != 0)
     {
       /* go back and fill in fields in IA_NA option */
       int sav = save_counter(t1cntr);
-      unsigned int t1, t2, fuzz = 0;
+      unsigned t1: i32, t2, fuzz = 0;
 
       if (do_fuzz)
 	{
@@ -1602,12 +1602,12 @@ static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz)
     }	
 }
 
-static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
-			unsigned int *min_time, struct in6_addr *addr, time_t now)
+pub fn add_address(struct state *state, struct dhcp_context *context, unsigned lease_time: i32, ia_option: Vec<u8>, 
+			min_time: &mut u32, addr: &mut net::IpAddr, now: &time::Instant)
 {
   unsigned int valid_time = 0, preferred_time = 0;
   int o = new_opt6(OPTION6_IAADDR);
-  struct dhcp_lease *lease;
+  let mut lease: dhcp_lease;
 
   /* get client requested times */
   if (ia_option)
@@ -1637,7 +1637,7 @@ static void add_address(struct state *state, struct dhcp_context *context, unsig
       
       if (!state.hostname_auth)
 	{
-	  struct dhcp_netid_list *id_list;
+	  let mut id_list: dhcp_netid_list;
 	  
 	  for (id_list = daemon.dhcp_ignore_names; id_list; id_list = id_list.next)
 	    if ((!id_list.list) || match_netid(id_list.list, &context.netid, 0))
@@ -1651,9 +1651,9 @@ static void add_address(struct state *state, struct dhcp_context *context, unsig
 
 }
 
-static void mark_context_used(struct state *state, struct in6_addr *addr)
+pub fn mark_context_used(struct state *state, addr: &mut net::IpAddr)
 {
-  struct dhcp_context *context;
+  let mut context: dhcp_context;
 
   /* Mark that we have an address for this prefix. */
   for (context = state.context; context; context = context.current)
@@ -1661,7 +1661,7 @@ static void mark_context_used(struct state *state, struct in6_addr *addr)
       context.flags |= CONTEXT_USED;
 }
 
-static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr)
+pub fn mark_config_used(struct dhcp_context *context, addr: &mut net::IpAddr)
 {
   for (; context; context = context.current)
     if (is_same_net6(addr, &context.start6, context.prefix))
@@ -1669,9 +1669,9 @@ static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr
 }
 
 /* make sure address not leased to another CLID/IAID */
-static int check_address(struct state *state, struct in6_addr *addr)
+ int check_address(struct state *state, addr: &mut net::IpAddr)
 { 
-  struct dhcp_lease *lease;
+  let mut lease: dhcp_lease;
 
   if (!(lease = lease6_find_by_addr(addr, 128, 0)))
     return 1;
@@ -1686,11 +1686,11 @@ static int check_address(struct state *state, struct in6_addr *addr)
 
 
 /* return true of *addr could have been generated from config. */
-static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr)
+ struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr)
 {
-  int prefix;
+  let mut prefix: i32;
   struct in6_addr wild_addr;
-  struct addrlist *addr_list;
+  let mut addr_list: addrlist;
   
   if (!config || !(config.flags & CONFIG_ADDR6))
     return NULL;
@@ -1715,10 +1715,10 @@ static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_c
   return NULL;
 }
 
-static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now)
+ int config_valid(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr, struct state *state, now: &time::Instant)
 {
   u64 addrpart, i, addresses;
-  struct addrlist *addr_list;
+  let mut addr_list: addrlist;
   
   if (!config || !(config.flags & CONFIG_ADDR6))
     return 0;
@@ -1773,8 +1773,8 @@ static int config_valid(struct dhcp_config *config, struct dhcp_context *context
    *min_time - smallest valid time sent so far, to calculate T1 and T2.
    
    */
-static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
-			    unsigned int *preferred_timep, unsigned int lease_time)
+pub fn calculate_times(struct dhcp_context *context, min_time: &mut u32, valid_timep: &mut u32, 
+			    preferred_timep: &mut u32, unsigned int lease_time)
 {
   unsigned int req_preferred = *preferred_timep, req_valid = *valid_timep;
   unsigned int valid_time = lease_time, preferred_time = lease_time;
@@ -1820,14 +1820,14 @@ static void calculate_times(struct dhcp_context *context, unsigned int *min_time
   *preferred_timep = preferred_time;
 }
 
-static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now)
+pub fn update_leases(struct state *state, struct dhcp_context *context, addr: &mut net::IpAddr, unsigned lease_time: i32, now: &time::Instant)
 {
   struct dhcp_lease *lease = lease6_find_by_addr(addr, 128, 0);
- HAVE_SCRIPT
+ 
   struct dhcp_netid *tagif = run_tag_if(state.tags);
 
 
-  (void)context;
+  ()context;
 
   if (!lease)
     lease = lease6_allocate(addr, state.ia_type == OPTION6_IA_NA ? LEASE_NA : LEASE_TA);
@@ -1846,10 +1846,10 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  lease_set_hostname(lease, state.hostname, state.hostname_auth, addr_domain, state.domain);
 	}
       
- HAVE_SCRIPT
+ 
       if (daemon.lease_change_command)
 	{
-	  void *class_opt;
+	  class_opt: Vec<u8>;
 	  lease.flags |= LEASE_CHANGED;
 	  free(lease.extradata);
 	  lease.extradata = NULL;
@@ -1858,21 +1858,21 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  
 	  if ((class_opt = opt6_find(state.packet_options, state.end, OPTION6_VENDOR_CLASS, 4)))
 	    {
-	      void *enc_opt, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
-	      lease.vendorclass_count++;
+	      enc_opt: Vec<u8>, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
+	      lease.vendorclass_count +=1;
 	      /* send enterprise number first  */
 	      sprintf(daemon.dhcp_buff2, "{}", opt6_uint(class_opt, 0, 4));
-	      lease_add_extradata(lease, (unsigned char *)daemon.dhcp_buff2, strlen(daemon.dhcp_buff2), 0);
+	      lease_add_extradata(lease, daemon.dhcp_buff2, strlen(daemon.dhcp_buff2), 0);
 	      
 	      if (opt6_len(class_opt) >= 6) 
 		for (enc_opt = opt6_ptr(class_opt, 4); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
 		  {
-		    lease.vendorclass_count++;
+		    lease.vendorclass_count +=1;
 		    lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
 		  }
 	    }
 	  
-	  lease_add_extradata(lease, (unsigned char *)state.client_hostname, 
+	  lease_add_extradata(lease, state.client_hostname, 
 			      state.client_hostname ? strlen(state.client_hostname) : 0, 0);				
 	  
 	  /* space-concat tag set */
@@ -1881,20 +1881,20 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  else
 	    {
 	      if (context.netid.net)
-		lease_add_extradata(lease, (unsigned char *)context.netid.net, strlen(context.netid.net), tagif ? ' ' : 0);
+		lease_add_extradata(lease, context.netid.net, strlen(context.netid.net), tagif ? ' ' : 0);
 	      
 	      if (tagif)
 		{
-		  struct dhcp_netid *n;
+		  let mut n: dhcp_netid;
 		  for (n = tagif; n; n = n.next)
 		    {
-		      struct dhcp_netid *n1;
+		      let mut n1: dhcp_netid;
 		      /* kill dupes */
 		      for (n1 = n.next; n1; n1 = n1.next)
 			if (strcmp(n.net, n1.net) == 0)
 			  break;
 		      if (!n1)
-			lease_add_extradata(lease, (unsigned char *)n.net, strlen(n.net), n.next ? ' ' : 0); 
+			lease_add_extradata(lease, n.net, strlen(n.net), n.next ? ' ' : 0); 
 		    }
 		}
 	    }
@@ -1902,11 +1902,11 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  if (state.link_address)
 	    inet_ntop(AF_INET6, state.link_address, daemon.addrbuff, ADDRSTRLEN);
 	  
-	  lease_add_extradata(lease, (unsigned char *)daemon.addrbuff, state.link_address ? strlen(daemon.addrbuff) : 0, 0);
+	  lease_add_extradata(lease, daemon.addrbuff, state.link_address ? strlen(daemon.addrbuff) : 0, 0);
 	  
 	  if ((class_opt = opt6_find(state.packet_options, state.end, OPTION6_USER_CLASS, 2)))
 	    {
-	      void *enc_opt, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
+	      enc_opt: Vec<u8>, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
 	      for (enc_opt = opt6_ptr(class_opt, 0); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
 		lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
 	    }
@@ -1918,9 +1918,9 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 			  
 			
 	
-static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_opts)
+pub fn log6_opts(nest: i32, unsigned xid: i32, start_opts: Vec<u8>, end_opts: Vec<u8>)
 {
-  void *opt;
+  opt: Vec<u8>;
   char *desc = nest ? "nest" : "sent";
   
   if (!option_bool(OPT_LOG_OPTS) || start_opts == end_opts)
@@ -1929,7 +1929,7 @@ static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_op
   for (opt = start_opts; opt; opt = opt6_next(opt, end_opts))
     {
       int type = opt6_type(opt);
-      void *ia_options = NULL;
+      ia_options: Vec<u8> = NULL;
       char *optname;
       
       if (type == OPTION6_IA_NA)
@@ -1979,13 +1979,13 @@ static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_op
     }
 }		 
  
-static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, char *string)
+pub fn log6_quiet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String)
 {
   if (option_bool(OPT_LOG_OPTS) || !option_bool(OPT_QUIET_DHCP6))
     log6_packet(state, type, addr, string);
 }
 
-static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string)
+pub fn log6_packet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String)
 {
   int clid_len = state.clid_len;
 
@@ -2020,10 +2020,10 @@ static void log6_packet(struct state *state, char *type, struct in6_addr *addr, 
 	      string ? string : "");
 }
 
-static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize)
+pub fn *opt6_find (opts: Vec<u8>, end: Vec<u8>, unsigned search: i32, unsigned int minsize)
 {
   u16 opt, opt_len;
-  void *start;
+  start: Vec<u8>;
   
   if (!opts)
     return NULL;
@@ -2047,7 +2047,7 @@ static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int
     }
 }
 
-static void *opt6_next(void *opts, void *end)
+pub fn *opt6_next(opts: Vec<u8>, end: Vec<u8>)
 {
   u16 opt_len;
   
@@ -2063,21 +2063,21 @@ static void *opt6_next(void *opts, void *end)
   return opts + opt_len;
 }
 
-static unsigned int opt6_uint(unsigned char *opt, int offset, int size)
+ unsigned int opt6_uint(opt: &mut Vec<u8>, offset: i32, size: i32)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;
-  int i;
+  let mut i: i32;
   unsigned char *p = opt6_ptr(opt, offset);
   
-  for (i = 0; i < size; i++)
-    ret = (ret << 8) | *p++;
+  for i in 0..size
+    ret = (ret << 8) | *p +=1;
   
   return ret;
 } 
 
-void relay_upstream6(struct dhcp_relay *relay, ssize_t sz, 
-		     struct in6_addr *peer_address, u32 scope_id, time_t now)
+void relay_upstream6(struct dhcp_relay *relay, ssz: usize, 
+		     peer_address: &mut net::IpAddr, u32 scope_id, now: &time::Instant)
 {
   /* .local is same value for all relays on .current chain */
   
@@ -2085,9 +2085,9 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
   unsigned char *header;
   unsigned char *inbuff = daemon.dhcp_packet.iov_base;
   int msg_type = *inbuff;
-  int hopcount;
+  let mut hopcount: i32;
   struct in6_addr multicast;
-  unsigned int maclen, mactype;
+  unsigned maclen: i32, mactype;
   unsigned char mac[DHCP_CHADDR_MAX];
 
   inet_pton(AF_INET6, ALL_SERVERS, &multicast);
@@ -2098,7 +2098,7 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
     
   /* Get hop count from nested relayed message */ 
   if (msg_type == DHCP6RELAYFORW)
-    hopcount = *((unsigned char *)inbuff+1) + 1;
+    hopcount = *(inbuff+1) + 1;
   else
     hopcount = 0;
 
@@ -2110,7 +2110,7 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
 
   if ((header = put_opt6(NULL, 34)))
     {
-      int o;
+      let mut o: i32;
 
       header[0] = DHCP6RELAYFORW;
       header[1] = hopcount;
@@ -2142,7 +2142,7 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
 
 	  if (IN6_ARE_ADDR_EQUAL(&relay.server.addr6, &multicast))
 	    {
-	      int multicast_iface;
+	      let mut multicast_iface: i32;
 	      if (!relay.interface || strchr(relay.interface, '*') ||
 		  (multicast_iface = if_nametoindex(relay.interface)) == 0 ||
 		  setsockopt(daemon.dhcp6fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &multicast_iface, sizeof(multicast_iface)) == -1)
@@ -2164,9 +2164,9 @@ void relay_upstream6(struct dhcp_relay *relay, ssize_t sz,
     }
 }
 
-unsigned short relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface)
+pub fn relay_reply6(struct sockaddr_in6 *peer, ssz: usize, arrival_interface: &mut String) -> u16
 {
-  struct dhcp_relay *relay;
+  let mut relay: dhcp_relay;
   struct in6_addr link;
   unsigned char *inbuff = daemon.dhcp_packet.iov_base;
   
@@ -2187,12 +2187,12 @@ unsigned short relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival
 
   if (relay)
     {
-      void *opt, *opts = inbuff + 34;
-      void *end = inbuff + sz;
+      opt: Vec<u8>, *opts = inbuff + 34;
+      end: Vec<u8> = inbuff + sz;
       for (opt = opts; opt; opt = opt6_next(opt, end))
 	if (opt6_type(opt) == OPTION6_RELAY_MSG && opt6_len(opt) > 0)
 	  {
-	    int encap_type = *((unsigned char *)opt6_ptr(opt, 0));
+	    int encap_type = *(opt6_ptr(opt, 0));
 	    put_opt6(opt6_ptr(opt, 0), opt6_len(opt));
 	    memcpy(&peer.sin6_addr, &inbuff[18], IN6ADDRSZ); 
 	    peer.sin6_scope_id = relay.iface_index;

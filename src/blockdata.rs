@@ -14,18 +14,18 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-static struct blockdata *keyblock_free;
-static unsigned int blockdata_count, blockdata_hwm, blockdata_alloced;
 
-static void blockdata_expand(int n)
+ let mut keyblock_free: blockdata;
+ unsigned blockdata_count: i32, blockdata_hwm, blockdata_alloced;
+
+pub fn blockdata_expand(int n)
 {
   struct blockdata *new = whine_malloc(n * sizeof(struct blockdata));
   
   if (new)
     {
-      int i;
+      let mut i: i32;
       
       new[n-1].next = keyblock_free;
       keyblock_free = new;
@@ -38,7 +38,7 @@ static void blockdata_expand(int n)
 }
 
 /* Preallocate some blocks, proportional to cachesize, to reduce heap fragmentation. */
-void blockdata_init(void)
+void blockdata_init()
 {
   keyblock_free = NULL;
   blockdata_alloced = 0;
@@ -50,7 +50,7 @@ void blockdata_init(void)
     blockdata_expand(daemon.cachesize);
 }
 
-void blockdata_report(void)
+void blockdata_report()
 {
   my_syslog(LOG_INFO, format!("pool memory in use {}, max {}, allocated {}"), 
 	    blockdata_count * sizeof(struct blockdata),  
@@ -58,11 +58,11 @@ void blockdata_report(void)
 	    blockdata_alloced * sizeof(struct blockdata));
 } 
 
-static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
+ struct blockdata *blockdata_alloc_real(fd: i32, data: &mut String, len: usize)
 {
   struct blockdata *block, *ret = NULL;
   struct blockdata **prev = &ret;
-  size_t blen;
+  blen: usize;
 
   while (len > 0)
     {
@@ -73,7 +73,7 @@ static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
 	{
 	  block = keyblock_free;
 	  keyblock_free = block.next;
-	  blockdata_count++; 
+	  blockdata_count +=1; 
 	}
       else
 	{
@@ -106,14 +106,14 @@ static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
   return ret;
 }
 
-struct blockdata *blockdata_alloc(char *data, size_t len)
+struct blockdata *blockdata_alloc(data: &mut String, len: usize)
 {
   return blockdata_alloc_real(0, data, len);
 }
 
 void blockdata_free(struct blockdata *blocks)
 {
-  struct blockdata *tmp;
+  let mut tmp: blockdata;
   
   if (blocks)
     {
@@ -125,15 +125,15 @@ void blockdata_free(struct blockdata *blocks)
     }
 }
 
-/* if data == NULL, return pointer to static block of sufficient size */
-void *blockdata_retrieve(struct blockdata *block, size_t len, void *data)
+/* if data == NULL, return pointer to  block of sufficient size */
+blockdata_retrieve: Vec<u8>(struct blockdata *block, len: usize, data: Vec<u8>)
 {
-  size_t blen;
+  blen: usize;
   struct  blockdata *b;
-  void *new, *d;
+  new: Vec<u8>, *d;
   
-  static unsigned int buff_len = 0;
-  static unsigned char *buff = NULL;
+   unsigned int buff_len = 0;
+   unsigned char *buff = NULL;
    
   if (!data)
     {
@@ -160,17 +160,17 @@ void *blockdata_retrieve(struct blockdata *block, size_t len, void *data)
 }
 
 
-void blockdata_write(struct blockdata *block, size_t len, int fd)
+void blockdata_write(struct blockdata *block, len: usize, fd: i32)
 {
   for (; len > 0 && block; block = block.next)
     {
-      size_t blen = len > KEYBLOCK_LEN ? KEYBLOCK_LEN : len;
+      blen: usize = len > KEYBLOCK_LEN ? KEYBLOCK_LEN : len;
       read_write(fd, block.key, blen, 0);
       len -= blen;
     }
 }
 
-struct blockdata *blockdata_read(int fd, size_t len)
+struct blockdata *blockdata_read(fd: i32, len: usize)
 {
   return blockdata_alloc_real(fd, NULL, len);
 }

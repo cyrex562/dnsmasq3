@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+
  HAVE_INOTIFY
 
 #include <sys/inotify.h>
@@ -33,16 +33,16 @@
    files don't. 
 */
 
-static char *inotify_buffer;
+ char *inotify_buffer;
 #define INOTIFY_SZ (sizeof(struct inotify_event) + NAME_MAX + 1)
 
 /* If path is a symbolic link, return the path it
    points to, made absolute if relative.
    If path doesn't exist or is not a symlink, return NULL.
    Return value is malloc'ed */
-static char *my_readlink(char *path)
+ char *my_readlink(path: &mut String)
 {
-  ssize_t rc, size = 64;
+  src: usize, size = 64;
   char *buf;
 
   while (1)
@@ -87,7 +87,7 @@ static char *my_readlink(char *path)
 
 void inotify_dnsmasq_init()
 {
-  struct resolvc *res;
+  let mut res: resolvc;
   inotify_buffer = safe_malloc(INOTIFY_SZ);
   daemon.inotifyfd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   
@@ -99,7 +99,7 @@ void inotify_dnsmasq_init()
   
   for (res = daemon.resolv_files; res; res = res.next)
     {
-      char *d, *new_path, *path = safe_malloc(strlen(res.name) + 1);
+      d: &mut String, *new_path, *path = safe_malloc(strlen(res.name) + 1);
       int links = MAXSYMLINKS;
 
       strcpy(path, res.name);
@@ -135,14 +135,14 @@ void inotify_dnsmasq_init()
 
 
 /* initialisation for dynamic-dir. Set inotify watch for each directory, and read pre-existing files */
-void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revhashsz)
+void set_dynamic_inotify(flag: i32, total_size: i32, struct crec **rhash, revhashsz: i32)
 {
-  struct hostsfile *ah;
+  let mut ah: hostsfile;
   
   for (ah = daemon.dynamic_dirs; ah; ah = ah.next)
     {
       DIR *dir_stream = NULL;
-      struct dirent *ent;
+      let mut ent: dirent;
       struct stat buf;
      
       if (!(ah.flags & flag))
@@ -172,8 +172,8 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 
        while ((ent = readdir(dir_stream)))
 	 {
-	   size_t lendir = strlen(ah.fname);
-	   size_t lenfile = strlen(ent.d_name);
+	   lendir: usize = strlen(ah.fname);
+	   lenfile: usize = strlen(ent.d_name);
 	   char *path;
 	   
 	   /* ignore emacs backups and dotfiles */
@@ -194,7 +194,7 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 		 {
 		   if (ah.flags & AH_HOSTS)
 		     total_size = read_hostsfile(path, ah.index, total_size, rhash, revhashsz);
- HAVE_DHCP
+ 
 		   else if (ah.flags & (AH_DHCP_HST | AH_DHCP_OPT))
 		     option_read_dynfile(path, ah.flags);
 		   
@@ -208,26 +208,26 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
     }
 }
 
-int inotify_check(time_t now)
+int inotify_check(now: time::Instant)
 {
-  int hit = 0;
-  struct hostsfile *ah;
+  let mut hit: i32 = 0;
+  let mut ah: hostsfile;
 
   while (1)
     {
-      int rc;
+      let mut rc: i32;
       char *p;
-      struct resolvc *res;
-      struct inotify_event *in;
+      let mut res: resolvc;
+      let mut in: inotify_event;
 
       while ((rc = read(daemon.inotifyfd, inotify_buffer, INOTIFY_SZ)) == -1 && errno == EINTR);
       
       if (rc <= 0)
 	break;
       
-      for (p = inotify_buffer; rc - (p - inotify_buffer) >= (int)sizeof(struct inotify_event); p += sizeof(struct inotify_event) + in.len) 
+      for (p = inotify_buffer; rc - (p - inotify_buffer) >= sizeof(struct inotify_event); p += sizeof(struct inotify_event) + in.len) 
 	{
-	  size_t namelen;
+	  namelen: usize;
 
 	  in = (struct inotify_event*)p;
 	  
@@ -245,7 +245,7 @@ int inotify_check(time_t now)
 	  for (ah = daemon.dynamic_dirs; ah; ah = ah.next)
 	    if (ah.wd == in.wd)
 	      {
-		size_t lendir = strlen(ah.fname);
+		lendir: usize = strlen(ah.fname);
 		char *path;
 		
 		if ((path = whine_malloc(lendir + in.len + 2)))
@@ -259,7 +259,7 @@ int inotify_check(time_t now)
 		    if (ah.flags & AH_HOSTS)
 		      {
 			read_hostsfile(path, ah.index, 0, NULL, 0);
- HAVE_DHCP
+ 
 			if (daemon.dhcp || daemon.doing_dhcp6) 
 			  {
 			    /* Propagate the consequences of loading a new dhcp-host */
@@ -270,7 +270,7 @@ int inotify_check(time_t now)
 			  }
 
 		      }
- HAVE_DHCP
+ 
 		    else if (ah.flags & AH_DHCP_HST)
 		      {
 			if (option_read_dynfile(path, AH_DHCP_HST))

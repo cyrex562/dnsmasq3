@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+
 
 const char * metric_names[] = {
     "dns_cache_inserted",

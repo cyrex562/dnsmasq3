@@ -15,9 +15,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
- HAVE_DNSSEC
+
+
 
 #define SERIAL_UNDEF  -100
 pub const SERIAL_EQ: u32 = 0;
@@ -40,12 +40,16 @@ pub const SERIAL_GT: u32 = 1;
    The buffers are all declared as 2049 (allowing for the trailing zero) 
    for this reason.
 */
-static int to_wire(char *name)
+ pub fn to_wire(name: &mut String) -> i32
 {
-  unsigned char *l, *p, *q, term;
-  int len;
+//   l: &mut Vec<u8>, *p, *q, term;
+	let mut l: Vec<u8>;
+	let mut p: Vec<u8>;
+	let mut q: Vec<u8>;
+	let mut term: Vec<u8>;
+  let mut len: i32;
 
-  for (l = (unsigned char*)name; *l != 0; l = p)
+  for (l = name; *l != 0; l = p)
     {
       for (p = l; *p != '.' && *p != 0; p++)
 	if (*p >= 'A' && *p <= 'Z')
@@ -62,24 +66,24 @@ static int to_wire(char *name)
 	memmove(l+1, l, len);
       *l = len;
       
-      p++;
+      p +=1;
       
       if (term == 0)
 	*p = 0;
     }
   
-  return l + 1 - (unsigned char *)name;
+  return l + 1 - name;
 }
 
 /* Note: no compression  allowed in input. */
-static void from_wire(char *name)
+pub fn from_wire(name: &mut String)
 {
-  unsigned char *l, *p, *last;
-  int len;
+  l: &mut Vec<u8>, *p, *last;
+  let mut len: i32;
   
-  for (last = (unsigned char *)name; *last != 0; last += *last+1);
+  for (last = name; *last != 0; last += *last+1);
   
-  for (l = (unsigned char *)name; *l != 0; l += len+1)
+  for (l = name; *l != 0; l += len+1)
     {
       len = *l;
       memmove(l, l+1, len);
@@ -87,7 +91,7 @@ static void from_wire(char *name)
 	if (*p == '.' || *p == 0 || *p == NAME_ESCAPE)
 	  {
 	    memmove(p+1, p, 1 + last - p);
-	    len++;
+	    len +=1;
 	    *p++ = NAME_ESCAPE; 
 	    (*p)++;
 	  }
@@ -95,14 +99,14 @@ static void from_wire(char *name)
       l[len] = '.';
     }
 
-  if ((char *)l != name)
+  if (l != name)
     *(l-1) = 0;
 }
 
 /* Input in presentation format */
-static int count_labels(char *name)
+ int count_labels(name: &mut String)
 {
-  int i;
+  let mut i: i32;
   char *p;
   
   if (*name == 0)
@@ -110,14 +114,14 @@ static int count_labels(char *name)
 
   for (p = name, i = 0; *p; p++)
     if (*p == '.')
-      i++;
+      i +=1;
 
   /* Don't count empty first label. */
   return *name == '.' ? i : i+1;
 }
 
 /* Implement RFC1982 wrapped compare for 32-bit numbers */
-static int serial_compare_32(u32 s1, u32 s2)
+ int serial_compare_32(u32 s1, u32 s2)
 {
   if (s1 == s2)
     return SERIAL_EQ;
@@ -138,9 +142,9 @@ static int serial_compare_32(u32 s1, u32 s2)
            1 . timestamp exists and is in future.
 */
 
-static time_t timestamp_time;
+ timestamp_time: time::Instant;
 
-int setup_timestamp(void)
+int setup_timestamp()
 {
   struct stat statbuf;
   
@@ -186,7 +190,7 @@ int setup_timestamp(void)
 }
 
 /* Check whether today/now is between date_start and date_end */
-static int is_check_date(unsigned long curtime)
+ int is_check_date(unsigned long curtime)
 {
   /* Checking timestamps may be temporarily disabled */
     
@@ -216,7 +220,7 @@ static int is_check_date(unsigned long curtime)
 }
 
 /* Check whether today/now is between date_start and date_end */
-static int check_date_range(unsigned long curtime, u32 date_start, u32 date_end)
+ int check_date_range(unsigned curtime: i32, u32 date_start, u32 date_end)
 {
   /* We must explicitly check against wanted values, because of SERIAL_UNDEF */
   return serial_compare_32(curtime, date_start) == SERIAL_GT
@@ -234,18 +238,18 @@ static int check_date_range(unsigned long curtime, u32 date_start, u32 date_end)
 */
 struct rdata_state {
   u16 *desc;
-  size_t c;
-  unsigned char *end, *ip, *op;
+  c: usize;
+  end: &mut Vec<u8>, *ip, *op;
   char *buff;
 };
 
-static int get_rdata(struct dns_header *header, size_t plen, struct rdata_state *state)
+ int get_rdata(struct dns_header *header, plen: usize, struct rdata_state *state)
 {
-  int d;
+  let mut d: i32;
   
   if (state.op && state.c != 1)
     {
-      state.op++;
+      state.op +=1;
       state.c--;
       return 1;
     }
@@ -267,19 +271,19 @@ static int get_rdata(struct dns_header *header, size_t plen, struct rdata_state 
 	}
       else
 	{
-	  state.desc++;
+	  state.desc +=1;
 	  
 	  if (d == (u16)0)
 	    {
 	      /* domain-name, canonicalise */
-	      int len;
+	      let mut len: i32;
 	      
 	      if (!extract_name(header, plen, &state.ip, state.buff, 1, 0) ||
 		  (len = to_wire(state.buff)) == 0)
 		continue;
 	      
 	      state.c = len;
-	      state.op = (unsigned char *)state.buff;
+	      state.op = state.buff;
 	    }
 	  else
 	    {
@@ -302,16 +306,16 @@ static int get_rdata(struct dns_header *header, size_t plen, struct rdata_state 
 
 /* Bubble sort the RRset into the canonical order. */
 
-static int sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int rrsetidx, 
-		      unsigned char **rrset, char *buff1, char *buff2)
+ int sort_rrset(struct dns_header *header, plen: usize, u16 *rr_desc, rrsetidx: i32, 
+		      unsigned char **rrset, buff1: &mut String, buff2: &mut String)
 {
-  int swap, i, j;
+  swap: i32, i, j;
   
   do
     {
       for (swap = 0, i = 0; i < rrsetidx-1; i++)
 	{
-	  int rdlen1, rdlen2;
+	  rdlen1: i32, rdlen2;
 	  struct rdata_state state1, state2;
 	  
 	  /* Note that these have been determined to be OK previously,
@@ -364,7 +368,7 @@ static int sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int 
 	    /* Comparing canonicalised RRs, byte-at-a-time. */
 	    while (1)
 	      {
-		int ok1, ok2;
+		ok1: i32, ok2;
 		
 		ok1 = get_rdata(header, plen, &state1);
 		ok2 = get_rdata(header, plen, &state2);
@@ -398,17 +402,17 @@ static int sort_rrset(struct dns_header *header, size_t plen, u16 *rr_desc, int 
   return rrsetidx;
 }
 
-static unsigned char **rrset = NULL, **sigs = NULL;
+ unsigned char **rrset = NULL, **sigs = NULL;
 
 /* Get pointers to RRset members and signature(s) for same.
    Check signatures, and return keyname associated in keyname. */
-static int explore_rrset(struct dns_header *header, size_t plen, int class, int type, 
-			 char *name, char *keyname, int *sigcnt, int *rrcnt)
+ int explore_rrset(struct dns_header *header, plen: usize, class: i32, type: i32, 
+			 name: &mut String, keyname: &mut String, int *sigcnt, int *rrcnt)
 {
-  static int rrset_sz = 0, sig_sz = 0; 
+   int rrset_sz = 0, sig_sz = 0; 
   unsigned char *p;
-  int rrsetidx, sigidx, j, rdlen, res;
-  int gotkey = 0;
+  rrsetidx: i32, sigidx, j, rdlen, res;
+  let mut gotkey: i32 = 0;
 
   if (!(p = skip_questions(header, plen)))
     return 0;
@@ -417,8 +421,8 @@ static int explore_rrset(struct dns_header *header, size_t plen, int class, int 
   for (rrsetidx = 0, sigidx = 0, j = ntohs(header.ancount) + ntohs(header.nscount); 
        j != 0; j--) 
     {
-      unsigned char *pstart, *pdata;
-      int stype, sclass, type_covered;
+      pstart: &mut Vec<u8>, *pdata;
+      stype: i32, sclass, type_covered;
 
       pstart = p;
       
@@ -478,7 +482,7 @@ static int explore_rrset(struct dns_header *header, size_t plen, int class, int 
 		      char *name_start;
 		      for (name_start = name; !hostname_isequal(name_start, keyname); )
 			if ((name_start = strchr(name_start, '.')))
-			  name_start++; /* chop a label off and try again */
+			  name_start +=1; /* chop a label off and try again */
 			else
 			  return 0;
 		    }
@@ -525,12 +529,12 @@ static int explore_rrset(struct dns_header *header, size_t plen, int class, int 
 
    ttl_out is the floor on TTL, based on TTL and orig_ttl and expiration of sig used to validate.
 */
-static int validate_rrset(time_t now, struct dns_header *header, size_t plen, int class, int type, int sigidx, int rrsetidx, 
-			  char *name, char *keyname, char **wildcard_out, struct blockdata *key, int keylen,
-			  int algo_in, int keytag_in, unsigned long *ttl_out)
+ int validate_rrset(now: time::Instant, struct dns_header *header, plen: usize, class: i32, type: i32, sigidx: i32, rrsetidx: i32, 
+			  name: &mut String, keyname: &mut String, char **wildcard_out, struct blockdata *key, keylen: i32,
+			  algo_in: i32, keytag_in: i32, unsigned long *ttl_out)
 {
   unsigned char *p;
-  int rdlen, j, name_labels, algo, labels, key_tag;
+  rdlen: i32, j, name_labels, algo, labels, key_tag;
   struct crec *crecp = NULL;
   u16 *rr_desc = rrfilter_desc(type);
   u32 sig_expiration, sig_inception;
@@ -551,10 +555,10 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
   /* Now try all the sigs to try and find one which validates */
   for (j = 0; j <sigidx; j++)
     {
-      unsigned char *psav, *sig, *digest;
-      int i, wire_len, sig_len;
-      const struct nettle_hash *hash;
-      void *ctx;
+      psav: &mut Vec<u8>, *sig, *digest;
+      i: i32, wire_len, sig_len;
+      const let mut hash: nettle_hash;
+      ctx: Vec<u8>;
       char *name_start;
       u32 nsigttl, ttl, orig_ttl;
       
@@ -564,8 +568,8 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
       psav = p;
       
       p += 2; /* type_covered - already checked */
-      algo = *p++;
-      labels = *p++;
+      algo = *p +=1;
+      labels = *p +=1;
       GETLONG(orig_ttl, p);
       GETLONG(sig_expiration, p);
       GETLONG(sig_inception, p);
@@ -603,14 +607,14 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
       
       hash.update(ctx, 18, psav);
       wire_len = to_wire(keyname);
-      hash.update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
+      hash.update(ctx, (unsigned int)wire_len, keyname);
       from_wire(keyname);
 
 pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
       
       for (i = 0; i < rrsetidx; ++i)
 	{
-	  int j;
+	  let mut j: i32;
 	  struct rdata_state state;
 	  u16 len;
 	  unsigned char rrbuf[RRBUFLEN];
@@ -628,9 +632,9 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	      for (j = name_labels - labels; j != 0; j--)
 		{
 		  while (*name_start != '.' && *name_start != 0)
-		    name_start++;
+		    name_start +=1;
 		  if (j != 1 && *name_start == '.')
-		    name_start++;
+		    name_start +=1;
 		}
 	      
 	      if (wildcard_out)
@@ -641,9 +645,9 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	    }
 	  
 	  wire_len = to_wire(name_start);
-	  hash.update(ctx, (unsigned int)wire_len, (unsigned char *)name_start);
+	  hash.update(ctx, (unsigned int)wire_len, name_start);
 	  hash.update(ctx, 4, p); /* class and type */
-	  hash.update(ctx, 4, (unsigned char *)&nsigttl);
+	  hash.update(ctx, 4, &nsigttl);
 
 	  p += 8; /* skip type, class, ttl */
 	  GETSHORT(rdlen, p);
@@ -660,7 +664,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	  if (*rr_desc == (u16)-1)
 	    {
 	      len = htons(rdlen);
-	      hash.update(ctx, 2, (unsigned char *)&len);
+	      hash.update(ctx, 2, &len);
 	      hash.update(ctx, rdlen, p);
 	    }
 	  else
@@ -678,7 +682,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 		  rrbuf[j] = *state.op;
 	      
 	      len = htons((u16)j);
-	      hash.update(ctx, 2, (unsigned char *)&len); 
+	      hash.update(ctx, 2, &len); 
 	      
 	      /* If the RR is shorter than RRBUFLEN (most of them, in practice)
 		 then we can just digest it now. If it exceeds RRBUFLEN we have to
@@ -709,7 +713,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
       hash.digest(ctx, hash.digest_size, digest);
       
       /* namebuff used for workspace above, restore to leave unchanged on exit */
-      p = (unsigned char*)(rrset[0]);
+      p = (rrset[0]);
       extract_name(header, plen, &p, name, 1, 0);
 
       if (key)
@@ -743,13 +747,13 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	 STAT_NEED_DS   DS records to validate a key not found, name in keyname 
 	 STAT_NEED_KEY  DNSKEY records to validate a key not found, name in keyname 
 */
-int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int class)
+int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32)
 {
-  unsigned char *psave, *p = (unsigned char *)(header+1);
+  psave: &mut Vec<u8>, *p = (header+1);
   struct crec *crecp, *recp1;
-  int rc, j, qtype, qclass, rdlen, flags, algo, valid, keytag;
-  unsigned long ttl, sig_ttl;
-  struct blockdata *key;
+  rc: i32, j, qtype, qclass, rdlen, flags, algo, valid, keytag;
+  unsigned ttl: i32, sig_ttl;
+  let mut key: blockdata;
   union all_addr a;
 
   if (ntohs(header.qdcount) != 1 ||
@@ -796,7 +800,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
       GETSHORT(flags, p);
       if (*p++ != 3)
 	return STAT_BOGUS;
-      algo = *p++;
+      algo = *p +=1;
       keytag = dnskey_keytag(algo, flags, p, rdlen - 4);
       key = NULL;
       
@@ -819,10 +823,10 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
       
       for (recp1 = crecp; recp1; recp1 = cache_find_by_name(recp1, name, now, F_DS))
 	{
-	  void *ctx;
-	  unsigned char *digest, *ds_digest;
-	  const struct nettle_hash *hash;
-	  int sigcnt, rrcnt;
+	  ctx: Vec<u8>;
+	  digest: &mut Vec<u8>, *ds_digest;
+	  const let mut hash: nettle_hash;
+	  sigcnt: i32, rrcnt;
 
 	  if (recp1.addr.ds.algo == algo && 
 	      recp1.addr.ds.keytag == keytag &&
@@ -835,14 +839,14 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
 	      
 	      /* Note that digest may be different between DSs, so 
 		 we can't move this outside the loop. */
-	      hash.update(ctx, (unsigned int)wire_len, (unsigned char *)name);
+	      hash.update(ctx, (unsigned int)wire_len, name);
 	      hash.update(ctx, (unsigned int)rdlen, psave);
 	      hash.digest(ctx, hash.digest_size, digest);
 	      
 	      from_wire(name);
 	      
 	      if (!(recp1.flags & F_NEG) &&
-		  recp1.addr.ds.keylen == (int)hash.digest_size &&
+		  recp1.addr.ds.keylen == hash.digest_size &&
 		  (ds_digest = blockdata_retrieve(recp1.addr.ds.keydata, recp1.addr.ds.keylen, NULL)) &&
 		  memcmp(ds_digest, digest, recp1.addr.ds.keylen) == 0 &&
 		  explore_rrset(header, plen, class, T_DNSKEY, name, keyname, &sigcnt, &rrcnt) &&
@@ -895,7 +899,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
 		  GETSHORT(flags, p);
 		  if (*p++ != 3)
 		    return STAT_BOGUS;
-		  algo = *p++;
+		  algo = *p +=1;
 		  keytag = dnskey_keytag(algo, flags, p, rdlen - 4);
 		  
 		  if ((key = blockdata_alloc((char*)p, rdlen - 4)))
@@ -951,12 +955,12 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
    STAT_NEED_DS     DS record needed.
 */
 
-int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int class)
+int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32)
 {
-  unsigned char *p = (unsigned char *)(header+1);
-  int qtype, qclass, rc, i, neganswer, nons, neg_ttl = 0;
-  int aclass, atype, rdlen;
-  unsigned long ttl;
+  unsigned char *p = (header+1);
+  qtype: i32, qclass, rc, i, neganswer, nons, neg_ttl = 0;
+  aclass: i32, atype, rdlen;
+  unsigned let ttl: i32;
   union all_addr a;
 
   if (ntohs(header.qdcount) != 1 ||
@@ -977,7 +981,7 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
       rc = STAT_BOGUS;
     }
   
-  p = (unsigned char *)(header+1);
+  p = (header+1);
   extract_name(header, plen, &p, name, 1, 4);
   p += 4; /* qtype, qclass */
   
@@ -1012,16 +1016,16 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
 	  
 	  if (aclass == class && atype == T_DS && rc == 1)
 	    { 
-	      int algo, digest, keytag;
+	      algo: i32, digest, keytag;
 	      unsigned char *psave = p;
-	      struct blockdata *key;
+	      let mut key: blockdata;
 	   
 	      if (rdlen < 4)
 		return STAT_BOGUS; /* bad packet */
 	      
 	      GETSHORT(keytag, p);
-	      algo = *p++;
-	      digest = *p++;
+	      algo = *p +=1;
+	      digest = *p +=1;
 	      
 	      if ((key = blockdata_alloc((char*)p, rdlen - 4)))
 		{
@@ -1085,13 +1089,13 @@ int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char 
 
 
 /* 4034 6.1 */
-static int hostname_cmp(const char *a, const char *b)
+ int hostname_cmp(const a: &mut String, const char *b)
 {
-  char *sa, *ea, *ca, *sb, *eb, *cb;
+  sa: &mut String, *ea, *ca, *sb, *eb, *cb;
   unsigned char ac, bc;
   
-  sa = ea = (char *)a + strlen(a);
-  sb = eb = (char *)b + strlen(b);
+  sa = ea = a + strlen(a);
+  sb = eb = b + strlen(b);
  
   while (1)
     {
@@ -1117,8 +1121,8 @@ static int hostname_cmp(const char *a, const char *b)
 	  if (cb == eb)
 	    return 1;
 	  
-	  ac = (unsigned char) *ca++;
-	  bc = (unsigned char) *cb++;
+	  ac =  *ca +=1;
+	  bc =  *cb +=1;
 	  
 	  if (ac >= 'A' && ac <= 'Z')
 	    ac += 'a' - 'A';
@@ -1148,11 +1152,11 @@ static int hostname_cmp(const char *a, const char *b)
     }
 }
 
-static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsigned char **nsecs, unsigned char **labels, int nsec_count,
-				    char *workspace1_in, char *workspace2, char *name, int type, int *nons)
+ int prove_non_existence_nsec(struct dns_header *header, plen: usize, unsigned char **nsecs, unsigned char **labels, nsec_count: i32,
+				    workspace1_in: &mut String, workspace2: &mut String, name: &mut String, type: i32, int *nons)
 {
-  int i, rc, rdlen;
-  unsigned char *p, *psave;
+  i: i32, rc, rdlen;
+  p: &mut Vec<u8>, *psave;
   int offset = (type & 0xff) >> 3;
   int mask = 0x80 >> (type & 0x07);
 
@@ -1160,10 +1164,10 @@ static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsi
     *nons = 1;
   
   /* Find NSEC record that proves name doesn't exist */
-  for (i = 0; i < nsec_count; i++)
+  for i in 0..nsec_count
     {
       char *workspace1 = workspace1_in;
-      int sig_labels, name_labels;
+      sig_labels: i32, name_labels;
 
       p = nsecs[i];
       if (!extract_name(header, plen, &p, workspace1, 1, 10))
@@ -1181,13 +1185,13 @@ static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsi
 
       if (sig_labels < name_labels)
 	{
-	  int k;
+	  let mut k: i32;
 	  for (k = name_labels - sig_labels; k != 0; k--)
 	    {
 	      while (*workspace1 != '.' && *workspace1 != 0)
-		workspace1++;
+		workspace1 +=1;
 	      if (k != 1 && *workspace1 == '.')
-		workspace1++;
+		workspace1 +=1;
 	    }
 	  
 	  workspace1--;
@@ -1264,17 +1268,17 @@ static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsi
 }
 
 /* return digest length, or zero on error */
-static int hash_name(char *in, unsigned char **out, struct nettle_hash const *hash, 
-		     unsigned char *salt, int salt_len, int iterations)
+ int hash_name(in: &mut String, unsigned char **out, struct nettle_hash const *hash, 
+		     salt: &mut Vec<u8>, salt_len: i32, iterations: i32)
 {
-  void *ctx;
+  ctx: Vec<u8>;
   unsigned char *digest;
-  int i;
+  let mut i: i32;
 
   if (!hash_init(hash, &ctx, &digest))
     return 0;
  
-  hash.update(ctx, to_wire(in), (unsigned char *)in);
+  hash.update(ctx, to_wire(in), in);
   hash.update(ctx, salt_len, salt);
   hash.digest(ctx, hash.digest_size, digest);
 
@@ -1292,9 +1296,9 @@ static int hash_name(char *in, unsigned char **out, struct nettle_hash const *ha
 }
 
 /* Decode base32 to first "." or end of string */
-static int base32_decode(char *in, unsigned char *out)
+ int base32_decode(in: &mut String, unsigned char *out)
 {
-  int oc, on, c, mask, i;
+  oc: i32, on, c, mask, i;
   unsigned char *p = out;
  
   for (c = *in, oc = 0, on = 0; c != 0 && c != '.'; c = *++in) 
@@ -1325,28 +1329,28 @@ static int base32_decode(char *in, unsigned char *out)
   return p - out;
 }
 
-static int check_nsec3_coverage(struct dns_header *header, size_t plen, int digest_len, unsigned char *digest, int type,
-				char *workspace1, char *workspace2, unsigned char **nsecs, int nsec_count, int *nons, int name_labels)
+ int check_nsec3_coverage(struct dns_header *header, plen: usize, digest_len: i32, digest: &mut Vec<u8>, type: i32,
+				workspace1: &mut String, workspace2: &mut String, unsigned char **nsecs, nsec_count: i32, int *nons, name_labels: i32)
 {
-  int i, hash_len, salt_len, base32_len, rdlen, flags;
-  unsigned char *p, *psave;
+  i: i32, hash_len, salt_len, base32_len, rdlen, flags;
+  p: &mut Vec<u8>, *psave;
 
-  for (i = 0; i < nsec_count; i++)
+  for i in 0..nsec_count
     if ((p = nsecs[i]))
       {
        	if (!extract_name(header, plen, &p, workspace1, 1, 0) ||
-	    !(base32_len = base32_decode(workspace1, (unsigned char *)workspace2)))
+	    !(base32_len = base32_decode(workspace1, workspace2)))
 	  return 0;
 	
 	p += 8; /* class, type, TTL */
 	GETSHORT(rdlen, p);
 	psave = p;
-	p++; /* algo */
-	flags = *p++; /* flags */
+	p +=1; /* algo */
+	flags = *p +=1; /* flags */
 	p += 2; /* iterations */
-	salt_len = *p++; /* salt_len */
+	salt_len = *p +=1; /* salt_len */
 	p += salt_len; /* salt */
-	hash_len = *p++; /* p now points to next hashed name */
+	hash_len = *p +=1; /* p now points to next hashed name */
 	
 	if (!CHECK_LEN(header, p, plen, hash_len))
 	  return 0;
@@ -1433,13 +1437,13 @@ static int check_nsec3_coverage(struct dns_header *header, size_t plen, int dige
   return 0;
 }
 
-static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, unsigned char **nsecs, int nsec_count,
-				     char *workspace1, char *workspace2, char *name, int type, char *wildname, int *nons)
+ int prove_non_existence_nsec3(struct dns_header *header, plen: usize, unsigned char **nsecs, nsec_count: i32,
+				     workspace1: &mut String, workspace2: &mut String, name: &mut String, type: i32, wildname: &mut String, int *nons)
 {
-  unsigned char *salt, *p, *digest;
-  int digest_len, i, iterations, salt_len, base32_len, algo = 0;
+  salt: &mut Vec<u8>, *p, *digest;
+  digest_len: i32, i, iterations, salt_len, base32_len, algo = 0;
   struct nettle_hash const *hash;
-  char *closest_encloser, *next_closest, *wildcard;
+  closest_encloser: &mut String, *next_closest, *wildcard;
   
   if (nons)
     *nons = 1;
@@ -1451,13 +1455,13 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
      as the ones we're going to use, and prune any 
      that don't match. */
   
-  for (i = 0; i < nsec_count; i++)
+  for i in 0..nsec_count
     {
       if (!(p = skip_name(nsecs[i], header, plen, 15)))
 	return 0; /* bad packet */
       
       p += 10; /* type, class, TTL, rdlen */
-      algo = *p++;
+      algo = *p +=1;
       
       if ((hash = hash_find(nsec3_digest_name(algo))))
 	break; /* known algo */
@@ -1467,7 +1471,7 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
   if (i == nsec_count)
     return 0;
 
-  p++; /* flags */
+  p +=1; /* flags */
 
   GETSHORT (iterations, p);
   /* Upper-bound iterations, to avoid DoS.
@@ -1477,16 +1481,16 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
   if (iterations > 2500)
     return 0;
   
-  salt_len = *p++;
+  salt_len = *p +=1;
   salt = p;
   if (!CHECK_LEN(header, salt, plen, salt_len))
     return 0; /* bad packet */
     
   /* Now prune so we only have NSEC3 records with same iterations, salt and algo */
-  for (i = 0; i < nsec_count; i++)
+  for i in 0..nsec_count
     {
       unsigned char *nsec3p = nsecs[i];
-      int this_iter, flags;
+      this_iter: i32, flags;
 
       nsecs[i] = NULL; /* Speculative, will be restored if OK. */
       
@@ -1498,7 +1502,7 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
       if (*p++ != algo)
 	continue;
  
-      flags = *p++; /* flags */
+      flags = *p +=1; /* flags */
       
       /* 5155 8.2 */
       if (flags != 0 && flags != 1)
@@ -1535,7 +1539,7 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
   do
     {
       if (*closest_encloser == '.')
-	closest_encloser++;
+	closest_encloser +=1;
 
       if (wildname && hostname_isequal(closest_encloser, wildname))
 	break;
@@ -1543,11 +1547,11 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
       if ((digest_len = hash_name(closest_encloser, &digest, hash, salt, salt_len, iterations)) == 0)
 	return 0;
       
-      for (i = 0; i < nsec_count; i++)
+      for i in 0..nsec_count
 	if ((p = nsecs[i]))
 	  {
 	    if (!extract_name(header, plen, &p, workspace1, 1, 0) ||
-		!(base32_len = base32_decode(workspace1, (unsigned char *)workspace2)))
+		!(base32_len = base32_decode(workspace1, workspace2)))
 	      return 0;
 	  
 	    if (digest_len == base32_len &&
@@ -1591,15 +1595,15 @@ static int prove_non_existence_nsec3(struct dns_header *header, size_t plen, uns
   return 1;
 }
 
-static int prove_non_existence(struct dns_header *header, size_t plen, char *keyname, char *name, int qtype, int qclass, char *wildname, int *nons, int *nsec_ttl)
+ int prove_non_existence(struct dns_header *header, plen: usize, keyname: &mut String, name: &mut String, qtype: i32, qclass: i32, wildname: &mut String, int *nons, int *nsec_ttl)
 {
-  static unsigned char **nsecset = NULL, **rrsig_labels = NULL;
-  static int nsecset_sz = 0, rrsig_labels_sz = 0;
+   unsigned char **nsecset = NULL, **rrsig_labels = NULL;
+   int nsecset_sz = 0, rrsig_labels_sz = 0;
   
-  int type_found = 0;
-  unsigned char *auth_start, *p = skip_questions(header, plen);
-  int type, class, rdlen, i, nsecs_found;
-  unsigned long ttl;
+  let mut type_found: i32 = 0;
+  auth_start: &mut Vec<u8>, *p = skip_questions(header, plen);
+  type: i32, class, rdlen, i, nsecs_found;
+  unsigned let ttl: i32;
   
   /* Move to NS section */
   if (!p || !(p = skip_section(p, ntohs(header.ancount), header, plen)))
@@ -1648,7 +1652,7 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 		 is the same in all, to avoid be duped by a rogue one.
 		 If there are no SIGs, that's an error */
 	      unsigned char *p1 = auth_start;
-	      int res, j, rdlen1, type1, class1;
+	      res: i32, j, rdlen1, type1, class1;
 	      
 	      if (!expand_workspace(&rrsig_labels, &rrsig_labels_sz, nsecs_found))
 		return 0;
@@ -1670,7 +1674,7 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 		   
 		   if (res == 1 && class1 == qclass && type1 == T_RRSIG)
 		     {
-		       int type_covered;
+		       let mut type_covered: i32;
 		       unsigned char *psav = p1;
 		       
 		       if (rdlen1 < 18)
@@ -1680,7 +1684,7 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 
 		       if (type_covered == T_NSEC)
 			 {
-			   p1++; /* algo */
+			   p1 +=1; /* algo */
 			   
 			   /* labels field must be the same in every SIG we find. */
 			   if (!rrsig_labels[nsecs_found])
@@ -1723,10 +1727,10 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
    STAT_NEED_KEY require DNSKEY record of name returned in keyname.
    name returned unaltered.
 */
-static int zone_status(char *name, int class, char *keyname, time_t now)
+ int zone_status(name: &mut String, class: i32, keyname: &mut String, now: &time::Instant)
 {
   int name_start = strlen(name); /* for when TA is root */
-  struct crec *crecp;
+  let mut crecp: crec;
   char *p;
 
   /* First, work towards the root, looking for a trust anchor.
@@ -1736,7 +1740,7 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
   for (p = name; p; p = strchr(p, '.'))
     {
       if (*p == '.')
-	p++;
+	p +=1;
 
       if (cache_find_by_name(NULL, p, now, F_DS))
 	{
@@ -1792,7 +1796,7 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
       for (p = &name[name_start-2]; (*p != '.') && (p != name); p--);
       
       if (p != name)
-        p++;
+        p +=1;
       
       name_start = p - name;
     } 
@@ -1815,15 +1819,15 @@ static int zone_status(char *name, int class, char *keyname, time_t now)
    Other RRs in that section missing sigs will not cause am INSECURE reply. We determine this mode
    is the nons argument is non-NULL.
 */
-int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, 
-			  int *class, int check_unsigned, int *neganswer, int *nons, int *nsec_ttl)
+int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, 
+			  int *class, check_unsigned: i32, int *neganswer, int *nons, int *nsec_ttl)
 {
-  static unsigned char **targets = NULL;
-  static int target_sz = 0;
+   unsigned char **targets = NULL;
+  let mut target_sz: i32 = 0;
 
-  unsigned char *ans_start, *p1, *p2;
-  int type1, class1, rdlen1 = 0, type2, class2, rdlen2, qclass, qtype, targetidx;
-  int i, j, rc = STAT_INSECURE;
+  ans_start: &mut Vec<u8>, *p1, *p2;
+  type1: i32, class1, rdlen1 = 0, type2, class2, rdlen2, qclass, qtype, targetidx;
+  i: i32, j, rc = STAT_INSECURE;
   int secure = STAT_SECURE;
 
   /* extend rr_status if necessary */
@@ -1850,7 +1854,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
   if (RCODE(header) != NXDOMAIN && RCODE(header) != NOERROR)
     return STAT_INSECURE;
 
-  p1 = (unsigned char *)(header+1);
+  p1 = (header+1);
   
    /* Find all the targets we're looking for answers to.
      The zeroth array element is for the query, subsequent ones
@@ -1936,7 +1940,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
       else
 	{
 	  /* Not done, validate now */
-	  int sigcnt, rrcnt;
+	  sigcnt: i32, rrcnt;
 	  char *wildname;
 	  
 	  if (!explore_rrset(header, plen, class1, type1, name, keyname, &sigcnt, &rrcnt))
@@ -1988,7 +1992,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 	      /* Zone is insecure, don't need to validate RRset */
 	      if (rc == STAT_SECURE)
 		{
-		  unsigned long sig_ttl;
+		  unsigned let sig_ttl: i32;
 		  rc = validate_rrset(now, header, plen, class1, type1, sigcnt,
 				      rrcnt, name, keyname, &wildname, NULL, 0, 0, 0, &sig_ttl);
 		  
@@ -2010,7 +2014,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 		  for (j = 0; j <targetidx; j++)
 		    if ((p2 = targets[j]))
 		      {
-			int rc1;
+			let mut rc1: i32;
 			if (!(rc1 = extract_name(header, plen, &p2, name, 0, 10)))
 			  return STAT_BOGUS; /* bad packet */
 			
@@ -2075,7 +2079,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 
 
 /* Compute keytag (checksum to quickly index a key). See RFC4034 */
-int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen)
+int dnskey_keytag(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32)
 {
   if (alg == 1)
     {
@@ -2086,7 +2090,7 @@ int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen)
   else
     {
       unsigned long ac = flags + 0x300 + alg;
-      int i;
+      let mut i: i32;
 
       for (i = 0; i < keylen; ++i)
         ac += (i & 1) ? key[i] : key[i] << 8;
@@ -2096,11 +2100,11 @@ int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen)
     }
 }
 
-size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char *name, int class, 
-			     int type, int edns_pktsz)
+dnssec_generate_query: usize(struct dns_header *header, end: &mut Vec<u8>, name: &mut String, class: i32, 
+			     type: i32, edns_pktsz: i32)
 {
   unsigned char *p;
-  size_t ret;
+  ret: usize;
 
   header.qdcount = htons(1);
   header.ancount = htons(0);
@@ -2115,14 +2119,14 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
 
   /* ID filled in later */
 
-  p = (unsigned char *)(header+1);
+  p = (header+1);
 	
   p = do_rfc1035_name(p, name, NULL);
   *p++ = 0;
   PUTSHORT(type, p);
   PUTSHORT(class, p);
 
-  ret = add_do_bit(header, p - (unsigned char *)header, end);
+  ret = add_do_bit(header, p - header, end);
 
   if (find_pseudoheader(header, ret, NULL, &p, NULL, NULL))
     PUTSHORT(edns_pktsz, p);
@@ -2130,4 +2134,4 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
   return ret;
 }
 
- /* HAVE_DNSSEC */
+ /* */

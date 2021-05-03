@@ -40,4 +40,4 @@ enum {
   __METRIC_MAX,
 };
 
-const char* get_metric_name(int);
+const char* get_metric_name;

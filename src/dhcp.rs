@@ -14,58 +14,56 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
- HAVE_DHCP
 
-struct iface_param {
-  struct dhcp_context *current;
-  struct dhcp_relay *relay;
-  struct in_addr relay_local;
-  int ind;
-};
+ 
 
-struct match_param {
-  int ind, matched;
-  struct in_addr netmask, broadcast, addr;
-};
+pub struct  iface_param {
+  pub current: dhcp_context,
+  pub relay: dhcp_relay,
+  pub relay_local: net::IpAddr,
+  pub ind: i32,
+}
 
-static int complete_context(struct in_addr local, int if_index, char *label,
-			    struct in_addr netmask, struct in_addr broadcast, void *vparam);
-static int check_listen_addrs(struct in_addr local, int if_index, char *label,
-			      struct in_addr netmask, struct in_addr broadcast, void *vparam);
-static int relay_upstream4(struct dhcp_relay *relay, struct dhcp_packet *mess, size_t sz, int iface_index);
-static struct dhcp_relay *relay_reply4(struct dhcp_packet *mess, char *arrival_interface);
+pub struct match_param {
+  // ind: i32, matched;
+  pub ind: i32,
+  pub matched: i32,
+  // netmask: net::IpAddr, broadcast, addr;
+  pub netmask: net::IpAddr,
+  pub broadcast: net::IpAddr,
+  pub addr: net::IpAddr,
+}
 
-static int make_fd(int port)
+
+
+ pub struct control_u {
+    pub align: cmsghdr, //struct cmsghdr align; /* this ensures alignment */
+    //char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
+    pub control: Vec<u8>,
+  } 
+
+ pub fn make_fd(port: i32) -> i32
 {
-  int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  struct sockaddr_in saddr;
-  int oneopt = 1;
-#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
-  int mtu = IP_PMTUDISC_DONT;
-
-#if defined(IP_TOS) && defined(IPTOS_CLASS_CS6)
-  int tos = IPTOS_CLASS_CS6;
+  let fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  // struct sockaddr_in saddr;
+  let mut oneopt: i32 = 1;
+  let mtu = IP_PMTUDISC_DONT;
+  let tos = IPTOS_CLASS_CS6;
 
 
-  if (fd == -1)
-    die (format!("cannot create DHCP socket: {}"), NULL, EC_BADNET);
+  if (fd == -1) {
+    panic!(String::from("cannot create DHCP socket"));
+  }
   
   if (!fix_fd(fd) ||
-#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
       setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER, &mtu, sizeof(mtu)) == -1 ||
-
-#if defined(IP_TOS) && defined(IPTOS_CLASS_CS6)
       setsockopt(fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) == -1 ||
-
-#if defined(HAVE_LINUX_NETWORK)
       setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &oneopt, sizeof(oneopt)) == -1 ||
-
       setsockopt(fd, IPPROTO_IP, IP_RECVIF, &oneopt, sizeof(oneopt)) == -1 ||
-
-      setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &oneopt, sizeof(oneopt)) == -1)  
-    die(format!("failed to set options on DHCP socket: {}"), NULL, EC_BADNET);
+      setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &oneopt, sizeof(oneopt)) == -1)  {
+    panic!(String::fromat("failed to set options on DHCP socket"));
+      }
   
   /* When bind-interfaces is set, there might be more than one dnsmasq
      instance binding port 67. That's OK if they serve different networks.
@@ -74,7 +72,7 @@ static int make_fd(int port)
      support it. This handles the introduction of REUSEPORT on Linux. */
   if (daemon.opt_nowild || daemon.opt_cleverbind)
     {
-      int rc = 0;
+      let mut rc: i32 = 0;
 
  SO_REUSEPORT
       if ((rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt))) == -1 && 
@@ -97,74 +95,79 @@ static int make_fd(int port)
   saddr.sin_len = sizeof(struct sockaddr_in);
 
 
-  if (bind(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in)))
+  if (bind(fd, &saddr, sizeof(struct sockaddr_in)))
     die(format!("failed to bind DHCP server socket: {}"), NULL, EC_BADNET);
 
   return fd;
 }
 
-void dhcp_init(void)
+pub fn dhcp_init()
 {
-#if defined(HAVE_BSD_NETWORK)
-  int oneopt = 1;
+
+  let mut oneopt: i32 = 1;
 
 
   daemon.dhcpfd = make_fd(daemon.dhcp_server_port);
-  if (daemon.enable_pxe)
+  if (daemon.enable_pxe) {
     daemon.pxefd = make_fd(PXE_PORT);
-  else
+  }
+  else {
     daemon.pxefd = -1;
+  }
 
-#if defined(HAVE_BSD_NETWORK)
   /* When we're not using capabilities, we need to do this here before
      we drop root. Also, set buffer size small, to avoid wasting
      kernel buffers */
   
-  if (option_bool(OPT_NO_PING))
+  if (option_bool(OPT_NO_PING)) {
     daemon.dhcp_icmp_fd = -1;
+  }
   else if ((daemon.dhcp_icmp_fd = make_icmp_sock()) == -1 ||
-	   setsockopt(daemon.dhcp_icmp_fd, SOL_SOCKET, SO_RCVBUF, &oneopt, sizeof(oneopt)) == -1 )
-    die(format!("cannot create ICMP raw socket: {}."), NULL, EC_BADNET);
+	   setsockopt(daemon.dhcp_icmp_fd, SOL_SOCKET, SO_RCVBUF, &oneopt, sizeof(oneopt)) == -1 ) {
+    panic!(format!("cannot create ICMP raw socket."));
+     }
   
   /* Make BPF raw send socket */
   init_bpf();
   
 }
 
-void dhcp_packet(time_t now, int pxe_fd)
+pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
 {
-  int fd = pxe_fd ? daemon.pxefd : daemon.dhcpfd;
-  struct dhcp_packet *mess;
-  struct dhcp_context *context;
-  struct dhcp_relay *relay;
-  int is_relay_reply = 0;
-  struct iname *tmp;
-  struct ifreq ifr;
-  struct msghdr msg;
-  struct sockaddr_in dest;
-  struct cmsghdr *cmptr;
-  struct iovec iov;
-  ssize_t sz; 
-  int iface_index = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
-  int rcvd_iface_index;
-  struct in_addr iface_addr;
-  struct iface_param parm;
-  time_t recvtime = now;
- HAVE_LINUX_NETWORK
-  struct arpreq arp_req;
-  struct timeval tv;
+  // int fd = pxe_fd ? daemon.pxefd : daemon.dhcpfd;
+  let mut fd: i32;
+  if pxe_fd {
+    fd = daemon.pxefd;
+  } else {
+    fd = daemon.dhcpfd;
+  }
+  let mut mess: dhcp_packet;
+  let mut context: dhcp_context;
+  let mut relay: dhcp_relay;
+  let mut is_relay_reply: i32 = 0;
+  let mut tmp: iname;
+  let mut ifr: ifreq;
+  let mut msg: msghdr;
+  // struct sockaddr_in dest;
+  let mut dest: net::IpAddr;
+  let mut cmptr: cmsghdr;
+  let mut iov: iovec;
+  let mut ssz: usize; 
+  // int iface_index = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
+  let mut  iface_index: i32 = 0;
+  let mut unicast_dest: i32 = 0;
+  let mut is_inform: i32 = 0;
+  let mut rcvd_iface_index: i32;
+  iface_addr: net::IpAddr;
+  let mut parm: iface_param;
+  recvtime: time::Instant = now;
 
+  // struct arpreq arp_req;
+  let arp_reg: arpreq;
+  // struct timeval tv;
+  let tv: time::Instant;
   
-  union {
-    struct cmsghdr align; /* this ensures alignment */
-#if defined(HAVE_LINUX_NETWORK)
-    char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
-#elif defined(HAVE_SOLARIS_NETWORK)
-    char control[CMSG_SPACE(sizeof(unsigned int))];
-#elif defined(HAVE_BSD_NETWORK) 
-    char control[CMSG_SPACE(sizeof(struct sockaddr_dl))];
-
-  } control_u;
+ 
   struct dhcp_bridge *bridge, *alias;
 
   msg.msg_controllen = sizeof(control_u);
@@ -178,45 +181,46 @@ void dhcp_packet(time_t now, int pxe_fd)
       (sz < (ssize_t)(sizeof(*mess) - sizeof(mess.options)))) 
     return;
     
-  #if defined (HAVE_LINUX_NETWORK)
-  if (ioctl(fd, SIOCGSTAMP, &tv) == 0)
+  if (ioctl(fd, SIOCGSTAMP, &tv) == 0) {
     recvtime = tv.tv_sec;
+  }
 
-  if (msg.msg_controllen >= sizeof(struct cmsghdr))
-    for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
+  if (msg.msg_controllen >= sizeof(struct cmsghdr)) {
+    for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr)) {
       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_PKTINFO)
 	{
 	  union {
 	    unsigned char *c;
-	    struct in_pktinfo *p;
+	    let mut p: in_pktinfo;
 	  } p;
 	  p.c = CMSG_DATA(cmptr);
 	  iface_index = p.p.ipi_ifindex;
 	  if (p.p.ipi_addr.s_addr != INADDR_BROADCAST)
 	    unicast_dest = 1;
 	}
+}
+  }
 
-#elif defined(HAVE_BSD_NETWORK) 
+ 
   if (msg.msg_controllen >= sizeof(struct cmsghdr))
     for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVIF)
         {
 	  union {
             unsigned char *c;
-            struct sockaddr_dl *s;
+            let mut s: sockaddr_dl;
           } p;
 	  p.c = CMSG_DATA(cmptr);
 	  iface_index = p.s.sdl_index;
 	}
   
-#elif defined(HAVE_SOLARIS_NETWORK) 
   if (msg.msg_controllen >= sizeof(struct cmsghdr))
     for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
       if (cmptr.cmsg_level == IPPROTO_IP && cmptr.cmsg_type == IP_RECVIF)
 	{
 	  union {
 	    unsigned char *c;
-	    unsigned int *i;
+	    i: &mut u32;
 	  } p;
 	  p.c = CMSG_DATA(cmptr);
 	  iface_index = *(p.i);
@@ -230,7 +234,7 @@ void dhcp_packet(time_t now, int pxe_fd)
   mess = (struct dhcp_packet *)daemon.dhcp_packet.iov_base;
   loopback = !mess.giaddr.s_addr && (ifr.ifr_flags & IFF_LOOPBACK);
   
- HAVE_LINUX_NETWORK
+
   /* ARP fiddling uses original interface even if we pretend to use a different one. */
   safe_strncpy(arp_req.arp_dev, ifr.ifr_name, sizeof(arp_req.arp_dev));
  
@@ -241,9 +245,12 @@ void dhcp_packet(time_t now, int pxe_fd)
      for DHCP contexts associated with the aliased interface instead
      of with the aliasing one. */
   rcvd_iface_index = iface_index;
-  for (bridge = daemon.bridges; bridge; bridge = bridge.next)
+  // for (bridge = daemon.bridges; bridge; bridge = bridge.next)
+  for bridge in daemon.bridges
     {
-      for (alias = bridge.alias; alias; alias = alias.next)
+      // for (alias = bridge.alias; alias; alias = alias.next) 
+      for alias in bridge.alias
+      {
 	if (wildcard_matchn(alias.iface, ifr.ifr_name, IF_NAMESIZE))
 	  {
 	    if (!(iface_index = if_nametoindex(bridge.iface)))
@@ -259,9 +266,11 @@ void dhcp_packet(time_t now, int pxe_fd)
 		break;
 	      }
 	  }
+  }
       
-      if (alias)
+      if (alias) {
 	break;
+      }
     }
 
  MSG_BCAST
@@ -278,7 +287,7 @@ void dhcp_packet(time_t now, int pxe_fd)
 	return;
       is_relay_reply = 1; 
       iov.iov_len = sz;
- HAVE_LINUX_NETWORK
+
       safe_strncpy(arp_req.arp_dev, ifr.ifr_name, sizeof(arp_req.arp_dev));
  
     }
@@ -286,7 +295,7 @@ void dhcp_packet(time_t now, int pxe_fd)
     {
       ifr.ifr_addr.sa_family = AF_INET;
       if (ioctl(daemon.dhcpfd, SIOCGIFADDR, &ifr) != -1 )
-	iface_addr = ((struct sockaddr_in *) &ifr.ifr_addr).sin_addr;
+	iface_addr = ( &ifr.ifr_addr).sin_addr;
       else
 	{
 	  if (iface_check(AF_INET, NULL, ifr.ifr_name, NULL))
@@ -394,7 +403,7 @@ void dhcp_packet(time_t now, int pxe_fd)
   else
     {
       /* fill cmsg for outbound interface (both broadcast & unicast) */
-      struct in_pktinfo *pkt;
+      let mut pkt: in_pktinfo;
       msg.msg_control = control_u.control;
       msg.msg_controllen = sizeof(control_u);
       cmptr = CMSG_FIRSTHDR(&msg);
@@ -446,13 +455,13 @@ void dhcp_packet(time_t now, int pxe_fd)
       struct arpreq req;
       dest.sin_addr = mess.yiaddr;
       dest.sin_port = htons(daemon.dhcp_client_port);
-      *((struct sockaddr_in *)&req.arp_pa) = dest;
+      *(&req.arp_pa) = dest;
       req.arp_ha.sa_family = AF_UNSPEC;
       memcpy(req.arp_ha.sa_data, mess.chaddr, mess.hlen);
       req.arp_flags = ATF_COM;
       ioctl(daemon.dhcpfd, SIOCSARP, &req);
     }
-#elif defined(HAVE_BSD_NETWORK)
+
   else 
     {
       send_via_bpf(mess, iov.iov_len, iface_addr, &ifr);
@@ -473,13 +482,13 @@ void dhcp_packet(time_t now, int pxe_fd)
 }
 
 /* check against secondary interface addresses */
-static int check_listen_addrs(struct in_addr local, int if_index, char *label,
-			      struct in_addr netmask, struct in_addr broadcast, void *vparam)
+ pub fn check_listen_addrs(local: net::IpAddr, if_index: i32, label: &mut String,
+			      netmask: net::IpAddr, broadcast: net::IpAddr, vparam: Vec<u8>) -> i32
 {
   struct match_param *param = vparam;
-  struct iname *tmp;
+  let mut tmp: iname;
 
-  (void) label;
+  () label;
 
   if (if_index == param.ind)
     {
@@ -508,9 +517,9 @@ static int check_listen_addrs(struct in_addr local, int if_index, char *label,
 
    Note that the current chain may be superseded later for configured hosts or those coming via gateways. */
 
-static void guess_range_netmask(struct in_addr addr, struct in_addr netmask)
+pub fn guess_range_netmask(addr: net::IpAddr, netmask: net::IpAddr)
 {
-  struct dhcp_context *context;
+  let mut context: dhcp_context;
 
   for (context = daemon.dhcp; context; context = context.next)
     if (!(context.flags & CONTEXT_NETMASK) &&
@@ -530,20 +539,20 @@ static void guess_range_netmask(struct in_addr addr, struct in_addr netmask)
       }
 }
 
-static int complete_context(struct in_addr local, int if_index, char *label,
-			    struct in_addr netmask, struct in_addr broadcast, void *vparam)
+ int complete_context(local: net::IpAddr, if_index: i32, label: &mut String,
+			    netmask: net::IpAddr, broadcast: net::IpAddr, vparam: Vec<u8>)
 {
-  struct dhcp_context *context;
-  struct dhcp_relay *relay;
+  let mut context: dhcp_context;
+  let mut relay: dhcp_relay;
   struct iface_param *param = vparam;
-  struct shared_network *share;
+  let mut share: shared_network;
   
-  (void)label;
+  ()label;
 
   for (share = daemon.shared_networks; share; share = share.next)
     {
       
- HAVE_DHCP6
+ 
       if (share.shared_addr.s_addr == 0)
 	continue;
 
@@ -621,15 +630,15 @@ static int complete_context(struct in_addr local, int if_index, char *label,
 }
 	  
 struct dhcp_context *address_available(struct dhcp_context *context, 
-				       struct in_addr taddr,
+				       taddr: net::IpAddr,
 				       struct dhcp_netid *netids)
 {
   /* Check is an address is OK for this network, check all
      possible ranges. Make sure that the address isn't in use
      by the server itself. */
   
-  unsigned int start, end, addr = ntohl(taddr.s_addr);
-  struct dhcp_context *tmp;
+  unsigned start: i32, end, addr = ntohl(taddr.s_addr);
+  let mut tmp: dhcp_context;
 
   for (tmp = context; tmp; tmp = tmp.current)
     if (taddr.s_addr == context.router.s_addr)
@@ -640,7 +649,7 @@ struct dhcp_context *address_available(struct dhcp_context *context,
       start = ntohl(tmp.start.s_addr);
       end = ntohl(tmp.end.s_addr);
 
-      if (!(tmp.flags & (CONTEXT_STATIC | CONTEXT_PROXY)) &&
+      if (!(tmp.flags & (CONTEXT_ | CONTEXT_PROXY)) &&
 	  addr >= start &&
 	  addr <= end &&
 	  match_netid(tmp.filter, netids, 1))
@@ -651,25 +660,25 @@ struct dhcp_context *address_available(struct dhcp_context *context,
 }
 
 struct dhcp_context *narrow_context(struct dhcp_context *context, 
-				    struct in_addr taddr,
+				    taddr: net::IpAddr,
 				    struct dhcp_netid *netids)
 {
   /* We start of with a set of possible contexts, all on the current physical interface.
      These are chained on .current.
      Here we have an address, and return the actual context corresponding to that
      address. Note that none may fit, if the address came a dhcp-host and is outside
-     any dhcp-range. In that case we return a static range if possible, or failing that,
+     any dhcp-range. In that case we return a  range if possible, or failing that,
      any context on the correct subnet. (If there's more than one, this is a dodgy 
      configuration: maybe there should be a warning.) */
   
-  struct dhcp_context *tmp;
+  let mut tmp: dhcp_context;
 
   if (!(tmp = address_available(context, taddr, netids)))
     {
       for (tmp = context; tmp; tmp = tmp.current)
 	if (match_netid(tmp.filter, netids, 1) &&
 	    is_same_net(taddr, tmp.start, tmp.netmask) && 
-	    (tmp.flags & CONTEXT_STATIC))
+	    (tmp.flags & CONTEXT_))
 	  break;
       
       if (!tmp)
@@ -687,9 +696,9 @@ struct dhcp_context *narrow_context(struct dhcp_context *context,
   return tmp;
 }
 
-struct dhcp_config *config_find_by_address(struct dhcp_config *configs, struct in_addr addr)
+struct dhcp_config *config_find_by_address(struct dhcp_config *configs, addr: net::IpAddr)
 {
-  struct dhcp_config *config;
+  let mut config: dhcp_config;
   
   for (config = configs; config; config = config.next)
     if ((config.flags & CONFIG_ADDR) && config.addr.s_addr == addr.s_addr)
@@ -702,11 +711,11 @@ struct dhcp_config *config_find_by_address(struct dhcp_config *configs, struct i
    This wrapper handles a cache and load-limiting.
    Return is NULL is address in use, or a pointer to a cache entry
    recording that it isn't. */
-struct ping_result *do_icmp_ping(time_t now, struct in_addr addr, unsigned int hash, int loopback)
+struct ping_result *do_icmp_ping(now: time::Instant, addr: net::IpAddr, unsigned hash: i32, loopback: i32)
 {
-  static struct ping_result dummy;
+   struct ping_result dummy;
   struct ping_result *r, *victim = NULL;
-  int count, max = (int)(0.6 * (((float)PING_CACHE_TIME)/
+  count: i32, max = (0.6 * (((float)PING_CACHE_TIME)/
 				((float)PING_WAIT)));
 
   /* check if we failed to ping addr sometime in the last
@@ -720,7 +729,7 @@ struct ping_result *do_icmp_ping(time_t now, struct in_addr addr, unsigned int h
       victim = r; /* old record */
     else 
       {
-	count++;
+	count +=1;
 	if (r.addr.s_addr == addr.s_addr)
 	  return r;
       }
@@ -759,17 +768,17 @@ struct ping_result *do_icmp_ping(time_t now, struct in_addr addr, unsigned int h
 }
 
 int address_allocate(struct dhcp_context *context,
-		     struct in_addr *addrp, unsigned char *hwaddr, int hw_len, 
-		     struct dhcp_netid *netids, time_t now, int loopback)   
+		     struct in_addr *addrp, hwaddr: &mut Vec<u8>, hw_len: i32, 
+		     struct dhcp_netid *netids, now: &time::Instant, loopback: i32)   
 {
   /* Find a free address: exclude anything in use and anything allocated to
      a particular hwaddr/clientid/hostname in our configuration.
      Try to return from contexts which match netids first. */
 
-  struct in_addr start, addr;
+  start: net::IpAddr, addr;
   struct dhcp_context *c, *d;
-  int i, pass;
-  unsigned int j; 
+  i: i32, pass;
+  let mut j: u32; 
 
   /* hash hwaddr: use the SDBM hashing algorithm.  Seems to give good
      dispersal even with similarly-valued "strings". */ 
@@ -782,7 +791,7 @@ int address_allocate(struct dhcp_context *context,
   
   for (pass = 0; pass <= 1; pass++)
     for (c = context; c; c = c.current)
-      if (c.flags & (CONTEXT_STATIC | CONTEXT_PROXY))
+      if (c.flags & (CONTEXT_ | CONTEXT_PROXY))
 	continue;
       else if (!match_netid(c.filter, netids, pass))
 	continue;
@@ -824,7 +833,7 @@ int address_allocate(struct dhcp_context *context,
 		  c.addr_epoch--;
 		else
 		  {
-		    struct ping_result *r;
+		    let mut r: ping_result;
 		    
 		    if ((r = do_icmp_ping(now, addr, j, loopback)))
 		      {
@@ -841,7 +850,7 @@ int address_allocate(struct dhcp_context *context,
 			/* address in use: perturb address selection so that we are
 			   less likely to try this address again. */
 			if (!option_bool(OPT_CONSEC_ADDR))
-			  c.addr_epoch++;
+			  c.addr_epoch +=1;
 		      }
 		  }
 	      }
@@ -857,16 +866,16 @@ int address_allocate(struct dhcp_context *context,
   return 0;
 }
 
-void dhcp_read_ethers(void)
+void dhcp_read_ethers()
 {
   FILE *f = fopen(ETHERSFILE, "r");
-  unsigned int flags;
+  let mut flags: u32;
   char *buff = daemon.namebuff;
-  char *ip, *cp;
-  struct in_addr addr;
+  ip: &mut String, *cp;
+  addr: net::IpAddr;
   unsigned char hwaddr[ETHER_ADDR_LEN];
   struct dhcp_config **up, *tmp;
-  struct dhcp_config *config;
+  let mut config: dhcp_config;
   int count = 0, lineno = 0;
 
   addr.s_addr = 0; /* eliminate warning */
@@ -898,16 +907,16 @@ void dhcp_read_ethers(void)
     {
       char *host = NULL;
       
-      lineno++;
+      lineno +=1;
       
-      while (strlen(buff) > 0 && isspace((int)buff[strlen(buff)-1]))
+      while (strlen(buff) > 0 && isspace(buff[strlen(buff)-1]))
 	buff[strlen(buff)-1] = 0;
       
       if ((*buff == '#') || (*buff == '+') || (*buff == 0))
 	continue;
       
-      for (ip = buff; *ip && !isspace((int)*ip); ip++);
-      for(; *ip && isspace((int)*ip); ip++)
+      for (ip = buff; *ip && !isspace(*ip); ip++);
+      for(; *ip && isspace(*ip); ip++)
 	*ip = 0;
       if (!*ip || parse_hex(buff, hwaddr, ETHER_ADDR_LEN, NULL, NULL) != ETHER_ADDR_LEN)
 	{
@@ -936,7 +945,7 @@ void dhcp_read_ethers(void)
 	}
       else 
 	{
-	  int nomem;
+	  let mut nomem: i32;
 	  if (!(host = canonicalise(ip, &nomem)) || !legal_hostname(host))
 	    {
 	      if (!nomem)
@@ -1007,7 +1016,7 @@ void dhcp_read_ethers(void)
 	  config.hwaddr.wildcard_mask = 0;
 	  config.hwaddr.next = NULL;
 	}
-      count++;
+      count +=1;
       
       free(host);
 
@@ -1024,9 +1033,9 @@ void dhcp_read_ethers(void)
    it gets stripped. The set of legal domain names is bigger than the set of legal hostnames
    so check here that the domain name is legal as a hostname. 
    NOTE: we're only allowed to overwrite daemon.dhcp_buff if we succeed. */
-char *host_from_dns(struct in_addr addr)
+char *host_from_dns(addr: net::IpAddr)
 {
-  struct crec *lookup;
+  let mut lookup: crec;
 
   if (daemon.port == 0)
     return NULL; /* DNS disabled. */
@@ -1035,7 +1044,7 @@ char *host_from_dns(struct in_addr addr)
 
   if (lookup && (lookup.flags & F_HOSTS))
     {
-      char *dot, *hostname = cache_get_name(lookup);
+      dot: &mut String, *hostname = cache_get_name(lookup);
       dot = strchr(hostname, '.');
       
       if (dot && strlen(dot+1) != 0)
@@ -1057,7 +1066,7 @@ char *host_from_dns(struct in_addr addr)
   return NULL;
 }
 
-static int  relay_upstream4(struct dhcp_relay *relay, struct dhcp_packet *mess, size_t sz, int iface_index)
+ int  relay_upstream4(struct dhcp_relay *relay, struct dhcp_packet *mess, sz: usize, iface_index: i32)
 {
   /* .local is same value for all relays on .current chain */
   union all_addr from;
@@ -1092,7 +1101,7 @@ static int  relay_upstream4(struct dhcp_relay *relay, struct dhcp_packet *mess, 
       to.in.sin_addr = relay.server.addr4;
       to.in.sin_port = htons(daemon.dhcp_server_port);
       
-      send_from(daemon.dhcpfd, 0, (char *)mess, sz, &to, &from, 0);
+      send_from(daemon.dhcpfd, 0, mess, sz, &to, &from, 0);
       
       if (option_bool(OPT_LOG_OPTS))
 	{
@@ -1108,9 +1117,9 @@ static int  relay_upstream4(struct dhcp_relay *relay, struct dhcp_packet *mess, 
 }
 
 
-static struct dhcp_relay *relay_reply4(struct dhcp_packet *mess, char *arrival_interface)
+ struct dhcp_relay *relay_reply4(struct dhcp_packet *mess, arrival_interface: &mut String)
 {
-  struct dhcp_relay *relay;
+  let mut relay: dhcp_relay;
 
   if (mess.giaddr.s_addr == 0 || mess.op != BOOTREPLY)
     return NULL;

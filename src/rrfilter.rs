@@ -16,17 +16,17 @@
 
 /* Code to safely remove RRs from a DNS answer */ 
 
-#include "dnsmasq.h"
+
 
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
    we've chopped out of the packet, or check they don't point into an elided part.  */
-static int check_name(unsigned char **namep, struct dns_header *header, size_t plen, int fixup, unsigned char **rrs, int rr_count)
+ int check_name(unsigned char **namep, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
 {
   unsigned char *ansp = *namep;
 
   while(1)
     {
-      unsigned int label_type;
+      let mut label_type: u32;
       
       if (!CHECK_LEN(header, ansp, plen, 1))
 	return 0;
@@ -36,19 +36,19 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
       if (label_type == 0xc0)
 	{
 	  /* pointer for compression. */
-	  unsigned int offset;
-	  int i;
+	  let mut offset: u32;
+	  let mut i: i32;
 	  unsigned char *p;
 	  
 	  if (!CHECK_LEN(header, ansp, plen, 2))
 	    return 0;
 
 	  offset = ((*ansp++) & 0x3f) << 8;
-	  offset |= *ansp++;
+	  offset |= *ansp +=1;
 
-	  p = offset + (unsigned char *)header;
+	  p = offset + header;
 	  
-	  for (i = 0; i < rr_count; i++)
+	  for i in 0..rr_count
 	    if (p < rrs[i])
 	      break;
 	    else
@@ -73,7 +73,7 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
       else if (label_type == 0x40)
 	{
 	  /* Extended label type */
-	  unsigned int count;
+	  let mut count: u32;
 	  
 	  if (!CHECK_LEN(header, ansp, plen, 2))
 	    return 0;
@@ -106,9 +106,9 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
 }
 
 /* Go through RRs and check or fixup the domain names contained within */
-static int check_rrs(unsigned char *p, struct dns_header *header, size_t plen, int fixup, unsigned char **rrs, int rr_count)
+ int check_rrs(p: &mut Vec<u8>, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
 {
-  int i, j, type, class, rdlen;
+  i: i32, j, type, class, rdlen;
   unsigned char *pp;
   
   for (i = 0; i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount); i++)
@@ -157,13 +157,13 @@ static int check_rrs(unsigned char *p, struct dns_header *header, size_t plen, i
 	
 
 /* mode is 0 to remove EDNS0, 1 to filter DNSSEC RRs */
-size_t rrfilter(struct dns_header *header, size_t plen, int mode)
+rrfilter: usize(struct dns_header *header, plen: usize, mode: i32)
 {
-  static unsigned char **rrs;
-  static int rr_sz = 0;
+   unsigned char **rrs;
+  let mut rr_sz: i32 = 0;
 
-  unsigned char *p = (unsigned char *)(header+1);
-  int i, rdlen, qtype, qclass, rr_found, chop_an, chop_ns, chop_ar;
+  unsigned char *p = (header+1);
+  i: i32, rdlen, qtype, qclass, rr_found, chop_an, chop_ns, chop_ar;
 
   if (ntohs(header.qdcount) != 1 ||
       !(p = skip_name(p, header, plen, 4)))
@@ -179,7 +179,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
        i++)
     {
       unsigned char *pstart = p;
-      int type, class;
+      type: i32, class;
 
       if (!(p = skip_name(p, header, plen, 10)))
 	return plen;
@@ -214,11 +214,11 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
       rrs[rr_found++] = p;
       
       if (i < ntohs(header.ancount))
-	chop_an++;
+	chop_an +=1;
       else if (i < (ntohs(header.nscount) + ntohs(header.ancount)))
-	chop_ns++;
+	chop_ns +=1;
       else
-	chop_ar++;
+	chop_ar +=1;
     }
   
   /* Nothing to do. */
@@ -228,7 +228,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
   /* Second pass, look for pointers in names in the records we're keeping and make sure they don't
      point to records we're going to elide. This is theoretically possible, but unlikely. If
      it happens, we give up and leave the answer unchanged. */
-  p = (unsigned char *)(header+1);
+  p = (header+1);
   
   /* question first */
   if (!check_name(&p, header, plen, 0, rrs, rr_found))
@@ -240,7 +240,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
     return plen;
   
   /* Third pass, actually fix up pointers in the records */
-  p = (unsigned char *)(header+1);
+  p = (header+1);
   
   check_name(&p, header, plen, 1, rrs, rr_found);
   p += 4; /* qclass, qtype */
@@ -251,13 +251,13 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
   for (p = rrs[0], i = 1; i < rr_found; i += 2)
     {
       unsigned char *start = rrs[i];
-      unsigned char *end = (i != rr_found - 1) ? rrs[i+1] : ((unsigned char *)header) + plen;
+      unsigned char *end = (i != rr_found - 1) ? rrs[i+1] : (header) + plen;
       
       memmove(p, start, end-start);
       p += end-start;
     }
      
-  plen = p - (unsigned char *)header;
+  plen = p - header;
   header.ancount = htons(ntohs(header.ancount) - chop_an);
   header.nscount = htons(ntohs(header.nscount) - chop_ns);
   header.arcount = htons(ntohs(header.arcount) - chop_ar);
@@ -277,7 +277,7 @@ u16 *rrfilter_desc(int type)
      anything which needs no mangling.
   */
   
-  static u16 rr_desc[] = 
+   u16 rr_desc[] = 
     { 
       T_NS, 0, -1, 
       T_MD, 0, -1,
@@ -310,7 +310,7 @@ u16 *rrfilter_desc(int type)
   return p+1;
 }
 
-int expand_workspace(unsigned char ***wkspc, int *szp, int new)
+int expand_workspace(unsigned char ***wkspc, int *szp, new: i32)
 {
   unsigned char **p;
   int old = *szp;
@@ -323,12 +323,12 @@ int expand_workspace(unsigned char ***wkspc, int *szp, int new)
 
   new += 5;
   
-  if (!(p = whine_malloc(new * sizeof(unsigned char *))))
+  if (!(p = whine_malloc(new * sizeof)))
     return 0;  
   
   if (old != 0 && *wkspc)
     {
-      memcpy(p, *wkspc, old * sizeof(unsigned char *));
+      memcpy(p, *wkspc, old * sizeof);
       free(*wkspc);
     }
   

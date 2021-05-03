@@ -1,3 +1,5 @@
+use crate::dnsmasq_h::DHOPT_TAGOK;
+
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -14,11 +16,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
- HAVE_DHCP
 
-void dhcp_common_init(void)
+ 
+
+void dhcp_common_init()
 {
   /* These each hold a DHCP option max size 255
      and get a terminating zero added */
@@ -30,15 +32,15 @@ void dhcp_common_init(void)
      sizeof(struct dhcp_packet) is as good an initial size as any,
      even for v6 */
   expand_buf(&daemon.dhcp_packet, sizeof(struct dhcp_packet));
- HAVE_DHCP6
+ 
   if (daemon.dhcp6)
     expand_buf(&daemon.outpacket, sizeof(struct dhcp_packet));
 
 }
 
-ssize_t recv_dhcp_packet(int fd, struct msghdr *msg)
+srecv_dhcp_packet: usize(fd: i32, struct msghdr *msg)
 {  
-  ssize_t sz, new_sz;
+  ssz: usize, new_sz;
  
   while (1)
     {
@@ -79,10 +81,10 @@ ssize_t recv_dhcp_packet(int fd, struct msghdr *msg)
   return (msg.msg_flags & MSG_TRUNC) ? -1 : new_sz;
 }
 
-struct dhcp_netid *run_tag_if(struct dhcp_netid *tags)
+pub fn run_tag_if(struct dhcp_netid *tags) -> dhcp_netid
 {
-  struct tag_if *exprs;
-  struct dhcp_netid_list *list;
+  let mut exprs: tag_if;
+  let mut list: dhcp_netid_list;
 
   for (exprs = daemon.tag_if; exprs; exprs = exprs.next)
     if (match_netid(exprs.tag, tags, 1))
@@ -96,15 +98,17 @@ struct dhcp_netid *run_tag_if(struct dhcp_netid *tags)
 }
 
 
-struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *context_tags, struct dhcp_opt *opts)
+pub fn option_filter(tags: &dhcp_netid, context_tags: &dhcp_netid, opts: &Vec<dhcp_opt>) -> dhcp_netid
 {
-  struct dhcp_netid *tagif = run_tag_if(tags);
-  struct dhcp_opt *opt;
-  struct dhcp_opt *tmp;  
+  // struct dhcp_netid *tagif = run_tag_if(tags);
+  let tagif = run_tag_if(tags)
+  let mut opt: dhcp_opt;
+  let mut tmp: dhcp_opt;  
 
   /* flag options which are valid with the current tag set (sans context tags) */
-  for (opt = opts; opt; opt = opt.next)
-    {
+  // for (opt = opts; opt; opt = opt.next)
+  for opt in opts
+  {
       opt.flags &= ~DHOPT_TAGOK;
       if (!(opt.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
 	  match_netid(opt.netid, tagif, 0))
@@ -115,10 +119,11 @@ struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *con
      otherwise valid options are inhibited if we found a higher priority one above */
   if (context_tags)
     {
-      struct dhcp_netid *last_tag;
+      let mut last_tag: dhcp_netid;
 
-      for (last_tag = context_tags; last_tag.next; last_tag = last_tag.next);
-      last_tag.next = tags;
+      todo!();
+      // for (last_tag = context_tags; last_tag.next; last_tag = last_tag.next);
+      // last_tag.next = tags;
       tagif = run_tag_if(context_tags);
       
       /* reset stuff with tag:!<tag> which now matches. */
@@ -132,7 +137,7 @@ struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *con
 	if (!(opt.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) &&
 	    match_netid(opt.netid, tagif, 0))
 	  {
-	    struct dhcp_opt *tmp;  
+	    let mut tmp: dhcp_opt;  
 	    for (tmp = opts; tmp; tmp = tmp.next) 
 	      if (tmp.opt == opt.opt && opt.netid && (tmp.flags & DHOPT_TAGOK))
 		break;
@@ -155,20 +160,27 @@ struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *con
       }
 
   /* Finally, eliminate duplicate options later in the chain, and therefore earlier in the config file. */
-  for (opt = opts; opt; opt = opt.next)
-    if (opt.flags & DHOPT_TAGOK)
-      for (tmp = opt.next; tmp; tmp = tmp.next) 
-	if (tmp.opt == opt.opt)
-	  tmp.flags &= ~DHOPT_TAGOK;
+  // for (opt = opts; opt; opt = opt.next)
+todo!();
+  //   for opt in opts 
+//   {
+//     if (opt.flags & DHOPT_TAGOK) {
+//       for (tmp = opt.next; tmp; tmp = tmp.next) { 
+// 	if (tmp.opt == opt.opt) {
+// 	  tmp.flags &= ~DHOPT_TAGOK;
+//   }
+// }
+//     }
+//   }
   
   return tagif;
 }
 	
 /* Is every member of check matched by a member of pool? 
    If tagnotneeded, untagged is OK */
-int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, int tagnotneeded)
+int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, tagnotneeded: i32)
 {
-  struct dhcp_netid *tmp1;
+  let mut tmp1: dhcp_netid;
   
   if (!check && !tagnotneeded)
     return 0;
@@ -193,7 +205,7 @@ int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, int tagnotnee
 }
 
 /* return domain or NULL if none. */
-char *strip_hostname(char *hostname)
+char *strip_hostname(hostname: &mut String)
 {
   char *dot = strchr(hostname, '.');
  
@@ -215,7 +227,7 @@ void log_tags(struct dhcp_netid *netid, u32 xid)
       for (*s = 0; netid; netid = netid.next)
 	{
 	  /* kill dupes. */
-	  struct dhcp_netid *n;
+	  let mut n: dhcp_netid;
 	  
 	  for (n = netid.next; n; n = n.next)
 	    if (strcmp(netid.net, n.net) == 0)
@@ -232,9 +244,9 @@ void log_tags(struct dhcp_netid *netid, u32 xid)
     } 
 }   
   
-int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
+int match_bytes(struct dhcp_opt *o, p: &mut Vec<u8>, len: i32)
 {
-  int i;
+  let mut i: i32;
   
   if (o.len > len)
     return 0;
@@ -254,7 +266,7 @@ int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
 	  return 1;
 	    
 	if (o.flags & DHOPT_STRING)
-	  i++;
+	  i +=1;
 	else
 	  i += o.len;
       }
@@ -262,9 +274,9 @@ int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
   return 0;
 }
 
-int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, int type)
+int config_has_mac(struct dhcp_config *config, hwaddr: &mut Vec<u8>, len: i32, type: i32)
 {
-  struct hwaddr_config *conf_addr;
+  let mut conf_addr: hwaddr_config;
   
   for (conf_addr = config.hwaddr; conf_addr; conf_addr = conf_addr.next)
     if (conf_addr.wildcard_mask == 0 &&
@@ -276,15 +288,15 @@ int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, i
   return 0;
 }
 
-static int is_config_in_context(struct dhcp_context *context, struct dhcp_config *config)
+ int is_config_in_context(struct dhcp_context *context, struct dhcp_config *config)
 {
   if (!context) /* called via find_config() from lease_update_from_configs() */
     return 1; 
   
- HAVE_DHCP6
+ 
   if (context.flags & CONTEXT_V6)
     {
-       struct addrlist *addr_list;
+       let mut addr_list: addrlist;
 
        if (!(config.flags & CONFIG_ADDR6))
 	 return 1;
@@ -313,16 +325,16 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
   return 0;
 }
 
-static struct dhcp_config *find_config_match(struct dhcp_config *configs,
+ struct dhcp_config *find_config_match(struct dhcp_config *configs,
 					     struct dhcp_context *context,
-					     unsigned char *clid, int clid_len,
-					     unsigned char *hwaddr, int hw_len, 
-					     int hw_type, char *hostname,
-					     struct dhcp_netid *tags, int tag_not_needed)
+					     clid: &mut Vec<u8>, clid_len: i32,
+					     hwaddr: &mut Vec<u8>, hw_len: i32, 
+					     hw_type: i32, hostname: &mut String,
+					     struct dhcp_netid *tags, tag_not_needed: i32)
 {
-  int count, new;
+  count: i32, new;
   struct dhcp_config *config, *candidate; 
-  struct hwaddr_config *conf_addr;
+  let mut conf_addr: hwaddr_config;
 
   if (clid)
     for (config = configs; config; config = config.next)
@@ -385,9 +397,9 @@ static struct dhcp_config *find_config_match(struct dhcp_config *configs,
 /* Find tagged configs first. */
 struct dhcp_config *find_config(struct dhcp_config *configs,
 				struct dhcp_context *context,
-				unsigned char *clid, int clid_len,
-				unsigned char *hwaddr, int hw_len, 
-				int hw_type, char *hostname, struct dhcp_netid *tags)
+				clid: &mut Vec<u8>, clid_len: i32,
+				hwaddr: &mut Vec<u8>, hw_len: i32, 
+				hw_type: i32, hostname: &mut String, struct dhcp_netid *tags)
 {
   struct dhcp_config *ret = find_config_match(configs, context, clid, clid_len, hwaddr, hw_len, hw_type, hostname, tags, 0);
 
@@ -399,28 +411,28 @@ struct dhcp_config *find_config(struct dhcp_config *configs,
 
 void dhcp_update_configs(struct dhcp_config *configs)
 {
-  /* Some people like to keep all static IP addresses in /etc/hosts.
-     This goes through /etc/hosts and sets static addresses for any DHCP config
+  /* Some people like to keep all  IP addresses in /etc/hosts.
+     This goes through /etc/hosts and sets  addresses for any DHCP config
      records which don't have an address and whose name matches. 
      We take care to maintain the invariant that any IP address can appear
      in at most one dhcp-host. Since /etc/hosts can be re-read by SIGHUP, 
      restore the status-quo ante first. */
   
   struct dhcp_config *config, *conf_tmp;
-  struct crec *crec;
+  let mut crec: crec;
   int prot = AF_INET;
 
   for (config = configs; config; config = config.next)
   {
     if (config.flags & CONFIG_ADDR_HOSTS)
       config.flags &= ~(CONFIG_ADDR | CONFIG_ADDR_HOSTS);
- HAVE_DHCP6
+ 
     if (config.flags & CONFIG_ADDR6_HOSTS)
       config.flags &= ~(CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS);
 
   }
 
- HAVE_DHCP6 
+  
  again:  
 
 
@@ -430,7 +442,7 @@ void dhcp_update_configs(struct dhcp_config *configs)
 	int conflags = CONFIG_ADDR;
 	int cacheflags = F_IPV4;
 
- HAVE_DHCP6
+ 
 	if (prot == AF_INET6)
 	  {
 	    conflags = CONFIG_ADDR6;
@@ -462,7 +474,7 @@ void dhcp_update_configs(struct dhcp_config *configs)
 		continue;
 	      }
 
- HAVE_DHCP6
+ 
 	    if (prot == AF_INET6 && 
 		(!(conf_tmp = config_find_by_address6(configs, NULL, 0, &crec.addr.addr6)) || conf_tmp == config))
 	      {
@@ -491,7 +503,7 @@ void dhcp_update_configs(struct dhcp_config *configs)
 	  }
       }
 
- HAVE_DHCP6
+ 
   if (prot == AF_INET)
     {
       prot = AF_INET6;
@@ -501,8 +513,8 @@ void dhcp_update_configs(struct dhcp_config *configs)
 
 }
 
- HAVE_LINUX_NETWORK 
-char *whichdevice(void)
+ 
+char *whichdevice()
 {
   /* If we are doing DHCP on exactly one interface, and running linux, do SO_BINDTODEVICE
      to that device. This is for the use case of  (eg) OpenStack, which runs a new
@@ -516,7 +528,7 @@ char *whichdevice(void)
 */
   
   struct irec *iface, *found;
-  struct iname *if_tmp;
+  let mut if_tmp: iname;
   
   if (!daemon.if_names)
     return NULL;
@@ -540,9 +552,9 @@ char *whichdevice(void)
   return NULL;
 }
  
-void  bindtodevice(char *device, int fd)
+void  bindtodevice(device: &mut String, fd: i32)
 {
-  size_t len = strlen(device)+1;
+  len: usize = strlen(device)+1;
   if (len > IFNAMSIZ)
     len = IFNAMSIZ;
   /* only allowed by root. */
@@ -552,7 +564,7 @@ void  bindtodevice(char *device, int fd)
 }
 
 
-static const struct opttab_t {
+ const struct opttab_t {
   char *name;
   u16 val, size;
 } opttab[] = {
@@ -578,7 +590,7 @@ static const struct opttab_t {
   { "broadcast", 28, OT_INTERNAL | OT_ADDR_LIST },
   { "router-discovery", 31, 1 },
   { "router-solicitation", 32, OT_ADDR_LIST },
-  { "static-route", 33, OT_ADDR_LIST },
+  { "-route", 33, OT_ADDR_LIST },
   { "trailer-encapsulation", 34, 1 },
   { "arp-timeout", 35, 4 | OT_DEC },
   { "ethernet-encap", 36, 1 },
@@ -625,15 +637,15 @@ static const struct opttab_t {
   { "subnet-select", 118, OT_INTERNAL },
   { "domain-search", 119, OT_RFC1035_NAME },
   { "sip-server", 120, 0 },
-  { "classless-static-route", 121, 0 },
+  { "classless--route", 121, 0 },
   { "vendor-id-encap", 125, 0 },
   { "tftp-server-address", 150, OT_ADDR_LIST },
   { "server-ip-address", 255, OT_ADDR_LIST }, /* special, internal only, sets siaddr */
   { NULL, 0, 0 }
 };
 
- HAVE_DHCP6
-static const struct opttab_t opttab6[] = {
+ 
+ const struct opttab_t opttab6[] = {
   { "client-id", 1, OT_INTERNAL },
   { "server-id", 2, OT_INTERNAL },
   { "ia-na", 3, OT_INTERNAL },
@@ -667,9 +679,9 @@ static const struct opttab_t opttab6[] = {
 
 
 
-void display_opts(void)
+void display_opts()
 {
-  int i;
+  let mut i: i32;
   
   printf(format!("Known DHCP options:\n"));
   
@@ -678,10 +690,10 @@ void display_opts(void)
       printf("%3d {}\n", opttab[i].val, opttab[i].name);
 }
 
- HAVE_DHCP6
-void display_opts6(void)
+ 
+void display_opts6()
 {
-  int i;
+  let mut i: i32;
   printf(format!("Known DHCPv6 options:\n"));
   
   for (i = 0; opttab6[i].name; i++)
@@ -690,14 +702,14 @@ void display_opts6(void)
 }
 
 
-int lookup_dhcp_opt(int prot, char *name)
+int lookup_dhcp_opt(prot: i32, name: &mut String)
 {
-  const struct opttab_t *t;
-  int i;
+  const let mut t: opttab_t;
+  let mut i: i32;
 
-  (void)prot;
+  ()prot;
 
- HAVE_DHCP6
+ 
   if (prot == AF_INET6)
     t = opttab6;
   else
@@ -711,14 +723,14 @@ int lookup_dhcp_opt(int prot, char *name)
   return -1;
 }
 
-int lookup_dhcp_len(int prot, int val)
+int lookup_dhcp_len(prot: i32, val: i32)
 {
-  const struct opttab_t *t;
-  int i;
+  const let mut t: opttab_t;
+  let mut i: i32;
 
-  (void)prot;
+  ()prot;
 
- HAVE_DHCP6
+ 
   if (prot == AF_INET6)
     t = opttab6;
   else
@@ -732,12 +744,12 @@ int lookup_dhcp_len(int prot, int val)
    return 0;
 }
 
-char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len, char *buf, int buf_len)
+char *option_string(prot: i32, unsigned opt: i32, val: &mut Vec<u8>, opt_len: i32, buf: &mut String, buf_len: i32)
 {
-  int o, i, j, nodecode = 0;
+  o: i32, i, j, nodecode = 0;
   const struct opttab_t *ot = opttab;
 
- HAVE_DHCP6
+ 
   if (prot == AF_INET6)
     ot = opttab6;
 
@@ -754,7 +766,7 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		union all_addr addr;
 		int addr_len = INADDRSZ;
 
- HAVE_DHCP6
+ 
 		if (prot == AF_INET6)
 		  addr_len = IN6ADDRSZ;
 
@@ -772,21 +784,21 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		for (i = 0, j = 0; i < opt_len && j < buf_len ; i++)
 		  {
 		    char c = val[i];
-		    if (isprint((int)c))
+		    if (isprint(c))
 		      buf[j++] = c;
 		  }
- HAVE_DHCP6
+ 
 	    /* We don't handle compressed rfc1035 names, so no good in IPv4 land */
 	    else if ((ot[o].size & OT_RFC1035_NAME) && prot == AF_INET6)
 	      {
 		i = 0, j = 0;
 		while (i < opt_len && val[i] != 0)
 		  {
-		    int k, l = i + val[i] + 1;
+		    k: i32, l = i + val[i] + 1;
 		    for (k = i + 1; k < opt_len && k < l && j < buf_len ; k++)
 		     {
 		       char c = val[k];
-		       if (isprint((int)c))
+		       if (isprint(c))
 			 buf[j++] = c;
 		     }
 		    i = l;
@@ -796,7 +808,7 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 	      }
 	    else if ((ot[o].size & OT_CSTRING))
 	      {
-		int k, len;
+		k: i32, len;
 		unsigned char *p;
 
 		i = 0, j = 0;
@@ -806,8 +818,8 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		    GETSHORT(len, p);
 		    for (k = 0; k < len && j < buf_len; k++)
 		      {
-		       char c = *p++;
-		       if (isprint((int)c))
+		       char c = *p +=1;
+		       if (isprint(c))
 			 buf[j++] = c;
 		     }
 		    i += len +2;
@@ -823,7 +835,7 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 	      {
 		unsigned int dec = 0;
 		
-		for (i = 0; i < opt_len; i++)
+		for i in 0..opt_len
 		  dec = (dec << 8) | val[i]; 
 
 		if (ot[o].size & OT_TIME)
@@ -856,17 +868,17 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 
 }
 
-void log_context(int family, struct dhcp_context *context)
+void log_context(family: i32, struct dhcp_context *context)
 {
   /* Cannot use dhcp_buff* for RA contexts */
 
-  void *start = &context.start;
-  void *end = &context.end;
+  start: Vec<u8> = &context.start;
+  end: Vec<u8> = &context.end;
   char *template = "", *p = daemon.namebuff;
   
   *p = 0;
     
- HAVE_DHCP6
+ 
   if (family == AF_INET6)
     {
       struct in6_addr subnet = context.start6;
@@ -887,7 +899,7 @@ void log_context(int family, struct dhcp_context *context)
       p += strlen(p);
     }	
 
- HAVE_DHCP6
+ 
   if (context.flags & CONTEXT_CONSTRUCTED)
     {
       char ifrn_name[IFNAMSIZ];
@@ -910,7 +922,7 @@ void log_context(int family, struct dhcp_context *context)
   if (!(context.flags & CONTEXT_OLD) &&
       ((context.flags & CONTEXT_DHCP) || family == AF_INET)) 
     {
- HAVE_DHCP6
+ 
       if (context.flags & CONTEXT_RA_STATELESS)
 	{
 	  if (context.flags & CONTEXT_TEMPLATE)
@@ -925,8 +937,8 @@ void log_context(int family, struct dhcp_context *context)
       my_syslog(MS_DHCP | LOG_INFO, 
 		(context.flags & CONTEXT_RA_STATELESS) ? 
 		format!("{} stateless on {}%.0s%.0s{}") :
-		(context.flags & CONTEXT_STATIC) ? 
-		format!("{}, static leases only on %.0s{}{}%.0s") :
+		(context.flags & CONTEXT_) ? 
+		format!("{},  leases only on %.0s{}{}%.0s") :
 		(context.flags & CONTEXT_PROXY) ?
 		format!("{}, proxy on subnet %.0s{}%.0s%.0s") :
 		format!("{}, IP range {} -- {}{}%.0s"),
@@ -934,7 +946,7 @@ void log_context(int family, struct dhcp_context *context)
 		daemon.dhcp_buff, daemon.dhcp_buff3, daemon.namebuff, template);
     }
   
- HAVE_DHCP6
+ 
   if (context.flags & CONTEXT_TEMPLATE)
     {
       strcpy(daemon.addrbuff, context.template_interface);
@@ -950,7 +962,7 @@ void log_context(int family, struct dhcp_context *context)
 
 }
 
-void log_relay(int family, struct dhcp_relay *relay)
+void log_relay(family: i32, struct dhcp_relay *relay)
 {
   inet_ntop(family, &relay.local, daemon.addrbuff, ADDRSTRLEN);
   inet_ntop(family, &relay.server, daemon.namebuff, ADDRSTRLEN); 

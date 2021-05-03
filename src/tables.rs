@@ -16,9 +16,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
-#if defined(HAVE_IPSET) && defined(HAVE_BSD_NETWORK)
+
+#if defined(HAVE_IPSET) && defined()
 
 #include <string.h>
 
@@ -33,12 +33,12 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define UNUSED(x) (void)(x)
+#define UNUSED(x) ()(x)
 
-static char *pf_device = "/dev/pf";
-static int dev = -1;
+ char *pf_device = "/dev/pf";
+ int dev = -1;
 
-static char *pfr_strerror(int errnum)
+ char *pfr_strerror(int errnum)
 {
   switch (errnum) 
     {
@@ -52,7 +52,7 @@ static char *pfr_strerror(int errnum)
 }
 
 
-void ipset_init(void) 
+void ipset_init() 
 {
   dev = open( pf_device, O_RDWR);
   if (dev == -1)
@@ -62,8 +62,8 @@ void ipset_init(void)
     }
 }
 
-int add_to_ipset(const char *setname, const union all_addr *ipaddr,
-		 int flags, int remove)
+int add_to_ipset(const setname: &mut String, const union all_addr *ipaddr,
+		 flags: i32, remove: i32)
 {
   struct pfr_addr addr;
   struct pfioc_table io;

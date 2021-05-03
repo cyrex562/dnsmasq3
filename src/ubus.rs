@@ -14,30 +14,30 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+
 
  HAVE_UBUS
 
 #include <libubus.h>
 
-static struct blob_buf b;
-static int notify;
-static int error_logged = 0;
+ struct blob_buf b;
+ let mut notify: i32;
+let mut error_logged: i32 = 0;
 
-static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
-			       struct ubus_request_data *req, const char *method,
+ int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
+			       struct ubus_request_data *req, const method: &mut String,
 			       struct blob_attr *msg);
 
-static void ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj);
+pub fn ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj);
 
-static const struct ubus_method ubus_object_methods[] = {
+ const struct ubus_method ubus_object_methods[] = {
   UBUS_METHOD_NOARG("metrics", ubus_handle_metrics),
 };
 
-static struct ubus_object_type ubus_object_type =
+ struct ubus_object_type ubus_object_type =
   UBUS_OBJECT_TYPE("dnsmasq", ubus_object_methods);
 
-static struct ubus_object ubus_object = {
+ struct ubus_object ubus_object = {
   .name = NULL,
   .type = &ubus_object_type,
   .methods = ubus_object_methods,
@@ -45,15 +45,15 @@ static struct ubus_object ubus_object = {
   .subscribe_cb = ubus_subscribe_cb,
 };
 
-static void ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj)
+pub fn ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj)
 {
-  (void)ctx;
+  ()ctx;
 
   my_syslog(LOG_DEBUG, format!("UBus subscription callback: {} subscriber(s)"), obj.has_subscribers ? "1" : "0");
   notify = obj.has_subscribers;
 }
 
-static void ubus_destroy(struct ubus_context *ubus)
+pub fn ubus_destroy(struct ubus_context *ubus)
 {
   // Forces re-initialization when we're reusing the same definitions later on.
   ubus_object.id = 0;
@@ -63,9 +63,9 @@ static void ubus_destroy(struct ubus_context *ubus)
   daemon.ubus = NULL;
 }
 
-static void ubus_disconnect_cb(struct ubus_context *ubus)
+pub fn ubus_disconnect_cb(struct ubus_context *ubus)
 {
-  int ret;
+  let mut ret: i32;
 
   ret = ubus_reconnect(ubus, NULL);
   if (ret)
@@ -79,7 +79,7 @@ static void ubus_disconnect_cb(struct ubus_context *ubus)
 void ubus_init()
 {
   struct ubus_context *ubus = NULL;
-  int ret = 0;
+  let mut ret: i32 = 0;
 
   ubus = ubus_connect(NULL);
   if (!ubus)
@@ -160,15 +160,15 @@ void check_ubus_listeners()
     }
 }
 
-static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
-			       struct ubus_request_data *req, const char *method,
+ int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
+			       struct ubus_request_data *req, const method: &mut String,
 			       struct blob_attr *msg)
 {
-  int i;
+  let mut i: i32;
 
-  (void)obj;
-  (void)method;
-  (void)msg;
+  ()obj;
+  ()method;
+  ()msg;
 
   blob_buf_init(&b, BLOBMSG_TYPE_TABLE);
 
@@ -178,10 +178,10 @@ static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj
   return ubus_send_reply(ctx, req, b.head);
 }
 
-void ubus_event_bcast(const char *type, const char *mac, const char *ip, const char *name, const char *interface)
+void ubus_event_bcast(const type: &mut String, const mac: &mut String, const ip: &mut String, const name: &mut String, const char *interface)
 {
   struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
-  int ret;
+  let mut ret: i32;
 
   if (!ubus || !notify)
     return;

@@ -14,7 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* Declare static char *compiler_opts  in config.h */
+/* Declare  char *compiler_opts  in config.h */
 
 mod arp;
 mod auth;
@@ -66,37 +66,38 @@ mod util;
 mod list_container;
 
 use dnsmasq_h::{InterfaceParams, passwd, DnsmasqDaemon};
+use libc::{gid_t, uid_t};
 
-use crate::{dnsmasq_h::DsConfig, util::rand_init};
+use crate::{dnsmasq_h::{DsConfig, cap_user_data_t, cap_user_header_t}, util::rand_init};
 
 // #define DNSMASQ_COMPILE_OPTS
 
-// #include "dnsmasq.h"
+// 
 
-// struct daemon *daemon;
+// let mut daemon: daemon;
 
 
-// static volatile pid_t pid = 0;
-// static volatile int pipewrite;
+//  volatile pid_t pid = 0;
+//  volatile let mut pipewrite: i32;
 
-// static int set_dns_listeners(time_t now);
-// static void check_dns_listeners(time_t now);
-// static void sig_handler(int sig);
-// static void async_event(int pipe, time_t now);
-// static void fatal_event(struct event_desc *ev, char *msg);
-// static int read_event(int fd, struct event_desc *evp, char **msg);
-// static void poll_resolv(int force, int do_reload, time_t now);
+//  int set_dns_listeners(now: time::Instant);
+// pub fn check_dns_listeners(now: time::Instant);
+// pub fn sig_handler(int sig);
+// pub fn async_event(pipe: i32, now: &time::Instant);
+// pub fn fatal_event(struct event_desc *ev, msg: &mut String);
+//  int read_event(fd: i32, struct event_desc *evp, char **msg);
+// pub fn poll_resolv(force: i32, do_reload: i32, now: &time::Instant);
 
 pub fn main () -> Result<(), io::Error>
 {
     // int bind_fallback = 0;
     let mut bind_fallback: i32 = 0;
-    //time_t now;
+    //now: time::Instant;
     let mut now: Instant;
     // struct sigaction sigact;
-    // struct iname *if_tmp;
+    // let mut if_tmp: iname;
     let mut if_tmp: InterfaceParams = Default::default();
-    //int piperead, pipefd[2], err_pipe[2];
+    //piperead: i32, pipefd[2], err_pipe[2];
     let mut piperead: i32;
     let mut pipefd: [i32;2];
     let mut err_pipe: [i32;2];
@@ -104,8 +105,8 @@ pub fn main () -> Result<(), io::Error>
     // struct passwd *ent_pw = NULL;
     let mut ent_pw: passwd = Default::default();
     if cfg!(target_os = "linux") {
-        let mut script_uid: libc::uid_t = 0;
-        let mut script_gid: libc::gid_t = 0;
+        let mut script_uid: uid_t = 0;
+        let mut script_gid: gid_t = 0;
     }
     
     // struct group *gp = NULL;
@@ -128,21 +129,21 @@ pub fn main () -> Result<(), io::Error>
     // int did_bind = 0;
     let mut did_bind = 0;
     
-    //struct server *serv;
+    //let mut serv: server;
     let mut serv: server = server::new();
     
     //char *netlink_warn;
     let mut netlink_warn: String;
     
-    // #if defined(HAVE_DHCP) || defined(HAVE_DHCP6)
-    // struct dhcp_context *context;
+    // #if defined() || defined()
+    // let mut context: dhcp_context;
     let mut context: dhcp_context;
 
-    // struct dhcp_relay *relay;
+    // let mut relay: dhcp_relay;
     let mut dhcp_relay: relay;
     
     // 
-    //  HAVE_TFTP
+    //  
     // int tftp_prefix_missing = 0;
     let mut tftp_prefix_missing = 0;
     // 
@@ -156,20 +157,20 @@ pub fn main () -> Result<(), io::Error>
     if cfg(target="linux") {
         sigact.sa_handler = sig_handler;
         sigact.sa_flags = 0;
-        sigemptyset(&sigact.sa_mask);
-        sigaction(SIGUSR1, &sigact, NULL);
-        sigaction(SIGUSR2, &sigact, NULL);
-        sigaction(SIGHUP, &sigact, NULL);
-        sigaction(SIGTERM, &sigact, NULL);
-        sigaction(SIGALRM, &sigact, NULL);
-        sigaction(SIGCHLD, &sigact, NULL);
-        sigaction(SIGINT, &sigact, NULL);
+        // sigemptyset(&sigact.sa_mask);
+        // sigaction(SIGUSR1, &sigact, NULL);
+        // sigaction(SIGUSR2, &sigact, NULL);
+        // sigaction(SIGHUP, &sigact, NULL);
+        // sigaction(SIGTERM, &sigact, NULL);
+        // sigaction(SIGALRM, &sigact, NULL);
+        // sigaction(SIGCHLD, &sigact, NULL);
+        // sigaction(SIGINT, &sigact, NULL);
         
         /* ignore SIGPIPE */
         sigact.sa_handler = SIG_IGN;
-        sigaction(SIGPIPE, &sigact, NULL);
+        // sigaction(SIGPIPE, &sigact, NULL);
     
-        umask(022); /* known umask, create leases and pid files as 0644 */
+        // umask(022); /* known umask, create leases and pid files as 0644 */
     }
     
     
@@ -232,7 +233,7 @@ pub fn main () -> Result<(), io::Error>
     open to /dev/null. Normally we'll be started with 0, 1 and 2 open, 
     but it's not guaranteed. By opening /dev/null three times, we 
     ensure that we're not using those fds for real stuff. */
-    // for (i = 0; i < 3; i++)
+    // for i in 0..3
     // open("/dev/null", O_RDWR); 
     
     /* Close any file descriptors we inherited apart from std{in|out|err} */
@@ -258,7 +259,7 @@ pub fn main () -> Result<(), io::Error>
     
     if (daemon.opt_dnssec_valid)
     {
-        //  HAVE_DNSSEC
+        // 
         let mut ds: ListContainer<DsConfig> = ListContainer::new();
 
         /* Must have at least a root trust anchor, or the DNSSEC code
@@ -271,7 +272,7 @@ pub fn main () -> Result<(), io::Error>
     }
 
     if (daemon.opt_tftp) {
-        panic!("TFTP server not available: set HAVE_TFTP in src/config.h");
+        panic!("TFTP server not available: set  in src/config.h");
     }
 
     if (daemon.opt_conntrack && (daemon.query_port != 0 || daemon.osport)) {
@@ -287,10 +288,10 @@ pub fn main () -> Result<(), io::Error>
     }
 
     if (daemon.auth_zones) {
-    panic!("authoritative DNS not available: set HAVE_AUTH in src/config.h");
+    panic!("authoritative DNS not available: set in src/config.h");
     }
 
-    if (option_bool(OPT_LOOP_DETECT)) {
+    if (daemon.opt_loop_detect) {
     panic!("loop detection not available: set HAVE_LOOP in src/config.h");
     }
 
@@ -398,7 +399,7 @@ pub fn main () -> Result<(), io::Error>
             }
 
             
-            // #if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP)
+            // #if defined(HAVE_LINUX_NETWORK) && defined()
             /* after enumerate_interfaces()  */
             bound_device = whichdevice();
             
@@ -417,7 +418,7 @@ pub fn main () -> Result<(), io::Error>
             }
             // 
             
-            // #if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP6)
+            // #if defined(HAVE_LINUX_NETWORK) && defined()
             if (daemon.doing_dhcp6 && !daemon.relay6 && bound_device)
             {
                 bindtodevice(bound_device, daemon.dhcp6fd);
@@ -478,7 +479,7 @@ pub fn main () -> Result<(), io::Error>
         if (daemon.port != 0) {
         pre_allocate_sfds();}
 
-        /* Note getpwnam returns static storage */
+        /* Note getpwnam returns  storage */
         if ((daemon.dhcp || daemon.dhcp6) && 
         daemon.scriptuser && 
         (daemon.lease_change_command || daemon.luascript))
@@ -663,11 +664,11 @@ pub fn main () -> Result<(), io::Error>
             /* write pidfile _after_ forking ! */
             if (daemon.runfile)
             {
-                // int fd, err = 0;
+                // fd: i32, err = 0;
                 let fd = 0;
                 let err = 0;
 
-                // sprintf(daemon.namebuff, "{}\n", (int) getpid());
+                // sprintf(daemon.namebuff, "{}\n",  getpid());
                 daemon.namebuff = format!("{}\n", getpid());
 
 
@@ -785,7 +786,7 @@ pub fn main () -> Result<(), io::Error>
                         _exit(0);
                     }     
                     
-                    //  HAVE_LINUX_NETWORK
+                    // 
                     data.effective &= !(1 << CAP_SETUID);
                     data.permitted &= !(1 << CAP_SETUID);
                     
@@ -809,7 +810,7 @@ pub fn main () -> Result<(), io::Error>
             if (daemon.opt_tftp)
             {
                 // DIR *dir;
-                // struct tftp_prefix *p;
+                // let mut p: tftp_prefix;
                 let dir: DIR;
                 let p: tftp_prefix;
 
@@ -888,8 +889,8 @@ pub fn main () -> Result<(), io::Error>
 
             if (daemon.opt_dnssec_valid)
             {
-                // int rc;
-                // struct ds_config *ds;
+                // let mut rc: i32;
+                // let mut ds: ds_config;
                 let rc: i32;
                 let ds: DsConfig = Default::default();
                 
@@ -957,14 +958,14 @@ pub fn main () -> Result<(), io::Error>
             }
             
             
-            //  HAVE_DHCP
+            //  
             // for (context = daemon.dhcp; context; context = context.next)
             // log_context(AF_INET, context);
             
             // for (relay = daemon.relay4; relay; relay = relay.next)
             log_relay(AF_INET, relay);
             
-            // #  ifdef HAVE_DHCP6
+            // #  ifdef 
             // for (context = daemon.dhcp6; context; context = context.next)
             // log_context(AF_INET6, context);
             
@@ -980,7 +981,7 @@ pub fn main () -> Result<(), io::Error>
             }
             // #  endif
             
-            // #  ifdef HAVE_LINUX_NETWORK
+            // #  ifdef
             if (did_bind) {
                 my_syslog(MS_DHCP | LOG_INFO, format!("DHCP, sockets bound exclusively to interface {}", bound_device));
             }
@@ -996,10 +997,10 @@ pub fn main () -> Result<(), io::Error>
             }
             // 
             
-            //  HAVE_TFTP
+            //  
             if (daemon.opt_tftp)
             {
-                // struct tftp_prefix *p;
+                // let mut p: tftp_prefix;
                 let mut p: tftp_prefix;
 
                 my_syslog(MS_TFTP | LOG_INFO, 
@@ -1072,7 +1073,7 @@ pub fn main () -> Result<(), io::Error>
      
         loop
         {
-            // int t, timeout = -1;
+            // t: i32, timeout = -1;
             let mut t: i32;
             let mut timeout: i32;
 
@@ -1268,7 +1269,7 @@ pub fn main () -> Result<(), io::Error>
                                 else
                                 {
                                     /* master process */
-                                    // int event, errsave = errno;
+                                    // event: i32, errsave = errno;
                                     let mut event: i32;
                                     let mut errsave: i32;
                                     
@@ -1352,8 +1353,8 @@ pub fn send_event(fd: i32, event: i32, data: i32, msg: &String)
     /* pipe is non-blocking and struct event_desc is smaller than
     PIPE_BUF, so this either fails or writes everything */
         while {
-            writev(fd, iov, if msg {2} else {1}) == -1 && errno == EINTR
-        }
+            (writev(fd, iov, if msg {2} else {1}) == -1) && (errno == EINTR)
+        } {}
     }
 }
                             
@@ -1406,7 +1407,7 @@ pub fn async_event(pipe: u32, now: time::Instant)
     let mut p: pid_t;
     // struct event_desc ev;
     let mut ev: event_desc;
-    // int i, check = 0;
+    // i: i32, check = 0;
     let mut i: i32 = 0;
     let mut check: i32 = 0;
     // char *msg;
@@ -1464,7 +1465,7 @@ pub fn async_event(pipe: u32, now: time::Instant)
             /* See Stevens 5.10 */
             while {
                 p = waitpid(-1, NULL, WNOHANG) != 0
-            }
+            } {}
             if (p == -1)
             {
                 if (errno != EINTR) {
@@ -1484,7 +1485,7 @@ pub fn async_event(pipe: u32, now: time::Instant)
             my_syslog(LOG_ERR, format!("failed to execute {}: {}"), 
             daemon.lease_change_command, strerror(ev.data));
         },
-        EVENT_SCRIPT_LOG => my_syslog(MS_SCRIPT | LOG_DEBUG, "{}", msg ? msg : ""),
+        EVENT_SCRIPT_LOG => my_syslog(MS_SCRIPT | LOG_DEBUG, "{}", if msg{msg} else {""}),
         /* necessary for fatal errors in helper */
         EVENT_USER_ERR => {},
         EVENT_DIE => {},
@@ -1510,45 +1511,48 @@ pub fn async_event(pipe: u32, now: time::Instant)
             }},
         EVENT_TERM => {
         /* Knock all our children on the head. */
-        for (i = 0; i < MAX_PROCS; i++)
-        if (daemon.tcp_pids[i] != 0)
+        for i in 0..MAX_PROCS {
+        if (daemon.tcp_pids[i] != 0) {
         kill(daemon.tcp_pids[i], SIGALRM);
+        }}
         }
     }
         
-        #if defined(HAVE_SCRIPT) && defined(HAVE_DHCP)
         /* handle pending lease transitions */
         if (daemon.helperfd != -1)
         {
             /* block in writes until all done */
-            if ((i = fcntl(daemon.helperfd, F_GETFL)) != -1)
-            fcntl(daemon.helperfd, F_SETFL, i & ~O_NONBLOCK); 
-            do {
+            if ((i = fcntl(daemon.helperfd, F_GETFL)) != -1) {
+            fcntl(daemon.helperfd, F_SETFL, i & !O_NONBLOCK); 
+            }
+            while {
                 helper_write();
-            } while (!helper_buf_empty() || do_script_run(now));
+                !helper_buf_empty() || do_script_run(now)
+            } {}
             close(daemon.helperfd);
         }
         
         
-        if (daemon.lease_stream)
-        fclose(daemon.lease_stream);
-        
-         HAVE_DNSSEC
+        if (daemon.lease_stream) {
+            fclose(daemon.lease_stream);
+        }
+
         /* update timestamp file on TERM if time is considered valid */
         if (daemon.back_to_the_future)
         {
-            if (utimes(daemon.timestamp_file, NULL) == -1)
-            my_syslog(LOG_ERR, format!("failed to update mtime on {}: {}"), daemon.timestamp_file, strerror(errno));
+            if (utimes(daemon.timestamp_file, NULL) == -1) {
+            my_syslog(LOG_ERR, format!("failed to update mtime on {}: {}", daemon.timestamp_file, strerror(errno)));
+            }
         }
         
         
-        if (daemon.runfile)
-        unlink(daemon.runfile);
-        
-         HAVE_DUMPFILE
-        if (daemon.dumpfd != -1)
-        close(daemon.dumpfd);
-        
+        if (daemon.runfile) {
+            unlink(daemon.runfile);
+        }
+
+        if (daemon.dumpfd != -1) {
+            close(daemon.dumpfd);
+        }
         
         my_syslog(LOG_INFO, format!("exiting on receipt of SIGTERM"));
         flush_log();
@@ -1556,20 +1560,26 @@ pub fn async_event(pipe: u32, now: time::Instant)
     }
 }
                                 
-static void poll_resolv(int force, int do_reload, time_t now)
+pub fn poll_resolv(force: i32, do_reload: i32, now: &time::Instant)
 {
-    struct resolvc *res, *latest;
-    struct stat statbuf;
-    time_t last_change = 0;
+    //struct resolvc *res, *latest;
+    let mut res: resolvc;
+    let mut latest: resolvc;
+    // struct stat statbuf;
+    let mut statbuf: stat;
+    let mut last_change: time::Instant = 0; 
     /* There may be more than one possible file. 
     Go through and find the one which changed _last_.
     Warn of any which can't be read. */
     
-    if (daemon.port == 0 || daemon.opt_no_poll)
+    if (daemon.port == 0 || daemon.opt_no_poll) {
     return;
+    }
     
-    for (latest = NULL, res = daemon.resolv_files; res; res = res.next)
-    if (stat(res.name, &statbuf) == -1)
+    //for (latest = NULL, res = daemon.resolv_files; res; res = res.next) {
+    let mut latest: Option<resolvc>;
+    for res in daemon.rsolv_files {
+        if (stat(res.name, &statbuf) == -1)
     {
         if (force)
         {
@@ -1577,8 +1587,8 @@ static void poll_resolv(int force, int do_reload, time_t now)
             continue;
         }
         
-        if (!res.logged)
-        my_syslog(LOG_WARNING, format!("failed to access {}: {}"), res.name, strerror(errno));
+        if (!res.logged) {
+        my_syslog(LOG_WARNING, format!("failed to access {}: {}"), res.name, strerror(errno));}
         res.logged = 1;
         
         if (res.mtime != 0)
@@ -1602,134 +1612,160 @@ static void poll_resolv(int force, int do_reload, time_t now)
             }
         }
     }
+}
     
-    if (latest)
+    if (latest.is_some())
     {
-        static int warned = 0;
+        let mut warned: i32 = 0;
         if (reload_servers(latest.name))
         {
-            my_syslog(LOG_INFO, format!("reading {}"), latest.name);
+            my_syslog(LOG_INFO, format!("reading {}", latest.name));
             warned = 0;
             check_servers();
-            if (option_bool(OPT_RELOAD) && do_reload)
+            if (option_bool(OPT_RELOAD) && do_reload) {
             clear_cache_and_reload(now);
+            }
         }
         else 
         {
             latest.mtime = 0;
             if (!warned)
             {
-                my_syslog(LOG_WARNING, format!("no servers found in {}, will retry"), latest.name);
+                my_syslog(LOG_WARNING, format!("no servers found in {}, will retry", latest.name));
                 warned = 1;
             }
         }
     }
 }       
                                 
-void clear_cache_and_reload(time_t now)
+pub fn clear_cache_and_reload(now: time::Instant)
 {
-    (void)now;
-    
-    if (daemon.port != 0)
+    if (daemon.port != 0) {
     cache_reload();
+    }
     
-     HAVE_DHCP
+     
     if (daemon.dhcp || daemon.doing_dhcp6)
     {
-        if (option_bool(OPT_ETHERS))
+        if (daemon.opt_ethers) {
         dhcp_read_ethers();
+        }
         reread_dhcp();
         dhcp_update_configs(daemon.dhcp_conf);
         lease_update_from_configs(); 
         lease_update_file(now); 
         lease_update_dns(1);
     }
-     HAVE_DHCP6
-    else if (daemon.doing_ra)
+     
+    else if (daemon.doing_ra) {
     /* Not doing DHCP, so no lease system, manage 
     alarms for ra only */
     send_alarm(periodic_ra(now), now);
+    }
     
     
 }
                                 
-static int set_dns_listeners(time_t now)
+pub fn set_dns_listeners(now: time::Instant) -> i32
 {
-    struct serverfd *serverfdp;
-    struct listener *listener;
-    int wait = 0, i;
-    
-     HAVE_TFTP
-    int  tftp = 0;
-    struct tftp_transfer *transfer;
-    if (!daemon.opt_single_port)
-    for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
+    let mut serverfdp: serverfd;
+    let mut listener: listener;
+    // int wait = 0, i;
+    let mut wait: i32 = 0;
+    let mut i: i32 = 0;
+     
+    let mut tftp: i32 = 0;
+    let mut transfer: tftp_transfer;
+    if (!daemon.opt_single_port) {
+    // for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
+    for transfer in daemon.tftp_trans
     {
-        tftp++;
+        tftp +=1;
         poll_listen(transfer.sockfd, POLLIN);
-    }
+    }}
     
     
     /* will we be able to get memory? */
-    if (daemon.port != 0)
-    get_new_frec(now, &wait, NULL);
+    if (daemon.port != 0) {
+        get_new_frec(now, &wait, NULL);
+    }
     
-    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    // for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    for serverfd in daemon.sfds
+    {
     poll_listen(serverfdp.fd, POLLIN);
+    }
     
-    if (daemon.port != 0 && !daemon.osport)
-    for (i = 0; i < RANDOM_SOCKS; i++)
-    if (daemon.randomsocks[i].refcount != 0)
+    if (daemon.port != 0 && !daemon.osport) {
+    // for i in 0..RANDOM_SOCKS 
+    for i in 0..RANDOM_SOCKS
+    {
+    if (daemon.randomsocks[i].refcount != 0) {
     poll_listen(daemon.randomsocks[i].fd, POLLIN);
+    }}}
     
-    for (listener = daemon.listeners; listener; listener = listener.next)
+    // for (listener = daemon.listeners; listener; listener = listener.next)
+    for listener in daemon.listeners
     {
         /* only listen for queries if we have resources */
-        if (listener.fd != -1 && wait == 0)
+        if (listener.fd != -1 && wait == 0) {
         poll_listen(listener.fd, POLLIN);
+        }
         
         /* death of a child goes through the select loop, so
         we don't need to explicitly arrange to wake up here */
-        if  (listener.tcpfd != -1)
-        for (i = 0; i < MAX_PROCS; i++)
+        if  (listener.tcpfd != -1) {
+        // for i in 0..MAX_PROCS
+        for i in 0..MAX_PROCS
+        {
         if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
         {
             poll_listen(listener.tcpfd, POLLIN);
             break;
         }
+    }}
         
-         HAVE_TFTP
+         
         /* tftp == 0 in single-port mode. */
-        if (tftp <= daemon.tftp_max && listener.tftpfd != -1)
-        poll_listen(listener.tftpfd, POLLIN);
+        if (tftp <= daemon.tftp_max && listener.tftpfd != -1) {
+            poll_listen(listener.tftpfd, POLLIN);
+        }
         
         
     }
     
-    if (!daemon.opt_debug)
-    for (i = 0; i < MAX_PROCS; i++)
-    if (daemon.tcp_pipes[i] != -1)
+    if (!daemon.opt_debug) {
+    // for i in 0..MAX_PROCS
+    for i in 0..MAX_PROCS
+    {
+    if (daemon.tcp_pipes[i] != -1) {
     poll_listen(daemon.tcp_pipes[i], POLLIN);
+    }}}
     
     return wait;
 }
                                 
-static void check_dns_listeners(time_t now)
+pub fn check_dns_listeners(now: time::Instant)
 {
-    struct serverfd *serverfdp;
-    struct listener *listener;
-    int i;
-    int pipefd[2];
+    let mut serverfdp: serverfd;
+    let mut listener: listener;
+    let mut i: i32;
+    let mut pipefd: [i32;2];
     
-    for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
-    if (poll_check(serverfdp.fd, POLLIN))
+    // for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    for serverfdp in daemon.sfds
+    {
+    if (poll_check(serverfdp.fd, POLLIN)) {
     reply_query(serverfdp.fd, serverfdp.source_addr.sa.sa_family, now);
+    }}
     
-    if (daemon.port != 0 && !daemon.osport)
-    for (i = 0; i < RANDOM_SOCKS; i++)
+    if (daemon.port != 0 && !daemon.osport) {
+    for i in 0..RANDOM_SOCKS
+    {
     if (daemon.randomsocks[i].refcount != 0 && 
-        poll_check(daemon.randomsocks[i].fd, POLLIN))
+        poll_check(daemon.randomsocks[i].fd, POLLIN)) {
         reply_query(daemon.randomsocks[i].fd, daemon.randomsocks[i].family, now);
+        }}
         
         /* Races. The child process can die before we read all of the data from the
         pipe, or vice versa. Therefore send tcp_pids to zero when we wait() the 
@@ -1738,8 +1774,9 @@ static void check_dns_listeners(time_t now)
         The order of these events is indeterminate, and both are needed
         to free the process slot. Once the child process has gone, poll()
         returns POLLHUP, not POLLIN, so have to check for both here. */
-        if (!daemon.opt_debug)
-        for (i = 0; i < MAX_PROCS; i++)
+        if (!daemon.opt_debug) {
+        for i in 0..MAX_PROCS
+        {
         if (daemon.tcp_pipes[i] != -1 &&
             poll_check(daemon.tcp_pipes[i], POLLIN | POLLHUP) &&
             !cache_recv_insert(now, daemon.tcp_pipes[i]))
@@ -1747,20 +1784,23 @@ static void check_dns_listeners(time_t now)
                 close(daemon.tcp_pipes[i]);
                 daemon.tcp_pipes[i] = -1;	
             }
+        }}
             
-            for (listener = daemon.listeners; listener; listener = listener.next)
+            // for (listener = daemon.listeners; listener; listener = listener.next)
+            for listener in daemon.listeners
             {
-                if (listener.fd != -1 && poll_check(listener.fd, POLLIN))
+                if (listener.fd != -1 && poll_check(listener.fd, POLLIN)) {
                 receive_query(listener, now); 
+                }
                 
-                 HAVE_TFTP     
+                      
                 if (listener.tftpfd != -1 && poll_check(listener.tftpfd, POLLIN))
                 tftp_request(listener, now);
                 
                 
                 if (listener.tcpfd != -1 && poll_check(listener.tcpfd, POLLIN))
                 {
-                    int confd, client_ok = 1;
+                    confd: i32, client_ok = 1;
                     struct irec *iface = NULL;
                     pid_t p;
                     union mysockaddr tcp_addr;
@@ -1771,7 +1811,7 @@ static void check_dns_listeners(time_t now)
                     if (confd == -1)
                     continue;
                     
-                    if (getsockname(confd, (struct sockaddr *)&tcp_addr, &tcp_len) == -1)
+                    if (getsockname(confd, &tcp_addr, &tcp_len) == -1)
                     {
                         close(confd);
                         continue;
@@ -1794,7 +1834,7 @@ static void check_dns_listeners(time_t now)
                     iface = listener.iface; /* May be NULL */
                     else 
                     {
-                        int if_index;
+                        let mut if_index: i32;
                         char intr_name[IF_NAMESIZE];
                         
                         /* if we can find the arrival interface, check it's one that's allowed */
@@ -1831,8 +1871,9 @@ static void check_dns_listeners(time_t now)
                                 if (sockaddr_isequal(&iface.addr, &tcp_addr))
                                 break;
                                 
-                                if (!iface)
+                                if (!iface) {
                                 client_ok = 0;
+                                }
                             }
                         }
                         
@@ -1848,8 +1889,8 @@ static void check_dns_listeners(time_t now)
                             close(pipefd[0]);
                             else
                             {
-                                int i;
-                                 HAVE_LINUX_NETWORK
+                                let mut i: i32;
+                                
                                 /* The child process inherits the netlink socket, 
                                 which it never uses, but when the parent (us) 
                                 uses it in the future, the answer may go to the 
@@ -1864,11 +1905,11 @@ static void check_dns_listeners(time_t now)
                                 is sent by the child after it has closed the
                                 netlink socket. */
                                 
-                                unsigned char a;
+                                unsigned let mut a: u8;
                                 read_write(pipefd[0], &a, 1, 1);
                                 
                                 
-                                for (i = 0; i < MAX_PROCS; i++)
+                                for i in 0..MAX_PROCS
                                 if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
                                 {
                                     daemon.tcp_pids[i] = p;
@@ -1884,10 +1925,10 @@ static void check_dns_listeners(time_t now)
                         else
                         {
                             unsigned char *buff;
-                            struct server *s; 
-                            int flags;
-                            struct in_addr netmask;
-                            int auth_dns;
+                            let mut s: server; 
+                            let mut flags: i32;
+                            netmask: net::IpAddr;
+                            let mut auth_dns: i32;
                             
                             if (iface)
                             {
@@ -1904,7 +1945,7 @@ static void check_dns_listeners(time_t now)
                             terminate the process. */
                             if (!daemon.opt_debug)
                             {
-                                 HAVE_LINUX_NETWORK
+                                
                                 /* See comment above re: netlink socket. */
                                 unsigned char a = 0;
                                 
@@ -1917,8 +1958,10 @@ static void check_dns_listeners(time_t now)
                             }
                             
                             /* start with no upstream connections. */
-                            for (s = daemon.servers; s; s = s.next)
+                            for (s = daemon.servers; s; s = s.next) 
+                            {
                             s.tcpfd = -1; 
+                            }
                             
                             /* The connected socket inherits non-blocking
                             attribute from the listening socket. 
@@ -1952,11 +1995,11 @@ static void check_dns_listeners(time_t now)
                 }
             }
             
-             HAVE_DHCP
-            int make_icmp_sock(void)
+             
+            int make_icmp_sock()
             {
-                int fd;
-                int zeroopt = 0;
+                let mut fd: i32;
+                let mut zeroopt: i32 = 0;
                 
                 if ((fd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) != -1)
                 {
@@ -1971,25 +2014,25 @@ static void check_dns_listeners(time_t now)
                 return fd;
             }
                                             
-int icmp_ping(struct in_addr addr)
+int icmp_ping(addr: net::IpAddr)
 {
     /* Try and get an ICMP echo from a machine. */
     
-    int fd;
+    let mut fd: i32;
     struct sockaddr_in saddr;
     struct { 
         struct ip ip;
         struct icmp icmp;
     } packet;
-    unsigned short id = rand16();
-    unsigned int i, j;
-    int gotreply = 0;
+    u16 id = rand16();
+    unsigned i: i32, j;
+    let mut gotreply: i32 = 0;
     
     #if defined(HAVE_LINUX_NETWORK) || defined (HAVE_SOLARIS_NETWORK)
     if ((fd = make_icmp_sock()) == -1)
     return 0;
     
-    int opt = 2000;
+    let mut opt: i32 = 2000;
     fd = daemon.dhcp_icmp_fd;
     setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
     
@@ -2005,13 +2048,13 @@ int icmp_ping(struct in_addr addr)
     packet.icmp.icmp_type = ICMP_ECHO;
     packet.icmp.icmp_id = id;
     for (j = 0, i = 0; i < sizeof(struct icmp) / 2; i++)
-    j += ((u16 *)&packet.icmp)[i];
+    j += (&packet.icmp)[i];
     while (j>>16)
     j = (j & 0xffff) + (j >> 16);  
     packet.icmp.icmp_cksum = (j == 0xffff) ? j : ~j;
     
-    while (retry_send(sendto(fd, (char *)&packet.icmp, sizeof(struct icmp), 0, 
-    (struct sockaddr *)&saddr, sizeof(saddr))));
+    while (retry_send(sendto(fd, &packet.icmp, sizeof(struct icmp), 0, 
+    &saddr, sizeof(saddr))));
     
     gotreply = delay_dhcp(dnsmasq_time(), PING_WAIT, fd, addr.s_addr, id);
     
@@ -2025,7 +2068,7 @@ int icmp_ping(struct in_addr addr)
     return gotreply;
 }
                                             
-int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id)
+int delay_dhcp(start: time::Instant, sec: i32, fd: i32, uint32_t addr, u16 id)
 {
 /* Delay processing DHCP packets for "sec" seconds counting from "start".
 If "fd" is not -1 it will stop waiting if an ICMP echo reply is received
@@ -2044,8 +2087,8 @@ from "addr" with ICMP ID "id" and return 1 */
     only allow this to happen as many times as it takes to get to the wait time
     in quarter-second chunks. This provides a fallback way to end loop. */
     
-    int rc, timeout_count;
-    time_t now;
+    rc: i32, timeout_count;
+    now: time::Instant;
     
     for (now = dnsmasq_time(), timeout_count = 0;
     (difftime(now, start) <= (float)sec) && (timeout_count < sec * 4);)
@@ -2056,7 +2099,7 @@ from "addr" with ICMP ID "id" and return 1 */
         set_dns_listeners(now);
         set_log_writer();
         
-         HAVE_DHCP6
+         
         if (daemon.doing_ra)
         poll_listen(daemon.icmp6fd, POLLIN); 
         
@@ -2066,19 +2109,19 @@ from "addr" with ICMP ID "id" and return 1 */
         if (rc < 0)
         continue;
         else if (rc == 0)
-        timeout_count++;
+        timeout_count +=1;
         
         now = dnsmasq_time();
         
         check_log_writer(0);
         check_dns_listeners(now);
         
-         HAVE_DHCP6
+         
         if (daemon.doing_ra && poll_check(daemon.icmp6fd, POLLIN))
         icmp6_packet(now);
         
         
-         HAVE_TFTP
+         
         check_tftp_listeners(now);
         
         
@@ -2092,7 +2135,7 @@ from "addr" with ICMP ID "id" and return 1 */
             socklen_t len = sizeof(faddr);
             
             if (poll_check(fd, POLLIN) &&
-            recvfrom(fd, &packet, sizeof(packet), 0, (struct sockaddr *)&faddr, &len) == sizeof(packet) &&
+            recvfrom(fd, &packet, sizeof(packet), 0, &faddr, &len) == sizeof(packet) &&
             addr == faddr.sin_addr.s_addr &&
             packet.icmp.icmp_type == ICMP_ECHOREPLY &&
             packet.icmp.icmp_seq == 0 &&

@@ -14,14 +14,14 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
 
 
-static struct cond_domain *search_domain(struct in_addr addr, struct cond_domain *c);
-static struct cond_domain *search_domain6(struct in6_addr *addr, struct cond_domain *c);
+
+ struct cond_domain *search_domain(addr: net::IpAddr, struct cond_domain *c);
+ struct cond_domain *search_domain6(addr: &mut net::IpAddr, struct cond_domain *c);
 
 
-int is_name_synthetic(int flags, char *name, union all_addr *addr)
+int is_name_synthetic(flags: i32, name: &mut String, union all_addr *addr)
 {
   char *p;
   struct cond_domain *c = NULL;
@@ -29,13 +29,13 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
 
   for (c = daemon.synth_domains; c; c = c.next)
     {
-      int found = 0;
-      char *tail, *pref;
+      let mut found: i32 = 0;
+      tail: &mut String, *pref;
       
       for (tail = name, pref = c.prefix; *tail != 0 && pref && *pref != 0; tail++, pref++)
 	{
-	  unsigned int c1 = (unsigned char) *pref;
-	  unsigned int c2 = (unsigned char) *tail;
+	  unsigned int c1 =  *pref;
+	  unsigned int c2 =  *tail;
 	  
 	  if (c1 >= 'A' && c1 <= 'Z')
 	    c1 += 'a' - 'A';
@@ -173,9 +173,9 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
 }
 
 
-int is_rev_synth(int flag, union all_addr *addr, char *name)
+int is_rev_synth(flag: i32, union all_addr *addr, name: &mut String)
 {
-   struct cond_domain *c;
+   let mut c: cond_domain;
 
    if (flag & F_IPV4 && (c = search_domain(addr.addr4, daemon.synth_domains))) 
      {
@@ -246,7 +246,7 @@ int is_rev_synth(int flag, union all_addr *addr, char *name)
 }
 
 
-static struct cond_domain *search_domain(struct in_addr addr, struct cond_domain *c)
+ struct cond_domain *search_domain(addr: net::IpAddr, struct cond_domain *c)
 {
   for (; c; c = c.next)
     if (!c.is6 &&
@@ -257,9 +257,9 @@ static struct cond_domain *search_domain(struct in_addr addr, struct cond_domain
   return NULL;
 }
 
-char *get_domain(struct in_addr addr)
+char *get_domain(addr: net::IpAddr)
 {
-  struct cond_domain *c;
+  let mut c: cond_domain;
 
   if ((c = search_domain(addr, daemon.cond_domain)))
     return c.domain;
@@ -268,7 +268,7 @@ char *get_domain(struct in_addr addr)
 } 
 
 
-static struct cond_domain *search_domain6(struct in6_addr *addr, struct cond_domain *c)
+ struct cond_domain *search_domain6(addr: &mut net::IpAddr, struct cond_domain *c)
 {
   u64 addrpart = addr6part(addr);
   
@@ -282,9 +282,9 @@ static struct cond_domain *search_domain6(struct in6_addr *addr, struct cond_dom
   return NULL;
 }
 
-char *get_domain6(struct in6_addr *addr)
+char *get_domain6(addr: &mut net::IpAddr)
 {
-  struct cond_domain *c;
+  let mut c: cond_domain;
 
   if (addr && (c = search_domain6(addr, daemon.cond_domain)))
     return c.domain;
