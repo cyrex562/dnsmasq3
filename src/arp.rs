@@ -1,5 +1,4 @@
 use std::{net, time};
-
 use winapi::shared::ws2def::AF_UNSPEC;
 
 use crate::{
@@ -63,11 +62,11 @@ pub fn filter_mac(
             /* existing address, was negative. */
             arp.status = ARP_NEW as u16;
             arp.hwlen = maclen as u16;
-            arp.hwaddr = mac;
+            arp.hwaddr.clone_from_slice(mac);
             // memcpy(arp.hwaddr, mac, maclen);
-        } else if (arp.hwlen == maclen && arp.hwaddr == mac) == 0 {
+        } else if ((arp.hwlen == maclen as u16) && (arp.hwaddr == mac)) == false {
             /* Existing entry matches - confirm. */
-            arp.status = ARP_FOUND;
+            arp.status = ARP_FOUND as u16;
         } else {
             continue;
         }
@@ -75,25 +74,26 @@ pub fn filter_mac(
         break;
     }
 
-    if !arp {
-        /* New entry */
-        //     if (freelist)
-        // {
-        //   arp = freelist;
-        //   freelist = freelist.next;
-        // }
-        //     else if (!(arp = whine_malloc(sizeof(struct arp_record)))) {
-        // return 1;}
+    // TODO: handle new entries
+    // if arp.is_none() {
+    //     /* New entry */
+    //     //     if (freelist)
+    //     // {
+    //     //   arp = freelist;
+    //     //   freelist = freelist.next;
+    //     // }
+    //     //     else if (!(arp = whine_malloc(sizeof(struct arp_record)))) {
+    //     // return 1;}
 
-        // arp.next = arps;
-        // arps = arp;
-        arp.status = ARP_NEW;
-        arp.hwlen = maclen;
-        arp.family = family;
-        // memcpy(arp.hwaddr, mac, maclen);
-        arp.hwaddr = mac;
-        arp.addr = addrp;
-    }
+    //     // arp.next = arps;
+    //     // arps = arp;
+    //     arp.status = ARP_NEW as u16;
+    //     arp.hwlen = maclen as u16;
+    //     arp.family = family;
+    //     // memcpy(arp.hwaddr, mac, maclen);
+    //     arp.hwaddr.clone_from_slice(mac);
+    //     arp.addr = *addrp;
+    // }
 
     return 1;
 }
@@ -102,10 +102,10 @@ pub fn filter_mac(
 pub fn find_mac(
     daemon: &mut DnsmasqDaemon,
     addr: &net::IpAddr,
-    mac: &[u8],
+    mac: &mut Vec<u8>,
     lazy: i32,
     now: &time::Instant,
-) -> i32 {
+) -> usize {
     // struct arp_record *arp, *tmp, **up;
     let mut arp: ArpRecord;
     let mut tmp: ArpRecord;
@@ -115,43 +115,44 @@ pub fn find_mac(
     //  again:
 
     /* If the database is less then INTERVAL old, look in there */
-    if now - daemon.last < INTERVAL {
+    if (*now - daemon.last) < time::Duration::from(INTERVAL) {
         /* addr == NULL . just make cache up-to-date */
-        if !addr {
-            return 0;
-        }
+        // if !addr {
+        //     return 0;
+        // }
 
         // for (arp = arps; arp; arp = arp.next)
         for arp in daemon.arps {
-            if addr.sa.sa_family != arp.family {
-                continue;
-            }
+            // if addr.sa.sa_family != arp.family {
+            //     continue;
+            // }
 
-            if arp.addr != addr {
+            if arp.addr != *addr {
                 continue;
             }
 
             /* Only accept positive entries unless in lazy mode. */
-            if arp.status != ARP_EMPTY || lazy || updated {
-                if mac && arp.hwlen != 0 {
-                    // memcpy(mac, arp.hwaddr, arp.hwlen);
-                    mac = arp.hwaddr;
-                }
-                return arp.hwlen;
+            if u32::from(arp.status) != ARP_EMPTY || lazy != 0 || updated != 0 {
+                // if mac && arp.hwlen != 0 {
+                //     // memcpy(mac, arp.hwaddr, arp.hwlen);
+
+                // }
+                mac.clone_from_slice(&arp.hwaddr);
+                return arp.hwlen.into();
             }
         }
     }
 
     /* Not found, try the kernel */
-    if !updated {
+    if updated == 0 {
         updated = 1;
-        daemon.last = now;
+        daemon.last = *now;
 
         /* Mark all non-negative entries */
         //  for (arp = arps; arp; arp = arp.next)
         for arp in daemon.arps {
-            if arp.status != ARP_EMPTY {
-                arp.status = ARP_MARK;
+            if arp.status != ARP_EMPTY as u16 {
+                arp.status = ARP_MARK as u16;
             }
         }
 
@@ -160,14 +161,14 @@ pub fn find_mac(
         /* Remove all unconfirmed entries to old list. */
         //  for (arp = arps, up = &arps; arp; arp = tmp)
         for arp in daemon.arps {
-            tmp = arp.next;
+            // tmp = arp.next;
 
             if arp.status == ARP_MARK {
                 //  *up = arp.next;
                 //  arp.next = old;
                 //  old = arp;
             } else {
-                up = &arp.next;
+                // up = &arp.next;
             }
         }
 

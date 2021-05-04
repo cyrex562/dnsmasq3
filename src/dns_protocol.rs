@@ -1,3 +1,5 @@
+use crate::dnsmasq_h::dns_header;
+
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
@@ -95,9 +97,14 @@ pub const HB4_CD: u32 = 0x10; /* Checking Disabled */
 pub const HB4_RCODE: u32 = 0x0f;
 
 // #define OPCODE(x)          (((x).hb3 & HB3_OPCODE) >> 3)
+pub fn OPCODE(x: dns_header) -> u8 {
+    (x.hb3 & HB3_OPCODE) >> 3
+}
+
 // #define SET_OPCODE(x, code) (x).hb3 = ((x).hb3 & ~HB3_OPCODE) | code
 
 // #define RCODE(x)           ((x).hb4 & HB4_RCODE)
+
 // #define SET_RCODE(x, code) (x).hb4 = ((x).hb4 & ~HB4_RCODE) | code
 
 // #define GETSHORT(s, cp) { \
@@ -138,6 +145,9 @@ pub const HB4_RCODE: u32 = 0x0f;
 
 // #define CHECK_LEN(header, pp, plen, len) \
 //     (((pp) - (header) + (len)) <= (plen))
+pub fn CHECK_LEN() {
+    unimplemented!()
+}
 
 // #define ADD_RDLEN(header, pp, plen, len) \
 //   (!CHECK_LEN(header, pp, plen, len) ? 0 : (((pp) += (len)), 1))

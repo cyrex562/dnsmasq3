@@ -2,7 +2,11 @@ use std::{mem, net, time};
 
 use winapi::shared::ws2def::AF_INET;
 
-use crate::{dhcp_protocol::DHCP_CHADDR_MAX, dnsmasq_h::{ACTION_TFTP, ARPHRD_ETHER, DnsmasqDaemon, dhcp_lease}, util::close_fds};
+use crate::{
+    dhcp_protocol::DHCP_CHADDR_MAX,
+    dnsmasq_h::{dhcp_lease, DnsmasqDaemon, ACTION_TFTP, ARPHRD_ETHER},
+    util::close_fds,
+};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 

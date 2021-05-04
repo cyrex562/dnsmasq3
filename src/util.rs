@@ -722,3 +722,11 @@ pub fn kernel_version() -> i32 {
     //   return version * 256 + (split ? atoi(split) : 0);
     todo!()
 }
+
+pub fn find_subnet() {
+    unimplemented!()
+}
+
+pub fn GETSHORT(dest: &mut u32, buff: &[u8]) {
+    unimplemented!()
+}

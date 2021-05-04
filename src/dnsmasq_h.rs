@@ -1355,7 +1355,6 @@ pub struct ping_result {
     // next
 }
 
-type usize = usize;
 type dev_t = u32;
 type ino_t = u32;
 
@@ -1840,6 +1839,7 @@ pub struct DnsmasqDaemon {
     pub opt_single_port: bool,
     pub opt_lease_renew: bool,
     pub opt_last: bool, //
+    pub last: time::Instant,
 }
 
 /* cache.c */
@@ -2607,3 +2607,6 @@ pub struct rt_metrics {
 }
 
 pub const ARPHRD_ETHER: u16 = 0x0806;
+
+pub const AF_LOCAL: u32 = 0;
+pub const F_IPV4: u32 = 0;

@@ -1,6 +1,6 @@
 use std::{net, time};
 
-use crate::{dnsmasq_h::{ADDRLIST_IPV6, AddrList, auth_zone}, util::hostname_isequal};
+use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, AddrList, DnsmasqDaemon, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{GETSHORT, find_subnet, hostname_isequal}};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -73,7 +73,7 @@ pub fn ind_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<A
   }
 
   /* No subnets specified, no filter */
-  if (!zone.subnet) {
+  if !zone.subnet {
     return 1;
   }
   
@@ -97,7 +97,7 @@ pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> i32
       
       if name[namelen - domainlen - 1] == '.'
 	{
-	  if (cut) {
+	  if cut {
 	    *cut = &name[namelen - domainlen - 1]; 
 	  }
 	  return 1;
@@ -117,13 +117,13 @@ let mut p: Vec<u8>;
 let mut ansp: Vec<u8>;
 //   qtype: i32, qclass, rc;
 let mut qtype: i32;
-let mut qlcass: i32;
+let mut qclass: i32;
 let mut rc: i32;
 //   nameoffset: i32, axfroffset = 0;
 let mut nameoffset: i32;
 let mut axfroffset: i32 = 0;
 //   q: i32, anscount = 0, authcount = 0;
-let mut q: i32;
+let mut q: u32;
 let mut anscount: i32 = 0;
 let mut authcount: i32 = 0;  
 let mut crecp: crec;
@@ -154,19 +154,20 @@ let mut a: cname;
 let mut candidate: cname;
 let mut wclen: u32;
   
-  if (ntohs(header.qdcount) == 0 || OPCODE(header) != QUERY )
+  if (header.qdcount.to_be() == 0) || (u32::from(OPCODE(header)) != QUERY)
     {return 0;}
 
   /* determine end of question section (we put answers there) */
-  if (!(ansp = skip_questions(header, qlen)))
+  ansp = skip_questions(header, qlen);
+  if ansp.is_empty()
     {return 0; /* bad packet */}
   
   /* now process each question, answers go in RRs after the question */
-  p = (header+1);
+  //p = header + 1;
 
 //   for (q = ntohs(header.qdcount); q != 0; q--)
 q = header.qdcount;
-while(q != 0)
+while q != 0
     {
       let mut flag: u32 = 0;
       let mut found: i32 = 0;
@@ -176,50 +177,54 @@ while(q != 0)
       nameoffset = p - header;
 
       /* now extract name as .-concatenated string into name */
-      if (!extract_name(header, qlen, &p, name, 1, 4))
+      if !extract_name(header, qlen, &p, name, 1, 4)
 	{return 0; /* bad packet */}
  
       GETSHORT(qtype, p); 
       GETSHORT(qclass, p);
       
-      if (qclass != C_IN)
+      if qclass != C_IN
 	{
 	  auth = 0;
 	  continue;
 	}
 
-      if ((qtype == T_PTR || qtype == T_SOA || qtype == T_NS) &&
+      if (qtype == T_PTR || qtype == T_SOA || qtype == T_NS) &&
 	  (flag = in_arpa_name_2_addr(name, &addr)) &&
-	  !local_query)
+	  !local_query
 	{
-	  for (zone = daemon.auth_zones; zone; zone = zone.next)
-	    if ((subnet = find_subnet(zone, flag, &addr)))
+	//   for (zone = daemon.auth_zones; zone; zone = zone.next)
+	for zone in daemon.auth_zones
+	{
+	    if subnet = find_subnet(zone, flag, &addr)
 	      {break;}
 	  
-	  if (!zone)
+	  if !zone
 	    {
 	      auth = 0;
 	      continue;
 	    }
-	  else if (qtype == T_SOA)
+	  else if qtype == T_SOA
 	    {soa = 1;
 			 found = 1;}
-	  else if (qtype == T_NS)
+	  else if qtype == T_NS
 	   { ns = 1;
 		 found = 1;}
 	}
 
-      if (qtype == T_PTR && flag)
+      if qtype == T_PTR && flag
 	{
 	  intr = NULL;
 
-	  if (flag == F_IPV4) 
+	  if flag == F_IPV4 
 	  {
-	    for (intr = daemon.int_names; intr; intr = intr.next)
+	    // for (intr = daemon.int_names; intr; intr = intr.next)
+		for inter in daemon.int_names 
 	      {
 		let mut addrlist: addrlist;
 		
-		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		// for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		for addrlist in intr.addr 
 		{
 		  if (!(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr)
 		    {break;}

@@ -16,43 +16,46 @@
 
 
 
-int extract_name(struct dns_header *header, plen: usize, unsigned char **pp, 
+pub fn extract_name(header &dns_header, plen: usize, pp: *mut *mut u8, 
 		 name: &mut String, isExtract: i32, extrabytes: i32)
 {
-  unsigned char *cp = name, *p = *pp, *p1 = NULL;
-  unsigned j: i32, l, namelen = 0, hops = 0;
+//   unsigned char *cp = name, *p = *pp, *p1 = NULL;
+	let mut cp: *mut u8;
+	*p = *pp;
+	*p1 = None;
+//   unsigned j: i32, l, namelen = 0, hops = 0;
   let mut retvalue: i32 = 1;
   
   if (isExtract)
-    *cp = 0;
+    {*cp = 0;}
 
-  while (1)
+  loop
     { 
       let mut label_type: u32;
 
       if (!CHECK_LEN(header, p, plen, 1))
-	return 0;
+	{return 0;}
       
       if ((l = *p++) == 0) 
 	/* end marker */
 	{
 	  /* check that there are the correct no. of bytes after the name */
 	  if (!CHECK_LEN(header, p1 ? p1 : p, plen, extrabytes))
-	    return 0;
+	    {return 0;}
 	  
 	  if (isExtract)
 	    {
 	      if (cp != name)
-		cp--;
+		{cp--;}
 	      *cp = 0; /* terminate: lose final period */
 	    }
 	  else if (*cp != 0)
-	    retvalue = 2;
+	    {retvalue = 2;}
 	  
 	  if (p1) /* we jumped via compression */
-	    *pp = p1;
+	    {*pp = p1;}
 	  else
-	    *pp = p;
+	    {*pp = p;}
 	  
 	  return retvalue;
 	}
@@ -145,22 +148,27 @@ int extract_name(struct dns_header *header, plen: usize, unsigned char **pp,
  
 /* Max size of input string (for IPv6) is 75 chars.) */
 pub const MAXARPANAME: u32 = 75;
-int in_arpa_name_2_addr(namein: &mut String, union all_addr *addrp)
+pub fn in_arpa_name_2_addr(namein: &mut String, addrp: &net::IpAddr) -> i32
 {
   let mut j: i32;
-  char name[MAXARPANAME+1], *cp1;
+//   char name[MAXARPANAME+1], *cp1;
+  let cp1: String;
+  let name: String;
   let mut addr: *mut u8 = addrp;
-  char *lastchunk = NULL, *penchunk = NULL;
+//   char *lastchunk = NULL, *penchunk = NULL;
+let mut lastchunk: String;
+let mut penchunk: String;
   
   if (strlen(namein) > MAXARPANAME)
-    return 0;
+    {return 0;}
 
-  memset(addrp, 0, sizeof(union all_addr));
+//   memset(addrp, 0, sizeof(union all_addr));
 
   /* turn name into a series of asciiz strings */
   /* j counts no. of labels */
-  for(j = 1,cp1 = name; *namein; cp1++, namein++)
-    if (*namein == '.')
+//   for(j = 1,cp1 = name; *namein; cp1++, namein++)
+while() {
+    if *namein == '.'
       {
 	penchunk = lastchunk;
         lastchunk = cp1 + 1;
@@ -168,12 +176,12 @@ int in_arpa_name_2_addr(namein: &mut String, union all_addr *addrp)
 	j +=1;
       }
     else
-      *cp1 = *namein;
+      {*cp1 = *namein;}
   
   *cp1 = 0;
 
   if (j<3)
-    return 0;
+    {return 0;}
 
   if (hostname_isequal(lastchunk, "arpa") && hostname_isequal(penchunk, "in-addr"))
     {
@@ -303,22 +311,25 @@ pub fn skip_name(ansp: &mut Vec<u8>, struct dns_header *header, plen: usize, ext
   return ansp;
 }
 
-pub fn skip_questions(struct dns_header *header, plen: usize) -> &mut Vec<u8>
+pub fn skip_questions(header: &dns_header, plen: usize) -> Option<Vec<u8>>
 {
   let mut q: i32;
   unsigned char *ansp = (header+1);
 
-  for (q = ntohs(header.qdcount); q != 0; q--)
+//   for (q = ntohs(header.qdcount); q != 0; q--)
+q = header.qdcount.to_be();
+while (q != 0)
     {
       if (!(ansp = skip_name(ansp, header, plen, 4)))
-	return NULL;
+	{return None;}
       ansp += 4; /* class and type */
+	  q -= 1;
     }
   
-  return ansp;
+  return Some(ansp);
 }
 
-pub fn skip_section(ansp: &mut Vec<u8>, count: i32, struct dns_header *header, plen: usize) -> &mut Vec<u8>
+pub fn skip_section(ansp: &mut Vec<u8>, count: i32, struct dns_header *header, plen: usize) -> Vec<u8>
 {
   i: i32, rdlen;
   

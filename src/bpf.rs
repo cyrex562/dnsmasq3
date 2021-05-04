@@ -1,4 +1,8 @@
-use crate::{dns_protocol::IN6ADDRSZ, dnsmasq_h::Ip4Header};
+use std::{mem, net};
+
+use winapi::{shared::ws2def::{AF_INET, AF_INET6, AF_LINK, AF_UNSPEC, SOCK_DGRAM}, um::winsock2::{PF_INET6, htons}};
+
+use crate::{dns_protocol::IN6ADDRSZ, dnsmasq_h::{AF_LOCAL, Ip4Header, rt_msghdr}};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -57,84 +61,83 @@ pub fn arp_enumerate(parm: &mut Vec<u8>, callback: fn()->i32) -> i32
   //char *next;
   let next: String;
   let mut rtm: rt_msghdr;
-  let mut sin2: sockaddr_inarp;
-  let mut sdl: sockaddr_dl;
-  let mut buff: iovec;
+  // let mut sin2: sockaddr_inarp;
+  // let mut sdl: sockaddr_dl;
+  // let mut buff: iovec;
   let mut rc: i32;
 
-  buff.iov_base = NULL;
-  buff.iov_len = 0;
+  // buff.iov_base = NULL;
+  // buff.iov_len = 0;
 
-  mib[0] = CTL_NET;
-  mib[1] = PF_ROUTE;
-  mib[2] = 0;
-  mib[3] = AF_INET;
-  mib[4] = NET_RT_FLAGS;
-  mib[5] = 0;
+  // mib[0] = CTL_NET;
+  // mib[1] = PF_ROUTE;
+  // mib[2] = 0;
+  // mib[3] = AF_INET;
+  // mib[4] = NET_RT_FLAGS;
+  // mib[5] = 0;
 	
-  if (sysctl(mib, 6, NULL, &needed, NULL, 0) == -1 || needed == 0) {
-    return 0;
-  }
+  // if (sysctl(mib, 6, NULL, &needed, NULL, 0) == -1 || needed == 0) {
+  //   return 0;
+  // }
 
-loop
-    {
-      if (!expand_buf(&buff, needed)) {
-	return 0;
-      }
-      if ((rc = sysctl(mib, 6, buff.iov_base, &needed, NULL, 0)) == 0 ||
-	  errno != ENOMEM) {
-	break;
-    }
-      needed += needed / 8;
-    }
-  if (rc == -1) {
+// loop
+//     {
+  //     if (!expand_buf(&buff, needed)) {
+	// return 0;
+  //     }
+  //     if ((rc = sysctl(mib, 6, buff.iov_base, &needed, NULL, 0)) == 0 ||
+	//   errno != ENOMEM) {
+	// break;
+  //   }
+    //   needed += needed / 8;
+    // }
+  if rc == -1 {
     return 0;
   }
   
   // for (next = buff.iov_base ; next < buff.iov_base + needed; next += rtm.rtm_msglen)
-  next = buff.iov_base;
-  while next < buff.iov_base   
-  {
-      rtm = next;
-      sin2 = (rtm + 1);
-      sdl = (sin2 + SA_SIZE(sin2));
-      if (!(*callback)(AF_INET, &sin2.sin_addr, LLADDR(sdl), sdl.sdl_alen, parm)) {
-	return 0;}
-        next += rtm.rtm_msglen;
-    }
+  // next = buff.iov_base;
+  // while next < buff.iov_base   
+  // {
+  //     rtm = next;
+  //     sin2 = (rtm + 1);
+  //     sdl = (sin2 + SA_SIZE(sin2));
+  //     if (!(*callback)(AF_INET, &sin2.sin_addr, LLADDR(sdl), sdl.sdl_alen, parm)) {
+	// return 0;}
+  //       next += rtm.rtm_msglen;
+  //   }
 
   return 1;
 }
  /* defined() && !defined(__APPLE__) */
 
 
-pub fn iface_enumerate(family: i32, par: Vec<u8>, callback: fn()->i32) -> i32
+pub fn iface_enumerate(family: i32, par: Option<Vec<u8>>, callback: fn()->i32) -> i32
 {
   // struct ifaddrs *head, *addrs;
- let mut head: ifaddrs;
- let mut addrs: ifaddrs;
+//  let mut head: ifaddrs;
+//  let mut addrs: ifaddrs;
   // errsave: i32, fd = -1, ret = 0;
   let mut errsave: i32;
   let mut fd: i32 = -1;
   let mut ret: i32 = 0;
 
-  if (family == AF_UNSPEC) {
+  if family == AF_UNSPEC {
     return  arp_enumerate(parm, callback);}
 
   //return 0;
 
 
   /* AF_LINK doesn't exist in Linux, so we can't use it in our API */
-  if (family == AF_LOCAL) {
+  if family == AF_LOCAL {
     family = AF_LINK;
   }
 
-  if (getifaddrs(&head) == -1) {
+  if getifaddrs(&head) == -1 {
     return 0;
   }
 
-
-  if (family == AF_INET6) {
+  if family == AF_INET6 {
     fd = socket(PF_INET6, SOCK_DGRAM, 0);
   }
 
@@ -142,21 +145,21 @@ pub fn iface_enumerate(family: i32, par: Vec<u8>, callback: fn()->i32) -> i32
   // for (addrs = head; addrs; addrs = addrs.ifa_next)
   for addrs in head
     {
-      if (addrs.ifa_addr.sa_family == family)
+      if addrs.ifa_addr.sa_family == family
 	{
 	  let iface_index = if_nametoindex(addrs.ifa_name);
-	  if (iface_index == 0 || !addrs.ifa_addr || 
-	      (!addrs.ifa_netmask && family != AF_LINK)) {
+	  if iface_index == 0 || !addrs.ifa_addr || 
+	      (!addrs.ifa_netmask && family != AF_LINK) {
 	    continue;
         }
 
-	  if (family == AF_INET)
+	  if family == AF_INET
 	    {
 	      // addr: net::IpAddr, netmask, broadcast;
         let mut netmask: net::IpAddr;
         let mut broadcast: net::IpAddr;
 	      addr = ( addrs.ifa_addr).sin_addr;
-	      if (del_family == AF_INET && del_addr.addr4.s_addr == addr.s_addr) {
+	      if del_family == AF_INET && del_addr.addr4.s_addr == addr.s_addr {
 		continue;}
 
 	      netmask = ( addrs.ifa_netmask).sin_addr;
@@ -311,7 +314,12 @@ pub fn init_bpf()
     }	     
 }
 
-pub fn send_via_bpf(mess: &mut dhcp_packet, len: usize, iface_addr: net::IpAddr, ifr: ifreq)
+pub fn send_via_bpf(
+  daemon: &mut DnsmasqDaemon, 
+  mess: &mut dhcp_packet, 
+  len: usize, 
+  iface_addr: net::IpAddr, 
+  ifr: ifreq)
 {
    /* Hairy stuff, packet either has to go to the
       net broadcast or the destination can't reply to ARP yet,
@@ -373,7 +381,7 @@ pub fn send_via_bpf(mess: &mut dhcp_packet, len: usize, iface_addr: net::IpAddr,
   ip.ip_sum = 0;
   let mut sum = 0;
   // for (sum = 0, i = 0; i < mem::sizeof<ip>() / 2; i++) 
-  for i in 0..((mem::sizeof::<Ip4Header4>())/2)
+  for i in 0..((mem::size_of::<Ip4Header4>())/2)
   {
     sum += (&ip)[i];
   }
@@ -441,12 +449,12 @@ pub fn route_sock()
   int rc = recv(daemon.routefd, daemon.packet, daemon.packet_buff_sz, 0);
 
   if (rc < 4)
-    return;
+    {return;}
 
   msg = (struct if_msghdr *)daemon.packet;
   
   if (rc < msg.ifm_msglen)
-    return;
+    {return;}
 
    if (msg.ifm_version != RTM_VERSION)
      {
