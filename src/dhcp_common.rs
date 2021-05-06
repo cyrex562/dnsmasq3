@@ -178,7 +178,7 @@ todo!();
 	
 /* Is every member of check matched by a member of pool? 
    If tagnotneeded, untagged is OK */
-int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, tagnotneeded: i32)
+match_netid: i32(struct dhcp_netid *check, struct dhcp_netid *pool, tagnotneeded: i32)
 {
   let mut tmp1: dhcp_netid;
   
@@ -244,7 +244,7 @@ pub fn log_tags(struct dhcp_netid *netid, u32 xid)
     } 
 }   
   
-int match_bytes(struct dhcp_opt *o, p: &mut Vec<u8>, len: i32)
+match_bytes: i32(struct dhcp_opt *o, p: &mut Vec<u8>, len: i32)
 {
   let mut i: i32;
   
@@ -274,7 +274,7 @@ int match_bytes(struct dhcp_opt *o, p: &mut Vec<u8>, len: i32)
   return 0;
 }
 
-int config_has_mac(struct dhcp_config *config, hwaddr: &mut Vec<u8>, len: i32, type: i32)
+config_has_mac: i32(struct dhcp_config *config, hwaddr: &mut Vec<u8>, len: i32, type: i32)
 {
   let mut conf_addr: hwaddr_config;
   
@@ -288,7 +288,7 @@ int config_has_mac(struct dhcp_config *config, hwaddr: &mut Vec<u8>, len: i32, t
   return 0;
 }
 
- int is_config_in_context(struct dhcp_context *context, struct dhcp_config *config)
+ is_config_in_context: i32(struct dhcp_context *context, struct dhcp_config *config)
 {
   if (!context) /* called via find_config() from lease_update_from_configs() */
     return 1; 
@@ -420,7 +420,7 @@ pub fn dhcp_update_configs(struct dhcp_config *configs)
   
   struct dhcp_config *config, *conf_tmp;
   let mut crec: crec;
-  int prot = AF_INET;
+  prot: i32 = AF_INET;
 
   for (config = configs; config; config = config.next)
   {
@@ -439,8 +439,8 @@ pub fn dhcp_update_configs(struct dhcp_config *configs)
   if (daemon.port != 0)
     for (config = configs; config; config = config.next)
       {
-	int conflags = CONFIG_ADDR;
-	int cacheflags = F_IPV4;
+	conflags: i32 = CONFIG_ADDR;
+	cacheflags: i32 = F_IPV4;
 
  
 	if (prot == AF_INET6)
@@ -702,7 +702,7 @@ pub fn display_opts6()
 }
 
 
-int lookup_dhcp_opt(prot: i32, name: &mut String)
+lookup_dhcp_opt: i32(prot: i32, name: &mut String)
 {
   const let mut t: opttab_t;
   let mut i: i32;
@@ -723,7 +723,7 @@ int lookup_dhcp_opt(prot: i32, name: &mut String)
   return -1;
 }
 
-int lookup_dhcp_len(prot: i32, val: i32)
+lookup_dhcp_len: i32(prot: i32, val: i32)
 {
   const let mut t: opttab_t;
   let mut i: i32;
@@ -764,7 +764,7 @@ char *option_string(prot: i32, unsigned opt: i32, val: &mut Vec<u8>, opt_len: i3
 	    if (ot[o].size & OT_ADDR_LIST) 
 	      {
 		union all_addr addr;
-		int addr_len = INADDRSZ;
+		addr_len: i32 = INADDRSZ;
 
  
 		if (prot == AF_INET6)
@@ -851,7 +851,7 @@ char *option_string(prot: i32, unsigned opt: i32, val: &mut Vec<u8>, opt_len: i3
 
   if (opt_len != 0 && buf && (!ot[o].name || nodecode))
     {
-      int trunc  = 0;
+      trunc: i32  = 0;
       if (opt_len > 14)
 	{
 	  trunc = 1;

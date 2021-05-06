@@ -1,4 +1,9 @@
 use std::{net, time};
+
+use libc::AF_INET;
+#[cfg(target_os = "linux")]
+use libc::AF_UNSPEC;
+#[cfg(target_os = "windows")]
 use winapi::shared::ws2def::AF_UNSPEC;
 
 use crate::{
@@ -115,7 +120,7 @@ pub fn find_mac(
     //  again:
 
     /* If the database is less then INTERVAL old, look in there */
-    if (*now - daemon.last) < time::Duration::from(INTERVAL) {
+    if (*now - daemon.last) < time::Duration::new(INTERVAL.into(), 0) {
         /* addr == NULL . just make cache up-to-date */
         // if !addr {
         //     return 0;
@@ -156,27 +161,32 @@ pub fn find_mac(
             }
         }
 
-        iface_enumerate(AF_UNSPEC, None, filter_mac);
+        // TODO
+        // iface_enumerate(AF_UNSPEC, None, filter_mac);
 
         /* Remove all unconfirmed entries to old list. */
         //  for (arp = arps, up = &arps; arp; arp = tmp)
         for arp in daemon.arps {
             // tmp = arp.next;
 
-            if arp.status == ARP_MARK {
+            if arp.status == ARP_MARK as u16 {
+                todo!();
                 //  *up = arp.next;
                 //  arp.next = old;
                 //  old = arp;
             } else {
+                todo!();
                 // up = &arp.next;
             }
         }
 
+        // TODO
         //  goto again;
     }
 
     /* record failure, so we don't consult the kernel each time
     we're asked for this address */
+    // TODO
     // if (freelist)
     //   {
     //     arp = freelist;
@@ -187,12 +197,10 @@ pub fn find_mac(
     // }
 
     if arp {
-        // arp.next = arps;
-        // arps = arp;
         arp.status = ARP_EMPTY;
-        arp.family = addr.sa.sa_family;
         arp.hwlen = 0;
         arp.addr = addr;
+        arp.family = AF_INET;
         daemon.arps.push(arp);
     }
 
@@ -214,6 +222,7 @@ pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32 {
             );
         }
 
+        // TODO
         // arp = old;
         // old = arp.next;
         // arp.next = freelist;

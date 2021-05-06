@@ -134,7 +134,7 @@ pub fn dhcp_init()
 
 pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
 {
-  // int fd = pxe_fd ? daemon.pxefd : daemon.dhcpfd;
+  // fd: i32 = pxe_fd ? daemon.pxefd : daemon.dhcpfd;
   let mut fd: i32;
   if pxe_fd {
     fd = daemon.pxefd;
@@ -153,7 +153,7 @@ pub fn dhcp_packet(daemon: &mut DnsmasqDaemon, now: time::Instant, pxe_fd: i32)
   let mut cmptr: cmsghdr;
   let mut iov: iovec;
   let mut ssz: usize; 
-  // int iface_index = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
+  // iface_index: i32 = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
   let mut  iface_index: i32 = 0;
   let mut unicast_dest: i32 = 0;
   let mut is_inform: i32 = 0;
@@ -539,7 +539,7 @@ pub fn guess_range_netmask(addr: net::IpAddr, netmask: net::IpAddr)
       }
 }
 
- int complete_context(local: net::IpAddr, if_index: i32, label: &mut String,
+ complete_context: i32(local: net::IpAddr, if_index: i32, label: &mut String,
 			    netmask: net::IpAddr, broadcast: net::IpAddr, vparam: Vec<u8>)
 {
   let mut context: dhcp_context;
@@ -745,7 +745,7 @@ struct ping_result *do_icmp_ping(now: time::Instant, addr: net::IpAddr, unsigned
     return NULL; /* address in use. */
   else
     {
-      /* at this point victim may hold an expired record */
+      /* at this povictim: i32 may hold an expired record */
       if (!victim)
 	{
 	  if ((victim = whine_malloc(sizeof(struct ping_result))))
@@ -767,7 +767,7 @@ struct ping_result *do_icmp_ping(now: time::Instant, addr: net::IpAddr, unsigned
     }
 }
 
-int address_allocate(struct dhcp_context *context,
+address_allocate: i32(struct dhcp_context *context,
 		     struct in_addr *addrp, hwaddr: &mut Vec<u8>, hw_len: i32, 
 		     struct dhcp_netid *netids, now: &time::Instant, loopback: i32)   
 {
@@ -876,7 +876,7 @@ pub fn dhcp_read_ethers()
   unsigned char hwaddr[ETHER_ADDR_LEN];
   struct dhcp_config **up, *tmp;
   let mut config: dhcp_config;
-  int count = 0, lineno = 0;
+  count: i32 = 0, lineno = 0;
 
   addr.s_addr = 0; /* eliminate warning */
   

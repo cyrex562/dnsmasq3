@@ -80,17 +80,17 @@ use crate::{dnsmasq_h::{DsConfig, cap_user_data_t, cap_user_header_t}, util::ran
 //  volatile pid_t pid = 0;
 //  volatile let mut pipewrite: i32;
 
-//  int set_dns_listeners(now: time::Instant);
+//  set_dns_listeners: i32(now: time::Instant);
 // pub fn check_dns_listeners(now: time::Instant);
-// pub fn sig_handler(int sig);
+// pub fn sig_handler(sig: i32);
 // pub fn async_event(pipe: i32, now: &time::Instant);
 // pub fn fatal_event(struct event_desc *ev, msg: &mut String);
-//  int read_event(fd: i32, struct event_desc *evp, char **msg);
+//  read_event: i32(fd: i32, struct event_desc *evp, char **msg);
 // pub fn poll_resolv(force: i32, do_reload: i32, now: &time::Instant);
 
 pub fn main () -> Result<(), io::Error>
 {
-    // int bind_fallback = 0;
+    // bind_fallback: i32 = 0;
     let mut bind_fallback: i32 = 0;
     //now: time::Instant;
     let mut now: Instant;
@@ -126,7 +126,7 @@ pub fn main () -> Result<(), io::Error>
     let mut need_cap_net_bind_service = 0;
     // char *bound_device = NULL;
     let mut bound_device: String = String::new();
-    // int did_bind = 0;
+    // did_bind: i32 = 0;
     let mut did_bind = 0;
     
     //let mut serv: server;
@@ -144,7 +144,7 @@ pub fn main () -> Result<(), io::Error>
     
     // 
     //  
-    // int tftp_prefix_missing = 0;
+    // tftp_prefix_missing: i32 = 0;
     let mut tftp_prefix_missing = 0;
     // 
     
@@ -1020,7 +1020,7 @@ pub fn main () -> Result<(), io::Error>
                         my_syslog(MS_TFTP | LOG_WARNING, format!("warning: TFTP directory {} inaccessible"), p.prefix);}}
                 
                 /* This is a guess, it assumes that for small limits, 
-                disjoint files might be served, but for large limits, 
+                disjofiles: i32 might be served, but for large limits, 
                 a single file will be sent to may clients (the file only needs
                     one fd). */
                     
@@ -1287,7 +1287,7 @@ pub fn main () -> Result<(), io::Error>
                                     event = EVENT_REOPEN;}
                                     else if (sig == SIGINT)
                                     {
-                                        /* Handle SIGINT normally in debug mode, so
+                                        /* Handle SIGnormally: i32 in debug mode, so
                                         ctrl-c continues to operate. */
                                         if (daemon.opt_debug) {
                                         exit(EC_MISC);}
@@ -1670,7 +1670,7 @@ pub fn set_dns_listeners(now: time::Instant) -> i32
 {
     let mut serverfdp: serverfd;
     let mut listener: listener;
-    // int wait = 0, i;
+    // wait: i32 = 0, i;
     let mut wait: i32 = 0;
     let mut i: i32 = 0;
      
@@ -1996,7 +1996,7 @@ pub fn check_dns_listeners(now: time::Instant)
             }
             
              
-            int make_icmp_sock()
+            make_icmp_sock: i32()
             {
                 let mut fd: i32;
                 let mut zeroopt: i32 = 0;
@@ -2014,7 +2014,7 @@ pub fn check_dns_listeners(now: time::Instant)
                 return fd;
             }
                                             
-int icmp_ping(addr: net::IpAddr)
+icmp_ping: i32(addr: net::IpAddr)
 {
     /* Try and get an ICMP echo from a machine. */
     
@@ -2068,7 +2068,7 @@ int icmp_ping(addr: net::IpAddr)
     return gotreply;
 }
                                             
-int delay_dhcp(start: time::Instant, sec: i32, fd: i32, uint32_t addr, u16 id)
+delay_dhcp: i32(start: time::Instant, sec: i32, fd: i32, uint32_t addr, u16 id)
 {
 /* Delay processing DHCP packets for "sec" seconds counting from "start".
 If "fd" is not -1 it will stop waiting if an ICMP echo reply is received

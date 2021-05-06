@@ -22,9 +22,9 @@
 
 let mut gotit: i32 = 0; /* yuck */
 
- int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>);
+ callback: i32(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>);
 
-int get_incoming_mark(peer_addr: &mut net::IpAddr, union all_addr *local_addr, istcp: i32, markp: &mut u32)
+get_incoming_mark: i32(peer_addr: &mut net::IpAddr, union all_addr *local_addr, istcp: i32, markp: &mut u32)
 {
   let mut ct: nf_conntrack;
   let mut h: nfct_handle;
@@ -72,7 +72,7 @@ int get_incoming_mark(peer_addr: &mut net::IpAddr, union all_addr *local_addr, i
   return gotit;
 }
 
- int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>)
+ callback: i32(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, data: Vec<u8>)
 {
   ret: &mut u32 = (unsigned int *)data;
   *ret = nfct_get_attr_u32(ct, ATTR_MARK);

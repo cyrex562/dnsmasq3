@@ -24,7 +24,7 @@
  let mut notify: i32;
 let mut error_logged: i32 = 0;
 
- int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
+ ubus_handle_metrics: i32(struct ubus_context *ctx, struct ubus_object *obj,
 			       struct ubus_request_data *req, const method: &mut String,
 			       struct blob_attr *msg);
 
@@ -160,7 +160,7 @@ pub fn check_ubus_listeners()
     }
 }
 
- int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
+ ubus_handle_metrics: i32(struct ubus_context *ctx, struct ubus_object *obj,
 			       struct ubus_request_data *req, const method: &mut String,
 			       struct blob_attr *msg)
 {

@@ -297,7 +297,7 @@ pub fn dbus_read_servers(DBusMessage *message)
 	  
 	  strcpy(str_domain, str);
 
-	  /* point to address part of old string for error message */
+	  /* poto: i32 address part of old string for error message */
 	  if ((str_addr = strrchr(str, '/')))
 	    str = str_addr+1;
 	  
@@ -641,7 +641,7 @@ DBusHandlerResult message_handler(DBusConnection *connection,
 {
   char *method = dbus_message_get_member(message);
   DBusMessage *reply = NULL;
-  int clear_cache = 0, new_servers = 0;
+  clear_cache: i32 = 0, new_servers = 0;
     
   if (dbus_message_is_method_call(message, DBUS_INTERFACE_INTROSPECTABLE, "Introspect"))
     {
@@ -781,8 +781,8 @@ pub fn set_dbus_listeners()
   for (w = daemon.watches; w; w = w.next)
     if (dbus_watch_get_enabled(w.watch))
       {
-	unsigned int flags = dbus_watch_get_flags(w.watch);
-	int fd = dbus_watch_get_unix_fd(w.watch);
+	unsigned flags: i32 = dbus_watch_get_flags(w.watch);
+	fd: i32 = dbus_watch_get_unix_fd(w.watch);
 	
 	if (flags & DBUS_WATCH_READABLE)
 	  poll_listen(fd, POLLIN);
@@ -803,7 +803,7 @@ pub fn check_dbus_listeners()
     if (dbus_watch_get_enabled(w.watch))
       {
 	let mut flags: u32 = 0;
-	int fd = dbus_watch_get_unix_fd(w.watch);
+	fd: i32 = dbus_watch_get_unix_fd(w.watch);
 	
 	if (poll_check(fd, POLLIN))
 	  flags |= DBUS_WATCH_READABLE;

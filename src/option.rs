@@ -17,9 +17,9 @@
 /* define this to get facilitynames */
 
 
-//  volatile int mem_recover = 0;
+//  volatile mem_recover: i32 = 0;
 //  jmp_buf mem_jmp;
-//  int one_file(file: &mut String, hard_opt: i32);
+//  one_file: i32(file: &mut String, hard_opt: i32);
 
 /* Solaris headers don't have facility names. */
 
@@ -609,7 +609,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
 //   return ret;
 // }
 
- int atoi_check(a: &mut String, res: &i32)
+ atoi_check: i32(a: &mut String, res: &i32)
 {
   char *p;
 
@@ -626,7 +626,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
   return 1;
 }
 
- int atoi_check16(a: &mut String, res: &i32)
+ atoi_check16: i32(a: &mut String, res: &i32)
 {
   if (!(atoi_check(a, res)) ||
       *res < 0 ||
@@ -637,7 +637,7 @@ pub const LOPT_PXE_VENDOR: u32 = 361;
 }
 
 
- int atoi_check8(a: &mut String, res: &i32)
+ atoi_check8: i32(a: &mut String, res: &i32)
 {
   if (!(atoi_check(a, res)) ||
       *res < 0 ||
@@ -745,7 +745,7 @@ pub fn do_usage()
 
 char *parse_server(arg: &mut String, addr: &mut net::IpAddr, source_addr: &mut net::IpAddr, interface: &mut String, flags: &i32)
 {
-  int source_port = 0, serv_port = NAMESERVER_PORT;
+  source_port: i32 = 0, serv_port = NAMESERVER_PORT;
   portno: &mut String, *source;
   char *interface_opt = NULL;
   let mut scope_index: i32 = 0;
@@ -901,7 +901,7 @@ char *parse_server(arg: &mut String, addr: &mut net::IpAddr, source_addr: &mut n
   
   for (i = msize-1; i >= 0; i -= 4)
     { 
-      int dig = (addr)[i>>3];
+      dig: i32 = (addr)[i>>3];
       p += sprintf(p, "%.1x.", (i>>2) & 1 ? dig & 15 : dig >> 4);
     }
   p += sprintf(p, "ip6.arpa");
@@ -915,7 +915,7 @@ char *parse_server(arg: &mut String, addr: &mut net::IpAddr, source_addr: &mut n
 
  
 
- int is_tag_prefix(arg: &mut String)
+ is_tag_prefix: i32(arg: &mut String)
 {
   if (arg && (strstr(arg, "net:") == arg || strstr(arg, "tag:") == arg))
     return 1;
@@ -1042,7 +1042,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
 
 
 /* This is too insanely large to keep in-line in the switch */
- int parse_dhcp_opt(errstr: &mut String, arg: &mut String, flags: i32)
+ parse_dhcp_opt: i32(errstr: &mut String, arg: &mut String, flags: i32)
 {
   struct dhcp_opt *new = opt_malloc(sizeof(struct dhcp_opt));
   char lenchar = 0, *cp;
@@ -1166,7 +1166,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
     {
       /* characterise the value */
       let mut c: u8;
-      int found_dig = 0, found_colon = 0;
+      found_dig: i32 = 0, found_colon = 0;
       is_addr = is_addr6 = is_hex = is_dec = is_string = 1;
       addrs = digs = 1;
       dots = 0;
@@ -1343,7 +1343,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
 	      else
 		{
 		  unsigned char *p = &in;
-		  int netsize = atoi(slash);
+		  netsize: i32 = atoi(slash);
 		  *op++ = netsize;
 		  if (netsize > 0)
 		    *op++ = *p +=1;
@@ -1394,7 +1394,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
 	      q: &mut Vec<u8>, *r, *tail;
 	      p: &mut Vec<u8>, *m = NULL, *newp;
 	      newlen: usize, len = 0;
-	      int header_size = (new.opt == OPTION_DOMAIN_SEARCH) ? 0 : 1;
+	      header_size: i32 = (new.opt == OPTION_DOMAIN_SEARCH) ? 0 : 1;
 	      
 	      arg = comma;
 	      comma = split(arg);
@@ -1494,7 +1494,7 @@ pub fn dhcp_opt_free(struct dhcp_opt *opt)
 	    {
 	      unsigned char *p = NULL, *q, *newp, *end;
 	      let mut len: i32 = 0;
-	      int header_size = (is6 && new.opt == OPTION6_NTP_SERVER) ? 4 : 0;
+	      header_size: i32 = (is6 && new.opt == OPTION6_NTP_SERVER) ? 4 : 0;
 	      arg = comma;
 	      comma = split(arg);
 	      
@@ -1585,12 +1585,12 @@ on_error:
 
 
 
-pub fn set_option_bool(unsigned int opt)
+pub fn set_option_bool(unsigned opt: i32)
 {
   option_var(opt) |= option_val(opt);
 }
 
-pub fn reset_option_bool(unsigned int opt)
+pub fn reset_option_bool(unsigned opt: i32)
 {
   option_var(opt) &= ~(option_val(opt));
 }
@@ -1605,7 +1605,7 @@ pub fn server_list_free(struct server *list)
     }
 }
 
- int one_opt(option: i32, arg: &mut String, errstr: &mut String, gen_err: &mut String, command_line: i32, servers_only: i32)
+ one_opt: i32(option: i32, arg: &mut String, errstr: &mut String, gen_err: &mut String, command_line: i32, servers_only: i32)
 {      
   let mut i: i32;
   char *comma;
@@ -1616,7 +1616,7 @@ pub fn server_list_free(struct server *list)
   for (i=0; usage[i].opt != 0; i++)
     if (usage[i].opt == option)
       {
-	 int rept = usage[i].rept;
+	 rept: i32 = usage[i].rept;
 	 
 	 if (command_line)
 	   {
@@ -2217,7 +2217,7 @@ pub fn server_list_free(struct server *list)
 			ret_err_free(gen_err, new);
 		      else if (inet_pton(AF_INET, comma, &new.start))
 			{
-			  int mask = (1 << (32 - msize)) - 1;
+			  mask: i32 = (1 << (32 - msize)) - 1;
 			  new.is6 = 0; 			  
 			  new.start.s_addr = ntohl(htonl(new.start.s_addr) & ~mask);
 			  new.end.s_addr = new.start.s_addr | htonl(mask);
@@ -2517,7 +2517,7 @@ pub fn server_list_free(struct server *list)
 	
 	if (arg && (*arg == '/' || option == LOPT_NO_REBIND))
 	  {
-	    int rebind = !(*arg == '/');
+	    rebind: i32 = !(*arg == '/');
 	    char *end = NULL;
 	    if (!rebind)
 	      arg +=1;
@@ -2858,7 +2858,7 @@ pub fn server_list_free(struct server *list)
       
       if (daemon.start_tftp_port > daemon.end_tftp_port)
 	{
-	  int tmp = daemon.start_tftp_port;
+	  tmp: i32 = daemon.start_tftp_port;
 	  daemon.start_tftp_port = daemon.end_tftp_port;
 	  daemon.end_tftp_port = tmp;
 	} 
@@ -3358,7 +3358,7 @@ pub fn server_list_free(struct server *list)
 	    else
 	      {
 		cp: &mut String, *lastp = NULL, last = 0;
-		int fac = 1, isdig = 0;
+		fac: i32 = 1, isdig = 0;
 		
 		if (strlen(arg) > 1)
 		  {
@@ -4074,7 +4074,7 @@ err:
       {
 	let mut new: cname;
 	alias: &mut String, *target, *last, *pen;
-	int ttl = -1;
+	ttl: i32 = -1;
 
 	for (last = pen = NULL, comma = arg; comma; comma = split(comma))
 	  {
@@ -4092,7 +4092,7 @@ err:
 
 	while (arg != last)
 	  {
-	    int arglen = strlen(arg);
+	    arglen: i32 = strlen(arg);
 	    alias = canonicalise_opt(arg);
 
 	    if (!alias || !target)
@@ -4303,7 +4303,7 @@ err:
       
     case 'W':  /* --srv-host */
       {
-	int port = 1, priority = 0, weight = 0;
+	port: i32 = 1, priority = 0, weight = 0;
 	name: &mut String, *target = NULL;
 	let mut new: mx_srv_record;
 	
@@ -4518,13 +4518,13 @@ err:
 
 pub fn read_file(file: &mut String, FILE *f, hard_opt: i32)	
 {
-  volatile int lineno = 0;
+  volatile lineno: i32 = 0;
   char *buff = daemon.namebuff;
   
   while (fgets(buff, MAXDNAME, f))
     {
       white: i32, i;
-      volatile int option = (hard_opt == LOPT_REV_SERV) ? 0 : hard_opt;
+      volatile option: i32 = (hard_opt == LOPT_REV_SERV) ? 0 : hard_opt;
       errmess: &mut String, *p, *arg, *start;
       len: usize;
 
@@ -4654,7 +4654,7 @@ pub fn read_file(file: &mut String, FILE *f, hard_opt: i32)
 }
 
 #if defined() && defined(HAVE_INOTIFY)
-int option_read_dynfile(file: &mut String, flags: i32)
+option_read_dynfile: i32(file: &mut String, flags: i32)
 {
   my_syslog(MS_DHCP | LOG_INFO, format!("read {}"), file);
   
@@ -4667,7 +4667,7 @@ int option_read_dynfile(file: &mut String, flags: i32)
 }
 
 
- int one_file(file: &mut String, hard_opt: i32)
+ one_file: i32(file: &mut String, hard_opt: i32)
 {
   FILE *f;
   let mut nofile_ok: i32 = 0;

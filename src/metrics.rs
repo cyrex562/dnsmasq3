@@ -39,6 +39,6 @@ const char * metric_names[] = {
     "leases_pruned_6",
 };
 
-const char* get_metric_name(int i) {
+const char* get_metric_name(i: i32) {
     return metric_names[i];
 }

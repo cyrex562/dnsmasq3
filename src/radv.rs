@@ -56,7 +56,7 @@ pub fn ra_init(now: time::Instant)
   struct icmp6_filter filter;
   let mut fd: i32;
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
-  int class = IPTOS_CLASS_CS6;
+  class: i32 = IPTOS_CLASS_CS6;
 
   let mut val: i32 = 255; /* radvd uses this value */
   socklen_t len = sizeof;
@@ -196,7 +196,7 @@ pub fn icmp6_packet(now: time::Instant)
          the context of the aliased interface. */
       for (bridge = daemon.bridges; bridge; bridge = bridge.next)
         {
-          int bridge_index = if_nametoindex(bridge.iface);
+          bridge_index: i32 = if_nametoindex(bridge.iface);
           if (bridge_index)
 	    {
 	      for (alias = bridge.alias; alias; alias = alias.next)
@@ -229,7 +229,7 @@ pub fn send_ra_alias(now: time::Instant, iface: i32, iface_name: &mut String, de
   struct dhcp_netid iface_id;
   let mut opt_cfg: dhcp_opt;
   struct ra_interface *ra_param = find_iface_param(iface_name);
-  int done_dns = 0, old_prefix = 0, mtu = 0;
+  done_dns: i32 = 0, old_prefix = 0, mtu = 0;
   let mut min_pref_time: u32;
 
   FILE *f;
@@ -297,7 +297,7 @@ pub fn send_ra_alias(now: time::Instant, iface: i32, iface_name: &mut String, de
 
       if (context.if_index == iface && (context.flags & CONTEXT_OLD))
 	{
-	  unsigned int old = difftime(now, context.address_lost_time);
+	  unsigned old: i32 = difftime(now, context.address_lost_time);
 	  
 	  if (old > context.saved_valid)
 	    { 
@@ -476,7 +476,7 @@ pub fn send_ra_alias(now: time::Instant, iface: i32, iface_name: &mut String, de
       
       if (opt_cfg.opt == OPTION6_DOMAIN_SEARCH && opt_cfg.len != 0)
 	{
-	  int len = ((opt_cfg.len+7)/8);
+	  len: i32 = ((opt_cfg.len+7)/8);
 	  
 	  put_opt6_char(ICMP6_OPT_DNSSL);
 	  put_opt6_char(len + 1);
@@ -539,7 +539,7 @@ pub fn send_ra(now: time::Instant, iface: i32, iface_name: &mut String, dest: &m
   send_ra_alias(now, iface, iface_name, dest, iface);
 }
 
- int add_prefixes(local: &mut net::IpAddr,  prefix: i32,
+ add_prefixes: i32(local: &mut net::IpAddr,  prefix: i32,
 			scope: i32, if_index: i32, flags: i32, 
 			unsigned preferred: i32, unsigned valid: i32, vparam: Vec<u8>)
 {
@@ -565,7 +565,7 @@ pub fn send_ra(now: time::Instant, iface: i32, iface_name: &mut String, dest: &m
 	{
 	  let mut real_prefix: i32 = 0;
 	  let mut do_slaac: i32 = 0;
-	  int deprecate  = 0;
+	  deprecate: i32  = 0;
 	  let mut constructed: i32 = 0;
 	  let mut adv_router: i32 = 0;
 	  let mut off_link: i32 = 0;
@@ -719,7 +719,7 @@ pub fn send_ra(now: time::Instant, iface: i32, iface_name: &mut String, dest: &m
   return 1;
 }
 
- int add_lla(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
+ add_lla: i32(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
 {
   ()type;
 
@@ -727,7 +727,7 @@ pub fn send_ra(now: time::Instant, iface: i32, iface_name: &mut String, dest: &m
     {
       /* size is in units of 8 octets and includes type and length (2 bytes)
 	 add 7 to round up */
-      int len = (maclen + 9) >> 3;
+      len: i32 = (maclen + 9) >> 3;
       unsigned char *p = expand(len << 3);
       memset(p, 0, len << 3);
       *p++ = ICMP6_OPT_SOURCE_MAC;
@@ -849,7 +849,7 @@ periodic_ra: time::Instant(now: time::Instant)
   return next_event;
 }
 
- int send_ra_to_aliases(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
+ send_ra_to_aliases: i32(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
 {
   struct alias_param *aparam = (struct alias_param *)parm;
   char ifrn_name[IFNAMSIZ];
@@ -871,7 +871,7 @@ periodic_ra: time::Instant(now: time::Instant)
   return 1;
 }
 
- int iface_search(local: &mut net::IpAddr,  prefix: i32,
+ iface_search: i32(local: &mut net::IpAddr,  prefix: i32,
 			scope: i32, if_index: i32, flags: i32, 
 			preferred: i32, valid: i32, vparam: Vec<u8>)
 {
@@ -930,7 +930,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
   else
     {
       /* range 3/4 - 1 times MaxRtrAdvInterval */
-      unsigned int adv_interval = calc_interval(find_iface_param(iface_name));
+      unsigned adv_interval: i32 = calc_interval(find_iface_param(iface_name));
       context.ra_time = now + (3 * adv_interval)/4 + ((adv_interval *rand16()) >> 18);
     }
 }
@@ -946,7 +946,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
   return NULL;
 }
 
- unsigned int calc_interval(struct ra_interface *ra)
+ unsigned calc_interval: i32(struct ra_interface *ra)
 {
   let mut interval: i32 = 600;
   
@@ -962,7 +962,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
   returninterval;
 }
 
- unsigned int calc_lifetime(struct ra_interface *ra)
+ unsigned calc_lifetime: i32(struct ra_interface *ra)
 {
   lifetime: i32, interval = calc_interval(ra);
   
@@ -980,7 +980,7 @@ pub fn new_timeout(struct dhcp_context *context, iface_name: &mut String, now: &
   returnlifetime;
 }
 
- unsigned int calc_prio(struct ra_interface *ra)
+ unsigned calc_prio: i32(struct ra_interface *ra)
 {
   if (ra)
     return ra.prio;

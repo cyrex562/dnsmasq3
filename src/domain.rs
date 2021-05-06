@@ -21,11 +21,11 @@
  struct cond_domain *search_domain6(addr: &mut net::IpAddr, struct cond_domain *c);
 
 
-int is_name_synthetic(flags: i32, name: &mut String, union all_addr *addr)
+is_name_synthetic: i32(flags: i32, name: &mut String, union all_addr *addr)
 {
   char *p;
   struct cond_domain *c = NULL;
-  int prot = (flags & F_IPV6) ? AF_INET6 : AF_INET;
+  prot: i32 = (flags & F_IPV6) ? AF_INET6 : AF_INET;
 
   for (c = daemon.synth_domains; c; c = c.next)
     {
@@ -34,8 +34,8 @@ int is_name_synthetic(flags: i32, name: &mut String, union all_addr *addr)
       
       for (tail = name, pref = c.prefix; *tail != 0 && pref && *pref != 0; tail++, pref++)
 	{
-	  unsigned int c1 =  *pref;
-	  unsigned int c2 =  *tail;
+	  unsigned c1: i32 =  *pref;
+	  unsigned c2: i32 =  *tail;
 	  
 	  if (c1 >= 'A' && c1 <= 'Z')
 	    c1 += 'a' - 'A';
@@ -68,7 +68,7 @@ int is_name_synthetic(flags: i32, name: &mut String, union all_addr *addr)
 	    {
 	      if (prot == AF_INET)
 		{
-		  unsigned int index = atoi(tail);
+		  unsigned index: i32 = atoi(tail);
 
 		   if (!c.is6 &&
 		      index <= ntohl(c.end.s_addr) - ntohl(c.start.s_addr))
@@ -173,7 +173,7 @@ int is_name_synthetic(flags: i32, name: &mut String, union all_addr *addr)
 }
 
 
-int is_rev_synth(flag: i32, union all_addr *addr, name: &mut String)
+is_rev_synth: i32(flag: i32, union all_addr *addr, name: &mut String)
 {
    let mut c: cond_domain;
 
@@ -184,7 +184,7 @@ int is_rev_synth(flag: i32, union all_addr *addr, name: &mut String)
        *name = 0;
        if (c.indexed)
 	 {
-	   unsigned int index = ntohl(addr.addr4.s_addr) - ntohl(c.start.s_addr);
+	   unsigned index: i32 = ntohl(addr.addr4.s_addr) - ntohl(c.start.s_addr);
 	   snprintf(name, MAXDNAME, "{}{}", c.prefix ? c.prefix : "", index);
 	 }
        else

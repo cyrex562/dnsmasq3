@@ -134,7 +134,7 @@ const struct nettle_hash *hash_find(name: &mut String)
 }
 
 /* expand ctx and digest memory allocations if necessary and init hash function */
-int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp)
+hash_init: i32(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp)
 {
   pub fn *ctx = NULL;
    let mut digest: *mut u8 = NULL;
@@ -175,7 +175,7 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
 
 
   
- int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+ dnsmasq_rsa_verify: i32(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
 			      digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
   let mut p: *mut u8;
@@ -227,7 +227,7 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
   return 0;
 }  
 
- int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned key_len: i32, 
+ dnsmasq_ecdsa_verify: i32(struct blockdata *key_data, unsigned key_len: i32, 
 				sig: &mut Vec<u8>, sig_len: usize,
 				digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
@@ -302,7 +302,7 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 }
 
 #if NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
- int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned key_len: i32, 
+ dnsmasq_gostdsa_verify: i32(struct blockdata *key_data, unsigned key_len: i32, 
 				  sig: &mut Vec<u8>, sig_len: usize,
 				  digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
@@ -342,7 +342,7 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 }
 
 
- int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned key_len: i32, 
+ dnsmasq_eddsa_verify: i32(struct blockdata *key_data, unsigned key_len: i32, 
 				sig: &mut Vec<u8>, sig_len: usize,
 				digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
@@ -385,7 +385,7 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
   return 0;
 }
 
- int (*verify_func(int algo))(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+ int (*verify_func(algo: i32))(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
 			     digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
     
@@ -414,7 +414,7 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
   return NULL;
 }
 
-int verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+verify: i32(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
 	   digest: &mut Vec<u8>, digest_len: usize, algo: i32)
 {
 
@@ -435,7 +435,7 @@ int verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>,
    supported by verify(). */
 
 /* http://www.iana.org/assignments/ds-rr-types/ds-rr-types.xhtml */
-char *ds_digest_name(int digest)
+char *ds_digest_name(digest: i32)
 {
   switch (digest)
     {
@@ -448,7 +448,7 @@ char *ds_digest_name(int digest)
 }
  
 /* http://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xhtml */
-char *algo_digest_name(int algo)
+char *algo_digest_name(algo: i32)
 {
   switch (algo)
     {
@@ -470,7 +470,7 @@ char *algo_digest_name(int algo)
 }
   
 /* http://www.iana.org/assignments/dnssec-nsec3-parameters/dnssec-nsec3-parameters.xhtml */
-char *nsec3_digest_name(int digest)
+char *nsec3_digest_name(digest: i32)
 {
   switch (digest)
     {

@@ -18,7 +18,7 @@
 
 
 
-int indextoname(fd: i32, index: i32, name: &mut String)
+indextoname: i32(fd: i32, index: i32, name: &mut String)
 {
   let mut ifr: ifreq;
   
@@ -43,7 +43,7 @@ int indextoname(fd: i32, index: i32, name: &mut String)
 pub const LIFC_UNDER_IPMP: u32 = 0;
 
 
-int indextoname(fd: i32, index: i32, name: &mut String)
+indextoname: i32(fd: i32, index: i32, name: &mut String)
 {
   int64_t lifc_flags;
   struct lifnum lifn;
@@ -97,7 +97,7 @@ int indextoname(fd: i32, index: i32, name: &mut String)
 
 
 
-int indextoname(fd: i32, index: i32, name: &mut String)
+indextoname: i32(fd: i32, index: i32, name: &mut String)
 { 
   ()fd;
 
@@ -109,10 +109,10 @@ int indextoname(fd: i32, index: i32, name: &mut String)
 
 
 
-int iface_check(family: i32, union all_addr *addr, name: &mut String, auth: &i32)
+iface_check: i32(family: i32, union all_addr *addr, name: &mut String, auth: &i32)
 {
   let mut tmp: iname;
-  int ret = 1, match_addr = 0;
+  ret: i32 = 1, match_addr = 0;
 
   /* Note: have to check all and not bail out early, so that we set the
      "used" flags.
@@ -179,7 +179,7 @@ int iface_check(family: i32, union all_addr *addr, name: &mut String, auth: &i32
    an interface other than the loopback. Accept packet if it arrived via a loopback 
    interface, even when we're not accepting packets that way, as long as the destination
    address is one we're believing. Interface list must be up-to-date before calling. */
-int loopback_exception(fd: i32, family: i32, union all_addr *addr, name: &mut String)    
+loopback_exception: i32(fd: i32, family: i32, union all_addr *addr, name: &mut String)    
 {
   let mut ifr: ifreq;
   let mut iface: irec;
@@ -207,7 +207,7 @@ int loopback_exception(fd: i32, family: i32, union all_addr *addr, name: &mut St
    on the relevant address, but the name of the arrival interface, derived from the
    index won't match the config. Check that we found an interface address for the arrival 
    interface: daemon.interfaces must be up-to-date. */
-int label_exception(index: i32, family: i32, union all_addr *addr)
+label_exception: i32(index: i32, family: i32, union all_addr *addr)
 {
   let mut iface: irec;
 
@@ -228,13 +228,13 @@ struct iface_param {
   let mut fd: i32;
 };
 
- int iface_allowed(struct iface_param *param, if_index: i32, label: &mut String,
+ iface_allowed: i32(struct iface_param *param, if_index: i32, label: &mut String,
 			 addr: &mut net::IpAddr, netmask: net::IpAddr, prefixlen: i32, iface_flags: i32) 
 {
   let mut iface: irec;
-  int mtu = 0, loopback;
+  mtu: i32 = 0, loopback;
   let mut ifr: ifreq;
-  int tftp_ok = !!daemon.opt_tftp;
+  tftp_ok: i32 = !!daemon.opt_tftp;
   let mut dhcp_ok: i32 = 1;
   let mut auth_dns: i32 = 0;
   let mut is_label: i32 = 0;
@@ -484,7 +484,7 @@ struct iface_param {
   return 0;
 }
 
- int iface_allowed_v6(local: &mut net::IpAddr, prefix: i32, 
+ iface_allowed_v6: i32(local: &mut net::IpAddr, prefix: i32, 
 			    scope: i32, if_index: i32, flags: i32, 
 			    preferred: i32, valid: i32, vparam: Vec<u8>)
 {
@@ -512,7 +512,7 @@ struct iface_param {
   return iface_allowed((struct iface_param *)vparam, if_index, NULL, &addr, netmask, prefix, flags);
 }
 
- int iface_allowed_v4(local: net::IpAddr, if_index: i32, label: &mut String,
+ iface_allowed_v4: i32(local: net::IpAddr, if_index: i32, label: &mut String,
 			    netmask: net::IpAddr, broadcast: net::IpAddr, vparam: Vec<u8>)
 {
   union mysockaddr addr;
@@ -561,7 +561,7 @@ pub fn clean_interfaces()
  *
  * @return 1 if released, 0 if still required
  */
- int release_listener(struct listener *l)
+ release_listener: i32(struct listener *l)
 {
   if (l.used > 1)
     {
@@ -571,7 +571,7 @@ pub fn clean_interfaces()
 	  {
 	    if (iface.found)
 	      {
-		/* update listener to point to active interface instead */
+		/* update listener to poto: i32 active interface instead */
 		if (!l.iface.found)
 		  l.iface = iface;
 	      }
@@ -609,7 +609,7 @@ pub fn clean_interfaces()
   return 1;
 }
 
-int enumerate_interfaces(int reset)
+enumerate_interfaces: i32(reset: i32)
 {
    struct addrlist *spare = NULL;
   let mut done: i32 = 0;
@@ -732,7 +732,7 @@ int enumerate_interfaces(int reset)
 }
 
 /* set NONBLOCK bit on fd: See Stevens 16.6 */
-int fix_fd(int fd)
+fix_fd: i32(fd: i32)
 {
   let mut flags: i32;
 
@@ -743,9 +743,9 @@ int fix_fd(int fd)
   return 1;
 }
 
- int make_sock(addr: &mut net::IpAddr, type: i32, dienow: i32)
+ make_sock: i32(addr: &mut net::IpAddr, type: i32, dienow: i32)
 {
-  int family = addr.sa.sa_family;
+  family: i32 = addr.sa.sa_family;
   fd: i32, rc, opt = 1;
   
   if ((fd = socket(family, type, 0)) == -1)
@@ -823,7 +823,7 @@ int fix_fd(int fd)
   return fd;
 }
 
-int set_ipv6pktinfo(int fd)
+set_ipv6pktinfo: i32(fd: i32)
 {
   let mut opt: i32 = 1;
 
@@ -852,7 +852,7 @@ int set_ipv6pktinfo(int fd)
 
 
 /* Find the interface on which a TCP connection arrived, if possible, or zero otherwise. */
-int tcp_interface(fd: i32, af: i32)
+tcp_interface: i32(fd: i32, af: i32)
 { 
   ()fd; /* suppress potential unused warning */
   ()af; /* suppress potential unused warning */
@@ -929,7 +929,7 @@ int tcp_interface(fd: i32, af: i32)
  struct listener *create_listeners(addr: &mut net::IpAddr, do_tftp: i32, dienow: i32)
 {
   struct listener *l = NULL;
-  int fd = -1, tcpfd = -1, tftpfd = -1;
+  fd: i32 = -1, tcpfd = -1, tftpfd = -1;
 
   ()do_tftp;
 
@@ -1016,7 +1016,7 @@ pub fn create_wildcard_listeners()
   return NULL;
 }
 
-pub fn create_bound_listeners(int dienow)
+pub fn create_bound_listeners(dienow: i32)
 {
   let mut new: listener;
   let mut iface: irec;
@@ -1044,7 +1044,7 @@ pub fn create_bound_listeners(int dienow)
                system is initialised and the sign-on printed. */
             if (!dienow)
               {
-		int port = prettyprint_addr(&iface.addr, daemon.addrbuff);
+		port: i32 = prettyprint_addr(&iface.addr, daemon.addrbuff);
 		my_syslog(LOG_DEBUG, format!("listening on {}(#{}): {} port {}"),
 			  iface.name, iface.index, daemon.addrbuff, port);
 	      }
@@ -1071,7 +1071,7 @@ pub fn create_bound_listeners(int dienow)
 
 	if (!dienow)
 	  {
-	    int port = prettyprint_addr(&if_tmp.addr, daemon.addrbuff);
+	    port: i32 = prettyprint_addr(&if_tmp.addr, daemon.addrbuff);
 	    my_syslog(LOG_DEBUG, format!("listening on {} port {}"), daemon.addrbuff, port);
 	  }
       }
@@ -1133,7 +1133,7 @@ pub fn warn_int_names()
       my_syslog(LOG_WARNING, format!("warning: no addresses found for interface {}"), intname.intr);
 }
  
-int is_dad_listeners()
+is_dad_listeners: i32()
 {
   let mut iface: irec;
   
@@ -1146,7 +1146,7 @@ int is_dad_listeners()
 }
 
  
-pub fn join_multicast(int dienow)      
+pub fn join_multicast(dienow: i32)      
 {
   struct irec *iface, *tmp;
 
@@ -1208,15 +1208,15 @@ pub fn join_multicast(int dienow)
 
 /* return a UDP socket bound to a random port, have to cope with straying into
    occupied port nos and reserved ones. */
-int random_sock(int family)
+random_sock: i32(family: i32)
 {
   let mut fd: i32;
 
   if ((fd = socket(family, SOCK_DGRAM, 0)) != -1)
     {
       union mysockaddr addr;
-      unsigned int ports_avail = ((u16)daemon.max_port - (u16)daemon.min_port) + 1;
-      int tries = ports_avail < 30 ? 3 * ports_avail : 100;
+      unsigned ports_avail: i32 = ((u16)daemon.max_port - (u16)daemon.min_port) + 1;
+      tries: i32 = ports_avail < 30 ? 3 * ports_avail : 100;
 
       memset(&addr, 0, sizeof(addr));
       addr.sa.sa_family = family;
@@ -1259,12 +1259,12 @@ int random_sock(int family)
 }
   
 
-int local_bind(fd: i32, addr: &mut net::IpAddr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32)
+local_bind: i32(fd: i32, addr: &mut net::IpAddr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32)
 {
   union mysockaddr addr_copy = *addr;
   u16 port;
-  int tries = 1, done = 0;
-  unsigned int ports_avail = ((u16)daemon.max_port - (u16)daemon.min_port) + 1;
+  tries: i32 = 1, done = 0;
+  unsigned ports_avail: i32 = ((u16)daemon.max_port - (u16)daemon.min_port) + 1;
  
   if (addr_copy.sa.sa_family == AF_INET)
     port = addr_copy.in.sin_port;
@@ -1445,7 +1445,7 @@ pub fn pre_allocate_sfds()
       }  
 }
 
-pub fn mark_servers(int flag)
+pub fn mark_servers(flag: i32)
 {
   let mut serv: server;
 
@@ -1571,7 +1571,7 @@ pub fn check_servers()
   let mut iface: irec;
   let mut serv: server;
   struct serverfd *sfd, *tmp, **up;
-  int port = 0, count;
+  port: i32 = 0, count;
   let mut locals: i32 = 0;
 
   /* interface may be new since startup */
@@ -1718,7 +1718,7 @@ pub fn check_servers()
 
 /* Return zero if no servers found, in that case we keep polling.
    This is a protection against an update-time/write race on resolv.conf */
-int reload_servers(fname: &mut String)
+reload_servers: i32(fname: &mut String)
 {
   FILE *f;
   char *line;

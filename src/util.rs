@@ -265,7 +265,7 @@ pub fn safe_pipe(fd: &mut i32, read_noblock: i32) {
 //   return ret;
 // }
 
-// int sockaddr_isequal(s1: &mut net::IpAddr, s2: &mut net::IpAddr)
+// sockaddr_isequal: i32(s1: &mut net::IpAddr, s2: &mut net::IpAddr)
 // {
 //   if (s1.sa.sa_family == s2.sa.sa_family)
 //     {
@@ -296,7 +296,7 @@ pub fn safe_pipe(fd: &mut i32, read_noblock: i32) {
 // }
 
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
-// int hostname_isequal(const a: &mut String, const char *b)
+// hostname_isequal: i32(const a: &mut String, const char *b)
 // {
 //   unsigned c1: i32, c2;
 
@@ -355,10 +355,10 @@ pub fn is_same_net(a: &net::IpAddr, b: &net::IpAddr, mask: &net::IpAddr) -> bool
     todo!()
 }
 
-// int is_same_net6(a: &mut net::IpAddr, b: &mut net::IpAddr, prefixlen: i32)
+// is_same_net6: i32(a: &mut net::IpAddr, b: &mut net::IpAddr, prefixlen: i32)
 // {
-//   int pfbytes = prefixlen >> 3;
-//   int pfbits = prefixlen & 7;
+//   pfbytes: i32 = prefixlen >> 3;
+//   pfbits: i32 = prefixlen & 7;
 
 //   if (memcmp(&a.s6_addr, &b.s6_addr, pfbytes) != 0)
 //     return 0;
@@ -387,7 +387,7 @@ pub fn setaddr6part(addr: &mut net::IpAddr, host: u64) {
 }
 
 /* returns port number from address */
-// int prettyprint_addr(addr: &mut net::IpAddr, buf: &mut String)
+// prettyprint_addr: i32(addr: &mut net::IpAddr, buf: &mut String)
 // {
 //   let mut port: i32 = 0;
 
@@ -413,7 +413,7 @@ pub fn setaddr6part(addr: &mut net::IpAddr, host: u64) {
 //   return port;
 // }
 
-// void prettyprint_time(buf: &mut String, unsigned int t)
+// void prettyprint_time(buf: &mut String, unsigned t: i32)
 // {
 //   if (t == 0xffffffff)
 //     sprintf(buf, format!("infinite"));
@@ -433,10 +433,10 @@ pub fn setaddr6part(addr: &mut net::IpAddr, host: u64) {
 
 /* in may equal out, when maxlen may be -1 (No max len).
 Return -1 for extraneous no-hex chars found. */
-// int parse_hex(in: &mut String, out: &mut Vec<u8>, maxlen: i32,
+// parse_hex: i32(in: &mut String, out: &mut Vec<u8>, maxlen: i32,
 // 	      wildcard_mask: &mut u32, mac_type: &i32)
 // {
-//   int done = 0, mask = 0, i = 0;
+//   done: i32 = 0, mask = 0, i = 0;
 //   char *r;
 
 //   if (mac_type)
@@ -502,7 +502,7 @@ Return -1 for extraneous no-hex chars found. */
 // }
 
 /* return 0 for no match, or (no matched octets) + 1 */
-// int memcmp_masked(a: &mut Vec<u8>, b: &mut Vec<u8>, len: i32, unsigned int mask)
+// memcmp_masked: i32(a: &mut Vec<u8>, b: &mut Vec<u8>, len: i32, unsigned mask: i32)
 // {
 //   i: i32, count;
 //   for (count = 1, i = len - 1; i >= 0; i--, mask = mask >> 1)
@@ -517,7 +517,7 @@ Return -1 for extraneous no-hex chars found. */
 // }
 
 /* _note_ may copy buffer */
-// int expand_buf(struct iovec *iov, size: usize)
+// expand_buf: i32(struct iovec *iov, size: usize)
 // {
 //   new: Vec<u8>;
 
@@ -688,7 +688,7 @@ pub fn close_fds(max_fd: i32, spare1: i32, spare2: i32, spare3: i32) {
 // }
 
 /* The same but comparing a maximum of NUM characters, like strncmp.  */
-// int wildcard_matchn(const char* wildcard, const char* match, num: i32)
+// wildcard_matchn: i32(const char* wildcard, const char* match, num: i32)
 // {
 //   while (*wildcard && *match && num)
 //     {

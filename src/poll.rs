@@ -45,7 +45,7 @@
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry
    to the left of which a new record should be inserted. */
- nfds_t fd_search(int fd)
+ nfds_t fd_search(fd: i32)
 {
   nfds_t left, right, mid;
   
@@ -73,12 +73,12 @@ pub fn poll_reset()
   nfds = 0;
 }
 
-int do_poll(int timeout)
+do_poll: i32(timeout: i32)
 {
   return poll(pollfds, nfds, timeout);
 }
 
-int poll_check(fd: i32, short event)
+poll_check: i32(fd: i32, short event)
 {
   nfds_t i = fd_search(fd);
   

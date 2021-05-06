@@ -183,7 +183,7 @@ pub fn create_helper(
     //     //   is6: i32, err = 0;
     //     let mut is6: i32;
     //     let mut err: i32;
-    //     // int pipeout[2];
+    //     // pipeout: i32[2];
     //     let mut pipeout: [i32; 2];
 
     /* Free rarely-allocated memory from previous iteration. */
@@ -799,11 +799,11 @@ pub fn queue_script(
     now: &time::Instant,
 ) {
     let mut p: *mut u8;
-    //   unsigned int hostname_len = 0, clid_len = 0, ed_len = 0;
+    //   unsigned hostname_len: i32 = 0, clid_len = 0, ed_len = 0;
     let mut hostname_len: u32 = 0;
     let mut clid_len: u32 = 0;
     let mut ed_len: u32 = 0;
-    // int fd = daemon.dhcpfd;
+    // fd: i32 = daemon.dhcpfd;
     let mut fd = daemon.dhcpfd;
 
     if !daemon.dhcp {

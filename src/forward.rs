@@ -27,7 +27,7 @@
  struct frec *lookup_frec_by_sender(u16 id,
 					  addr: &mut net::IpAddr,
 					  hash: Vec<u8>);
- struct frec *lookup_frec_by_query(hash: Vec<u8>, unsigned int flags);
+ struct frec *lookup_frec_by_query(hash: Vec<u8>, unsigned flags: i32);
 
  u16 get_id();
 pub fn free_frec(struct frec *f);
@@ -106,15 +106,15 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
   return 1;
 }
           
- unsigned int search_servers(now: time::Instant, union all_addr **addrpp, unsigned qtype: i32,
+ unsigned search_servers: i32(now: time::Instant, union all_addr **addrpp, unsigned qtype: i32,
 				   qdomain: &mut String, type: &i32, char **domain, norebind: &i32)
 			      
 {
   /* If the query ends in the domain in one of our servers, set
-     domain to point to that name. We find the largest match to allow both
+     domain to poto: i32 that name. We find the largest match to allow both
      domain.org and sub.domain.org to exist. */
   
-  unsigned int namelen = strlen(qdomain);
+  unsigned namelen: i32 = strlen(qdomain);
   let mut matchlen: u32 = 0;
   let mut serv: server;
   let mut flags: u32 = 0;
@@ -126,7 +126,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
     /* domain matches take priority over NODOTS matches */
     else if ((serv.flags & SERV_FOR_NODOTS) && *type != SERV_HAS_DOMAIN && !strchr(qdomain, '.') && namelen != 0)
       {
-	unsigned int sflag = serv.addr.sa.sa_family == AF_INET ? F_IPV4 : F_IPV6; 
+	unsigned sflag: i32 = serv.addr.sa.sa_family == AF_INET ? F_IPV4 : F_IPV6; 
 	*type = SERV_FOR_NODOTS;
 	if ((serv.flags & SERV_NO_REBIND) && norebind)
 	  *norebind = 1;
@@ -155,7 +155,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
       }
     else if (serv.flags & SERV_HAS_DOMAIN)
       {
-	unsigned int domainlen = strlen(serv.domain);
+	unsigned domainlen: i32 = strlen(serv.domain);
 	char *matchstart = qdomain + namelen - domainlen;
 	if (namelen >= domainlen &&
 	    hostname_isequal(matchstart, serv.domain) &&
@@ -165,7 +165,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 	      *norebind = 1;
 	    else
 	      {
-		unsigned int sflag = serv.addr.sa.sa_family == AF_INET ? F_IPV4 : F_IPV6;
+		unsigned sflag: i32 = serv.addr.sa.sa_family == AF_INET ? F_IPV4 : F_IPV6;
 		/* implement priority rules for --address and --server for same domain.
 		   --address wins if the address is for the correct AF
 		   --server wins otherwise. */
@@ -246,13 +246,13 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
   return  flags;
 }
 
- int forward_query(udpfd: i32, udpaddr: &mut net::IpAddr,
+ forward_query: i32(udpfd: i32, udpaddr: &mut net::IpAddr,
 			 union all_addr *dst_addr, unsigned dst_iface: i32,
 			 struct dns_header *header, plen: usize, now: &time::Instant, 
 			 struct frec *forward, ad_reqd: i32, do_bit: i32)
 {
   char *domain = NULL;
-  int type = SERV_DO_DNSSEC, norebind = 0;
+  type: i32 = SERV_DO_DNSSEC, norebind = 0;
   union all_addr *addrp = NULL;
   let mut flags: u32 = 0;
   let mut fwd_flags: u32 = 0;
@@ -261,7 +261,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 
   let mut do_dnssec: i32 = 0;
 
-  unsigned int gotname = extract_request(header, plen, daemon.namebuff, NULL);
+  unsigned gotname: i32 = extract_request(header, plen, daemon.namebuff, NULL);
   unsigned char *oph = find_pseudoheader(header, plen, NULL, NULL, NULL, NULL);
   ()do_bit;
   
@@ -287,7 +287,7 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
       
 
       /* If we've already got an answer to this query, but we're awaiting keys for validation,
-	 there's no point retrying the query, retry the key query instead...... */
+	 there's no poretrying: i32 the query, retry the key query instead...... */
       if (forward.blocking_query)
 	{
 	  fd: i32, is_sign;
@@ -624,8 +624,8 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
 {
   pheader: &mut Vec<u8>, *sizep;
   char **sets = 0;
-  int munged = 0, is_sign;
-  unsigned int rcode = RCODE(header);
+  munged: i32 = 0, is_sign;
+  unsigned rcode: i32 = RCODE(header);
   plen: usize; 
   
   ()ad_reqd;
@@ -637,11 +637,11 @@ pub fn send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
     {
       /* Similar algorithm to search_servers. */
       let mut ipset_pos: ipsets;
-      unsigned int namelen = strlen(daemon.namebuff);
+      unsigned namelen: i32 = strlen(daemon.namebuff);
       let mut matchlen: u32 = 0;
       for (ipset_pos = daemon.ipsets; ipset_pos; ipset_pos = ipset_pos.next) 
 	{
-	  unsigned int domainlen = strlen(ipset_pos.domain);
+	  unsigned domainlen: i32 = strlen(ipset_pos.domain);
 	  char *matchstart = daemon.namebuff + namelen - domainlen;
 	  if (namelen >= domainlen && hostname_isequal(matchstart, ipset_pos.domain) &&
 	      (domainlen == 0 || namelen == domainlen || *(matchstart - 1) == '.' ) &&
@@ -1013,7 +1013,7 @@ pub fn reply_query(fd: i32, family: i32, now: &time::Instant)
      everything is broken */
   if (forward.forwardall == 0 || --forward.forwardall == 1 || RCODE(header) != REFUSED)
     {
-      int check_rebind = 0, no_cache_dnssec = 0, cache_secure = 0, bogusanswer = 0;
+      check_rebind: i32 = 0, no_cache_dnssec = 0, cache_secure = 0, bogusanswer = 0;
       
       if (option_bool(OPT_NO_REBIND))
 	check_rebind = !(forward.flags & FREC_NOREBIND);
@@ -1326,7 +1326,7 @@ pub fn receive_query(struct listener *listen, now: &time::Instant)
   netmask: net::IpAddr, dst_addr_4;
   m: usize;
   sn: usize;
-  int if_index = 0, auth_dns = 0, do_bit = 0, have_pseudoheader = 0;
+  if_index: i32 = 0, auth_dns = 0, do_bit = 0, have_pseudoheader = 0;
 
   let mut local_auth: i32 = 0;
 
@@ -1346,9 +1346,9 @@ pub fn receive_query(struct listener *listen, now: &time::Instant)
 		 CMSG_SPACE(sizeof(struct sockaddr_dl))];
 
   } control_u;
-  int family = listen.addr.sa.sa_family;
+  family: i32 = listen.addr.sa.sa_family;
    /* Can always get recvd interface for IPv6 */
-  int check_dst = !daemon.opt_nowild || family == AF_INET6;
+  check_dst: i32 = !daemon.opt_nowild || family == AF_INET6;
 
   /* packet buffer overwritten */
   daemon.srv_save = NULL;
@@ -1625,7 +1625,7 @@ pub fn receive_query(struct listener *listen, now: &time::Instant)
   else
 
     {
-      int ad_reqd = do_bit;
+      ad_reqd: i32 = do_bit;
        /* RFC 6840 5.7 */
       if (header.hb4 & HB4_AD)
 	ad_reqd = 1;
@@ -1649,7 +1649,7 @@ pub fn receive_query(struct listener *listen, now: &time::Instant)
 
 
 /* Recurse up the key hierarchy */
- int tcp_key_recurse(now: time::Instant, status: i32, struct dns_header *header, n: usize, 
+ tcp_key_recurse: i32(now: time::Instant, status: i32, struct dns_header *header, n: usize, 
 			   class: i32, name: &mut String, keyname: &mut String, struct server *server, 
 			   have_mark: i32, unsigned mark: i32, keycount: &i32)
 {
@@ -1661,7 +1661,7 @@ pub fn receive_query(struct listener *listen, now: &time::Instant)
  
   while (1)
     {
-      int type = SERV_DO_DNSSEC;
+      type: i32 = SERV_DO_DNSSEC;
       char *domain;
       m: usize; 
       unsigned char c1, c2;
@@ -1980,7 +1980,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
       else
 
 	{
-	   int ad_reqd = do_bit;
+	   ad_reqd: i32 = do_bit;
 	   /* RFC 6840 5.7 */
 	   if (header.hb4 & HB4_AD)
 	     ad_reqd = 1;
@@ -1996,7 +1996,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 	    {
 	      let mut flags: u32 = 0;
 	      union all_addr *addrp = NULL;
-	      int type = SERV_DO_DNSSEC;
+	      type: i32 = SERV_DO_DNSSEC;
 	      char *domain = NULL;
 	      unsigned char *oph = find_pseudoheader(header, size, NULL, NULL, NULL, NULL);
 
@@ -2132,8 +2132,8 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 
 		      if (daemon.opt_dnssec_valid && !checking_disabled && (last_server.flags & SERV_DO_DNSSEC))
 			{
-			  int keycount = DNSSEC_WORK; /* Limit to number of DNSSEC questions, to catch loops and avoid filling cache. */
-			  int status = tcp_key_recurse(now, STAT_OK, header, m, 0, daemon.namebuff, daemon.keyname, 
+			  keycount: i32 = DNSSEC_WORK; /* Limit to number of DNSSEC questions, to catch loops and avoid filling cache. */
+			  status: i32 = tcp_key_recurse(now, STAT_OK, header, m, 0, daemon.namebuff, daemon.keyname, 
 						       last_server, have_mark, mark, &keycount);
 			  result: &mut String, *domain = "result";
 			  
@@ -2167,7 +2167,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
 		      else
 			header.hb4 &= ~HB4_CD;
 		      
-		      /* There's no point in updating the cache, since this process will exit and
+		      /* There's no poin: i32 updating the cache, since this process will exit and
 			 lose the information after a few queries. We make this call for the alias and 
 			 bogus-nxdomain side-effects. */
 		      /* If the crc of the question section doesn't match the crc we sent, then
@@ -2234,7 +2234,7 @@ unsigned char *tcp_request(confd: i32, now: &time::Instant,
   return f;
 }
 
-struct randfd *allocate_rfd(int family)
+struct randfd *allocate_rfd(family: i32)
 {
   let mut finger: i32 = 0;
   let mut i: i32;
@@ -2256,7 +2256,7 @@ struct randfd *allocate_rfd(int family)
   /* No free ones or cannot get new socket, grab an existing one */
   for i in 0..RANDOM_SOCKS
     {
-      int j = (i+finger) % RANDOM_SOCKS;
+      j: i32 = (i+finger) % RANDOM_SOCKS;
       if (daemon.randomsocks[j].refcount != 0 &&
 	  daemon.randomsocks[j].family == family && 
 	  daemon.randomsocks[j].refcount != 0xffff)
@@ -2443,7 +2443,7 @@ struct frec *get_new_frec(now: time::Instant, wait: &i32, struct frec *force)
   return NULL;
 }
 
- struct frec *lookup_frec_by_query(hash: Vec<u8>, unsigned int flags)
+ struct frec *lookup_frec_by_query(hash: Vec<u8>, unsigned flags: i32)
 {
   let mut f: frec;
 

@@ -132,7 +132,7 @@ pub fn netlink_init() -> String
 
 /* family = AF_UNSPEC finds ARP table entries.
    family = AF_LOCAL finds MAC addresses. */
-int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
+iface_enumerate: i32(family: i32, parm: Vec<u8>, int (*callback)())
 {
   struct sockaddr_nl addr;
   let mut h: nlmsghdr;
@@ -201,7 +201,7 @@ int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
 	  {
 	    struct ifaddrmsg *ifa = NLMSG_DATA(h);  
 	    struct rtattr *rta = IFA_RTA(ifa);
-	    unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
+	    unsigned len1: i32 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
 	    
 	    if (ifa.ifa_family == family)
 	      {
@@ -271,7 +271,7 @@ int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
 	  {
 	    struct ndmsg *neigh = NLMSG_DATA(h);  
 	    struct rtattr *rta = NDA_RTA(neigh);
-	    unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*neigh));
+	    unsigned len1: i32 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*neigh));
 	    maclen: usize = 0;
 	    char *inaddr = NULL, *mac = NULL;
 	    
@@ -298,7 +298,7 @@ int iface_enumerate(family: i32, parm: Vec<u8>, int (*callback)())
 	  {
 	    struct ifinfomsg *link =  NLMSG_DATA(h);
 	    struct rtattr *rta = IFLA_RTA(link);
-	    unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*link));
+	    unsigned len1: i32 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*link));
 	    char *mac = NULL;
 	    maclen: usize = 0;
 

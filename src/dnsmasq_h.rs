@@ -161,8 +161,8 @@ pub const _FILE_OFFSET_BITS: u32 = 64;
 // #include <linux/capability.h>
 /* There doesn't seem to be a universally-available
 userspace header for these. */
-// extern int capset(cap_user_header_t header, cap_user_data_t data);
-// extern int capget(cap_user_header_t header, cap_user_data_t data);
+// extern capset: i32(cap_user_header_t header, cap_user_data_t data);
+// extern capget: i32(cap_user_header_t header, cap_user_data_t data);
 pub const LINUX_CAPABILITY_VERSION_1: u32 = 0x19980330;
 pub const LINUX_CAPABILITY_VERSION_2: u32 = 0x20071026;
 pub const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
@@ -1447,7 +1447,7 @@ pub struct DnsmasqDaemon {
     /* datastuctures representing the command-line and
     config file arguments. All set (including defaults)
     in option.c */
-    //   unsigned int options[OPTION_SIZE];
+    //   unsigned options: i32[OPTION_SIZE];
     // pub options: [u32;OPTION_SIZE],
     // struct resolvc default_resolv, *resolv_files;
     pub old: ArpRecord,
@@ -1846,31 +1846,31 @@ pub struct DnsmasqDaemon {
 // void cache_init();
 // void next_uid(struct crec *crecp);
 // void log_query(unsigned flags: i32, name: &mut String, union all_addr *addr, arg: &mut String);
-// char *record_source(unsigned int index);
+// char *record_source(unsigned index: i32);
 // char *querystr(desc: &mut String, u16 type);
-// int cache_find_non_terminal(name: &mut String, now: &time::Instant);
+// cache_find_non_terminal: i32(name: &mut String, now: &time::Instant);
 // struct crec *cache_find_by_addr(struct crec *crecp,
 //         union all_addr *addr, now: &time::Instant,
-//         unsigned int prot);
+//         unsigned prot: i32);
 // struct crec *cache_find_by_name(struct crec *crecp,
-//         name: &mut String, now: &time::Instant, unsigned int prot);
+//         name: &mut String, now: &time::Instant, unsigned prot: i32);
 // void cache_end_insert();
 // void cache_start_insert();
-// int cache_recv_insert(now: time::Instant, fd: i32);
+// cache_recv_insert: i32(now: time::Instant, fd: i32);
 // struct crec *cache_insert(name: &mut String, union all_addr *addr, u16 class,
-//         now: time::Instant, unsigned ttl: i32, unsigned int flags);
+//         now: time::Instant, unsigned ttl: i32, unsigned flags: i32);
 // void cache_reload();
 // void cache_add_dhcp_entry(host_name: &mut String, prot: i32, union all_addr *host_address, ttd: &time::Instant);
 // a_record_from_hosts: net::IpAddr(name: &mut String, now: &time::Instant);
 // void cache_unhash_dhcp();
 // void dump_cache(now: time::Instant);
 // #ifndef NO_ID
-// int cache_make_stat(struct txt_record *t);
+// cache_make_stat: i32(struct txt_record *t);
 //
 // char *cache_get_name(struct crec *crecp);
 // char *cache_get_cname_target(struct crec *crecp);
-// struct crec *cache_enumerate(int init);
-// int read_hostsfile(filename: &mut String, unsigned index: i32, cache_size: i32,
+// struct crec *cache_enumerate(init: i32);
+// read_hostsfile: i32(filename: &mut String, unsigned index: i32, cache_size: i32,
 //        struct crec **rhash, hashsz: i32);
 
 /* blockdata.c */
@@ -1885,55 +1885,55 @@ pub struct DnsmasqDaemon {
 /* domain.c */
 // char *get_domain(addr: net::IpAddr);
 // char *get_domain6(addr: &mut net::IpAddr);
-// int is_name_synthetic(flags: i32, name: &mut String, union all_addr *addr);
-// int is_rev_synth(flag: i32, union all_addr *addr, name: &mut String);
+// is_name_synthetic: i32(flags: i32, name: &mut String, union all_addr *addr);
+// is_rev_synth: i32(flag: i32, union all_addr *addr, name: &mut String);
 
 /* rfc1035.c */
-// int extract_name(struct dns_header *header, plen: usize, unsigned char **pp,
+// extract_name: i32(struct dns_header *header, plen: usize, unsigned char **pp,
 //                  name: &mut String, isExtract: i32, extrabytes: i32);
 // pub fn skip_name(ansp: &mut Vec<u8>, struct dns_header *header, plen: usize, extrabytes: i32) -> &mut Vec<u8>;
 // pub fn skip_questions(struct dns_header *header, plen: usize) -> &mut Vec<u8>;
 // pub fn skip_section(ansp: &mut Vec<u8>, count: i32, struct dns_header *header, plen: usize) -> &mut Vec<u8>;
-// unsigned int extract_request(struct dns_header *header, qlen: usize,
+// unsigned extract_request: i32(struct dns_header *header, qlen: usize,
 //              name: &mut String, u16 *typep);
 // setup_reply: usize(struct dns_header *header, size_t  qlen,
 //        union all_addr *addrp, unsigned flags: i32,
 //        unsigned long ttl);
-// int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
+// extract_addresses: i32(struct dns_header *header, qlen: usize, name: &mut String,
 //           now: time::Instant, char **ipsets, is_sign: i32, check_rebind: i32,
 //           no_cache_dnssec: i32, secure: i32, doctored: &i32);
 // answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize,
 //           local_addr: net::IpAddr, local_netmask: net::IpAddr,
 //           now: time::Instant, ad_reqd: i32, do_bit: i32, have_pseudoheader: i32);
-// int check_for_bogus_wildcard(struct dns_header *header, qlen: usize, name: &mut String,
+// check_for_bogus_wildcard: i32(struct dns_header *header, qlen: usize, name: &mut String,
 //            struct bogus_addr *baddr, now: &time::Instant);
-// int check_for_ignored_address(struct dns_header *header, qlen: usize, struct bogus_addr *baddr);
-// int check_for_local_domain(name: &mut String, now: &time::Instant);
+// check_for_ignored_address: i32(struct dns_header *header, qlen: usize, struct bogus_addr *baddr);
+// check_for_local_domain: i32(name: &mut String, now: &time::Instant);
 // resize_packet: usize(struct dns_header *header, plen: usize,
 //       pheader: &mut Vec<u8>, hlen: usize);
-// int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &i32,
+// add_resource_record: i32(struct dns_header *header, limit: &mut String, truncp: &i32,
 //       nameoffset: i32, unsigned char **pp, unsigned ttl: i32,
 //       offset: &i32, u16 type, u16 class, format: &mut String, ...);
-// int in_arpa_name_2_addr(namein: &mut String, union all_addr *addrp);
-// int private_net(addr: net::IpAddr, ban_localhost: i32);
+// in_arpa_name_2_addr: i32(namein: &mut String, union all_addr *addrp);
+// private_net: i32(addr: net::IpAddr, ban_localhost: i32);
 
 /* auth.c */
 //
 // answer_auth: usize(struct dns_header *header, limit: &mut String, qlen: usize,
 //        now: time::Instant, peer_addr: &mut net::IpAddr, local_query: i32,
 //        do_bit: i32, have_pseudoheader: i32);
-// int in_zone(struct auth_zone *zone, name: &mut String, char **cut);
+// in_zone: i32(struct auth_zone *zone, name: &mut String, char **cut);
 //
 
 /* dnssec.c */
 // dnssec_generate_query: usize(struct dns_header *header, end: &mut Vec<u8>, name: &mut String, class: i32, type: i32, edns_pktsz: i32);
-// int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32);
-// int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32);
-// int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: &i32,
+// dnssec_validate_by_ds: i32(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32);
+// dnssec_validate_ds: i32(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32);
+// dnssec_validate_reply: i32(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: &i32,
 //         check_unsigned: i32, neganswer: &i32, nons: &i32, nsec_ttl: &i32);
-// int dnskey_keytag(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32);
+// dnskey_keytag: i32(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32);
 // filter_rrsigs: usize(struct dns_header *header, plen: usize);
-// int setup_timestamp();
+// setup_timestamp: i32();
 
 /* hash_questions.c */
 // void hash_questions_init();
@@ -1941,61 +1941,61 @@ pub struct DnsmasqDaemon {
 
 /* crypto.c */
 // const struct nettle_hash *hash_find(name: &mut String);
-// int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp);
-// int verify(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
+// hash_init: i32(const struct nettle_hash *hash, void **ctxp, unsigned char **digestp);
+// verify: i32(struct blockdata *key_data, unsigned key_len: i32, sig: &mut Vec<u8>, sig_len: usize,
 //      digest: &mut Vec<u8>, digest_len: usize, algo: i32);
-// char *ds_digest_name(int digest);
-// char *algo_digest_name(int algo);
-// char *nsec3_digest_name(int digest);
+// char *ds_digest_name(digest: i32);
+// char *algo_digest_name(algo: i32);
+// char *nsec3_digest_name(digest: i32);
 
 /* util.c */
 // void rand_init();
 // u16 rand16();
 // u32 rand32();
 // u64 rand64();
-// int legal_hostname(name: &mut String);
+// legal_hostname: i32(name: &mut String);
 // char *canonicalise(in: &mut String, nomem: &i32);
 // pub fn do_rfc1035_name(p: &mut Vec<u8>, sval: &mut String, limit: &mut String) -> &mut Vec<u8>;
 // safe_malloc: Vec<u8>(size: usize);
 // void safe_strncpy(dest: &mut String, const src: &mut String, size: usize);
 // void safe_pipe(fd: &i32, read_noblock: i32);
 // whine_malloc: Vec<u8>(size: usize);
-// int sa_len(addr: &mut net::IpAddr);
-// int sockaddr_isequal(s1: &mut net::IpAddr, s2: &mut net::IpAddr);
-// int hostname_isequal(const a: &mut String, const char *b);
-// int hostname_issubdomain(a: &mut String, b: &mut String);
+// sa_len: i32(addr: &mut net::IpAddr);
+// sockaddr_isequal: i32(s1: &mut net::IpAddr, s2: &mut net::IpAddr);
+// hostname_isequal: i32(const a: &mut String, const char *b);
+// hostname_issubdomain: i32(a: &mut String, b: &mut String);
 // dnsmasq_time: time::Instant();
-// int netmask_length(mask: net::IpAddr);
-// int is_same_net(a: net::IpAddr, b: net::IpAddr, mask: net::IpAddr);
-// int is_same_net6(a: &mut net::IpAddr, b: &mut net::IpAddr, prefixlen: i32);
+// netmask_length: i32(mask: net::IpAddr);
+// is_same_net: i32(a: net::IpAddr, b: net::IpAddr, mask: net::IpAddr);
+// is_same_net6: i32(a: &mut net::IpAddr, b: &mut net::IpAddr, prefixlen: i32);
 // u64 addr6part(addr: &mut net::IpAddr);
 // void setaddr6part(addr: &mut net::IpAddr, u64 host);
-// int retry_send(src: usize);
-// void prettyprint_time(buf: &mut String, unsigned int t);
-// int prettyprint_addr(addr: &mut net::IpAddr, buf: &mut String);
-// int parse_hex(in: &mut String, out: &mut Vec<u8>, maxlen: i32,
+// retry_send: i32(src: usize);
+// void prettyprint_time(buf: &mut String, unsigned t: i32);
+// prettyprint_addr: i32(addr: &mut net::IpAddr, buf: &mut String);
+// parse_hex: i32(in: &mut String, out: &mut Vec<u8>, maxlen: i32,
 //         wildcard_mask: &mut u32, mac_type: &i32);
-// int memcmp_masked(a: &mut Vec<u8>, b: &mut Vec<u8>, len: i32,
-//       unsigned int mask);
-// int expand_buf(struct iovec *iov, size: usize);
+// memcmp_masked: i32(a: &mut Vec<u8>, b: &mut Vec<u8>, len: i32,
+//       unsigned mask: i32);
+// expand_buf: i32(struct iovec *iov, size: usize);
 // char *print_mac(buff: &mut String, mac: &mut Vec<u8>, len: i32);
-// int read_write(fd: i32, packet: &mut Vec<u8>, size: i32, rw: i32);
+// read_write: i32(fd: i32, packet: &mut Vec<u8>, size: i32, rw: i32);
 // void close_fds(max_fd: i32, spare1: i32, spare2: i32, spare3: i32);
-// int wildcard_match(const char* wildcard, const char* match);
-// int wildcard_matchn(const char* wildcard, const char* match, num: i32);
+// wildcard_match: i32(const char* wildcard, const char* match);
+// wildcard_matchn: i32(const char* wildcard, const char* match, num: i32);
 //
-// int kernel_version();
+// kernel_version: i32();
 //
 
 /* log.c */
 // void die(message: &mut String, arg1: &mut String, exit_code: i32) ATTRIBUTE_NORETURN;
-// int log_start(struct passwd *ent_pw, errfd: i32);
-// int log_reopen(log_file: &mut String);
+// log_start: i32(struct passwd *ent_pw, errfd: i32);
+// log_reopen: i32(log_file: &mut String);
 
 // void my_syslog(priority: i32, const format: &mut String, ...);
 
 // void set_log_writer();
-// void check_log_writer(int force);
+// void check_log_writer(force: i32);
 // void flush_log();
 
 /* option.c */
@@ -2004,12 +2004,12 @@ pub struct DnsmasqDaemon {
 //         opt_len: i32, buf: &mut String, buf_len: i32);
 // void reread_dhcp();
 // void read_servers_file();
-// void set_option_bool(unsigned int opt);
-// void reset_option_bool(unsigned int opt);
+// void set_option_bool(unsigned opt: i32);
+// void reset_option_bool(unsigned opt: i32);
 // struct hostsfile *expand_filelist(struct hostsfile *list);
 // char *parse_server(arg: &mut String, addr: &mut net::IpAddr,
 //        source_addr: &mut net::IpAddr, interface: &mut String, flags: &i32);
-// int option_read_dynfile(file: &mut String, flags: i32);
+// option_read_dynfile: i32(file: &mut String, flags: i32);
 
 /* forward.c */
 // void reply_query(fd: i32, family: i32, now: &time::Instant);
@@ -2018,20 +2018,20 @@ pub struct DnsmasqDaemon {
 //          local_addr: &mut net::IpAddr, netmask: net::IpAddr, auth_dns: i32);
 // void server_gone(struct server *server);
 // struct frec *get_new_frec(now: time::Instant, wait: &i32, struct frec *force);
-// int send_from(fd: i32, nowild: i32, packet: &mut String, len: usize,
+// send_from: i32(fd: i32, nowild: i32, packet: &mut String, len: usize,
 //          to: &mut net::IpAddr, union all_addr *source,
-//          unsigned int iface);
+//          unsigned iface: i32);
 // void resend_query();
-// struct randfd *allocate_rfd(int family);
+// struct randfd *allocate_rfd(family: i32);
 // void free_rfd(struct randfd *rfd);
 
 /* network.c */
-// int indextoname(fd: i32, index: i32, name: &mut String);
-// int local_bind(fd: i32, addr: &mut net::IpAddr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32);
-// int random_sock(int family);
+// indextoname: i32(fd: i32, index: i32, name: &mut String);
+// local_bind: i32(fd: i32, addr: &mut net::IpAddr, intname: &mut String, unsigned ifindex: i32, is_tcp: i32);
+// random_sock: i32(family: i32);
 // void pre_allocate_sfds();
-// int reload_servers(fname: &mut String);
-// void mark_servers(int flag);
+// reload_servers: i32(fname: &mut String);
+// void mark_servers(flag: i32);
 // void cleanup_servers();
 // void add_update_server(flags: i32,
 //            addr: &mut net::IpAddr,
@@ -2039,21 +2039,21 @@ pub struct DnsmasqDaemon {
 //            const interface: &mut String,
 //            const char *domain);
 // void check_servers();
-// int enumerate_interfaces(int reset);
+// enumerate_interfaces: i32(reset: i32);
 // void create_wildcard_listeners();
-// void create_bound_listeners(int dienow);
+// void create_bound_listeners(dienow: i32);
 // void warn_bound_listeners();
 // void warn_wild_labels();
 // void warn_int_names();
-// int is_dad_listeners();
-// int iface_check(family: i32, union all_addr *addr, name: &mut String, auth: &i32);
-// int loopback_exception(fd: i32, family: i32, union all_addr *addr, name: &mut String);
-// int label_exception(index: i32, family: i32, union all_addr *addr);
-// int fix_fd(int fd);
-// int tcp_interface(fd: i32, af: i32);
-// int set_ipv6pktinfo(int fd);
+// is_dad_listeners: i32();
+// iface_check: i32(family: i32, union all_addr *addr, name: &mut String, auth: &i32);
+// loopback_exception: i32(fd: i32, family: i32, union all_addr *addr, name: &mut String);
+// label_exception: i32(index: i32, family: i32, union all_addr *addr);
+// fix_fd: i32(fd: i32);
+// tcp_interface: i32(fd: i32, af: i32);
+// set_ipv6pktinfo: i32(fd: i32);
 //
-// void join_multicast(int dienow);
+// void join_multicast(dienow: i32);
 //
 // #if defined(HAVE_LINUX_NETWORK) || defined()
 // void newaddress(now: time::Instant);
@@ -2071,7 +2071,7 @@ pub struct DnsmasqDaemon {
 //             struct dhcp_netid *netids);
 // struct ping_result *do_icmp_ping(now: time::Instant, addr: net::IpAddr,
 //          unsigned hash: i32, loopback: i32);
-// int address_allocate(struct dhcp_context *context,
+// address_allocate: i32(struct dhcp_context *context,
 //          struct in_addr *addrp, hwaddr: &mut Vec<u8>, hw_len: i32,
 //          struct dhcp_netid *netids, now: &time::Instant, loopback: i32);
 // void dhcp_read_ethers();
@@ -2082,7 +2082,7 @@ pub struct DnsmasqDaemon {
 /* lease.c */
 //
 // void lease_update_file(now: time::Instant);
-// void lease_update_dns(int force);
+// void lease_update_dns(force: i32);
 // void lease_init(now: time::Instant);
 // struct dhcp_lease *lease4_allocate(addr: net::IpAddr);
 //
@@ -2091,12 +2091,12 @@ pub struct DnsmasqDaemon {
 //              lease_type: i32, unsigned iaid: i32, addr: &mut net::IpAddr);
 // void lease6_reset();
 // struct dhcp_lease *lease6_find_by_client(first: &mut dhcp_lease, lease_type: i32,
-//            clid: &mut Vec<u8>, clid_len: i32, unsigned int iaid);
+//            clid: &mut Vec<u8>, clid_len: i32, unsigned iaid: i32);
 // struct dhcp_lease *lease6_find_by_addr(net: &mut net::IpAddr, prefix: i32, u64 addr);
 // u64 lease_find_max_addr6(struct dhcp_context *context);
 // void lease_ping_reply(sender: &mut net::IpAddr, packet: &mut Vec<u8>, interface: &mut String);
 // void lease_update_slaac(now: time::Instant);
-// void lease_set_iaid(lease: &mut dhcp_lease, unsigned int iaid);
+// void lease_set_iaid(lease: &mut dhcp_lease, unsigned iaid: i32);
 // void lease_make_duid(now: time::Instant);
 //
 // void lease_set_hwaddr(lease: &mut dhcp_lease, const hwaddr: &mut Vec<u8>,
@@ -2111,7 +2111,7 @@ pub struct DnsmasqDaemon {
 // lease_find_max_addr: net::IpAddr(struct dhcp_context *context);
 // void lease_prune(target: &mut dhcp_lease, now: &time::Instant);
 // void lease_update_from_configs();
-// int do_script_run(now: time::Instant);
+// do_script_run: i32(now: time::Instant);
 // void rerun_scripts();
 // void lease_find_interfaces(now: time::Instant);
 //
@@ -2131,11 +2131,11 @@ pub struct DnsmasqDaemon {
 
 /* dnsmasq.c */
 //
-// int make_icmp_sock();
-// int icmp_ping(addr: net::IpAddr);
-// int delay_dhcp(start: time::Instant, sec: i32, fd: i32, uint32_t addr, u16 id);
+// make_icmp_sock: i32();
+// icmp_ping: i32(addr: net::IpAddr);
+// delay_dhcp: i32(start: time::Instant, sec: i32, fd: i32, uint32_t addr, u16 id);
 //
-// void queue_event(int event);
+// void queue_event(event: i32);
 // void send_alarm(event: time::Instant, now: &time::Instant);
 // void send_event(fd: i32, event: i32, data: i32, msg: &mut String);
 // void clear_cache_and_reload(now: time::Instant);
@@ -2156,7 +2156,7 @@ pub struct DnsmasqDaemon {
 //
 
 /* bpf.c or netlink.c */
-// int iface_enumerate(family: i32, parm: Vec<u8>, int (callback)());
+// iface_enumerate: i32(family: i32, parm: Vec<u8>, int (callback)());
 
 /* dbus.c */
 //  HAVE_DBUS
@@ -2179,12 +2179,12 @@ pub struct DnsmasqDaemon {
 /* ipset.c */
 //  HAVE_IPSET
 // void ipset_init();
-// int add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, flags: i32, remove: i32);
+// add_to_ipset: i32(const setname: &mut String, const union all_addr *ipaddr, flags: i32, remove: i32);
 //
 
 /* helper.c */
 // #if defined()
-// int create_helper(event_fd: i32, err_fd: i32, uid_t uid, gid_t gid, long max_fd);
+// create_helper: i32(event_fd: i32, err_fd: i32, uid_t uid, gid_t gid, long max_fd);
 // void helper_write();
 // void queue_script(action: i32, lease: &mut dhcp_lease,
 //       hostname: &mut String, now: &time::Instant);
@@ -2193,19 +2193,19 @@ pub struct DnsmasqDaemon {
 //
 // void queue_arp(action: i32, mac: &mut Vec<u8>, maclen: i32,
 //          family: i32, union all_addr *addr);
-// int helper_buf_empty();
+// helper_buf_empty: i32();
 //
 
 /* tftp.c */
 //
 // void tftp_request(struct listener *listen, now: &time::Instant);
 // void check_tftp_listeners(now: time::Instant);
-// int do_tftp_script_run();
+// do_tftp_script_run: i32();
 //
 
 /* conntrack.c */
 //  HAVE_CONNTRACK
-// int get_incoming_mark(peer_addr: &mut net::IpAddr, union all_addr *local_addr,
+// get_incoming_mark: i32(peer_addr: &mut net::IpAddr, union all_addr *local_addr,
 //           istcp: i32, markp: &mut u32);
 //
 
@@ -2218,11 +2218,11 @@ pub struct DnsmasqDaemon {
 // struct dhcp_context *address6_available(struct dhcp_context *context,
 //           taddr: &mut net::IpAddr,
 //           struct dhcp_netid *netids,
-//           int plain_range);
+//           plain_range: i32);
 // struct dhcp_context *address6_valid(struct dhcp_context *context,
 //             taddr: &mut net::IpAddr,
 //             struct dhcp_netid *netids,
-//             int plain_range);
+//             plain_range: i32);
 // struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, net: &mut net::IpAddr,
 //               prefix: i32, addr: &mut net::IpAddr);
 // void make_duid(now: time::Instant);
@@ -2249,21 +2249,21 @@ pub struct DnsmasqDaemon {
 // struct dhcp_netid *run_tag_if(struct dhcp_netid *tags);
 // struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *context_tags,
 //          struct dhcp_opt *opts);
-// int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, tagnotneeded: i32);
+// match_netid: i32(struct dhcp_netid *check, struct dhcp_netid *pool, tagnotneeded: i32);
 // char *strip_hostname(hostname: &mut String);
 // void log_tags(struct dhcp_netid *netid, u32 xid);
-// int match_bytes(struct dhcp_opt *o, p: &mut Vec<u8>, len: i32);
+// match_bytes: i32(struct dhcp_opt *o, p: &mut Vec<u8>, len: i32);
 // void dhcp_update_configs(struct dhcp_config *configs);
 // void display_opts();
-// int lookup_dhcp_opt(prot: i32, name: &mut String);
-// int lookup_dhcp_len(prot: i32, val: i32);
+// lookup_dhcp_opt: i32(prot: i32, name: &mut String);
+// lookup_dhcp_len: i32(prot: i32, val: i32);
 // struct dhcp_config *find_config(struct dhcp_config *configs,
 //         struct dhcp_context *context,
 //         clid: &mut Vec<u8>, clid_len: i32,
 //         hwaddr: &mut Vec<u8>, hw_len: i32,
 //         hw_type: i32, hostname: &mut String,
 //         struct dhcp_netid *filter);
-// int config_has_mac(struct dhcp_config *config, hwaddr: &mut Vec<u8>, len: i32, type: i32);
+// config_has_mac: i32(struct dhcp_config *config, hwaddr: &mut Vec<u8>, len: i32, type: i32);
 //
 // char *whichdevice();
 // void bindtodevice(device: &mut String, fd: i32);
@@ -2277,15 +2277,15 @@ pub struct DnsmasqDaemon {
 
 /* outpacket.c */
 //
-// void end_opt6(int container);
+// void end_opt6(container: i32);
 // void reset_counter();
-// int save_counter(int newval);
+// save_counter: i32(newval: i32);
 // expand: Vec<u8>(headroom: usize);
-// int new_opt6(int opt);
+// new_opt6: i32(opt: i32);
 // put_opt6: Vec<u8>(data: Vec<u8>, len: usize);
-// void put_opt6_long(unsigned int val);
-// void put_opt6_short(unsigned int val);
-// void put_opt6_char(unsigned int val);
+// void put_opt6_long(unsigned val: i32);
+// void put_opt6_short(unsigned val: i32);
+// void put_opt6_char(unsigned val: i32);
 // void put_opt6_string(s: &mut String);
 //
 
@@ -2307,26 +2307,26 @@ pub struct DnsmasqDaemon {
 /* loop.c */
 //  HAVE_LOOP
 // void loop_send_probes();
-// int detect_loop(query: &mut String, type: i32);
+// detect_loop: i32(query: &mut String, type: i32);
 //
 
 /* inotify.c */
 //  HAVE_INOTIFY
 // void inotify_dnsmasq_init();
-// int inotify_check(now: time::Instant);
+// inotify_check: i32(now: time::Instant);
 // void set_dynamic_inotify(flag: i32, total_size: i32, struct crec **rhash, revhashsz: i32);
 //
 
 /* poll.c */
 // void poll_reset();
-// int poll_check(fd: i32, short event);
+// poll_check: i32(fd: i32, short event);
 // void poll_listen(fd: i32, short event);
-// int do_poll(int timeout);
+// do_poll: i32(timeout: i32);
 
 /* rrfilter.c */
 // rrfilter: usize(struct dns_header *header, plen: usize, mode: i32);
-// u16 *rrfilter_desc(int type);
-// int expand_workspace(unsigned char ***wkspc, szp: &i32, new: i32);
+// u16 *rrfilter_desc(type: i32);
+// expand_workspace: i32(unsigned char ***wkspc, szp: &i32, new: i32);
 
 /* edns0.c */
 // unsigned char *find_pseudoheader(struct dns_header *header, plen: usize,
@@ -2336,11 +2336,11 @@ pub struct DnsmasqDaemon {
 // add_do_bit: usize(struct dns_header *header, plen: usize, unsigned char *limit);
 // add_edns0_config: usize(struct dns_header *header, plen: usize, limit: &mut Vec<u8>,
 //       source: &mut net::IpAddr, now: &time::Instant, check_subnet: &i32, cacheable: &i32);
-// int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, peer: &mut net::IpAddr);
+// check_source: i32(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, peer: &mut net::IpAddr);
 
 /* arp.c */
-// int find_mac(addr: &mut net::IpAddr, mac: &mut Vec<u8>, lazy: i32, now: &time::Instant);
-// int do_arp_script_run();
+// find_mac: i32(addr: &mut net::IpAddr, mac: &mut Vec<u8>, lazy: i32, now: &time::Instant);
+// do_arp_script_run: i32();
 
 /* dump.c */
 //  HAVE_DUMPFILE

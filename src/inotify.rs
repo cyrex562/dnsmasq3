@@ -100,7 +100,7 @@ pub fn inotify_dnsmasq_init()
   for (res = daemon.resolv_files; res; res = res.next)
     {
       d: &mut String, *new_path, *path = safe_malloc(strlen(res.name) + 1);
-      int links = MAXSYMLINKS;
+      links: i32 = MAXSYMLINKS;
 
       strcpy(path, res.name);
 
@@ -208,7 +208,7 @@ pub fn set_dynamic_inotify(flag: i32, total_size: i32, struct crec **rhash, revh
     }
 }
 
-int inotify_check(now: time::Instant)
+inotify_check: i32(now: time::Instant)
 {
   let mut hit: i32 = 0;
   let mut ah: hostsfile;

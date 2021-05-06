@@ -27,7 +27,7 @@
 
 pub fn make_non_terminals(struct crec *source);
  struct crec *really_insert(name: &mut String, union all_addr *addr, u16 class,
-				  now: time::Instant,  unsigned ttl: i32, unsigned int flags);
+				  now: time::Instant,  unsigned ttl: i32, unsigned flags: i32);
 
 /* type.string mapping: this is also used by the name-hash function as a mixing table. */
  const struct {
@@ -79,7 +79,7 @@ pub fn make_non_terminals(struct crec *source);
 pub fn cache_free(struct crec *crecp);
 pub fn cache_unlink(struct crec *crecp);
 pub fn cache_link(struct crec *crecp);
-pub fn rehash(int size);
+pub fn rehash(size: i32);
 pub fn cache_hash(struct crec *crecp);
 
 pub fn next_uid(struct crec *crecp)
@@ -125,7 +125,7 @@ pub fn cache_init()
    but if the hosts file(s) are big (some people have 50000 ad-block entries), the table
    will be much too small, so the hosts reading code calls rehash every 1000 addresses, to
    expand the table. */
-pub fn rehash(int size)
+pub fn rehash(size: i32)
 {
   struct crec **new, **old, *p, *tmp;
   i: i32, new_size, old_size;
@@ -284,7 +284,7 @@ char *cache_get_cname_target(struct crec *crecp)
 
 
 
-struct crec *cache_enumerate(int init)
+struct crec *cache_enumerate(init: i32)
 {
    let mut bucket: i32;
    let mut cache: crec;
@@ -307,7 +307,7 @@ struct crec *cache_enumerate(int init)
   return cache;
 }
 
- int is_outdated_cname_pointer(struct crec *crecp)
+ is_outdated_cname_pointer: i32(struct crec *crecp)
 {
   if (!(crecp.flags & F_CNAME) || crecp.addr.cname.is_name_ptr)
     return 0;
@@ -322,7 +322,7 @@ struct crec *cache_enumerate(int init)
   return 1;
 }
 
- int is_expired(now: time::Instant, struct crec *crecp)
+ is_expired: i32(now: time::Instant, struct crec *crecp)
 {
   if (crecp.flags & F_IMMORTAL)
     return 0;
@@ -415,7 +415,7 @@ struct crec *cache_enumerate(int init)
   else
     {
       let mut i: i32;
-      int addrlen = (flags & F_IPV6) ? IN6ADDRSZ : INADDRSZ;
+      addrlen: i32 = (flags & F_IPV6) ? IN6ADDRSZ : INADDRSZ;
 
       for i in 0..hash_size
 	for (crecp = hash_table[i], up = &hash_table[i]; 
@@ -470,7 +470,7 @@ pub fn cache_start_insert()
 }
 
 struct crec *cache_insert(name: &mut String, union all_addr *addr, u16 class,
-			  now: time::Instant,  unsigned ttl: i32, unsigned int flags)
+			  now: time::Instant,  unsigned ttl: i32, unsigned flags: i32)
 {
 
   if (flags & (F_DNSKEY | F_DS)) 
@@ -501,11 +501,11 @@ struct crec *cache_insert(name: &mut String, union all_addr *addr, u16 class,
 
 
  struct crec *really_insert(name: &mut String, union all_addr *addr, u16 class,
-				  now: time::Instant,  unsigned ttl: i32, unsigned int flags)
+				  now: time::Instant,  unsigned ttl: i32, unsigned flags: i32)
 {
   struct crec *new, *target_crec = NULL;
   union bigname *big_name = NULL;
-  int freed_all = flags & F_REVERSE;
+  freed_all: i32 = flags & F_REVERSE;
   let mut free_avail: i32 = 0;
   let mut target_uid: u32;
   
@@ -672,7 +672,7 @@ pub fn cache_end_insert()
 	    {
 	      char *name = cache_get_name(new_chain);
 	      sm: usize = strlen(name);
-	      unsigned int flags = new_chain.flags;
+	      unsigned flags: i32 = new_chain.flags;
 
 	      u16 class = new_chain.uid;
 
@@ -722,7 +722,7 @@ pub fn cache_end_insert()
 
 
 /* A marshalled cache entry arrives on fd, read, unmarshall and insert into cache of master process. */
-int cache_recv_insert(now: time::Instant, fd: i32)
+cache_recv_insert: i32(now: time::Instant, fd: i32)
 {
   sm: usize;
   union all_addr addr;
@@ -804,7 +804,7 @@ int cache_recv_insert(now: time::Instant, fd: i32)
     }
 }
 	
-int cache_find_non_terminal(name: &mut String, now: &time::Instant)
+cache_find_non_terminal: i32(name: &mut String, now: &time::Instant)
 {
   let mut crecp: crec;
 
@@ -819,10 +819,10 @@ int cache_find_non_terminal(name: &mut String, now: &time::Instant)
   return 0;
 }
 
-struct crec *cache_find_by_name(struct crec *crecp, name: &mut String, now: &time::Instant, unsigned int prot)
+struct crec *cache_find_by_name(struct crec *crecp, name: &mut String, now: &time::Instant, unsigned prot: i32)
 {
   let mut ans: crec;
-  int no_rr = prot & F_NO_RR;
+  no_rr: i32 = prot & F_NO_RR;
 
   prot &= ~F_NO_RR;
   
@@ -907,10 +907,10 @@ struct crec *cache_find_by_name(struct crec *crecp, name: &mut String, now: &tim
 }
 
 struct crec *cache_find_by_addr(struct crec *crecp, union all_addr *addr, 
-				now: time::Instant, unsigned int prot)
+				now: time::Instant, unsigned prot: i32)
 {
   let mut ans: crec;
-  int addrlen = (prot == F_IPV6) ? IN6ADDRSZ : INADDRSZ;
+  addrlen: i32 = (prot == F_IPV6) ? IN6ADDRSZ : INADDRSZ;
   
   if (crecp) /* iterating */
     ans = crecp.next;
@@ -1033,7 +1033,7 @@ pub fn add_hosts_entry(struct crec *cache, union all_addr *addr, addrlen: i32,
   make_non_terminals(cache);
 }
 
- int eatspace(FILE *f)
+ eatspace: i32(FILE *f)
 {
   c: i32, nl = 0;
 
@@ -1057,7 +1057,7 @@ pub fn add_hosts_entry(struct crec *cache, union all_addr *addr, addrlen: i32,
     }
 }
 	 
- int gettok(FILE *f, token: &mut String)
+ gettok: i32(FILE *f, token: &mut String)
 {
   c: i32, count = 0;
  
@@ -1080,11 +1080,11 @@ pub fn add_hosts_entry(struct crec *cache, union all_addr *addr, addrlen: i32,
     }
 }
 
-int read_hostsfile(filename: &mut String, unsigned index: i32, cache_size: i32, struct crec **rhash, hashsz: i32)
+read_hostsfile: i32(filename: &mut String, unsigned index: i32, cache_size: i32, struct crec **rhash, hashsz: i32)
 {  
   FILE *f = fopen(filename, "r");
   char *token = daemon.namebuff, *domain_suffix = NULL;
-  int addr_count = 0, name_count = cache_size, lineno = 1;
+  addr_count: i32 = 0, name_count = cache_size, lineno = 1;
   let mut flags: u32 = 0;
   union all_addr addr;
   atnl: i32, addrlen = 0;
@@ -1473,7 +1473,7 @@ pub fn make_non_terminals(struct crec *source)
 {
   char *name = cache_get_name(source);
   struct crec *crecp, *tmp, **up;
-  int type = F_HOSTS | F_CONFIG;
+  type: i32 = F_HOSTS | F_CONFIG;
  
   if (source.flags & F_DHCP)
     type = F_DHCP;
@@ -1558,7 +1558,7 @@ pub fn make_non_terminals(struct crec *source)
 }
 
 #ifndef NO_ID
-int cache_make_stat(struct txt_record *t)
+cache_make_stat: i32(struct txt_record *t)
 { 
    char *buff = NULL;
   let mut bufflen: i32 = 60;
@@ -1610,7 +1610,7 @@ int cache_make_stat(struct txt_record *t)
 	  {
 	    new: &mut String, *lenp;
 	    port: i32, newlen, bytes_avail, bytes_needed;
-	    unsigned int queries = 0, failed_queries = 0;
+	    unsigned queries: i32 = 0, failed_queries = 0;
 	    for (serv1 = serv; serv1; serv1 = serv1.next)
 	      if (!(serv1.flags & 
 		    (SERV_NO_ADDR | SERV_LITERAL_ADDRESS | SERV_COUNTED | SERV_USE_RESOLV | SERV_NO_REBIND)) && 
@@ -1693,7 +1693,7 @@ pub fn dump_cache(now: time::Instant)
 	  (SERV_NO_ADDR | SERV_LITERAL_ADDRESS | SERV_COUNTED | SERV_USE_RESOLV | SERV_NO_REBIND)))
       {
 	let mut port: i32;
-	unsigned int queries = 0, failed_queries = 0;
+	unsigned queries: i32 = 0, failed_queries = 0;
 	for (serv1 = serv; serv1; serv1 = serv1.next)
 	  if (!(serv1.flags & 
 		(SERV_NO_ADDR | SERV_LITERAL_ADDRESS | SERV_COUNTED | SERV_USE_RESOLV | SERV_NO_REBIND)) && 
@@ -1726,7 +1726,7 @@ pub fn dump_cache(now: time::Instant)
 	      a = sanitise(cache_get_cname_target(cache));
 	    else if ((cache.flags & F_SRV) && !(cache.flags & F_NEG))
 	      {
-		int targetlen = cache.addr.srv.targetlen;
+		targetlen: i32 = cache.addr.srv.targetlen;
 		slen: usize = sprintf(a, "{} {} {} ", cache.addr.srv.priority,
 				      cache.addr.srv.weight, cache.addr.srv.srvport);
 
@@ -1790,7 +1790,7 @@ pub fn dump_cache(now: time::Instant)
     }
 }
 
-char *record_source(unsigned int index)
+char *record_source(unsigned index: i32)
 {
   let mut ah: hostsfile;
 
@@ -1883,7 +1883,7 @@ pub fn log_query(unsigned flags: i32, name: &mut String, union all_addr *addr, a
 	sprintf(daemon.addrbuff, arg, addr.log.keytag, addr.log.algo, addr.log.digest);
       else if (flags & F_RCODE)
 	{
-	  unsigned int rcode = addr.log.rcode;
+	  unsigned rcode: i32 = addr.log.rcode;
 
 	   if (rcode == SERVFAIL)
 	     dest = "SERVFAIL";
@@ -1971,7 +1971,7 @@ pub fn log_query(unsigned flags: i32, name: &mut String, union all_addr *addr, a
 
   if (option_bool(OPT_EXTRALOG))
     {
-      int port = prettyprint_addr(daemon.log_source_addr, daemon.addrbuff2);
+      port: i32 = prettyprint_addr(daemon.log_source_addr, daemon.addrbuff2);
       if (flags & F_NOEXTRA)
 	my_syslog(LOG_INFO, "* {}/{} {} {} {} {}", daemon.addrbuff2, port, source, name, verb, dest);
       else

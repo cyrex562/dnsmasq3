@@ -16,12 +16,13 @@
 
 
 
- let mut keyblock_free: blockdata;
- unsigned blockdata_count: i32, blockdata_hwm, blockdata_alloced;
+//  let mut keyblock_free: blockdata;
+//  unsigned blockdata_count: i32, blockdata_hwm, blockdata_alloced;
 
-pub fn blockdata_expand(int n)
+pub fn blockdata_expand(n: i32)
 {
-  struct blockdata *new = whine_malloc(n * sizeof(struct blockdata));
+  // struct blockdata *new = whine_malloc(n * sizeof(struct blockdata));
+  let mut new: blockdata = Default::default();
   
   if (new)
     {
@@ -30,8 +31,9 @@ pub fn blockdata_expand(int n)
       new[n-1].next = keyblock_free;
       keyblock_free = new;
 
-      for (i = 0; i < n - 1; i++)
-	new[i].next = &new[i+1];
+      // for (i = 0; i < n - 1; i++)
+      for i in 0..n-1
+	{new[i].next = &new[i+1];}
 
       blockdata_alloced += n;
     }

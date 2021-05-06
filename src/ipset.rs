@@ -99,13 +99,13 @@ pub fn ipset_init()
   die (format!("failed to create IPset control socket: {}"), NULL, EC_MISC);
 }
 
- int new_add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, af: i32, remove: i32)
+ new_add_to_ipset: i32(const setname: &mut String, const union all_addr *ipaddr, af: i32, remove: i32)
 {
   let mut nlh: nlmsghdr;
   let mut nfg: my_nfgenmsg;
   struct my_nlattr *nested[2];
   uint8_t proto;
-  int addrsz = (af == AF_INET6) ? IN6ADDRSZ : INADDRSZ;
+  addrsz: i32 = (af == AF_INET6) ? IN6ADDRSZ : INADDRSZ;
 
   if (strlen(setname) >= IPSET_MAXNAMELEN) 
     {
@@ -148,7 +148,7 @@ pub fn ipset_init()
 }
 
 
- int old_add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, remove: i32)
+ old_add_to_ipset: i32(const setname: &mut String, const union all_addr *ipaddr, remove: i32)
 {
   socklen_t size;
   struct ip_set_req_adt_get {
@@ -189,9 +189,9 @@ pub fn ipset_init()
 
 
 
-int add_to_ipset(const setname: &mut String, const union all_addr *ipaddr, flags: i32, remove: i32)
+add_to_ipset: i32(const setname: &mut String, const union all_addr *ipaddr, flags: i32, remove: i32)
 {
-  int ret = 0, af = AF_INET;
+  ret: i32 = 0, af = AF_INET;
 
   if (flags & F_IPV6)
     {

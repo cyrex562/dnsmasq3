@@ -295,7 +295,7 @@ pub fn skip_name(ansp: &mut Vec<u8>, struct dns_header *header, plen: usize, ext
 	}
       else
 	{ /* label type == 0 Bottom six bits is length */
-	  unsigned int len = (*ansp++) & 0x3f;
+	  unsigned len: i32 = (*ansp++) & 0x3f;
 	  
 	  if (!ADD_RDLEN(header, ansp, plen, len))
 	    return NULL;
@@ -371,7 +371,7 @@ resize_packet: usize(struct dns_header *header, plen: usize, pheader: &mut Vec<u
 }
 
 /* is addr in the non-globally-routed IP space? */ 
-int private_net(addr: net::IpAddr, ban_localhost: i32) 
+private_net: i32(addr: net::IpAddr, ban_localhost: i32) 
 {
   in_addr_t ip_addr = ntohl(addr.s_addr);
 
@@ -388,7 +388,7 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
     ((ip_addr & 0xFFFFFFFF) == 0xFFFFFFFF)  /* 255.255.255.255/32 (broadcast)*/ ;
 }
 
- int private_net6(a: &mut net::IpAddr)
+ private_net6: i32(a: &mut net::IpAddr)
 {
   return 
     IN6_IS_ADDR_UNSPECIFIED(a) || /* RFC 6303 4.3 */
@@ -484,7 +484,7 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
   return p; 
 }
 
- int find_soa(struct dns_header *header, qlen: usize, name: &mut String, doctored: &i32)
+ find_soa: i32(struct dns_header *header, qlen: usize, name: &mut String, doctored: &i32)
 {
   let mut p: *mut u8;
   qtype: i32, qclass, rdlen;
@@ -538,11 +538,11 @@ int private_net(addr: net::IpAddr, ban_localhost: i32)
   return minttl;
 }
 
-/* Note that the following code can create CNAME chains that don't point to a real record,
+/* Note that the following code can create CNAME chains that don't poto: i32 a real record,
    either because of lack of memory, or lack of SOA records.  These are treated by the cache code as 
    expired and cleaned out that way. 
    Return 1 if we reject an address because it look like part of dns-rebinding attack. */
-int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String, now: &time::Instant, 
+extract_addresses: i32(struct dns_header *header, qlen: usize, name: &mut String, now: &time::Instant, 
 		      char **ipsets, is_sign: i32, check_rebind: i32, no_cache_dnssec: i32,
 		      secure: i32, doctored: &i32)
 {
@@ -583,9 +583,9 @@ int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
   
   for (i = ntohs(header.qdcount); i != 0; i--)
     {
-      int found = 0, cname_count = CNAME_CHAIN;
+      found: i32 = 0, cname_count = CNAME_CHAIN;
       struct crec *cpp = NULL;
-      int flags = RCODE(header) == NXDOMAIN ? F_NXDOMAIN : 0;
+      flags: i32 = RCODE(header) == NXDOMAIN ? F_NXDOMAIN : 0;
 
       let mut cname_short: i32 = 0;
 
@@ -605,7 +605,7 @@ int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
 	 represent them in the cache. */
       if (qtype == T_PTR)
 	{ 
-	  int name_encoding = in_arpa_name_2_addr(name, &addr);
+	  name_encoding: i32 = in_arpa_name_2_addr(name, &addr);
 	  
 	  if (!name_encoding)
 	    continue;
@@ -899,7 +899,7 @@ int extract_addresses(struct dns_header *header, qlen: usize, name: &mut String,
 
 /* If the packet holds exactly one query
    return F_IPV4 or F_IPV6  and leave the name from the query in name */
-unsigned int extract_request(struct dns_header *header, qlen: usize, name: &mut String, u16 *typep)
+unsigned extract_request: i32(struct dns_header *header, qlen: usize, name: &mut String, u16 *typep)
 {
   unsigned char *p = (header+1);
   qtype: i32, qclass;
@@ -996,7 +996,7 @@ setup_reply: usize(struct dns_header *header, qlen: usize,
 }
 
 /* check if name matches local names ie from /etc/hosts or DHCP or local mx names. */
-int check_for_local_domain(name: &mut String, now: &time::Instant)
+check_for_local_domain: i32(name: &mut String, now: &time::Instant)
 {
   let mut mx: mx_srv_record;
   let mut txt: txt_record;
@@ -1033,7 +1033,7 @@ int check_for_local_domain(name: &mut String, now: &time::Instant)
 /* Is the packet a reply with the answer address equal to addr?
    If so mung is into an NXDOMAIN reply and also put that information
    in the cache. */
-int check_for_bogus_wildcard(struct dns_header *header, qlen: usize, name: &mut String, 
+check_for_bogus_wildcard: i32(struct dns_header *header, qlen: usize, name: &mut String, 
 			     struct bogus_addr *baddr, now: &time::Instant)
 {
   let mut p: *mut u8;
@@ -1080,7 +1080,7 @@ int check_for_bogus_wildcard(struct dns_header *header, qlen: usize, name: &mut 
   return 0;
 }
 
-int check_for_ignored_address(struct dns_header *header, qlen: usize, struct bogus_addr *baddr)
+check_for_ignored_address: i32(struct dns_header *header, qlen: usize, struct bogus_addr *baddr)
 {
   let mut p: *mut u8;
   i: i32, qtype, qclass, rdlen;
@@ -1118,7 +1118,7 @@ int check_for_ignored_address(struct dns_header *header, qlen: usize, struct bog
 }
 
 
-int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &i32, nameoffset: i32, unsigned char **pp, 
+add_resource_record: i32(struct dns_header *header, limit: &mut String, truncp: &i32, nameoffset: i32, unsigned char **pp, 
 			unsigned ttl: i32, offset: &i32, u16 type, u16 class, format: &mut String, ...)
 {
   va_list ap;
@@ -1131,7 +1131,7 @@ int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &
 #define CHECK_LIMIT(size) \
   if (limit && p + (size) > limit) goto truncated;
 
-  va_start(ap, format);   /* make ap point to 1st unamed argument */
+  va_start(ap, format);   /* make ap poto: i32 1st unamed argument */
   
   if (truncp && *truncp)
     goto truncated;
@@ -1260,7 +1260,7 @@ int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &
 
   if (crecp.flags & F_DHCP)
     {
-      int conf_ttl = daemon.use_dhcp_ttl ? daemon.dhcp_ttl : daemon.local_ttl;
+      conf_ttl: i32 = daemon.use_dhcp_ttl ? daemon.dhcp_ttl : daemon.local_ttl;
       
       /* Apply ceiling of actual lease length to configured TTL. */
       if (!(crecp.flags & F_IMMORTAL) && (crecp.ttd - now) < conf_ttl)
@@ -1280,7 +1280,7 @@ int add_resource_record(struct dns_header *header, limit: &mut String, truncp: &
     return daemon.max_ttl;
 }
 
- int cache_validated(const struct crec *crecp)
+ cache_validated: i32(const struct crec *crecp)
 {
   return (daemon.opt_dnssec_valid && !(crecp.flags & F_DNSSECOK));
 }
@@ -1299,10 +1299,10 @@ answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize
   q: i32, ans, anscount = 0, addncount = 0;
   let mut dryrun: i32 = 0;
   let mut crecp: crec;
-  int nxdomain = 0, notimp = 0, auth = 1, trunc = 0, sec_data = 1;
+  nxdomain: i32 = 0, notimp = 0, auth = 1, trunc = 0, sec_data = 1;
   let mut rec: mx_srv_record;
   len: usize;
-  int rd_bit = (header.hb3 & HB3_RD);
+  rd_bit: i32 = (header.hb3 & HB3_RD);
 
   /* never answer queries with RD unset, to avoid cache snooping. */
   if (ntohs(header.ancount) != 0 ||
@@ -1452,7 +1452,7 @@ answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize
 	  if (qtype == T_PTR || qtype == T_ANY)
 	    {
 	      /* see if it's w.z.y.z.in-addr.arpa format */
-	      int is_arpa = in_arpa_name_2_addr(name, &addr);
+	      is_arpa: i32 = in_arpa_name_2_addr(name, &addr);
 	      let mut ptr: ptr_record;
 	      struct interface_name* intr = NULL;
 
@@ -1584,7 +1584,7 @@ answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize
 		       (is_arpa == F_IPV4 && private_net(addr.addr4, 1))))
 		{
 		  let mut serv: server;
-		  unsigned int namelen = strlen(name);
+		  unsigned namelen: i32 = strlen(name);
 		  char *nameend = name + namelen;
 
 		  /* see if have rev-server set */
@@ -1635,7 +1635,7 @@ answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize
 	      if (intr)
 		{
 		  let mut addrlist: addrlist;
-		  int gotit = 0, localise = 0;
+		  gotit: i32 = 0, localise = 0;
 
 		  enumerate_interfaces(0);
 		    
@@ -1944,7 +1944,7 @@ answer_request: usize(struct dns_header *header, limit: &mut String, qlen: usize
 	crecp = NULL;
 	while ((crecp = cache_find_by_name(crecp, rec.target, now, F_IPV4 | F_IPV6)))
 	  {
-	    int type =  crecp.flags & F_IPV4 ? T_A : T_AAAA;
+	    type: i32 =  crecp.flags & F_IPV4 ? T_A : T_AAAA;
 
 	    if (crecp.flags & F_NEG)
 	      continue;

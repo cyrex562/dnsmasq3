@@ -37,7 +37,7 @@ pub fn dhcp6_init()
   let mut fd: i32;
   struct sockaddr_in6 saddr;
 
-  int class = IPTOS_CLASS_CS6;
+  class: i32 = IPTOS_CLASS_CS6;
 
   let mut oneopt: i32 = 1;
 
@@ -306,7 +306,7 @@ pub fn get_client_mac(client: &mut net::IpAddr, iface: i32, mac: &mut Vec<u8>, m
   *mactypep = ARPHRD_ETHER;
 }
     
- int complete_context6(local: &mut net::IpAddr,  prefix: i32,
+ complete_context6: i32(local: &mut net::IpAddr,  prefix: i32,
 			     scope: i32, if_index: i32, flags: i32, unsigned preferred: i32, 
 			     unsigned valid: i32, vparam: Vec<u8>)
 {
@@ -526,7 +526,7 @@ struct dhcp_context *address6_allocate(struct dhcp_context *context,  clid: &mut
 struct dhcp_context *address6_available(struct dhcp_context *context, 
 					taddr: &mut net::IpAddr,
 					struct dhcp_netid *netids,
-					int plain_range)
+					plain_range: i32)
 {
   u64 start, end, addr = addr6part(taddr);
   let mut tmp: dhcp_context;
@@ -552,7 +552,7 @@ struct dhcp_context *address6_available(struct dhcp_context *context,
 struct dhcp_context *address6_valid(struct dhcp_context *context, 
 				    taddr: &mut net::IpAddr,
 				    struct dhcp_netid *netids,
-				    int plain_range)
+				    plain_range: i32)
 {
   let mut tmp: dhcp_context;
  
@@ -596,7 +596,7 @@ pub fn make_duid(now: time::Instant)
     }
 }
 
- int make_duid1(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
+ make_duid1: i32(index: i32, unsigned type: i32, mac: &mut String, maclen: usize, parm: Vec<u8>)
 {
   /* create DUID as specified in RFC3315. We use the MAC of the
      first interface we find that isn't loopback or P-to-P and
@@ -637,7 +637,7 @@ struct cparam {
   newone: i32, newname;
 };
 
- int construct_worker(local: &mut net::IpAddr, prefix: i32, 
+ construct_worker: i32(local: &mut net::IpAddr, prefix: i32, 
 			    scope: i32, if_index: i32, flags: i32, 
 			    preferred: i32, valid: i32, vparam: Vec<u8>)
 {
@@ -713,7 +713,7 @@ struct cparam {
 	      
 	      if (context.if_index == if_index)
 		{
-		  int cflags = context.flags;
+		  cflags: i32 = context.flags;
 		  context.flags &= ~(CONTEXT_GC | CONTEXT_OLD);
 		  if (cflags & CONTEXT_OLD)
 		    {

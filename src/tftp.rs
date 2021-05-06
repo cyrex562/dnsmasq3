@@ -49,21 +49,21 @@ pub fn tftp_request(struct listener *listen, now: &time::Instant)
   let mut msg: msghdr;
   let mut iov: iovec;
   let mut ifr: ifreq;
-  int is_err = 1, if_index = 0, mtu = 0;
+  is_err: i32 = 1, if_index = 0, mtu = 0;
   let mut tmp: iname;
   struct tftp_transfer *transfer = NULL, **up;
-  int port = daemon.start_tftp_port; /* may be zero to use ephemeral port */
+  port: i32 = daemon.start_tftp_port; /* may be zero to use ephemeral port */
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
-  int mtuflag = IP_PMTUDISC_DONT;
+  mtuflag: i32 = IP_PMTUDISC_DONT;
 
   char namebuff[IF_NAMESIZE];
   char *name = NULL;
   char *prefix = daemon.tftp_prefix;
   let mut pref: tftp_prefix;
   union all_addr addra;
-  int family = listen.addr.sa.sa_family;
+  family: i32 = listen.addr.sa.sa_family;
   /* Can always get recvd interface for IPv6 */
-  int check_dest = !daemon.opt_nowild || family == AF_INET6;
+  check_dest: i32 = !daemon.opt_nowild || family == AF_INET6;
   union {
     struct cmsghdr align; /* this ensures alignment */
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -376,7 +376,7 @@ pub fn tftp_request(struct listener *listen, now: &time::Instant)
 	      if ((opt = next(&p, end)) && !option_bool(OPT_TFTP_NOBLOCK))
 		{
 		  /* 32 bytes for IP, UDP and TFTP headers, 52 bytes for IPv6 */
-		  int overhead = (family == AF_INET) ? 32 : 52;
+		  overhead: i32 = (family == AF_INET) ? 32 : 52;
 		  transfer.blocksize = atoi(opt);
 		  if (transfer.blocksize < 1)
 		    transfer.blocksize = 1;
@@ -498,7 +498,7 @@ pub fn tftp_request(struct listener *listen, now: &time::Instant)
   let mut t: tftp_transfer;
   uid_t uid = geteuid();
   struct stat statbuf;
-  int fd = -1;
+  fd: i32 = -1;
 
   /* trick to ban moving out of the subtree */
   if (prefix && strstr(namebuff, "/../"))
@@ -840,7 +840,7 @@ pub const MAXMESSAGE: u32 = 500; /* limit to make packet < 512 bytes and definit
 }
 
 
-int do_tftp_script_run()
+do_tftp_script_run: i32()
 {
   let mut transfer: tftp_transfer;
 

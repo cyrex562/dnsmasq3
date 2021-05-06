@@ -19,8 +19,8 @@
 
 
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
-   we've chopped out of the packet, or check they don't point into an elided part.  */
- int check_name(unsigned char **namep, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
+   we've chopped out of the packet, or check they don't pointo: i32 an elided part.  */
+ check_name: i32(unsigned char **namep, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
 {
   unsigned char *ansp = *namep;
 
@@ -90,7 +90,7 @@
 	}
       else
 	{ /* label type == 0 Bottom six bits is length */
-	  unsigned int len = (*ansp++) & 0x3f;
+	  unsigned len: i32 = (*ansp++) & 0x3f;
 	  
 	  if (!ADD_RDLEN(header, ansp, plen, len))
 	    return 0;
@@ -106,7 +106,7 @@
 }
 
 /* Go through RRs and check or fixup the domain names contained within */
- int check_rrs(p: &mut Vec<u8>, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
+ check_rrs: i32(p: &mut Vec<u8>, struct dns_header *header, plen: usize, fixup: i32, unsigned char **rrs, rr_count: i32)
 {
   i: i32, j, type, class, rdlen;
   let mut pp: *mut u8;
@@ -226,7 +226,7 @@ rrfilter: usize(struct dns_header *header, plen: usize, mode: i32)
     return plen;
 
   /* Second pass, look for pointers in names in the records we're keeping and make sure they don't
-     point to records we're going to elide. This is theoretically possible, but unlikely. If
+     poto: i32 records we're going to elide. This is theoretically possible, but unlikely. If
      it happens, we give up and leave the answer unchanged. */
   p = (header+1);
   
@@ -266,7 +266,7 @@ rrfilter: usize(struct dns_header *header, plen: usize, mode: i32)
 }
 
 /* This is used in the DNSSEC code too, hence it's exported */
-u16 *rrfilter_desc(int type)
+u16 *rrfilter_desc(type: i32)
 {
   /* List of RRtypes which include domains in the data.
      0 . domain
@@ -310,10 +310,10 @@ u16 *rrfilter_desc(int type)
   return p+1;
 }
 
-int expand_workspace(unsigned char ***wkspc, szp: &i32, new: i32)
+expand_workspace: i32(unsigned char ***wkspc, szp: &i32, new: i32)
 {
   unsigned char **p;
-  int old = *szp;
+  old: i32 = *szp;
 
   if (old >= new+1)
     return 1;

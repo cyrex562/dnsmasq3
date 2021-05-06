@@ -36,9 +36,9 @@
 #define UNUSED(x) ()(x)
 
  char *pf_device = "/dev/pf";
- int dev = -1;
+ dev: i32 = -1;
 
- char *pfr_strerror(int errnum)
+ char *pfr_strerror(errnum: i32)
 {
   switch (errnum) 
     {
@@ -62,7 +62,7 @@ pub fn ipset_init()
     }
 }
 
-int add_to_ipset(const setname: &mut String, const union all_addr *ipaddr,
+add_to_ipset: i32(const setname: &mut String, const union all_addr *ipaddr,
 		 flags: i32, remove: i32)
 {
   struct pfr_addr addr;

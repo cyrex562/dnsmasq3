@@ -25,21 +25,21 @@
 pub fn add_extradata_opt(lease: &mut dhcp_lease, unsigned char *opt);
 
 
- int sanitise(opt: &mut Vec<u8>, buf: &mut String);
+ sanitise: i32(opt: &mut Vec<u8>, buf: &mut String);
  server_id: net::IpAddr(struct dhcp_context *context, override: net::IpAddr, fallback: net::IpAddr);
- unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt);
-pub fn option_put(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32, len: i32, unsigned int val);
+ unsigned calc_time: i32(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt);
+pub fn option_put(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32, len: i32, unsigned val: i32);
 pub fn option_put_string(struct dhcp_packet *mess, end: &mut Vec<u8>, 
 			      opt: i32, const string: &mut String, null_term: i32);
  option_addr: net::IpAddr(unsigned char *opt);
- unsigned int option_uint(opt: &mut Vec<u8>, offset: i32, size: i32);
+ unsigned option_uint: i32(opt: &mut Vec<u8>, offset: i32, size: i32);
 pub fn log_packet(type: &mut String, addr: Vec<u8>, ext_mac: &mut Vec<u8>, 
 		       mac_len: i32, interface: &mut String, string: &mut String, err: &mut String, u32 xid);
  pub fn option_find(struct dhcp_packet *mess, size: usize, opt_type: i32, minsize: i32) -> &mut Vec<u8>;
  pub fn option_find1(p: &mut Vec<u8>, end: &mut Vec<u8>, opt: i32, minsize: i32) -> &mut Vec<u8>;
  dhcp_packet_size: usize(struct dhcp_packet *mess, agent_id: &mut Vec<u8>, unsigned char *real_end);
 pub fn clear_packet(struct dhcp_packet *mess, unsigned char *end);
- int in_list(list: &mut Vec<u8>, opt: i32);
+ in_list: i32(list: &mut Vec<u8>, opt: i32);
 pub fn do_options(struct dhcp_context *context,
 		       struct dhcp_packet *mess,
 		       end: &mut Vec<u8>,
@@ -59,14 +59,14 @@ pub fn do_options(struct dhcp_context *context,
 
 
 pub fn match_vendor_opts(opt: &mut Vec<u8>, struct dhcp_opt *dopt); 
- int do_encap_opts(struct dhcp_opt *opt, encap: i32, flag: i32, struct dhcp_packet *mess, end: &mut Vec<u8>, null_term: i32);
+ do_encap_opts: i32(struct dhcp_opt *opt, encap: i32, flag: i32, struct dhcp_packet *mess, end: &mut Vec<u8>, null_term: i32);
 pub fn pxe_misc(struct dhcp_packet *mess, end: &mut Vec<u8>, uuid: &mut Vec<u8>, const char *pxevendor);
- int prune_vendor_opts(struct dhcp_netid *netid);
+ prune_vendor_opts: i32(struct dhcp_netid *netid);
  struct dhcp_opt *pxe_opts(pxe_arch: i32, struct dhcp_netid *netid, local: net::IpAddr, now: &time::Instant);
 struct dhcp_boot *find_boot(struct dhcp_netid *netid);
- int pxe_uefi_workaround(pxe_arch: i32, struct dhcp_netid *netid, struct dhcp_packet *mess, local: net::IpAddr, now: &time::Instant, pxe: i32);
+ pxe_uefi_workaround: i32(pxe_arch: i32, struct dhcp_netid *netid, struct dhcp_packet *mess, local: net::IpAddr, now: &time::Instant, pxe: i32);
 pub fn apply_delay(u32 xid, recvtime: &time::Instant, struct dhcp_netid *netid);
- int is_pxe_client(struct dhcp_packet *mess, sz: usize, const char **pxe_vendor);
+ is_pxe_client: i32(struct dhcp_packet *mess, sz: usize, const char **pxe_vendor);
 
 dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_index: i32,
 		  sz: usize, now: &time::Instant, unicast_dest: i32, loopback: i32,
@@ -77,13 +77,13 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
   let mut vendor: dhcp_vendor;
   let mut mac: dhcp_mac;
   let mut id_list: dhcp_netid_list;
-  int clid_len = 0, ignore = 0, do_classes = 0, rapid_commit = 0, selecting = 0, pxearch = -1;
+  clid_len: i32 = 0, ignore = 0, do_classes = 0, rapid_commit = 0, selecting = 0, pxearch = -1;
   const char *pxevendor = NULL;
   struct dhcp_packet *mess = (struct dhcp_packet *)daemon.dhcp_packet.iov_base;
   unsigned char *end = (mess + 1); 
   unsigned char *real_end = (mess + 1); 
   char *hostname = NULL, *offer_hostname = NULL, *client_hostname = NULL, *domain = NULL;
-  int hostname_auth = 0, borken_opt = 0;
+  hostname_auth: i32 = 0, borken_opt = 0;
   let mut req_options: *mut u8 = NULL;
   char *message = NULL;
   let mut time: u32;
@@ -95,7 +95,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
   unsigned char fqdn_flags = 0;
   unsigned char *agent_id = NULL, *uuid = NULL;
   let mut emac: *mut u8 = NULL;
-  int vendor_class_len = 0, emac_len = 0;
+  vendor_class_len: i32 = 0, emac_len = 0;
   struct dhcp_netid known_id, iface_id, cpewan_id;
   let mut o: dhcp_opt;
   unsigned char pxe_uuid[17];
@@ -190,7 +190,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
 	     Note that the incoming options must not be overwritten here, so there has to 
 	     be enough free space at the end of the packet to copy the option. */
 	  let mut sopt: *mut u8;
-	  unsigned int total = option_len(opt) + 2;
+	  unsigned total: i32 = option_len(opt) + 2;
 	  unsigned char *last_opt = option_find1(&mess.options[0] + sizeof(u32), (mess) + sz,
 						 OPTION_END, 0);
 	  if (last_opt && last_opt < end - total)
@@ -279,7 +279,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
       struct dhcp_context *context_tmp, *context_new = NULL;
       struct shared_network *share = NULL;
       addr: net::IpAddr;
-      int force = 0, via_relay = 0;
+      force: i32 = 0, via_relay = 0;
       
       if (subnet_addr.s_addr)
 	{
@@ -663,7 +663,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
   if ((opt = option_find(mess, sz, OPTION_CLIENT_FQDN, 3)))
     {
       /* http://tools.ietf.org/wg/dhc/draft-ietf-dhc-fqdn-option/draft-ietf-dhc-fqdn-option-10.txt */
-      int len = option_len(opt);
+      len: i32 = option_len(opt);
       char *pq = daemon.dhcp_buff;
       pp: &mut Vec<u8>, *op = option_ptr(opt, 0);
       
@@ -715,7 +715,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
     }
   else if ((opt = option_find(mess, sz, OPTION_HOSTNAME, 1)))
     {
-      int len = option_len(opt);
+      len: i32 = option_len(opt);
       memcpy(daemon.dhcp_buff, option_ptr(opt, 0), len);
       /* Microsoft clients are broken, and need zero-terminated strings
 	 in options. We detect this state here, and do the same in
@@ -853,8 +853,8 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
 	  (opt = option_find1(option_ptr(opt, 0), option_ptr(opt, option_len(opt)), SUBOPT_PXE_BOOT_ITEM, 4)))
 	{
 	  let mut service: pxe_service;
-	  int type = option_uint(opt, 0, 2);
-	  int layer = option_uint(opt, 2, 2);
+	  type: i32 = option_uint(opt, 0, 2);
+	  layer: i32 = option_uint(opt, 2, 2);
 	  unsigned char save71[4];
 	  struct dhcp_opt opt71;
 
@@ -1399,7 +1399,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
 		  /* DNSMASQ_REQUESTED_OPTIONS */
 		  if ((opt = option_find(mess, sz, OPTION_REQUESTED_OPTIONS, 1)))
 		    {
-		      int len = option_len(opt);
+		      len: i32 = option_len(opt);
 		      unsigned char *rop = option_ptr(opt, 0);
 		      char *q = daemon.namebuff;
 		      let mut i: i32;
@@ -1431,7 +1431,7 @@ dhcp_reply: usize(struct dhcp_context *context, iface_name: &mut String, int_ind
 		  
 		  if ((opt = option_find(mess, sz, OPTION_USER_CLASS, 1)))
 		    {
-		      int len = option_len(opt);
+		      len: i32 = option_len(opt);
 		      unsigned char *ucp = option_ptr(opt, 0);
 		      /* If the user-class option started as counted strings, the first byte will be zero. */
 		      if (len != 0 && ucp[0] == 0)
@@ -1612,13 +1612,13 @@ unsigned char *extended_hwaddr(hwtype: i32, hwlen: i32, hwaddr: &mut Vec<u8>,
   return hwaddr;
 }
 
- unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt)
+ unsigned calc_time: i32(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt)
 {
-  unsigned int time = have_config(config, CONFIG_TIME) ? config.lease_time : context.lease_time;
+  unsigned time: i32 = have_config(config, CONFIG_TIME) ? config.lease_time : context.lease_time;
   
   if (opt)
     { 
-      unsigned int req_time = option_uint(opt, 0, 4);
+      unsigned req_time: i32 = option_uint(opt, 0, 4);
       if (req_time < 120 )
 	req_time = 120; /* sanity */
       if (time == 0xffffffff || (req_time != 0xffffffff && req_time < time))
@@ -1638,7 +1638,7 @@ unsigned char *extended_hwaddr(hwtype: i32, hwlen: i32, hwaddr: &mut Vec<u8>,
     return fallback;
 }
 
- int sanitise(opt: &mut Vec<u8>, buf: &mut String)
+ sanitise: i32(opt: &mut Vec<u8>, buf: &mut String)
 {
   char *p;
   let mut i: i32;
@@ -1786,7 +1786,7 @@ pub fn log_options(start: &mut Vec<u8>, u32 xid)
   return ret;
 }
 
- unsigned int option_uint(opt: &mut Vec<u8>, offset: i32, size: i32)
+ unsigned option_uint: i32(opt: &mut Vec<u8>, offset: i32, size: i32)
 {
   /* this worries about unaligned data and byte order */
   let mut ret: u32 = 0;
@@ -1939,7 +1939,7 @@ pub fn log_options(start: &mut Vec<u8>, u32 xid)
   return p;
 }
 	      
-pub fn option_put(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32, len: i32, unsigned int val)
+pub fn option_put(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32, len: i32, unsigned val: i32)
 {
   let mut i: i32;
   unsigned char *p = free_space(mess, end, opt, len);
@@ -1963,9 +1963,9 @@ pub fn option_put_string(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32,
 }
 
 /* return length, note this only does the data part */
- int do_opt(struct dhcp_opt *opt, p: &mut Vec<u8>, struct dhcp_context *context, null_term: i32)
+ do_opt: i32(struct dhcp_opt *opt, p: &mut Vec<u8>, struct dhcp_context *context, null_term: i32)
 {
-  int len = opt.len;
+  len: i32 = opt.len;
   
   if ((opt.flags & DHOPT_STRING) && null_term && len != 255)
     len +=1;
@@ -1993,7 +1993,7 @@ pub fn option_put_string(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32,
   return len;
 }
 
- int in_list(list: &mut Vec<u8>, opt: i32)
+ in_list: i32(list: &mut Vec<u8>, opt: i32)
 {
   let mut i: i32;
 
@@ -2008,7 +2008,7 @@ pub fn option_put_string(struct dhcp_packet *mess, end: &mut Vec<u8>, opt: i32,
   return 0;
 }
 
- struct dhcp_opt *option_find2(int opt)
+ struct dhcp_opt *option_find2(opt: i32)
 {
   let mut opts: dhcp_opt;
   
@@ -2058,7 +2058,7 @@ pub fn match_vendor_opts(opt: &mut Vec<u8>, struct dhcp_opt *dopt)
     }
 }
 
- int do_encap_opts(struct dhcp_opt *opt, encap: i32, flag: i32,  
+ do_encap_opts: i32(struct dhcp_opt *opt, encap: i32, flag: i32,  
 			 struct dhcp_packet *mess, end: &mut Vec<u8>, null_term: i32)
 {
   len: i32, enc_len, ret = 0;
@@ -2069,7 +2069,7 @@ pub fn match_vendor_opts(opt: &mut Vec<u8>, struct dhcp_opt *dopt)
   for (enc_len = 0, start = opt; opt; opt = opt.next)
     if (opt.flags & flag)
       {
-	int new = do_opt(opt, NULL, NULL, null_term) + 2;
+	new: i32 = do_opt(opt, NULL, NULL, null_term) + 2;
 	ret  = 1;
 	if (enc_len + new <= 255)
 	  enc_len += new;
@@ -2117,7 +2117,7 @@ pub fn pxe_misc(struct dhcp_packet *mess, end: &mut Vec<u8>, uuid: &mut Vec<u8>,
     memcpy(p, uuid, 17);
 }
 
- int prune_vendor_opts(struct dhcp_netid *netid)
+ prune_vendor_opts: i32(struct dhcp_netid *netid)
 {
   let mut force: i32 = 0;
   let mut opt: dhcp_opt;
@@ -2140,7 +2140,7 @@ pub fn pxe_misc(struct dhcp_packet *mess, end: &mut Vec<u8>, uuid: &mut Vec<u8>,
    and jamb the data direct into the DHCP file, siaddr and sname fields.
    Note that in this case, we have to assume that layer zero would be requested
    by the client PXE stack. */
- int pxe_uefi_workaround(pxe_arch: i32, struct dhcp_netid *netid, struct dhcp_packet *mess, local: net::IpAddr, now: &time::Instant, pxe: i32)
+ pxe_uefi_workaround: i32(pxe_arch: i32, struct dhcp_netid *netid, struct dhcp_packet *mess, local: net::IpAddr, now: &time::Instant, pxe: i32)
 {
   struct pxe_service *service, *found;
 
@@ -2329,7 +2329,7 @@ struct dhcp_boot *find_boot(struct dhcp_netid *netid)
   return boot;
 }
 
- int is_pxe_client(struct dhcp_packet *mess, sz: usize, const char **pxe_vendor)
+ is_pxe_client: i32(struct dhcp_packet *mess, sz: usize, const char **pxe_vendor)
 {
   const let mut opt: *mut u8 = NULL;
   sconf_len: usize = 0;
@@ -2374,7 +2374,7 @@ pub fn do_options(struct dhcp_context *context,
   let mut p: *mut u8;
   i: i32, len, force_encap = 0;
   unsigned char f0 = 0, s0 = 0;
-  int done_file = 0, done_server = 0;
+  done_file: i32 = 0, done_server = 0;
   let mut done_vendor_class: i32 = 0;
   let mut tagif: dhcp_netid;
   let mut id_list: dhcp_netid_list;
@@ -2494,8 +2494,8 @@ pub fn do_options(struct dhcp_context *context,
    
   if (lease_time != 0xffffffff)
     { 
-      unsigned int t1val = lease_time/2; 
-      unsigned int t2val = (lease_time*7)/8;
+      unsigned t1val: i32 = lease_time/2; 
+      unsigned t2val: i32 = (lease_time*7)/8;
       let mut hval: u32;
       
       /* If set by user, sanity check, so not longer than lease. */
@@ -2611,7 +2611,7 @@ pub fn do_options(struct dhcp_context *context,
 
   for (opt = config_opts; opt; opt = opt.next)
     {
-      int optno = opt.opt;
+      optno: i32 = opt.opt;
 
       /* netids match and not encapsulated? */
       if (!(opt.flags & DHOPT_TAGOK))
@@ -2695,7 +2695,7 @@ pub fn do_options(struct dhcp_context *context,
 
 	  for (len = 0, o = config_opts; o; o = o.next)
 	    {
-	      int outer = flags & DHOPT_ENCAPSULATE ? o.u.encap : OPTION_VENDOR_IDENT_OPT;
+	      outer: i32 = flags & DHOPT_ENCAPSULATE ? o.u.encap : OPTION_VENDOR_IDENT_OPT;
 
 	      o.flags &= ~DHOPT_ENCAP_MATCH;
 	      
@@ -2720,7 +2720,7 @@ pub fn do_options(struct dhcp_context *context,
 		my_syslog(MS_DHCP | LOG_WARNING, format!("cannot send RFC3925 option: too many options for enterprise number {}"), opt.u.encap);
 	      else if ((p = free_space(mess, end,  OPTION_VENDOR_IDENT_OPT, len + 5)))
 		{
-		  int swap_ent = htonl(opt.u.encap);
+		  swap_ent: i32 = htonl(opt.u.encap);
 		  memcpy(p, &swap_ent, 4);
 		  p += 4;
 		  *(p++) = len;

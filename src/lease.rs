@@ -21,7 +21,7 @@
  struct dhcp_lease *leases = NULL, *old_leases = NULL;
  dns_dirty: i32, file_dirty, leases_left;
 
- int read_leases(now: time::Instant, FILE *leasestream)
+ read_leases: i32(now: time::Instant, FILE *leasestream)
 {
   unsigned let ei: i32;
   union all_addr addr;
@@ -81,7 +81,7 @@
 	else if (inet_pton(AF_INET6, daemon.namebuff, &addr.addr6))
 	  {
 	    char *s = daemon.dhcp_buff2;
-	    int lease_type = LEASE_NA;
+	    lease_type: i32 = LEASE_NA;
 
 	    if (s[0] == 'T')
 	      {
@@ -387,11 +387,11 @@ pub fn lease_update_file(now: time::Instant)
 }
 
 
- int find_interface_v4(local: net::IpAddr, if_index: i32, label: &mut String,
+ find_interface_v4: i32(local: net::IpAddr, if_index: i32, label: &mut String,
 			     netmask: net::IpAddr, broadcast: net::IpAddr, vparam: Vec<u8>)
 {
   let mut lease: dhcp_lease;
-  int prefix = netmask_length(netmask);
+  prefix: i32 = netmask_length(netmask);
 
   () label;
   () broadcast;
@@ -410,7 +410,7 @@ pub fn lease_update_file(now: time::Instant)
 }
 
  
- int find_interface_v6(local: &mut net::IpAddr,  prefix: i32,
+ find_interface_v6: i32(local: &mut net::IpAddr,  prefix: i32,
 			     scope: i32, if_index: i32, flags: i32, 
 			     preferred: i32, valid: i32, vparam: Vec<u8>)
 {
@@ -494,7 +494,7 @@ pub fn lease_make_duid(now: time::Instant)
 
 
 
-pub fn lease_update_dns(int force)
+pub fn lease_update_dns(force: i32)
 {
   let mut lease: dhcp_lease;
 
@@ -509,7 +509,7 @@ pub fn lease_update_dns(int force)
 
       for (lease = leases; lease; lease = lease.next)
 	{
-	  int prot = AF_INET;
+	  prot: i32 = AF_INET;
 	  
  
 	  if (lease.flags & (LEASE_TA | LEASE_NA))
@@ -670,7 +670,7 @@ pub fn lease6_reset()
 /* enumerate all leases belonging to {CLID, IAID} */
 struct dhcp_lease *lease6_find_by_client(first: &mut dhcp_lease, lease_type: i32,
 					 clid: &mut Vec<u8>, clid_len: i32,
-					 unsigned int iaid)
+					 unsigned iaid: i32)
 {
   let mut lease: dhcp_lease;
 
@@ -852,7 +852,7 @@ pub fn lease_set_expires(lease: &mut dhcp_lease, unsigned len: i32, now: &time::
 } 
 
  
-pub fn lease_set_iaid(lease: &mut dhcp_lease, unsigned int iaid)
+pub fn lease_set_iaid(lease: &mut dhcp_lease, unsigned iaid: i32)
 {
   if (lease.iaid != iaid)
     {
@@ -867,7 +867,7 @@ pub fn lease_set_hwaddr(lease: &mut dhcp_lease, const hwaddr: &mut Vec<u8>,
 		      clid_len: i32, now: &time::Instant, force: i32)
 {
  
-  int change = force;
+  change: i32 = force;
   lease.flags |= LEASE_HAVE_HWADDR;
 
 
@@ -1067,7 +1067,7 @@ pub fn rerun_scripts()
    script. Also run the lease change script on new/modified leases.
 
    Return zero if nothing to do. */
-int do_script_run(now: time::Instant)
+do_script_run: i32(now: time::Instant)
 {
   let mut lease: dhcp_lease;
 

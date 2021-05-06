@@ -55,7 +55,7 @@ use crate::{dns_protocol::IN6ADDRSZ, dnsmasq_h::{AF_LOCAL, Ip4Header, rt_msghdr}
 
 pub fn arp_enumerate(parm: &mut Vec<u8>, callback: fn()->i32) -> i32
 {
-  // int mib[6];
+  // mib: i32[6];
   let mut mib: [i32;6];
   let mut needed: usize;
   //char *next;
@@ -446,7 +446,7 @@ pub fn route_init()
 pub fn route_sock()
 {
   let mut msg: if_msghdr;
-  int rc = recv(daemon.routefd, daemon.packet, daemon.packet_buff_sz, 0);
+  rc: i32 = recv(daemon.routefd, daemon.packet, daemon.packet_buff_sz, 0);
 
   if (rc < 4)
     {return;}
@@ -475,8 +475,8 @@ pub fn route_sock()
        /* There's a race in the kernel, such that if we run iface_enumerate() immediately
 	  we get a DELADDR event, the deleted address still appears. Here we store the deleted address
 	  in a  variable, and omit it from the set returned by iface_enumerate() */
-       int mask = ((struct ifa_msghdr *)msg).ifam_addrs;
-       int maskvec[] = { RTA_DST, RTA_GATEWAY, RTA_NETMASK, RTA_GENMASK,
+       mask: i32 = ((struct ifa_msghdr *)msg).ifam_addrs;
+       maskvec: i32[] = { RTA_DST, RTA_GATEWAY, RTA_NETMASK, RTA_GENMASK,
 			 RTA_IFP, RTA_IFA, RTA_AUTHOR, RTA_BRD };
        let mut of: i32;
        let mut i: u32;

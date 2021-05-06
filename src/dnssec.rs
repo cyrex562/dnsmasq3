@@ -104,7 +104,7 @@ pub fn from_wire(name: &mut String)
 }
 
 /* Input in presentation format */
- int count_labels(name: &mut String)
+ count_labels: i32(name: &mut String)
 {
   let mut i: i32;
   char *p;
@@ -121,7 +121,7 @@ pub fn from_wire(name: &mut String)
 }
 
 /* Implement RFC1982 wrapped compare for 32-bit numbers */
- int serial_compare_32(u32 s1, u32 s2)
+ serial_compare_32: i32(u32 s1, u32 s2)
 {
   if (s1 == s2)
     return SERIAL_EQ;
@@ -144,7 +144,7 @@ pub fn from_wire(name: &mut String)
 
  timestamp_time: time::Instant;
 
-int setup_timestamp()
+setup_timestamp: i32()
 {
   struct stat statbuf;
   
@@ -171,7 +171,7 @@ int setup_timestamp()
   if (errno == ENOENT)
     {
       /* NB. for explanation of O_EXCL flag, see comment on pidfile in dnsmasq.c */ 
-      int fd = open(daemon.timestamp_file, O_WRONLY | O_CREAT | O_NONBLOCK | O_EXCL, 0666);
+      fd: i32 = open(daemon.timestamp_file, O_WRONLY | O_CREAT | O_NONBLOCK | O_EXCL, 0666);
       if (fd != -1)
 	{
 	  struct timeval tv[2];
@@ -190,7 +190,7 @@ int setup_timestamp()
 }
 
 /* Check whether today/now is between date_start and date_end */
- int is_check_date(unsigned long curtime)
+ is_check_date: i32(unsigned long curtime)
 {
   /* Checking timestamps may be temporarily disabled */
     
@@ -220,7 +220,7 @@ int setup_timestamp()
 }
 
 /* Check whether today/now is between date_start and date_end */
- int check_date_range(unsigned curtime: i32, u32 date_start, u32 date_end)
+ check_date_range: i32(unsigned curtime: i32, u32 date_start, u32 date_end)
 {
   /* We must explicitly check against wanted values, because of SERIAL_UNDEF */
   return serial_compare_32(curtime, date_start) == SERIAL_GT
@@ -243,7 +243,7 @@ struct rdata_state {
   char *buff;
 };
 
- int get_rdata(struct dns_header *header, plen: usize, struct rdata_state *state)
+ get_rdata: i32(struct dns_header *header, plen: usize, struct rdata_state *state)
 {
   let mut d: i32;
   
@@ -306,7 +306,7 @@ struct rdata_state {
 
 /* Bubble sort the RRset into the canonical order. */
 
- int sort_rrset(struct dns_header *header, plen: usize, u16 *rr_desc, rrsetidx: i32, 
+ sort_rrset: i32(struct dns_header *header, plen: usize, u16 *rr_desc, rrsetidx: i32, 
 		      unsigned char **rrset, buff1: &mut String, buff2: &mut String)
 {
   swap: i32, i, j;
@@ -345,8 +345,8 @@ struct rdata_state {
 	     canonicalised RRs one byte at a time. */
 	  if (*rr_desc == (u16)-1)	  
 	    {
-	      int rdmin = rdlen1 > rdlen2 ? rdlen2 : rdlen1;
-	      int cmp = memcmp(state1.ip, state2.ip, rdmin);
+	      rdmin: i32 = rdlen1 > rdlen2 ? rdlen2 : rdlen1;
+	      cmp: i32 = memcmp(state1.ip, state2.ip, rdmin);
 	      
 	      if (cmp > 0 || (cmp == 0 && rdlen1 > rdmin))
 		{
@@ -406,10 +406,10 @@ struct rdata_state {
 
 /* Get pointers to RRset members and signature(s) for same.
    Check signatures, and return keyname associated in keyname. */
- int explore_rrset(struct dns_header *header, plen: usize, class: i32, type: i32, 
+ explore_rrset: i32(struct dns_header *header, plen: usize, class: i32, type: i32, 
 			 name: &mut String, keyname: &mut String, sigcnt: &i32, rrcnt: &i32)
 {
-   int rrset_sz = 0, sig_sz = 0; 
+   rrset_sz: i32 = 0, sig_sz = 0; 
   let mut p: *mut u8;
   rrsetidx: i32, sigidx, j, rdlen, res;
   let mut gotkey: i32 = 0;
@@ -529,7 +529,7 @@ struct rdata_state {
 
    ttl_out is the floor on TTL, based on TTL and orig_ttl and expiration of sig used to validate.
 */
- int validate_rrset(now: time::Instant, struct dns_header *header, plen: usize, class: i32, type: i32, sigidx: i32, rrsetidx: i32, 
+ validate_rrset: i32(now: time::Instant, struct dns_header *header, plen: usize, class: i32, type: i32, sigidx: i32, rrsetidx: i32, 
 			  name: &mut String, keyname: &mut String, char **wildcard_out, struct blockdata *key, keylen: i32,
 			  algo_in: i32, keytag_in: i32, unsigned long *ttl_out)
 {
@@ -540,7 +540,7 @@ struct rdata_state {
   u32 sig_expiration, sig_inception;
 
   unsigned long curtime = time(0);
-  int time_check = is_check_date(curtime);
+  time_check: i32 = is_check_date(curtime);
   
   if (wildcard_out)
     *wildcard_out = NULL;
@@ -548,7 +548,7 @@ struct rdata_state {
   name_labels = count_labels(name); /* For 4035 5.3.2 check */
 
   /* Sort RRset records into canonical order. 
-     Note that at this point keyname and daemon.workspacename buffs are
+     Note that at this pokeyname: i32 and daemon.workspacename buffs are
      unused, and used as workspace by the sort. */
   rrsetidx = sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon.workspacename, keyname);
          
@@ -747,7 +747,7 @@ pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
 	 STAT_NEED_DS   DS records to validate a key not found, name in keyname 
 	 STAT_NEED_KEY  DNSKEY records to validate a key not found, name in keyname 
 */
-int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32)
+dnssec_validate_by_ds: i32(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32)
 {
   psave: &mut Vec<u8>, *p = (header+1);
   struct crec *crecp, *recp1;
@@ -835,7 +835,7 @@ int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: u
 	      hash_init(hash, &ctx, &digest))
 	    
 	    {
-	      int wire_len = to_wire(name);
+	      wire_len: i32 = to_wire(name);
 	      
 	      /* Note that digest may be different between DSs, so 
 		 we can't move this outside the loop. */
@@ -955,7 +955,7 @@ int dnssec_validate_by_ds(now: time::Instant, struct dns_header *header, plen: u
    STAT_NEED_DS     DS record needed.
 */
 
-int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32)
+dnssec_validate_ds: i32(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, class: i32)
 {
   unsigned char *p = (header+1);
   qtype: i32, qclass, rc, i, neganswer, nons, neg_ttl = 0;
@@ -1063,7 +1063,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
     }
   else
     {
-      int flags = F_FORWARD | F_DS | F_NEG | F_DNSSECOK;
+      flags: i32 = F_FORWARD | F_DS | F_NEG | F_DNSSECOK;
             
       if (RCODE(header) == NXDOMAIN)
 	flags |= F_NXDOMAIN;
@@ -1089,7 +1089,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 
 
 /* 4034 6.1 */
- int hostname_cmp(const a: &mut String, const char *b)
+ hostname_cmp: i32(const a: &mut String, const char *b)
 {
   sa: &mut String, *ea, *ca, *sb, *eb, *cb;
   unsigned char ac, bc;
@@ -1152,13 +1152,13 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
     }
 }
 
- int prove_non_existence_nsec(struct dns_header *header, plen: usize, unsigned char **nsecs, unsigned char **labels, nsec_count: i32,
+ prove_non_existence_nsec: i32(struct dns_header *header, plen: usize, unsigned char **nsecs, unsigned char **labels, nsec_count: i32,
 				    workspace1_in: &mut String, workspace2: &mut String, name: &mut String, type: i32, nons: &i32)
 {
   i: i32, rc, rdlen;
   p: &mut Vec<u8>, *psave;
-  int offset = (type & 0xff) >> 3;
-  int mask = 0x80 >> (type & 0x07);
+  offset: i32 = (type & 0xff) >> 3;
+  mask: i32 = 0x80 >> (type & 0x07);
 
   if (nons)
     *nons = 1;
@@ -1268,7 +1268,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 }
 
 /* return digest length, or zero on error */
- int hash_name(in: &mut String, unsigned char **out, struct nettle_hash const *hash, 
+ hash_name: i32(in: &mut String, unsigned char **out, struct nettle_hash const *hash, 
 		     salt: &mut Vec<u8>, salt_len: i32, iterations: i32)
 {
   ctx: Vec<u8>;
@@ -1296,7 +1296,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 }
 
 /* Decode base32 to first "." or end of string */
- int base32_decode(in: &mut String, unsigned char *out)
+ base32_decode: i32(in: &mut String, unsigned char *out)
 {
   oc: i32, on, c, mask, i;
   let mut p: *mut u8 = out;
@@ -1329,7 +1329,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
   return p - out;
 }
 
- int check_nsec3_coverage(struct dns_header *header, plen: usize, digest_len: i32, digest: &mut Vec<u8>, type: i32,
+ check_nsec3_coverage: i32(struct dns_header *header, plen: usize, digest_len: i32, digest: &mut Vec<u8>, type: i32,
 				workspace1: &mut String, workspace2: &mut String, unsigned char **nsecs, nsec_count: i32, nons: &i32, name_labels: i32)
 {
   i: i32, hash_len, salt_len, base32_len, rdlen, flags;
@@ -1357,15 +1357,15 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
 	
 	if (digest_len == base32_len && hash_len == base32_len)
 	  {
-	    int rc = memcmp(workspace2, digest, digest_len);
+	    rc: i32 = memcmp(workspace2, digest, digest_len);
 
 	    if (rc == 0)
 	      {
 		/* We found an NSEC3 whose hashed name exactly matches the query, so
 		   we just need to check the type map. p points to the RR data for the record. */
 		
-		int offset = (type & 0xff) >> 3;
-		int mask = 0x80 >> (type & 0x07);
+		offset: i32 = (type & 0xff) >> 3;
+		mask: i32 = 0x80 >> (type & 0x07);
 		
 		p += hash_len; /* skip next-domain hash */
 		rdlen -= p - psave;
@@ -1437,7 +1437,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
   return 0;
 }
 
- int prove_non_existence_nsec3(struct dns_header *header, plen: usize, unsigned char **nsecs, nsec_count: i32,
+ prove_non_existence_nsec3: i32(struct dns_header *header, plen: usize, unsigned char **nsecs, nsec_count: i32,
 				     workspace1: &mut String, workspace2: &mut String, name: &mut String, type: i32, wildname: &mut String, nons: &i32)
 {
   salt: &mut Vec<u8>, *p, *digest;
@@ -1595,10 +1595,10 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
   return 1;
 }
 
- int prove_non_existence(struct dns_header *header, plen: usize, keyname: &mut String, name: &mut String, qtype: i32, qclass: i32, wildname: &mut String, nons: &i32, nsec_ttl: &i32)
+ prove_non_existence: i32(struct dns_header *header, plen: usize, keyname: &mut String, name: &mut String, qtype: i32, qclass: i32, wildname: &mut String, nons: &i32, nsec_ttl: &i32)
 {
    unsigned char **nsecset = NULL, **rrsig_labels = NULL;
-   int nsecset_sz = 0, rrsig_labels_sz = 0;
+   nsecset_sz: i32 = 0, rrsig_labels_sz = 0;
   
   let mut type_found: i32 = 0;
   auth_start: &mut Vec<u8>, *p = skip_questions(header, plen);
@@ -1727,9 +1727,9 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
    STAT_NEED_KEY require DNSKEY record of name returned in keyname.
    name returned unaltered.
 */
- int zone_status(name: &mut String, class: i32, keyname: &mut String, now: &time::Instant)
+ zone_status: i32(name: &mut String, class: i32, keyname: &mut String, now: &time::Instant)
 {
-  int name_start = strlen(name); /* for when TA is root */
+  name_start: i32 = strlen(name); /* for when TA is root */
   let mut crecp: crec;
   char *p;
 
@@ -1819,7 +1819,7 @@ int dnssec_validate_ds(now: time::Instant, struct dns_header *header, plen: usiz
    Other RRs in that section missing sigs will not cause am INSECURE reply. We determine this mode
    is the nons argument is non-NULL.
 */
-int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, 
+dnssec_validate_reply: i32(now: time::Instant, struct dns_header *header, plen: usize, name: &mut String, keyname: &mut String, 
 			  class: &i32, check_unsigned: i32, neganswer: &i32, nons: &i32, nsec_ttl: &i32)
 {
    unsigned char **targets = NULL;
@@ -1828,7 +1828,7 @@ int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: u
   ans_start: &mut Vec<u8>, *p1, *p2;
   type1: i32, class1, rdlen1 = 0, type2, class2, rdlen2, qclass, qtype, targetidx;
   i: i32, j, rc = STAT_INSECURE;
-  int secure = STAT_SECURE;
+  secure: i32 = STAT_SECURE;
 
   /* extend rr_status if necessary */
   if (daemon.rr_status_sz < ntohs(header.ancount) + ntohs(header.nscount))
@@ -2079,7 +2079,7 @@ int dnssec_validate_reply(now: time::Instant, struct dns_header *header, plen: u
 
 
 /* Compute keytag (checksum to quickly index a key). See RFC4034 */
-int dnskey_keytag(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32)
+dnskey_keytag: i32(alg: i32, flags: i32, key: &mut Vec<u8>, keylen: i32)
 {
   if (alg == 1)
     {

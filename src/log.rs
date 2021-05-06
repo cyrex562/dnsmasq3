@@ -32,16 +32,16 @@
 pub const MAX_MESSAGE: u32 = 1024;
 
 /* defaults in case we die() before we log_start() */
-//  int log_fac = LOG_DAEMON;
+//  log_fac: i32 = LOG_DAEMON;
 // let mut log_stderr: i32 = 0;
 // let mut echo_stderr: i32 = 0;
-//  int log_fd = -1;
+//  log_fd: i32 = -1;
 // let mut log_to_file: i32 = 0;
 // let mut entries_alloced: i32 = 0;
 // let mut entries_lost: i32 = 0;
 // let mut connection_good: i32 = 1;
 // let mut max_logs: i32 = 0;
-//  int connection_type = SOCK_DGRAM;
+//  connection_type: i32 = SOCK_DGRAM;
 
 pub struct log_entry {
   // offset: i32, length;
@@ -189,7 +189,7 @@ pub fn log_write()
 	      free_entry();
 	      if (entries_lost != 0)
 		{
-		  int e = entries_lost;
+		  e: i32 = entries_lost;
 		  entries_lost = 0; /* avoid wild recursion */
 		  my_syslog(LOG_WARNING, format!("overflow: {} log entries lost"), e);
 		}	  
@@ -433,7 +433,7 @@ pub fn set_log_writer()
     poll_listen(log_fd, POLLOUT);
 }
 
-pub fn check_log_writer(int force)
+pub fn check_log_writer(force: i32)
 {
   if (log_fd != -1 && (force || poll_check(log_fd, POLLOUT)))
     log_write();
@@ -467,7 +467,7 @@ pub fn die(message: &mut String, arg1: &mut String, exit_code: i32)
 
   if (!log_stderr)
     {
-      echo_stderr = 1; /* print as well as log when we die.... */
+      echo_stderr = 1; /* pras: i32 well as log when we die.... */
       fputc('\n', stderr); /* prettyfy  startup-script message */
     }
   my_syslog(LOG_CRIT, message, arg1, errmess);

@@ -101,7 +101,7 @@ add_pseudoheader: usize(struct dns_header *header, plen: usize, limit: &mut Vec<
 			u16 udp_sz, optno: i32, opt: &mut Vec<u8>, optlen: usize, set_do: i32, replace: i32)
 { 
   lenp: &mut Vec<u8>, *datap, *p, *udp_len, *buff = NULL;
-  int rdlen = 0, is_sign, is_last;
+  rdlen: i32 = 0, is_sign, is_last;
   u16 flags = set_do ? 0x8000 : 0, rcode = 0;
 
   p = find_pseudoheader(header, plen, NULL, &udp_len, &is_sign, &is_last);
@@ -325,7 +325,7 @@ pub fn *get_addrp(addr: &mut net::IpAddr, const short family)
   
   let mut len: i32;
   addrp: Vec<u8> = NULL;
-  int sa_family = source.sa.sa_family;
+  sa_family: i32 = source.sa.sa_family;
   let mut cacheable: i32 = 0;
   
   opt.source_netmask = 0;
@@ -389,7 +389,7 @@ pub fn *get_addrp(addr: &mut net::IpAddr, const short family)
   return add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_CLIENT_SUBNET, &opt, len, 0, 0);
 }
 
-int check_source(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, peer: &mut net::IpAddr)
+check_source: i32(struct dns_header *header, plen: usize, pseudoheader: &mut Vec<u8>, peer: &mut net::IpAddr)
 {
   /* Section 9.2, Check that subnet option in reply matches. */
   

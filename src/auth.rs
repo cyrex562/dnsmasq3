@@ -1,6 +1,6 @@
 use std::{net, time};
 
-use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, AddrList, DnsmasqDaemon, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{GETSHORT, find_subnet, hostname_isequal}};
+use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, AddrList, DnsmasqDaemon, F_IPV4, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{GETSHORT, find_subnet, hostname_isequal}};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -214,27 +214,28 @@ while q != 0
 
       if qtype == T_PTR && flag
 	{
-	  intr = NULL;
+	  intr = None;
 
 	  if flag == F_IPV4 
 	  {
 	    // for (intr = daemon.int_names; intr; intr = intr.next)
 		for inter in daemon.int_names 
 	      {
-		let mut addrlist: addrlist;
+		let mut addrlist: AddrList;
 		
 		// for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
 		for addrlist in intr.addr 
 		{
-		  if (!(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr)
+		  if !(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr
 		    {break;}
 		
 		if (addrlist)
 		  {break;}
 		else {
-		  while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
-		    {intr = intr.next;}
-	      }
+			todo!()
+		//   while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
+		//     {intr = intr.next;}
+	    //   }
 	  else if (flag == F_IPV6) {
 	    for (intr = daemon.int_names; intr; intr = intr.next)
 	      {
@@ -649,7 +650,7 @@ while q != 0
 	      
 	      for (i = subnet.prefixlen-1; i >= 0; i -= 4)
 		{ 
-		  int dig = (&subnet.addr.addr6)[i>>3];
+		  dig: i32 = (&subnet.addr.addr6)[i>>3];
 		  p += sprintf(p, "%.1x.", (i>>2) & 1 ? dig & 15 : dig >> 4);
 		}
 	      p += sprintf(p, "ip6.arpa");

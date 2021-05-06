@@ -33,31 +33,31 @@ struct state {
   unsigned mac_len: i32, mac_type;
 };
 
- int dhcp6_maybe_relay(struct state *state, inbuff: Vec<u8>, sz: usize, 
+ dhcp6_maybe_relay: i32(struct state *state, inbuff: Vec<u8>, sz: usize, 
 			     client_addr: &mut net::IpAddr, is_unicast: i32, now: &time::Instant);
- int dhcp6_no_relay(struct state *state, msg_type: i32, inbuff: Vec<u8>, sz: usize, is_unicast: i32, now: &time::Instant);
+ dhcp6_no_relay: i32(struct state *state, msg_type: i32, inbuff: Vec<u8>, sz: usize, is_unicast: i32, now: &time::Instant);
 pub fn log6_opts(nest: i32, unsigned xid: i32, start_opts: Vec<u8>, end_opts: Vec<u8>);
 pub fn log6_packet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String);
 pub fn log6_quiet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String);
-pub fn *opt6_find (opts: Vec<u8>, end: Vec<u8>, unsigned search: i32, unsigned int minsize);
+pub fn *opt6_find (opts: Vec<u8>, end: Vec<u8>, unsigned search: i32, unsigned minsize: i32);
 pub fn *opt6_next(opts: Vec<u8>, end: Vec<u8>);
- unsigned int opt6_uint(opt: &mut Vec<u8>, offset: i32, size: i32);
+ unsigned opt6_uint: i32(opt: &mut Vec<u8>, offset: i32, size: i32);
 pub fn get_context_tag(struct state *state, struct dhcp_context *context);
- int check_ia(struct state *state, opt: Vec<u8>, void **endp, void **ia_option);
- int build_ia(struct state *state, t1cntr: &i32);
+ check_ia: i32(struct state *state, opt: Vec<u8>, void **endp, void **ia_option);
+ build_ia: i32(struct state *state, t1cntr: &i32);
 pub fn end_ia(t1cntr: i32, unsigned min_time: i32, do_fuzz: i32);
 pub fn mark_context_used(struct state *state, addr: &mut net::IpAddr);
 pub fn mark_config_used(struct dhcp_context *context, addr: &mut net::IpAddr);
- int check_address(struct state *state, addr: &mut net::IpAddr);
- int config_valid(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr, struct state *state, now: &time::Instant);
+ check_address: i32(struct state *state, addr: &mut net::IpAddr);
+ config_valid: i32(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr, struct state *state, now: &time::Instant);
  struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr);
 pub fn add_address(struct state *state, struct dhcp_context *context, unsigned lease_time: i32, ia_option: Vec<u8>, 
 			min_time: &mut u32, addr: &mut net::IpAddr, now: &time::Instant);
 pub fn update_leases(struct state *state, struct dhcp_context *context, addr: &mut net::IpAddr, unsigned lease_time: i32, now: &time::Instant);
- int add_local_addrs(struct dhcp_context *context);
+ add_local_addrs: i32(struct dhcp_context *context);
  struct dhcp_netid *add_options(struct state *state, do_refresh: i32);
 pub fn calculate_times(struct dhcp_context *context, min_time: &mut u32, valid_timep: &mut u32, 
-			    preferred_timep: &mut u32, unsigned int lease_time);
+			    preferred_timep: &mut u32, unsigned lease_time: i32);
 
 pub const opt: u32 = 6;_len(opt) ((opt6_uint(opt, -2, 2)))
 pub const opt: u32 = 6;_type(opt) (opt6_uint(opt, -4, 2))
@@ -104,12 +104,12 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
 }
 
 /* This cost me blood to write, it will probably cost you blood to understand - srk. */
- int dhcp6_maybe_relay(struct state *state, inbuff: Vec<u8>, sz: usize, 
+ dhcp6_maybe_relay: i32(struct state *state, inbuff: Vec<u8>, sz: usize, 
 			     client_addr: &mut net::IpAddr, is_unicast: i32, now: &time::Instant)
 {
   end: Vec<u8> = inbuff + sz;
   opts: Vec<u8> = inbuff + 34;
-  int msg_type = *(inbuff);
+  msg_type: i32 = *(inbuff);
   let mut outmsgtypep: *mut u8;
   opt: Vec<u8>;
   let mut vendor: dhcp_vendor;
@@ -238,7 +238,7 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
       /* Don't copy MAC address into reply. */
       if (opt6_type(opt) != OPTION6_CLIENT_MAC)
 	{
-	  int o = new_opt6(opt6_type(opt));
+	  o: i32 = new_opt6(opt6_type(opt));
 	  if (opt6_type(opt) == OPTION6_RELAY_MSG)
 	    {
 	      struct in6_addr align;
@@ -259,7 +259,7 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
   return 1;
 }
 
- int dhcp6_no_relay(struct state *state, msg_type: i32, inbuff: Vec<u8>, sz: usize, is_unicast: i32, now: &time::Instant)
+ dhcp6_no_relay: i32(struct state *state, msg_type: i32, inbuff: Vec<u8>, sz: usize, is_unicast: i32, now: &time::Instant)
 {
   opt: Vec<u8>;
   i: i32, o, o1, start_opts;
@@ -460,7 +460,7 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
   if ((opt = opt6_find(state.packet_options, state.end, OPTION6_FQDN, 1)))
     {
       /* RFC4704 refers */
-       int len = opt6_len(opt) - 1;
+       len: i32 = opt6_len(opt) - 1;
        
        state.fqdn_flags = opt6_uint(opt, 0, 1);
        
@@ -806,7 +806,7 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
     case DHCP6REQUEST:
       {
 	let mut address_assigned: i32 = 0;
-	int start = save_counter(-1);
+	start: i32 = save_counter(-1);
 
 	/* set reply message type */
 	*outmsgtypep = DHCP6REPLY;
@@ -941,8 +941,8 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
 	      {
 		struct dhcp_lease *lease = NULL;
 		struct in6_addr req_addr;
-		unsigned int preferred_time =  opt6_uint(ia_option, 16, 4);
-		unsigned int valid_time =  opt6_uint(ia_option, 20, 4);
+		unsigned preferred_time: i32 =  opt6_uint(ia_option, 16, 4);
+		unsigned valid_time: i32 =  opt6_uint(ia_option, 20, 4);
 		char *message = NULL;
 		let mut this_context: dhcp_context;
 
@@ -1265,7 +1265,7 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
   /* filter options based on tags, those we want get DHOPT_TAGOK bit set */
   struct dhcp_netid *tagif = option_filter(state.tags, state.context_tags, daemon.dhcp_opts6);
   let mut opt_cfg: dhcp_opt;
-  int done_dns = 0, done_refresh = !do_refresh, do_encap = 0;
+  done_dns: i32 = 0, done_refresh = !do_refresh, do_encap = 0;
   i: i32, o, o1;
 
   oro = opt6_find(state.packet_options, state.end, OPTION6_ORO, 0);
@@ -1492,7 +1492,7 @@ u16 dhcp6_reply(struct dhcp_context *context, interface: i32, iface_name: &mut S
   return tagif;
 }
  
- int add_local_addrs(struct dhcp_context *context)
+ add_local_addrs: i32(struct dhcp_context *context)
 {
   let mut done: i32 = 0;
   
@@ -1537,7 +1537,7 @@ pub fn get_context_tag(struct state *state, struct dhcp_context *context)
     }
 } 
 
- int check_ia(struct state *state, opt: Vec<u8>, void **endp, void **ia_option)
+ check_ia: i32(struct state *state, opt: Vec<u8>, void **endp, void **ia_option)
 {
   state.ia_type = opt6_type(opt);
   *ia_option = NULL;
@@ -1559,7 +1559,7 @@ pub fn get_context_tag(struct state *state, struct dhcp_context *context)
 }
 
 
- int build_ia(struct state *state, t1cntr: &i32)
+ build_ia: i32(struct state *state, t1cntr: &i32)
 {
   int  o = new_opt6(state.ia_type);
  
@@ -1583,7 +1583,7 @@ pub fn end_ia(t1cntr: i32, unsigned min_time: i32, do_fuzz: i32)
   if (t1cntr != 0)
     {
       /* go back and fill in fields in IA_NA option */
-      int sav = save_counter(t1cntr);
+      sav: i32 = save_counter(t1cntr);
       unsigned t1: i32, t2, fuzz = 0;
 
       if (do_fuzz)
@@ -1605,8 +1605,8 @@ pub fn end_ia(t1cntr: i32, unsigned min_time: i32, do_fuzz: i32)
 pub fn add_address(struct state *state, struct dhcp_context *context, unsigned lease_time: i32, ia_option: Vec<u8>, 
 			min_time: &mut u32, addr: &mut net::IpAddr, now: &time::Instant)
 {
-  unsigned int valid_time = 0, preferred_time = 0;
-  int o = new_opt6(OPTION6_IAADDR);
+  unsigned valid_time: i32 = 0, preferred_time = 0;
+  o: i32 = new_opt6(OPTION6_IAADDR);
   let mut lease: dhcp_lease;
 
   /* get client requested times */
@@ -1669,7 +1669,7 @@ pub fn mark_config_used(struct dhcp_context *context, addr: &mut net::IpAddr)
 }
 
 /* make sure address not leased to another CLID/IAID */
- int check_address(struct state *state, addr: &mut net::IpAddr)
+ check_address: i32(struct state *state, addr: &mut net::IpAddr)
 { 
   let mut lease: dhcp_lease;
 
@@ -1715,7 +1715,7 @@ pub fn mark_config_used(struct dhcp_context *context, addr: &mut net::IpAddr)
   return NULL;
 }
 
- int config_valid(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr, struct state *state, now: &time::Instant)
+ config_valid: i32(struct dhcp_config *config, struct dhcp_context *context, addr: &mut net::IpAddr, struct state *state, now: &time::Instant)
 {
   u64 addrpart, i, addresses;
   let mut addr_list: addrlist;
@@ -1774,10 +1774,10 @@ pub fn mark_config_used(struct dhcp_context *context, addr: &mut net::IpAddr)
    
    */
 pub fn calculate_times(struct dhcp_context *context, min_time: &mut u32, valid_timep: &mut u32, 
-			    preferred_timep: &mut u32, unsigned int lease_time)
+			    preferred_timep: &mut u32, unsigned lease_time: i32)
 {
-  unsigned int req_preferred = *preferred_timep, req_valid = *valid_timep;
-  unsigned int valid_time = lease_time, preferred_time = lease_time;
+  unsigned req_preferred: i32 = *preferred_timep, req_valid = *valid_timep;
+  unsigned valid_time: i32 = lease_time, preferred_time = lease_time;
   
   /* RFC 3315: "A server ignores the lifetimes set
      by the client if the preferred lifetime is greater than the valid
@@ -1928,7 +1928,7 @@ pub fn log6_opts(nest: i32, unsigned xid: i32, start_opts: Vec<u8>, end_opts: Ve
   
   for (opt = start_opts; opt; opt = opt6_next(opt, end_opts))
     {
-      int type = opt6_type(opt);
+      type: i32 = opt6_type(opt);
       ia_options: Vec<u8> = NULL;
       char *optname;
       
@@ -1959,7 +1959,7 @@ pub fn log6_opts(nest: i32, unsigned xid: i32, start_opts: Vec<u8>, end_opts: Ve
 	}
       else if (type == OPTION6_STATUS_CODE)
 	{
-	  int len = sprintf(daemon.namebuff, "{} ", opt6_uint(opt, 0, 2));
+	  len: i32 = sprintf(daemon.namebuff, "{} ", opt6_uint(opt, 0, 2));
 	  memcpy(daemon.namebuff + len, opt6_ptr(opt, 2), opt6_len(opt)-2);
 	  daemon.namebuff[len + opt6_len(opt) - 2] = 0;
 	  optname = "status";
@@ -1967,7 +1967,7 @@ pub fn log6_opts(nest: i32, unsigned xid: i32, start_opts: Vec<u8>, end_opts: Ve
       else
 	{
 	  /* account for flag byte on FQDN */
-	  int offset = type == OPTION6_FQDN ? 1 : 0;
+	  offset: i32 = type == OPTION6_FQDN ? 1 : 0;
 	  optname = option_string(AF_INET6, type, opt6_ptr(opt, offset), opt6_len(opt) - offset, daemon.namebuff, MAXDNAME);
 	}
       
@@ -1987,7 +1987,7 @@ pub fn log6_quiet(struct state *state, type: &mut String, addr: &mut net::IpAddr
 
 pub fn log6_packet(struct state *state, type: &mut String, addr: &mut net::IpAddr, string: &mut String)
 {
-  int clid_len = state.clid_len;
+  clid_len: i32 = state.clid_len;
 
   /* avoid buffer overflow */
   if (clid_len > 100)
@@ -2020,7 +2020,7 @@ pub fn log6_packet(struct state *state, type: &mut String, addr: &mut net::IpAdd
 	      string ? string : "");
 }
 
-pub fn *opt6_find (opts: Vec<u8>, end: Vec<u8>, unsigned search: i32, unsigned int minsize)
+pub fn *opt6_find (opts: Vec<u8>, end: Vec<u8>, unsigned search: i32, unsigned minsize: i32)
 {
   u16 opt, opt_len;
   start: Vec<u8>;
@@ -2063,7 +2063,7 @@ pub fn *opt6_next(opts: Vec<u8>, end: Vec<u8>)
   return opts + opt_len;
 }
 
- unsigned int opt6_uint(opt: &mut Vec<u8>, offset: i32, size: i32)
+ unsigned opt6_uint: i32(opt: &mut Vec<u8>, offset: i32, size: i32)
 {
   /* this worries about unaligned data and byte order */
   let mut ret: u32 = 0;
@@ -2084,7 +2084,7 @@ pub fn relay_upstream6(struct dhcp_relay *relay, ssz: usize,
   union all_addr from;
   let mut header: *mut u8;
   unsigned char *inbuff = daemon.dhcp_packet.iov_base;
-  int msg_type = *inbuff;
+  msg_type: i32 = *inbuff;
   let mut hopcount: i32;
   struct in6_addr multicast;
   unsigned maclen: i32, mactype;
@@ -2192,7 +2192,7 @@ pub fn relay_reply6(struct sockaddr_in6 *peer, ssz: usize, arrival_interface: &m
       for (opt = opts; opt; opt = opt6_next(opt, end))
 	if (opt6_type(opt) == OPTION6_RELAY_MSG && opt6_len(opt) > 0)
 	  {
-	    int encap_type = *(opt6_ptr(opt, 0));
+	    encap_type: i32 = *(opt6_ptr(opt, 0));
 	    put_opt6(opt6_ptr(opt, 0), opt6_len(opt));
 	    memcpy(&peer.sin6_addr, &inbuff[18], IN6ADDRSZ); 
 	    peer.sin6_scope_id = relay.iface_index;

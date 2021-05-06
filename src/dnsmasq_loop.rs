@@ -86,7 +86,7 @@ pub fn loop_send_probes()
 }
   
 
-int detect_loop(query: &mut String, type: i32)
+detect_loop: i32(query: &mut String, type: i32)
 {
   let mut i: i32;
   u32 uid;
