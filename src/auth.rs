@@ -22,7 +22,7 @@ use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_NS, T_PTR, T_SOA}, dnsmasq_h::
 
 
 
-pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: net::IpAddr) -> AddrList
+pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: net::IpAddr) -> Option<AddrList>
 {
 	// for item in list {
 	// 	if !(list.flags & ADDRLIST_IPV6)
@@ -49,11 +49,7 @@ pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: net::IpAddr) -> Add
 }
 
 pub fn ind_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
-{
-  if (!zone.subnet) {
-    return None;
-  }
-  
+{ 
   return find_addrlist(zone.subnet, flag, addr_u);
 }
 
@@ -237,11 +233,13 @@ while q != 0
 		//     {intr = intr.next;}
 	    //   }
 	  else if (flag == F_IPV6) {
-	    for (intr = daemon.int_names; intr; intr = intr.next)
+	    // for (intr = daemon.int_names; intr; intr = intr.next)
+		for intr in daemon.int_names
 	      {
 		let mut addrlist: addrlist;
 		
-		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		// for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		for addrlist in intr.addr
 		{
 		  if ((addrlist.flags & ADDRLIST_IPV6) && IN6_ARE_ADDR_EQUAL(&addr.addr6, &addrlist.addr.addr6))
 		    {break;}
@@ -250,9 +248,9 @@ while q != 0
 		  break;
 		}
 		else
-		  while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
+		  {while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
 		    intr = intr.next;
-	      }
+	      }}
 	  
 	  if (intr)
 	    {
@@ -263,12 +261,12 @@ while q != 0
 		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					  daemon.auth_ttl, NULL,
 					  T_PTR, C_IN, "d", intr.name))
-		    anscount +=1;
+		    {anscount +=1;}
 		}
 	    }
 	  
 	  if ((crecp = cache_find_by_addr(NULL, &addr, now, flag)))
-	    do { 
+	    {while { 
 	      strcpy(name, cache_get_name(crecp));
 	      
 	      if (crecp.flags & F_DHCP && !option_bool(OPT_DHCP_FQDN))
@@ -288,7 +286,7 @@ while q != 0
 		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					  daemon.auth_ttl, NULL,
 					  T_PTR, C_IN, "d", name))
-		    anscount +=1;
+		    {anscount +=1;}
 		}
 	      else if (crecp.flags & (F_DHCP | F_HOSTS) && (local_query || in_zone(zone, name, NULL)))
 		{
@@ -297,30 +295,31 @@ while q != 0
 		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					  daemon.auth_ttl, NULL,
 					  T_PTR, C_IN, "d", name))
-		    anscount +=1;
+		    {anscount +=1;}
 		}
 	      else
-		continue;
+		{continue;}
+		crecp = cache_find_by_addr(crecp, &addr, now, flag)
 		    
-	    } while ((crecp = cache_find_by_addr(crecp, &addr, now, flag)));
+	    } {}
 
 	  if (found)
-	    nxdomain = 0;
+	    {nxdomain = 0;}
 	  else
-	    log_query(flag | F_NEG | F_NXDOMAIN | F_REVERSE | (auth ? F_AUTH : 0), NULL, &addr, NULL);
+	    {log_query(flag | F_NEG | F_NXDOMAIN | F_REVERSE | (auth ? F_AUTH : 0), NULL, &addr, NULL);}
 
 	  continue;
 	}
       
     cname_restart:
-      if (found)
+      if (found){
 	/* NS and SOA .arpa requests have set found above. */
-	cut = NULL;
+	cut = NULL;}
       else
 	{
 	  for (zone = daemon.auth_zones; zone; zone = zone.next)
-	    if (in_zone(zone, name, &cut))
-	      break;
+	    {if (in_zone(zone, name, &cut)){
+	      break;}}
 	  
 	  if (!zone)
 	    {
@@ -330,7 +329,7 @@ while q != 0
 	}
 
       for (rec = daemon.mxnames; rec; rec = rec.next)
-	if (!rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
+	{if (!rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
 	  {
 	    nxdomain = 0;
 	         
@@ -342,10 +341,10 @@ while q != 0
 					NULL, T_MX, C_IN, "sd", rec.weight, rec.target))
 		  anscount +=1;
 	      }
-	  }
+	  }}
       
       for (move = NULL, up = &daemon.mxnames, rec = daemon.mxnames; rec; rec = rec.next)
-	if (rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
+	{if (rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
 	  {
 	    nxdomain = 0;
 	    
@@ -370,7 +369,7 @@ while q != 0
 	      up = &rec.next;      
 	  }
 	else
-	  up = &rec.next;
+	  up = &rec.next;}
 	  
       /* put first SRV record back at the end. */
       if (move)
@@ -380,7 +379,7 @@ while q != 0
 	}
 
       for (txt = daemon.rr; txt; txt = txt.next)
-	if ((rc = hostname_issubdomain(name, txt.name)))
+	{if ((rc = hostname_issubdomain(name, txt.name)))
 	  {
 	    nxdomain = 0;
 	    if (rc == 2 && txt.class == qtype)
@@ -391,10 +390,10 @@ while q != 0
 					NULL, txt.class, C_IN, "t", txt.len, txt.txt))
 		  anscount +=1;
 	      }
-	  }
+	  }}
       
       for (txt = daemon.txt; txt; txt = txt.next)
-	if (txt.class == C_IN && (rc = hostname_issubdomain(name, txt.name)))
+	{if (txt.class == C_IN && (rc = hostname_issubdomain(name, txt.name)))
 	  {
 	    nxdomain = 0;
 	    if (rc == 2 && qtype == T_TXT)
@@ -405,10 +404,10 @@ while q != 0
 					NULL, T_TXT, C_IN, "t", txt.len, txt.txt))
 		  anscount +=1;
 	      }
-	  }
+	  }}
 
        for (na = daemon.naptr; na; na = na.next)
-	 if ((rc = hostname_issubdomain(name, na.name)))
+	 {if ((rc = hostname_issubdomain(name, na.name)))
 	   {
 	     nxdomain = 0;
 	     if (rc == 2 && qtype == T_NAPTR)
@@ -420,24 +419,24 @@ while q != 0
 					 na.order, na.pref, na.flags, na.services, na.regexp, na.replace))
 			  anscount +=1;
 	       }
-	   }
+	   }}
     
        if (qtype == T_A)
-	 flag = F_IPV4;
+	 {flag = F_IPV4;}
        
        if (qtype == T_AAAA)
-	 flag = F_IPV6;
+	 {flag = F_IPV6;}
        
        for (intr = daemon.int_names; intr; intr = intr.next)
 	 if ((rc = hostname_issubdomain(name, intr.name)))
-	   {
+	   {{
 	     let mut addrlist: addrlist;
 	     
 	     nxdomain = 0;
 	     
 	     if (rc == 2 && flag)
-	       for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)  
-		 if (((addrlist.flags & ADDRLIST_IPV6)  ? T_AAAA : T_A) == qtype &&
+	       {for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)  
+		 {if (((addrlist.flags & ADDRLIST_IPV6)  ? T_AAAA : T_A) == qtype &&
 		     (local_query || filter_zone(zone, flag, &addrlist.addr)))
 		   {
 		     if (addrlist.flags & ADDRLIST_REVONLY)
@@ -450,7 +449,7 @@ while q != 0
 					     qtype == T_A ? "4" : "6", &addrlist.addr))
 		       anscount +=1;
 		   }
-	     }
+	     }}}}
        
       if (!cut)
 	{
