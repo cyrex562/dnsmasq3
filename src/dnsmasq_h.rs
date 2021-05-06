@@ -586,7 +586,7 @@ pub struct interface_name {
     pub name: String,
     pub intr: String,
     pub family: i32,
-    pub addr: AddrList,
+    pub addr: Vec<AddrList>,
     // next
 }
 
@@ -637,36 +637,67 @@ pub struct crec {
 // #define SIZEOF_POINTER_CREC (sizeof(struct crec) + sizeof - SMALLDNAME)
 
 // #define F_IMMORTAL  (1u<<0)
+pub const F_IMMORTAL: u32 = 1 << 0;
 // #define F_NAMEP     (1u<<1)
+pub const F_NAMEP: u32 = 1 << 1;
 // #define F_REVERSE   (1u<<2)
+pub const F_REVERSE: u32 = 1 << 2;
 // #define F_FORWARD   (1u<<3)
+pub const F_FORWARD: u32 = 1 << 3;
 // #define F_DHCP      (1u<<4)
+pub const F_DHCP: u32 = 1 << 4;
 // #define F_NEG       (1u<<5)
+pub const F_NEG: u32 = 1 << 5;
 // #define F_HOSTS     (1u<<6)
-// pub const F_IPV: u32 = 4;      (1u<<7)
+pub const F_HOSTS: u32 = 1 << 6;
+// pub const F_IPV4: u32 = 4;      (1u<<7)
+pub const F_IPV4: u32 = 1 << 7;
 // pub const F_IPV: u32 = 6;      (1u<<8)
+pub const F_IPV6: u32 = 1 << 8;
 // #define F_BIGNAME   (1u<<9)
+pub const F_BIGNAME: u32 = 1 << 9;
 // #define F_NXDOMAIN  (1u<<10)
+pub const F_NXDOMAIN: u32 = 1 << 10;
 // #define F_CNAME     (1u<<11)
+pub const F_CNAME: u32 = 1 << 11;
 // #define F_DNSKEY    (1u<<12)
+pub const F_DNSKEY: u32 = 1 << 12;
 // #define F_CONFIG    (1u<<13)
+pub const F_CONFIG: u32 = 1 << 13;
 // #define F_DS        (1u<<14)
+pub const F_DS: u32 = 1 << 14;
 // #define F_DNSSECOK  (1u<<15)
+pub const F_DNSSECOK: u32 = 1 << 15;
 // #define F_UPSTREAM  (1u<<16)
+pub const F_UPSTREAM: u32 = 1 << 16;
 // #define F_RRNAME    (1u<<17)
+pub const F_RRNAME: u32 = 1 << 17;
 // #define F_SERVER    (1u<<18)
+pub const F_SESRVER: u32 = 1 << 18;
 // #define F_QUERY     (1u<<19)
+pub const F_QUERY: u32 = 1 << 19;
 // #define F_NOERR     (1u<<20)
+pub const F_NOERR: u32 = 1 << 20;
 // #define F_AUTH      (1u<<21)
+pub const F_AUTH: u32 = 1 << 21;
 // #define F_DNSSEC    (1u<<22)
+pub const F_DNSSEC: u32 = 1 << 22;
 // #define F_KEYTAG    (1u<<23)
+pub const F_KEYTAY: u32 = 1 << 23;
 // #define F_SECSTAT   (1u<<24)
+pub const F_SECSTAT: u32 = 1 << 24;
 // #define F_NO_RR     (1u<<25)
+pub const F_NO_RR: u32 = 1 << 25;
 // #define F_IPSET     (1u<<26)
+pub const F_IPSET: u32 = 1 << 26;
 // #define F_NOEXTRA   (1u<<27)
+pub const F_NOEXTRA: u32 = 1 << 27;
 // #define F_SERVFAIL  (1u<<28) /* currently unused. */
+pub const F_SERVFAIL: u32 = 1 << 28;
 // #define F_RCODE     (1u<<29)
+pub const F_RCODE: u32 = 1 << 29;
 // #define F_SRV       (1u<<30)
+pub const F_SRV: u32 = 1 << 30;
 
 pub const UID_NONE: u32 = 0;
 /* Values of uid in crecs with F_CONFIG bit set. */
@@ -1475,7 +1506,7 @@ pub struct DnsmasqDaemon {
     // let mut auth_zones: auth_zone;
     pub auth_zones: auth_zone,
     // let mut int_names: interface_name;
-    pub int_names: interface_name,
+    pub int_names: Vec<interface_name>,
     // char *mxtarget;
     pub mxtarget: String,
     // let mut add_subnet4: mysubnet;
@@ -2609,4 +2640,3 @@ pub struct rt_metrics {
 pub const ARPHRD_ETHER: u16 = 0x0806;
 
 pub const AF_LOCAL: u32 = 0;
-pub const F_IPV4: u32 = 0;

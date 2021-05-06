@@ -1,6 +1,6 @@
 use std::{net, time};
 
-use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, AddrList, DnsmasqDaemon, F_IPV4, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{GETSHORT, find_subnet, hostname_isequal}};
+use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_A, T_AAAA, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, ADDRLIST_REVONLY, AddrList, DnsmasqDaemon, F_IPV4, F_IPV6, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{GETSHORT, hostname_isequal, log_query}};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -22,7 +22,7 @@ use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_NS, T_PTR, T_SOA}, dnsmasq_h::
 
 
 
-pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: net::IpAddr) -> Option<AddrList>
+pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
 {
 	// for item in list {
 	// 	if !(list.flags & ADDRLIST_IPV6)
@@ -48,35 +48,27 @@ pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: net::IpAddr) -> Opt
 	// }
 }
 
-pub fn ind_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
+pub fn find_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
 { 
-  return find_addrlist(zone.subnet, flag, addr_u);
+  return find_addrlist(&mut zone.subnet, flag, addr_u);
 }
 
-  pub fn find_exclude(zone: &auth_zone, flag: i32, addr_u: net::IpAddr) -> Option<AddrList>
-{
-  if !zone.exclude {
-    return None;
-  }
-  
-  return find_addrlist(zone.exclude, flag, addr_u);
+  pub fn find_exclude(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
+{ 
+  return find_addrlist(&mut zone.exclude, flag, addr_u);
 }
 
- pub fn filter_zone(zone: &auth_zone, flag: i32, addr_u: net::IpAddr) -> i32
+ pub fn filter_zone(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> bool
 {
-  if find_exclude(zone, flag, addr_u) {
-    return 0;
+  if find_exclude(zone, flag, addr_u).is_some() {
+    return false;
   }
 
-  /* No subnets specified, no filter */
-  if !zone.subnet {
-    return 1;
-  }
-  
+  /* No subnets specified, no filter */ 
   return find_subnet(zone, flag, addr_u).is_some();
 }
 
-pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> i32
+pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> bool
 {
   let mut namelen: usize = name.len();
   let mut domainlen: usize = zone.domain.len();
@@ -85,22 +77,24 @@ pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> i32
 //     *cut = NULL;
 //   }
   
-  if namelen >= domainlen &&  hostname_isequal(zone.domain, &name[namelen - domainlen])
+  if namelen >= domainlen &&  hostname_isequal(&zone.domain, &String::from(&name[namelen - domainlen..]))
     {
       if namelen == domainlen {
-	return 1;
+	return true;
 	  }
       
-      if name[namelen - domainlen - 1] == '.'
+    //   if name[(namelen - domainlen - 1)as i32] == '.'
+	if name.chars().nth(namelen - domainlen - 1).unwrap() == '.'
 	{
-	  if cut {
-	    *cut = &name[namelen - domainlen - 1]; 
-	  }
-	  return 1;
+		todo!();
+	//   if cut {
+	//     *cut = &name[namelen - domainlen - 1]; 
+	//   }
+	  return true;
 	}
     }
 
-  return 0;
+  return false;
 }
 
 
@@ -162,7 +156,7 @@ let mut wclen: u32;
   //p = header + 1;
 
 //   for (q = ntohs(header.qdcount); q != 0; q--)
-q = header.qdcount;
+q = header.qdcount.into();
 while q != 0
     {
       let mut flag: u32 = 0;
@@ -170,7 +164,8 @@ while q != 0
       let mut cname_wildcard: i32 = 0;
   
       /* save pointer to name for copying into answers */
-      nameoffset = p - header;
+	  // TODO
+    //   nameoffset = p - header;
 
       /* now extract name as .-concatenated string into name */
       if !extract_name(header, qlen, &p, name, 1, 4)
@@ -224,40 +219,45 @@ while q != 0
 		{
 		  if !(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr
 		    {break;}
+		}
 		
-		if (addrlist)
+		if addrlist
 		  {break;}
 		else {
-			todo!()
+			todo!();
 		//   while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
 		//     {intr = intr.next;}
 	    //   }
+		}
+	}}
 	  else if (flag == F_IPV6) {
 	    // for (intr = daemon.int_names; intr; intr = intr.next)
 		for intr in daemon.int_names
 	      {
-		let mut addrlist: addrlist;
+		let mut addrlist: AddrList;
 		
 		// for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
 		for addrlist in intr.addr
 		{
-		  if ((addrlist.flags & ADDRLIST_IPV6) && IN6_ARE_ADDR_EQUAL(&addr.addr6, &addrlist.addr.addr6))
+		  if ((addrlist.flags & ADDRLIST_IPV6) && (addr == addrlist.addr))
 		    {break;}
 		
 		if (addrlist) {
 		  break;
 		}
-		else
-		  {while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
-		    intr = intr.next;
-	      }}
+		else {
+			todo!();
+		//   {while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
+		//     intr = intr.next;
+	    //   }
+	}
 	  
 	  if (intr)
 	    {
-	      if (local_query || in_zone(zone, intr.name, NULL))
+	      if (local_query || in_zone(zone, intr.name, None))
 		{	
 		  found = 1;
-		  log_query(flag | F_REVERSE | F_CONFIG, intr.name, &addr, NULL);
+		  log_query(flag | F_REVERSE | F_CONFIG, intr.name, &addr, None);
 		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					  daemon.auth_ttl, NULL,
 					  T_PTR, C_IN, "d", intr.name))
@@ -272,8 +272,9 @@ while q != 0
 	      if (crecp.flags & F_DHCP && !option_bool(OPT_DHCP_FQDN))
 		{
 		  char *p = strchr(name, '.');
+		  /* must be bare name */
 		  if (p)
-		    *p = 0; /* must be bare name */
+		    {*p = 0;} 
 		  
 		  /* add  external domain */
 		  if (zone)
@@ -283,18 +284,18 @@ while q != 0
 		    }
 		  log_query(flag | F_DHCP | F_REVERSE, name, &addr, record_source(crecp.uid));
 		  found = 1;
-		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
+		  if add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					  daemon.auth_ttl, NULL,
-					  T_PTR, C_IN, "d", name))
+					  T_PTR, C_IN, "d", name)
 		    {anscount +=1;}
 		}
-	      else if (crecp.flags & (F_DHCP | F_HOSTS) && (local_query || in_zone(zone, name, NULL)))
+	      else if crecp.flags & (F_DHCP | F_HOSTS) && (local_query || in_zone(zone, name, NULL))
 		{
-		  log_query(crecp.flags & ~F_FORWARD, name, &addr, record_source(crecp.uid));
+		  log_query(crecp.flags & !F_FORWARD, name, &addr, record_source(crecp.uid));
 		  found = 1;
-		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
+		  if add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					  daemon.auth_ttl, NULL,
-					  T_PTR, C_IN, "d", name))
+					  T_PTR, C_IN, "d", name)
 		    {anscount +=1;}
 		}
 	      else
@@ -306,18 +307,19 @@ while q != 0
 	  if (found)
 	    {nxdomain = 0;}
 	  else
-	    {log_query(flag | F_NEG | F_NXDOMAIN | F_REVERSE | (auth ? F_AUTH : 0), NULL, &addr, NULL);}
+	    {log_query(flag | F_NEG | F_NXDOMAIN | F_REVERSE | if auth { F_AUTH} else {0}, NULL, &addr, NULL);}
 
 	  continue;
 	}
-      
-    cname_restart:
+      //TODO
+    // cname_restart:
       if (found){
 	/* NS and SOA .arpa requests have set found above. */
 	cut = NULL;}
       else
 	{
-	  for (zone = daemon.auth_zones; zone; zone = zone.next)
+	//   for (zone = daemon.auth_zones; zone; zone = zone.next)
+	for zone in daemon.auth_zones
 	    {if (in_zone(zone, name, &cut)){
 	      break;}}
 	  
@@ -328,7 +330,8 @@ while q != 0
 	    }
 	}
 
-      for (rec = daemon.mxnames; rec; rec = rec.next)
+    //   for (rec = daemon.mxnames; rec; rec = rec.next)
+	for rec in daemon.mxnames
 	{if (!rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
 	  {
 	    nxdomain = 0;
@@ -337,13 +340,15 @@ while q != 0
 	      {
 		found = 1;
 		log_query(F_CONFIG | F_RRNAME, name, NULL, "<MX>"); 
-		if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
-					NULL, T_MX, C_IN, "sd", rec.weight, rec.target))
-		  anscount +=1;
+		if add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
+					NULL, T_MX, C_IN, "sd", rec.weight, rec.target)
+		  {anscount +=1;}
 	      }
 	  }}
-      
-      for (move = NULL, up = &daemon.mxnames, rec = daemon.mxnames; rec; rec = rec.next)
+      // TODO
+      //for (move = NULL, up = &daemon.mxnames, rec = daemon.mxnames; rec; rec = rec.next)
+	  let _move = None;
+	  for rec in daemon.mxnames
 	{if (rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
 	  {
 	    nxdomain = 0;
@@ -356,30 +361,31 @@ while q != 0
 					NULL, T_SRV, C_IN, "sssd", 
 					rec.priority, rec.weight, rec.srvport, rec.target))
 
-		  anscount +=1;
+		  {anscount +=1;}
 	      } 
 	    
 	    /* unlink first SRV record found */
-	    if (!move)
+	    if _move.is_none()
 	      {
-		move = rec;
+		_move = Some(rec);
 		*up = rec.next;
 	      }
 	    else
-	      up = &rec.next;      
+	      {up = &rec.next;      }
 	  }
 	else
-	  up = &rec.next;}
+	  {up = &rec.next;}}
 	  
       /* put first SRV record back at the end. */
-      if (move)
+      if _move
 	{
-	  *up = move;
-	  move.next = NULL;
+	  *up = _move;
+	  _move.next = NULL;
 	}
 
-      for (txt = daemon.rr; txt; txt = txt.next)
-	{if ((rc = hostname_issubdomain(name, txt.name)))
+    //   for (txt = daemon.rr; txt; txt = txt.next)
+	for txt in daemon.rr
+	{if rc = hostname_issubdomain(name, txt.name)
 	  {
 	    nxdomain = 0;
 	    if (rc == 2 && txt.class == qtype)
@@ -388,11 +394,12 @@ while q != 0
 		log_query(F_CONFIG | F_RRNAME, name, NULL, querystr(NULL, txt.class)); 
 		if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
 					NULL, txt.class, C_IN, "t", txt.len, txt.txt))
-		  anscount +=1;
+		  {anscount +=1;}
 	      }
 	  }}
       
-      for (txt = daemon.txt; txt; txt = txt.next)
+    //   for (txt = daemon.txt; txt; txt = txt.next)
+	for txt in daemon.txt
 	{if (txt.class == C_IN && (rc = hostname_issubdomain(name, txt.name)))
 	  {
 	    nxdomain = 0;
@@ -402,11 +409,12 @@ while q != 0
 		log_query(F_CONFIG | F_RRNAME, name, NULL, "<TXT>"); 
 		if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
 					NULL, T_TXT, C_IN, "t", txt.len, txt.txt))
-		  anscount +=1;
+		  {anscount +=1;}
 	      }
 	  }}
 
-       for (na = daemon.naptr; na; na = na.next)
+    //    for (na = daemon.naptr; na; na = na.next)
+	for na in daemon.naptr
 	 {if ((rc = hostname_issubdomain(name, na.name)))
 	   {
 	     nxdomain = 0;
@@ -417,7 +425,7 @@ while q != 0
 		 if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl, 
 					 NULL, T_NAPTR, C_IN, "sszzzd", 
 					 na.order, na.pref, na.flags, na.services, na.regexp, na.replace))
-			  anscount +=1;
+			  {anscount +=1;}
 	       }
 	   }}
     
@@ -427,29 +435,32 @@ while q != 0
        if (qtype == T_AAAA)
 	 {flag = F_IPV6;}
        
-       for (intr = daemon.int_names; intr; intr = intr.next)
-	 if ((rc = hostname_issubdomain(name, intr.name)))
+    //    for (intr = daemon.int_names; intr; intr = intr.next)
+	for intr in daemon.int_names
+	 {if ((rc = hostname_issubdomain(name, intr.name)))
 	   {{
 	     let mut addrlist: addrlist;
 	     
 	     nxdomain = 0;
 	     
 	     if (rc == 2 && flag)
-	       {for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)  
-		 {if (((addrlist.flags & ADDRLIST_IPV6)  ? T_AAAA : T_A) == qtype &&
-		     (local_query || filter_zone(zone, flag, &addrlist.addr)))
+	       {
+			//    for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)  
+			for addrlist in intr.addr
+		 {if (if (addrlist.flags & ADDRLIST_IPV6)   {T_AAAA} else {T_A}) == qtype &&
+		     (local_query || filter_zone(zone, flag, &addrlist.addr))
 		   {
-		     if (addrlist.flags & ADDRLIST_REVONLY)
-		       continue;
+		     if addrlist.flags & ADDRLIST_REVONLY
+		       {continue;}
 
 		     found = 1;
-		     log_query(F_FORWARD | F_CONFIG | flag, name, &addrlist.addr, NULL);
+		     log_query(F_FORWARD | F_CONFIG | flag, name, &addrlist.addr, None);
 		     if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
 					     daemon.auth_ttl, NULL, qtype, C_IN, 
-					     qtype == T_A ? "4" : "6", &addrlist.addr))
-		       anscount +=1;
+					     qtype == if T_A  {"4"} else {"6"}, &addrlist.addr))
+		       {anscount +=1;}
 		   }
-	     }}}}
+	     }}}}}
        
       if (!cut)
 	{

@@ -730,3 +730,13 @@ pub fn find_subnet() {
 pub fn GETSHORT(dest: &mut u32, buff: &[u8]) {
     unimplemented!()
 }
+
+pub fn log_query(
+    daemon: &mut DnsmasqDaemon,
+    mut flags: u32,
+    mut name: &String,
+    mut addr: &NetAddress,
+    mut arg: Option<&String>,
+) {
+    unimplemented!()
+}
