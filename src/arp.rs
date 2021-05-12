@@ -47,14 +47,13 @@ pub fn filter_mac(
     mac: &[u8],
     maclen: usize,
 ) -> i32 {
-    let mut arp: ArpRecord;
     if maclen > DHCP_CHADDR_MAX {
         return 1;
     }
 
     /* Look for existing entry */
     // for (arp = arps; arp; arp = arp.next)
-    for arp in daemon.arps {
+    for mut arp in daemon.arps {
         if family != arp.family || arp.status == ARP_NEW as u16 {
             continue;
         }
@@ -112,7 +111,7 @@ pub fn find_mac(
     now: &time::Instant,
 ) -> usize {
     // struct arp_record *arp, *tmp, **up;
-    let mut arp: ArpRecord;
+    let mut arp: ArpRecord = ArpRecord::new();
     let mut tmp: ArpRecord;
     let mut up: ArpRecord;
     let mut updated: i32 = 0;
@@ -155,7 +154,7 @@ pub fn find_mac(
 
         /* Mark all non-negative entries */
         //  for (arp = arps; arp; arp = arp.next)
-        for arp in daemon.arps {
+        for mut arp in daemon.arps {
             if arp.status != ARP_EMPTY as u16 {
                 arp.status = ARP_MARK as u16;
             }
@@ -197,25 +196,28 @@ pub fn find_mac(
     // }
 
     if arp {
-        arp.status = ARP_EMPTY;
+        arp.status = ARP_EMPTY as u16;
         arp.hwlen = 0;
-        arp.addr = addr;
-        arp.family = AF_INET;
+        arp.addr = *addr;
+        arp.family = AF_INET as u16;
         daemon.arps.push(arp);
     }
 
     return 0;
 }
 
-pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32 {
+pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> bool {
     let mut arp: ArpRecord;
 
     /* Notify any which went, then move to free list */
     if daemon.old {
         if daemon.opt_script_arp {
             queue_arp(
+                daemon,
                 ACTION_ARP_DEL,
-                daemon.old.hwaddr,
+                None,
+                None,
+                &daemon.old.hwaddr,
                 daemon.old.hwlen,
                 daemon.old.family,
                 &daemon.old.addr,
@@ -227,16 +229,15 @@ pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32 {
         // old = arp.next;
         // arp.next = freelist;
         // freelist = arp;
-        return 1;
+        return true;
     }
 
     // for (arp = arps; arp; arp = arp.next)
-    for arp in daemon.arps {
-        if arp.status == ARP_NEW && (daemon.opt_script_arp) {
-            queue_arp(ACTION_ARP, arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
-
-            arp.status = ARP_FOUND;
-            return 1;
+    for mut arp in daemon.arps {
+        if (arp.status == ARP_NEW as u16) && (daemon.opt_script_arp) {
+            queue_arp(daemon, ACTION_ARP, None, None,&arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
+            arp.status = ARP_FOUND as u16;
+            return true;
         }
 
         // TODO: replace old, next, and freelist stuff
@@ -244,21 +245,21 @@ pub fn do_arp_script_run(daemon: &mut DnsmasqDaemon) -> i32 {
         // old = arp.next;
         // arp.next = freelist;
         // freelist = arp;
-        return 1;
+        return true;
     }
 
     // for (arp = arps; arp; arp = arp.next)
-    for arp in daemon.arps {
-        if arp.status == ARP_NEW {
+    for mut arp in daemon.arps {
+        if arp.status == ARP_NEW as u16 {
             // #ifdef HAVE_SCRIPT
             if daemon.opt_script_arp {
-                queue_arp(ACTION_ARP, arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
+                queue_arp(daemon, ACTION_ARP, None, None,&arp.hwaddr, arp.hwlen, arp.family, &arp.addr);
             }
             // #endif
-            arp.status = ARP_FOUND;
-            return 1;
+            arp.status = ARP_FOUND as u16;
+            return true;
         }
     }
 
-    return 0;
+    return false;
 }

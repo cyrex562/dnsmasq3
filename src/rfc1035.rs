@@ -16,8 +16,10 @@
 
 
 
-pub fn extract_name(header &dns_header, plen: usize, pp: *mut *mut u8, 
-		 name: &mut String, isExtract: i32, extrabytes: i32)
+use crate::dnsmasq_h::dns_header;
+
+pub fn extract_name(header &dns_header, plen: usize, pp: *mut *mut u8,
+                    name: &mut String, isExtract: i32, extrabytes: i32)
 {
 //   unsigned char *cp = name, *p = *pp, *p1 = NULL;
 	let mut cp: *mut u8;

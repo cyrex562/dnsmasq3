@@ -25,9 +25,9 @@ use crate::{
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-type pid_t = i32;
-type uid_t = i32;
-type gid_t = i32;
+// type pid_t = i32;
+// type uid_t = i32;
+// type gid_t = i32;
 
 //#define COPYRIGHT "Copyright (c) 2000-2021 Simon Kelley"
 
@@ -189,7 +189,7 @@ pub const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
 // struct event_desc {
 //   event: i32, data, msg_sz;
 // };
-pub struct event_desc {
+pub struct EventDesc {
     pub event: i32,
     pub data: i32,
     pub msg_sz: i32,
@@ -1871,6 +1871,7 @@ pub struct DnsmasqDaemon {
     pub opt_lease_renew: bool,
     pub opt_last: bool, //
     pub last: time::Instant,
+    pub entries: Vec<log_entry>,
 }
 
 /* cache.c */
@@ -2508,6 +2509,7 @@ pub struct dns_header {
     pub arcount: u16,
 }
 
+
 pub struct ArpRecord {
     // u16 hwlen, status;
     pub hwlen: u16,
@@ -2519,6 +2521,18 @@ pub struct ArpRecord {
     // union all_addr addr;
     pub addr: net::IpAddr,
     // let mut next: arp_record;
+}
+
+impl ArpRecord {
+    pub fn new() -> ArpRecord {
+        ArpRecord {
+            hwlen: 0,
+            status: 0,
+            family: u16,
+            hwaddr: [0;16],
+            addr: net::IpAddrr::new(),
+        }
+    }
 }
 
 pub struct udphdr {
@@ -2640,3 +2654,15 @@ pub struct rt_metrics {
 pub const ARPHRD_ETHER: u16 = 0x0806;
 
 pub const AF_LOCAL: u32 = 0;
+
+
+pub type nfds_t = libc::c_ulong;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct PollFd {
+    pub fd: i32,
+    pub events: i16,
+    pub revents: i16,
+}
+

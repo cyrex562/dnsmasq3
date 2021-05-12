@@ -39,87 +39,95 @@
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
 
- struct pollfd *pollfds = NULL;
- nfds_t nfds, arrsize = 0;
+// struct pollfd *pollfds = NULL;
+// nfds_t nfds, arrsize = 0;
 
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry
    to the left of which a new record should be inserted. */
- nfds_t fd_search(fd: i32)
+use crate::dnsmasq_h::{PollFd, nfds_t};
+
+pub fn fd_search(fd: i32) -> nfds_t
 {
-  nfds_t left, right, mid;
-  
-  if ((right = nfds) == 0)
-    return 0;
-  
-  left = 0;
-  
-  while (1)
+// nfds_t left, right, mid;
+    let mut left: nfds_t;
+    let mut right: nfds_t;
+    let mut mid: nfds_t;
+
+    right = nfds;
+    if right == 0 { return 0; }
+
+    left = 0;
+
+    loop
     {
-      if (right == left + 1)
-	return (pollfds[left].fd >= fd) ? left : right;
-      
-      mid = (left + right)/2;
-      
-      if (pollfds[mid].fd > fd)
-	right = mid;
-      else 
-	left = mid;
+        if right == left + 1 {
+            return if pollfds[left].fd >= fd { left } else { right };
+        }
+
+        mid = (left + right)/2;
+
+        if pollfds[mid].fd > fd { right = mid; }
+        else { left = mid; }
     }
 }
 
-pub fn poll_reset()
-{
-  nfds = 0;
+pub fn poll_reset() {
+    nfds = 0;
 }
 
-do_poll: i32(timeout: i32)
-{
-  return poll(pollfds, nfds, timeout);
+pub fn do_poll(timeout: i32) -> i32 {
+    return poll(pollfds, nfds, timeout);
 }
 
-poll_check: i32(fd: i32, short event)
-{
-  nfds_t i = fd_search(fd);
-  
-  if (i < nfds && pollfds[i].fd == fd)
-    return pollfds[i].revents & event;
+pub fn poll_check(fd: i32, event: i16) -> i32 {
+    let i = fd_search(fd);
 
-  return 0;
+    if i < nfds && pollfds[i].fd == fd { return pollfds[i].revents & event; }
+
+    return 0;
 }
 
-pub fn poll_listen(fd: i32, short event)
+pub fn poll_listen(fd: i32, event: i16)
 {
-   nfds_t i = fd_search(fd);
-  
-   if (i < nfds && pollfds[i].fd == fd)
-     pollfds[i].events |= event;
-   else
-     {
-       if (arrsize != nfds)
-	 memmove(&pollfds[i+1], &pollfds[i], (nfds - i) * sizeof(struct pollfd));
-       else
-	 {
-	   /* Array too small, extend. */
-	   let mut new: pollfd;
+    let i = fd_search(fd);
 
-	   arrsize = (arrsize == 0) ? 64 : arrsize * 2;
+    if i < nfds && pollfds[i].fd == fd { pollfds[i].events |= event; }
+    else
+    {
+        if arrsize != nfds {
+            // TODO:
+            // memmove(&pollfds[i + 1], &pollfds[i], (nfds - i) * sizeof(struct pollfd));
+        }
+        else
+        {
+            /* Array too small, extend. */
+            let mut new = PollFd::new();
 
-	   if (!(new = whine_malloc(arrsize * sizeof(struct pollfd))))
-	     return;
+            // arrsize = (arrsize == 0) ? 64 : arrsize * 2;
+            if arrsize == 0 {
+                arrsize = 64
+            } else {
+                arrsize = arrsize * 2;
+            }
 
-	   if (pollfds)
-	     {
-	       memcpy(new, pollfds, i * sizeof(struct pollfd));
-	       memcpy(&new[i+1], &pollfds[i], (nfds - i) * sizeof(struct pollfd));
-	       free(pollfds);
-	     }
-	   
-	   pollfds = new;
-	 }
-       
-       pollfds[i].fd = fd;
-       pollfds[i].events = event;
-       nfds +=1;
-     }
+            // TODO:
+            // if !(new = whine_malloc(arrsize * sizeof(struct pollfd))))
+            // { return;}
+
+            if pollfds
+            {
+                // TODO
+                // memcpy(new, pollfds, i * sizeof(struct pollfd));
+                // memcpy(&new[i+1], &pollfds[i], (nfds - i) * sizeof(struct pollfd));
+                // free(pollfds);
+            }
+
+            pollfds = new;
+        }
+
+        pollfds[i].fd = fd;
+        pollfds[i].events = event;
+        nfds +=1;
+    }
 }

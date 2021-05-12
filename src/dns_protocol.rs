@@ -16,18 +16,18 @@ use crate::dnsmasq_h::dns_header;
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-pub const NAMESERVER_PORT: u32 = 53;
-pub const TFTP_PORT: u32 = 69;
-pub const MIN_PORT: u32 = 1024; /* first non-reserved port */
-pub const MAX_PORT: u32 = 65535;
+pub const NAMESERVER_PORT: u16 = 53;
+pub const TFTP_PORT: u16 = 69;
+pub const MIN_PORT: u16 = 1024; /* first non-reserved port */
+pub const MAX_PORT: u16 = 65535;
 
-pub const IN6ADDRSZ: u32 = 16;
-pub const INADDRSZ: u32 = 4;
+pub const IN6ADDRSZ: usize = 16;
+pub const INADDRSZ: usize = 4;
 
-pub const PACKETSZ: u32 = 512; /* maximum packet size */
-pub const MAXDNAME: u32 = 1025; /* maximum presentation domain name */
-pub const RRFIXEDSZ: u32 = 10; /* #/bytes of fixed data in r record */
-pub const MAXLABEL: u32 = 63; /* maximum length of domain label */
+pub const PACKETSZ: usize = 512; /* maximum packet size */
+pub const MAXDNAME: usize = 1025; /* maximum presentation domain name */
+pub const RRFIXEDSZ: usize = 10; /* #/bytes of fixed data in r record */
+pub const MAXLABEL: usize = 63; /* maximum length of domain label */
 
 pub const NOERROR: u32 = 0; /* no error */
 pub const FORMERR: u32 = 1; /* format error */
@@ -97,7 +97,7 @@ pub const HB4_CD: u32 = 0x10; /* Checking Disabled */
 pub const HB4_RCODE: u32 = 0x0f;
 
 // #define OPCODE(x)          (((x).hb3 & HB3_OPCODE) >> 3)
-pub fn OPCODE(x: dns_header) -> u8 {
+pub fn OPCODE(x: &dns_header) -> u8 {
     (x.hb3 & HB3_OPCODE) >> 3
 }
 
@@ -107,7 +107,7 @@ pub fn OPCODE(x: dns_header) -> u8 {
 
 // #define SET_RCODE(x, code) (x).hb4 = ((x).hb4 & ~HB4_RCODE) | code
 
-// #define GETSHORT(s, cp) { \
+// #define getshort(s, cp) { \
 // 	unsigned char *t_cp = (cp); \
 // 	(s) = ((u16)t_cp[0] << 8) \
 // 	    | ((u16)t_cp[1]) \

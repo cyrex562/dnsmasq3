@@ -1,6 +1,6 @@
 use std::{net, time};
 
-use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_A, T_AAAA, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, ADDRLIST_REVONLY, AddrList, DnsmasqDaemon, F_IPV4, F_IPV6, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{GETSHORT, hostname_isequal, log_query}};
+use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_A, T_AAAA, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, ADDRLIST_REVONLY, AddrList, DnsmasqDaemon, F_IPV4, F_IPV6, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{getshort, hostname_isequal, log_query}};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -19,913 +19,777 @@ use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_A, T_AAAA, T_NS, T_PTR, T_SOA}
 */
 
 
-
-
-
-pub fn find_addrlist(list: &mut AddrList, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
-{
-	// for item in list {
-	// 	if !(list.flags & ADDRLIST_IPV6)
+pub fn find_addrlist(list: &AddrList, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList> {
+    // for item in list {
+    // 	if !(list.flags & ADDRLIST_IPV6)
     //   {
-	// // netmask: net::IpAddr, addr = addr_u.addr4;
-	//   let netmask: net::IpAddr;
-	//   let addr: net::IpAddr;
-	//   addr = addr_u;
-	// 	}
-	
-	// if !(flag & F_IPV4) {
-	//   continue;
-	// }
-	
-	todo!();
-	// netmask.s_addr = htonl(!0 << (32 - list.prefixlen));
-	
-	// if  (is_same_net(addr, list.addr.addr4, netmask)) {
-	//   return list;
+    // // netmask: net::IpAddr, addr = addr_u.addr4;
+    //   let netmask: net::IpAddr;
+    //   let addr: net::IpAddr;
+    //   addr = addr_u;
+    // 	}
+
+    // if !(flag & F_IPV4) {
+    //   continue;
+    // }
+
+    todo!();
+    // netmask.s_addr = htonl(!0 << (32 - list.prefixlen));
+
+    // if  (is_same_net(addr, list.addr.addr4, netmask)) {
+    //   return list;
     //   }
     // else if (is_same_net6(&(addr_u.addr6), &list.addr.addr6, list.prefixlen)) {
     //   return list;
-	// }
+    // }
 }
 
-pub fn find_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
-{ 
-  return find_addrlist(&mut zone.subnet, flag, addr_u);
+pub fn find_subnet(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList> {
+    return find_addrlist(&zone.subnet, flag, addr_u);
 }
 
-  pub fn find_exclude(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList>
-{ 
-  return find_addrlist(&mut zone.exclude, flag, addr_u);
+pub fn find_exclude(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> Option<AddrList> {
+    return find_addrlist(&zone.exclude, flag, addr_u);
 }
 
- pub fn filter_zone(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> bool
-{
-  if find_exclude(zone, flag, addr_u).is_some() {
-    return false;
-  }
+pub fn filter_zone(zone: &auth_zone, flag: i32, addr_u: &net::IpAddr) -> bool {
+    if find_exclude(zone, flag, addr_u).is_some() {
+        return false;
+    }
 
-  /* No subnets specified, no filter */ 
-  return find_subnet(zone, flag, addr_u).is_some();
+    /* No subnets specified, no filter */
+    return find_subnet(zone, flag, addr_u).is_some();
 }
 
-pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> bool
-{
-  let mut namelen: usize = name.len();
-  let mut domainlen: usize = zone.domain.len();
+pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> bool {
+    let mut namelen: usize = name.len();
+    let mut domainlen: usize = zone.domain.len();
 
 //   if (cut) {
 //     *cut = NULL;
 //   }
-  
-  if namelen >= domainlen &&  hostname_isequal(&zone.domain, &String::from(&name[namelen - domainlen..]))
-    {
-      if namelen == domainlen {
-	return true;
-	  }
-      
-    //   if name[(namelen - domainlen - 1)as i32] == '.'
-	if name.chars().nth(namelen - domainlen - 1).unwrap() == '.'
-	{
-		todo!();
-	//   if cut {
-	//     *cut = &name[namelen - domainlen - 1]; 
-	//   }
-	  return true;
-	}
+
+    if namelen >= domainlen && hostname_isequal(&zone.domain, &String::from(&name[namelen - domainlen..])) {
+        if namelen == domainlen {
+            return true;
+        }
+
+        //   if name[(namelen - domainlen - 1)as i32] == '.'
+        if name.chars().nth(namelen - domainlen - 1).unwrap() == '.' {
+            todo!();
+            //   if cut {
+            //     *cut = &name[namelen - domainlen - 1];
+            //   }
+            return true;
+        }
     }
 
-  return false;
+    return false;
 }
 
 
-pub fn answer_auth(daemon: &mut DnsmasqDaemon, header: dns_header, limit: &mut String, qlen: usize, now: &time::Instant, peer_addr: net::IpAddr, 
-		   local_query: i32, do_bit: i32, have_pseudoheader: i32) -> usize 
-{
-  let mut name: String = daemon.namebuff;
+pub fn answer_auth(daemon: &mut DnsmasqDaemon,
+                   header: &dns_header,
+                   limit: &mut String,
+                   qlen: usize,
+                   now: &time::Instant,
+                   peer_addr: &net::IpAddr,
+                   local_query: bool,
+                   do_bit: bool,
+                   have_pseudoheader: bool) -> usize {
+    let mut name: String = daemon.namebuff.clone();
 //   p: &mut Vec<u8>, *ansp;
-let mut p: Vec<u8>;
-let mut ansp: Vec<u8>;
+    let mut p: Vec<u8>;
+    let mut ansp: Vec<u8>;
 //   qtype: i32, qclass, rc;
-let mut qtype: i32;
-let mut qclass: i32;
-let mut rc: i32;
+    let mut qtype: i32;
+    let mut qclass: i32;
+    let mut rc: i32;
 //   nameoffset: i32, axfroffset = 0;
-let mut nameoffset: i32;
-let mut axfroffset: i32 = 0;
+    let mut nameoffset: i32;
+    let mut axfroffset: i32 = 0;
 //   q: i32, anscount = 0, authcount = 0;
-let mut q: u32;
-let mut anscount: i32 = 0;
-let mut authcount: i32 = 0;  
-let mut crecp: crec;
+    let mut q: u32;
+    let mut anscount: i32 = 0;
+    let mut authcount: i32 = 0;
+    let mut crecp: crec;
 //   int  auth = !local_query, trunc = 0, nxdomain = 1, soa = 0, ns = 0, axfr = 0;
-let mut auth: i32 = !local_query;
-let mut trunc: i32 = 0;
-let mut nxdomain: i32 = 1;
-let mut soa: i32 = 0;
-let mut ns: i32 = 0;
-let mut axfr: i32 = 0; 
+    let mut auth: bool = !local_query;
+    let mut trunc: i32 = 0;
+    let mut nxdomain: i32 = 1;
+    let mut soa: i32 = 0;
+    let mut ns: i32 = 0;
+    let mut axfr: i32 = 0;
 // struct auth_zone *zone = NULL;
-let mut zone: Option<auth_zone> = None;
+    let mut zone: Option<auth_zone> = None;
 // struct addrlist *subnet = NULL;
-let mut subnet: Option<AddrList> = None;
+    let mut subnet: Option<AddrList> = None;
 // char *cut;
-let mut cut: String;
+    let mut cut: String;
 // struct mx_srv_record *rec, *move, **up;
-let mut rec: mx_srv_record;
-let mut _move: mx_srv_record;
-let mut up: mx_srv_record;
-let mut txt: txt_record;
-  let mut intr: interface_name;
-  let mut na: naptr;
+    let mut rec: mx_srv_record;
+    let mut _move: mx_srv_record;
+    let mut up: mx_srv_record;
+    let mut txt: txt_record;
+    let mut intr: interface_name;
+    let mut na: naptr;
 //   union all_addr addr;
-let mut addr: net::IpAddr;  
+    let mut addr: net::IpAddr;
 // struct cname *a, *candidate;
-let mut a: cname;
-let mut candidate: cname;
-let mut wclen: u32;
-  
-  if (header.qdcount.to_be() == 0) || (u32::from(OPCODE(header)) != QUERY)
-    {return 0;}
+    let mut a: cname;
+    let mut candidate: cname;
+    let mut wclen: u32;
 
-  /* determine end of question section (we put answers there) */
-  ansp = skip_questions(header, qlen);
-  if ansp.is_empty()
-    {return 0; /* bad packet */}
-  
-  /* now process each question, answers go in RRs after the question */
-  //p = header + 1;
+    if (header.qdcount.to_be() == 0) || (u32::from(OPCODE(header)) != QUERY) { return 0; }
+
+    /* determine end of question section (we put answers there) */
+    ansp = skip_questions(header, qlen);
+    if ansp.is_empty() { return 0; /* bad packet */ }
+
+    /* now process each question, answers go in RRs after the question */
+    //p = header + 1;
 
 //   for (q = ntohs(header.qdcount); q != 0; q--)
-q = header.qdcount.into();
-while q != 0
-    {
-      let mut flag: u32 = 0;
-      let mut found: i32 = 0;
-      let mut cname_wildcard: i32 = 0;
-  
-      /* save pointer to name for copying into answers */
-	  // TODO
-    //   nameoffset = p - header;
+    q = header.qdcount.into();
+    while q != 0 {
+        let mut flag: u32 = 0;
+        let mut found: i32 = 0;
+        let mut cname_wildcard: i32 = 0;
 
-      /* now extract name as .-concatenated string into name */
-      if !extract_name(header, qlen, &p, name, 1, 4)
-	{return 0; /* bad packet */}
- 
-      GETSHORT(qtype, p); 
-      GETSHORT(qclass, p);
-      
-      if qclass != C_IN
-	{
-	  auth = 0;
-	  continue;
-	}
+        /* save pointer to name for copying into answers */
+        // TODO
+        //   nameoffset = p - header;
 
-      if (qtype == T_PTR || qtype == T_SOA || qtype == T_NS) &&
-	  (flag = in_arpa_name_2_addr(name, &addr)) &&
-	  !local_query
-	{
-	//   for (zone = daemon.auth_zones; zone; zone = zone.next)
-	for zone in daemon.auth_zones
-	{
-	    if subnet = find_subnet(zone, flag, &addr)
-	      {break;}
-	  
-	  if !zone
-	    {
-	      auth = 0;
-	      continue;
-	    }
-	  else if qtype == T_SOA
-	    {soa = 1;
-			 found = 1;}
-	  else if qtype == T_NS
-	   { ns = 1;
-		 found = 1;}
-	}
+        /* now extract name as .-concatenated string into name */
+        if !extract_name(header, qlen, &p, name, 1, 4) { return 0; /* bad packet */ }
 
-      if qtype == T_PTR && flag
-	{
-	  intr = None;
+        getshort(qtype, p);
+        getshort(qclass, p);
 
-	  if flag == F_IPV4 
-	  {
-	    // for (intr = daemon.int_names; intr; intr = intr.next)
-		for inter in daemon.int_names 
-	      {
-		let mut addrlist: AddrList;
-		
-		// for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
-		for addrlist in intr.addr 
-		{
-		  if !(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr
-		    {break;}
-		}
-		
-		if addrlist
-		  {break;}
-		else {
-			todo!();
-		//   while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
-		//     {intr = intr.next;}
-	    //   }
-		}
-	}}
-	  else if (flag == F_IPV6) {
-	    // for (intr = daemon.int_names; intr; intr = intr.next)
-		for intr in daemon.int_names
-	      {
-		let mut addrlist: AddrList;
-		
-		// for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
-		for addrlist in intr.addr
-		{
-		  if ((addrlist.flags & ADDRLIST_IPV6) && (addr == addrlist.addr))
-		    {break;}
-		
-		if (addrlist) {
-		  break;
-		}
-		else {
-			todo!();
-		//   {while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
-		//     intr = intr.next;
-	    //   }
-	}
-	  
-	  if (intr)
-	    {
-	      if (local_query || in_zone(zone, intr.name, None))
-		{	
-		  found = 1;
-		  log_query(flag | F_REVERSE | F_CONFIG, intr.name, &addr, None);
-		  if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-					  daemon.auth_ttl, NULL,
-					  T_PTR, C_IN, "d", intr.name))
-		    {anscount +=1;}
-		}
-	    }
-	  
-	  if ((crecp = cache_find_by_addr(NULL, &addr, now, flag)))
-	    {while { 
-	      strcpy(name, cache_get_name(crecp));
-	      
-	      if (crecp.flags & F_DHCP && !option_bool(OPT_DHCP_FQDN))
-		{
-		  char *p = strchr(name, '.');
-		  /* must be bare name */
-		  if (p)
-		    {*p = 0;} 
-		  
-		  /* add  external domain */
-		  if (zone)
-		    {
-		      strcat(name, ".");
-		      strcat(name, zone.domain);
-		    }
-		  log_query(flag | F_DHCP | F_REVERSE, name, &addr, record_source(crecp.uid));
-		  found = 1;
-		  if add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-					  daemon.auth_ttl, NULL,
-					  T_PTR, C_IN, "d", name)
-		    {anscount +=1;}
-		}
-	      else if crecp.flags & (F_DHCP | F_HOSTS) && (local_query || in_zone(zone, name, NULL))
-		{
-		  log_query(crecp.flags & !F_FORWARD, name, &addr, record_source(crecp.uid));
-		  found = 1;
-		  if add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-					  daemon.auth_ttl, NULL,
-					  T_PTR, C_IN, "d", name)
-		    {anscount +=1;}
-		}
-	      else
-		{continue;}
-		crecp = cache_find_by_addr(crecp, &addr, now, flag)
-		    
-	    } {}
+        if qclass != C_IN {
+            auth = 0;
+            continue;
+        }
 
-	  if (found)
-	    {nxdomain = 0;}
-	  else
-	    {log_query(flag | F_NEG | F_NXDOMAIN | F_REVERSE | if auth { F_AUTH} else {0}, NULL, &addr, NULL);}
+        if (qtype == T_PTR || qtype == T_SOA || qtype == T_NS) && (flag = in_arpa_name_2_addr(name, &addr)) && !local_query {
+            //   for (zone = daemon.auth_zones; zone; zone = zone.next)
+            for zone in daemon.auth_zones {
+                if subnet = find_subnet(zone, flag, &addr) { break; }
 
-	  continue;
-	}
-      //TODO
-    // cname_restart:
-      if (found){
-	/* NS and SOA .arpa requests have set found above. */
-	cut = NULL;}
-      else
-	{
-	//   for (zone = daemon.auth_zones; zone; zone = zone.next)
-	for zone in daemon.auth_zones
-	    {if (in_zone(zone, name, &cut)){
-	      break;}}
-	  
-	  if (!zone)
-	    {
-	      auth = 0;
-	      continue;
-	    }
-	}
+                if !zone {
+                    auth = 0;
+                    continue;
+                } else if qtype == T_SOA {
+                    soa = 1;
+                    found = 1;
+                } else if qtype == T_NS {
+                    ns = 1;
+                    found = 1;
+                }
+            }
 
-    //   for (rec = daemon.mxnames; rec; rec = rec.next)
-	for rec in daemon.mxnames
-	{if (!rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
-	  {
-	    nxdomain = 0;
-	         
-	    if (rc == 2 && qtype == T_MX)
-	      {
-		found = 1;
-		log_query(F_CONFIG | F_RRNAME, name, NULL, "<MX>"); 
-		if add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
-					NULL, T_MX, C_IN, "sd", rec.weight, rec.target)
-		  {anscount +=1;}
-	      }
-	  }}
-      // TODO
-      //for (move = NULL, up = &daemon.mxnames, rec = daemon.mxnames; rec; rec = rec.next)
-	  let _move = None;
-	  for rec in daemon.mxnames
-	{if (rec.issrv && (rc = hostname_issubdomain(name, rec.name)))
-	  {
-	    nxdomain = 0;
-	    
-	    if (rc == 2 && qtype == T_SRV)
-	      {
-		found = 1;
-		log_query(F_CONFIG | F_RRNAME, name, NULL, "<SRV>"); 
-		if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
-					NULL, T_SRV, C_IN, "sssd", 
-					rec.priority, rec.weight, rec.srvport, rec.target))
+            if qtype == T_PTR && flag {
+                intr = None;
 
-		  {anscount +=1;}
-	      } 
-	    
-	    /* unlink first SRV record found */
-	    if _move.is_none()
-	      {
-		_move = Some(rec);
-		*up = rec.next;
-	      }
-	    else
-	      {up = &rec.next;      }
-	  }
-	else
-	  {up = &rec.next;}}
-	  
-      /* put first SRV record back at the end. */
-      if _move
-	{
-	  *up = _move;
-	  _move.next = NULL;
-	}
+                if flag == F_IPV4 {
+                    // for (intr = daemon.int_names; intr; intr = intr.next)
+                    for inter in daemon.int_names {
+                        let mut addrlist: AddrList;
 
-    //   for (txt = daemon.rr; txt; txt = txt.next)
-	for txt in daemon.rr
-	{if rc = hostname_issubdomain(name, txt.name)
-	  {
-	    nxdomain = 0;
-	    if (rc == 2 && txt.class == qtype)
-	      {
-		found = 1;
-		log_query(F_CONFIG | F_RRNAME, name, NULL, querystr(NULL, txt.class)); 
-		if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
-					NULL, txt.class, C_IN, "t", txt.len, txt.txt))
-		  {anscount +=1;}
-	      }
-	  }}
-      
-    //   for (txt = daemon.txt; txt; txt = txt.next)
-	for txt in daemon.txt
-	{if (txt.class == C_IN && (rc = hostname_issubdomain(name, txt.name)))
-	  {
-	    nxdomain = 0;
-	    if (rc == 2 && qtype == T_TXT)
-	      {
-		found = 1;
-		log_query(F_CONFIG | F_RRNAME, name, NULL, "<TXT>"); 
-		if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
-					NULL, T_TXT, C_IN, "t", txt.len, txt.txt))
-		  {anscount +=1;}
-	      }
-	  }}
+                        // for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+                        for addrlist in intr.addr {
+                            if !(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr { break; }
+                        }
 
-    //    for (na = daemon.naptr; na; na = na.next)
-	for na in daemon.naptr
-	 {if ((rc = hostname_issubdomain(name, na.name)))
-	   {
-	     nxdomain = 0;
-	     if (rc == 2 && qtype == T_NAPTR)
-	       {
-		 found = 1;
-		 log_query(F_CONFIG | F_RRNAME, name, NULL, "<NAPTR>");
-		 if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl, 
-					 NULL, T_NAPTR, C_IN, "sszzzd", 
-					 na.order, na.pref, na.flags, na.services, na.regexp, na.replace))
-			  {anscount +=1;}
-	       }
-	   }}
-    
-       if (qtype == T_A)
-	 {flag = F_IPV4;}
-       
-       if (qtype == T_AAAA)
-	 {flag = F_IPV6;}
-       
-    //    for (intr = daemon.int_names; intr; intr = intr.next)
-	for intr in daemon.int_names
-	 {if ((rc = hostname_issubdomain(name, intr.name)))
-	   {{
-	     let mut addrlist: addrlist;
-	     
-	     nxdomain = 0;
-	     
-	     if (rc == 2 && flag)
-	       {
-			//    for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)  
-			for addrlist in intr.addr
-		 {if (if (addrlist.flags & ADDRLIST_IPV6)   {T_AAAA} else {T_A}) == qtype &&
-		     (local_query || filter_zone(zone, flag, &addrlist.addr))
-		   {
-		     if addrlist.flags & ADDRLIST_REVONLY
-		       {continue;}
+                        if addrlist { break; } else {
+                            todo!();
+                            //   while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
+                            //     {intr = intr.next;}
+                            //   }
+                        }
+                    }
+                } else if (flag == F_IPV6) {
+                    // for (intr = daemon.int_names; intr; intr = intr.next)
+                    for intr in daemon.int_names {
+                        let mut addrlist: AddrList;
 
-		     found = 1;
-		     log_query(F_FORWARD | F_CONFIG | flag, name, &addrlist.addr, None);
-		     if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-					     daemon.auth_ttl, NULL, qtype, C_IN, 
-					     qtype == if T_A  {"4"} else {"6"}, &addrlist.addr))
-		       {anscount +=1;}
-		   }
-	     }}}}}
-       
-      if (!cut)
-	{
-	  nxdomain = 0;
-	  
-	  if (qtype == T_SOA)
-	    {
-	      auth = soa = 1; /* inhibits auth section */
-	      found = 1;
-	      log_query(F_RRNAME | F_AUTH, zone.domain, NULL, "<SOA>");
-	    }
-      	  else if (qtype == T_AXFR)
-	    {
-	      let mut peers: iname;
-	      
-	      if (peer_addr.sa.sa_family == AF_INET)
-		peer_addr.in.sin_port = 0;
-	      else
-		{
-		  peer_addr.in6.sin6_port = 0; 
-		  peer_addr.in6.sin6_scope_id = 0;
-		}
-	      
-	      for (peers = daemon.auth_peers; peers; peers = peers.next)
-		if (sockaddr_isequal(peer_addr, &peers.addr))
-		  break;
-	      
-	      /* Refuse all AXFR unless --auth-sec-servers or auth-peers is set */
-	      if ((!daemon.secondary_forward_server && !daemon.auth_peers) ||
-		  (daemon.auth_peers && !peers)) 
-		{
-		  if (peer_addr.sa.sa_family == AF_INET)
-		    inet_ntop(AF_INET, &peer_addr.in.sin_addr, daemon.addrbuff, ADDRSTRLEN);
-		  else
-		    inet_ntop(AF_INET6, &peer_addr.in6.sin6_addr, daemon.addrbuff, ADDRSTRLEN); 
-		  
-		  my_syslog(LOG_WARNING, format!("ignoring zone transfer request from {}"), daemon.addrbuff);
-		  return 0;
-		}
-	       	      
-	      auth = 1;
-	      soa = 1; /* inhibits auth section */
-	      ns = 1; /* ensure we include NS records! */
-	      axfr = 1;
-	      found = 1;
-	      axfroffset = nameoffset;
-	      log_query(F_RRNAME | F_AUTH, zone.domain, NULL, "<AXFR>");
-	    }
-      	  else if (qtype == T_NS)
-	    {
-	      auth = 1;
-	      ns = 1; /* inhibits auth section */
-	      found = 1;
-	      log_query(F_RRNAME | F_AUTH, zone.domain, NULL, "<NS>"); 
-	    }
-	}
-      
-      if (!option_bool(OPT_DHCP_FQDN) && cut)
-	{	  
-	  *cut = 0; /* remove domain part */
-	  
-	  if (!strchr(name, '.') && (crecp = cache_find_by_name(NULL, name, now, F_IPV4 | F_IPV6)))
-	    {
-	      if (crecp.flags & F_DHCP)
-		do
-		  { 
-		    nxdomain = 0;
-		    if ((crecp.flags & flag) && 
-			(local_query || filter_zone(zone, flag, &(crecp.addr))))
-		      {
-			*cut = '.'; /* restore domain part */
-			log_query(crecp.flags, name, &crecp.addr, record_source(crecp.uid));
-			*cut  = 0; /* remove domain part */
-			found = 1;
-			if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-						daemon.auth_ttl, NULL, qtype, C_IN, 
-						qtype == T_A ? "4" : "6", &crecp.addr))
-			  anscount +=1;
-		      }
-		  } while ((crecp = cache_find_by_name(crecp, name, now,  F_IPV4 | F_IPV6)));
-	    }
-       	  
-	  *cut = '.'; /* restore domain part */	    
-	}
-      
-      if ((crecp = cache_find_by_name(NULL, name, now, F_IPV4 | F_IPV6)))
-	{
-	  if ((crecp.flags & F_HOSTS) || (((crecp.flags & F_DHCP) && option_bool(OPT_DHCP_FQDN))))
-	    do
-	      { 
-		 nxdomain = 0;
-		 if ((crecp.flags & flag) && (local_query || filter_zone(zone, flag, &(crecp.addr))))
-		   {
-		     log_query(crecp.flags, name, &crecp.addr, record_source(crecp.uid));
-		     found = 1;
-		     if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-					     daemon.auth_ttl, NULL, qtype, C_IN, 
-					     qtype == T_A ? "4" : "6", &crecp.addr))
-		       anscount +=1;
-		   }
-	      } while ((crecp = cache_find_by_name(crecp, name, now, F_IPV4 | F_IPV6)));
-	}
-      
-      /* Only supply CNAME if no record for any type is known. */
-      if (nxdomain)
-	{
-	  /* Check for possible wildcard match against *.domain 
-	     return length of match, to get longest.
-	     Note that if return length of wildcard section, so
-	     we match b.simon to _both_ *.simon and b.simon
-	     but return a longer (better) match to b.simon.
-	  */  
-	  for (wclen = 0, candidate = NULL, a = daemon.cnames; a; a = a.next)
-	    if (a.alias[0] == '*')
-	      {
-		char *test = name;
-		
-		while ((test = strchr(test+1, '.')))
-		  {
-		    if (hostname_isequal(test, &(a.alias[1])))
-		      {
-			if (strlen(test) > wclen && !cname_wildcard)
-			  {
-			    wclen = strlen(test);
-			    candidate = a;
-			    cname_wildcard = 1;
-			  }
-			break;
-		      }
-		  }
-		
-	      }
-	    else if (hostname_isequal(a.alias, name) && strlen(a.alias) > wclen)
-	      {
-		/* Simple case, no wildcard */
-		wclen = strlen(a.alias);
-		candidate = a;
-	      }
-	  
-	  if (candidate)
-	    {
-	      log_query(F_CONFIG | F_CNAME, name, NULL, NULL);
-	      strcpy(name, candidate.target);
-	      if (!strchr(name, '.'))
-		{
-		  strcat(name, ".");
-		  strcat(name, zone.domain);
-		}
-	      found = 1;
-	      if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
-				      daemon.auth_ttl, &nameoffset,
-				      T_CNAME, C_IN, "d", name))
-		anscount +=1;
-	      
-	      goto cname_restart;
-	    }
-	  else if (cache_find_non_terminal(name, now))
-	    nxdomain = 0;
+                        // for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+                        for addrlist in intr.addr {
+                            if ((addrlist.flags & ADDRLIST_IPV6) && (addr == addrlist.addr)) { break; }
 
-	  log_query(flag | F_NEG | (nxdomain ? F_NXDOMAIN : 0) | F_FORWARD | F_AUTH, name, NULL, NULL);
-	}
-      
-    }
-  
-  /* Add auth section */
-  if (auth && zone)
-    {
-      char *authname;
-      newoffset: i32, offset = 0;
+                            if (addrlist) {
+                                break;
+                            } else {
+                                todo!();
+                                //   {while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
+                                //     intr = intr.next;
+                                //   }
+                            }
 
-      if (!subnet)
-	authname = zone.domain;
-      else
-	{
-	  /* handle NS and SOA for PTR records */
-	  
-	  authname = name;
+                            if (intr) {
+                                if (local_query || in_zone(zone, intr.name, None)) {
+                                    found = 1;
+                                    log_query(flag | F_REVERSE | F_CONFIG, intr.name, &addr, None);
+                                    if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                            daemon.auth_ttl, NULL,
+                                                            T_PTR, C_IN, "d", intr.name)) { anscount += 1; }
+                                }
+                            }
 
-	  if (!(subnet.flags & ADDRLIST_IPV6))
-	    {
-	      in_addr_t a = ntohl(subnet.addr.addr4.s_addr) >> 8;
-	      char *p = name;
-	      
-	      if (subnet.prefixlen >= 24)
-		p += sprintf(p, "{}.", a & 0xff);
-	      a = a >> 8;
-	      if (subnet.prefixlen >= 16 )
-		p += sprintf(p, "{}.", a & 0xff);
-	      a = a >> 8;
-	      p += sprintf(p, "{}.in-addr.arpa", a & 0xff);
-	      
-	    }
-	  else
-	    {
-	      char *p = name;
-	      let mut i: i32;
-	      
-	      for (i = subnet.prefixlen-1; i >= 0; i -= 4)
-		{ 
-		  dig: i32 = (&subnet.addr.addr6)[i>>3];
-		  p += sprintf(p, "%.1x.", (i>>2) & 1 ? dig & 15 : dig >> 4);
-		}
-	      p += sprintf(p, "ip6.arpa");
-	      
-	    }
-	}
-      
-      /* handle NS and SOA in auth section or for explicit queries */
-       newoffset = ansp - header;
-       if (((anscount == 0 && !ns) || soa) &&
-	  add_resource_record(header, limit, &trunc, 0, &ansp, 
-			      daemon.auth_ttl, NULL, T_SOA, C_IN, "ddlllll",
-			      authname, daemon.authserver,  daemon.hostmaster,
-			      daemon.soa_sn, daemon.soa_refresh, 
-			      daemon.soa_retry, daemon.soa_expiry, 
-			      daemon.auth_ttl))
-	{
-	  offset = newoffset;
-	  if (soa)
-	    anscount +=1;
-	  else
-	    authcount +=1;
-	}
-      
-      if (anscount != 0 || ns)
-	{
-	  let mut secondary: name_list;
-	  
-	  /* Only include the machine running dnsmasq if it's acting as an auth server */
-	  if (daemon.authinterface)
-	    {
-	      newoffset = ansp - header;
-	      if (add_resource_record(header, limit, &trunc, -offset, &ansp, 
-				      daemon.auth_ttl, NULL, T_NS, C_IN, "d", offset == 0 ? authname : NULL, daemon.authserver))
-		{
-		  if (offset == 0) 
-		    offset = newoffset;
-		  if (ns) 
-		    anscount +=1;
-		  else
-		    authcount +=1;
-		}
-	    }
+                            if ((crecp = cache_find_by_addr(NULL, &addr, now, flag))) {
+                                while {
+                                    strcpy(name, cache_get_name(crecp));
 
-	  if (!subnet)
-	    for (secondary = daemon.secondary_forward_server; secondary; secondary = secondary.next)
-	      if (add_resource_record(header, limit, &trunc, offset, &ansp, 
-				      daemon.auth_ttl, NULL, T_NS, C_IN, "d", secondary.name))
-		{
-		  if (ns) 
-		    anscount +=1;
-		  else
-		    authcount +=1;
-		}
-	}
-      
-      if (axfr)
-	{
-	  for (rec = daemon.mxnames; rec; rec = rec.next)
-	    if (in_zone(zone, rec.name, &cut))
-	      {
-		if (cut)
-		   *cut = 0;
+                                    if (crecp.flags & F_DHCP && !option_bool(OPT_DHCP_FQDN)) {
+                                        char * p = strchr(name, '.');
+                                        /* must be bare name */
+                                        if (p) { *p = 0; }
 
-		if (rec.issrv)
-		  {
-		    if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
-					    NULL, T_SRV, C_IN, "sssd", cut ? rec.name : NULL,
-					    rec.priority, rec.weight, rec.srvport, rec.target))
-		      
-		      anscount +=1;
-		  }
-		else
-		  {
-		    if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
-					    NULL, T_MX, C_IN, "sd", cut ? rec.name : NULL, rec.weight, rec.target))
-		      anscount +=1;
-		  }
-		
-		/* restore config data */
-		if (cut)
-		  *cut = '.';
-	      }
-	      
-	  for (txt = daemon.rr; txt; txt = txt.next)
-	    if (in_zone(zone, txt.name, &cut))
-	      {
-		if (cut)
-		  *cut = 0;
-		
-		if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
-					NULL, txt.class, C_IN, "t",  cut ? txt.name : NULL, txt.len, txt.txt))
-		  anscount +=1;
-		
-		/* restore config data */
-		if (cut)
-		  *cut = '.';
-	      }
-	  
-	  for (txt = daemon.txt; txt; txt = txt.next)
-	    if (txt.class == C_IN && in_zone(zone, txt.name, &cut))
-	      {
-		if (cut)
-		  *cut = 0;
-		
-		if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
-					NULL, T_TXT, C_IN, "t", cut ? txt.name : NULL, txt.len, txt.txt))
-		  anscount +=1;
-		
-		/* restore config data */
-		if (cut)
-		  *cut = '.';
-	      }
-	  
-	  for (na = daemon.naptr; na; na = na.next)
-	    if (in_zone(zone, na.name, &cut))
-	      {
-		if (cut)
-		  *cut = 0;
-		
-		if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl, 
-					NULL, T_NAPTR, C_IN, "sszzzd", cut ? na.name : NULL,
-					na.order, na.pref, na.flags, na.services, na.regexp, na.replace))
-		  anscount +=1;
-		
-		/* restore config data */
-		if (cut)
-		  *cut = '.'; 
-	      }
-	  
-	  for (intr = daemon.int_names; intr; intr = intr.next)
-	    if (in_zone(zone, intr.name, &cut))
-	      {
-		let mut addrlist: addrlist;
-		
-		if (cut)
-		  *cut = 0;
-		
-		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next) 
-		  if (!(addrlist.flags & ADDRLIST_IPV6) &&
-		      (local_query || filter_zone(zone, F_IPV4, &addrlist.addr)) && 
-		      add_resource_record(header, limit, &trunc, -axfroffset, &ansp, 
-					  daemon.auth_ttl, NULL, T_A, C_IN, "4", cut ? intr.name : NULL, &addrlist.addr))
-		    anscount +=1;
-		
-		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next) 
-		  if ((addrlist.flags & ADDRLIST_IPV6) && 
-		      (local_query || filter_zone(zone, F_IPV6, &addrlist.addr)) &&
-		      add_resource_record(header, limit, &trunc, -axfroffset, &ansp, 
-					  daemon.auth_ttl, NULL, T_AAAA, C_IN, "6", cut ? intr.name : NULL, &addrlist.addr))
-		    anscount +=1;
-		
-		/* restore config data */
-		if (cut)
-		  *cut = '.'; 
-	      }
-             
-	  for (a = daemon.cnames; a; a = a.next)
-	    if (in_zone(zone, a.alias, &cut))
-	      {
-		strcpy(name, a.target);
-		if (!strchr(name, '.'))
-		  {
-		    strcat(name, ".");
-		    strcat(name, zone.domain);
-		  }
-		
-		if (cut)
-		  *cut = 0;
-		
-		if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, 
-					daemon.auth_ttl, NULL,
-					T_CNAME, C_IN, "d",  cut ? a.alias : NULL, name))
-		  anscount +=1;
-	      }
-	
-	  cache_enumerate(1);
-	  while ((crecp = cache_enumerate(0)))
-	    {
-	      if ((crecp.flags & (F_IPV4 | F_IPV6)) &&
-		  !(crecp.flags & (F_NEG | F_NXDOMAIN)) &&
-		  (crecp.flags & F_FORWARD))
-		{
-		  if ((crecp.flags & F_DHCP) && !option_bool(OPT_DHCP_FQDN))
-		    {
-		      char *cache_name = cache_get_name(crecp);
-		      if (!strchr(cache_name, '.') && 
-			  (local_query || filter_zone(zone, (crecp.flags & (F_IPV6 | F_IPV4)), &(crecp.addr))) &&
-			  add_resource_record(header, limit, &trunc, -axfroffset, &ansp, 
-					      daemon.auth_ttl, NULL, (crecp.flags & F_IPV6) ? T_AAAA : T_A, C_IN, 
-					      (crecp.flags & F_IPV4) ? "4" : "6", cache_name, &crecp.addr))
-			anscount +=1;
-		    }
-		  
-		  if ((crecp.flags & F_HOSTS) || (((crecp.flags & F_DHCP) && option_bool(OPT_DHCP_FQDN))))
-		    {
-		      strcpy(name, cache_get_name(crecp));
-		      if (in_zone(zone, name, &cut) && 
-			  (local_query || filter_zone(zone, (crecp.flags & (F_IPV6 | F_IPV4)), &(crecp.addr))))
-			{
-			  if (cut)
-			    *cut = 0;
+                                        /* add  external domain */
+                                        if (zone) {
+                                            strcat(name, ".");
+                                            strcat(name, zone.domain);
+                                        }
+                                        log_query(flag | F_DHCP | F_REVERSE, name, &addr, record_source(crecp.uid));
+                                        found = 1;
+                                        if add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                               daemon.auth_ttl, NULL,
+                                                               T_PTR, C_IN, "d", name) { anscount += 1; }
+                                    } else if crecp.flags & (F_DHCP | F_HOSTS) && (local_query || in_zone(zone, name, NULL)) {
+                                        log_query(crecp.flags & !F_FORWARD, name, &addr, record_source(crecp.uid));
+                                        found = 1;
+                                        if add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                               daemon.auth_ttl, NULL,
+                                                               T_PTR, C_IN, "d", name) { anscount += 1; }
+                                    } else { continue; }
+                                    crecp = cache_find_by_addr(crecp, &addr, now, flag)
+                                } {}
 
-			  if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, 
-						  daemon.auth_ttl, NULL, (crecp.flags & F_IPV6) ? T_AAAA : T_A, C_IN, 
-						  (crecp.flags & F_IPV4) ? "4" : "6", cut ? name : NULL, &crecp.addr))
-			    anscount +=1;
-			}
-		    }
-		}
-	    }
-	   
-	  /* repeat SOA as last record */
-	  if (add_resource_record(header, limit, &trunc, axfroffset, &ansp, 
-				  daemon.auth_ttl, NULL, T_SOA, C_IN, "ddlllll",
-				  daemon.authserver,  daemon.hostmaster,
-				  daemon.soa_sn, daemon.soa_refresh, 
-				  daemon.soa_retry, daemon.soa_expiry, 
-				  daemon.auth_ttl))
-	    anscount +=1;
-	  
-	}
-      
-    }
-  
-  /* done all questions, set up header and return length of result */
-  /* clear authoritative and truncated flags, set QR flag */
-  header.hb3 = (header.hb3 & ~(HB3_AA | HB3_TC)) | HB3_QR;
+                                if (found) { nxdomain = 0; } else { log_query(flag | F_NEG | F_NXDOMAIN | F_REVERSE | if auth { F_AUTH } else { 0 }, NULL, &addr, NULL); }
 
-  if (local_query)
-    {
-      /* set RA flag */
-      header.hb4 |= HB4_RA;
-    }
-  else
-    {
-      /* clear RA flag */
-      header.hb4 &= ~HB4_RA;
-    }
+                                continue;
+                            }
+                            //TODO
+                            // cname_restart:
+                            if (found) {
+                                /* NS and SOA .arpa requests have set found above. */
+                                cut = NULL;
+                            } else {
+                                //   for (zone = daemon.auth_zones; zone; zone = zone.next)
+                                for zone in daemon.auth_zones {
+                                    if (in_zone(zone, name, &cut)) {
+                                        break;
+                                    }
+                                }
 
-  /* data is never DNSSEC signed. */
-  header.hb4 &= ~HB4_AD;
+                                if (!zone) {
+                                    auth = 0;
+                                    continue;
+                                }
+                            }
 
-  /* authoritative */
-  if (auth)
-    header.hb3 |= HB3_AA;
-  
-  /* truncation */
-  if (trunc)
-    header.hb3 |= HB3_TC;
-  
-  if ((auth || local_query) && nxdomain)
-    SET_RCODE(header, NXDOMAIN);
-  else
-    SET_RCODE(header, NOERROR); /* no error */
-  header.ancount = htons(anscount);
-  header.nscount = htons(authcount);
-  header.arcount = htons(0);
+                            //   for (rec = daemon.mxnames; rec; rec = rec.next)
+                            for rec in daemon.mxnames {
+                                if (!rec.issrv && (rc = hostname_issubdomain(name, rec.name))) {
+                                    nxdomain = 0;
 
-  /* Advertise our packet size limit in our reply */
-  if (have_pseudoheader)
-    return add_pseudoheader(header,  ansp - header, limit, daemon.edns_pktsz, 0, NULL, 0, do_bit, 0);
+                                    if (rc == 2 && qtype == T_MX) {
+                                        found = 1;
+                                        log_query(F_CONFIG | F_RRNAME, name, NULL, "<MX>");
+                                        if add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
+                                                               NULL, T_MX, C_IN, "sd", rec.weight, rec.target) { anscount += 1; }
+                                    }
+                                }
+                            }
+                            // TODO
+                            //for (move = NULL, up = &daemon.mxnames, rec = daemon.mxnames; rec; rec = rec.next)
+                            let _move = None;
+                            for rec in daemon.mxnames {
+                                if (rec.issrv && (rc = hostname_issubdomain(name, rec.name))) {
+                                    nxdomain = 0;
 
-  return ansp - header;
-}
+                                    if (rc == 2 && qtype == T_SRV) {
+                                        found = 1;
+                                        log_query(F_CONFIG | F_RRNAME, name, NULL, "<SRV>");
+                                        if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
+                                                                NULL, T_SRV, C_IN, "sssd",
+                                                                rec.priority, rec.weight, rec.srvport, rec.target))
+
+                                        { anscount += 1; }
+                                    }
+
+                                    /* unlink first SRV record found */
+                                    if _move.is_none() {
+                                        _move = Some(rec);
+                                        *up = rec.next;
+                                    } else { up = &rec.next; }
+                                } else { up = &rec.next; }
+                            }
+
+                            /* put first SRV record back at the end. */
+                            if _move {
+                                *up = _move;
+                                _move.next = NULL;
+                            }
+
+                            //   for (txt = daemon.rr; txt; txt = txt.next)
+                            for txt in daemon.rr {
+                                if rc = hostname_issubdomain(name, txt.name) {
+                                    nxdomain = 0;
+                                    if (rc == 2 && txt.class == qtype) {
+                                        found = 1;
+                                        log_query(F_CONFIG | F_RRNAME, name, NULL, querystr(NULL, txt.class));
+                                        if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
+                                                                NULL, txt.class, C_IN, "t", txt.len, txt.txt)) { anscount += 1; }
+                                    }
+                                }
+                            }
+
+                            //   for (txt = daemon.txt; txt; txt = txt.next)
+                            for txt in daemon.txt {
+                                if (txt.class == C_IN && (rc = hostname_issubdomain(name, txt.name))) {
+                                    nxdomain = 0;
+                                    if (rc == 2 && qtype == T_TXT) {
+                                        found = 1;
+                                        log_query(F_CONFIG | F_RRNAME, name, NULL, "<TXT>");
+                                        if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
+                                                                NULL, T_TXT, C_IN, "t", txt.len, txt.txt)) { anscount += 1; }
+                                    }
+                                }
+                            }
+
+                            //    for (na = daemon.naptr; na; na = na.next)
+                            for na in daemon.naptr {
+                                if ((rc = hostname_issubdomain(name, na.name))) {
+                                    nxdomain = 0;
+                                    if (rc == 2 && qtype == T_NAPTR) {
+                                        found = 1;
+                                        log_query(F_CONFIG | F_RRNAME, name, NULL, "<NAPTR>");
+                                        if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon.auth_ttl,
+                                                                NULL, T_NAPTR, C_IN, "sszzzd",
+                                                                na.order, na.pref, na.flags, na.services, na.regexp, na.replace)) { anscount += 1; }
+                                    }
+                                }
+                            }
+
+                            if (qtype == T_A) { flag = F_IPV4; }
+
+                            if (qtype == T_AAAA) { flag = F_IPV6; }
+
+                            //    for (intr = daemon.int_names; intr; intr = intr.next)
+                            for intr in daemon.int_names {
+                                if ((rc = hostname_issubdomain(name, intr.name))) {
+                                    {
+                                        let mut addrlist: addrlist;
+
+                                        nxdomain = 0;
+
+                                        if (rc == 2 && flag) {
+                                            //    for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+                                            for addrlist in intr.addr {
+                                                if (if (addrlist.flags & ADDRLIST_IPV6) { T_AAAA } else { T_A }) == qtype && (local_query || filter_zone(zone, flag, &addrlist.addr)) {
+                                                    if addrlist.flags & ADDRLIST_REVONLY { continue; }
+
+                                                    found = 1;
+                                                    log_query(F_FORWARD | F_CONFIG | flag, name, &addrlist.addr, None);
+                                                    if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                                            daemon.auth_ttl, NULL, qtype, C_IN,
+                                                                            qtype == if T_A { "4" } else { "6" }, &addrlist.addr)) { anscount += 1; }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!cut) {
+                                nxdomain = 0;
+
+                                if (qtype == T_SOA) {
+                                    auth = soa = 1; /* inhibits auth section */
+                                    found = 1;
+                                    log_query(F_RRNAME | F_AUTH, zone.domain, NULL, "<SOA>");
+                                } else if (qtype == T_AXFR) {
+                                    let mut peers: iname;
+
+                                    if (peer_addr.sa.sa_family == AF_INET)
+                                    peer_addr. in.sin_port = 0;
+                                    else
+                                    {
+                                        peer_addr.in6.sin6_port = 0;
+                                        peer_addr.in6.sin6_scope_id = 0;
+                                    }
+
+                                    for (peers = daemon.auth_peers; peers; peers = peers.next)
+                                    if (sockaddr_isequal(peer_addr, &peers.addr))
+                                    break;
+
+                                    /* Refuse all AXFR unless --auth-sec-servers or auth-peers is set */
+                                    if ((!daemon.secondary_forward_server && !daemon.auth_peers) || (daemon.auth_peers && !peers)) {
+                                        if (peer_addr.sa.sa_family == AF_INET)
+                                        inet_ntop(AF_INET, &peer_addr. in.sin_addr, daemon.addrbuff, ADDRSTRLEN);
+                                        else
+                                        inet_ntop(AF_INET6, &peer_addr.in6.sin6_addr, daemon.addrbuff, ADDRSTRLEN);
+
+                                        my_syslog(LOG_WARNING, format!("ignoring zone transfer request from {}"), daemon.addrbuff);
+                                        return 0;
+                                    }
+
+                                    auth = 1;
+                                    soa = 1; /* inhibits auth section */
+                                    ns = 1; /* ensure we include NS records! */
+                                    axfr = 1;
+                                    found = 1;
+                                    axfroffset = nameoffset;
+                                    log_query(F_RRNAME | F_AUTH, zone.domain, NULL, "<AXFR>");
+                                } else if (qtype == T_NS) {
+                                    auth = 1;
+                                    ns = 1; /* inhibits auth section */
+                                    found = 1;
+                                    log_query(F_RRNAME | F_AUTH, zone.domain, NULL, "<NS>");
+                                }
+                            }
+
+                            if (!option_bool(OPT_DHCP_FQDN) && cut) {
+                                *cut = 0; /* remove domain part */
+
+                                if (!strchr(name, '.') && (crecp = cache_find_by_name(NULL, name, now, F_IPV4 | F_IPV6))) {
+                                    if (crecp.flags & F_DHCP)
+                                    do
+                                    {
+                                        nxdomain = 0;
+                                        if ((crecp.flags & flag) && (local_query || filter_zone(zone, flag, &(crecp.addr)))) {
+                                            *cut = '.'; /* restore domain part */
+                                            log_query(crecp.flags, name, &crecp.addr, record_source(crecp.uid));
+                                            *cut = 0; /* remove domain part */
+                                            found = 1;
+                                            if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                                    daemon.auth_ttl, NULL, qtype, C_IN,
+                                                                    qtype == T_A? "4": "6", &crecp.addr))
+                                            anscount += 1;
+                                        }
+                                    }
+                                    while ((crecp = cache_find_by_name(crecp, name, now, F_IPV4 | F_IPV6)));
+                                }
+
+                                *cut = '.'; /* restore domain part */
+                            }
+
+                            if ((crecp = cache_find_by_name(NULL, name, now, F_IPV4 | F_IPV6))) {
+                                if ((crecp.flags & F_HOSTS) || (((crecp.flags & F_DHCP) && option_bool(OPT_DHCP_FQDN))))
+                                do
+                                {
+                                    nxdomain = 0;
+                                    if ((crecp.flags & flag) && (local_query || filter_zone(zone, flag, &(crecp.addr)))) {
+                                        log_query(crecp.flags, name, &crecp.addr, record_source(crecp.uid));
+                                        found = 1;
+                                        if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                                daemon.auth_ttl, NULL, qtype, C_IN,
+                                                                qtype == T_A? "4": "6", &crecp.addr))
+                                        anscount += 1;
+                                    }
+                                }
+                                while ((crecp = cache_find_by_name(crecp, name, now, F_IPV4 | F_IPV6)));
+                            }
+
+                            /* Only supply CNAME if no record for any type is known. */
+                            if (nxdomain) {
+                                /* Check for possible wildcard match against *.domain
+                                   return length of match, to get longest.
+                                   Note that if return length of wildcard section, so
+                                   we match b.simon to _both_ *.simon and b.simon
+                                   but return a longer (better) match to b.simon.
+                                */
+                                for (wclen = 0, candidate = NULL, a = daemon.cnames; a; a = a.next)
+                                if (a.alias[0] == '*') {
+                                    char * test = name;
+
+                                    while ((test = strchr(test + 1, '.'))) {
+                                        if (hostname_isequal(test, &(a.alias[1]))) {
+                                            if (strlen(test) > wclen && !cname_wildcard) {
+                                                wclen = strlen(test);
+                                                candidate = a;
+                                                cname_wildcard = 1;
+                                            }
+                                            break;
+                                        }
+                                    }
+                                } else if (hostname_isequal(a.alias, name) && strlen(a.alias) > wclen) {
+                                    /* Simple case, no wildcard */
+                                    wclen = strlen(a.alias);
+                                    candidate = a;
+                                }
+
+                                if (candidate) {
+                                    log_query(F_CONFIG | F_CNAME, name, NULL, NULL);
+                                    strcpy(name, candidate.target);
+                                    if (!strchr(name, '.')) {
+                                        strcat(name, ".");
+                                        strcat(name, zone.domain);
+                                    }
+                                    found = 1;
+                                    if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+                                                            daemon.auth_ttl, &nameoffset,
+                                                            T_CNAME, C_IN, "d", name))
+                                    anscount += 1;
+
+                                    goto
+                                    cname_restart;
+                                } else if (cache_find_non_terminal(name, now))
+                                nxdomain = 0;
+
+                                log_query(flag | F_NEG | (nxdomain? F_NXDOMAIN: 0) | F_FORWARD | F_AUTH, name, NULL, NULL);
+                            }
+                        }
+
+                        /* Add auth section */
+                        if (auth && zone) {
+                            char * authname;
+                            newoffset: i32, offset = 0;
+
+                            if (!subnet)
+                            authname = zone.domain;
+                            else
+                            {
+                                /* handle NS and SOA for PTR records */
+
+                                authname = name;
+
+                                if (!(subnet.flags & ADDRLIST_IPV6)) {
+                                    in_addr_t
+                                    a = ntohl(subnet.addr.addr4.s_addr) >> 8;
+                                    char * p = name;
+
+                                    if (subnet.prefixlen >= 24)
+                                    p += sprintf(p, "{}.", a & 0xff);
+                                    a = a >> 8;
+                                    if (subnet.prefixlen >= 16)
+                                    p += sprintf(p, "{}.", a & 0xff);
+                                    a = a >> 8;
+                                    p += sprintf(p, "{}.in-addr.arpa", a & 0xff);
+                                } else {
+                                    char * p = name;
+                                    let mut i: i32;
+
+                                    for (i = subnet.prefixlen-1; i > = 0; i -= 4)
+                                    {
+                                        dig: i32 = (&subnet.addr.addr6)[i >> 3];
+                                        p += sprintf(p, "%.1x.", (i >> 2) & 1? dig & 15: dig >> 4);
+                                    }
+                                    p += sprintf(p, "ip6.arpa");
+                                }
+                            }
+
+                            /* handle NS and SOA in auth section or for explicit queries */
+                            newoffset = ansp - header;
+                            if (((anscount == 0 && !ns) || soa) && add_resource_record(header, limit, &trunc, 0, &ansp,
+                                                                                       daemon.auth_ttl, NULL, T_SOA, C_IN, "ddlllll",
+                                                                                       authname, daemon.authserver, daemon.hostmaster,
+                                                                                       daemon.soa_sn, daemon.soa_refresh,
+                                                                                       daemon.soa_retry, daemon.soa_expiry,
+                                                                                       daemon.auth_ttl)) {
+                                offset = newoffset;
+                                if (soa)
+                                anscount += 1;
+                                else
+                                authcount += 1;
+                            }
+
+                            if (anscount != 0 || ns) {
+                                let mut secondary: name_list;
+
+                                /* Only include the machine running dnsmasq if it's acting as an auth server */
+                                if (daemon.authinterface) {
+                                    newoffset = ansp - header;
+                                    if (add_resource_record(header, limit, &trunc, -offset, &ansp,
+                                                            daemon.auth_ttl, NULL, T_NS, C_IN, "d", offset == 0? authname: NULL, daemon.authserver)) {
+                                        if (offset == 0)
+                                        offset = newoffset;
+                                        if (ns)
+                                        anscount += 1;
+                                        else
+                                        authcount += 1;
+                                    }
+                                }
+
+                                if (!subnet)
+                                for (secondary = daemon.secondary_forward_server; secondary; secondary = secondary.next)
+                                if (add_resource_record(header, limit, &trunc, offset, &ansp,
+                                                        daemon.auth_ttl, NULL, T_NS, C_IN, "d", secondary.name)) {
+                                    if (ns)
+                                    anscount += 1;
+                                    else
+                                    authcount += 1;
+                                }
+                            }
+
+                            if (axfr) {
+                                for (rec = daemon.mxnames; rec; rec = rec.next)
+                                if (in_zone(zone, rec.name, &cut)) {
+                                    if (cut) * cut = 0;
+
+                                    if (rec.issrv) {
+                                        if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
+                                                                NULL, T_SRV, C_IN, "sssd", cut? rec.name: NULL,
+                                                                rec.priority, rec.weight, rec.srvport, rec.target))
+
+                                        anscount += 1;
+                                    } else {
+                                        if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
+                                                                NULL, T_MX, C_IN, "sd", cut? rec.name: NULL, rec.weight, rec.target))
+                                        anscount += 1;
+                                    }
+
+                                    /* restore config data */
+                                    if (cut) * cut = '.';
+                                }
+
+                                for (txt = daemon.rr; txt; txt = txt.next)
+                                if (in_zone(zone, txt.name, &cut)) {
+                                    if (cut) * cut = 0;
+
+                                    if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
+                                                            NULL, txt.class, C_IN, "t", cut? txt.name: NULL, txt.len, txt.txt))
+                                    anscount += 1;
+
+                                    /* restore config data */
+                                    if (cut) * cut = '.';
+                                }
+
+                                for (txt = daemon.txt; txt; txt = txt.next)
+                                if (txt.class == C_IN && in_zone(zone, txt.name, &cut)) {
+                                    if (cut) * cut = 0;
+
+                                    if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
+                                                            NULL, T_TXT, C_IN, "t", cut? txt.name: NULL, txt.len, txt.txt))
+                                    anscount += 1;
+
+                                    /* restore config data */
+                                    if (cut) * cut = '.';
+                                }
+
+                                for (na = daemon.naptr; na; na = na.next)
+                                if (in_zone(zone, na.name, &cut)) {
+                                    if (cut) * cut = 0;
+
+                                    if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp, daemon.auth_ttl,
+                                                            NULL, T_NAPTR, C_IN, "sszzzd", cut? na.name: NULL,
+                                                            na.order, na.pref, na.flags, na.services, na.regexp, na.replace))
+                                    anscount += 1;
+
+                                    /* restore config data */
+                                    if (cut) * cut = '.';
+                                }
+
+                                for (intr = daemon.int_names; intr; intr = intr.next)
+                                if (in_zone(zone, intr.name, &cut)) {
+                                    let mut addrlist: addrlist;
+
+                                    if (cut) * cut = 0;
+
+                                    for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+                                    if (!(addrlist.flags & ADDRLIST_IPV6) && (local_query || filter_zone(zone, F_IPV4, &addrlist.addr)) && add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
+                                                                                                                                                               daemon.auth_ttl, NULL, T_A, C_IN, "4", cut? intr.name: NULL, &addrlist.addr))
+                                    anscount += 1;
+
+                                    for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+                                    if ((addrlist.flags & ADDRLIST_IPV6) && (local_query || filter_zone(zone, F_IPV6, &addrlist.addr)) && add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
+                                                                                                                                                              daemon.auth_ttl, NULL, T_AAAA, C_IN, "6", cut? intr.name: NULL, &addrlist.addr))
+                                    anscount += 1;
+
+                                    /* restore config data */
+                                    if (cut) * cut = '.';
+                                }
+
+                                for (a = daemon.cnames; a; a = a.next)
+                                if (in_zone(zone, a.alias, &cut)) {
+                                    strcpy(name, a.target);
+                                    if (!strchr(name, '.')) {
+                                        strcat(name, ".");
+                                        strcat(name, zone.domain);
+                                    }
+
+                                    if (cut) * cut = 0;
+
+                                    if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
+                                                            daemon.auth_ttl, NULL,
+                                                            T_CNAME, C_IN, "d", cut? a.alias: NULL, name))
+                                    anscount += 1;
+                                }
+
+                                cache_enumerate(1);
+                                while ((crecp = cache_enumerate(0))) {
+                                    if ((crecp.flags & (F_IPV4 | F_IPV6)) && !(crecp.flags & (F_NEG | F_NXDOMAIN)) && (crecp.flags & F_FORWARD)) {
+                                        if ((crecp.flags & F_DHCP) && !option_bool(OPT_DHCP_FQDN)) {
+                                            char * cache_name = cache_get_name(crecp);
+                                            if (!strchr(cache_name, '.') && (local_query || filter_zone(zone, (crecp.flags & (F_IPV6 | F_IPV4)), &(crecp.addr))) && add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
+                                                                                                                                                                                        daemon.auth_ttl, NULL, (crecp.flags & F_IPV6)? T_AAAA: T_A, C_IN,
+                                                                                                                                                                                        (crecp.flags & F_IPV4)? "4": "6", cache_name, &crecp.addr))
+                                            anscount += 1;
+                                        }
+
+                                        if ((crecp.flags & F_HOSTS) || (((crecp.flags & F_DHCP) && option_bool(OPT_DHCP_FQDN)))) {
+                                            strcpy(name, cache_get_name(crecp));
+                                            if (in_zone(zone, name, &cut) && (local_query || filter_zone(zone, (crecp.flags & (F_IPV6 | F_IPV4)), &(crecp.addr)))) {
+                                                if (cut) * cut = 0;
+
+                                                if (add_resource_record(header, limit, &trunc, -axfroffset, &ansp,
+                                                                        daemon.auth_ttl, NULL, (crecp.flags & F_IPV6)? T_AAAA: T_A, C_IN,
+                                                                        (crecp.flags & F_IPV4)? "4": "6", cut? name: NULL, &crecp.addr))
+                                                anscount += 1;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                /* repeat SOA as last record */
+                                if (add_resource_record(header, limit, &trunc, axfroffset, &ansp,
+                                                        daemon.auth_ttl, NULL, T_SOA, C_IN, "ddlllll",
+                                                        daemon.authserver, daemon.hostmaster,
+                                                        daemon.soa_sn, daemon.soa_refresh,
+                                                        daemon.soa_retry, daemon.soa_expiry,
+                                                        daemon.auth_ttl))
+                                anscount += 1;
+                            }
+                        }
+
+                        /* done all questions, set up header and return length of result */
+                        /* clear authoritative and truncated flags, set QR flag */
+                        header.hb3 = (header.hb3 & ~(HB3_AA | HB3_TC)) | HB3_QR;
+
+                        if (local_query) {
+                            /* set RA flag */
+                            header.hb4 |= HB4_RA;
+                        } else {
+                            /* clear RA flag */
+                            header.hb4 &= ~HB4_RA;
+                        }
+
+                        /* data is never DNSSEC signed. */
+                        header.hb4 &= ~HB4_AD;
+
+                        /* authoritative */
+                        if (auth)
+                        header.hb3 |= HB3_AA;
+
+                        /* truncation */
+                        if (trunc)
+                        header.hb3 |= HB3_TC;
+
+                        if ((auth || local_query) && nxdomain)
+                        SET_RCODE(header, NXDOMAIN);
+                        else
+                        SET_RCODE(header, NOERROR); /* no error */
+                        header.ancount = htons(anscount);
+                        header.nscount = htons(authcount);
+                        header.arcount = htons(0);
+
+                        /* Advertise our packet size limit in our reply */
+                        if (have_pseudoheader)
+                        return add_pseudoheader(header, ansp - header, limit, daemon.edns_pktsz, 0, NULL, 0, do_bit, 0);
+
+                        return ansp - header;
+                    }
   
   
   

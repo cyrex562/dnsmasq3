@@ -52,7 +52,7 @@ pub struct script_data {
     pub length: u32,
     pub expires: time::Instant,
     pub file_len: usize,
-    pub addr6: net::IpAddr,
+    pub addr6: net::Ip6Addr,
     pub vendorclass_count: i32,
     pub iaid: u32,
     pub hwaddr: [u8; DHCP_CHADDR_MAX],
@@ -68,12 +68,12 @@ pub fn create_helper(
     err_fd: i32,
     uid: u32,
     gid: u32,
-    max_fd: libc::c_long,
+    max_fd: i32,
 ) -> i32 {
     let mut pid: u32;
     //i: i32, pipefd[2];
     let mut i: i32;
-    let mut pipefd: [i32; 2];
+    let mut pipefd: [i32; 2] = [0;2];
     //struct sigaction sigact;
     // let mut sigact: sigaction;
     //let mut alloc_buff: *mut u8 = NULL;
@@ -806,9 +806,10 @@ pub fn queue_script(
     // fd: i32 = daemon.dhcpfd;
     let mut fd = daemon.dhcpfd;
 
-    if !daemon.dhcp {
-        fd = daemon.dhcp6fd;
-    }
+    // if !daemon.dhcp {
+    //     fd = daemon.dhcp6fd;
+    // }
+    fd = daemon.dhcp6fd;
 
     /* no script */
     if daemon.helperfd == -1 {
@@ -816,13 +817,13 @@ pub fn queue_script(
     }
 
     if lease.extradata {
-        ed_len = lease.extradata_len;
+        ed_len = lease.extradata_len as u32;
     }
     if lease.clid {
-        clid_len = lease.clid_len;
+        clid_len = lease.clid_len as u32;
     }
     if hostname {
-        hostname_len = hostname.len() + 1;
+        hostname_len = (hostname.len() + 1) as u32;
     }
 
     //   buff_alloc(sizeof(struct script_data) +  clid_len + ed_len + hostname_len);
@@ -836,9 +837,9 @@ pub fn queue_script(
 
     buf.hwaddr_len = lease.hwaddr_len;
     buf.hwaddr_type = lease.hwaddr_type;
-    buf.clid_len = clid_len;
-    buf.ed_len = ed_len;
-    buf.hostname_len = hostname_len;
+    buf.clid_len = clid_len as i32;
+    buf.ed_len = ed_len as i32;
+    buf.hostname_len = hostname_len as i32;
     buf.addr = lease.addr;
     buf.giaddr = lease.giaddr;
     // TODO: copyt hwaddr with rust code
@@ -847,7 +848,7 @@ pub fn queue_script(
     //     buf.interface[0] = 0;
     // }
 
-    buf.length = lease.length;
+    buf.length = lease.length as u32;
 
     buf.expires = lease.expires;
 
@@ -871,7 +872,7 @@ pub fn queue_script(
         // memcpy(p, lease.extradata, ed_len);
         p += ed_len;
     }
-    bytes_in_buf = p - buf;
+    *bytes_in_buf = p - buf;
 }
 
 /* This nastily re-uses DHCP-fields for TFTP stuff */
@@ -890,12 +891,12 @@ pub fn queue_tftp(
         return;
     }
 
-    filename_len = filename.len() + 1;
+    filename_len = (filename.len() + 1) as u32;
     //   buff_alloc(sizeof(struct script_data) +  filename_len);
     //   memset(buf, 0, sizeof(struct script_data));
 
-    buf.action = ACTION_TFTP;
-    buf.hostname_len = filename_len;
+    buf.action = ACTION_TFTP as i32;
+    buf.hostname_len = filename_len as i32;
     buf.file_len = file_len;
 
     if (buf.flags = peer.sa.sa_family) == AF_INET {
@@ -906,18 +907,18 @@ pub fn queue_tftp(
 
     // memcpy((buf + 1), filename, filename_len);
 
-    bytes_in_buf = mem::size_of::<script_data>() + filename_len;
+    *bytes_in_buf = mem::size_of::<script_data>() + filename_len;
 }
 
 pub fn queue_arp(
     daemon: &mut DnsmasqDaemon,
-    action: i32,
-    buf: &mut script_data,
-    bytes_in_buf: &mut usize,
-    mac: &mut Vec<u8>,
-    maclen: i32,
-    family: i32,
-    addr: net::IpAddr,
+    action: u32,
+    buf: Option<&mut script_data>,
+    bytes_in_buf: Option<&mut usize>,
+    mac: &[u8;16],
+    maclen: u16,
+    family: u16,
+    addr: &net::IpAddr,
 ) {
     /* no script */
     if daemon.helperfd == -1 {
@@ -938,11 +939,11 @@ pub fn queue_arp(
 
     // memcpy(buf.hwaddr, mac, maclen);
 
-    bytes_in_buf = mem::size_of::<script_data>();
+    *bytes_in_buf = mem::size_of::<script_data>();
 }
 
-pub fn helper_buf_empty(bytes_in_buf: &usize) -> i32 {
-    return bytes_in_buf == 0;
+pub fn helper_buf_empty(bytes_in_buf: &usize) -> bool {
+    return *bytes_in_buf == 0;
 }
 
 pub fn helper_write(daemon: &mut DnsmasqDaemon, buf: &mut script_data, bytes_in_buf: &mut usize) {

@@ -1,7 +1,10 @@
 use core::time;
 use std::net;
 
-use crate::dns_protocol::{MAXDNAME, MAXLABEL};
+use crate::dns_protocol::{MAXDNAME, MAXLABEL, NAME_ESCAPE};
+use crate::log::my_syslog;
+use std::fs::{read, write};
+use crate::dnsmasq_h::DnsmasqDaemon;
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -47,7 +50,7 @@ pub fn rand64() -> u64 {
 }
 
 /* returns 2 if names is OK but contains one or more underscores */
-pub fn check_name(_in: &mut String) {
+pub fn check_name(_in: &mut String) -> u32 {
     /* remove trailing .
     also fail empty string and label > 63 chars */
     // dotgap: usize = 0, l = strlen(_in);
@@ -57,44 +60,44 @@ pub fn check_name(_in: &mut String) {
     let mut nowhite: i32 = 0;
     let mut hasuscore: i32 = 0;
 
-    if (l == 0 || l > MAXDNAME) {
+    if l == 0 || l > MAXDNAME {
         return 0;
     }
 
-    if (_in[l - 1] == '.') {
+    if _in[l - 1] == '.' {
         _in[l - 1] = 0;
         nowhite = 1;
     }
 
     // for (; (c = *_in); _in++)
     for c in _in {
-        if (c == '.') {
+        if c == '.' {
             dotgap = 0;
-        } else if (dotgap + 1 > MAXLABEL) {
+        } else if dotgap + 1 > MAXLABEL {
             dotgap += 1;
             return 0;
-        } else if (isascii(c) && iscntrl(c)) {
+        } else if isascii(c) && iscntrl(c) {
             /* iscntrl only gives expected results for ascii */
             return 0;
-        } else if (!isascii(c)) {
+        } else if !isascii(c) {
             return 0;
-        } else if (c != ' ') {
+        } else if c != ' ' {
             nowhite = 1;
-            if (c == '_') {
+            if c == '_' {
                 hasuscore = 1;
             }
         }
     }
 
-    if (!nowhite) {
+    if !nowhite {
         return 0;
     }
 
     // return hasuscore ? 2 : 1;
-    if hasuscore {
-        return 2;
+    return if hasuscore {
+        2
     } else {
-        return 1;
+        1
     }
 }
 
@@ -102,46 +105,44 @@ pub fn check_name(_in: &mut String) {
 so check for legal char a-z A-Z 0-9 - _
 Note that this may receive a FQDN, so only check the first label
 for the tighter criteria. */
-pub fn legal_hostname(name: &mut String) -> i32 {
-    let mut c: u8;
-    let mut first: i32;
+pub fn legal_hostname(name: &mut String) -> bool {
+    let mut first: bool = true;
 
-    if (!check_name(name)) {
-        return 0;
+    if !check_name(name) {
+        return false;
     }
 
     //   for (first = 1; (c = *name); name++, first = 0)
-    first = 1;
     for c in name
     /* check for legal char a-z A-Z 0-9 - _ . */
     {
-        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+        if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
             continue;
         }
 
-        if (!first && (c == '-' || c == '_')) {
+        if !first && ((c == '-') || (c == '_')) {
             continue;
         }
 
         /* end of hostname part */
-        if (c == '.') {
-            return 1;
+        if c == '.' {
+            return true;
         }
 
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
-pub fn canonicalise(_in: &mut String, nomem: &mut i32) -> Option<String> {
-    //   char *ret = NULL;
-    let mut ret: String;
-    let mut rc: i32;
+pub fn canonicalise(_in: &mut String, nomem: &mut bool) -> Option<String> {
+     let mut ret: String = String::new();
+    let mut rc: u32;
 
-    if (nomem) {
-        *nomem = 0;
-    }
+    // if nomem {
+    //     *nomem = 0;
+    // }
+    *nomem = false;
 
     if !(rc = check_name(_in)) {
         return None;
@@ -149,20 +150,20 @@ pub fn canonicalise(_in: &mut String, nomem: &mut i32) -> Option<String> {
 
     /* older libidn2 strips underscores, so don't do IDN processing
     if the name has an underscore (check_name() returned 2) */
-    if (rc != 2) {
+    if rc != 2 {
         rc = idn2_to_ascii_lz(_in, &ret, IDN2_NONTRANSITIONAL);
-        if (rc == IDN2_DISALLOWED) {
+        if rc == IDN2_DISALLOWED {
             rc = idn2_to_ascii_lz(_in, &ret, IDN2_TRANSITIONAL);
             rc = idna_to_ascii_lz(_in, &ret, 0);
         }
-        if (rc != IDNA_SUCCESS) {
-            if (ret) {
-                free(ret);
-            }
+        if rc != IDNA_SUCCESS {
+            // if (ret) {
+            //     free(ret);
+            // }
 
-            if (nomem && (rc == IDNA_MALLOC_ERROR || rc == IDNA_DLOPEN_ERROR)) {
-                my_syslog(LOG_ERR, format!("failed to allocate memory"));
-                *nomem = 1;
+            if *nomem && (rc == IDNA_MALLOC_ERROR || rc == IDNA_DLOPEN_ERROR) {
+                my_syslog(LOG_ERR, &format!("failed to allocate memory"));
+                *nomem = true;
             }
 
             return None;
@@ -173,11 +174,11 @@ pub fn canonicalise(_in: &mut String, nomem: &mut i32) -> Option<String> {
 
     if (ret = whine_malloc(strlen(_in) + 1)) {
         strcpy(ret, _in);
-    } else if (nomem) {
-        *nomem = 1;
+    } else if nomem {
+        *nomem = true;
     }
 
-    return Some(ret);
+    return Some(ret.clone());
 }
 
 pub fn do_rfc1035_name(p: &mut String, sval: &mut String, limit: &mut String) -> Option<String> {
@@ -187,27 +188,27 @@ pub fn do_rfc1035_name(p: &mut String, sval: &mut String, limit: &mut String) ->
     let mut p_index: usize = 0;
     let mut s_index: usize = 0;
 
-    while (sval && *sval) {
+    while sval.is_empty() == false && sval[0] != 0 {
         //unsigned char *cp = p +=1;
         // let mut cp: &mut Vec<u8> = p.offset(1);
 
-        if (limit && p > limit) {
+        if limit.is_empty() == false && p[0] > limit {
             return None;
         }
 
         // for (j = 0; *sval && (*sval != '.'); sval++, j++)
         let mut j = 0;
         for s in sval {
-            if (limit && p + 1 > limit) {
+            if limit.is_empty() == false && p[0] + 1 > limit {
                 return None;
             }
 
-            if (daemon.opt_dnssec_valid && s == NAME_ESCAPE) {
+            if daemon.opt_dnssec_valid && s == NAME_ESCAPE {
                 s_index += 1;
                 p[p_index] = (sval[s_index]) - 1;
             } else {
                 p[p_index] = s;
-                p += 1;
+                p[0] += 1;
             }
 
             if s == '.' {
@@ -219,12 +220,12 @@ pub fn do_rfc1035_name(p: &mut String, sval: &mut String, limit: &mut String) ->
 
         *cp = j;
 
-        if (*sval) {
-            sval += 1;
+        if sval[0] != 0 {
+            *sval = *sval[1..];
         }
     }
 
-    return p;
+    return Some(p.clone());
 }
 
 /* for use during startup */
@@ -340,9 +341,9 @@ pub fn hostname_issubdomain(a: &mut String, b: &mut String) -> i32 {
 // }
 
 pub fn netmask_length(mask: &net::IpAddr) -> u32 {
-    let mut zero_count: i32 = 0;
+    let mut zero_count: u32 = 0;
 
-    while (0x0 == (mask.s_addr & 0x1) && zero_count < 32) {
+    while 0x0 == (mask.s_addr & 0x1) && zero_count < 32 {
         mask.s_addr >>= 1;
         zero_count += 1;
     }
@@ -565,52 +566,53 @@ pub fn retry_send(rc: isize) -> i32 {
     retrying in EAGAIN for 1 second max, to avoid this hanging
     dnsmasq. */
 
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        waiter.tv_sec = 0;
-        waiter.tv_nsec = 10000;
-        nanosleep(&waiter, NULL);
+    if errno == EAGAIN || errno == EWOULDBLOCK {
+        // waiter.tv_sec = 0;
+        // waiter.tv_nsec = 10000;
+        // nanosleep(&waiter, NULL);
+        time::sleep(time::Duration::new(0, 10000));
         retries += 1;
-        if (retries < 1000) {
+        if retries < 1000 {
             return 1;
         }
     }
 
     retries = 0;
 
-    if (errno == EINTR) {
+    if errno == EINTR {
         return 1;
     }
 
     return 0;
 }
 
-pub fn read_write(fd: i32, packet: &mut Vec<u8>, size: i32, rw: i32) -> i32 {
+pub fn read_write(fd: i32, packet: &mut Vec<u8>, size: usize, rw: bool) -> bool {
     //   sn: usize, done;
-    let mut n: isize;
-    let mut done: isize;
+    let mut n: isize = 0;
+    let mut done: usize = 0;
 
     //   for (done = 0; done < size; done += n)
-    while (done < size) {
+    while done < size {
         while {
-            if (rw) {
-                n = read(fd, &packet[done], (size - done));
+            if rw {
+                // n = read(fd, &packet[done], (size - done));
             } else {
-                n = write(fd, &packet[done], (size - done));
+                // n = write(fd, &packet[done], (size - done));
             }
 
-            if (n == 0) {
-                return 0;
+            if n == 0 {
+                return false;
             }
-            retry_send(n) || errno == ENOMEM || errno == ENOBUFS
+            retry_send(n) || i32::from(errno == ENOMEM) || errno == ENOBUFS
         } {}
 
-        if (errno != 0) {
-            return 0;
+        if errno != 0 {
+            return false;
         }
         done += n
     }
 
-    return 1;
+    return true;
 }
 
 /* close all fds except STDIN, STDOUT and STDERR, spare1, spare2 and spare3 */
@@ -622,26 +624,27 @@ pub fn close_fds(max_fd: i32, spare1: i32, spare2: i32, spare3: i32) {
     //   DIR *d;
     let d: DIR;
 
-    if (d = opendir("/proc/self/fd")) {
+    if d = opendir("/proc/self/fd") {
         let mut de: dirent;
 
-        while (de = readdir(d)) {
+        while de = readdir(d) {
             let fd: i32;
-            char * e = NULL;
+            // char * e = NULL;
+            let mut e: String = String::new();
 
             errno = 0;
             fd = strtol(de.d_name, &e, 10);
 
-            if (errno != 0
-                || !e
-                || *e
+            if errno != 0
+                || e.is_empty() == false
+                || e[0] != 0
                 || fd == dirfd(d)
                 || fd == STDOUT_FILENO
                 || fd == STDERR_FILENO
                 || fd == STDIN_FILENO
                 || fd == spare1
                 || fd == spare2
-                || fd == spare3)
+                || fd == spare3
             {
                 continue;
             }
@@ -655,17 +658,17 @@ pub fn close_fds(max_fd: i32, spare1: i32, spare2: i32, spare3: i32) {
 
     /* fallback, dumb code. */
     //   for (max_fd--; max_fd >= 0; max_fd--)
-    while (max_fd >= 0) {
-        if (max_fd != STDOUT_FILENO
+    while max_fd >= 0 {
+        if max_fd != STDOUT_FILENO
             && max_fd != STDERR_FILENO
             && max_fd != STDIN_FILENO
             && max_fd != spare1
             && max_fd != spare2
-            && max_fd != spare3)
+            && max_fd != spare3
         {
             close(max_fd);
         }
-        max_fd -= 1
+        *max_fd -= 1
     }
 }
 
@@ -727,7 +730,7 @@ pub fn find_subnet() {
     unimplemented!()
 }
 
-pub fn GETSHORT(dest: &mut u32, buff: &[u8]) {
+pub fn getshort(dest: &mut u32, buff: &[u8]) {
     unimplemented!()
 }
 
