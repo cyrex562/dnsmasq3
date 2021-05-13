@@ -347,7 +347,7 @@ not to occupy the same bits as priorities, no matter how syslog.h is set up. */
 pub struct all_addr {
     pub addr_4: net::Ipv4Addr,
     pub addr6: net::Ipv6Addr,
-    pub cache: Vec<crec>,
+    pub cache: Vec<Crec>,
     pub name: String,
     pub uid: u32,
     pub is_name_ptr: bool,
@@ -620,7 +620,7 @@ pub struct blockdata {
 //     char *namep;
 //   } name;
 // };
-pub struct crec {
+pub struct Crec {
     // next
     // prev
     // hash_next
@@ -629,7 +629,7 @@ pub struct crec {
     pub uid: u32,
     pub flags: u32,
     pub sname: String,
-    pub bname: bigname,
+    pub bname: String,
     pub namep: String,
 }
 
@@ -2497,7 +2497,7 @@ pub struct DhcpContext {
     // current
 }
 
-pub struct dns_header {
+pub struct DnsHeader {
     pub id: u16,
     //   u8  hb3,hb4;
     pub hb3: u8,

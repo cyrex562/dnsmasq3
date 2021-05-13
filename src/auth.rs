@@ -1,6 +1,6 @@
 use std::{net, time};
 
-use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_A, T_AAAA, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, ADDRLIST_REVONLY, AddrList, DnsmasqDaemon, F_IPV4, F_IPV6, auth_zone, cname, crec, dns_header, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{getshort, hostname_isequal, log_query}};
+use crate::{dns_protocol::{C_IN, OPCODE, QUERY, T_A, T_AAAA, T_NS, T_PTR, T_SOA}, dnsmasq_h::{ADDRLIST_IPV6, ADDRLIST_REVONLY, AddrList, DnsmasqDaemon, F_IPV4, F_IPV6, auth_zone, cname, Crec, DnsHeader, interface_name, mx_srv_record, naptr, txt_record}, rfc1035::{extract_name, in_arpa_name_2_addr, skip_questions}, util::{getshort, hostname_isequal, log_query}};
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -89,7 +89,7 @@ pub fn in_zone(zone: &auth_zone, name: &mut String, cut: &Vec<String>) -> bool {
 
 
 pub fn answer_auth(daemon: &mut DnsmasqDaemon,
-                   header: &dns_header,
+                   header: &DnsHeader,
                    limit: &mut String,
                    qlen: usize,
                    now: &time::Instant,
@@ -100,19 +100,19 @@ pub fn answer_auth(daemon: &mut DnsmasqDaemon,
     let mut name: String = daemon.namebuff.clone();
 //   p: &mut Vec<u8>, *ansp;
     let mut p: Vec<u8>;
-    let mut ansp: Vec<u8>;
+    let mut ansp: String;
 //   qtype: i32, qclass, rc;
-    let mut qtype: i32;
-    let mut qclass: i32;
+    let mut qtype: u16 = 0;
+    let mut qclass: u16 = 0;
     let mut rc: i32;
 //   nameoffset: i32, axfroffset = 0;
-    let mut nameoffset: i32;
-    let mut axfroffset: i32 = 0;
+    let mut nameoffset: usize;
+    let mut axfroffset: usize = 0;
 //   q: i32, anscount = 0, authcount = 0;
     let mut q: u32;
     let mut anscount: i32 = 0;
     let mut authcount: i32 = 0;
-    let mut crecp: crec;
+    let mut crecp: Crec;
 //   int  auth = !local_query, trunc = 0, nxdomain = 1, soa = 0, ns = 0, axfr = 0;
     let mut auth: bool = !local_query;
     let mut trunc: i32 = 0;
@@ -161,34 +161,42 @@ pub fn answer_auth(daemon: &mut DnsmasqDaemon,
         //   nameoffset = p - header;
 
         /* now extract name as .-concatenated string into name */
-        if !extract_name(header, qlen, &p, name, 1, 4) { return 0; /* bad packet */ }
+        /* bad packet */
+        if !extract_name(header, qlen, &p, &name, true, 4) {
+            return 0;
+        }
 
-        getshort(qtype, p);
-        getshort(qclass, p);
+        getshort(&mut qtype, &p.as_slice());
+        getshort(&mut qclass, &p.as_slice());
 
         if qclass != C_IN {
-            auth = 0;
+            auth = true;
             continue;
         }
 
-        if (qtype == T_PTR || qtype == T_SOA || qtype == T_NS) && (flag = in_arpa_name_2_addr(name, &addr)) && !local_query {
-            //   for (zone = daemon.auth_zones; zone; zone = zone.next)
-            for zone in daemon.auth_zones {
-                if subnet = find_subnet(zone, flag, &addr) { break; }
+        flag = in_arpa_name_2_addr(&name, &addr)
+        if (qtype == T_PTR
+            || qtype == T_SOA
+            || qtype == T_NS)
+            && (flag != 0)
+            && !local_query {
+                //   for (zone = daemon.auth_zones; zone; zone = zone.next)
+                for zone in daemon.auth_zones {
+                    if subnet = find_subnet(zone, flag as i32, &addr) { break; }
 
                 if !zone {
-                    auth = 0;
+                    auth = false;
                     continue;
-                } else if qtype == T_SOA {
-                    soa = 1;
-                    found = 1;
-                } else if qtype == T_NS {
-                    ns = 1;
-                    found = 1;
+                } else if qtype == T_SOA as i32 {
+                    soa = true;
+                    found = true;
+                } else if qtype == T_NS as i32 {
+                    ns = true;
+                    found = true;
                 }
             }
 
-            if qtype == T_PTR && flag {
+            if qtype == T_PTR as i32 && flag {
                 intr = None;
 
                 if flag == F_IPV4 {

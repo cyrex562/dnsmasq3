@@ -730,8 +730,8 @@ pub fn find_subnet() {
     unimplemented!()
 }
 
-pub fn getshort(dest: &mut u32, buff: &[u8]) {
-    unimplemented!()
+pub fn getshort(dest: &mut u16, buff: &[u8]){
+    *dest = u16::from_le_bytes(buf[0..2])
 }
 
 pub fn log_query(

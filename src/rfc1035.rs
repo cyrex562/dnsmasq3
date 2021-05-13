@@ -16,141 +16,127 @@
 
 
 
-use crate::dnsmasq_h::dns_header;
+use crate::dnsmasq_h::{DnsHeader, F_IPV4, F_NEG, F_IPV6, mx_srv_record, F_CONFIG, F_RRNAME, F_SRV, F_NXDOMAIN, F_DNSSECOK, F_NO_RR, F_DHCP, F_HOSTS, F_FORWARD, F_REVERSE, ADDRLIST_REVONLY, ADDRLIST_IPV6, interface_name, SERV_HAS_DOMAIN, SERV_NO_ADDR, ptr_record, txt_record, F_RCODE, F_CNAME, F_IMMORTAL, F_SERVFAIL, F_NOERR, F_QUERY, F_IPSET, doctor};
+use crate::dns_protocol::{CHECK_LEN, HB4_AD, NOERROR, NOTIMP, NXDOMAIN, HB3_TC, HB3_AA, HB4_RA, HB3_QR, C_IN, T_A, T_SOA, T_MAILB, T_NAPTR, T_ANY, T_SRV, T_MX, T_AAAA, T_PTR, C_CHAOS, T_TXT, T_CNAME, HB4_CD, QUERY, OPCODE, HB3_RD, INADDRSZ, IN6ADDRSZ, REFUSED, SERVFAIL, T_DNSKEY, T_DS, NAME_ESCAPE, MAXDNAME};
+use crate::list_container::len;
+use winapi::shared::ntdef::NULL;
+use crate::util::{hostname_isequal, log_query, is_same_net, hostname_issubdomain, do_rfc1035_name};
+use std::{time, net};
+use crate::config::CNAME_CHAIN;
+use crate::log::my_syslog;
 
-pub fn extract_name(header &dns_header, plen: usize, pp: *mut *mut u8,
-                    name: &mut String, isExtract: i32, extrabytes: i32)
-{
+pub fn extract_name(header: &DnsHeader,
+                    plen: usize,
+                    pp: &Vec<u8>,
+                    name: &String,
+                    is_extract: bool,
+                    extra_bytes: i32) -> u32 {
 //   unsigned char *cp = name, *p = *pp, *p1 = NULL;
-	let mut cp: *mut u8;
-	*p = *pp;
-	*p1 = None;
+    let mut cp: String = String::new();
+    let mut p: Vec<u8> = pp[0].clone();
+    *p1 = None;
 //   unsigned j: i32, l, namelen = 0, hops = 0;
-  let mut retvalue: i32 = 1;
-  
-  if (isExtract)
-    {*cp = 0;}
+    let mut ret_val: u32 = 1;
 
-  loop
-    { 
-      let mut label_type: u32;
+    if (is_extract) { cp[0] = 0; }
 
-      if (!CHECK_LEN(header, p, plen, 1))
-	{return 0;}
-      
-      if ((l = *p++) == 0) 
-	/* end marker */
-	{
-	  /* check that there are the correct no. of bytes after the name */
-	  if (!CHECK_LEN(header, p1 ? p1 : p, plen, extrabytes))
-	    {return 0;}
-	  
-	  if (isExtract)
-	    {
-	      if (cp != name)
-		{cp--;}
-	      *cp = 0; /* terminate: lose final period */
-	    }
-	  else if (*cp != 0)
-	    {retvalue = 2;}
-	  
-	  if (p1) /* we jumped via compression */
-	    {*pp = p1;}
-	  else
-	    {*pp = p;}
-	  
-	  return retvalue;
-	}
+    loop {
+        let mut label_type: u32;
 
-      label_type = l & 0xc0;
-      
-      if (label_type == 0xc0) /* pointer */
-	{ 
-	  if (!CHECK_LEN(header, p, plen, 1))
-	    return 0;
-	      
-	  /* get offset */
-	  l = (l&0x3f) << 8;
-	  l |= *p +=1;
-	  
-	  if (!p1) /* first jump, save location to go back to */
-	    p1 = p;
-	      
-	  hops +=1; /* break malicious infinite loops */
-	  if (hops > 255)
-	    return 0;
-	  
-	  p = l + header;
-	}
-      else if (label_type == 0x00)
-	{ /* label_type = 0 . label. */
-	  namelen += l + 1; /* include period */
-	  if (namelen >= MAXDNAME)
-	    return 0;
-	  if (!CHECK_LEN(header, p, plen, l))
-	    return 0;
-	  
-	  for(j=0; j<l; j++, p++)
-	    if (isExtract)
-	      {
-		unsigned char c = *p;
+        if (!CHECK_LEN(header, p, plen, 1)) { return 0; }
 
-		if (daemon.opt_dnssec_valid)
-		  {
-		    if (c == 0 || c == '.' || c == NAME_ESCAPE)
-		      {
-			*cp++ = NAME_ESCAPE;
-			*cp++ = c+1;
-		      }
-		    else {
-		      *cp++ = c;
-			} 
-		  }
-		else
+        if ((l = *p + +) == 0)
+        /* end marker */ {
+            /* check that there are the correct no. of bytes after the name */
+            if (!CHECK_LEN(header, p1? p1: p, plen, extra_bytes)) { return 0; }
 
-		if (c != 0 && c != '.') {
-		  *cp++ = c;
-		}
-		else 
-		  return 0;
-	      }
-	    else 
-	      {
-		unsigned char c1 = *cp, c2 = *p;
-		
-		if (c1 == 0)
-		  retvalue = 2;
-		else 
-		  {
-		    cp +=1;
-		    if (c1 >= 'A' && c1 <= 'Z')
-		      c1 += 'a' - 'A';
+            if (is_extract) {
+                if (cp != name) { cp - -; }
+                *cp = 0; /* terminate: lose final period */
+            } else if (*cp != 0) { ret_val = 2; }
 
-		    if (daemon.opt_dnssec_valid && c1 == NAME_ESCAPE)
-		      c1 = (*cp++)-1;
+            if (p1) /* we jumped via compression */ { *pp = p1; } else { *pp = p; }
 
-		    
-		    if (c2 >= 'A' && c2 <= 'Z')
-		      c2 += 'a' - 'A';
-		     
-		    if (c1 != c2)
-		      retvalue =  2;
-		  }
-	      }
-	    
-	  if (isExtract)
-	    *cp++ = '.';
-	  else if (*cp != 0 && *cp++ != '.')
-	    retvalue = 2;
-	}
-      else
-	return 0; /* label types 0x40 and 0x80 not supported */
+            return ret_val;
+        }
+
+        label_type = l & 0xc0;
+
+        if label_type == 0xc0 /* pointer */ {
+            if !CHECK_LEN(header, p, plen, 1) { return 0; }
+
+            /* get offset */
+            l = (l & 0x3f) << 8;
+            l |= *p += 1;
+
+            /* first jump, save location to go back to */
+            if !p1 { p1 = p; }
+
+            hops += 1; /* break malicious infinite loops */
+            if hops > 255 { return 0; }
+
+            p = l + header;
+        } else if label_type == 0x00 {
+            /* label_type = 0 . label. */
+            namelen += l + 1; /* include period */
+            if (namelen >= MAXDNAME)
+            return 0;
+            if (!CHECK_LEN(header, p, plen, l))
+            return 0;
+
+            for (j=0; j < l; j+ +, p+ +)
+            if (is_extract) {
+                unsigned
+                char
+                c = *p;
+
+                if (daemon.opt_dnssec_valid) {
+                    if (c == 0 || c == '.' || c == NAME_ESCAPE) {
+                        *cp + + = NAME_ESCAPE;
+                        *cp + + = c + 1;
+                    } else {
+                        *cp + + = c;
+                    }
+                } else
+
+                if (c != 0 && c != '.') {
+                    *cp + + = c;
+                } else return 0;
+            } else {
+                unsigned
+                char
+                c1 = *cp, c2 = *p;
+
+                if (c1 == 0)
+                ret_val = 2;
+                else
+                {
+                    cp += 1;
+                    if (c1 >= 'A' && c1 <= 'Z')
+                    c1 += 'a' - 'A';
+
+                    if (daemon.opt_dnssec_valid && c1 == NAME_ESCAPE)
+                    c1 = (*cp + +) - 1;
+
+
+                    if (c2 >= 'A' && c2 <= 'Z')
+                    c2 += 'a' - 'A';
+
+                    if (c1 != c2)
+                    ret_val = 2;
+                }
+            }
+
+            if (is_extract) * cp + + = '.';
+            else if (*cp != 0 && *cp + + != '.')
+            ret_val = 2;
+        } else return 0; /* label types 0x40 and 0x80 not supported */
     }
 }
  
 /* Max size of input string (for IPv6) is 75 chars.) */
 pub const MAXARPANAME: u32 = 75;
-pub fn in_arpa_name_2_addr(namein: &mut String, addrp: &net::IpAddr) -> i32
+pub fn in_arpa_name_2_addr(namein: &String, addrp: &net::IpAddr) -> u32
 {
   let mut j: i32;
 //   char name[MAXARPANAME+1], *cp1;

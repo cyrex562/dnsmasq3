@@ -1,4 +1,4 @@
-use crate::dnsmasq_h::dns_header;
+use crate::dnsmasq_h::DnsHeader;
 
 /* dnsmasq is Copyright (c) 2000-2021 Simon Kelley
 
@@ -38,47 +38,47 @@ pub const REFUSED: u32 = 5; /* query refused */
 
 pub const QUERY: u32 = 0; /* opcode */
 
-pub const C_IN: u32 = 1; /* the arpa internet */
-pub const C_CHAOS: u32 = 3; /* for chaos net (MIT) */
-pub const C_HESIOD: u32 = 4; /* hesiod */
-pub const C_ANY: u32 = 255; /* wildcard match */
+pub const C_IN: u16 = 1; /* the arpa internet */
+pub const C_CHAOS: u16 = 3; /* for chaos net (MIT) */
+pub const C_HESIOD: u16 = 4; /* hesiod */
+pub const C_ANY: u16 = 255; /* wildcard match */
 
-pub const T_A: u32 = 1;
-pub const T_NS: u32 = 2;
-pub const T_MD: u32 = 3;
-pub const T_MF: u32 = 4;
-pub const T_CNAME: u32 = 5;
-pub const T_SOA: u32 = 6;
-pub const T_MB: u32 = 7;
-pub const T_MG: u32 = 8;
-pub const T_MR: u32 = 9;
-pub const T_PTR: u32 = 12;
-pub const T_MINFO: u32 = 14;
-pub const T_MX: u32 = 15;
-pub const T_TXT: u32 = 16;
-pub const T_RP: u32 = 17;
-pub const T_AFSDB: u32 = 18;
-pub const T_RT: u32 = 21;
-pub const T_SIG: u32 = 24;
-pub const T_PX: u32 = 26;
-pub const T_AAAA: u32 = 28;
-pub const T_NXT: u32 = 30;
-pub const T_SRV: u32 = 33;
-pub const T_NAPTR: u32 = 35;
-pub const T_KX: u32 = 36;
-pub const T_DNAME: u32 = 39;
-pub const T_OPT: u32 = 41;
-pub const T_DS: u32 = 43;
-pub const T_RRSIG: u32 = 46;
-pub const T_NSEC: u32 = 47;
-pub const T_DNSKEY: u32 = 48;
-pub const T_NSEC3: u32 = 50;
-pub const T_TKEY: u32 = 249;
-pub const T_TSIG: u32 = 250;
-pub const T_AXFR: u32 = 252;
-pub const T_MAILB: u32 = 253;
-pub const T_ANY: u32 = 255;
-pub const T_CAA: u32 = 257;
+pub const T_A: u16 = 1;
+pub const T_NS: u16 = 2;
+pub const T_MD: u16 = 3;
+pub const T_MF: u16 = 4;
+pub const T_CNAME: u16 = 5;
+pub const T_SOA: u16 = 6;
+pub const T_MB: u16 = 7;
+pub const T_MG: u16 = 8;
+pub const T_MR: u16 = 9;
+pub const T_PTR: u16 = 12;
+pub const T_MINFO: u16 = 14;
+pub const T_MX: u16 = 15;
+pub const T_TXT: u16 = 16;
+pub const T_RP: u16 = 17;
+pub const T_AFSDB: u16 = 18;
+pub const T_RT: u16 = 21;
+pub const T_SIG: u16 = 24;
+pub const T_PX: u16 = 26;
+pub const T_AAAA: u16 = 28;
+pub const T_NXT: u16 = 30;
+pub const T_SRV: u16 = 33;
+pub const T_NAPTR: u16 = 35;
+pub const T_KX: u16 = 36;
+pub const T_DNAME: u16 = 39;
+pub const T_OPT: u16 = 41;
+pub const T_DS: u16 = 43;
+pub const T_RRSIG: u16 = 46;
+pub const T_NSEC: u16 = 47;
+pub const T_DNSKEY: u16 = 48;
+pub const T_NSEC3: u16 = 50;
+pub const T_TKEY: u16 = 249;
+pub const T_TSIG: u16 = 250;
+pub const T_AXFR: u16 = 252;
+pub const T_MAILB: u16 = 253;
+pub const T_ANY: u16 = 255;
+pub const T_CAA: u16 = 257;
 
 pub const EDNS0_OPTION_MAC: u32 = 65001; /* dyndns.org temporary assignment */
 pub const EDNS0_OPTION_CLIENT_SUBNET: u32 = 8; /* IANA */
@@ -97,7 +97,7 @@ pub const HB4_CD: u32 = 0x10; /* Checking Disabled */
 pub const HB4_RCODE: u32 = 0x0f;
 
 // #define OPCODE(x)          (((x).hb3 & HB3_OPCODE) >> 3)
-pub fn OPCODE(x: &dns_header) -> u8 {
+pub fn OPCODE(x: &DnsHeader) -> u8 {
     (x.hb3 & HB3_OPCODE) >> 3
 }
 
