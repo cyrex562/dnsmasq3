@@ -1,5 +1,7 @@
 mod util;
 mod dnsmasq_h;
+mod defines;
+
 
 use std::fmt::Debug;
 use log::{debug, error, info};
