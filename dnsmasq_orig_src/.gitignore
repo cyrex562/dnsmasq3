@@ -1,8 +1,0 @@
-# Project exclude paths
-/cmake-build-debug/
-.vs/dnsmasq3/v16/.suo
-.vs/dnsmasq3/v16/Browse.VC.db
-.vs/dnsmasq3/v16/ipch/AutoPCH/90ae7bdc5fe2bd51/NETWORK.ipch
-.vs/dnsmasq3/v16/ipch/AutoPCH/9844556a3cede35b/CACHE.ipch
-.vs/dnsmasq3/v16/ipch/AutoPCH/a6c35a220de6f350/DHCP.ipch
-out/build/*
