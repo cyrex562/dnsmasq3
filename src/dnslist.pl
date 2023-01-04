@@ -228,15 +228,15 @@ sub byip {
 # Output HTML file.
 sub write_output {
 	# Create new template object.
-	my $template = Template->new(
+	my $template = Template.new(
 		{
 			ABSOLUTE => 1, # /var/www/... is an absolute path
 			OUTPUT => $html_output_file # put it here, not STDOUT
 		}
 	);
 	$data->{'updated'} = nice_time(time); # add "(updated ...)" to file
-	unless ($template->process($html_template_file, $data)) { # do it
-		warn "write_output: Template Toolkit error: " . $template->error() . "\n";
+	unless ($template.process($html_template_file, $data)) { # do it
+		warn "write_output: Template Toolkit error: " . $template.error() . "\n";
 		return 0;
 	}
 	print "write_output: page updated.\n";
