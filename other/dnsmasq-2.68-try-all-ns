@@ -17,13 +17,12 @@ index 8167229..76070b5 100644
 
    if ((RCODE(header) == SERVFAIL || RCODE(header) == REFUSED) &&
        !option_bool(OPT_ORDER) &&
--      forward->forwardall == 0)
-+      forward->forwardall == 0 ||
+-      forward.forwardall == 0)
++      forward.forwardall == 0 ||
 +      /* try each in turn */
 +      RCODE(header) == NXDOMAIN &&
 +      option_bool(OPT_ORDER) &&
-+      server->next != NULL)
++      server.next != NULL)
      /* for broken servers, attempt to send to another one. */
      {
        unsigned char *pheader;
-

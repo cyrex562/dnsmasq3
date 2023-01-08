@@ -33,35 +33,35 @@
    The client-id is optional. If it is "*" then it treated as being missing.
 */
 
-#include <sys/types.h> 
-#include <netinet/in.h>
-#include <net/if.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <net/if_arp.h>
-#include <sys/ioctl.h>
-#include <linux/types.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
-#include <errno.h>
+// #include <sys/types.h>
+// #include <netinet/in.h>
+// #include <net/if.h>
+// #include <arpa/inet.h>
+// #include <sys/socket.h>
+// #include <unistd.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <stdlib.h>
+// #include <net/if_arp.h>
+// #include <sys/ioctl.h>
+// #include <linux/types.h>
+// #include <linux/netlink.h>
+// #include <linux/rtnetlink.h>
+// #include <errno.h>
 
-#define DHCP_CHADDR_MAX          16
-#define BOOTREQUEST              1
-#define DHCP_COOKIE              0x63825363
-#define OPTION_SERVER_IDENTIFIER 54
-#define OPTION_CLIENT_ID         61
-#define OPTION_MESSAGE_TYPE      53
-#define OPTION_END               255
-#define DHCPRELEASE              7
-#define DHCP_SERVER_PORT         67
+pub const DHCP_CHADDR_MAX: u32 = 16;
+pub const BOOTREQUEST: u32 = 1;
+pub const DHCP_COOKIE: u32 = 0;x63825363
+pub const OPTION_SERVER_IDENTIFIER: u32 = 54;
+pub const OPTION_CLIENT_ID: u32 = 61;
+pub const OPTION_MESSAGE_TYPE: u32 = 53;
+pub const OPTION_END: u32 = 255;
+pub const DHCPRELEASE: u32 = 7;
+pub const DHCP_SERVER_PORT: u32 = 67;
 
 typedef unsigned char u8;
 typedef unsigned short u16;
-typedef unsigned int u32;
+typedef unsigned u32: i32;
 
 struct dhcp_packet {
   u8 op, htype, hlen, hops;
@@ -79,7 +79,7 @@ static int expand_buf(struct iovec *iov, size_t size)
 {
   void *new;
 
-  if (size <= iov->iov_len)
+  if (size <= iov.iov_len)
     return 1;
 
   if (!(new = malloc(size)))
@@ -88,9 +88,9 @@ static int expand_buf(struct iovec *iov, size_t size)
       return 0;
     }
 
-  if (iov->iov_base)
+  if (iov.iov_base)
     {
-      memcpy(new, iov->iov_base, iov->iov_len);
+      memcpy(new, iov.iov_base, iov->iov_len);
       free(iov->iov_base);
     }
 
@@ -222,7 +222,7 @@ static struct in_addr find_interface(struct in_addr client, int fd, unsigned int
 	    /* No match found, return first address as src/dhcp.c code does */
 	    ifr->ifr_addr.sa_family = AF_INET;
 	    if (ioctl(ifrfd, SIOCGIFADDR, ifr) != -1)
-	      return ((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr;
+	      return ((struct sockaddr_in *)&ifr->ifr_addr).sin_addr;
 	    else
 	      {
 		fprintf(stderr, "error: local IPv4 address not found\n");
@@ -244,7 +244,7 @@ static struct in_addr find_interface(struct in_addr client, int fd, unsigned int
                 
                 for (rta = IFA_RTA(ifa); RTA_OK(rta, len1); rta = RTA_NEXT(rta, len1))
 		  if (rta->rta_type == IFA_LOCAL)
-		    addr = *((struct in_addr *)(rta+1));
+		    addr = *((rta+1));
 		
                 if (addr.s_addr && is_same_net(addr, client, netmask))
 		  return addr;
@@ -258,7 +258,7 @@ static struct in_addr find_interface(struct in_addr client, int fd, unsigned int
 int main(int argc, char **argv)
 { 
   struct in_addr server, lease;
-  int mac_type;
+  mac_type: i32;
   struct dhcp_packet packet;
   unsigned char *p = packet.options;
   struct sockaddr_in dest;

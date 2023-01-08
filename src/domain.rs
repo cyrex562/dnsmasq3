@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 
 static struct cond_domain *search_domain(struct in_addr addr, struct cond_domain *c);
@@ -28,12 +28,12 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
   struct cond_domain *c = NULL;
   int prot = (flags & F_IPV6) ? AF_INET6 : AF_INET;
 
-  for (c = daemon->synth_domains; c; c = c->next)
+  for (c = daemon.synth_domains; c; c = c.next)
     {
       int found = 0;
       char *tail, *pref;
       
-      for (tail = name, pref = c->prefix; *tail != 0 && pref && *pref != 0; tail++, pref++)
+      for (tail = name, pref = c.prefix; *tail != 0 && pref && *pref != 0; tail++, pref++)
 	{
 	  unsigned int c1 = (unsigned char) *pref;
 	  unsigned int c2 = (unsigned char) *tail;
@@ -50,7 +50,7 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
       if (pref && *pref != 0)
 	continue; /* prefix match fail */
 
-      if (c->indexed)
+      if (c.indexed)
 	{
 	  for (p = tail; *p; p++)
 	    {
@@ -65,16 +65,16 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
 	  
 	  *p = 0;
 	  
-	  if (hostname_isequal(c->domain, p+1))
+	  if (hostname_isequal(c.domain, p+1))
 	    {
 	      if (prot == AF_INET)
 		{
 		  unsigned int index = atoi(tail);
 
-		   if (!c->is6 &&
-		      index <= ntohl(c->end.s_addr) - ntohl(c->start.s_addr))
+		   if (!c.is6 &&
+		      index <= ntohl(c.end.s_addr) - ntohl(c.start.s_addr))
 		    {
-		      addr->addr4.s_addr = htonl(ntohl(c->start.s_addr) + index);
+		      addr.addr4.s_addr = htonl(ntohl(c.start.s_addr) + index);
 		      found = 1;
 		    }
 		} 
@@ -82,12 +82,12 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
 		{
 		  u64 index = atoll(tail);
 		  
-		  if (c->is6 &&
-		      index <= addr6part(&c->end6) - addr6part(&c->start6))
+		  if (c.is6 &&
+		      index <= addr6part(&c.end6) - addr6part(&c.start6))
 		    {
-		      u64 start = addr6part(&c->start6);
-		      addr->addr6 = c->start6;
-		      setaddr6part(&addr->addr6, start + index);
+		      u64 start = addr6part(&c.start6);
+		      addr.addr6 = c.start6;
+		      setaddr6part(&addr.addr6, start + index);
 		      found = 1;
 		    }
 		}
@@ -135,8 +135,8 @@ int is_name_synthetic(int flags, char *name, union all_addr *addr)
 		  }
 	    }
 	  
-	  if (hostname_isequal(c->domain, p+1) && inet_pton(prot, tail, addr))
-	    found = (prot == AF_INET) ? match_domain(addr->addr4, c) : match_domain6(&addr->addr6, c);
+	  if (hostname_isequal(c.domain, p+1) && inet_pton(prot, tail, addr))
+	    found = (prot == AF_INET) ? match_domain(addr.addr4, c) : match_domain6(&addr.addr6, c);
 	}
       
       /* restore name */
@@ -159,7 +159,7 @@ int is_rev_synth(int flag, union all_addr *addr, char *name)
 {
    struct cond_domain *c;
 
-   if (flag & F_IPV4 && (c = search_domain(addr->addr4, daemon->synth_domains))) 
+   if (flag & F_IPV4 && (c = search_domain(addr.addr4, daemon->synth_domains)))
      {
        char *p;
        

@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 /* Wrapper for poll(). Allocates and extends array of struct pollfds,
    keeps them in fd order so that we can set and test conditions on

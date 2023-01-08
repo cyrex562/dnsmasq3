@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 static struct frec *get_new_frec(time_t now, struct server *serv, int force);
 static struct frec *lookup_frec(unsigned short id, int fd, void *hash, int *firstp, int *lastp);
@@ -116,7 +116,7 @@ int send_from(int fd, int nowild, char *packet, size_t len,
 static void set_outgoing_mark(struct frec *forward, int fd)
 {
   /* Copy connection mark of incoming query to outgoing connection. */
-  unsigned int mark;
+  unsigned mark: i32;
   if (get_incoming_mark(&forward->frec_src.source, &forward->frec_src.dest, 0, &mark))
     setsockopt(fd, SOL_SOCKET, SO_MARK, &mark, sizeof(unsigned int));
 }
@@ -372,7 +372,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 
       if (forward->flags & (FREC_DNSKEY_QUERY | FREC_DS_QUERY))
 	{
-	  int is_sign;
+	  is_sign: i32;
 	  unsigned char *pheader;
 	  
 	  /* log_id should match previous DNSSEC query. */
@@ -492,7 +492,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 
   while (1)
     { 
-      int fd;
+      fd: i32;
       struct server *srv = daemon->serverarray[start];
       
       if ((fd = allocate_rfd(&forward->rfds, srv)) != -1)
@@ -514,7 +514,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 		 known to be OK for this server. We check returned size after stripping and set
 		 the truncated bit if it's still too big. */		  
 	      unsigned char *pheader;
-	      int is_sign;
+	      is_sign: i32;
 	      if (find_pseudoheader(header, plen, NULL, &pheader, &is_sign, NULL) && !is_sign)
 		PUTSHORT(srv->edns_pktsz, pheader);
 	    }
@@ -592,7 +592,7 @@ static int forward_query(int udpfd, union mysockaddr *udpaddr,
 #if defined(HAVE_CONNTRACK) && defined(HAVE_UBUS)
       if (option_bool(OPT_CMARK_ALST_EN))
 	{
-	  unsigned int mark;
+	  unsigned mark: i32;
 	  int have_mark = get_incoming_mark(udpaddr, dst_addr, /* istcp: */ 0, &mark);
 	  if (have_mark && ((u32)mark & daemon->allowlist_mask))
 	    report_addresses(header, plen, mark);
@@ -1160,7 +1160,7 @@ void reply_query(int fd, time_t now)
       unsigned char *pheader, *udpsz;
       unsigned short udp_size =  PACKETSZ; /* default if no EDNS0 */
       size_t plen;
-      int is_sign;
+      is_sign: i32;
       size_t nn = 0;
       
 #ifdef HAVE_DNSSEC
@@ -1375,7 +1375,7 @@ static void return_reply(time_t now, struct frec *forward, struct dns_header *he
 #if defined(HAVE_CONNTRACK) && defined(HAVE_UBUS)
 	  if (option_bool(OPT_CMARK_ALST_EN))
 	    {
-	      unsigned int mark;
+	      unsigned mark: i32;
 	      int have_mark = get_incoming_mark(&src->source, &src->dest, /* istcp: */ 0, &mark);
 	      if (have_mark && ((u32)mark & daemon->allowlist_mask))
 		report_addresses(header, nn, mark);
@@ -1808,7 +1808,7 @@ void receive_query(struct listener *listen, time_t now)
 #endif
   else
     {
-      int stale;
+      stale: i32;
       int ad_reqd = do_bit;
       u16 hb3 = header->hb3, hb4 = header->hb4;
       int fd = listen->fd;
@@ -1886,7 +1886,7 @@ static ssize_t tcp_talk(int first, int last, int start, unsigned char *packet,  
   struct dns_header *header = (struct dns_header *)payload;
   unsigned char c1, c2;
   unsigned char hash[HASH_SIZE], *hashp;
-  unsigned int rsize;
+  unsigned rsize: i32;
   
   (void)mark;
   (void)have_mark;
@@ -2000,7 +2000,7 @@ static int tcp_key_recurse(time_t now, int status, struct dns_header *header, si
   while (1)
     {
       size_t m;
-      int log_save;
+      log_save: i32;
             
       /* limit the amount of work we do, to avoid cycling forever on loops in the DNS */
       if (--(*keycount) == 0)
@@ -2071,7 +2071,7 @@ unsigned char *tcp_request(int confd, time_t now,
 			   union mysockaddr *local_addr, struct in_addr netmask, int auth_dns)
 {
   size_t size = 0;
-  int norebind;
+  norebind: i32;
 #ifdef HAVE_CONNTRACK
   int is_single_query = 0, allowed = 1;
 #endif
@@ -2082,7 +2082,7 @@ unsigned char *tcp_request(int confd, time_t now,
   int cacheable, no_cache_dnssec = 0, cache_secure = 0, bogusanswer = 0;
   size_t m;
   unsigned short qtype;
-  unsigned int gotname;
+  unsigned gotname: i32;
   /* Max TCP packet + slop + size */
   unsigned char *packet = whine_malloc(65536 + MAXDNAME + RRFIXEDSZ + sizeof(u16));
   unsigned char *payload = &packet[2];
@@ -2300,7 +2300,7 @@ unsigned char *tcp_request(int confd, time_t now,
 	  if (m == 0)
 	    {
 	      struct server *master;
-	      int start;
+	      start: i32;
 
 	      if (lookup_domain(daemon->namebuff, gotname, &first, &last))
 		flags = is_local_answer(now, first, daemon->namebuff);
@@ -2478,7 +2478,7 @@ unsigned char *tcp_request(int confd, time_t now,
    occupied port nos and reserved ones. */
 static int random_sock(struct server *s)
 {
-  int fd;
+  fd: i32;
 
   if ((fd = socket(s->source_addr.sa.sa_family, SOCK_DGRAM, 0)) != -1)
     {
@@ -2586,7 +2586,7 @@ int allocate_rfd(struct randfd_list **fdlp, struct server *serv)
   /* check for all available ports in use. */
   if (ports_avail != 0)
     {
-      int ports_inuse;
+      ports_inuse: i32;
 
       for (ports_inuse = 0, i = 0; i < daemon->numrrand; i++)
 	if (daemon->randomsocks[i].refcount != 0 &&
@@ -2806,7 +2806,7 @@ static void free_frec(struct frec *f)
 static struct frec *get_new_frec(time_t now, struct server *master, int force)
 {
   struct frec *f, *oldest, *target;
-  int count;
+  count: i32;
   
   /* look for free records, garbage collect old records and count number in use by our server-group. */
   for (f = daemon->frec_list, oldest = NULL, target =  NULL, count = 0; f; f = f->next)
@@ -2941,7 +2941,7 @@ static struct frec *lookup_frec_dnssec(char *target, int class, int flags, struc
 	 blockdata_retrieve(f->stash, f->stash_len, (void *)header))
        {
 	 unsigned char *p = (unsigned char *)(header+1);
-	 int hclass;
+	 hclass: i32;
 
 	 if (extract_name(header, f->stash_len, &p, target, 0, 4) != 1)
 	   continue;
@@ -2971,7 +2971,7 @@ void resend_query()
 void server_gone(struct server *server)
 {
   struct frec *f;
-  int i;
+  i: i32;
   
   for (f = daemon->frec_list; f; f = f->next)
     if (f->sentto && f->sentto == server)

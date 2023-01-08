@@ -16,22 +16,22 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #if defined(HAVE_IPSET) && defined(HAVE_BSD_NETWORK)
 
-#include <string.h>
+// #include <string.h>
 
-#include <sys/types.h>
-#include <sys/ioctl.h>
+// #include <sys/types.h>
+// #include <sys/ioctl.h>
 
-#include <net/if.h>
-#include <netinet/in.h>
-#include <net/pfvar.h>
+// #include <net/if.h>
+// #include <netinet/in.h>
+// #include <net/pfvar.h>
 
-#include <err.h>
-#include <errno.h>
-#include <fcntl.h>
+// #include <err.h>
+// #include <errno.h>
+// #include <fcntl.h>
 
 #define UNUSED(x) (void)(x)
 
@@ -119,7 +119,7 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr,
     {
       addr.pfra_af = AF_INET;
       addr.pfra_net = 0x20;
-      addr.pfra_ip4addr.s_addr = ipaddr->addr4.s_addr;
+      addr.pfra_ip4addr.s_addr = ipaddr.addr4.s_addr;
     }
 
   bzero(&io, sizeof(io));

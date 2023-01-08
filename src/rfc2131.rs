@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP
 
@@ -86,7 +86,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
   int hostname_auth = 0, borken_opt = 0;
   unsigned char *req_options = NULL;
   char *message = NULL;
-  unsigned int time;
+  unsigned time: i32;
   struct dhcp_config *config;
   struct dhcp_netid *netid, *tagif_netid;
   struct in_addr subnet_addr, override;
@@ -211,7 +211,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	  /* if a circuit-id or remote-is option is provided, exact-match to options. */ 
 	  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
 	    {
-	      int search;
+	      search: i32;
 	      
 	      if (vendor->match_type == MATCH_CIRCUIT)
 		search = SUBOPT_CIRCUIT_ID;
@@ -484,7 +484,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
     
   for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
     {
-      int mopt;
+      mopt: i32;
       
       if (vendor->match_type == MATCH_VENDOR)
 	mopt = OPTION_VENDOR_ID;
@@ -495,7 +495,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 
       if ((opt = option_find(mess, sz, mopt, 1)))
 	{
-	  int i;
+	  i: i32;
 	  for (i = 0; i <= (option_len(opt) - vendor->len); i++)
 	    if (memcmp(vendor->data, option_ptr(opt, i), vendor->len) == 0)
 	      {
@@ -1104,7 +1104,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  ltmp != lease &&
 		  !config_has_mac(config, ltmp->hwaddr, ltmp->hwaddr_len, ltmp->hwaddr_type))
 		{
-		  int len;
+		  len: i32;
 		  unsigned char *mac = extended_hwaddr(ltmp->hwaddr_type, ltmp->hwaddr_len,
 						       ltmp->hwaddr, ltmp->clid_len, ltmp->clid, &len);
 		  my_syslog(MS_DHCP | LOG_WARNING, _("not using configured address %s because it is leased to %s"),
@@ -1495,7 +1495,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  break;
 	      if (id_list)
 		{
-		  int i;
+		  i: i32;
 
 		  hostname = daemon->dhcp_buff;
 		  /* buffer is 256 bytes, 3 bytes per octet */
@@ -1666,7 +1666,7 @@ static struct in_addr server_id(struct dhcp_context *context, struct in_addr ove
 static int sanitise(unsigned char *opt, char *buf)
 {
   char *p;
-  int i;
+  i: i32;
   
   *buf = 0;
   
@@ -1760,7 +1760,7 @@ static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt
 	p++;
       else 
 	{ 
-	  int opt_len;
+	  opt_len: i32;
 	  if (p > end - 2)
 	    return NULL; /* malformed packet */
 	  opt_len = option_len(p);
@@ -1813,7 +1813,7 @@ static unsigned int option_uint(unsigned char *opt, int offset, int size)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;
-  int i;
+  i: i32;
   unsigned char *p = option_ptr(opt, offset);
   
   for (i = 0; i < size; i++)
@@ -1967,7 +1967,7 @@ static unsigned char *free_space(struct dhcp_packet *mess, unsigned char *end, i
 	      
 static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val)
 {
-  int i;
+  i: i32;
   unsigned char *p = free_space(mess, end, opt, len);
   
   if (p) 
@@ -2000,8 +2000,8 @@ static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *c
     {
       if (context && (opt->flags & DHOPT_ADDR))
 	{
-	  int j;
-	  struct in_addr *a = (struct in_addr *)opt->val;
+	  j: i32;
+	  struct in_addr *a = opt->val;
 	  for (j = 0; j < opt->len; j+=INADDRSZ, a++)
 	    {
 	      /* zero means "self" (but not in vendorclass options.) */
@@ -2021,7 +2021,7 @@ static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *c
 
 static int in_list(unsigned char *list, int opt)
 {
-  int i;
+  i: i32;
 
    /* If no requested options, send everything, not nothing. */
   if (!list)
@@ -2213,7 +2213,7 @@ static int pxe_uefi_workaround(int pxe_arch, struct dhcp_netid *netid, struct dh
 
 static struct dhcp_opt *pxe_opts(int pxe_arch, struct dhcp_netid *netid, struct in_addr local, time_t now)
 {
-#define NUM_OPTS 4  
+pub const NUM_OPTS: u32 = 4;
 
   unsigned  char *p, *q;
   struct pxe_service *service;
@@ -2495,7 +2495,7 @@ static void do_options(struct dhcp_context *context,
 	}
       
       if ((opt = option_find2(OPTION_END)))
-	mess->siaddr.s_addr = ((struct in_addr *)opt->val)->s_addr;	
+	mess->siaddr.s_addr = (opt->val).s_addr;
     }
         
   /* We don't want to do option-overload for BOOTP, so make the file and sname
@@ -2523,7 +2523,7 @@ static void do_options(struct dhcp_context *context,
     { 
       unsigned int t1val = lease_time/2; 
       unsigned int t2val = (lease_time*7)/8;
-      unsigned int hval;
+      unsigned hval: i32;
       
       /* If set by user, sanity check, so not longer than lease. */
       if ((opt = option_find2(OPTION_T1)))
@@ -2710,7 +2710,7 @@ static void do_options(struct dhcp_context *context,
   
   for (opt = config_opts; opt; opt = opt->next)
     {
-      int flags;
+      flags: i32;
       
       if ((flags = (opt->flags & (DHOPT_ENCAPSULATE | DHOPT_RFC3925))))
 	{

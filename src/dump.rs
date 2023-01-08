@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DUMPFILE
 
-#include <netinet/icmp6.h>
+// #include <netinet/icmp6.h>
 
 static u32 packet_count;
 static void do_dump_packet(int mask, void *packet, size_t len,
@@ -51,7 +51,7 @@ void dump_init(void)
 
   packet_count = 0;
   
-  if (stat(daemon->dump_file, &buf) == -1)
+  if (stat(daemon.dump_file, &buf) == -1)
     {
       /* doesn't exist, create and add header */
       header.magic_number = 0xa1b2c3d4;
@@ -59,25 +59,25 @@ void dump_init(void)
       header.version_minor = 4;
       header.thiszone = 0;
       header.sigfigs = 0;
-      header.snaplen = daemon->edns_pktsz + 200; /* slop for IP/UDP headers */
+      header.snaplen = daemon.edns_pktsz + 200; /* slop for IP/UDP headers */
       header.network = 101; /* DLT_RAW http://www.tcpdump.org/linktypes.html */
 
       if (errno != ENOENT ||
-	  (daemon->dumpfd = creat(daemon->dump_file, S_IRUSR | S_IWUSR)) == -1 ||
-	  !read_write(daemon->dumpfd, (void *)&header, sizeof(header), 0))
-	die(_("cannot create %s: %s"), daemon->dump_file, EC_FILE);
+	  (daemon.dumpfd = creat(daemon.dump_file, S_IRUSR | S_IWUSR)) == -1 ||
+	  !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 0))
+	die(_("cannot create %s: %s"), daemon.dump_file, EC_FILE);
     }
-  else if ((daemon->dumpfd = open(daemon->dump_file, O_APPEND | O_RDWR)) == -1 ||
-	   !read_write(daemon->dumpfd, (void *)&header, sizeof(header), 1))
-    die(_("cannot access %s: %s"), daemon->dump_file, EC_FILE);
+  else if ((daemon.dumpfd = open(daemon.dump_file, O_APPEND | O_RDWR)) == -1 ||
+	   !read_write(daemon.dumpfd, (void *)&header, sizeof(header), 1))
+    die(_("cannot access %s: %s"), daemon.dump_file, EC_FILE);
   else if (header.magic_number != 0xa1b2c3d4)
-    die(_("bad header in %s"), daemon->dump_file, EC_FILE);
+    die(_("bad header in %s"), daemon.dump_file, EC_FILE);
   else
     {
       /* count existing records */
-      while (read_write(daemon->dumpfd, (void *)&pcap_header, sizeof(pcap_header), 1))
+      while (read_write(daemon.dumpfd, (void *)&pcap_header, sizeof(pcap_header), 1))
 	{
-	  lseek(daemon->dumpfd, pcap_header.incl_len, SEEK_CUR);
+	  lseek(daemon.dumpfd, pcap_header.incl_len, SEEK_CUR);
 	  packet_count++;
 	}
     }
@@ -89,7 +89,7 @@ void dump_packet_udp(int mask, void *packet, size_t len,
   union mysockaddr fd_addr;
   socklen_t addr_len = sizeof(fd_addr);
 
-  if (daemon->dumpfd != -1 && (mask & daemon->dump_mask))
+  if (daemon.dumpfd != -1 && (mask & daemon.dump_mask))
      {
        /* if fd is negative it carries a port number (negated) 
 	  which we use as a source or destination when not otherwise
@@ -116,7 +116,7 @@ void dump_packet_udp(int mask, void *packet, size_t len,
 void dump_packet_icmp(int mask, void *packet, size_t len,
 		      union mysockaddr *src, union mysockaddr *dst)
 {
-  if (daemon->dumpfd != -1 && (mask & daemon->dump_mask))
+  if (daemon.dumpfd != -1 && (mask & daemon.dump_mask))
     do_dump_packet(mask, packet, len, src, dst, -1, IPPROTO_ICMP);
 }
 
@@ -125,7 +125,7 @@ static void do_dump_packet(int mask, void *packet, size_t len,
 {
   struct ip ip;
   struct ip6_hdr ip6;
-  int family;
+  family: i32;
   struct udphdr {
     u16 uh_sport;               /* source port */
     u16 uh_dport;               /* destination port */
@@ -137,7 +137,7 @@ static void do_dump_packet(int mask, void *packet, size_t len,
   u32 i, sum;
   void *iphdr;
   size_t ipsz;
-  int rc;
+  rc: i32;
      
   /* if port != -1 it carries a port number 
      which we use as a source or destination when not otherwise
@@ -147,9 +147,9 @@ static void do_dump_packet(int mask, void *packet, size_t len,
   udp.uh_sport = udp.uh_dport = htons(port < 0 ? 0 : port);
   
   if (src)
-    family = src->sa.sa_family;
+    family = src.sa.sa_family;
   else
-    family = dst->sa.sa_family;
+    family = dst.sa.sa_family;
 
   if (family == AF_INET6)
     {
@@ -170,14 +170,14 @@ static void do_dump_packet(int mask, void *packet, size_t len,
       
       if (src)
 	{
-	  memcpy(&ip6.ip6_src, &src->in6.sin6_addr, IN6ADDRSZ);
-	  udp.uh_sport = src->in6.sin6_port;
+	  memcpy(&ip6.ip6_src, &src.in6.sin6_addr, IN6ADDRSZ);
+	  udp.uh_sport = src.in6.sin6_port;
 	}
       
       if (dst)
 	{
-	  memcpy(&ip6.ip6_dst, &dst->in6.sin6_addr, IN6ADDRSZ);
-	  udp.uh_dport = dst->in6.sin6_port;
+	  memcpy(&ip6.ip6_dst, &dst.in6.sin6_addr, IN6ADDRSZ);
+	  udp.uh_dport = dst.in6.sin6_port;
 	}
             
       /* start UDP checksum */
@@ -207,14 +207,14 @@ static void do_dump_packet(int mask, void *packet, size_t len,
       
       if (src)
 	{
-	  ip.ip_src = src->in.sin_addr;
-	  udp.uh_sport = src->in.sin_port;
+	  ip.ip_src = src.in.sin_addr;
+	  udp.uh_sport = src.in.sin_port;
 	}
 
       if (dst)
 	{
-	  ip.ip_dst = dst->in.sin_addr;
-	  udp.uh_dport = dst->in.sin_port;
+	  ip.ip_dst = dst.in.sin_addr;
+	  udp.uh_dport = dst.in.sin_port;
 	}
       
       ip.ip_sum = 0;
@@ -265,12 +265,12 @@ static void do_dump_packet(int mask, void *packet, size_t len,
       sum += htons(proto);
       sum += htons(len);
       
-      icmp->icmp6_cksum = 0;
+      icmp.icmp6_cksum = 0;
       for (i = 0; i < (len + 1) / 2; i++)
 	sum += ((u16 *)packet)[i];
       while (sum >> 16)
 	sum = (sum & 0xffff) + (sum >> 16);
-      icmp->icmp6_cksum = (sum == 0xffff) ? sum : ~sum;
+      icmp.icmp6_cksum = (sum == 0xffff) ? sum : ~sum;
 
       pcap_header.incl_len = pcap_header.orig_len = ipsz + len;
     }
@@ -280,13 +280,13 @@ static void do_dump_packet(int mask, void *packet, size_t len,
   pcap_header.ts_usec = time.tv_usec;
   
   if (rc == -1 ||
-      !read_write(daemon->dumpfd, (void *)&pcap_header, sizeof(pcap_header), 0) ||
-      !read_write(daemon->dumpfd, iphdr, ipsz, 0) ||
-      (proto == IPPROTO_UDP && !read_write(daemon->dumpfd, (void *)&udp, sizeof(udp), 0)) ||
-      !read_write(daemon->dumpfd, (void *)packet, len, 0))
+      !read_write(daemon.dumpfd, (void *)&pcap_header, sizeof(pcap_header), 0) ||
+      !read_write(daemon.dumpfd, iphdr, ipsz, 0) ||
+      (proto == IPPROTO_UDP && !read_write(daemon.dumpfd, (void *)&udp, sizeof(udp), 0)) ||
+      !read_write(daemon.dumpfd, (void *)packet, len, 0))
     my_syslog(LOG_ERR, _("failed to write packet dump"));
   else if (option_bool(OPT_EXTRALOG))
-    my_syslog(LOG_INFO, _("%u dumping packet %u mask 0x%04x"),  daemon->log_display_id, ++packet_count, mask);
+    my_syslog(LOG_INFO, _("%u dumping packet %u mask 0x%04x"),  daemon.log_display_id, ++packet_count, mask);
   else
     my_syslog(LOG_INFO, _("dumping packet %u mask 0x%04x"), ++packet_count, mask);
 

@@ -14,13 +14,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP
 
 struct iface_param {
   struct dhcp_context *current;
-  int ind;
+  ind: i32;
 };
 
 struct match_param {
@@ -107,11 +107,11 @@ void dhcp_init(void)
   int oneopt = 1;
 #endif
 
-  daemon->dhcpfd = make_fd(daemon->dhcp_server_port);
-  if (daemon->enable_pxe)
-    daemon->pxefd = make_fd(PXE_PORT);
+  daemon.dhcpfd = make_fd(daemon.dhcp_server_port);
+  if (daemon.enable_pxe)
+    daemon.pxefd = make_fd(PXE_PORT);
   else
-    daemon->pxefd = -1;
+    daemon.pxefd = -1;
 
 #if defined(HAVE_BSD_NETWORK)
   /* When we're not using capabilities, we need to do this here before
@@ -119,9 +119,9 @@ void dhcp_init(void)
      kernel buffers */
   
   if (option_bool(OPT_NO_PING))
-    daemon->dhcp_icmp_fd = -1;
-  else if ((daemon->dhcp_icmp_fd = make_icmp_sock()) == -1 ||
-	   setsockopt(daemon->dhcp_icmp_fd, SOL_SOCKET, SO_RCVBUF, &oneopt, sizeof(oneopt)) == -1 )
+    daemon.dhcp_icmp_fd = -1;
+  else if ((daemon.dhcp_icmp_fd = make_icmp_sock()) == -1 ||
+	   setsockopt(daemon.dhcp_icmp_fd, SOL_SOCKET, SO_RCVBUF, &oneopt, sizeof(oneopt)) == -1 )
     die(_("cannot create ICMP raw socket: %s."), NULL, EC_BADNET);
   
   /* Make BPF raw send socket */
@@ -131,7 +131,7 @@ void dhcp_init(void)
 
 void dhcp_packet(time_t now, int pxe_fd)
 {
-  int fd = pxe_fd ? daemon->pxefd : daemon->dhcpfd;
+  int fd = pxe_fd ? daemon.pxefd : daemon.dhcpfd;
   struct dhcp_packet *mess;
   struct dhcp_context *context;
   struct dhcp_relay *relay;
@@ -144,7 +144,7 @@ void dhcp_packet(time_t now, int pxe_fd)
   struct iovec iov;
   ssize_t sz; 
   int iface_index = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
-  int rcvd_iface_index;
+  rcvd_iface_index: i32;
   struct in_addr iface_addr;
   struct iface_param parm;
   time_t recvtime = now;
@@ -169,15 +169,15 @@ void dhcp_packet(time_t now, int pxe_fd)
   msg.msg_control = control_u.control;
   msg.msg_name = &dest;
   msg.msg_namelen = sizeof(dest);
-  msg.msg_iov = &daemon->dhcp_packet;
+  msg.msg_iov = &daemon.dhcp_packet;
   msg.msg_iovlen = 1;
   
   if ((sz = recv_dhcp_packet(fd, &msg)) == -1 || 
-      (sz < (ssize_t)(sizeof(*mess) - sizeof(mess->options)))) 
+      (sz < (ssize_t)(sizeof(*mess) - sizeof(mess.options))))
     return;
   
 #ifdef HAVE_DUMPFILE
-  dump_packet_udp(DUMP_DHCP, (void *)daemon->dhcp_packet.iov_base, sz, (union mysockaddr *)&dest, NULL, fd);
+  dump_packet_udp(DUMP_DHCP, (void *)daemon.dhcp_packet.iov_base, sz, (union mysockaddr *)&dest, NULL, fd);
 #endif
   
 #if defined (HAVE_LINUX_NETWORK)
@@ -186,7 +186,7 @@ void dhcp_packet(time_t now, int pxe_fd)
   
   if (msg.msg_controllen >= sizeof(struct cmsghdr))
     for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-      if (cmptr->cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_PKTINFO)
+      if (cmptr.cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_PKTINFO)
 	{
 	  union {
 	    unsigned char *c;
@@ -288,7 +288,7 @@ void dhcp_packet(time_t now, int pxe_fd)
     {
       ifr.ifr_addr.sa_family = AF_INET;
       if (ioctl(daemon->dhcpfd, SIOCGIFADDR, &ifr) != -1 )
-	iface_addr = ((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
+	iface_addr = ((struct sockaddr_in *) &ifr.ifr_addr).sin_addr;
       else
 	{
 	  if (iface_check(AF_INET, NULL, ifr.ifr_name, NULL))
@@ -785,7 +785,7 @@ int address_allocate(struct dhcp_context *context,
   struct in_addr start, addr;
   struct dhcp_context *c, *d;
   int i, pass;
-  unsigned int j; 
+  unsigned j: i32;
 
   /* hash hwaddr: use the SDBM hashing algorithm.  Seems to give good
      dispersal even with similarly-valued "strings". */ 
@@ -876,7 +876,7 @@ int address_allocate(struct dhcp_context *context,
 void dhcp_read_ethers(void)
 {
   FILE *f = fopen(ETHERSFILE, "r");
-  unsigned int flags;
+  unsigned flags: i32;
   char *buff = daemon->namebuff;
   char *ip, *cp;
   struct in_addr addr;
@@ -952,7 +952,7 @@ void dhcp_read_ethers(void)
 	}
       else 
 	{
-	  int nomem;
+	  nomem: i32;
 	  if (!(host = canonicalise(ip, &nomem)) || !legal_hostname(host))
 	    {
 	      if (!nomem)
@@ -1137,7 +1137,7 @@ static int relay_upstream4(int iface_index, struct dhcp_packet *mess, size_t sz)
 		continue;
 	      }
 	    
-	    to.in.sin_addr = ((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
+	    to.in.sin_addr = ((struct sockaddr_in *) &ifr.ifr_addr).sin_addr;
 	  }
 	
 #ifdef HAVE_DUMPFILE

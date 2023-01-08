@@ -15,14 +15,14 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DNSSEC
 
 #define SERIAL_UNDEF  -100
-#define SERIAL_EQ        0
+pub const SERIAL_EQ: u32 = 0;
 #define SERIAL_LT       -1
-#define SERIAL_GT        1
+pub const SERIAL_GT: u32 = 1;
 
 /* Convert from presentation format to wire format, in place.
    Also map UC -> LC.
@@ -43,7 +43,7 @@
 static int to_wire(char *name)
 {
   unsigned char *l, *p, *q, term;
-  int len;
+  len: i32;
 
   for (l = (unsigned char*)name; *l != 0; l = p)
     {
@@ -75,7 +75,7 @@ static int to_wire(char *name)
 static void from_wire(char *name)
 {
   unsigned char *l, *p, *last;
-  int len;
+  len: i32;
   
   for (last = (unsigned char *)name; *last != 0; last += *last+1);
   
@@ -102,7 +102,7 @@ static void from_wire(char *name)
 /* Input in presentation format */
 static int count_labels(char *name)
 {
-  int i;
+  i: i32;
   char *p;
   
   if (*name == 0)
@@ -144,9 +144,9 @@ int setup_timestamp(void)
 {
   struct stat statbuf;
   
-  daemon->back_to_the_future = 0;
+  daemon.back_to_the_future = 0;
   
-  if (!daemon->timestamp_file)
+  if (!daemon.timestamp_file)
     return 0;
   
   if (stat(daemon->timestamp_file, &statbuf) != -1)
@@ -233,7 +233,7 @@ struct rdata_state {
 
 static int get_rdata(struct dns_header *header, size_t plen, struct rdata_state *state)
 {
-  int d;
+  d: i32;
   
   if (state->op && state->c != 1)
     {
@@ -264,7 +264,7 @@ static int get_rdata(struct dns_header *header, size_t plen, struct rdata_state 
 	  if (d == (u16)0)
 	    {
 	      /* domain-name, canonicalise */
-	      int len;
+	      len: i32;
 	      
 	      if (!extract_name(header, plen, &state->ip, state->buff, 1, 0) ||
 		  (len = to_wire(state->buff)) == 0)
@@ -620,11 +620,11 @@ static int validate_rrset(time_t now, struct dns_header *header, size_t plen, in
       hash->update(ctx, (unsigned int)wire_len, (unsigned char*)keyname);
       from_wire(keyname);
 
-#define RRBUFLEN 128 /* Most RRs are smaller than this. */
+pub const RRBUFLEN: u32 = 128; /* Most RRs are smaller than this. */
       
       for (i = 0; i < rrsetidx; ++i)
 	{
-	  int j;
+	  j: i32;
 	  struct rdata_state state;
 	  u16 len;
 	  unsigned char rrbuf[RRBUFLEN];
@@ -843,7 +843,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
 	  unsigned char *digest, *ds_digest;
 	  const struct nettle_hash *hash;
 	  int sigcnt, rrcnt;
-	  int wire_len;
+	  wire_len: i32;
 	  
 	  if (recp1->addr.ds.algo == algo && 
 	      recp1->addr.ds.keytag == keytag &&
@@ -1238,7 +1238,7 @@ static int prove_non_existence_nsec(struct dns_header *header, size_t plen, unsi
 
       if (sig_labels < name_labels)
 	{
-	  int k;
+	  k: i32;
 	  for (k = name_labels - sig_labels; k != 0; k--)
 	    {
 	      while (*workspace1 != '.' && *workspace1 != 0)
@@ -1326,7 +1326,7 @@ static int hash_name(char *in, unsigned char **out, struct nettle_hash const *ha
 {
   void *ctx;
   unsigned char *digest;
-  int i;
+  i: i32;
 
   if (!hash_init(hash, &ctx, &digest))
     return 0;
@@ -1727,7 +1727,7 @@ static int prove_non_existence(struct dns_header *header, size_t plen, char *key
 		   
 		   if (res == 1 && class1 == qclass && type1 == T_RRSIG)
 		     {
-		       int type_covered;
+		       type_covered: i32;
 		       unsigned char *psav = p1;
 		       
 		       if (rdlen1 < 18)
@@ -2068,7 +2068,7 @@ int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, ch
 		  for (j = 0; j <targetidx; j++)
 		    if ((p2 = targets[j]))
 		      {
-			int rc1;
+			rc1: i32;
 			if (!(rc1 = extract_name(header, plen, &p2, name, 0, 10)))
 			  return STAT_BOGUS; /* bad packet */
 			
@@ -2143,7 +2143,7 @@ int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen)
   else
     {
       unsigned long ac = flags + 0x300 + alg;
-      int i;
+      i: i32;
 
       for (i = 0; i < keylen; ++i)
         ac += (i & 1) ? key[i] : key[i] << 8;

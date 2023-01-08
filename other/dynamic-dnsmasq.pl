@@ -91,12 +91,12 @@ if ( @ARGV < 1 ) {
 }
 
 sub listen_for_updates {
-	my $sock = IO::Socket::INET->new(Listen    => 5,
+	my $sock = IO::Socket::INET.new(Listen    => 5,
 		LocalAddr => $listenaddress, LocalPort => $listenport,
 		Proto     => 'tcp', ReuseAddr => 1,
 		MultiHomed => 1) || die "Could not open listening socket: $!\n";
 	$SIG{'CHLD'} = 'IGNORE';
-	while ( my $client = $sock->accept() ) {
+	while ( my $client = $sock.accept() ) {
 		my $p = fork();
 		if ( $p != 0 ) {
 			next;
@@ -120,7 +120,7 @@ sub listen_for_updates {
 					exit(1);
 				}
 				if ( !exists $cgi{'myip'} ) {
-					$cgi{'myip'} = $client->peerhost();
+					$cgi{'myip'} = $client.peerhost();
 				}
 				my ($user,$pass) = split ":", MIME::Base64::decode($1);
 				if ( authorize($user, $pass, $cgi{'hostname'}, $cgi{'myip'}) == 0 ) {
@@ -141,7 +141,7 @@ sub listen_for_updates {
 sub add_acct {
 	my ($user, $pass, $hostname) = @_;
 	my $X = tie my %h, "DB_File", $accountdb, O_RDWR|O_CREAT, 0600, $DB_HASH;
-	$X->put($user, join("\t", ($pass, $hostname)));
+	$X.put($user, join("\t", ($pass, $hostname)));
 	undef $X;
 	untie %h;
 }
@@ -149,7 +149,7 @@ sub add_acct {
 sub del_acct {
         my ($user, $pass, $hostname) = @_;
         my $X = tie my %h, "DB_File", $accountdb, O_RDWR|O_CREAT, 0600, $DB_HASH;
-        $X->del($user);
+        $X.del($user);
         undef $X;
         untie %h;
 }
@@ -163,7 +163,7 @@ sub authorize {
 	my $X = tie my %h, "DB_File", $accountdb, O_RDWR|O_CREAT, 0600, $DB_HASH;
 	my ($spass, $shost) = split("\t", $h{$user});
 	if ( defined $h{$user} and ($spass eq $pass) and ($shost eq $hostname) ) {
-		$X->put($user, join("\t", $spass, $shost, $ip));
+		$X.put($user, join("\t", $spass, $shost, $ip));
 		undef $X;
 		untie %h;
 		return(0);

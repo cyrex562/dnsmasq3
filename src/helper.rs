@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_SCRIPT
 
@@ -35,9 +35,9 @@ static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  ch
 
 #ifdef HAVE_LUASCRIPT
 #define LUA_COMPAT_ALL
-#include <lua.h>  
-#include <lualib.h>  
-#include <lauxlib.h>  
+// #include <lua.h>
+// #include <lualib.h>
+// #include <lauxlib.h>
 
 #ifndef lua_open
 #define lua_open()     luaL_newstate()
@@ -51,13 +51,13 @@ static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end,
 
 struct script_data
 {
-  int flags;
+  flags: i32;
   int action, hwaddr_len, hwaddr_type;
   int clid_len, hostname_len, ed_len;
   struct in_addr addr, giaddr;
-  unsigned int remaining_time;
+  unsigned remaining_time: i32;
 #ifdef HAVE_BROKEN_RTC
-  unsigned int length;
+  unsigned length: i32;
 #else
   time_t expires;
 #endif
@@ -66,8 +66,8 @@ struct script_data
 #endif
   struct in6_addr addr6;
 #ifdef HAVE_DHCP6
-  int vendorclass_count;
-  unsigned int iaid;
+  vendorclass_count: i32;
+  unsigned iaid: i32;
 #endif
   unsigned char hwaddr[DHCP_CHADDR_MAX];
   char interface[IF_NAMESIZE];
@@ -115,13 +115,13 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	{
 	  if (option_bool(OPT_NO_FORK))
 	    /* send error to daemon process if no-fork */
-	    send_event(event_fd, EVENT_USER_ERR, errno, daemon->scriptuser);
+	    send_event(event_fd, EVENT_USER_ERR, errno, daemon.scriptuser);
 	  else
 	    {
 	      /* kill daemon */
 	      send_event(event_fd, EVENT_DIE, 0, NULL);
 	      /* return error */
-	      send_event(err_fd, EVENT_USER_ERR, errno, daemon->scriptuser);
+	      send_event(err_fd, EVENT_USER_ERR, errno, daemon.scriptuser);
 	    }
 	  _exit(0);
 	}
@@ -134,7 +134,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
   close_fds(max_fd, pipefd[0], event_fd, err_fd);
   
 #ifdef HAVE_LUASCRIPT
-  if (daemon->luascript)
+  if (daemon.luascript)
     {
       const char *lua_err = NULL;
       lua = lua_open();
@@ -552,7 +552,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
 	  /* reap our children's children, if necessary */
 	  while (1)
 	    {
-	      int status;
+	      status: i32;
 	      pid_t rc = wait(&status);
 	      
 	      if (rc == pid)
@@ -872,7 +872,7 @@ void queue_relay_snoop(struct in6_addr *client, int if_index, struct in6_addr *p
 /* This nastily re-uses DHCP-fields for TFTP stuff */
 void queue_tftp(off_t file_len, char *filename, union mysockaddr *peer)
 {
-  unsigned int filename_len;
+  unsigned filename_len: i32;
 
   /* no script */
   if (daemon->helperfd == -1)

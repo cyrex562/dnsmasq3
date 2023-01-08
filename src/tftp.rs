@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_TFTP
 
@@ -27,24 +27,24 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer);
 static char *next(char **p, char *end);
 static void sanitise(char *buf);
 
-#define OP_RRQ  1
-#define OP_WRQ  2
-#define OP_DATA 3
-#define OP_ACK  4
-#define OP_ERR  5
-#define OP_OACK 6
+pub const OP_RRQ: u32 = 1;
+pub const OP_WRQ: u32 = 2;
+pub const OP_DATA: u32 = 3;
+pub const OP_ACK: u32 = 4;
+pub const OP_ERR: u32 = 5;
+pub const OP_OACK: u32 = 6;
 
-#define ERR_NOTDEF 0
-#define ERR_FNF    1
-#define ERR_PERM   2
-#define ERR_FULL   3
-#define ERR_ILL    4
-#define ERR_TID    5
+pub const ERR_NOTDEF: u32 = 0;
+pub const ERR_FNF: u32 = 1;
+pub const ERR_PERM: u32 = 2;
+pub const ERR_FULL: u32 = 3;
+pub const ERR_ILL: u32 = 4;
+pub const ERR_TID: u32 = 5;
 
 void tftp_request(struct listener *listen, time_t now)
 {
   ssize_t len;
-  char *packet = daemon->packet;
+  char *packet = daemon.packet;
   char *filename, *mode, *p, *end, *opt;
   union mysockaddr addr, peer;
   struct msghdr msg;
@@ -53,16 +53,16 @@ void tftp_request(struct listener *listen, time_t now)
   int is_err = 1, if_index = 0, mtu = 0;
   struct iname *tmp;
   struct tftp_transfer *transfer = NULL, **up;
-  int port = daemon->start_tftp_port; /* may be zero to use ephemeral port */
+  int port = daemon.start_tftp_port; /* may be zero to use ephemeral port */
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
   int mtuflag = IP_PMTUDISC_DONT;
 #endif
   char namebuff[IF_NAMESIZE];
   char *name = NULL;
-  char *prefix = daemon->tftp_prefix;
+  char *prefix = daemon.tftp_prefix;
   struct tftp_prefix *pref;
   union all_addr addra;
-  int family = listen->addr.sa.sa_family;
+  int family = listen.addr.sa.sa_family;
   /* Can always get recvd interface for IPv6 */
   int check_dest = !option_bool(OPT_NOWILD) || family == AF_INET6;
   union {
@@ -88,35 +88,35 @@ void tftp_request(struct listener *listen, time_t now)
   msg.msg_iovlen = 1;
 
   iov.iov_base = packet;
-  iov.iov_len = daemon->packet_buff_sz;
+  iov.iov_len = daemon.packet_buff_sz;
 
   /* we overwrote the buffer... */
-  daemon->srv_save = NULL;
+  daemon.srv_save = NULL;
 
-  if ((len = recvmsg(listen->tftpfd, &msg, 0)) < 2)
+  if ((len = recvmsg(listen.tftpfd, &msg, 0)) < 2)
     return;
 
 #ifdef HAVE_DUMPFILE
-  dump_packet_udp(DUMP_TFTP, (void *)packet, len, (union mysockaddr *)&peer, NULL, listen->tftpfd);
+  dump_packet_udp(DUMP_TFTP, (void *)packet, len, (union mysockaddr *)&peer, NULL, listen.tftpfd);
 #endif
   
   /* Can always get recvd interface for IPv6 */
   if (!check_dest)
     {
-      if (listen->iface)
+      if (listen.iface)
 	{
-	  addr = listen->iface->addr;
-	  name = listen->iface->name;
-	  mtu = listen->iface->mtu;
-	  if (daemon->tftp_mtu != 0 && daemon->tftp_mtu < mtu)
-	    mtu = daemon->tftp_mtu;
+	  addr = listen.iface.addr;
+	  name = listen.iface.name;
+	  mtu = listen.iface.mtu;
+	  if (daemon.tftp_mtu != 0 && daemon.tftp_mtu < mtu)
+	    mtu = daemon.tftp_mtu;
 	}
       else
 	{
 	  /* we're listening on an address that doesn't appear on an interface,
 	     ask the kernel what the socket is bound to */
 	  socklen_t tcp_len = sizeof(union mysockaddr);
-	  if (getsockname(listen->tftpfd, (struct sockaddr *)&addr, &tcp_len) == -1)
+	  if (getsockname(listen.tftpfd, (struct sockaddr *)&addr, &tcp_len) == -1)
 	    return;
 	}
     }
@@ -132,7 +132,7 @@ void tftp_request(struct listener *listen, time_t now)
 #if defined(HAVE_LINUX_NETWORK)
       if (family == AF_INET)
 	for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-	  if (cmptr->cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_PKTINFO)
+	  if (cmptr.cmsg_level == IPPROTO_IP && cmptr->cmsg_type == IP_PKTINFO)
 	    {
 	      union {
 		unsigned char *c;
@@ -249,7 +249,7 @@ void tftp_request(struct listener *listen, time_t now)
   /* data transfer via server listening socket */
   if (option_bool(OPT_SINGLE_PORT))
     {
-      int tftp_cnt;
+      tftp_cnt: i32;
 
       for (tftp_cnt = 0, transfer = daemon->tftp_trans, up = &daemon->tftp_trans; transfer; up = &transfer->next, transfer = transfer->next)
 	{
@@ -758,7 +758,7 @@ static void sanitise(char *buf)
 
 }
 
-#define MAXMESSAGE 500 /* limit to make packet < 512 bytes and definitely smaller than buffer */ 
+pub const MAXMESSAGE: u32 = 500; /* limit to make packet < 512 bytes and definitely smaller than buffer */
 static ssize_t tftp_err(int err, char *packet, char *message, char *file, char *arg2)
 {
   struct errmess {
@@ -848,7 +848,7 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
       if (transfer->netascii)
 	{
 	  size_t i;
-	  int newcarrylf;
+	  newcarrylf: i32;
 
 	  for (i = 0, newcarrylf = 0; i < size; i++)
 	    if (mess->data[i] == '\n' && ( i != 0 || !transfer->carrylf))

@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef __ANDROID__
 #  include <android/log.h>
@@ -30,7 +30,7 @@
 /* The "wire" protocol for logging is defined in RFC 3164 */
 
 /* From RFC 3164 */
-#define MAX_MESSAGE 1024
+pub const MAX_MESSAGE: u32 = 1024;
 
 /* defaults in case we die() before we log_start() */
 static int log_fac = LOG_DAEMON;
@@ -61,18 +61,18 @@ int log_start(struct passwd *ent_pw, int errfd)
 
   echo_stderr = option_bool(OPT_DEBUG);
 
-  if (daemon->log_fac != -1)
-    log_fac = daemon->log_fac;
+  if (daemon.log_fac != -1)
+    log_fac = daemon.log_fac;
 #ifdef LOG_LOCAL0
   else if (option_bool(OPT_DEBUG))
     log_fac = LOG_LOCAL0;
 #endif
 
-  if (daemon->log_file)
+  if (daemon.log_file)
     { 
       log_to_file = 1;
-      daemon->max_logs = 0;
-      if (strcmp(daemon->log_file, "-") == 0)
+      daemon.max_logs = 0;
+      if (strcmp(daemon.log_file, "-") == 0)
 	{
 	  log_stderr = 1;
 	  echo_stderr = 0;
@@ -80,11 +80,11 @@ int log_start(struct passwd *ent_pw, int errfd)
 	}
     }
   
-  max_logs = daemon->max_logs;
+  max_logs = daemon.max_logs;
 
-  if (!log_reopen(daemon->log_file))
+  if (!log_reopen(daemon.log_file))
     {
-      send_event(errfd, EVENT_LOG_ERR, errno, daemon->log_file ? daemon->log_file : "");
+      send_event(errfd, EVENT_LOG_ERR, errno, daemon.log_file ? daemon.log_file : "");
       _exit(0);
     }
 
@@ -93,7 +93,7 @@ int log_start(struct passwd *ent_pw, int errfd)
   if (max_logs == 0)
     {  
       free_entries = safe_malloc(sizeof(struct log_entry));
-      free_entries->next = NULL;
+      free_entries.next = NULL;
       entries_alloced = 1;
     }
 
@@ -108,13 +108,13 @@ int log_start(struct passwd *ent_pw, int errfd)
      once the file is owned by the dnsmasq user, it can't be written
      whilst dnsmasq is running as root during startup.
  */
-  if (log_to_file && !log_stderr && ent_pw && ent_pw->pw_uid != 0)
+  if (log_to_file && !log_stderr && ent_pw && ent_pw.pw_uid != 0)
     {
       struct stat ls;
       if (getgid() == 0 && fstat(log_fd, &ls) == 0 && ls.st_gid == 0 &&
 	  (ls.st_mode & S_IWGRP) == 0)
 	(void)fchmod(log_fd, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
-      if (fchown(log_fd, ent_pw->pw_uid, -1) != 0)
+      if (fchown(log_fd, ent_pw.pw_uid, -1) != 0)
 	ret = errno;
     }
 
@@ -140,7 +140,7 @@ int log_reopen(char *log_file)
 #   define _PATH_LOG ""  /* dummy */
 	  return 1;
 #else
-	  int flags;
+	  flags: i32;
 	  log_fd = socket(AF_UNIX, connection_type, 0);
 	  
 	  /* if max_logs is zero, leave the socket blocking */
@@ -156,8 +156,8 @@ int log_reopen(char *log_file)
 static void free_entry(void)
 {
   struct log_entry *tmp = entries;
-  entries = tmp->next;
-  tmp->next = free_entries;
+  entries = tmp.next;
+  tmp.next = free_entries;
   free_entries = tmp;
 }      
 
@@ -176,12 +176,12 @@ static void log_write(void)
       int len_adjust = 0;
 
       if (log_to_file)
-	entries->payload[entries->offset + entries->length - 1] = '\n';
+	entries.payload[entries.offset + entries.length - 1] = '\n';
       else if (connection_type == SOCK_DGRAM)
 	len_adjust = 1;
 
       /* Avoid duplicates over a fork() */
-      if (entries->pid != getpid())
+      if (entries.pid != getpid())
 	{
 	  free_entry();
 	  continue;
@@ -189,11 +189,11 @@ static void log_write(void)
 
       connection_good = 1;
 
-      if ((rc = write(log_fd, entries->payload + entries->offset, entries->length - len_adjust)) != -1)
+      if ((rc = write(log_fd, entries.payload + entries.offset, entries.length - len_adjust)) != -1)
 	{
-	  entries->length -= rc;
-	  entries->offset += rc;
-	  if (entries->length == len_adjust)
+	  entries.length -= rc;
+	  entries.offset += rc;
+	  if (entries.length == len_adjust)
 	    {
 	      free_entry();
 	      if (entries_lost != 0)
@@ -331,7 +331,7 @@ void my_syslog(int priority, const char *format, ...)
 #ifdef __ANDROID__
       /* do android-specific logging. 
 	 log_fd is always -1 on Android except when logging to a file. */
-      int alog_lvl;
+      alog_lvl: i32;
       
       if (priority <= LOG_ERR)
 	alog_lvl = ANDROID_LOG_ERROR;
@@ -364,7 +364,7 @@ void my_syslog(int priority, const char *format, ...)
     }
   
   if ((entry = free_entries))
-    free_entries = entry->next;
+    free_entries = entry.next;
   else if (entries_alloced < max_logs && (entry = malloc(sizeof(struct log_entry))))
     entries_alloced++;
   
@@ -373,18 +373,18 @@ void my_syslog(int priority, const char *format, ...)
   else
     {
       /* add to end of list, consumed from the start */
-      entry->next = NULL;
+      entry.next = NULL;
       if (!entries)
 	entries = entry;
       else
 	{
 	  struct log_entry *tmp;
-	  for (tmp = entries; tmp->next; tmp = tmp->next);
-	  tmp->next = entry;
+	  for (tmp = entries; tmp.next; tmp = tmp.next);
+	  tmp.next = entry;
 	}
       
       time(&time_now);
-      p = entry->payload;
+      p = entry.payload;
       if (!log_to_file)
 	p += sprintf(p, "<%d>", priority | log_fac);
 
@@ -394,13 +394,13 @@ void my_syslog(int priority, const char *format, ...)
       
       p += sprintf(p, "dnsmasq%s[%d]: ", func, (int)pid);
         
-      len = p - entry->payload;
+      len = p - entry.payload;
       va_start(ap, format);  
       len += vsnprintf(p, MAX_MESSAGE - len, format, ap) + 1; /* include zero-terminator */
       va_end(ap);
-      entry->length = len > MAX_MESSAGE ? MAX_MESSAGE : len;
-      entry->offset = 0;
-      entry->pid = pid;
+      entry.length = len > MAX_MESSAGE ? MAX_MESSAGE : len;
+      entry.offset = 0;
+      entry.pid = pid;
     }
   
   /* almost always, logging won't block, so try and write this now,
@@ -420,9 +420,9 @@ void my_syslog(int priority, const char *format, ...)
 
   if (entries && max_logs != 0)
     {
-      int d;
+      d: i32;
       
-      for (d = 0,entry = entries; entry; entry = entry->next, d++);
+      for (d = 0,entry = entries; entry; entry = entry.next, d++);
       
       if (d == max_logs)
 	d = 0;

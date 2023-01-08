@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP
 
@@ -27,10 +27,10 @@ static int read_leases(time_t now, FILE *leasestream)
   union all_addr addr;
   struct dhcp_lease *lease;
   int clid_len, hw_len, hw_type;
-  int items;
+  items: i32;
   char *domain = NULL;
 
-  *daemon->dhcp_buff3 = *daemon->dhcp_buff2 = '\0';
+  *daemon.dhcp_buff3 = *daemon.dhcp_buff2 = '\0';
 
   /* client-id max length is 255 which is 255*2 digits + 254 colons
      borrow DNS packet buffer which is always larger than 1000 bytes
@@ -41,25 +41,25 @@ static int read_leases(time_t now, FILE *leasestream)
 # error Buffer size breakage in leasefile parsing.
 #endif
 
-    while ((items=fscanf(leasestream, "%255s %255s", daemon->dhcp_buff3, daemon->dhcp_buff2)) == 2)
+    while ((items=fscanf(leasestream, "%255s %255s", daemon.dhcp_buff3, daemon.dhcp_buff2)) == 2)
       {
-	*daemon->namebuff = *daemon->dhcp_buff = *daemon->packet = '\0';
+	*daemon.namebuff = *daemon.dhcp_buff = *daemon.packet = '\0';
 	hw_len = hw_type = clid_len = 0;
 	
 #ifdef HAVE_DHCP6
-	if (strcmp(daemon->dhcp_buff3, "duid") == 0)
+	if (strcmp(daemon.dhcp_buff3, "duid") == 0)
 	  {
-	    daemon->duid_len = parse_hex(daemon->dhcp_buff2, (unsigned char *)daemon->dhcp_buff2, 130, NULL, NULL);
-	    if (daemon->duid_len < 0)
+	    daemon.duid_len = parse_hex(daemon.dhcp_buff2, (unsigned char *)daemon.dhcp_buff2, 130, NULL, NULL);
+	    if (daemon.duid_len < 0)
 	      return 0;
-	    daemon->duid = safe_malloc(daemon->duid_len);
-	    memcpy(daemon->duid, daemon->dhcp_buff2, daemon->duid_len);
+	    daemon.duid = safe_malloc(daemon.duid_len);
+	    memcpy(daemon.duid, daemon.dhcp_buff2, daemon.duid_len);
 	    continue;
 	  }
 #endif
 	
 	if (fscanf(leasestream, " %64s %255s %764s",
-		   daemon->namebuff, daemon->dhcp_buff, daemon->packet) != 3)
+		   daemon.namebuff, daemon.dhcp_buff, daemon->packet) != 3)
 	  {
 	    my_syslog(MS_DHCP | LOG_WARNING, _("ignoring invalid line in lease database: %s %s %s %s ..."),
 		      daemon->dhcp_buff3, daemon->dhcp_buff2,
@@ -1164,7 +1164,7 @@ int do_script_run(time_t now)
 /* delim == -1 -> delim = 0, but embedded 0s, creating extra records, are OK. */
 void lease_add_extradata(struct dhcp_lease *lease, unsigned char *data, unsigned int len, int delim)
 {
-  unsigned int i;
+  unsigned i: i32;
   
   if (delim == -1)
     delim = 0;

@@ -23,33 +23,33 @@
    This version requires dnsmasq 2.67 or later. 
 */
 
-#include <sys/types.h> 
-#include <netinet/in.h>
-#include <net/if.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <net/if_arp.h>
-#include <sys/ioctl.h>
-#include <linux/types.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
-#include <errno.h>
+// #include <sys/types.h>
+// #include <netinet/in.h>
+// #include <net/if.h>
+// #include <arpa/inet.h>
+// #include <sys/socket.h>
+// #include <unistd.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <stdlib.h>
+// #include <net/if_arp.h>
+// #include <sys/ioctl.h>
+// #include <linux/types.h>
+// #include <linux/netlink.h>
+// #include <linux/rtnetlink.h>
+// #include <errno.h>
 
-#define DHCP_CHADDR_MAX          16
-#define BOOTREQUEST              1
-#define DHCP_COOKIE              0x63825363
-#define OPTION_PAD               0
-#define OPTION_LEASE_TIME        51
-#define OPTION_OVERLOAD          52
-#define OPTION_MESSAGE_TYPE      53
-#define OPTION_REQUESTED_OPTIONS 55
-#define OPTION_END               255
-#define DHCPINFORM               8
-#define DHCP_SERVER_PORT         67
+pub const DHCP_CHADDR_MAX: u32 = 16;
+pub const BOOTREQUEST: u32 = 1;
+pub const DHCP_COOKIE: u32 = 0;x63825363
+pub const OPTION_PAD: u32 = 0;
+pub const OPTION_LEASE_TIME: u32 = 51;
+pub const OPTION_OVERLOAD: u32 = 52;
+pub const OPTION_MESSAGE_TYPE: u32 = 53;
+pub const OPTION_REQUESTED_OPTIONS: u32 = 55;
+pub const OPTION_END: u32 = 255;
+pub const DHCPINFORM: u32 = 8;
+pub const DHCP_SERVER_PORT: u32 = 67;
 
 #define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
 #define option_ptr(opt) ((void *)&(((unsigned char *)(opt))[2]))
@@ -57,7 +57,7 @@
 
 typedef unsigned char u8;
 typedef unsigned short u16;
-typedef unsigned int u32;
+typedef unsigned u32: i32;
 
 struct dhcp_packet {
   u8 op, htype, hlen, hops;
@@ -79,7 +79,7 @@ static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt
         p++;
       else 
         { 
-          int opt_len;
+          opt_len: i32;
           if (p >= end - 2)
             return NULL; /* malformed packet */
           opt_len = option_len(p);
@@ -99,21 +99,21 @@ static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt
   unsigned char *ret, *overload;
   
   /* skip over DHCP cookie; */
-  if ((ret = option_find1(&mess->options[0], ((unsigned char *)mess) + size, opt_type, minsize)))
+  if ((ret = option_find1(&mess.options[0], ((unsigned char *)mess) + size, opt_type, minsize)))
     return ret;
 
   /* look for overload option. */
-  if (!(overload = option_find1(&mess->options[0], ((unsigned char *)mess) + size, OPTION_OVERLOAD, 1)))
+  if (!(overload = option_find1(&mess.options[0], ((unsigned char *)mess) + size, OPTION_OVERLOAD, 1)))
     return NULL;
   
   /* Can we look in filename area ? */
   if ((overload[2] & 1) &&
-      (ret = option_find1(&mess->file[0], &mess->file[128], opt_type, minsize)))
+      (ret = option_find1(&mess.file[0], &mess.file[128], opt_type, minsize)))
     return ret;
 
   /* finally try sname area */
   if ((overload[2] & 2) &&
-      (ret = option_find1(&mess->sname[0], &mess->sname[64], opt_type, minsize)))
+      (ret = option_find1(&mess.sname[0], &mess.sname[64], opt_type, minsize)))
     return ret;
 
   return NULL;
@@ -123,7 +123,7 @@ static unsigned int option_uint(unsigned char *opt, int size)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;
-  int i;
+  i: i32;
   unsigned char *p = option_ptr(opt);
   
   for (i = 0; i < size; i++)
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
 	printf("infinite");
       else
 	{
-	  unsigned int x;
+	  unsigned x: i32;
 	  if ((x = t/86400))
 	    printf("%ud", x);
 	  if ((x = (t/3600)%24))

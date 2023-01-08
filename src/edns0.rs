@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t  *len, unsigned char **p, int *is_sign, int *is_last)
 {
@@ -23,7 +23,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
      Finally, check to see if a packet is signed. If it is we cannot change a single bit before
      forwarding. We look for TSIG in the addition section, and TKEY queries (for GSS-TSIG) */
   
-  int i, arcount = ntohs(header->arcount);
+  int i, arcount = ntohs(header.arcount);
   unsigned char *ansp = (unsigned char *)(header+1);
   unsigned short rdlen, type, class;
   unsigned char *ret = NULL;
@@ -34,7 +34,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
 
       if (OPCODE(header) == QUERY)
 	{
-	  for (i = ntohs(header->qdcount); i != 0; i--)
+	  for (i = ntohs(header.qdcount); i != 0; i--)
 	    {
 	      if (!(ansp = skip_name(ansp, header, plen, 4)))
 		return NULL;
@@ -56,7 +56,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
   if (arcount == 0)
     return NULL;
   
-  if (!(ansp = skip_section(ansp, ntohs(header->ancount) + ntohs(header->nscount), header, plen)))
+  if (!(ansp = skip_section(ansp, ntohs(header.ancount) + ntohs(header.nscount), header, plen)))
     return NULL; 
   
   for (i = 0; i < arcount; i++)
@@ -112,7 +112,7 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
   if (p)
     {
       /* Existing header */
-      int i;
+      i: i32;
       unsigned short code, len;
 
       p = udp_len;
@@ -190,7 +190,7 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
       /* We are (re)adding the pseudoheader */
       if (!(p = skip_questions(header, plen)) ||
 	  !(p = skip_section(p, 
-			     ntohs(header->ancount) + ntohs(header->nscount) + ntohs(header->arcount), 
+			     ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount),
 			     header, plen)))
       {
 	free(buff);
@@ -224,7 +224,7 @@ size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *l
       
       /* Only bump arcount if RR is going to fit */ 
       if (((ssize_t)optlen) <= (limit - (p + 4)))
-	header->arcount = htons(ntohs(header->arcount) + 1);
+	header.arcount = htons(ntohs(header.arcount) + 1);
     }
   
   if (((ssize_t)optlen) > (limit - (p + 4)))
@@ -332,50 +332,50 @@ struct subnet_opt {
 static void *get_addrp(union mysockaddr *addr, const short family) 
 {
   if (family == AF_INET6)
-    return &addr->in6.sin6_addr;
+    return &addr.in6.sin6_addr;
 
-  return &addr->in.sin_addr;
+  return &addr.in.sin_addr;
 }
 
 static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, int *cacheablep)
 {
   /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
   
-  int len;
+  len: i32;
   void *addrp = NULL;
-  int sa_family = source->sa.sa_family;
+  int sa_family = source.sa.sa_family;
   int cacheable = 0;
   
-  opt->source_netmask = 0;
-  opt->scope_netmask = 0;
+  opt.source_netmask = 0;
+  opt.scope_netmask = 0;
     
-  if (source->sa.sa_family == AF_INET6 && daemon->add_subnet6)
+  if (source.sa.sa_family == AF_INET6 && daemon.add_subnet6)
     {
-      opt->source_netmask = daemon->add_subnet6->mask;
-      if (daemon->add_subnet6->addr_used) 
+      opt.source_netmask = daemon.add_subnet6.mask;
+      if (daemon.add_subnet6.addr_used)
 	{
-	  sa_family = daemon->add_subnet6->addr.sa.sa_family;
-	  addrp = get_addrp(&daemon->add_subnet6->addr, sa_family);
+	  sa_family = daemon.add_subnet6.addr.sa.sa_family;
+	  addrp = get_addrp(&daemon.add_subnet6.addr, sa_family);
 	  cacheable = 1;
 	} 
       else 
-	addrp = &source->in6.sin6_addr;
+	addrp = &source.in6.sin6_addr;
     }
 
-  if (source->sa.sa_family == AF_INET && daemon->add_subnet4)
+  if (source.sa.sa_family == AF_INET && daemon.add_subnet4)
     {
-      opt->source_netmask = daemon->add_subnet4->mask;
-      if (daemon->add_subnet4->addr_used)
+      opt.source_netmask = daemon.add_subnet4.mask;
+      if (daemon.add_subnet4.addr_used)
 	{
-	  sa_family = daemon->add_subnet4->addr.sa.sa_family;
-	  addrp = get_addrp(&daemon->add_subnet4->addr, sa_family);
+	  sa_family = daemon.add_subnet4.addr.sa.sa_family;
+	  addrp = get_addrp(&daemon.add_subnet4.addr, sa_family);
 	  cacheable = 1; /* Address is constant */
 	} 
 	else 
-	  addrp = &source->in.sin_addr;
+	  addrp = &source.in.sin_addr;
     }
   
-  opt->family = htons(sa_family == AF_INET6 ? 2 : 1);
+  opt.family = htons(sa_family == AF_INET6 ? 2 : 1);
   
   if (addrp && opt->source_netmask != 0)
     {
@@ -462,16 +462,16 @@ int check_source(struct dns_header *header, size_t plen, unsigned char *pseudohe
 /* See https://docs.umbrella.com/umbrella-api/docs/identifying-dns-traffic for
  * detailed information on packet formating.
  */
-#define UMBRELLA_VERSION    1
-#define UMBRELLA_TYPESZ     2
+pub const UMBRELLA_VERSION: u32 = 1;
+pub const UMBRELLA_TYPESZ: u32 = 2;
 
-#define UMBRELLA_ASSET      0x0004
+pub const UMBRELLA_ASSET: u32 = 0;x0004
 #define UMBRELLA_ASSETSZ    sizeof(daemon->umbrella_asset)
-#define UMBRELLA_ORG        0x0008
+pub const UMBRELLA_ORG: u32 = 0;x0008
 #define UMBRELLA_ORGSZ      sizeof(daemon->umbrella_org)
-#define UMBRELLA_IPV4       0x0010
-#define UMBRELLA_IPV6       0x0020
-#define UMBRELLA_DEVICE     0x0040
+pub const UMBRELLA_IPV4: u32 = 0;x0010
+pub const UMBRELLA_IPV6: u32 = 0;x0020
+pub const UMBRELLA_DEVICE: u32 = 0;x0040
 #define UMBRELLA_DEVICESZ   sizeof(daemon->umbrella_device)
 
 struct umbrella_opt {

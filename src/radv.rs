@@ -20,11 +20,11 @@
    not used by DHCPv4 code. This code may also be called when DHCP 4 or 6 isn't
    active, so we ensure that outpacket is allocated here too */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP6
 
-#include <netinet/icmp6.h>
+// #include <netinet/icmp6.h>
 
 struct ra_param {
   time_t now;
@@ -37,15 +37,15 @@ struct ra_param {
 };
 
 struct search_param {
-  time_t now; int iface;
+  time_t now; iface: i32;
   char name[IF_NAMESIZE+1];
 };
 
 struct alias_param {
-  int iface;
+  iface: i32;
   struct dhcp_bridge *bridge;
-  int num_alias_ifs;
-  int max_alias_ifs;
+  num_alias_ifs: i32;
+  max_alias_ifs: i32;
   int *alias_ifs;
 };
 
@@ -66,12 +66,12 @@ static unsigned int calc_interval(struct ra_interface *ra);
 static unsigned int calc_prio(struct ra_interface *ra);
 static struct ra_interface *find_iface_param(char *iface);
 
-static int hop_limit;
+static hop_limit: i32;
 
 void ra_init(time_t now)
 {
   struct icmp6_filter filter;
-  int fd;
+  fd: i32;
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
   int class = IPTOS_CLASS_CS6;
 #endif
@@ -80,17 +80,17 @@ void ra_init(time_t now)
   struct dhcp_context *context;
   
   /* ensure this is around even if we're not doing DHCPv6 */
-  expand_buf(&daemon->outpacket, sizeof(struct dhcp_packet));
+  expand_buf(&daemon.outpacket, sizeof(struct dhcp_packet));
  
   /* See if we're guessing SLAAC addresses, if so we need to receive ping replies */
-  for (context = daemon->dhcp6; context; context = context->next)
-    if ((context->flags & CONTEXT_RA_NAME))
+  for (context = daemon.dhcp6; context; context = context.next)
+    if ((context.flags & CONTEXT_RA_NAME))
       break;
   
   /* Need ICMP6 socket for transmission for DHCPv6 even when not doing RA. */
 
   ICMP6_FILTER_SETBLOCKALL(&filter);
-  if (daemon->doing_ra)
+  if (daemon.doing_ra)
     {
       ICMP6_FILTER_SETPASS(ND_ROUTER_SOLICIT, &filter);
       if (context)
@@ -109,9 +109,9 @@ void ra_init(time_t now)
       setsockopt(fd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof(filter)) == -1)
     die (_("cannot create ICMPv6 socket: %s"), NULL, EC_BADNET);
   
-   daemon->icmp6fd = fd;
+   daemon.icmp6fd = fd;
    
-   if (daemon->doing_ra)
+   if (daemon.doing_ra)
      ra_start_unsolicited(now, NULL);
 }
 
@@ -124,17 +124,17 @@ void ra_start_unsolicited(time_t now, struct dhcp_context *context)
   
   if (context)
     {
-      context->ra_short_period_start = now;
+      context.ra_short_period_start = now;
       /* start after 1 second to get logging right at startup. */
-      context->ra_time = now + 1;
+      context.ra_time = now + 1;
     }
   else
-    for (context = daemon->dhcp6; context; context = context->next)
-      if (!(context->flags & CONTEXT_TEMPLATE))
+    for (context = daemon.dhcp6; context; context = context.next)
+      if (!(context.flags & CONTEXT_TEMPLATE))
 	{
-	  context->ra_time = now + (rand16()/13000); /* range 0 - 5 */
+	  context.ra_time = now + (rand16()/13000); /* range 0 - 5 */
 	  /* re-do frequently for a minute or so, in case the first gets lost. */
-	  context->ra_short_period_start = now;
+	  context.ra_short_period_start = now;
 	}
 }
 
@@ -159,16 +159,16 @@ void icmp6_packet(time_t now)
   msg.msg_flags = 0;
   msg.msg_name = &from;
   msg.msg_namelen = sizeof(from);
-  msg.msg_iov = &daemon->outpacket;
+  msg.msg_iov = &daemon.outpacket;
   msg.msg_iovlen = 1;
   
-  if ((sz = recv_dhcp_packet(daemon->icmp6fd, &msg)) == -1 || sz < 8)
+  if ((sz = recv_dhcp_packet(daemon.icmp6fd, &msg)) == -1 || sz < 8)
     return;
    
-  packet = (unsigned char *)daemon->outpacket.iov_base;
+  packet = (unsigned char *)daemon.outpacket.iov_base;
 
   for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-    if (cmptr->cmsg_level == IPPROTO_IPV6 && cmptr->cmsg_type == daemon->v6pktinfo)
+    if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
       {
 	union {
 	  unsigned char *c;
@@ -176,17 +176,17 @@ void icmp6_packet(time_t now)
 	} p;
 	p.c = CMSG_DATA(cmptr);
         
-	if_index = p.p->ipi6_ifindex;
+	if_index = p.p.ipi6_ifindex;
       }
   
-  if (!indextoname(daemon->icmp6fd, if_index, interface))
+  if (!indextoname(daemon.icmp6fd, if_index, interface))
     return;
     
   if (!iface_check(AF_LOCAL, NULL, interface, NULL))
     return;
   
-  for (tmp = daemon->dhcp_except; tmp; tmp = tmp->next)
-    if (tmp->name && wildcard_match(tmp->name, interface))
+  for (tmp = daemon.dhcp_except; tmp; tmp = tmp.next)
+    if (tmp.name && wildcard_match(tmp.name, interface))
       return;
  
   if (packet[1] != 0)
@@ -200,7 +200,7 @@ void icmp6_packet(time_t now)
       struct dhcp_bridge *bridge, *alias;
       ssize_t rem;
       unsigned char *p;
-      int opt_sz;
+      opt_sz: i32;
       
 #ifdef HAVE_DUMPFILE
       dump_packet_icmp(DUMP_RA, (void *)packet, sz, (union mysockaddr *)&from, NULL);
@@ -263,7 +263,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   struct dhcp_opt *opt_cfg;
   struct ra_interface *ra_param = find_iface_param(iface_name);
   int done_dns = 0, old_prefix = 0, mtu = 0;
-  unsigned int min_pref_time;
+  unsigned min_pref_time: i32;
 #ifdef HAVE_LINUX_NETWORK
   FILE *f;
 #endif
@@ -455,7 +455,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   
   for (opt_cfg = daemon->dhcp_opts6; opt_cfg; opt_cfg = opt_cfg->next)
     {
-      int i;
+      i: i32;
       
       /* netids match and not encapsulated? */
       if (!(opt_cfg->flags & DHOPT_TAGOK))
@@ -464,7 +464,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
       if (opt_cfg->opt == OPTION6_DNS_SERVER)
         {
 	  struct in6_addr *a;
-	  int len;
+	  len: i32;
 
 	  done_dns = 1;
 
@@ -472,7 +472,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
 	    continue;
 	  
 	  /* reduce len for any addresses we can't substitute */
-	  for (a = (struct in6_addr *)opt_cfg->val, len = opt_cfg->len, i = 0; 
+	  for (a = opt_cfg->val, len = opt_cfg->len, i = 0;
 	       i < opt_cfg->len; i += IN6ADDRSZ, a++)
 	    if ((IN6_IS_ADDR_UNSPECIFIED(a) && parm.glob_pref_time == 0) ||
 		(IN6_IS_ADDR_ULA_ZERO(a) && parm.ula_pref_time == 0) ||
@@ -486,7 +486,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
 	      put_opt6_short(0);
 	      put_opt6_long(min_pref_time);
 	 
-	      for (a = (struct in6_addr *)opt_cfg->val, i = 0; i <  opt_cfg->len; i += IN6ADDRSZ, a++)
+	      for (a = opt_cfg->val, i = 0; i <  opt_cfg->len; i += IN6ADDRSZ, a++)
 		if (IN6_IS_ADDR_UNSPECIFIED(a))
 		  {
 		    if (parm.glob_pref_time != 0)

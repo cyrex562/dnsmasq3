@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 static int order(char *qdomain, size_t qlen, struct server *serv);
 static int order_qsort(const void *a, const void *b);
@@ -28,26 +28,26 @@ void build_server_array(void)
   struct server *serv;
   int count = 0;
   
-  for (serv = daemon->servers; serv; serv = serv->next)
+  for (serv = daemon.servers; serv; serv = serv.next)
 #ifdef HAVE_LOOP
-    if (!(serv->flags & SERV_LOOP))
+    if (!(serv.flags & SERV_LOOP))
 #endif
       {
 	count++;
-	if (serv->flags & SERV_WILDCARD)
-	  daemon->server_has_wildcard = 1;
+	if (serv.flags & SERV_WILDCARD)
+	  daemon.server_has_wildcard = 1;
       }
   
-  for (serv = daemon->local_domains; serv; serv = serv->next)
+  for (serv = daemon.local_domains; serv; serv = serv.next)
     {
       count++;
-      if (serv->flags & SERV_WILDCARD)
-	daemon->server_has_wildcard = 1;
+      if (serv.flags & SERV_WILDCARD)
+	daemon.server_has_wildcard = 1;
     }
   
-  daemon->serverarraysz = count;
+  daemon.serverarraysz = count;
 
-  if (count > daemon->serverarrayhwm)
+  if (count > daemon.serverarrayhwm)
     {
       struct server **new;
 
@@ -55,37 +55,37 @@ void build_server_array(void)
 
       if ((new = whine_malloc(count * sizeof(struct server *))))
 	{
-	  if (daemon->serverarray)
-	    free(daemon->serverarray);
+	  if (daemon.serverarray)
+	    free(daemon.serverarray);
 	  
-	  daemon->serverarray = new;
-	  daemon->serverarrayhwm = count;
+	  daemon.serverarray = new;
+	  daemon.serverarrayhwm = count;
 	}
     }
 
   count = 0;
   
-  for (serv = daemon->servers; serv; serv = serv->next)
+  for (serv = daemon.servers; serv; serv = serv.next)
 #ifdef HAVE_LOOP
-    if (!(serv->flags & SERV_LOOP))
+    if (!(serv.flags & SERV_LOOP))
 #endif
       {
-	daemon->serverarray[count] = serv;
-	serv->serial = count;
-	serv->last_server = -1;
+	daemon.serverarray[count] = serv;
+	serv.serial = count;
+	serv.last_server = -1;
 	count++;
       }
   
-  for (serv = daemon->local_domains; serv; serv = serv->next, count++)
-    daemon->serverarray[count] = serv;
+  for (serv = daemon.local_domains; serv; serv = serv.next, count++)
+    daemon.serverarray[count] = serv;
   
-  qsort(daemon->serverarray, daemon->serverarraysz, sizeof(struct server *), order_qsort);
+  qsort(daemon.serverarray, daemon.serverarraysz, sizeof(struct server *), order_qsort);
   
   /* servers need the location in the array to find all the whole
      set of equivalent servers from a pointer to a single one. */
-  for (count = 0; count < daemon->serverarraysz; count++)
-    if (!(daemon->serverarray[count]->flags & SERV_IS_LOCAL))
-      daemon->serverarray[count]->arrayposn = count;
+  for (count = 0; count < daemon.serverarraysz; count++)
+    if (!(daemon.serverarray[count]->flags & SERV_IS_LOCAL))
+      daemon.serverarray[count]->arrayposn = count;
 }
 
 /* we're looking for the server whose domain is the longest exact match
@@ -110,7 +110,7 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
   char *cp, *qdomain = domain;
 
   /* may be no configured servers. */
-  if (daemon->serverarraysz == 0)
+  if (daemon.serverarraysz == 0)
     return 0;
   
   /* find query length and presence of '.' */
@@ -132,7 +132,7 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 	 we don't reset low to zero here, we can go further below and crop the 
 	 search string to the size of the largest remaining server
 	 when this match fails. */
-      high = daemon->serverarraysz;
+      high = daemon.serverarraysz;
       crop_query = 1;
       
       /* binary search */
@@ -140,7 +140,7 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 	{
 	  try = (low + high)/2;
 
-	  if ((rc = order(qdomain, qlen, daemon->serverarray[try])) == 0)
+	  if ((rc = order(qdomain, qlen, daemon.serverarray[try])) == 0)
 	    break;
 	  
 	  if (rc < 0)
@@ -149,7 +149,7 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 		{
 		  /* qdomain is longer or same length as longest domain, and try == 0 
 		     crop the query to the longest domain. */
-		  crop_query = qlen - daemon->serverarray[try]->domain_len;
+		  crop_query = qlen - daemon.serverarray[try]->domain_len;
 		  break;
 		}
 	      high = try;
@@ -170,10 +170,10 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 		     before the query, since no such domain exists. In that case, the loop 
 		     exits via the rc < 0 && high == try path above and this code is
 		     not executed. */
-		  ssize_t len, old = daemon->serverarray[try]->domain_len;
-		  while (++try != daemon->serverarraysz)
+		  ssize_t len, old = daemon.serverarray[try]->domain_len;
+		  while (++try != daemon.serverarraysz)
 		    {
-		      if (old != (len = daemon->serverarray[try]->domain_len))
+		      if (old != (len = daemon.serverarray[try]->domain_len))
 			{
 			  crop_query = qlen - len;
 			  break;
@@ -189,20 +189,20 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 	{
 	  int found = 1;
 
-	  if (daemon->server_has_wildcard)
+	  if (daemon.server_has_wildcard)
 	    {
 	      /* if we have example.com and *example.com we need to check against *example.com, 
 		 but the binary search may have found either. Use the fact that example.com is sorted before *example.com
 		 We favour example.com in the case that both match (ie www.example.com) */
-	      while (try != 0 && order(qdomain, qlen, daemon->serverarray[try-1]) == 0)
+	      while (try != 0 && order(qdomain, qlen, daemon.serverarray[try-1]) == 0)
 		try--;
 	      
 	      if (!(qdomain == domain || *qdomain == 0 || *(qdomain-1) == '.'))
 		{
-		  while (try < daemon->serverarraysz-1 && order(qdomain, qlen, daemon->serverarray[try+1]) == 0)
+		  while (try < daemon.serverarraysz-1 && order(qdomain, qlen, daemon.serverarray[try+1]) == 0)
 		    try++;
 		  
-		  if (!(daemon->serverarray[try]->flags & SERV_WILDCARD))
+		  if (!(daemon.serverarray[try]->flags & SERV_WILDCARD))
 		     found = 0;
 		}
 	    }
@@ -215,7 +215,7 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 	      /* We've matched a setting which says to use servers without a domain.
 		 Continue the search with empty query. We set the F_SERVER flag
 		 so that --address=/#/... doesn't match. */
-	      if (daemon->serverarray[nlow]->flags & SERV_USE_RESOLV)
+	      if (daemon.serverarray[nlow]->flags & SERV_USE_RESOLV)
 		{
 		  crop_query = qlen;
 		  flags |= F_SERVER;
@@ -234,7 +234,7 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 	 domain somewhere, in which case we have to go one at a time. */
       qlen -= crop_query;
       qdomain += crop_query;
-      if (!daemon->server_has_wildcard)
+      if (!daemon.server_has_wildcard)
 	while (qlen > 0 &&  (*(qdomain-1) != '.'))
 	  qlen--, qdomain++;
     }
@@ -243,9 +243,9 @@ int lookup_domain(char *domain, int flags, int *lowout, int *highout)
      These servers always sort to the very end of the array. 
      A configured server eg server=/lan/ will take precdence. */
   if (nodots &&
-      (daemon->serverarray[daemon->serverarraysz-1]->flags & SERV_FOR_NODOTS) &&
-      (nlow == nhigh || daemon->serverarray[nlow]->domain_len == 0))
-    filter_servers(daemon->serverarraysz-1, flags, &nlow, &nhigh);
+      (daemon.serverarray[daemon.serverarraysz-1]->flags & SERV_FOR_NODOTS) &&
+      (nlow == nhigh || daemon.serverarray[nlow]->domain_len == 0))
+    filter_servers(daemon.serverarraysz-1, flags, &nlow, &nhigh);
   
   if (lowout)
     *lowout = nlow;
@@ -268,15 +268,15 @@ int server_samegroup(struct server *a, struct server *b)
 int filter_servers(int seed, int flags, int *lowout, int *highout)
 {
   int nlow = seed, nhigh = seed;
-  int i;
+  i: i32;
   
   /* expand nlow and nhigh to cover all the records with the same domain 
      nlow is the first, nhigh - 1 is the last. nlow=nhigh means no servers,
      which can happen below. */
-  while (nlow > 0 && order_servers(daemon->serverarray[nlow-1], daemon->serverarray[nlow]) == 0)
+  while (nlow > 0 && order_servers(daemon.serverarray[nlow-1], daemon.serverarray[nlow]) == 0)
     nlow--;
   
-  while (nhigh < daemon->serverarraysz-1 && order_servers(daemon->serverarray[nhigh], daemon->serverarray[nhigh+1]) == 0)
+  while (nhigh < daemon.serverarraysz-1 && order_servers(daemon.serverarray[nhigh], daemon.serverarray[nhigh+1]) == 0)
     nhigh++;
   
   nhigh++;
@@ -287,7 +287,7 @@ int filter_servers(int seed, int flags, int *lowout, int *highout)
     {
       /* We're just lookin for any matches that return an RR. */
       for (i = nlow; i < nhigh; i++)
-	if (daemon->serverarray[i]->flags & SERV_LOCAL_ADDRESS)
+	if (daemon.serverarray[i]->flags & SERV_LOCAL_ADDRESS)
 	  break;
       
       /* failed, return failure. */
@@ -301,7 +301,7 @@ int filter_servers(int seed, int flags, int *lowout, int *highout)
 	 
 	 See which of those match our query in that priority order and narrow (low, high) */
       
-      for (i = nlow; i < nhigh && (daemon->serverarray[i]->flags & SERV_6ADDR); i++);
+      for (i = nlow; i < nhigh && (daemon.serverarray[i]->flags & SERV_6ADDR); i++);
       
       if (!(flags & F_SERVER) && i != nlow && (flags & F_IPV6))
 	nhigh = i;
@@ -309,7 +309,7 @@ int filter_servers(int seed, int flags, int *lowout, int *highout)
 	{
 	  nlow = i;
 	  
-	  for (i = nlow; i < nhigh && (daemon->serverarray[i]->flags & SERV_4ADDR); i++);
+	  for (i = nlow; i < nhigh && (daemon.serverarray[i]->flags & SERV_4ADDR); i++);
 	  
 	  if (!(flags & F_SERVER) && i != nlow && (flags & F_IPV4))
 	    nhigh = i;
@@ -317,7 +317,7 @@ int filter_servers(int seed, int flags, int *lowout, int *highout)
 	    {
 	      nlow = i;
 	      
-	      for (i = nlow; i < nhigh && (daemon->serverarray[i]->flags & SERV_ALL_ZEROS); i++);
+	      for (i = nlow; i < nhigh && (daemon.serverarray[i]->flags & SERV_ALL_ZEROS); i++);
 	      
 	      if (!(flags & F_SERVER) && i != nlow && (flags & (F_IPV4 | F_IPV6)))
 		nhigh = i;
@@ -326,23 +326,23 @@ int filter_servers(int seed, int flags, int *lowout, int *highout)
 		  nlow = i;
 		  
 		  /* Short to resolv.conf servers */
-		  for (i = nlow; i < nhigh && (daemon->serverarray[i]->flags & SERV_USE_RESOLV); i++);
+		  for (i = nlow; i < nhigh && (daemon.serverarray[i]->flags & SERV_USE_RESOLV); i++);
 		  
 		  if (i != nlow)
 		    nhigh = i;
 		  else
 		    {
 		      /* now look for a server */
-		      for (i = nlow; i < nhigh && !(daemon->serverarray[i]->flags & SERV_LITERAL_ADDRESS); i++);
+		      for (i = nlow; i < nhigh && !(daemon.serverarray[i]->flags & SERV_LITERAL_ADDRESS); i++);
 		      
 		      if (i != nlow)
 			{
 			  /* If we want a server that can do DNSSEC, and this one can't, 
 			     return nothing, similarly if were looking only for a server
 			     for a particular domain. */
-			  if ((flags & F_DNSSECOK) && !(daemon->serverarray[nlow]->flags & SERV_DO_DNSSEC))
+			  if ((flags & F_DNSSECOK) && !(daemon.serverarray[nlow]->flags & SERV_DO_DNSSEC))
 			    nlow = nhigh;
-			  else if ((flags & F_DOMAINSRV) && daemon->serverarray[nlow]->domain_len == 0)
+			  else if ((flags & F_DOMAINSRV) && daemon.serverarray[nlow]->domain_len == 0)
 			    nlow = nhigh;
 			  else
 			    nhigh = i;
@@ -370,7 +370,7 @@ int is_local_answer(time_t now, int first, char *name)
   int flags = 0;
   int rc = 0;
   
-  if ((flags = daemon->serverarray[first]->flags) & SERV_LITERAL_ADDRESS)
+  if ((flags = daemon.serverarray[first]->flags) & SERV_LITERAL_ADDRESS)
     {
       if (flags & SERV_4ADDR)
 	rc = F_IPV4;
@@ -384,9 +384,9 @@ int is_local_answer(time_t now, int first, char *name)
 	     now roll back to the server which is just the same domain, to check if that 
 	     provides an answer of a different type. */
 
-	  for (;first > 0 && order_servers(daemon->serverarray[first-1], daemon->serverarray[first]) == 0; first--);
+	  for (;first > 0 && order_servers(daemon.serverarray[first-1], daemon.serverarray[first]) == 0; first--);
 	  
-	  if ((daemon->serverarray[first]->flags & SERV_LOCAL_ADDRESS) ||
+	  if ((daemon.serverarray[first]->flags & SERV_LOCAL_ADDRESS) ||
 	      check_for_local_domain(name, now))
 	    rc = F_NOERR;
 	  else
@@ -401,7 +401,7 @@ size_t make_local_answer(int flags, int gotname, size_t size, struct dns_header 
 {
   int trunc = 0, anscount = 0;
   unsigned char *p;
-  int start;
+  start: i32;
   union all_addr addr;
   
   if (flags & (F_NXDOMAIN | F_NOERR))
@@ -415,14 +415,14 @@ size_t make_local_answer(int flags, int gotname, size_t size, struct dns_header 
   if (flags & gotname & F_IPV4)
     for (start = first; start != last; start++)
       {
-	struct serv_addr4 *srv = (struct serv_addr4 *)daemon->serverarray[start];
+	struct serv_addr4 *srv = (struct serv_addr4 *)daemon.serverarray[start];
 
-	if (srv->flags & SERV_ALL_ZEROS)
+	if (srv.flags & SERV_ALL_ZEROS)
 	  memset(&addr, 0, sizeof(addr));
 	else
-	  addr.addr4 = srv->addr;
+	  addr.addr4 = srv.addr;
 	
-	if (add_resource_record(header, limit, &trunc, sizeof(struct dns_header), &p, daemon->local_ttl, NULL, T_A, C_IN, "4", &addr))
+	if (add_resource_record(header, limit, &trunc, sizeof(struct dns_header), &p, daemon.local_ttl, NULL, T_A, C_IN, "4", &addr))
 	  anscount++;
 	log_query((flags | F_CONFIG | F_FORWARD) & ~F_IPV6, name, (union all_addr *)&addr, NULL, 0);
       }
@@ -430,21 +430,21 @@ size_t make_local_answer(int flags, int gotname, size_t size, struct dns_header 
   if (flags & gotname & F_IPV6)
     for (start = first; start != last; start++)
       {
-	struct serv_addr6 *srv = (struct serv_addr6 *)daemon->serverarray[start];
+	struct serv_addr6 *srv = (struct serv_addr6 *)daemon.serverarray[start];
 
-	if (srv->flags & SERV_ALL_ZEROS)
+	if (srv.flags & SERV_ALL_ZEROS)
 	  memset(&addr, 0, sizeof(addr));
 	else
-	  addr.addr6 = srv->addr;
+	  addr.addr6 = srv.addr;
 	
-	if (add_resource_record(header, limit, &trunc, sizeof(struct dns_header), &p, daemon->local_ttl, NULL, T_AAAA, C_IN, "6", &addr))
+	if (add_resource_record(header, limit, &trunc, sizeof(struct dns_header), &p, daemon.local_ttl, NULL, T_AAAA, C_IN, "6", &addr))
 	  anscount++;
 	log_query((flags | F_CONFIG | F_FORWARD) & ~F_IPV4, name, (union all_addr *)&addr, NULL, 0);
       }
 
   if (trunc)
-    header->hb3 |= HB3_TC;
-  header->ancount = htons(anscount);
+    header.hb3 |= HB3_TC;
+  header.ancount = htons(anscount);
   
   return p - (unsigned char *)header;
 }
@@ -461,14 +461,14 @@ int dnssec_server(struct server *server, char *keyname, int *firstp, int *lastp)
     return -1;
 
   for (index = first; index != last; index++)
-    if (daemon->serverarray[index] == server)
+    if (daemon.serverarray[index] == server)
       break;
 	      
   /* No match to server used for original query.
      Use newly looked up set. */
   if (index == last)
-    index =  daemon->serverarray[first]->last_server == -1 ?
-      first : daemon->serverarray[first]->last_server;
+    index =  daemon.serverarray[first]->last_server == -1 ?
+      first : daemon.serverarray[first]->last_server;
 
   if (firstp)
     *firstp = first;
@@ -487,10 +487,10 @@ static int order(char *qdomain, size_t qlen, struct server *serv)
     
   /* servers for dotless names always sort last 
      searched for name is never dotless. */
-  if (serv->flags & SERV_FOR_NODOTS)
+  if (serv.flags & SERV_FOR_NODOTS)
     return -1;
 
-  dlen = serv->domain_len;
+  dlen = serv.domain_len;
   
   if (qlen < dlen)
     return 1;
@@ -498,32 +498,32 @@ static int order(char *qdomain, size_t qlen, struct server *serv)
   if (qlen > dlen)
     return -1;
 
-  return hostname_order(qdomain, serv->domain);
+  return hostname_order(qdomain, serv.domain);
 }
 
 static int order_servers(struct server *s1, struct server *s2)
 {
-  int rc;
+  rc: i32;
 
   /* need full comparison of dotless servers in 
      order_qsort() and filter_servers() */
 
-  if (s1->flags & SERV_FOR_NODOTS)
-     return (s2->flags & SERV_FOR_NODOTS) ? 0 : 1;
+  if (s1.flags & SERV_FOR_NODOTS)
+     return (s2.flags & SERV_FOR_NODOTS) ? 0 : 1;
    
-  if ((rc = order(s1->domain, s1->domain_len, s2)) != 0)
+  if ((rc = order(s1.domain, s1.domain_len, s2)) != 0)
     return rc;
 
   /* For identical domains, sort wildcard ones first */
-  if (s1->flags & SERV_WILDCARD)
-    return (s2->flags & SERV_WILDCARD) ? 0 : 1;
+  if (s1.flags & SERV_WILDCARD)
+    return (s2.flags & SERV_WILDCARD) ? 0 : 1;
 
-  return (s2->flags & SERV_WILDCARD) ? -1 : 0;
+  return (s2.flags & SERV_WILDCARD) ? -1 : 0;
 }
   
 static int order_qsort(const void *a, const void *b)
 {
-  int rc;
+  rc: i32;
   
   struct server *s1 = *((struct server **)a);
   struct server *s2 = *((struct server **)b);
@@ -535,13 +535,13 @@ static int order_qsort(const void *a, const void *b)
      so the order is IPv6 literal, IPv4 literal, all-zero literal, 
      unqualified servers, upstream server, NXDOMAIN literal. */
   if (rc == 0)
-    rc = ((s2->flags & (SERV_LITERAL_ADDRESS | SERV_4ADDR | SERV_6ADDR | SERV_USE_RESOLV | SERV_ALL_ZEROS)) ^ SERV_LITERAL_ADDRESS) -
-      ((s1->flags & (SERV_LITERAL_ADDRESS | SERV_4ADDR | SERV_6ADDR | SERV_USE_RESOLV | SERV_ALL_ZEROS)) ^ SERV_LITERAL_ADDRESS);
+    rc = ((s2.flags & (SERV_LITERAL_ADDRESS | SERV_4ADDR | SERV_6ADDR | SERV_USE_RESOLV | SERV_ALL_ZEROS)) ^ SERV_LITERAL_ADDRESS) -
+      ((s1.flags & (SERV_LITERAL_ADDRESS | SERV_4ADDR | SERV_6ADDR | SERV_USE_RESOLV | SERV_ALL_ZEROS)) ^ SERV_LITERAL_ADDRESS);
 
   /* Finally, order by appearance in /etc/resolv.conf etc, for --strict-order */
   if (rc == 0)
-    if (!(s1->flags & SERV_LITERAL_ADDRESS))
-      rc = s1->serial - s2->serial;
+    if (!(s1.flags & SERV_LITERAL_ADDRESS))
+      rc = s1.serial - s2.serial;
 
   return rc;
 }
@@ -563,35 +563,35 @@ void mark_servers(int flag)
 
   maybe_free_servers = !!flag;
   
-  daemon->servers_tail = NULL;
+  daemon.servers_tail = NULL;
   
   /* mark everything with argument flag */
-  for (serv = daemon->servers; serv; serv = serv->next)
+  for (serv = daemon.servers; serv; serv = serv.next)
     {
-      if (serv->flags & flag)
-	serv->flags |= SERV_MARK;
+      if (serv.flags & flag)
+	serv.flags |= SERV_MARK;
       else
-	serv->flags &= ~SERV_MARK;
+	serv.flags &= ~SERV_MARK;
 
-      daemon->servers_tail = serv;
+      daemon.servers_tail = serv;
     }
   
   /* --address etc is different: since they are expected to be 
      1) numerous and 2) not reloaded often. We just delete 
      and recreate. */
   if (flag)
-    for (serv = daemon->local_domains, up = &daemon->local_domains; serv; serv = next)
+    for (serv = daemon.local_domains, up = &daemon.local_domains; serv; serv = next)
       {
-	next = serv->next;
+	next = serv.next;
 
-	if (serv->flags & flag)
+	if (serv.flags & flag)
 	  {
 	    *up = next;
-	    free(serv->domain);
+	    free(serv.domain);
 	    free(serv);
 	  }
 	else 
-	  up = &serv->next;
+	  up = &serv.next;
       }
 }
 
@@ -600,20 +600,20 @@ void cleanup_servers(void)
   struct server *serv, *tmp, **up;
 
   /* unlink and free anything still marked. */
-  for (serv = daemon->servers, up = &daemon->servers, daemon->servers_tail = NULL; serv; serv = tmp) 
+  for (serv = daemon.servers, up = &daemon.servers, daemon.servers_tail = NULL; serv; serv = tmp)
     {
-      tmp = serv->next;
-      if (serv->flags & SERV_MARK)
+      tmp = serv.next;
+      if (serv.flags & SERV_MARK)
        {
          server_gone(serv);
-         *up = serv->next;
-	 free(serv->domain);
+         *up = serv.next;
+	 free(serv.domain);
 	 free(serv);
        }
       else 
 	{
-	  up = &serv->next;
-	  daemon->servers_tail = serv;
+	  up = &serv.next;
+	  daemon.servers_tail = serv;
 	}
     }
 }
@@ -666,14 +666,14 @@ int add_update_server(int flags,
 	  return 0;
 	}
       
-      serv->next = daemon->local_domains;
-      daemon->local_domains = serv;
+      serv.next = daemon.local_domains;
+      daemon.local_domains = serv;
       
       if (flags & SERV_4ADDR)
-	((struct serv_addr4*)serv)->addr = local_addr->addr4;
+	((struct serv_addr4*)serv).addr = local_addr.addr4;
       
       if (flags & SERV_6ADDR)
-	((struct serv_addr6*)serv)->addr = local_addr->addr6;
+	((struct serv_addr6*)serv).addr = local_addr.addr6;
     }
   else
     { 
@@ -685,30 +685,30 @@ int add_update_server(int flags,
       serv = NULL;
       
       if (maybe_free_servers)
-	for (serv = daemon->servers, up = &daemon->servers; serv; serv = tmp)
+	for (serv = daemon.servers, up = &daemon.servers; serv; serv = tmp)
 	  {
-	    tmp = serv->next;
-	    if ((serv->flags & SERV_MARK) &&
-		hostname_isequal(alloc_domain, serv->domain))
+	    tmp = serv.next;
+	    if ((serv.flags & SERV_MARK) &&
+		hostname_isequal(alloc_domain, serv.domain))
 	      {
 		/* Need to move down? */
-		if (serv->next)
+		if (serv.next)
 		  {
-		    *up = serv->next;
-		    daemon->servers_tail->next = serv;
-		    daemon->servers_tail = serv;
-		    serv->next = NULL;
+		    *up = serv.next;
+		    daemon.servers_tail.next = serv;
+		    daemon.servers_tail = serv;
+		    serv.next = NULL;
 		  }
 		break;
 	      }
 	    else
-	      up = &serv->next;
+	      up = &serv.next;
 	  }
       
       if (serv)
 	{
 	  free(alloc_domain);
-	  alloc_domain = serv->domain;
+	  alloc_domain = serv.domain;
 	}
       else
 	{
@@ -721,29 +721,28 @@ int add_update_server(int flags,
 	  memset(serv, 0, sizeof(struct server));
 	  
 	  /* Add to the end of the chain, for order */
-	  if (daemon->servers_tail)
-	    daemon->servers_tail->next = serv;
+	  if (daemon.servers_tail)
+	    daemon.servers_tail.next = serv;
 	  else
-	    daemon->servers = serv;
-	  daemon->servers_tail = serv;
+	    daemon.servers = serv;
+	  daemon.servers_tail = serv;
 	}
       
 #ifdef HAVE_LOOP
-      serv->uid = rand32();
+      serv.uid = rand32();
 #endif      
 	  
       if (interface)
-	safe_strncpy(serv->interface, interface, sizeof(serv->interface));
+	safe_strncpy(serv.interface, interface, sizeof(serv.interface));
       if (addr)
-	serv->addr = *addr;
+	serv.addr = *addr;
       if (source_addr)
-	serv->source_addr = *source_addr;
+	serv.source_addr = *source_addr;
     }
     
-  serv->flags = flags;
-  serv->domain = alloc_domain;
-  serv->domain_len = strlen(alloc_domain);
+  serv.flags = flags;
+  serv.domain = alloc_domain;
+  serv.domain_len = strlen(alloc_domain);
   
   return 1;
 }
-

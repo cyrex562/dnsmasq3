@@ -14,53 +14,53 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define FTABSIZ 150 /* max number of outstanding requests (default) */
-#define MAX_PROCS 20 /* max no children for TCP requests */
-#define CHILD_LIFETIME 150 /* secs 'till terminated (RFC1035 suggests > 120s) */
-#define TCP_MAX_QUERIES 100 /* Maximum number of queries per incoming TCP connection */
-#define TCP_BACKLOG 32  /* kernel backlog limit for TCP connections */
-#define EDNS_PKTSZ 4096 /* default max EDNS.0 UDP packet from RFC5625 */
-#define SAFE_PKTSZ 1232 /* "go anywhere" UDP packet size, see https://dnsflagday.net/2020/ */
-#define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
-#define DNSSEC_WORK 50 /* Max number of queries to validate one question */
-#define TIMEOUT 10     /* drop UDP queries after TIMEOUT seconds */
-#define SMALL_PORT_RANGE 30 /* If DNS port range is smaller than this, use different allocation. */
-#define FORWARD_TEST 50 /* try all servers every 50 queries */
-#define FORWARD_TIME 20 /* or 20 seconds */
-#define UDP_TEST_TIME 60 /* How often to reset our idea of max packet size. */
-#define SERVERS_LOGGED 30 /* Only log this many servers when logging state */
-#define LOCALS_LOGGED 8 /* Only log this many local addresses when logging state */
-#define LEASE_RETRY 60 /* on error, retry writing leasefile after LEASE_RETRY seconds */
-#define CACHESIZ 150 /* default cache size */
-#define TTL_FLOOR_LIMIT 3600 /* don't allow --min-cache-ttl to raise TTL above this under any circumstances */
-#define MAXLEASES 1000 /* maximum number of DHCP leases */
-#define PING_WAIT 3 /* wait for ping address-in-use test */
-#define PING_CACHE_TIME 30 /* Ping test assumed to be valid this long. */
-#define DECLINE_BACKOFF 600 /* disable DECLINEd static addresses for this long */
-#define DHCP_PACKET_MAX 16384 /* hard limit on DHCP packet size */
-#define SMALLDNAME 50 /* most domain names are smaller than this */
-#define CNAME_CHAIN 10 /* chains longer than this atr dropped for loop protection */
-#define DNSSEC_MIN_TTL 60 /* DNSKEY and DS records in cache last at least this long */
+pub const FTABSIZ: u32 = 150; /* max number of outstanding requests (default) */
+pub const MAX_PROCS: u32 = 20; /* max no children for TCP requests */
+pub const CHILD_LIFETIME: u32 = 150; /* secs 'till terminated (RFC1035 suggests > 120s) */
+pub const TCP_MAX_QUERIES: u32 = 100; /* Maximum number of queries per incoming TCP connection */
+pub const TCP_BACKLOG: u32 = 32;  /* kernel backlog limit for TCP connections */
+pub const EDNS_PKTSZ: u32 = 4096; /* default max EDNS.0 UDP packet from RFC5625 */
+pub const SAFE_PKTSZ: u32 = 1232; /* "go anywhere" UDP packet size, see https://dnsflagday.net/2020/ */
+pub const KEYBLOCK_LEN: u32 = 40; /* choose to minimise fragmentation when storing DNSSEC keys */
+pub const DNSSEC_WORK: u32 = 50; /* Max number of queries to validate one question */
+pub const TIMEOUT: u32 = 10;     /* drop UDP queries after TIMEOUT seconds */
+pub const SMALL_PORT_RANGE: u32 = 30; /* If DNS port range is smaller than this, use different allocation. */
+pub const FORWARD_TEST: u32 = 50; /* try all servers every 50 queries */
+pub const FORWARD_TIME: u32 = 20; /* or 20 seconds */
+pub const UDP_TEST_TIME: u32 = 60; /* How often to reset our idea of max packet size. */
+pub const SERVERS_LOGGED: u32 = 30; /* Only log this many servers when logging state */
+pub const LOCALS_LOGGED: u32 = 8; /* Only log this many local addresses when logging state */
+pub const LEASE_RETRY: u32 = 60; /* on error, retry writing leasefile after LEASE_RETRY seconds */
+pub const CACHESIZ: u32 = 150; /* default cache size */
+pub const TTL_FLOOR_LIMIT: u32 = 3600; /* don't allow --min-cache-ttl to raise TTL above this under any circumstances */
+pub const MAXLEASES: u32 = 1000; /* maximum number of DHCP leases */
+pub const PING_WAIT: u32 = 3; /* wait for ping address-in-use test */
+pub const PING_CACHE_TIME: u32 = 30; /* Ping test assumed to be valid this long. */
+pub const DECLINE_BACKOFF: u32 = 600; /* disable DECLINEd static addresses for this long */
+pub const DHCP_PACKET_MAX: u32 = 16384; /* hard limit on DHCP packet size */
+pub const SMALLDNAME: u32 = 50; /* most domain names are smaller than this */
+pub const CNAME_CHAIN: u32 = 10; /* chains longer than this atr dropped for loop protection */
+pub const DNSSEC_MIN_TTL: u32 = 60; /* DNSKEY and DS records in cache last at least this long */
 #define HOSTSFILE "/etc/hosts"
 #define ETHERSFILE "/etc/ethers"
-#define DEFLEASE 3600 /* default DHCPv4 lease time, one hour */
-#define DEFLEASE6 (3600*24) /* default lease time for DHCPv6. One day. */
+pub const DEFLEASE: u32 = 3600; /* default DHCPv4 lease time, one hour */
+pub const DEFLEASE: u32 = 6; (3600*24) /* default lease time for DHCPv6. One day. */
 #define CHUSER "nobody"
 #define CHGRP "dip"
-#define TFTP_MAX_CONNECTIONS 50 /* max simultaneous connections */
-#define LOG_MAX 5 /* log-queue length */
+pub const TFTP_MAX_CONNECTIONS: u32 = 50; /* max simultaneous connections */
+pub const LOG_MAX: u32 = 5; /* log-queue length */
 #define RANDFILE "/dev/urandom"
 #define DNSMASQ_SERVICE "uk.org.thekelleys.dnsmasq" /* Default - may be overridden by config */
 #define DNSMASQ_PATH "/uk/org/thekelleys/dnsmasq"
 #define DNSMASQ_UBUS_NAME "dnsmasq" /* Default - may be overridden by config */
-#define AUTH_TTL 600 /* default TTL for auth DNS */
-#define SOA_REFRESH 1200 /* SOA refresh default */
-#define SOA_RETRY 180 /* SOA retry default */
-#define SOA_EXPIRY 1209600 /* SOA expiry default */
+pub const AUTH_TTL: u32 = 600; /* default TTL for auth DNS */
+pub const SOA_REFRESH: u32 = 1200; /* SOA refresh default */
+pub const SOA_RETRY: u32 = 180; /* SOA retry default */
+pub const SOA_EXPIRY: u32 = 1209600; /* SOA expiry default */
 #define LOOP_TEST_DOMAIN "test" /* domain for loop testing, "test" is reserved by RFC 2606 and won't therefore clash */
 #define LOOP_TEST_TYPE T_TXT
-#define DEFAULT_FAST_RETRY 1000 /* ms, default delay before fast retry */
-#define STALE_CACHE_EXPIRY 86400 /* 1 day in secs, default maximum expiry time for stale cache data */
+pub const DEFAULT_FAST_RETRY: u32 = 1000; /* ms, default delay before fast retry */
+pub const STALE_CACHE_EXPIRY: u32 = 86400; /* 1 day in secs, default maximum expiry time for stale cache data */
  
 /* compile-time options: uncomment below to enable or do eg.
    make COPTS=-DHAVE_BROKEN_RTC
@@ -177,7 +177,7 @@ RESOLVFILE
    has no library dependencies other than libc */
 
 #define HAVE_DHCP
-#define HAVE_DHCP6 
+pub const HAVE_DHCP: u32 = 6;
 #define HAVE_TFTP
 #define HAVE_SCRIPT
 #define HAVE_AUTH
@@ -195,7 +195,7 @@ RESOLVFILE
 /* #define HAVE_LUASCRIPT */
 /* #define HAVE_DBUS */
 /* #define HAVE_IDN */
-/* #define HAVE_LIBIDN2 */
+/* pub const HAVE_LIBIDN: u32 = 2; */
 /* #define HAVE_CONNTRACK */
 /* #define HAVE_CRYPTOHASH */
 /* #define HAVE_DNSSEC */
@@ -292,7 +292,7 @@ HAVE_SOCKADDR_SA_LEN
 #define _BSD_SOCKLEN_T_
 /* Select the RFC_3542 version of the IPv6 socket API. 
    Define before netinet6/in6.h is included. */
-#define __APPLE_USE_RFC_3542
+pub const __APPLE_USE_RFC_354: u32 = 2;
 /* Required for Mojave. */
 #ifndef SOL_TCP
 #  define SOL_TCP IPPROTO_TCP
@@ -308,7 +308,7 @@ HAVE_SOCKADDR_SA_LEN
 #define HAVE_SOLARIS_NETWORK
 #define HAVE_GETOPT_LONG
 #undef HAVE_SOCKADDR_SA_LEN
-#define ETHER_ADDR_LEN 6 
+pub const ETHER_ADDR_LEN: u32 = 6;
  
 #endif
 

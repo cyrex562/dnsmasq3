@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 #ifdef HAVE_INOTIFY
 
-#include <sys/inotify.h>
-#include <sys/param.h> /* For MAXSYMLINKS */
+// #include <sys/inotify.h>
+// #include <sys/param.h> /* For MAXSYMLINKS */
 
 /* the strategy is to set an inotify on the directories containing
    resolv files, for any files in the directory which are close-write 
@@ -89,26 +89,26 @@ void inotify_dnsmasq_init()
 {
   struct resolvc *res;
   inotify_buffer = safe_malloc(INOTIFY_SZ);
-  daemon->inotifyfd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+  daemon.inotifyfd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   
-  if (daemon->inotifyfd == -1)
+  if (daemon.inotifyfd == -1)
     die(_("failed to create inotify: %s"), NULL, EC_MISC);
 
   if (option_bool(OPT_NO_RESOLV))
     return;
   
-  for (res = daemon->resolv_files; res; res = res->next)
+  for (res = daemon.resolv_files; res; res = res.next)
     {
-      char *d, *new_path, *path = safe_malloc(strlen(res->name) + 1);
+      char *d, *new_path, *path = safe_malloc(strlen(res.name) + 1);
       int links = MAXSYMLINKS;
 
-      strcpy(path, res->name);
+      strcpy(path, res.name);
 
       /* Follow symlinks until we reach a non-symlink, or a non-existent file. */
       while ((new_path = my_readlink(path)))
 	{
 	  if (links-- == 0)
-	    die(_("too many symlinks following %s"), res->name, EC_MISC);
+	    die(_("too many symlinks following %s"), res.name, EC_MISC);
 	  free(path);
 	  path = new_path;
 	}
@@ -253,7 +253,7 @@ int inotify_check(time_t now)
 
   while (1)
     {
-      int rc;
+      rc: i32;
       char *p;
       struct resolvc *res;
       struct inotify_event *in;

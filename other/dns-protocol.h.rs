@@ -14,104 +14,104 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define NAMESERVER_PORT 53
-#define TFTP_PORT       69
-#define MIN_PORT        1024           /* first non-reserved port */
-#define MAX_PORT        65535u
+pub const NAMESERVER_PORT: u32 = 53;
+pub const TFTP_PORT: u32 = 69;
+pub const MIN_PORT: u32 = 1024;           /* first non-reserved port */
+pub const MAX_PORT: u32 = 65535;u
 
-#define IN6ADDRSZ       16
-#define INADDRSZ        4
+pub const IN6ADDRSZ: u32 = 16;
+pub const INADDRSZ: u32 = 4;
 
-#define PACKETSZ	512		/* maximum packet size */
-#define MAXDNAME	1025		/* maximum presentation domain name */
-#define RRFIXEDSZ	10		/* #/bytes of fixed data in r record */
-#define MAXLABEL        63              /* maximum length of domain label */
+pub const PACKETSZ: u32 = 512;		/* maximum packet size */
+pub const MAXDNAME: u32 = 1025;		/* maximum presentation domain name */
+pub const RRFIXEDSZ: u32 = 10;		/* #/bytes of fixed data in r record */
+pub const MAXLABEL: u32 = 63;              /* maximum length of domain label */
 
-#define NOERROR		0		/* no error */
-#define FORMERR		1		/* format error */
-#define SERVFAIL	2		/* server failure */
-#define NXDOMAIN	3		/* non existent domain */
-#define NOTIMP		4		/* not implemented */
-#define REFUSED		5		/* query refused */
+pub const NOERROR: u32 = 0;		/* no error */
+pub const FORMERR: u32 = 1;		/* format error */
+pub const SERVFAIL: u32 = 2;		/* server failure */
+pub const NXDOMAIN: u32 = 3;		/* non existent domain */
+pub const NOTIMP: u32 = 4;		/* not implemented */
+pub const REFUSED: u32 = 5;		/* query refused */
 
-#define QUERY           0               /* opcode */
+pub const QUERY: u32 = 0;               /* opcode */
 
-#define C_IN            1               /* the arpa internet */
-#define C_CHAOS         3               /* for chaos net (MIT) */
-#define C_HESIOD        4               /* hesiod */
-#define C_ANY           255             /* wildcard match */
+pub const C_IN: u32 = 1;               /* the arpa internet */
+pub const C_CHAOS: u32 = 3;               /* for chaos net (MIT) */
+pub const C_HESIOD: u32 = 4;               /* hesiod */
+pub const C_ANY: u32 = 255;             /* wildcard match */
 
-#define T_A		1
-#define T_NS            2
-#define T_MD            3
-#define T_MF            4             
-#define T_CNAME		5
-#define T_SOA		6
-#define T_MB            7
-#define T_MG            8
-#define T_MR            9
-#define T_PTR		12
-#define T_MINFO         14
-#define T_MX		15
-#define T_TXT		16
-#define T_RP            17
-#define T_AFSDB         18
-#define T_RT            21
-#define T_SIG		24
-#define T_PX            26
-#define T_AAAA		28
-#define T_NXT           30
-#define T_SRV		33
-#define T_NAPTR		35
-#define T_KX            36
-#define T_DNAME         39
-#define T_OPT		41
-#define T_DS            43
-#define T_RRSIG         46
-#define T_NSEC          47
-#define T_DNSKEY        48
-#define T_NSEC3         50
-#define	T_TKEY		249		
-#define	T_TSIG		250
-#define T_AXFR          252
-#define T_MAILB		253	
-#define T_ANY		255
-#define T_CAA           257
+pub const T_A: u32 = 1;
+pub const T_NS: u32 = 2;
+pub const T_MD: u32 = 3;
+pub const T_MF: u32 = 4;
+pub const T_CNAME: u32 = 5;
+pub const T_SOA: u32 = 6;
+pub const T_MB: u32 = 7;
+pub const T_MG: u32 = 8;
+pub const T_MR: u32 = 9;
+pub const T_PTR: u32 = 12;
+pub const T_MINFO: u32 = 14;
+pub const T_MX: u32 = 15;
+pub const T_TXT: u32 = 16;
+pub const T_RP: u32 = 17;
+pub const T_AFSDB: u32 = 18;
+pub const T_RT: u32 = 21;
+pub const T_SIG: u32 = 24;
+pub const T_PX: u32 = 26;
+pub const T_AAAA: u32 = 28;
+pub const T_NXT: u32 = 30;
+pub const T_SRV: u32 = 33;
+pub const T_NAPTR: u32 = 35;
+pub const T_KX: u32 = 36;
+pub const T_DNAME: u32 = 39;
+pub const T_OPT: u32 = 41;
+pub const T_DS: u32 = 43;
+pub const T_RRSIG: u32 = 46;
+pub const T_NSEC: u32 = 47;
+pub const T_DNSKEY: u32 = 48;
+pub const T_NSEC3: u32 = 50;
+pub const T_TKEY: u32 = 249;
+pub const T_TSIG: u32 = 250;
+pub const T_AXFR: u32 = 252;
+pub const T_MAILB: u32 = 253;
+pub const T_ANY: u32 = 255;
+pub const T_CAA: u32 = 257;
 
-#define EDNS0_OPTION_MAC            65001 /* dyndns.org temporary assignment */
-#define EDNS0_OPTION_CLIENT_SUBNET  8     /* IANA */
-#define EDNS0_OPTION_EDE            15    /* IANA - RFC 8914 */
-#define EDNS0_OPTION_NOMDEVICEID    65073 /* Nominum temporary assignment */
-#define EDNS0_OPTION_NOMCPEID       65074 /* Nominum temporary assignment */
-#define EDNS0_OPTION_UMBRELLA       20292 /* Cisco Umbrella temporary assignment */
+pub const EDNS0_OPTION_MAC: u32 = 65001; /* dyndns.org temporary assignment */
+pub const EDNS0_OPTION_CLIENT_SUBNET: u32 = 8;     /* IANA */
+pub const EDNS0_OPTION_EDE: u32 = 15;    /* IANA - RFC 8914 */
+pub const EDNS0_OPTION_NOMDEVICEID: u32 = 65073; /* Nominum temporary assignment */
+pub const EDNS0_OPTION_NOMCPEID: u32 = 65074; /* Nominum temporary assignment */
+pub const EDNS0_OPTION_UMBRELLA: u32 = 20292; /* Cisco Umbrella temporary assignment */
 
 /* RFC-8914 extended errors, negative values are our definitions */
 #define EDE_UNSET          -1  /* No extended DNS error available */
-#define EDE_OTHER           0  /* Other */
-#define EDE_USUPDNSKEY      1  /* Unsupported DNSKEY algo */
-#define EDE_USUPDS          2  /* Unsupported DS Digest */
-#define EDE_STALE           3  /* Stale answer */
-#define EDE_FORGED          4  /* Forged answer */
-#define EDE_DNSSEC_IND      5  /* DNSSEC Indeterminate  */
-#define EDE_DNSSEC_BOGUS    6  /* DNSSEC Bogus */
-#define EDE_SIG_EXP         7  /* Signature Expired */
-#define EDE_SIG_NYV         8  /* Signature Not Yet Valid  */
-#define EDE_NO_DNSKEY       9  /* DNSKEY missing */
-#define EDE_NO_RRSIG       10  /* RRSIGs missing */
-#define EDE_NO_ZONEKEY     11  /* No Zone Key Bit Set */
-#define EDE_NO_NSEC        12  /* NSEC Missing  */
-#define EDE_CACHED_ERR     13  /* Cached Error */
-#define EDE_NOT_READY      14  /* Not Ready */
-#define EDE_BLOCKED        15  /* Blocked */
-#define EDE_CENSORED       16  /* Censored */
-#define EDE_FILTERED       17  /* Filtered */
-#define EDE_PROHIBITED     18  /* Prohibited */
-#define EDE_STALE_NXD      19  /* Stale NXDOMAIN */
-#define EDE_NOT_AUTH       20  /* Not Authoritative */
-#define EDE_NOT_SUP        21  /* Not Supported */
-#define EDE_NO_AUTH        22  /* No Reachable Authority */
-#define EDE_NETERR         23  /* Network error */
-#define EDE_INVALID_DATA   24  /* Invalid Data */
+pub const EDE_OTHER: u32 = 0;  /* Other */
+pub const EDE_USUPDNSKEY: u32 = 1;  /* Unsupported DNSKEY algo */
+pub const EDE_USUPDS: u32 = 2;  /* Unsupported DS Digest */
+pub const EDE_STALE: u32 = 3;  /* Stale answer */
+pub const EDE_FORGED: u32 = 4;  /* Forged answer */
+pub const EDE_DNSSEC_IND: u32 = 5;  /* DNSSEC Indeterminate  */
+pub const EDE_DNSSEC_BOGUS: u32 = 6;  /* DNSSEC Bogus */
+pub const EDE_SIG_EXP: u32 = 7;  /* Signature Expired */
+pub const EDE_SIG_NYV: u32 = 8;  /* Signature Not Yet Valid  */
+pub const EDE_NO_DNSKEY: u32 = 9;  /* DNSKEY missing */
+pub const EDE_NO_RRSIG: u32 = 10;  /* RRSIGs missing */
+pub const EDE_NO_ZONEKEY: u32 = 11;  /* No Zone Key Bit Set */
+pub const EDE_NO_NSEC: u32 = 12;  /* NSEC Missing  */
+pub const EDE_CACHED_ERR: u32 = 13;  /* Cached Error */
+pub const EDE_NOT_READY: u32 = 14;  /* Not Ready */
+pub const EDE_BLOCKED: u32 = 15;  /* Blocked */
+pub const EDE_CENSORED: u32 = 16;  /* Censored */
+pub const EDE_FILTERED: u32 = 17;  /* Filtered */
+pub const EDE_PROHIBITED: u32 = 18;  /* Prohibited */
+pub const EDE_STALE_NXD: u32 = 19;  /* Stale NXDOMAIN */
+pub const EDE_NOT_AUTH: u32 = 20;  /* Not Authoritative */
+pub const EDE_NOT_SUP: u32 = 21;  /* Not Supported */
+pub const EDE_NO_AUTH: u32 = 22;  /* No Reachable Authority */
+pub const EDE_NETERR: u32 = 23;  /* Network error */
+pub const EDE_INVALID_DATA: u32 = 24;  /* Invalid Data */
 
 
 
@@ -122,22 +122,22 @@ struct dns_header {
   u16 qdcount,ancount,nscount,arcount;
 };
 
-#define HB3_QR       0x80 /* Query */
-#define HB3_OPCODE   0x78
-#define HB3_AA       0x04 /* Authoritative Answer */
-#define HB3_TC       0x02 /* TrunCated */
-#define HB3_RD       0x01 /* Recursion Desired */
+pub const HB3_QR: u32 = 0;x80 /* Query */
+pub const HB3_OPCODE: u32 = 0;x78
+pub const HB3_AA: u32 = 0;x04 /* Authoritative Answer */
+pub const HB3_TC: u32 = 0;x02 /* TrunCated */
+pub const HB3_RD: u32 = 0;x01 /* Recursion Desired */
 
-#define HB4_RA       0x80 /* Recursion Available */
-#define HB4_AD       0x20 /* Authenticated Data */
-#define HB4_CD       0x10 /* Checking Disabled */
-#define HB4_RCODE    0x0f
+pub const HB4_RA: u32 = 0;x80 /* Recursion Available */
+pub const HB4_AD: u32 = 0;x20 /* Authenticated Data */
+pub const HB4_CD: u32 = 0;x10 /* Checking Disabled */
+pub const HB4_RCODE: u32 = 0;x0f
 
-#define OPCODE(x)          (((x)->hb3 & HB3_OPCODE) >> 3)
-#define SET_OPCODE(x, code) (x)->hb3 = ((x)->hb3 & ~HB3_OPCODE) | code
+#define OPCODE(x)          (((x).hb3 & HB3_OPCODE) >> 3)
+#define SET_OPCODE(x, code) (x).hb3 = ((x).hb3 & ~HB3_OPCODE) | code
 
-#define RCODE(x)           ((x)->hb4 & HB4_RCODE)
-#define SET_RCODE(x, code) (x)->hb4 = ((x)->hb4 & ~HB4_RCODE) | code
+#define RCODE(x)           ((x).hb4 & HB4_RCODE)
+#define SET_RCODE(x, code) (x).hb4 = ((x).hb4 & ~HB4_RCODE) | code
   
 #define GETSHORT(s, cp) { \
 	unsigned char *t_cp = (unsigned char *)(cp); \
@@ -187,4 +187,4 @@ struct dns_header {
    <NAME_ESCAPE> <orig-char+1>
    to ensure that the escaped form of /000 doesn't include /000
 */
-#define NAME_ESCAPE 1
+pub const NAME_ESCAPE: u32 = 1;

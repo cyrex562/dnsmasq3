@@ -14,21 +14,21 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_LINUX_NETWORK
 
-#include <linux/types.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
+// #include <linux/types.h>
+// #include <linux/netlink.h>
+// #include <linux/rtnetlink.h>
 
 /* Blergh. Radv does this, so that's our excuse. */
 #ifndef SOL_NETLINK
-#define SOL_NETLINK 270
+pub const SOL_NETLINK: u32 = 270;
 #endif
 
 #ifndef NETLINK_NO_ENOBUFS
-#define NETLINK_NO_ENOBUFS 5
+pub const NETLINK_NO_ENOBUFS: u32 = 5;
 #endif
 
 /* linux 2.6.19 buggers up the headers, patch it up here. */ 
@@ -71,17 +71,17 @@ char *netlink_init(void)
   addr.nl_groups |= RTMGRP_IPV6_IFADDR;
 
   /* May not be able to have permission to set multicast groups don't die in that case */
-  if ((daemon->netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) != -1)
+  if ((daemon.netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) != -1)
     {
-      if (bind(daemon->netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+      if (bind(daemon.netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
 	{
 	  addr.nl_groups = 0;
-	  if (errno != EPERM || bind(daemon->netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-	    daemon->netlinkfd = -1;
+	  if (errno != EPERM || bind(daemon.netlinkfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+	    daemon.netlinkfd = -1;
 	}
     }
   
-  if (daemon->netlinkfd == -1 || 
+  if (daemon.netlinkfd == -1 ||
       getsockname(daemon->netlinkfd, (struct sockaddr *)&addr, &slen) == -1)
     die(_("cannot create netlink socket: %s"), NULL, EC_MISC);
   
@@ -237,9 +237,9 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		    while (RTA_OK(rta, len1))
 		      {
 			if (rta->rta_type == IFA_LOCAL)
-			  addr = *((struct in_addr *)(rta+1));
+			  addr = *((rta+1));
 			else if (rta->rta_type == IFA_BROADCAST)
-			  broadcast = *((struct in_addr *)(rta+1));
+			  broadcast = *((rta+1));
 			else if (rta->rta_type == IFA_LABEL)
 			  label = RTA_DATA(rta);
 			
@@ -266,9 +266,9 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 			 * local address is supplied in IFA_LOCAL attribute.
 			 */
 			if (rta->rta_type == IFA_LOCAL)
-			  addrp = ((struct in6_addr *)(rta+1));
+			  addrp = ((rta+1));
 			else if (rta->rta_type == IFA_ADDRESS && !addrp)
-			  addrp = ((struct in6_addr *)(rta+1)); 
+			  addrp = ((rta+1));
 			else if (rta->rta_type == IFA_CACHEINFO)
 			  {
 			    struct ifa_cacheinfo *ifc = (struct ifa_cacheinfo *)(rta+1);

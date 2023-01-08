@@ -16,7 +16,7 @@
 
 /* Code to safely remove RRs from a DNS answer */ 
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 /* Go through a domain name, find "pointers" and fix them up based on how many bytes
    we've chopped out of the packet, or check they don't point into an elided part.  */
@@ -26,7 +26,7 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
 
   while(1)
     {
-      unsigned int label_type;
+      unsigned label_type: i32;
       
       if (!CHECK_LEN(header, ansp, plen, 1))
 	return 0;
@@ -36,8 +36,8 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
       if (label_type == 0xc0)
 	{
 	  /* pointer for compression. */
-	  unsigned int offset;
-	  int i;
+	  unsigned offset: i32;
+	  i: i32;
 	  unsigned char *p;
 	  
 	  if (!CHECK_LEN(header, ansp, plen, 2))
@@ -73,7 +73,7 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
       else if (label_type == 0x40)
 	{
 	  /* Extended label type */
-	  unsigned int count;
+	  unsigned count: i32;
 	  
 	  if (!CHECK_LEN(header, ansp, plen, 2))
 	    return 0;
@@ -111,7 +111,7 @@ static int check_rrs(unsigned char *p, struct dns_header *header, size_t plen, i
   int i, j, type, class, rdlen;
   unsigned char *pp;
   
-  for (i = 0; i < ntohs(header->ancount) + ntohs(header->nscount) + ntohs(header->arcount); i++)
+  for (i = 0; i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount); i++)
     {
       pp = p;
 
@@ -165,7 +165,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
   unsigned char *p = (unsigned char *)(header+1);
   int i, rdlen, qtype, qclass, rr_found, chop_an, chop_ns, chop_ar;
 
-  if (ntohs(header->qdcount) != 1 ||
+  if (ntohs(header.qdcount) != 1 ||
       !(p = skip_name(p, header, plen, 4)))
     return plen;
   
@@ -175,7 +175,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
   /* First pass, find pointers to start and end of all the records we wish to elide:
      records added for DNSSEC, unless explicitly queried for */
   for (rr_found = 0, chop_ns = 0, chop_an = 0, chop_ar = 0, i = 0; 
-       i < ntohs(header->ancount) + ntohs(header->nscount) + ntohs(header->arcount);
+       i < ntohs(header.ancount) + ntohs(header.nscount) + ntohs(header.arcount);
        i++)
     {
       unsigned char *pstart = p;

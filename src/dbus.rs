@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DBUS
 
-#include <dbus/dbus.h>
+// #include <dbus/dbus.h>
 
 const char* introspection_xml_template =
 "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
@@ -111,16 +111,16 @@ static dbus_bool_t add_watch(DBusWatch *watch, void *data)
 {
   struct watch *w;
 
-  for (w = daemon->watches; w; w = w->next)
-    if (w->watch == watch)
+  for (w = daemon.watches; w; w = w.next)
+    if (w.watch == watch)
       return TRUE;
 
   if (!(w = whine_malloc(sizeof(struct watch))))
     return FALSE;
 
-  w->watch = watch;
-  w->next = daemon->watches;
-  daemon->watches = w;
+  w.watch = watch;
+  w.next = daemon.watches;
+  daemon.watches = w;
 
   (void)data; /* no warning */
   return TRUE;
@@ -130,16 +130,16 @@ static void remove_watch(DBusWatch *watch, void *data)
 {
   struct watch **up, *w, *tmp;  
   
-  for (up = &(daemon->watches), w = daemon->watches; w; w = tmp)
+  for (up = &(daemon.watches), w = daemon.watches; w; w = tmp)
     {
-      tmp = w->next;
-      if (w->watch == watch)
+      tmp = w.next;
+      if (w.watch == watch)
 	{
 	  *up = tmp;
 	  free(w);
 	}
       else
-	up = &(w->next);
+	up = &(w.next);
     }
 
   (void)data; /* no warning */
@@ -177,12 +177,12 @@ static DBusMessage* dbus_read_servers(DBusMessage *message)
 	  source_addr.in.sin_family = addr.in.sin_family = AF_INET;
 	  addr.in.sin_port = htons(NAMESERVER_PORT);
 	  source_addr.in.sin_addr.s_addr = INADDR_ANY;
-	  source_addr.in.sin_port = htons(daemon->query_port);
+	  source_addr.in.sin_port = htons(daemon.query_port);
 	}
       else if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_BYTE)
 	{
 	  unsigned char p[sizeof(struct in6_addr)];
-	  unsigned int i;
+	  unsigned i: i32;
 
 	  skip = 1;
 
@@ -208,7 +208,7 @@ static DBusMessage* dbus_read_servers(DBusMessage *message)
               source_addr.in6.sin6_flowinfo = addr.in6.sin6_flowinfo = 0;
 	      source_addr.in6.sin6_scope_id = addr.in6.sin6_scope_id = 0;
               source_addr.in6.sin6_addr = in6addr_any;
-              source_addr.in6.sin6_port = htons(daemon->query_port);
+              source_addr.in6.sin6_port = htons(daemon.query_port);
 	      skip = 0;
 	    }
 	}
@@ -247,11 +247,11 @@ static DBusMessage *dbus_reply_server_loop(DBusMessage *message)
   dbus_message_iter_init_append (reply, &args);
   dbus_message_iter_open_container (&args, DBUS_TYPE_ARRAY,DBUS_TYPE_STRING_AS_STRING, &args_iter);
 
-  for (serv = daemon->servers; serv; serv = serv->next)
-    if (serv->flags & SERV_LOOP)
+  for (serv = daemon.servers; serv; serv = serv.next)
+    if (serv.flags & SERV_LOOP)
       {
-	(void)prettyprint_addr(&serv->addr, daemon->addrbuff);
-	dbus_message_iter_append_basic (&args_iter, DBUS_TYPE_STRING, &daemon->addrbuff);
+	(void)prettyprint_addr(&serv.addr, daemon.addrbuff);
+	dbus_message_iter_append_basic (&args_iter, DBUS_TYPE_STRING, &daemon.addrbuff);
       }
   
   dbus_message_iter_close_container (&args, &args_iter);
@@ -613,7 +613,7 @@ static DBusMessage *dbus_add_lease(DBusMessage* message)
                    clid_len, now, 0);
   lease_set_expires(lease, expires, now);
   if (hostname_len != 0)
-    lease_set_hostname(lease, hostname, 0, get_domain(lease->addr), NULL);
+    lease_set_hostname(lease, hostname, 0, get_domain(lease.addr), NULL);
   
   lease_update_file(now);
   lease_update_dns(0);
@@ -673,14 +673,14 @@ static DBusMessage *dbus_get_metrics(DBusMessage* message)
 {
   DBusMessage *reply = dbus_message_new_method_return(message);
   DBusMessageIter array, dict, iter;
-  int i;
+  i: i32;
 
   dbus_message_iter_init_append(reply, &iter);
   dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "{su}", &array);
 
   for (i = 0; i < __METRIC_MAX; i++) {
     const char *key     = get_metric_name(i);
-    dbus_uint32_t value = daemon->metrics[i];
+    dbus_uint32_t value = daemon.metrics[i];
 
     dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, NULL, &dict);
     dbus_message_iter_append_basic(&dict, DBUS_TYPE_STRING, &key);
@@ -705,9 +705,9 @@ static void add_dict_entry(DBusMessageIter *container, const char *key, const ch
 
 static void add_dict_int(DBusMessageIter *container, const char *key, const unsigned int val)
 {
-  snprintf(daemon->namebuff, MAXDNAME, "%u", val);
+  snprintf(daemon.namebuff, MAXDNAME, "%u", val);
   
-  add_dict_entry(container, key, daemon->namebuff);
+  add_dict_entry(container, key, daemon.namebuff);
 }
 
 static DBusMessage *dbus_get_server_metrics(DBusMessage* message)
@@ -720,13 +720,13 @@ static DBusMessage *dbus_get_server_metrics(DBusMessage* message)
   dbus_message_iter_open_container(&server_iter, DBUS_TYPE_ARRAY, "a{ss}", &server_array);
 
   /* sum counts from different records for same server */
-  for (serv = daemon->servers; serv; serv = serv->next)
-    serv->flags &= ~SERV_MARK;
+  for (serv = daemon.servers; serv; serv = serv.next)
+    serv.flags &= ~SERV_MARK;
   
-  for (serv = daemon->servers; serv; serv = serv->next)
+  for (serv = daemon.servers; serv; serv = serv->next)
     if (!(serv->flags & SERV_MARK))
       {
-	unsigned int port;
+	unsigned port: i32;
 	unsigned int queries = 0, failed_queries = 0, nxdomain_replies = 0, retrys = 0;
 	unsigned int sigma_latency = 0, count_latency = 0;
 	
@@ -978,7 +978,7 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
   DBusMessageIter args;
   char *action_str, *mac = daemon->namebuff;
   unsigned char *p;
-  int i;
+  i: i32;
 
   if (!connection)
     return;

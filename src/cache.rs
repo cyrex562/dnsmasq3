@@ -14,14 +14,14 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 static struct crec *cache_head = NULL, *cache_tail = NULL, **hash_table = NULL;
 #ifdef HAVE_DHCP
 static struct crec *dhcp_spare = NULL;
 #endif
 static struct crec *new_chain = NULL;
-static int insert_error;
+static insert_error: i32;
 static union bigname *big_free = NULL;
 static int bignames_left, hash_size;
 
@@ -32,7 +32,7 @@ static struct crec *really_insert(char *name, union all_addr *addr, unsigned sho
 /* type->string mapping: this is also used by the name-hash function as a mixing table. */
 /* taken from https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml */
 static const struct {
-  unsigned int type;
+  unsigned type: i32;
   const char * const name;
 } typestr[] = {
   { 1,   "A" }, /* a host address [RFC1035] */
@@ -136,7 +136,7 @@ void next_uid(struct crec *crecp)
 {
   static unsigned int uid = 0;
 
-  if (crecp->uid == UID_NONE)
+  if (crecp.uid == UID_NONE)
     {
       uid++;
   
@@ -144,31 +144,31 @@ void next_uid(struct crec *crecp)
       if (uid == UID_NONE)
 	uid++;
       
-      crecp->uid = uid;
+      crecp.uid = uid;
     }
 }
 
 void cache_init(void)
 {
   struct crec *crecp;
-  int i;
+  i: i32;
  
-  bignames_left = daemon->cachesize/10;
+  bignames_left = daemon.cachesize/10;
   
-  if (daemon->cachesize > 0)
+  if (daemon.cachesize > 0)
     {
-      crecp = safe_malloc(daemon->cachesize*sizeof(struct crec));
+      crecp = safe_malloc(daemon.cachesize*sizeof(struct crec));
       
-      for (i=0; i < daemon->cachesize; i++, crecp++)
+      for (i=0; i < daemon.cachesize; i++, crecp++)
 	{
 	  cache_link(crecp);
-	  crecp->flags = 0;
-	  crecp->uid = UID_NONE;
+	  crecp.flags = 0;
+	  crecp.uid = UID_NONE;
 	}
     }
   
   /* create initial hash table*/
-  rehash(daemon->cachesize);
+  rehash(daemon.cachesize);
 }
 
 /* In most cases, we create the hash table once here by calling this with (hash_table == NULL)
@@ -202,7 +202,7 @@ static void rehash(int size)
       for (i = 0; i < old_size; i++)
 	for (p = old[i]; p ; p = tmp)
 	  {
-	    tmp = p->hash_next;
+	    tmp = p.hash_next;
 	    cache_hash(p);
 	  }
       free(old);
@@ -236,19 +236,19 @@ static void cache_hash(struct crec *crecp)
   char *name = cache_get_name(crecp);
   struct crec **up = hash_bucket(name);
 
-  if (!(crecp->flags & F_REVERSE))
+  if (!(crecp.flags & F_REVERSE))
     {
-      while (*up && ((*up)->flags & F_REVERSE))
-	up = &((*up)->hash_next); 
+      while (*up && ((*up).flags & F_REVERSE))
+	up = &((*up).hash_next);
       
       if (crecp->flags & F_IMMORTAL)
-	while (*up && !((*up)->flags & F_IMMORTAL))
-	  up = &((*up)->hash_next);
+	while (*up && !((*up).flags & F_IMMORTAL))
+	  up = &((*up).hash_next);
     }
 
   /* Preserve order when inserting the same name multiple times. */
   while (*up && hostname_isequal(cache_get_name(*up), name))
-    up = &((*up)->hash_next);
+    up = &((*up).hash_next);
   
   crecp->hash_next = *up;
   *up = crecp;
@@ -342,7 +342,7 @@ char *cache_get_cname_target(struct crec *crecp)
 
 struct crec *cache_enumerate(int init)
 {
-  static int bucket;
+  static bucket: i32;
   static struct crec *cache;
 
   if (init)
@@ -405,7 +405,7 @@ static int is_expired(time_t now, struct crec *crecp)
 /* Remove entries with a given UID from the cache */
 unsigned int cache_remove_uid(const unsigned int uid)
 {
-  int i;
+  i: i32;
   unsigned int removed = 0;
   struct crec *crecp, **up;
 
@@ -504,7 +504,7 @@ static struct crec *cache_scan_free(char *name, union all_addr *addr, unsigned s
     }
   else
     {
-      int i;
+      i: i32;
       int addrlen = (flags & F_IPV6) ? IN6ADDRSZ : INADDRSZ;
 
       for (i = 0; i < hash_size; i++)
@@ -595,7 +595,7 @@ static struct crec *really_insert(char *name, union all_addr *addr, unsigned sho
   union bigname *big_name = NULL;
   int freed_all = (flags & F_REVERSE);
   int free_avail = 0;
-  unsigned int target_uid;
+  unsigned target_uid: i32;
   
   /* if previous insertion failed give up now. */
   if (insert_error)
@@ -820,7 +820,7 @@ int cache_recv_insert(time_t now, int fd)
   union all_addr addr;
   unsigned long ttl;
   time_t ttd;
-  unsigned int flags;
+  unsigned flags: i32;
   struct crec *crecp = NULL;
   
   cache_start_insert();
@@ -1012,7 +1012,7 @@ struct crec *cache_find_by_addr(struct crec *crecp, union all_addr *addr,
 	 also free anything which has expired. All the reverse entries are at the
 	 start of the hash chain, so we can give up when we find the first 
 	 non-REVERSE one.  */
-       int i;
+       i: i32;
        struct crec **up, **chainp = &ans;
        
        for (i=0; i<hash_size; i++)
@@ -1062,8 +1062,8 @@ struct crec *cache_find_by_addr(struct crec *crecp, union all_addr *addr,
 static void add_hosts_entry(struct crec *cache, union all_addr *addr, int addrlen, 
 			    unsigned int index, struct crec **rhash, int hashsz)
 {
-  int i;
-  unsigned int j; 
+  i: i32;
+  unsigned j: i32;
   struct crec *lookup = NULL;
 
   /* Remove duplicates in hosts files. */
@@ -1459,7 +1459,7 @@ struct in_addr a_record_from_hosts(char *name, time_t now)
 void cache_unhash_dhcp(void)
 {
   struct crec *cache, **up;
-  int i;
+  i: i32;
 
   for (i=0; i<hash_size; i++)
     for (cache = hash_table[i], up = &hash_table[i]; cache; cache = cache->hash_next)
@@ -1658,7 +1658,7 @@ int cache_make_stat(struct txt_record *t)
 { 
   static char *buff = NULL;
   static int bufflen = 60;
-  int len;
+  len: i32;
   struct server *serv, *serv1;
   char *p;
 
@@ -1785,7 +1785,7 @@ void dump_cache(time_t now)
   for (serv = daemon->servers; serv; serv = serv->next)
     if (!(serv->flags & SERV_MARK))
       {
-	int port;
+	port: i32;
 	unsigned int queries = 0, failed_queries = 0, nxdomain_replies = 0, retrys = 0;
 	unsigned int sigma_latency = 0, count_latency = 0;
 
@@ -1808,7 +1808,7 @@ void dump_cache(time_t now)
   if (option_bool(OPT_DEBUG) || option_bool(OPT_LOG))
     {
       struct crec *cache ;
-      int i;
+      i: i32;
       my_syslog(LOG_INFO, "Host                           Address                                  Flags      Expires                  Source");
       my_syslog(LOG_INFO, "------------------------------ ---------------------------------------- ---------- ------------------------ ------------");
     
@@ -1923,7 +1923,7 @@ char *record_source(unsigned int index)
 
 static char *querystr(char *desc, unsigned short type)
 {
-  unsigned int i;
+  unsigned i: i32;
   int len = 10; /* strlen("type=xxxxx") */
   const char *types = NULL;
   static char *buff = NULL;

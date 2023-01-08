@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_LINUX_NETWORK
 
@@ -37,8 +37,8 @@ int indextoname(int fd, int index, char *name)
 
 #elif defined(HAVE_SOLARIS_NETWORK)
 
-#include <zone.h>
-#include <alloca.h>
+// #include <zone.h>
+// #include <alloca.h>
 #ifndef LIFC_UNDER_IPMP
 #  define LIFC_UNDER_IPMP 0
 #endif
@@ -224,7 +224,7 @@ int label_exception(int index, int family, union all_addr *addr)
 
 struct iface_param {
   struct addrlist *spare;
-  int fd;
+  fd: i32;
 };
 
 static int iface_allowed(struct iface_param *param, int if_index, char *label,
@@ -232,7 +232,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
 {
   struct irec *iface;
   struct cond_domain *cond;
-  int loopback;
+  loopback: i32;
   struct ifreq ifr;
   int tftp_ok = !!option_bool(OPT_TFTP);
   int dhcp_ok = 1;
@@ -396,7 +396,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
 		
 		if (int_name->flags & INP6)
 		  {
-		    int i;
+		    i: i32;
 
 		    /* No sense in doing /128. */
 		    if (prefixlen == 128)
@@ -694,7 +694,7 @@ static int release_listener(struct listener *l)
 
   if (l->iface->done)
     {
-      int port;
+      port: i32;
 
       port = prettyprint_addr(&l->iface->addr, daemon->addrbuff);
       my_syslog(LOG_DEBUG|MS_DEBUG, _("stopped listening on %s(#%d): %s port %d"),
@@ -878,7 +878,7 @@ again:
 /* set NONBLOCK bit on fd: See Stevens 16.6 */
 int fix_fd(int fd)
 {
-  int flags;
+  flags: i32;
 
   if ((flags = fcntl(fd, F_GETFL)) == -1 ||
       fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
@@ -1443,7 +1443,7 @@ int local_bind(int fd, union mysockaddr *addr, char *intname, unsigned int ifind
 static struct serverfd *allocate_sfd(union mysockaddr *addr, char *intname, unsigned int ifindex)
 {
   struct serverfd *sfd;
-  int errsave;
+  errsave: i32;
   int opt = 1;
   
   /* when using random ports, servers which would otherwise use

@@ -14,30 +14,30 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #if defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
-#include <ifaddrs.h>
+// #include <ifaddrs.h>
 
-#include <sys/param.h>
+// #include <sys/param.h>
 #if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
-#include <sys/sysctl.h>
+// #include <sys/sysctl.h>
 #endif
-#include <net/if.h>
-#include <net/route.h>
-#include <net/if_dl.h>
-#include <netinet/if_ether.h>
+// #include <net/if.h>
+// #include <net/route.h>
+// #include <net/if_dl.h>
+// #include <netinet/if_ether.h>
 #if defined(__FreeBSD__)
 #  include <net/if_var.h> 
 #endif
-#include <netinet/in_var.h>
-#include <netinet6/in6_var.h>
+// #include <netinet/in_var.h>
+// #include <netinet6/in6_var.h>
 
 #ifndef SA_SIZE
 #define SA_SIZE(sa)                                             \
-    (  (!(sa) || ((struct sockaddr *)(sa))->sa_len == 0) ?      \
+    (  (!(sa) || ((struct sockaddr *)(sa)).sa_len == 0) ?      \
         sizeof(long)            :                               \
-        1 + ( (((struct sockaddr *)(sa))->sa_len - 1) | (sizeof(long) - 1) ) )
+        1 + ( (((struct sockaddr *)(sa)).sa_len - 1) | (sizeof(long) - 1) ) )
 #endif
 
 #ifdef HAVE_BSD_NETWORK
@@ -56,7 +56,7 @@ int arp_enumerate(void *parm, int (*callback)())
   struct sockaddr_inarp *sin2;
   struct sockaddr_dl *sdl;
   struct iovec buff;
-  int rc;
+  rc: i32;
 
   buff.iov_base = NULL;
   buff.iov_len = 0;
@@ -86,12 +86,12 @@ int arp_enumerate(void *parm, int (*callback)())
   if (rc == -1)
     return 0;
   
-  for (next = buff.iov_base ; next < (char *)buff.iov_base + needed; next += rtm->rtm_msglen)
+  for (next = buff.iov_base ; next < (char *)buff.iov_base + needed; next += rtm.rtm_msglen)
     {
       rtm = (struct rt_msghdr *)next;
       sin2 = (struct sockaddr_inarp *)(rtm + 1);
       sdl = (struct sockaddr_dl *)((char *)sin2 + SA_SIZE(sin2));
-      if (!(*callback)(AF_INET, &sin2->sin_addr, LLADDR(sdl), sdl->sdl_alen, parm))
+      if (!(*callback)(AF_INET, &sin2.sin_addr, LLADDR(sdl), sdl.sdl_alen, parm))
 	return 0;
     }
 
@@ -124,27 +124,27 @@ int iface_enumerate(int family, void *parm, int (*callback)())
     fd = socket(PF_INET6, SOCK_DGRAM, 0);
 #endif
   
-  for (addrs = head; addrs; addrs = addrs->ifa_next)
+  for (addrs = head; addrs; addrs = addrs.ifa_next)
     {
-      if (addrs->ifa_addr->sa_family == family)
+      if (addrs.ifa_addr.sa_family == family)
 	{
-	  int iface_index = if_nametoindex(addrs->ifa_name);
+	  int iface_index = if_nametoindex(addrs.ifa_name);
 
-	  if (iface_index == 0 || !addrs->ifa_addr || 
-	      (!addrs->ifa_netmask && family != AF_LINK))
+	  if (iface_index == 0 || !addrs.ifa_addr ||
+	      (!addrs.ifa_netmask && family != AF_LINK))
 	    continue;
 
 	  if (family == AF_INET)
 	    {
 	      struct in_addr addr, netmask, broadcast;
-	      addr = ((struct sockaddr_in *) addrs->ifa_addr)->sin_addr;
+	      addr = ((struct sockaddr_in *) addrs.ifa_addr).sin_addr;
 #ifdef HAVE_BSD_NETWORK
 	      if (del_family == AF_INET && del_addr.addr4.s_addr == addr.s_addr)
 		continue;
 #endif
-	      netmask = ((struct sockaddr_in *) addrs->ifa_netmask)->sin_addr;
-	      if (addrs->ifa_broadaddr)
-		broadcast = ((struct sockaddr_in *) addrs->ifa_broadaddr)->sin_addr; 
+	      netmask = ((struct sockaddr_in *) addrs.ifa_netmask).sin_addr;
+	      if (addrs.ifa_broadaddr)
+		broadcast = ((struct sockaddr_in *) addrs.ifa_broadaddr).sin_addr;
 	      else 
 		broadcast.s_addr = 0;	      
 	      if (!((*callback)(addr, iface_index, NULL, netmask, broadcast, parm)))
@@ -152,9 +152,9 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	    }
 	  else if (family == AF_INET6)
 	    {
-	      struct in6_addr *addr = &((struct sockaddr_in6 *) addrs->ifa_addr)->sin6_addr;
-	      unsigned char *netmask = (unsigned char *) &((struct sockaddr_in6 *) addrs->ifa_netmask)->sin6_addr;
-	      int scope_id = ((struct sockaddr_in6 *) addrs->ifa_addr)->sin6_scope_id;
+	      struct in6_addr *addr = &((struct sockaddr_in6 *) addrs.ifa_addr).sin6_addr;
+	      unsigned char *netmask = (unsigned char *) &((struct sockaddr_in6 *) addrs.ifa_netmask).sin6_addr;
+	      int scope_id = ((struct sockaddr_in6 *) addrs.ifa_addr).sin6_scope_id;
 	      int i, j, prefix = 0;
 	      u32 valid = 0xffffffff, preferred = 0xffffffff;
 	      int flags = 0;
@@ -166,9 +166,9 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	      struct in6_ifreq ifr6;
 
 	      memset(&ifr6, 0, sizeof(ifr6));
-	      safe_strncpy(ifr6.ifr_name, addrs->ifa_name, sizeof(ifr6.ifr_name));
+	      safe_strncpy(ifr6.ifr_name, addrs.ifa_name, sizeof(ifr6.ifr_name));
 	      
-	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs->ifa_addr);
+	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs.ifa_addr);
 	      if (fd != -1 && ioctl(fd, SIOCGIFAFLAG_IN6, &ifr6) != -1)
 		{
 		  if (ifr6.ifr_ifru.ifru_flags6 & IN6_IFF_TENTATIVE)
@@ -188,7 +188,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 #endif
 		}
 	      
-	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs->ifa_addr);
+	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs.ifa_addr);
 	      if (fd != -1 && ioctl(fd, SIOCGIFALIFETIME_IN6, &ifr6) != -1)
 		{
 		  valid = ifr6.ifr_ifru.ifru_lifetime.ia6t_vltime;
@@ -208,8 +208,8 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	      /* voodoo to clear interface field in address */
 	      if (!option_bool(OPT_NOWILD) && IN6_IS_ADDR_LINKLOCAL(addr))
 		{
-		  addr->s6_addr[2] = 0;
-		  addr->s6_addr[3] = 0;
+		  addr.s6_addr[2] = 0;
+		  addr.s6_addr[3] = 0;
 		} 
 	     
 	      if (!((*callback)(addr, prefix, scope_id, iface_index, flags,
@@ -221,9 +221,9 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	  else if (family == AF_LINK)
 	    { 
 	      /* Assume ethernet again here */
-	      struct sockaddr_dl *sdl = (struct sockaddr_dl *) addrs->ifa_addr;
-	      if (sdl->sdl_alen != 0 && 
-		  !((*callback)(iface_index, ARPHRD_ETHER, LLADDR(sdl), sdl->sdl_alen, parm)))
+	      struct sockaddr_dl *sdl = (struct sockaddr_dl *) addrs.ifa_addr;
+	      if (sdl.sdl_alen != 0 &&
+		  !((*callback)(iface_index, ARPHRD_ETHER, LLADDR(sdl), sdl.sdl_alen, parm)))
 		goto err;
 	    }
 #endif 
@@ -245,7 +245,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 
 
 #if defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP)
-#include <net/bpf.h>
+// #include <net/bpf.h>
 
 void init_bpf(void)
 {
@@ -253,8 +253,8 @@ void init_bpf(void)
 
   while (1) 
     {
-      sprintf(daemon->dhcp_buff, "/dev/bpf%d", i++);
-      if ((daemon->dhcp_raw_fd = open(daemon->dhcp_buff, O_RDWR, 0)) != -1)
+      sprintf(daemon.dhcp_buff, "/dev/bpf%d", i++);
+      if ((daemon.dhcp_raw_fd = open(daemon.dhcp_buff, O_RDWR, 0)) != -1)
 	return;
 
       if (errno != EBUSY)
@@ -284,29 +284,29 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   struct iovec iov[4];
 
   /* Only know how to do ethernet on *BSD */
-  if (mess->htype != ARPHRD_ETHER || mess->hlen != ETHER_ADDR_LEN)
+  if (mess.htype != ARPHRD_ETHER || mess.hlen != ETHER_ADDR_LEN)
     {
       my_syslog(MS_DHCP | LOG_WARNING, _("DHCP request for unsupported hardware type (%d) received on %s"), 
-		mess->htype, ifr->ifr_name);
+		mess.htype, ifr.ifr_name);
       return;
     }
    
-  ifr->ifr_addr.sa_family = AF_LINK;
-  if (ioctl(daemon->dhcpfd, SIOCGIFADDR, ifr) < 0)
+  ifr.ifr_addr.sa_family = AF_LINK;
+  if (ioctl(daemon.dhcpfd, SIOCGIFADDR, ifr) < 0)
     return;
   
-  memcpy(ether.ether_shost, LLADDR((struct sockaddr_dl *)&ifr->ifr_addr), ETHER_ADDR_LEN);
+  memcpy(ether.ether_shost, LLADDR((struct sockaddr_dl *)&ifr.ifr_addr), ETHER_ADDR_LEN);
   ether.ether_type = htons(ETHERTYPE_IP);
   
-  if (ntohs(mess->flags) & 0x8000)
+  if (ntohs(mess.flags) & 0x8000)
     {
       memset(ether.ether_dhost, 255,  ETHER_ADDR_LEN);
       ip.ip_dst.s_addr = INADDR_BROADCAST;
     }
   else
     {
-      memcpy(ether.ether_dhost, mess->chaddr, ETHER_ADDR_LEN); 
-      ip.ip_dst.s_addr = mess->yiaddr.s_addr;
+      memcpy(ether.ether_dhost, mess.chaddr, ETHER_ADDR_LEN);
+      ip.ip_dst.s_addr = mess.yiaddr.s_addr;
     }
   
   ip.ip_p = IPPROTO_UDP;
@@ -327,8 +327,8 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
     sum = (sum & 0xffff) + (sum >> 16);  
   ip.ip_sum = (sum == 0xffff) ? sum : ~sum;
   
-  udp.uh_sport = htons(daemon->dhcp_server_port);
-  udp.uh_dport = htons(daemon->dhcp_client_port);
+  udp.uh_sport = htons(daemon.dhcp_server_port);
+  udp.uh_dport = htons(daemon.dhcp_client_port);
   if (len & 1)
     ((char *)mess)[len] = 0; /* for checksum, in case length is odd. */
   udp.uh_sum = 0;
@@ -346,7 +346,7 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
     sum = (sum & 0xffff) + (sum >> 16);
   udp.uh_sum = (sum == 0xffff) ? sum : ~sum;
   
-  ioctl(daemon->dhcp_raw_fd, BIOCSETIF, ifr);
+  ioctl(daemon.dhcp_raw_fd, BIOCSETIF, ifr);
   
   iov[0].iov_base = &ether;
   iov[0].iov_len = sizeof(ether);
@@ -357,7 +357,7 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   iov[3].iov_base = mess;
   iov[3].iov_len = len;
 
-  while (retry_send(writev(daemon->dhcp_raw_fd, iov, 4)));
+  while (retry_send(writev(daemon.dhcp_raw_fd, iov, 4)));
 }
 
 #endif /* defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP) */
@@ -368,16 +368,16 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
 void route_init(void)
 {
   /* AF_UNSPEC: all addr families */
-  daemon->routefd = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
+  daemon.routefd = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
   
-  if (daemon->routefd == -1 || !fix_fd(daemon->routefd))
+  if (daemon.routefd == -1 || !fix_fd(daemon.routefd))
     die(_("cannot create PF_ROUTE socket: %s"), NULL, EC_BADNET);
 }
 
 void route_sock(void)
 {
   struct if_msghdr *msg;
-  int rc = recv(daemon->routefd, daemon->packet, daemon->packet_buff_sz, 0);
+  int rc = recv(daemon.routefd, daemon.packet, daemon->packet_buff_sz, 0);
 
   if (rc < 4)
     return;
@@ -406,11 +406,11 @@ void route_sock(void)
        /* There's a race in the kernel, such that if we run iface_enumerate() immediately
 	  we get a DELADDR event, the deleted address still appears. Here we store the deleted address
 	  in a static variable, and omit it from the set returned by iface_enumerate() */
-       int mask = ((struct ifa_msghdr *)msg)->ifam_addrs;
+       int mask = ((struct ifa_msghdr *)msg).ifam_addrs;
        int maskvec[] = { RTA_DST, RTA_GATEWAY, RTA_NETMASK, RTA_GENMASK,
 			 RTA_IFP, RTA_IFA, RTA_AUTHOR, RTA_BRD };
-       int of;
-       unsigned int i;
+       of: i32;
+       unsigned i: i32;
        
        for (i = 0,  of = sizeof(struct ifa_msghdr); of < rc && i < sizeof(maskvec)/sizeof(maskvec[0]); i++) 
 	 if (mask & maskvec[i]) 
@@ -422,9 +422,9 @@ void route_sock(void)
 	       {
 		 del_family = sa->sa_family;
 		 if (del_family == AF_INET)
-		   del_addr.addr4 = ((struct sockaddr_in *)sa)->sin_addr;
+		   del_addr.addr4 = ((struct sockaddr_in *)sa).sin_addr;
 		 else if (del_family == AF_INET6)
-		   del_addr.addr6 = ((struct sockaddr_in6 *)sa)->sin6_addr;
+		   del_addr.addr6 = ((struct sockaddr_in6 *)sa).sin6_addr;
 		 else
 		   del_family = 0;
 	       }

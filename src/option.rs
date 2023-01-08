@@ -16,8 +16,8 @@
 
 /* define this to get facilitynames */
 #define SYSLOG_NAMES
-#include "dnsmasq.h"
-#include <setjmp.h>
+// #include "dnsmasq.h"
+// #include <setjmp.h>
 
 static volatile int mem_recover = 0;
 static jmp_buf mem_jmp;
@@ -27,7 +27,7 @@ static int one_file(char *file, int hard_opt);
 #ifdef HAVE_SOLARIS_NETWORK
 static const struct {
   char *c_name;
-  unsigned int c_val;
+  unsigned c_val: i32;
 }  facilitynames[] = {
   { "kern",   LOG_KERN },
   { "user",   LOG_USER },
@@ -55,136 +55,136 @@ static const struct {
 #ifndef HAVE_GETOPT_LONG
 struct myoption {
   const char *name;
-  int has_arg;
+  has_arg: i32;
   int *flag;
-  int val;
+  val: i32;
 };
 #endif
 
 #define OPTSTRING "951yZDNLERKzowefnbvhdkqr:m:p:c:l:s:i:t:u:g:a:x:S:C:A:T:H:Q:I:B:F:G:O:M:X:V:U:j:P:J:W:Y:2:4:6:7:8:0:3:"
 
 /* options which don't have a one-char version */
-#define LOPT_RELOAD        256
-#define LOPT_NO_NAMES      257
-#define LOPT_TFTP          258
-#define LOPT_SECURE        259
-#define LOPT_PREFIX        260
-#define LOPT_PTR           261
-#define LOPT_BRIDGE        262
-#define LOPT_TFTP_MAX      263
-#define LOPT_FORCE         264
-#define LOPT_NOBLOCK       265
-#define LOPT_LOG_OPTS      266
-#define LOPT_MAX_LOGS      267
-#define LOPT_CIRCUIT       268
-#define LOPT_REMOTE        269
-#define LOPT_SUBSCR        270
-#define LOPT_INTNAME       271
-#define LOPT_BANK          272
-#define LOPT_DHCP_HOST     273
-#define LOPT_APREF         274
-#define LOPT_OVERRIDE      275
-#define LOPT_TFTPPORTS     276
-#define LOPT_REBIND        277
-#define LOPT_NOLAST        278
-#define LOPT_OPTS          279
-#define LOPT_DHCP_OPTS     280
-#define LOPT_MATCH         281
-#define LOPT_BROADCAST     282
-#define LOPT_NEGTTL        283
-#define LOPT_ALTPORT       284
-#define LOPT_SCRIPTUSR     285
-#define LOPT_LOCAL         286
-#define LOPT_NAPTR         287
-#define LOPT_MINPORT       288
-#define LOPT_DHCP_FQDN     289
-#define LOPT_CNAME         290
-#define LOPT_PXE_PROMT     291
-#define LOPT_PXE_SERV      292
-#define LOPT_TEST          293
-#define LOPT_TAG_IF        294
-#define LOPT_PROXY         295
-#define LOPT_GEN_NAMES     296
-#define LOPT_MAXTTL        297
-#define LOPT_NO_REBIND     298
-#define LOPT_LOC_REBND     299
-#define LOPT_ADD_MAC       300
-#define LOPT_DNSSEC        301
-#define LOPT_INCR_ADDR     302
-#define LOPT_CONNTRACK     303
-#define LOPT_FQDN          304
-#define LOPT_LUASCRIPT     305
-#define LOPT_RA            306
-#define LOPT_DUID          307
-#define LOPT_HOST_REC      308
-#define LOPT_TFTP_LC       309
-#define LOPT_RR            310
-#define LOPT_CLVERBIND     311
-#define LOPT_MAXCTTL       312
-#define LOPT_AUTHZONE      313
-#define LOPT_AUTHSERV      314
-#define LOPT_AUTHTTL       315
-#define LOPT_AUTHSOA       316
-#define LOPT_AUTHSFS       317
-#define LOPT_AUTHPEER      318
-#define LOPT_IPSET         319
-#define LOPT_SYNTH         320
-#define LOPT_RELAY         323
-#define LOPT_RA_PARAM      324
-#define LOPT_ADD_SBNET     325
-#define LOPT_QUIET_DHCP    326
-#define LOPT_QUIET_DHCP6   327
-#define LOPT_QUIET_RA      328
-#define LOPT_SEC_VALID     329
-#define LOPT_TRUST_ANCHOR  330
-#define LOPT_DNSSEC_DEBUG  331
-#define LOPT_REV_SERV      332
-#define LOPT_SERVERS_FILE  333
-#define LOPT_DNSSEC_CHECK  334
-#define LOPT_LOCAL_SERVICE 335
-#define LOPT_DNSSEC_TIME   336
-#define LOPT_LOOP_DETECT   337
-#define LOPT_IGNORE_ADDR   338
-#define LOPT_MINCTTL       339
-#define LOPT_DHCP_INOTIFY  340
-#define LOPT_DHOPT_INOTIFY 341
-#define LOPT_HOST_INOTIFY  342
-#define LOPT_DNSSEC_STAMP  343
-#define LOPT_TFTP_NO_FAIL  344
-#define LOPT_MAXPORT       345
-#define LOPT_CPE_ID        346
-#define LOPT_SCRIPT_ARP    347
-#define LOPT_DHCPTTL       348
-#define LOPT_TFTP_MTU      349
-#define LOPT_REPLY_DELAY   350
-#define LOPT_RAPID_COMMIT  351
-#define LOPT_DUMPFILE      352
-#define LOPT_DUMPMASK      353
-#define LOPT_UBUS          354
-#define LOPT_NAME_MATCH    355
-#define LOPT_CAA           356
-#define LOPT_SHARED_NET    357
-#define LOPT_IGNORE_CLID   358
-#define LOPT_SINGLE_PORT   359
-#define LOPT_SCRIPT_TIME   360
-#define LOPT_PXE_VENDOR    361
-#define LOPT_DYNHOST       362
-#define LOPT_LOG_DEBUG     363
-#define LOPT_UMBRELLA	   364
-#define LOPT_CMARK_ALST_EN 365
-#define LOPT_CMARK_ALST    366
-#define LOPT_QUIET_TFTP    367
-#define LOPT_NFTSET        368
-#define LOPT_FILTER_A      369
-#define LOPT_FILTER_AAAA   370
-#define LOPT_STRIP_SBNET   371
-#define LOPT_STRIP_MAC     372
-#define LOPT_CONF_OPT      373
-#define LOPT_CONF_SCRIPT   374
-#define LOPT_RANDPORT_LIM  375
-#define LOPT_FAST_RETRY    376
-#define LOPT_STALE_CACHE   377
-#define LOPT_NORR          378
+pub const LOPT_RELOAD: u32 = 256;
+pub const LOPT_NO_NAMES: u32 = 257;
+pub const LOPT_TFTP: u32 = 258;
+pub const LOPT_SECURE: u32 = 259;
+pub const LOPT_PREFIX: u32 = 260;
+pub const LOPT_PTR: u32 = 261;
+pub const LOPT_BRIDGE: u32 = 262;
+pub const LOPT_TFTP_MAX: u32 = 263;
+pub const LOPT_FORCE: u32 = 264;
+pub const LOPT_NOBLOCK: u32 = 265;
+pub const LOPT_LOG_OPTS: u32 = 266;
+pub const LOPT_MAX_LOGS: u32 = 267;
+pub const LOPT_CIRCUIT: u32 = 268;
+pub const LOPT_REMOTE: u32 = 269;
+pub const LOPT_SUBSCR: u32 = 270;
+pub const LOPT_INTNAME: u32 = 271;
+pub const LOPT_BANK: u32 = 272;
+pub const LOPT_DHCP_HOST: u32 = 273;
+pub const LOPT_APREF: u32 = 274;
+pub const LOPT_OVERRIDE: u32 = 275;
+pub const LOPT_TFTPPORTS: u32 = 276;
+pub const LOPT_REBIND: u32 = 277;
+pub const LOPT_NOLAST: u32 = 278;
+pub const LOPT_OPTS: u32 = 279;
+pub const LOPT_DHCP_OPTS: u32 = 280;
+pub const LOPT_MATCH: u32 = 281;
+pub const LOPT_BROADCAST: u32 = 282;
+pub const LOPT_NEGTTL: u32 = 283;
+pub const LOPT_ALTPORT: u32 = 284;
+pub const LOPT_SCRIPTUSR: u32 = 285;
+pub const LOPT_LOCAL: u32 = 286;
+pub const LOPT_NAPTR: u32 = 287;
+pub const LOPT_MINPORT: u32 = 288;
+pub const LOPT_DHCP_FQDN: u32 = 289;
+pub const LOPT_CNAME: u32 = 290;
+pub const LOPT_PXE_PROMT: u32 = 291;
+pub const LOPT_PXE_SERV: u32 = 292;
+pub const LOPT_TEST: u32 = 293;
+pub const LOPT_TAG_IF: u32 = 294;
+pub const LOPT_PROXY: u32 = 295;
+pub const LOPT_GEN_NAMES: u32 = 296;
+pub const LOPT_MAXTTL: u32 = 297;
+pub const LOPT_NO_REBIND: u32 = 298;
+pub const LOPT_LOC_REBND: u32 = 299;
+pub const LOPT_ADD_MAC: u32 = 300;
+pub const LOPT_DNSSEC: u32 = 301;
+pub const LOPT_INCR_ADDR: u32 = 302;
+pub const LOPT_CONNTRACK: u32 = 303;
+pub const LOPT_FQDN: u32 = 304;
+pub const LOPT_LUASCRIPT: u32 = 305;
+pub const LOPT_RA: u32 = 306;
+pub const LOPT_DUID: u32 = 307;
+pub const LOPT_HOST_REC: u32 = 308;
+pub const LOPT_TFTP_LC: u32 = 309;
+pub const LOPT_RR: u32 = 310;
+pub const LOPT_CLVERBIND: u32 = 311;
+pub const LOPT_MAXCTTL: u32 = 312;
+pub const LOPT_AUTHZONE: u32 = 313;
+pub const LOPT_AUTHSERV: u32 = 314;
+pub const LOPT_AUTHTTL: u32 = 315;
+pub const LOPT_AUTHSOA: u32 = 316;
+pub const LOPT_AUTHSFS: u32 = 317;
+pub const LOPT_AUTHPEER: u32 = 318;
+pub const LOPT_IPSET: u32 = 319;
+pub const LOPT_SYNTH: u32 = 320;
+pub const LOPT_RELAY: u32 = 323;
+pub const LOPT_RA_PARAM: u32 = 324;
+pub const LOPT_ADD_SBNET: u32 = 325;
+pub const LOPT_QUIET_DHCP: u32 = 326;
+pub const LOPT_QUIET_DHCP6: u32 = 327;
+pub const LOPT_QUIET_RA: u32 = 328;
+pub const LOPT_SEC_VALID: u32 = 329;
+pub const LOPT_TRUST_ANCHOR: u32 = 330;
+pub const LOPT_DNSSEC_DEBUG: u32 = 331;
+pub const LOPT_REV_SERV: u32 = 332;
+pub const LOPT_SERVERS_FILE: u32 = 333;
+pub const LOPT_DNSSEC_CHECK: u32 = 334;
+pub const LOPT_LOCAL_SERVICE: u32 = 335;
+pub const LOPT_DNSSEC_TIME: u32 = 336;
+pub const LOPT_LOOP_DETECT: u32 = 337;
+pub const LOPT_IGNORE_ADDR: u32 = 338;
+pub const LOPT_MINCTTL: u32 = 339;
+pub const LOPT_DHCP_INOTIFY: u32 = 340;
+pub const LOPT_DHOPT_INOTIFY: u32 = 341;
+pub const LOPT_HOST_INOTIFY: u32 = 342;
+pub const LOPT_DNSSEC_STAMP: u32 = 343;
+pub const LOPT_TFTP_NO_FAIL: u32 = 344;
+pub const LOPT_MAXPORT: u32 = 345;
+pub const LOPT_CPE_ID: u32 = 346;
+pub const LOPT_SCRIPT_ARP: u32 = 347;
+pub const LOPT_DHCPTTL: u32 = 348;
+pub const LOPT_TFTP_MTU: u32 = 349;
+pub const LOPT_REPLY_DELAY: u32 = 350;
+pub const LOPT_RAPID_COMMIT: u32 = 351;
+pub const LOPT_DUMPFILE: u32 = 352;
+pub const LOPT_DUMPMASK: u32 = 353;
+pub const LOPT_UBUS: u32 = 354;
+pub const LOPT_NAME_MATCH: u32 = 355;
+pub const LOPT_CAA: u32 = 356;
+pub const LOPT_SHARED_NET: u32 = 357;
+pub const LOPT_IGNORE_CLID: u32 = 358;
+pub const LOPT_SINGLE_PORT: u32 = 359;
+pub const LOPT_SCRIPT_TIME: u32 = 360;
+pub const LOPT_PXE_VENDOR: u32 = 361;
+pub const LOPT_DYNHOST: u32 = 362;
+pub const LOPT_LOG_DEBUG: u32 = 363;
+pub const LOPT_UMBRELLA: u32 = 364;
+pub const LOPT_CMARK_ALST_EN: u32 = 365;
+pub const LOPT_CMARK_ALST: u32 = 366;
+pub const LOPT_QUIET_TFTP: u32 = 367;
+pub const LOPT_NFTSET: u32 = 368;
+pub const LOPT_FILTER_A: u32 = 369;
+pub const LOPT_FILTER_AAAA: u32 = 370;
+pub const LOPT_STRIP_SBNET: u32 = 371;
+pub const LOPT_STRIP_MAC: u32 = 372;
+pub const LOPT_CONF_OPT: u32 = 373;
+pub const LOPT_CONF_SCRIPT: u32 = 374;
+pub const LOPT_RANDPORT_LIM: u32 = 375;
+pub const LOPT_FAST_RETRY: u32 = 376;
+pub const LOPT_STALE_CACHE: u32 = 377;
+pub const LOPT_NORR: u32 = 378;
 
 #ifdef HAVE_GETOPT_LONG
 static const struct option opts[] =  
@@ -384,8 +384,8 @@ static const struct myoption opts[] =
 #define ARG_USED_FILE OPT_LAST + 3
 
 static struct {
-  int opt;
-  unsigned int rept;
+  opt: i32;
+  unsigned rept: i32;
   char * const flagdesc;
   char * const desc;
   char * const arg;
@@ -590,7 +590,7 @@ static const char meta[] = "\000123456 \b\t\n78\r90abcdefABCDE\033F:,.";
 
 static char hide_meta(char c)
 {
-  unsigned int i;
+  unsigned i: i32;
 
   for (i = 0; i < (sizeof(meta) - 1); i++)
     if (c == meta[i])
@@ -679,7 +679,7 @@ static char *split(char *s)
 static char *canonicalise_opt(char *s)
 {
   char *ret;
-  int nomem;
+  nomem: i32;
 
   if (!s)
     return 0;
@@ -789,7 +789,7 @@ static void do_usage(void)
 
   struct {
     char handle;
-    int val;
+    val: i32;
   } tab[] = {
     { '$', CACHESIZ },
     { '*', EDNS_PKTSZ },
@@ -1068,11 +1068,11 @@ int parse_server_next(struct server_details *sdetails)
       /* Get address */
       if (sdetails->addr_type == AF_INET)
 	memcpy(&sdetails->addr->in.sin_addr,
-		&((struct sockaddr_in *) sdetails->hostinfo->ai_addr)->sin_addr,
+		&((struct sockaddr_in *) sdetails->hostinfo->ai_addr).sin_addr,
 		sizeof(sdetails->addr->in.sin_addr));
       else if (sdetails->addr_type == AF_INET6)
 	memcpy(&sdetails->addr->in6.sin6_addr,
-		&((struct sockaddr_in6 *) sdetails->hostinfo->ai_addr)->sin6_addr,
+		&((struct sockaddr_in6 *) sdetails->hostinfo->ai_addr).sin6_addr,
 		sizeof(sdetails->addr->in6.sin6_addr));
 
       /* Iterate to the next available address */
@@ -1094,7 +1094,7 @@ static char *domain_rev4(int from_file, char *server, struct in_addr *addr4, int
 {
   int i, j;
   char *string;
-  int msize;
+  msize: i32;
   u16 flags = 0;
   char domain[29]; /* strlen("xxx.yyy.zzz.ttt.in-addr.arpa")+1 */
   union mysockaddr serv_addr, source_addr;
@@ -1177,7 +1177,7 @@ static char *domain_rev6(int from_file, char *server, struct in6_addr *addr6, in
 {
   int i, j;
   char *string;
-  int msize;
+  msize: i32;
   u16 flags = 0;
   char domain[73]; /* strlen("32*<n.>ip6.arpa")+1 */
   union mysockaddr serv_addr, source_addr;
@@ -1777,7 +1777,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 		  for (in = dom; in && *in;) 
 		    {
 		      unsigned char *cp = q++;
-		      int j;
+		      j: i32;
 		      for (j = 0; *in && (*in != '.'); in++, j++)
 			*q++ = *in;
 		      *cp = j;
@@ -1948,7 +1948,7 @@ void reset_option_bool(unsigned int opt)
 
 static int one_opt(int option, char *arg, char *errstr, char *gen_err, int command_line, int servers_only)
 {      
-  int i;
+  i: i32;
   char *comma;
 
   if (option == '?')
@@ -2576,14 +2576,14 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		  unhide_metas(comma);
 		  if ((netpart = split_chr(comma, '/')))
 		    {
-		      int msize;
+		      msize: i32;
 
 		      arg = split(netpart);
 		      if (!atoi_check(netpart, &msize))
 			ret_err_free(gen_err, new);
 		      else if (inet_pton(AF_INET, comma, &new->start))
 			{
-			  int mask;
+			  mask: i32;
 
 			  if (msize > 32)
 			     ret_err_free(_("bad prefix length"), new);
@@ -3067,7 +3067,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case LOPT_REV_SERV: /* --rev-server */
       {
 	char *string;
-	int size;
+	size: i32;
 	struct in_addr addr4;
 	struct in6_addr addr6;
  	
@@ -3124,7 +3124,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	 struct ipsets *ipsets = &ipsets_head;
          struct ipsets **daemon_sets =
            (option == LOPT_IPSET) ? &daemon->ipsets : &daemon->nftsets;
-	 int size;
+	 size: i32;
 	 char *end;
 	 char **sets, **sets_pos;
 	 memset(ipsets, 0, sizeof(struct ipsets));
@@ -3318,7 +3318,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       
     case 'c':  /* --cache-size */
       {
-	int size;
+	size: i32;
 	
 	if (!atoi_check(arg, &size))
 	  ret_err(gen_err);
@@ -3378,7 +3378,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 
     case 'P': /* --edns-packet-max */
       {
-	int i;
+	i: i32;
 	if (!atoi_check(arg, &i))
 	  ret_err(gen_err);
 	daemon->edns_pktsz = (unsigned short)i;	
@@ -3407,7 +3407,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case LOPT_AUTHTTL: /* --auth-ttl */
     case LOPT_DHCPTTL: /* --dhcp-ttl */
       {
-	int ttl;
+	ttl: i32;
 	if (!atoi_check(arg, &ttl))
 	  ret_err(gen_err);
 	else if (option == LOPT_NEGTTL)
@@ -3441,7 +3441,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	daemon->fast_retry_time = DEFAULT_FAST_RETRY;
       else
 	{
-	  int retry;
+	  retry: i32;
 	  
 	  comma = split(arg);
 	  if (!atoi_check(arg, &retry) || retry < 50)
@@ -3724,7 +3724,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	    /* bare integer < 128 is prefix value */
 	    if (leasepos < k)
 	      {
-		int pref;
+		pref: i32;
 		for (cp = a[leasepos]; *cp; cp++)
 		  if (!(*cp >= '0' && *cp <= '9'))
 		    break;
@@ -3877,7 +3877,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		      new->flags |= CONFIG_NOCLID;
 		    else
 		      {
-			int len;
+			len: i32;
 			arg += 3; /* dump id: */
 			if (strchr(arg, ':'))
 			  len = parse_hex(arg, (unsigned char *)arg, -1, NULL, NULL);
@@ -4243,7 +4243,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	else
 	  {
 	    struct delay_config *new;
-	    int delay;
+	    delay: i32;
 	    if (!atoi_check(arg, &delay))
               ret_err(gen_err);
 	    
@@ -4260,7 +4260,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case LOPT_PXE_PROMT:  /* --pxe-prompt */
        {
 	 struct dhcp_opt *new = opt_malloc(sizeof(struct dhcp_opt));
-	 int timeout;
+	 timeout: i32;
 	 
 	 new->netid = NULL;
 	 new->opt = 10; /* PXE_MENU_PROMPT */
@@ -4737,7 +4737,7 @@ err:
 	
 	/* Add to the end of the list, so that first name
 	   of an interface is used for PTR lookups. */
-	for (up = &daemon->int_names; *up; up = &((*up)->next));
+	for (up = &daemon->int_names; *up; up = &((*up).next));
 	*up = new;
 	
 	while ((comma = split(arg)))
@@ -4909,7 +4909,7 @@ err:
        	struct txt_record *new;
 	size_t len = 0;
 	char *data;
-	int class;
+	class: i32;
 
 	comma = split(arg);
 	data = split(comma);
@@ -4944,7 +4944,7 @@ err:
       {
        	struct txt_record *new;
 	char *tag, *value;
-	int flags;
+	flags: i32;
 	
 	comma = split(arg);
 	tag = split(comma);
@@ -5188,7 +5188,7 @@ err:
       {
 	struct ds_config *new = opt_malloc(sizeof(struct ds_config));
       	char *cp, *cp1, *keyhex, *digest, *algo = NULL;
-	int len;
+	len: i32;
 	
 	new->class = C_IN;
 	new->name = NULL;
@@ -5258,7 +5258,7 @@ static void read_file(char *file, FILE *f, int hard_opt, int from_script)
   while (fgets(buff, MAXDNAME, f))
     {
       int white, i;
-      volatile int option;
+      volatile option: i32;
       char *errmess, *p, *arg, *start;
       size_t len;
 
@@ -5485,7 +5485,7 @@ static int one_file(char *file, int hard_opt)
 
   if (do_popen)
     {
-      int rc;
+      rc: i32;
 
       if ((rc = pclose(f)) == -1)
 	die(_("error executing %s: %s"), file, EC_MISC);
@@ -5516,7 +5516,7 @@ static int file_filter(const struct dirent *ent)
 /* expand any name which is a directory */
 struct hostsfile *expand_filelist(struct hostsfile *list)
 {
-  unsigned int i;
+  unsigned i: i32;
   int entcnt, n;
   struct hostsfile *ah, *last, *next, **up;
   struct dirent **namelist;
@@ -5896,8 +5896,8 @@ void read_opts(int argc, char **argv, char *compile_opts)
     {
       struct cname *cn, *cn2, *cn3;
 
-#define NOLOOP 1
-#define TESTLOOP 2      
+pub const NOLOOP: u32 = 1;
+pub const TESTLOOP: u32 = 2;
 
       /* Fill in TTL for CNAMES now we have local_ttl.
 	 Also prepare to do loop detection. */
@@ -6002,11 +6002,11 @@ void read_opts(int argc, char **argv, char *compile_opts)
 
       if (option_bool(OPT_NO_RESOLV) ||
 	  !daemon->resolv_files || 
-	  (daemon->resolv_files)->next)
+	  (daemon->resolv_files).next)
 	die(_("must have exactly one resolv.conf to read domain from."), NULL, EC_BADCONF);
       
-      if (!(f = fopen((daemon->resolv_files)->name, "r")))
-	die(_("failed to read %s: %s"), (daemon->resolv_files)->name, EC_FILE);
+      if (!(f = fopen((daemon->resolv_files).name, "r")))
+	die(_("failed to read %s: %s"), (daemon->resolv_files).name, EC_FILE);
       
       while ((line = fgets(buff, MAXDNAME, f)))
 	{
@@ -6023,7 +6023,7 @@ void read_opts(int argc, char **argv, char *compile_opts)
       fclose(f);
 
       if (!daemon->domain_suffix)
-	die(_("no search directive found in %s"), (daemon->resolv_files)->name, EC_MISC);
+	die(_("no search directive found in %s"), (daemon->resolv_files).name, EC_MISC);
     }
 
   if (daemon->domain_suffix)

@@ -15,7 +15,7 @@
 */
 
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
  
 #ifdef HAVE_DHCP6
 
@@ -23,7 +23,7 @@ static size_t outpacket_counter;
 
 void end_opt6(int container)
 {
-   void *p = daemon->outpacket.iov_base + container + 2;
+   void *p = daemon.outpacket.iov_base + container + 2;
    u16 len = outpacket_counter - container - 4 ;
    
    PUTSHORT(len, p);
@@ -32,8 +32,8 @@ void end_opt6(int container)
 void reset_counter(void)
 {
   /* Clear out buffer when starting from beginning */
-  if (daemon->outpacket.iov_base)
-    memset(daemon->outpacket.iov_base, 0, daemon->outpacket.iov_len);
+  if (daemon.outpacket.iov_base)
+    memset(daemon.outpacket.iov_base, 0, daemon.outpacket.iov_len);
  
   save_counter(0);
 }
@@ -52,9 +52,9 @@ void *expand(size_t headroom)
 {
   void *ret;
 
-  if (expand_buf(&daemon->outpacket, outpacket_counter + headroom))
+  if (expand_buf(&daemon.outpacket, outpacket_counter + headroom))
     {
-      ret = daemon->outpacket.iov_base + outpacket_counter;
+      ret = daemon.outpacket.iov_base + outpacket_counter;
       outpacket_counter += headroom;
       return ret;
     }

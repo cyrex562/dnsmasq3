@@ -16,17 +16,17 @@
 
 
 
-#define IN6_IS_ADDR_ULA(a) \
+pub const IN: u32 = 6;_IS_ADDR_ULA(a) \
         ((((__const uint32_t *) (a))[0] & htonl (0xff000000))                 \
          == htonl (0xfd000000))
 
-#define IN6_IS_ADDR_ULA_ZERO(a) \
+pub const IN: u32 = 6;_IS_ADDR_ULA_ZERO(a) \
         (((__const uint32_t *) (a))[0] == htonl (0xfd000000)                        \
          && ((__const uint32_t *) (a))[1] == 0                                \
          && ((__const uint32_t *) (a))[2] == 0                                \
          && ((__const uint32_t *) (a))[3] == 0)
 
-#define IN6_IS_ADDR_LINK_LOCAL_ZERO(a) \
+pub const IN: u32 = 6;_IS_ADDR_LINK_LOCAL_ZERO(a) \
         (((__const uint32_t *) (a))[0] == htonl (0xfe800000)                  \
          && ((__const uint32_t *) (a))[1] == 0                                \
          && ((__const uint32_t *) (a))[2] == 0                                \

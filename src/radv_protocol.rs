@@ -46,10 +46,10 @@ struct prefix_opt {
   struct in6_addr prefix;
 };
 
-#define ICMP6_OPT_SOURCE_MAC   1
-#define ICMP6_OPT_PREFIX       3
-#define ICMP6_OPT_MTU          5
-#define ICMP6_OPT_ADV_INTERVAL 7
-#define ICMP6_OPT_RT_INFO     24
-#define ICMP6_OPT_RDNSS       25
-#define ICMP6_OPT_DNSSL       31
+pub const ICMP6_OPT_SOURCE_MAC: u32 = 1;
+pub const ICMP6_OPT_PREFIX: u32 = 3;
+pub const ICMP6_OPT_MTU: u32 = 5;
+pub const ICMP6_OPT_ADV_INTERVAL: u32 = 7;
+pub const ICMP6_OPT_RT_INFO: u32 = 24;
+pub const ICMP6_OPT_RDNSS: u32 = 25;
+pub const ICMP6_OPT_DNSSL: u32 = 31;

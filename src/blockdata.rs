@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 static struct blockdata *keyblock_free;
 static unsigned int blockdata_count, blockdata_hwm, blockdata_alloced;
@@ -25,7 +25,7 @@ static void blockdata_expand(int n)
   
   if (new)
     {
-      int i;
+      i: i32;
       
       new[n-1].next = keyblock_free;
       keyblock_free = new;
@@ -47,7 +47,7 @@ void blockdata_init(void)
 
   /* Note that daemon->cachesize is enforced to have non-zero size if OPT_DNSSEC_VALID is set */  
   if (option_bool(OPT_DNSSEC_VALID))
-    blockdata_expand(daemon->cachesize);
+    blockdata_expand(daemon.cachesize);
 }
 
 void blockdata_report(void)
@@ -72,7 +72,7 @@ static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
       if (keyblock_free)
 	{
 	  block = keyblock_free;
-	  keyblock_free = block->next;
+	  keyblock_free = block.next;
 	  blockdata_count++; 
 	}
       else
@@ -88,10 +88,10 @@ static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
       blen = len > KEYBLOCK_LEN ? KEYBLOCK_LEN : len;
       if (data)
 	{
-	  memcpy(block->key, data, blen);
+	  memcpy(block.key, data, blen);
 	  data += blen;
 	}
-      else if (!read_write(fd, block->key, blen, 1))
+      else if (!read_write(fd, block.key, blen, 1))
 	{
 	  /* failed read free partial chain */
 	  blockdata_free(ret);
@@ -99,8 +99,8 @@ static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
 	}
       len -= blen;
       *prev = block;
-      prev = &block->next;
-      block->next = NULL;
+      prev = &block.next;
+      block.next = NULL;
     }
   
   return ret;
@@ -117,9 +117,9 @@ void blockdata_free(struct blockdata *blocks)
   
   if (blocks)
     {
-      for (tmp = blocks; tmp->next; tmp = tmp->next)
+      for (tmp = blocks; tmp.next; tmp = tmp.next)
 	blockdata_count--;
-      tmp->next = keyblock_free;
+      tmp.next = keyblock_free;
       keyblock_free = blocks; 
       blockdata_count--;
     }
@@ -148,10 +148,10 @@ void *blockdata_retrieve(struct blockdata *block, size_t len, void *data)
       data = buff;
     }
   
-  for (d = data, b = block; len > 0 && b;  b = b->next)
+  for (d = data, b = block; len > 0 && b;  b = b.next)
     {
       blen = len > KEYBLOCK_LEN ? KEYBLOCK_LEN : len;
-      memcpy(d, b->key, blen);
+      memcpy(d, b.key, blen);
       d += blen;
       len -= blen;
     }
@@ -162,10 +162,10 @@ void *blockdata_retrieve(struct blockdata *block, size_t len, void *data)
 
 void blockdata_write(struct blockdata *block, size_t len, int fd)
 {
-  for (; len > 0 && block; block = block->next)
+  for (; len > 0 && block; block = block.next)
     {
       size_t blen = len > KEYBLOCK_LEN ? KEYBLOCK_LEN : len;
-      read_write(fd, block->key, blen, 0);
+      read_write(fd, block.key, blen, 0);
       len -= blen;
     }
 }

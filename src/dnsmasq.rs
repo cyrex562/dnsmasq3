@@ -18,16 +18,16 @@
 #define DNSMASQ_COMPILE_OPTS
 
 /* dnsmasq.h has to be included first as it sources config.h */
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #if defined(HAVE_IDN) || defined(HAVE_LIBIDN2) || defined(LOCALEDIR)
-#include <locale.h>
+// #include <locale.h>
 #endif
 
 struct daemon *daemon;
 
 static volatile pid_t pid = 0;
-static volatile int pipewrite;
+static volatile pipewrite: i32;
 
 static void set_dns_listeners(void);
 static void check_dns_listeners(time_t now);
@@ -51,7 +51,7 @@ int main (int argc, char **argv)
   struct group *gp = NULL;
   long i, max_fd = sysconf(_SC_OPEN_MAX);
   char *baduser = NULL;
-  int log_err;
+  log_err: i32;
   int chown_warn = 0;
 #if defined(HAVE_LINUX_NETWORK)
   cap_user_header_t hdr = NULL;
@@ -104,7 +104,7 @@ int main (int argc, char **argv)
   read_opts(argc, argv, compile_opts);
  
 #ifdef HAVE_LINUX_NETWORK
-  daemon->kernel_version = kernel_version();
+  daemon.kernel_version = kernel_version();
 #endif
 
   if (daemon->edns_pktsz < PACKETSZ)
@@ -893,7 +893,7 @@ int main (int argc, char **argv)
 #ifdef HAVE_DNSSEC
   if (option_bool(OPT_DNSSEC_VALID))
     {
-      int rc;
+      rc: i32;
       struct ds_config *ds;
       
       /* Delay creating the timestamp file until here, after we've changed user, so that
@@ -1742,7 +1742,7 @@ static void set_dns_listeners(void)
   struct serverfd *serverfdp;
   struct listener *listener;
   struct randfd_list *rfl;
-  int i;
+  i: i32;
   
 #ifdef HAVE_TFTP
   int  tftp = 0;
@@ -1801,7 +1801,7 @@ static void check_dns_listeners(time_t now)
   struct serverfd *serverfdp;
   struct listener *listener;
   struct randfd_list *rfl;
-  int i;
+  i: i32;
   int pipefd[2];
   
   for (serverfdp = daemon->sfds; serverfdp; serverfdp = serverfdp->next)
@@ -1890,7 +1890,7 @@ static void check_dns_listeners(time_t now)
 	    iface = listener->iface; /* May be NULL */
 	  else 
 	    {
-	      int if_index;
+	      if_index: i32;
 	      char intr_name[IF_NAMESIZE];
 	      
 	      /* if we can find the arrival interface, check it's one that's allowed */
@@ -1976,9 +1976,9 @@ static void check_dns_listeners(time_t now)
 	    {
 	      unsigned char *buff;
 	      struct server *s; 
-	      int flags;
+	      flags: i32;
 	      struct in_addr netmask;
-	      int auth_dns;
+	      auth_dns: i32;
 	   
 	      if (iface)
 		{
@@ -2043,7 +2043,7 @@ static void check_dns_listeners(time_t now)
 #ifdef HAVE_DHCP
 int make_icmp_sock(void)
 {
-  int fd;
+  fd: i32;
   int zeroopt = 0;
 
   if ((fd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) != -1)
@@ -2063,7 +2063,7 @@ int icmp_ping(struct in_addr addr)
 {
   /* Try and get an ICMP echo from a machine. */
 
-  int fd;
+  fd: i32;
   struct sockaddr_in saddr;
   struct { 
     struct ip ip;

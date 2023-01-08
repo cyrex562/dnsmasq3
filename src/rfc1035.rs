@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 int extract_name(struct dns_header *header, size_t plen, unsigned char **pp, 
 		 char *name, int isExtract, int extrabytes)
@@ -28,7 +28,7 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
 
   while (1)
     { 
-      unsigned int label_type;
+      unsigned label_type: i32;
 
       if (!CHECK_LEN(header, p, plen, 1))
 	return 0;
@@ -142,10 +142,10 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
 }
  
 /* Max size of input string (for IPv6) is 75 chars.) */
-#define MAXARPANAME 75
+pub const MAXARPANAME: u32 = 75;
 int in_arpa_name_2_addr(char *namein, union all_addr *addrp)
 {
-  int j;
+  j: i32;
   char name[MAXARPANAME+1], *cp1;
   unsigned char *addr = (unsigned char *)addrp;
   char *lastchunk = NULL, *penchunk = NULL;
@@ -250,7 +250,7 @@ unsigned char *skip_name(unsigned char *ansp, struct dns_header *header, size_t 
 {
   while(1)
     {
-      unsigned int label_type;
+      unsigned label_type: i32;
       
       if (!CHECK_LEN(header, ansp, plen, 1))
 	return NULL;
@@ -268,7 +268,7 @@ unsigned char *skip_name(unsigned char *ansp, struct dns_header *header, size_t 
       else if (label_type == 0x40)
 	{
 	  /* Extended label type */
-	  unsigned int count;
+	  unsigned count: i32;
 	  
 	  if (!CHECK_LEN(header, ansp, plen, 2))
 	    return NULL;
@@ -303,7 +303,7 @@ unsigned char *skip_name(unsigned char *ansp, struct dns_header *header, size_t 
 
 unsigned char *skip_questions(struct dns_header *header, size_t plen)
 {
-  int q;
+  q: i32;
   unsigned char *ansp = (unsigned char *)(header+1);
 
   for (q = ntohs(header->qdcount); q != 0; q--)
@@ -954,7 +954,7 @@ static int safe_name(char *name)
 void report_addresses(struct dns_header *header, size_t len, u32 mark)
 {
   unsigned char *p, *endrr;
-  int i;
+  i: i32;
   unsigned long attl;
   struct allowlist *allowlists;
   char **pattern_pos;
@@ -1232,7 +1232,7 @@ int add_resource_record(struct dns_header *header, char *limit, int *truncp, int
 {
   va_list ap;
   unsigned char *sav, *p = *pp;
-  int j;
+  j: i32;
   unsigned short usval;
   long lval;
   char *sval;
@@ -1415,7 +1415,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
   unsigned char *p, *ansp;
   unsigned int qtype, qclass;
   union all_addr addr;
-  int nameoffset;
+  nameoffset: i32;
   unsigned short flag;
   int q, ans, anscount = 0, addncount = 0;
   int dryrun = 0;
@@ -1923,7 +1923,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 		    sec_data = 0;
 		    if (!dryrun)
 		      {
-			int offset;
+			offset: i32;
 			log_query(F_CONFIG | F_RRNAME, name, NULL, "<MX>", 0);
 			if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon->local_ttl,
 						&offset, T_MX, C_IN, "sd", rec->weight, rec->target))
@@ -1963,7 +1963,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 		    sec_data = 0;
 		    if (!dryrun)
 		      {
-			int offset;
+			offset: i32;
 			log_query(F_CONFIG | F_RRNAME, name, NULL, "<SRV>", 0);
 			if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, daemon->local_ttl, 
 						&offset, T_SRV, C_IN, "sssd", 

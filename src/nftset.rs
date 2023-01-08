@@ -15,14 +15,14 @@
 */
 
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #if defined (HAVE_NFTSET) && defined (HAVE_LINUX_NETWORK)
 
-#include <nftables/libnftables.h>
+// #include <nftables/libnftables.h>
 
-#include <string.h>
-#include <arpa/inet.h>
+// #include <string.h>
+// #include <arpa/inet.h>
 
 static struct nft_ctx *ctx = NULL;
 static const char *cmd_add = "add element %s { %s }";
@@ -47,7 +47,7 @@ int add_to_nftset(const char *setname, const union all_addr *ipaddr, int flags, 
   static char *cmd_buf = NULL;
   static size_t cmd_buf_sz = 0;
 
-  inet_ntop(af, ipaddr, daemon->addrbuff, ADDRSTRLEN);
+  inet_ntop(af, ipaddr, daemon.addrbuff, ADDRSTRLEN);
 
   if (setname[1] == ' ' && (setname[0] == '4' || setname[0] == '6'))
     {
@@ -63,7 +63,7 @@ int add_to_nftset(const char *setname, const union all_addr *ipaddr, int flags, 
   if (cmd_buf_sz == 0)
     new_sz = 150; /* initial allocation */
   else
-    new_sz = snprintf(cmd_buf, cmd_buf_sz, cmd, setname, daemon->addrbuff);
+    new_sz = snprintf(cmd_buf, cmd_buf_sz, cmd, setname, daemon.addrbuff);
   
   if (new_sz > cmd_buf_sz)
     {
@@ -74,7 +74,7 @@ int add_to_nftset(const char *setname, const union all_addr *ipaddr, int flags, 
 	free(cmd_buf);
       cmd_buf = new;
       cmd_buf_sz = new_sz + 10;
-      snprintf(cmd_buf, cmd_buf_sz, cmd, setname, daemon->addrbuff);
+      snprintf(cmd_buf, cmd_buf_sz, cmd, setname, daemon.addrbuff);
     }
 
   ret = nft_run_cmd_from_buffer(ctx, cmd_buf);

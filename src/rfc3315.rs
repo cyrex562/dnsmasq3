@@ -15,7 +15,7 @@
 */
 
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP6
 
@@ -59,13 +59,13 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh);
 static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
 			    unsigned int *preferred_timep, unsigned int lease_time);
 
-#define opt6_len(opt) ((int)(opt6_uint(opt, -2, 2)))
-#define opt6_type(opt) (opt6_uint(opt, -4, 2))
-#define opt6_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[4+(i)]))
+pub const opt: u32 = 6;_len(opt) ((int)(opt6_uint(opt, -2, 2)))
+pub const opt: u32 = 6;_type(opt) (opt6_uint(opt, -4, 2))
+pub const opt: u32 = 6;_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[4+(i)]))
 
-#define opt6_user_vendor_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2+(i)]))
-#define opt6_user_vendor_len(opt) ((int)(opt6_uint(opt, -4, 2)))
-#define opt6_user_vendor_next(opt, end) (opt6_next(((void *) opt) - 2, end))
+pub const opt: u32 = 6;_user_vendor_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2+(i)]))
+pub const opt: u32 = 6;_user_vendor_len(opt) ((int)(opt6_uint(opt, -4, 2)))
+pub const opt: u32 = 6;_user_vendor_next(opt, end) (opt6_next(((void *) opt) - 2, end))
  
 
 unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *iface_name,
@@ -73,7 +73,7 @@ unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *if
 			   size_t sz, struct in6_addr *client_addr, time_t now)
 {
   struct dhcp_vendor *vendor;
-  int msg_type;
+  msg_type: i32;
   struct state state;
   
   if (sz <= 4)
@@ -199,7 +199,7 @@ static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t 
   /* look for relay options and set tags if found. */
   for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
     {
-      int mopt;
+      mopt: i32;
       
       if (vendor->match_type == MATCH_SUBSCRIBER)
 	mopt = OPTION6_SUBSCRIBER_ID;
@@ -359,7 +359,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
   /* match vendor and user class options */
   for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
     {
-      int mopt;
+      mopt: i32;
       
       if (vendor->match_type == MATCH_VENDOR)
 	mopt = OPTION6_VENDOR_CLASS;
@@ -649,8 +649,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 	  {   
 	    void *ia_option, *ia_end;
 	    unsigned int min_time = 0xffffffff;
-	    int t1cntr;
-	    int ia_counter;
+	    t1cntr: i32;
+	    ia_counter: i32;
 	    /* set unless we're sending a particular prefix-class, when we
 	       want only dhcp-ranges with the correct tags set and not those without any tags. */
 	    int plain_range = 1;
@@ -822,7 +822,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 	  {   
 	    void *ia_option, *ia_end;
 	    unsigned int min_time = 0xffffffff;
-	    int t1cntr;
+	    t1cntr: i32;
 	    
 	     if (!check_ia(state, opt, &ia_end, &ia_option))
 	       continue;
@@ -841,7 +841,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 	      {
 		struct in6_addr req_addr;
 		struct dhcp_context *dynamic, *c;
-		unsigned int lease_time;
+		unsigned lease_time: i32;
 		int config_ok = 0;
 
 		/* align. */
@@ -988,7 +988,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 		if ((this_context = address6_available(state->context, &req_addr, tagif, 1)) ||
 		    (this_context = address6_valid(state->context, &req_addr, tagif, 1)))
 		  {
-		    unsigned int lease_time;
+		    unsigned lease_time: i32;
 
 		    get_context_tag(state, this_context);
 		    
@@ -1328,7 +1328,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
 	  int len, j;
 	  struct in6_addr *a;
 	  
-	  for (a = (struct in6_addr *)opt_cfg->val, len = opt_cfg->len, j = 0; 
+	  for (a = opt_cfg->val, len = opt_cfg->len, j = 0;
 	       j < opt_cfg->len; j += IN6ADDRSZ, a++)
 	    if ((IN6_IS_ADDR_ULA_ZERO(a) && IN6_IS_ADDR_UNSPECIFIED(state->ula_addr)) ||
 		(IN6_IS_ADDR_LINK_LOCAL_ZERO(a) && IN6_IS_ADDR_UNSPECIFIED(state->ll_addr)))
@@ -1339,7 +1339,7 @@ static struct dhcp_netid *add_options(struct state *state, int do_refresh)
 	      
 	      o = new_opt6(opt_cfg->opt);
 	      	  
-	      for (a = (struct in6_addr *)opt_cfg->val, j = 0; j < opt_cfg->len; j+=IN6ADDRSZ, a++)
+	      for (a = opt_cfg->val, j = 0; j < opt_cfg->len; j+=IN6ADDRSZ, a++)
 		{
 		  struct in6_addr *p = NULL;
 
@@ -1718,7 +1718,7 @@ static int check_address(struct state *state, struct in6_addr *addr)
 /* return true of *addr could have been generated from config. */
 static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr)
 {
-  int prefix;
+  prefix: i32;
   struct in6_addr wild_addr;
   struct addrlist *addr_list;
   
@@ -2116,7 +2116,7 @@ static unsigned int opt6_uint(unsigned char *opt, int offset, int size)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;
-  int i;
+  i: i32;
   unsigned char *p = opt6_ptr(opt, offset);
   
   for (i = 0; i < size; i++)
@@ -2192,7 +2192,7 @@ int relay_upstream6(int iface_index, ssize_t sz,
 	
 	if (IN6_ARE_ADDR_EQUAL(&relay->server.addr6, &multicast))
 	  {
-	    int multicast_iface;
+	    multicast_iface: i32;
 	    if (!relay->interface || strchr(relay->interface, '*') ||
 		(multicast_iface = if_nametoindex(relay->interface)) == 0 ||
 		setsockopt(daemon->dhcp6fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &multicast_iface, sizeof(multicast_iface)) == -1)

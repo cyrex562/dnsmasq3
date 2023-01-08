@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP6
 
-#include <netinet/icmp6.h>
+// #include <netinet/icmp6.h>
 
 struct iface_param {
   struct dhcp_context *current;
@@ -34,7 +34,7 @@ static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, vo
 
 void dhcp6_init(void)
 {
-  int fd;
+  fd: i32;
   struct sockaddr_in6 saddr;
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
   int class = IPTOS_CLASS_CS6;
@@ -83,7 +83,7 @@ void dhcp6_init(void)
   if (bind(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in6)))
     die(_("failed to bind DHCPv6 server socket: %s"), NULL, EC_BADNET);
   
-  daemon->dhcp6fd = fd;
+  daemon.dhcp6fd = fd;
 }
 
 void dhcp6_packet(time_t now)
@@ -112,19 +112,19 @@ void dhcp6_packet(time_t now)
   msg.msg_flags = 0;
   msg.msg_name = &from;
   msg.msg_namelen = sizeof(from);
-  msg.msg_iov =  &daemon->dhcp_packet;
+  msg.msg_iov =  &daemon.dhcp_packet;
   msg.msg_iovlen = 1;
   
-  if ((sz = recv_dhcp_packet(daemon->dhcp6fd, &msg)) == -1)
+  if ((sz = recv_dhcp_packet(daemon.dhcp6fd, &msg)) == -1)
     return;
   
 #ifdef HAVE_DUMPFILE
-  dump_packet_udp(DUMP_DHCPV6, (void *)daemon->dhcp_packet.iov_base, sz,
-		  (union mysockaddr *)&from, NULL, daemon->dhcp6fd);
+  dump_packet_udp(DUMP_DHCPV6, (void *)daemon.dhcp_packet.iov_base, sz,
+		  (union mysockaddr *)&from, NULL, daemon.dhcp6fd);
 #endif
   
   for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-    if (cmptr->cmsg_level == IPPROTO_IPV6 && cmptr->cmsg_type == daemon->v6pktinfo)
+    if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
       {
 	union {
 	  unsigned char *c;
@@ -132,21 +132,21 @@ void dhcp6_packet(time_t now)
 	} p;
 	p.c = CMSG_DATA(cmptr);
         
-	if_index = p.p->ipi6_ifindex;
-	dst_addr = p.p->ipi6_addr;
+	if_index = p.p.ipi6_ifindex;
+	dst_addr = p.p.ipi6_addr;
       }
 
-  if (!indextoname(daemon->dhcp6fd, if_index, ifr.ifr_name))
+  if (!indextoname(daemon.dhcp6fd, if_index, ifr.ifr_name))
     return;
 
   if (relay_reply6(&from, sz, ifr.ifr_name))
     {
 #ifdef HAVE_DUMPFILE
-      dump_packet_udp(DUMP_DHCPV6, (void *)daemon->outpacket.iov_base, save_counter(-1), NULL,
-		      (union mysockaddr *)&from, daemon->dhcp6fd);
+      dump_packet_udp(DUMP_DHCPV6, (void *)daemon.outpacket.iov_base, save_counter(-1), NULL,
+		      (union mysockaddr *)&from, daemon.dhcp6fd);
 #endif
       
-      while (retry_send(sendto(daemon->dhcp6fd, daemon->outpacket.iov_base, 
+      while (retry_send(sendto(daemon.dhcp6fd, daemon.outpacket.iov_base,
 			       save_counter(-1), 0, (struct sockaddr *)&from, 
 			       sizeof(from))));
     }
@@ -154,12 +154,12 @@ void dhcp6_packet(time_t now)
     {
       struct dhcp_bridge *bridge, *alias;
       
-      for (tmp = daemon->if_except; tmp; tmp = tmp->next)
-	if (tmp->name && wildcard_match(tmp->name, ifr.ifr_name))
+      for (tmp = daemon.if_except; tmp; tmp = tmp.next)
+	if (tmp.name && wildcard_match(tmp.name, ifr.ifr_name))
 	  return;
       
-      for (tmp = daemon->dhcp_except; tmp; tmp = tmp->next)
-	if (tmp->name && wildcard_match(tmp->name, ifr.ifr_name))
+      for (tmp = daemon.dhcp_except; tmp; tmp = tmp.next)
+	if (tmp.name && wildcard_match(tmp.name, ifr.ifr_name))
 	  return;
       
       parm.current = NULL;
@@ -174,7 +174,7 @@ void dhcp6_packet(time_t now)
          --bridge-interface option), change parm.ind so that we look
          for DHCPv6 contexts associated with the aliased interface
          instead of with the aliasing one. */
-      for (bridge = daemon->bridges; bridge; bridge = bridge->next)
+      for (bridge = daemon.bridges; bridge; bridge = bridge->next)
 	{
 	  for (alias = bridge->alias; alias; alias = alias->next)
 	    if (wildcard_matchn(alias->iface, ifr.ifr_name, IF_NAMESIZE))

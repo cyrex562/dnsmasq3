@@ -30,21 +30,21 @@
  
  
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <getopt.h>
-#include <errno.h>
-#include <unistd.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
+// #include <strings.h>
+// #include <sys/types.h>
+// #include <sys/socket.h>
+// #include <arpa/inet.h>
+// #include <getopt.h>
+// #include <errno.h>
+// #include <unistd.h>
 
-#define NOT_REPLY_CODE 115
+pub const NOT_REPLY_CODE: u32 = 115;
 typedef unsigned char u8;
 typedef unsigned short u16;
-typedef unsigned int u32;
+typedef unsigned u32: i32;
 
 enum DHCP6_TYPES
   {
@@ -357,10 +357,10 @@ int send_release_packet(const char* iface, struct dhcp6_packet* packet)
       fail_fatal("inet_pton", 5);
     server_addr.sin6_port = htons(DHCP6_SERVER_PORT);
     ssize_t recv_size = 0;
-    int result;
+    result: i32;
     for (i = 0; i < 5; i++)
       {
-        if (sendto(sock, packet->buf, packet->len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        if (sendto(sock, packet.buf, packet.len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
 	  fail_fatal("sendto failed", 4);
 	
         recv_size = recvfrom(sock, response, sizeof(response), MSG_DONTWAIT, NULL, 0);

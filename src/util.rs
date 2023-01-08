@@ -18,20 +18,20 @@
    Daniel J Bernstein, which is public domain. */
 
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_BROKEN_RTC
-#include <sys/times.h>
+// #include <sys/times.h>
 #endif
 
 #if defined(HAVE_LIBIDN2)
-#include <idn2.h>
+// #include <idn2.h>
 #elif defined(HAVE_IDN)
-#include <idna.h>
+// #include <idna.h>
 #endif
 
 #ifdef HAVE_LINUX_NETWORK
-#include <sys/utsname.h>
+// #include <sys/utsname.h>
 #endif
 
 /* SURF random number generator */
@@ -59,7 +59,7 @@ void rand_init()
 static void surf(void)
 {
   u32 t[12]; u32 x; u32 sum = 0;
-  int r; int i; int loop;
+  r: i32; i: i32; loop: i32;
 
   for (i = 0;i < 12;++i) t[i] = in[i] ^ seed[12 + i];
   for (i = 0;i < 8;++i) out[i] = seed[24 + i];
@@ -191,7 +191,7 @@ static int check_name(char *in)
 int legal_hostname(char *name)
 {
   char c;
-  int first;
+  first: i32;
 
   if (!check_name(name))
     return 0;
@@ -220,7 +220,7 @@ int legal_hostname(char *name)
 char *canonicalise(char *in, int *nomem)
 {
   char *ret = NULL;
-  int rc;
+  rc: i32;
   
   if (nomem)
     *nomem = 0;
@@ -266,7 +266,7 @@ char *canonicalise(char *in, int *nomem)
 
 unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
 {
-  int j;
+  j: i32;
   
   while (sval && *sval)
     {
@@ -348,17 +348,17 @@ void *whine_realloc(void *ptr, size_t size)
 
 int sockaddr_isequal(const union mysockaddr *s1, const union mysockaddr *s2)
 {
-  if (s1->sa.sa_family == s2->sa.sa_family)
+  if (s1.sa.sa_family == s2.sa.sa_family)
     { 
-      if (s1->sa.sa_family == AF_INET &&
-	  s1->in.sin_port == s2->in.sin_port &&
-	  s1->in.sin_addr.s_addr == s2->in.sin_addr.s_addr)
+      if (s1.sa.sa_family == AF_INET &&
+	  s1.in.sin_port == s2.in.sin_port &&
+	  s1.in.sin_addr.s_addr == s2.in.sin_addr.s_addr)
 	return 1;
       
-      if (s1->sa.sa_family == AF_INET6 &&
-	  s1->in6.sin6_port == s2->in6.sin6_port &&
-	  s1->in6.sin6_scope_id == s2->in6.sin6_scope_id &&
-	  IN6_ARE_ADDR_EQUAL(&s1->in6.sin6_addr, &s2->in6.sin6_addr))
+      if (s1.sa.sa_family == AF_INET6 &&
+	  s1.in6.sin6_port == s2.in6.sin6_port &&
+	  s1.in6.sin6_scope_id == s2.in6.sin6_scope_id &&
+	  IN6_ARE_ADDR_EQUAL(&s1.in6.sin6_addr, &s2.in6.sin6_addr))
 	return 1;
     }
   return 0;
@@ -366,12 +366,12 @@ int sockaddr_isequal(const union mysockaddr *s1, const union mysockaddr *s2)
 
 int sockaddr_isnull(const union mysockaddr *s)
 {
-  if (s->sa.sa_family == AF_INET &&
-      s->in.sin_addr.s_addr == 0)
+  if (s.sa.sa_family == AF_INET &&
+      s.in.sin_addr.s_addr == 0)
     return 1;
   
-  if (s->sa.sa_family == AF_INET6 &&
-      IN6_IS_ADDR_UNSPECIFIED(&s->in6.sin6_addr))
+  if (s.sa.sa_family == AF_INET6 &&
+      IN6_IS_ADDR_UNSPECIFIED(&s.in6.sin6_addr))
     return 1;
   
   return 0;
@@ -380,12 +380,12 @@ int sockaddr_isnull(const union mysockaddr *s)
 int sa_len(union mysockaddr *addr)
 {
 #ifdef HAVE_SOCKADDR_SA_LEN
-  return addr->sa.sa_len;
+  return addr.sa.sa_len;
 #else
-  if (addr->sa.sa_family == AF_INET6)
-    return sizeof(addr->in6);
+  if (addr.sa.sa_family == AF_INET6)
+    return sizeof(addr.in6);
   else
-    return sizeof(addr->in); 
+    return sizeof(addr.in);
 #endif
 }
 
@@ -512,11 +512,11 @@ int is_same_net6(struct in6_addr *a, struct in6_addr *b, int prefixlen)
   int pfbytes = prefixlen >> 3;
   int pfbits = prefixlen & 7;
 
-  if (memcmp(&a->s6_addr, &b->s6_addr, pfbytes) != 0)
+  if (memcmp(&a.s6_addr, &b.s6_addr, pfbytes) != 0)
     return 0;
 
   if (pfbits == 0 ||
-      (a->s6_addr[pfbytes] >> (8 - pfbits) == b->s6_addr[pfbytes] >> (8 - pfbits)))
+      (a.s6_addr[pfbytes] >> (8 - pfbits) == b.s6_addr[pfbytes] >> (8 - pfbits)))
     return 1;
 
   return 0;
@@ -525,22 +525,22 @@ int is_same_net6(struct in6_addr *a, struct in6_addr *b, int prefixlen)
 /* return least significant 64 bits if IPv6 address */
 u64 addr6part(struct in6_addr *addr)
 {
-  int i;
+  i: i32;
   u64 ret = 0;
 
   for (i = 8; i < 16; i++)
-    ret = (ret << 8) + addr->s6_addr[i];
+    ret = (ret << 8) + addr.s6_addr[i];
 
   return ret;
 }
 
 void setaddr6part(struct in6_addr *addr, u64 host)
 {
-  int i;
+  i: i32;
 
   for (i = 15; i >= 8; i--)
     {
-      addr->s6_addr[i] = host;
+      addr.s6_addr[i] = host;
       host = host >> 8;
     }
 }
@@ -551,16 +551,16 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
 {
   int port = 0;
   
-  if (addr->sa.sa_family == AF_INET)
+  if (addr.sa.sa_family == AF_INET)
     {
-      inet_ntop(AF_INET, &addr->in.sin_addr, buf, ADDRSTRLEN);
-      port = ntohs(addr->in.sin_port);
+      inet_ntop(AF_INET, &addr.in.sin_addr, buf, ADDRSTRLEN);
+      port = ntohs(addr.in.sin_port);
     }
-  else if (addr->sa.sa_family == AF_INET6)
+  else if (addr.sa.sa_family == AF_INET6)
     {
       char name[IF_NAMESIZE];
-      inet_ntop(AF_INET6, &addr->in6.sin6_addr, buf, ADDRSTRLEN);
-      if (addr->in6.sin6_scope_id != 0 &&
+      inet_ntop(AF_INET6, &addr.in6.sin6_addr, buf, ADDRSTRLEN);
+      if (addr.in6.sin6_scope_id != 0 &&
 	  if_indextoname(addr->in6.sin6_scope_id, name) &&
 	  strlen(buf) + strlen(name) + 2 <= ADDRSTRLEN)
 	{
@@ -706,7 +706,7 @@ int expand_buf(struct iovec *iov, size_t size)
 char *print_mac(char *buff, unsigned char *mac, int len)
 {
   char *p = buff;
-  int i;
+  i: i32;
    
   if (len == 0)
     sprintf(p, "<null>");
@@ -860,7 +860,7 @@ int wildcard_matchn(const char* wildcard, const char* match, int num)
 int kernel_version(void)
 {
   struct utsname utsname;
-  int version;
+  version: i32;
   char *split;
   
   if (uname(&utsname) < 0)

@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_DHCP
 
@@ -22,7 +22,7 @@ void dhcp_common_init(void)
 {
   /* These each hold a DHCP option max size 255
      and get a terminating zero added */
-  daemon->dhcp_buff = safe_malloc(DHCP_BUFF_SZ);
+  daemon.dhcp_buff = safe_malloc(DHCP_BUFF_SZ);
   daemon->dhcp_buff2 = safe_malloc(DHCP_BUFF_SZ); 
   daemon->dhcp_buff3 = safe_malloc(DHCP_BUFF_SZ);
   
@@ -267,7 +267,7 @@ void log_tags(struct dhcp_netid *netid, u32 xid)
   
 int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
 {
-  int i;
+  i: i32;
   
   if (o->len > len)
     return 0;
@@ -735,7 +735,7 @@ static const struct opttab_t opttab6[] = {
 
 void display_opts(void)
 {
-  int i;
+  i: i32;
   
   printf(_("Known DHCP options:\n"));
   
@@ -747,7 +747,7 @@ void display_opts(void)
 #ifdef HAVE_DHCP6
 void display_opts6(void)
 {
-  int i;
+  i: i32;
   printf(_("Known DHCPv6 options:\n"));
   
   for (i = 0; opttab6[i].name; i++)
@@ -759,7 +759,7 @@ void display_opts6(void)
 int lookup_dhcp_opt(int prot, char *name)
 {
   const struct opttab_t *t;
-  int i;
+  i: i32;
 
   (void)prot;
 
@@ -780,7 +780,7 @@ int lookup_dhcp_opt(int prot, char *name)
 int lookup_dhcp_len(int prot, int val)
 {
   const struct opttab_t *t;
-  int i;
+  i: i32;
 
   (void)prot;
 

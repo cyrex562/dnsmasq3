@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 
@@ -22,7 +22,7 @@
 
 /* bignum.h includes version.h and works on
    earlier releases of nettle which don't have version.h */
-#include <nettle/bignum.h>
+// #include <nettle/bignum.h>
 #if !defined(NETTLE_VERSION_MAJOR)
 #  define NETTLE_VERSION_MAJOR 2
 #  define NETTLE_VERSION_MINOR 0
@@ -33,11 +33,11 @@
 #endif /* defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH) */
 
 #if defined(HAVE_DNSSEC)
-#include <nettle/rsa.h>
-#include <nettle/ecdsa.h>
-#include <nettle/ecc-curve.h>
+// #include <nettle/rsa.h>
+// #include <nettle/ecdsa.h>
+// #include <nettle/ecc-curve.h>
 #if MIN_VERSION(3, 1)
-#include <nettle/eddsa.h>
+// #include <nettle/eddsa.h>
 #endif
 #if MIN_VERSION(3, 6)
 #  include <nettle/gostdsa.h>
@@ -63,17 +63,17 @@ struct null_hash_ctx
 
 static size_t null_hash_buff_sz = 0;
 static uint8_t *null_hash_buff = NULL;
-#define BUFF_INCR 128
+pub const BUFF_INCR: u32 = 128;
 
 static void null_hash_init(void *ctx)
 {
-  ((struct null_hash_ctx *)ctx)->len = 0;
+  ((struct null_hash_ctx *)ctx).len = 0;
 }
 
 static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
 {
   struct null_hash_ctx *ctx = ctxv;
-  size_t new_len = ctx->len + length;
+  size_t new_len = ctx.len + length;
   
   if (new_len > null_hash_buff_sz)
     {
@@ -84,8 +84,8 @@ static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
 
       if (null_hash_buff)
 	{
-	  if (ctx->len != 0)
-	    memcpy(new, null_hash_buff, ctx->len);
+	  if (ctx.len != 0)
+	    memcpy(new, null_hash_buff, ctx.len);
 	  free(null_hash_buff);
 	}
       
@@ -93,16 +93,16 @@ static void null_hash_update(void *ctxv, size_t length, const uint8_t *src)
       null_hash_buff = new;
     }
 
-  memcpy(null_hash_buff + ctx->len, src, length);
-  ctx->len += length;
+  memcpy(null_hash_buff + ctx.len, src, length);
+  ctx.len += length;
 }
  
 static void null_hash_digest(void *ctx, size_t length, uint8_t *dst)
 {
   (void)length;
   
-  ((struct null_hash_digest *)dst)->buff = null_hash_buff;
-  ((struct null_hash_digest *)dst)->len = ((struct null_hash_ctx *)ctx)->len;
+  ((struct null_hash_digest *)dst).buff = null_hash_buff;
+  ((struct null_hash_digest *)dst).len = ((struct null_hash_ctx *)ctx).len;
 }
 
 static struct nettle_hash null_hash = {
@@ -127,30 +127,30 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
 
   void *new;
 
-  if (ctx_sz < hash->context_size)
+  if (ctx_sz < hash.context_size)
     {
-      if (!(new = whine_malloc(hash->context_size)))
+      if (!(new = whine_malloc(hash.context_size)))
 	return 0;
       if (ctx)
 	free(ctx);
       ctx = new;
-      ctx_sz = hash->context_size;
+      ctx_sz = hash.context_size;
     }
   
-  if (digest_sz < hash->digest_size)
+  if (digest_sz < hash.digest_size)
     {
-      if (!(new = whine_malloc(hash->digest_size)))
+      if (!(new = whine_malloc(hash.digest_size)))
 	return 0;
       if (digest)
 	free(digest);
       digest = new;
-      digest_sz = hash->digest_size;
+      digest_sz = hash.digest_size;
     }
 
   *ctxp = ctx;
   *digestp = digest;
 
-  hash->init(ctx);
+  hash.init(ctx);
 
   return 1;
 }
@@ -188,9 +188,9 @@ static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, 
   if (exp_len >= key_len)
     return 0;
   
-  key->size =  key_len - exp_len;
-  mpz_import(key->e, exp_len, 1, 1, 0, 0, p);
-  mpz_import(key->n, key->size, 1, 1, 0, 0, p + exp_len);
+  key.size =  key_len - exp_len;
+  mpz_import(key.e, exp_len, 1, 1, 0, 0, p);
+  mpz_import(key.n, key.size, 1, 1, 0, 0, p + exp_len);
 
   mpz_import(sig_mpz, sig_len, 1, 1, 0, 0, sig);
   
@@ -212,15 +212,15 @@ static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len
 				unsigned char *digest, size_t digest_len, int algo)
 {
   unsigned char *p;
-  unsigned int t;
+  unsigned t: i32;
   struct ecc_point *key;
 
   static struct ecc_point *key_256 = NULL, *key_384 = NULL;
   static mpz_t x, y;
   static struct dsa_signature *sig_struct;
 #if !MIN_VERSION(3, 4)
-#define nettle_get_secp_256r1() (&nettle_secp_256r1)
-#define nettle_get_secp_384r1() (&nettle_secp_384r1)
+pub const nettle_get_secp_256r: u32 = 1;() (&nettle_secp_256r1)
+pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 #endif
   
   if (!sig_struct)
@@ -275,8 +275,8 @@ static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len
   if (!ecc_point_set(key, x, y))
     return 0;
   
-  mpz_import(sig_struct->r, t, 1, 1, 0, 0, sig);
-  mpz_import(sig_struct->s, t, 1, 1, 0, 0, sig + t);
+  mpz_import(sig_struct.r, t, 1, 1, 0, 0, sig);
+  mpz_import(sig_struct.s, t, 1, 1, 0, 0, sig + t);
   
   return nettle_ecdsa_verify(key, digest_len, digest, sig_struct);
 }
@@ -315,8 +315,8 @@ static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_l
   if (!ecc_point_set(gost_key, x, y))
     return 0; 
   
-  mpz_import(sig_struct->s, 32, 1, 1, 0, 0, sig);
-  mpz_import(sig_struct->r, 32, 1, 1, 0, 0, sig + 32);
+  mpz_import(sig_struct.s, 32, 1, 1, 0, 0, sig);
+  mpz_import(sig_struct.r, 32, 1, 1, 0, 0, sig + 32);
   
   return nettle_gostdsa_verify(gost_key, digest_len, digest, sig_struct);
 }
@@ -345,8 +345,8 @@ static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len
 	return 0;
 
       return ed25519_sha512_verify(p,
-				   ((struct null_hash_digest *)digest)->len,
-				   ((struct null_hash_digest *)digest)->buff,
+				   ((struct null_hash_digest *)digest).len,
+				   ((struct null_hash_digest *)digest).buff,
 				   sig);
       
 #if MIN_VERSION(3, 6)
@@ -356,8 +356,8 @@ static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len
 	return 0;
 
       return ed448_shake256_verify(p,
-				   ((struct null_hash_digest *)digest)->len,
-				   ((struct null_hash_digest *)digest)->buff,
+				   ((struct null_hash_digest *)digest).len,
+				   ((struct null_hash_digest *)digest).buff,
 				   sig);
 #endif
 
@@ -498,7 +498,7 @@ const struct nettle_hash *hash_find(char *name)
   return nettle_lookup_hash(name);
 #else
   {
-    int i;
+    i: i32;
 
     for (i = 0; nettle_hashes[i]; i++)
       if (strcmp(nettle_hashes[i]->name, name) == 0)

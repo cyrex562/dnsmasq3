@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 const char * metric_names[] = {
     "dns_cache_inserted",
@@ -47,20 +47,19 @@ const char* get_metric_name(int i) {
 
 void clear_metrics(void)
 {
-  int i;
+  i: i32;
   struct server *serv;
   
   for (i = 0; i < __METRIC_MAX; i++)
-    daemon->metrics[i] = 0;
+    daemon.metrics[i] = 0;
 
-  for (serv = daemon->servers; serv; serv = serv->next)
+  for (serv = daemon.servers; serv; serv = serv.next)
     {
-      serv->queries = 0;
-      serv->failed_queries = 0;
-      serv->failed_queries = 0;
-      serv->retrys = 0;
-      serv->nxdomain_replies = 0;
-      serv->query_latency = 0;
+      serv.queries = 0;
+      serv.failed_queries = 0;
+      serv.failed_queries = 0;
+      serv.retrys = 0;
+      serv.nxdomain_replies = 0;
+      serv.query_latency = 0;
     }
 }
-	

@@ -14,47 +14,47 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_AUTH
 
 static struct addrlist *find_addrlist(struct addrlist *list, int flag, union all_addr *addr_u)
 {
   do {
-    if (!(list->flags & ADDRLIST_IPV6))
+    if (!(list.flags & ADDRLIST_IPV6))
       {
-	struct in_addr netmask, addr = addr_u->addr4;
+	struct in_addr netmask, addr = addr_u.addr4;
 	
 	if (!(flag & F_IPV4))
 	  continue;
 	
-	netmask.s_addr = htonl(~(in_addr_t)0 << (32 - list->prefixlen));
+	netmask.s_addr = htonl(~(in_addr_t)0 << (32 - list.prefixlen));
 	
-	if  (is_same_net(addr, list->addr.addr4, netmask))
+	if  (is_same_net(addr, list.addr.addr4, netmask))
 	  return list;
       }
-    else if (is_same_net6(&(addr_u->addr6), &list->addr.addr6, list->prefixlen))
+    else if (is_same_net6(&(addr_u.addr6), &list.addr.addr6, list.prefixlen))
       return list;
     
-  } while ((list = list->next));
+  } while ((list = list.next));
   
   return NULL;
 }
 
 static struct addrlist *find_subnet(struct auth_zone *zone, int flag, union all_addr *addr_u)
 {
-  if (!zone->subnet)
+  if (!zone.subnet)
     return NULL;
   
-  return find_addrlist(zone->subnet, flag, addr_u);
+  return find_addrlist(zone.subnet, flag, addr_u);
 }
 
 static struct addrlist *find_exclude(struct auth_zone *zone, int flag, union all_addr *addr_u)
 {
-  if (!zone->exclude)
+  if (!zone.exclude)
     return NULL;
   
-  return find_addrlist(zone->exclude, flag, addr_u);
+  return find_addrlist(zone.exclude, flag, addr_u);
 }
 
 static int filter_zone(struct auth_zone *zone, int flag, union all_addr *addr_u)
@@ -63,7 +63,7 @@ static int filter_zone(struct auth_zone *zone, int flag, union all_addr *addr_u)
     return 0;
 
   /* No subnets specified, no filter */
-  if (!zone->subnet)
+  if (!zone.subnet)
     return 1;
   
   return find_subnet(zone, flag, addr_u) != NULL;
@@ -72,13 +72,13 @@ static int filter_zone(struct auth_zone *zone, int flag, union all_addr *addr_u)
 int in_zone(struct auth_zone *zone, char *name, char **cut)
 {
   size_t namelen = strlen(name);
-  size_t domainlen = strlen(zone->domain);
+  size_t domainlen = strlen(zone.domain);
 
   if (cut)
     *cut = NULL;
   
   if (namelen >= domainlen && 
-      hostname_isequal(zone->domain, &name[namelen - domainlen]))
+      hostname_isequal(zone.domain, &name[namelen - domainlen]))
     {
       
       if (namelen == domainlen)
@@ -99,7 +99,7 @@ int in_zone(struct auth_zone *zone, char *name, char **cut)
 size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t now, union mysockaddr *peer_addr, 
 		   int local_query, int do_bit, int have_pseudoheader) 
 {
-  char *name = daemon->namebuff;
+  char *name = daemon.namebuff;
   unsigned char *p, *ansp;
   int qtype, qclass, rc;
   int nameoffset, axfroffset = 0;
@@ -115,9 +115,9 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
   struct naptr *na;
   union all_addr addr;
   struct cname *a, *candidate;
-  unsigned int wclen;
+  unsigned wclen: i32;
   
-  if (ntohs(header->qdcount) == 0 || OPCODE(header) != QUERY )
+  if (ntohs(header.qdcount) == 0 || OPCODE(header) != QUERY )
     return 0;
 
   /* determine end of question section (we put answers there) */
@@ -127,7 +127,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
   /* now process each question, answers go in RRs after the question */
   p = (unsigned char *)(header+1);
 
-  for (q = ntohs(header->qdcount); q != 0; q--)
+  for (q = ntohs(header.qdcount); q != 0; q--)
     {
       unsigned int flag = 0;
       int found = 0;
@@ -154,7 +154,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 	  (flag = in_arpa_name_2_addr(name, &addr)) &&
 	  !local_query)
 	{
-	  for (zone = daemon->auth_zones; zone; zone = zone->next)
+	  for (zone = daemon.auth_zones; zone; zone = zone.next)
 	    if ((subnet = find_subnet(zone, flag, &addr)))
 	      break;
 	  
@@ -175,18 +175,18 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 	  intr = NULL;
 
 	  if (flag == F_IPV4)
-	    for (intr = daemon->int_names; intr; intr = intr->next)
+	    for (intr = daemon.int_names; intr; intr = intr.next)
 	      {
 		struct addrlist *addrlist;
 		
-		for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
-		  if (!(addrlist->flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist->addr.addr4.s_addr)
+		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
+		  if (!(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr)
 		    break;
 		
 		if (addrlist)
 		  break;
 		else
-		  while (intr->next && strcmp(intr->intr, intr->next->intr) == 0)
+		  while (intr.next && strcmp(intr.intr, intr.next.intr) == 0)
 		    intr = intr->next;
 	      }
 	  else if (flag == F_IPV6)
@@ -614,7 +614,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 	  else
 	    {
 	      char *p = name;
-	      int i;
+	      i: i32;
 	      
 	      for (i = subnet->prefixlen-1; i >= 0; i -= 4)
 		{ 

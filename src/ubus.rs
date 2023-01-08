@@ -14,11 +14,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_UBUS
 
-#include <libubus.h>
+// #include <libubus.h>
 
 static struct blob_buf b;
 static int error_logged = 0;
@@ -76,13 +76,13 @@ static void ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj)
 {
   (void)ctx;
 
-  my_syslog(LOG_DEBUG, _("UBus subscription callback: %s subscriber(s)"), obj->has_subscribers ? "1" : "0");
+  my_syslog(LOG_DEBUG, _("UBus subscription callback: %s subscriber(s)"), obj.has_subscribers ? "1" : "0");
 }
 
 static void ubus_destroy(struct ubus_context *ubus)
 {
   ubus_free(ubus);
-  daemon->ubus = NULL;
+  daemon.ubus = NULL;
   
   /* Forces re-initialization when we're reusing the same definitions later on. */
   ubus_object.id = 0;
@@ -91,7 +91,7 @@ static void ubus_destroy(struct ubus_context *ubus)
 
 static void ubus_disconnect_cb(struct ubus_context *ubus)
 {
-  int ret;
+  ret: i32;
 
   ret = ubus_reconnect(ubus, NULL);
   if (ret)
@@ -110,7 +110,7 @@ char *ubus_init()
   if (!(ubus = ubus_connect(NULL)))
     return NULL;
   
-  ubus_object.name = daemon->ubus_name;
+  ubus_object.name = daemon.ubus_name;
   ret = ubus_add_object(ubus, &ubus_object);
   if (ret)
     {
@@ -118,8 +118,8 @@ char *ubus_init()
       return (char *)ubus_strerror(ret);
     }    
   
-  ubus->connection_lost = ubus_disconnect_cb;
-  daemon->ubus = ubus;
+  ubus.connection_lost = ubus_disconnect_cb;
+  daemon.ubus = ubus;
   error_logged = 0;
 
   return NULL;
@@ -127,7 +127,7 @@ char *ubus_init()
 
 void set_ubus_listeners()
 {
-  struct ubus_context *ubus = (struct ubus_context *)daemon->ubus;
+  struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
   if (!ubus)
     {
       if (!error_logged)
@@ -140,14 +140,14 @@ void set_ubus_listeners()
 
   error_logged = 0;
 
-  poll_listen(ubus->sock.fd, POLLIN);
-  poll_listen(ubus->sock.fd, POLLERR);
-  poll_listen(ubus->sock.fd, POLLHUP);
+  poll_listen(ubus.sock.fd, POLLIN);
+  poll_listen(ubus.sock.fd, POLLERR);
+  poll_listen(ubus.sock.fd, POLLHUP);
 }
 
 void check_ubus_listeners()
 {
-  struct ubus_context *ubus = (struct ubus_context *)daemon->ubus;
+  struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
   if (!ubus)
     {
       if (!error_logged)
@@ -160,10 +160,10 @@ void check_ubus_listeners()
   
   error_logged = 0;
 
-  if (poll_check(ubus->sock.fd, POLLIN))
+  if (poll_check(ubus.sock.fd, POLLIN))
     ubus_handle_event(ubus);
   
-  if (poll_check(ubus->sock.fd, POLLHUP | POLLERR))
+  if (poll_check(ubus.sock.fd, POLLHUP | POLLERR))
     {
       my_syslog(LOG_INFO, _("Disconnecting from UBus"));
 
@@ -185,7 +185,7 @@ static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj
 			       struct ubus_request_data *req, const char *method,
 			       struct blob_attr *msg)
 {
-  int i;
+  i: i32;
 
   (void)obj;
   (void)method;
@@ -194,7 +194,7 @@ static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj
   CHECK(blob_buf_init(&b, BLOBMSG_TYPE_TABLE));
 
   for (i=0; i < __METRIC_MAX; i++)
-    CHECK(blobmsg_add_u32(&b, get_metric_name(i), daemon->metrics[i]));
+    CHECK(blobmsg_add_u32(&b, get_metric_name(i), daemon.metrics[i]));
   
   CHECK(ubus_send_reply(ctx, req, b.head));
   return UBUS_STATUS_OK;
@@ -247,17 +247,17 @@ static int ubus_handle_set_connmark_allowlist(struct ubus_context *ctx, struct u
 	}
     }
   
-  for (allowlists_pos = &daemon->allowlists; *allowlists_pos; allowlists_pos = &(*allowlists_pos)->next)
-    if ((*allowlists_pos)->mark == mark && (*allowlists_pos)->mask == mask)
+  for (allowlists_pos = &daemon.allowlists; *allowlists_pos; allowlists_pos = &(*allowlists_pos).next)
+    if ((*allowlists_pos).mark == mark && (*allowlists_pos).mask == mask)
       {
-	struct allowlist *allowlists_next = (*allowlists_pos)->next;
-	for (patterns_pos = (*allowlists_pos)->patterns; *patterns_pos; patterns_pos++)
+	struct allowlist *allowlists_next = (*allowlists_pos).next;
+	for (patterns_pos = (*allowlists_pos).patterns; *patterns_pos; patterns_pos++)
 	  {
 	    free(*patterns_pos);
 	    *patterns_pos = NULL;
 	  }
-	free((*allowlists_pos)->patterns);
-	(*allowlists_pos)->patterns = NULL;
+	free((*allowlists_pos).patterns);
+	(*allowlists_pos).patterns = NULL;
 	free(*allowlists_pos);
 	*allowlists_pos = allowlists_next;
 	break;
@@ -289,11 +289,11 @@ static int ubus_handle_set_connmark_allowlist(struct ubus_context *ctx, struct u
   if (!allowlists)
     goto fail;
   memset(allowlists, 0, sizeof(struct allowlist));
-  allowlists->mark = mark;
-  allowlists->mask = mask;
-  allowlists->patterns = patterns;
-  allowlists->next = daemon->allowlists;
-  daemon->allowlists = allowlists;
+  allowlists.mark = mark;
+  allowlists.mask = mask;
+  allowlists.patterns = patterns;
+  allowlists.next = daemon.allowlists;
+  daemon.allowlists = allowlists;
   return UBUS_STATUS_OK;
   
 fail:
@@ -330,7 +330,7 @@ fail:
 
 void ubus_event_bcast(const char *type, const char *mac, const char *ip, const char *name, const char *interface)
 {
-  struct ubus_context *ubus = (struct ubus_context *)daemon->ubus;
+  struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
 
   if (!ubus || !ubus_object.has_subscribers)
     return;
@@ -351,7 +351,7 @@ void ubus_event_bcast(const char *type, const char *mac, const char *ip, const c
 #ifdef HAVE_CONNTRACK
 void ubus_event_bcast_connmark_allowlist_refused(u32 mark, const char *name)
 {
-  struct ubus_context *ubus = (struct ubus_context *)daemon->ubus;
+  struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
 
   if (!ubus || !ubus_object.has_subscribers)
     return;
@@ -365,7 +365,7 @@ void ubus_event_bcast_connmark_allowlist_refused(u32 mark, const char *name)
 
 void ubus_event_bcast_connmark_allowlist_resolved(u32 mark, const char *name, const char *value, u32 ttl)
 {
-  struct ubus_context *ubus = (struct ubus_context *)daemon->ubus;
+  struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
 
   if (!ubus || !ubus_object.has_subscribers)
     return;

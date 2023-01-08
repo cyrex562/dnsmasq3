@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dnsmasq.h"
+// #include "dnsmasq.h"
 
 #ifdef HAVE_LOOP
 static ssize_t loop_make_probe(u32 uid);
@@ -34,7 +34,7 @@ void loop_send_probes()
 	 !(serv->flags & (SERV_FOR_NODOTS)))
        {
 	 ssize_t len = loop_make_probe(serv->uid);
-	 int fd;
+	 fd: i32;
 	 
 	 serv->flags &= ~SERV_LOOP;
 
@@ -79,7 +79,7 @@ static ssize_t loop_make_probe(u32 uid)
 
 int detect_loop(char *query, int type)
 {
-  int i;
+  i: i32;
   u32 uid;
   struct server *serv;
   
