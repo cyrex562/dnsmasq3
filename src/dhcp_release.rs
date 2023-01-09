@@ -51,7 +51,7 @@
 
 pub const DHCP_CHADDR_MAX: u32 = 16;
 pub const BOOTREQUEST: u32 = 1;
-pub const DHCP_COOKIE: u32 = 0;x63825363
+pub const DHCP_COOKIE: u32 = 0x63825363;
 pub const OPTION_SERVER_IDENTIFIER: u32 = 54;
 pub const OPTION_CLIENT_ID: u32 = 61;
 pub const OPTION_MESSAGE_TYPE: u32 = 53;

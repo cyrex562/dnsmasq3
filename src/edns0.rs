@@ -465,13 +465,13 @@ int check_source(struct dns_header *header, size_t plen, unsigned char *pseudohe
 pub const UMBRELLA_VERSION: u32 = 1;
 pub const UMBRELLA_TYPESZ: u32 = 2;
 
-pub const UMBRELLA_ASSET: u32 = 0;x0004
+pub const UMBRELLA_ASSET: u32 = 0x0004;
 #define UMBRELLA_ASSETSZ    sizeof(daemon->umbrella_asset)
-pub const UMBRELLA_ORG: u32 = 0;x0008
+pub const UMBRELLA_ORG: u32 = 0x0008;
 #define UMBRELLA_ORGSZ      sizeof(daemon->umbrella_org)
-pub const UMBRELLA_IPV4: u32 = 0;x0010
-pub const UMBRELLA_IPV6: u32 = 0;x0020
-pub const UMBRELLA_DEVICE: u32 = 0;x0040
+pub const UMBRELLA_IPV4: u32 = 0x0010;
+pub const UMBRELLA_IPV6: u32 = 0x0020;
+pub const UMBRELLA_DEVICE: u32 = 0x0040;
 #define UMBRELLA_DEVICESZ   sizeof(daemon->umbrella_device)
 
 struct umbrella_opt {

@@ -25,7 +25,7 @@ pub const DHCP_BUFF_SZ: u32 = 256;
 
 pub const BOOTREQUEST: u32 = 1;
 pub const BOOTREPLY: u32 = 2;
-pub const DHCP_COOKIE: u32 = 0;x63825363
+pub const DHCP_COOKIE: u32 = 0x63825363;
 
 /* The Linux in-kernel DHCP client silently ignores any packet 
    smaller than this. Sigh...........   */

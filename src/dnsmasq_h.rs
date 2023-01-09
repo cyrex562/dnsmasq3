@@ -406,71 +406,20 @@ pub const SERV_GOT_TCP: u32 = 32768;  /* Got some data from the TCP connection *
 
 
 
-struct serv_local {
-  u16 flags, domain_len;
-  char *domain;
-  struct server *next;
-};
 
-struct rebind_domain {
-  char *domain;
-  struct rebind_domain *next;
-};
 
-struct ipsets {
-  char **sets;
-  char *domain;
-  struct ipsets *next;
-};
 
-struct allowlist {
-  u32 mark, mask;
-  char **patterns;
-  struct allowlist *next;
-};
 
-struct irec {
-  union mysockaddr addr;
-  netmask: in_addr; /* only valid for IPv4 */
-  int tftp_ok, dhcp_ok, mtu, done, warned, dad, dns_auth, index, multicast_done, found, label;
-  char *name; 
-  struct irec *next;
-};
 
-struct listener {
-  int fd, tcpfd, tftpfd, used;
-  union mysockaddr addr;
-  struct irec *iface; /* only sometimes valid for non-wildcard */
-  struct listener *next;
-};
 
-/* interface and address parms from command line. */
-struct iname {
-  char *name;
-  union mysockaddr addr;
-  used: i32;
-  struct iname *next;
-};
 
-/* subnet parameters from command line */
-struct mysubnet {
-  union mysockaddr addr;
-  addr_used: i32;
-  mask: i32;
-};
 
-/* resolv-file parms from command-line */
-struct resolvc {
-  struct resolvc *next;
-  int is_default, logged;
-  time_t mtime;
-  ino_t ino;
-  char *name;
-// #ifdef HAVE_INOTIFY
-  wd: i32; /* inotify watch descriptor */
-  char *file; /* pointer to file part if path */
-// #endif
-};
+
+
+
+
+
+
 
 /* adn-hosts parms from command-line (also dhcp-hostsfile and dhcp-optsfile and dhcp-hostsdir*/
 pub const AH_DIR: u32 = 1;
@@ -479,57 +428,44 @@ pub const AH_WD_DONE: u32 = 4;
 pub const AH_HOSTS: u32 = 8;
 pub const AH_DHCP_HST: u32 = 16;
 pub const AH_DHCP_OPT: u32 = 32;
-struct hostsfile {
-  struct hostsfile *next;
-  flags: i32;
-  char *fname;
-  unsigned index: i32; /* matches to cache entries for logging */
-};
 
-struct dyndir {
-  struct dyndir *next;
-  struct hostsfile *files;
-  flags: i32;
-  char *dname;
-// #ifdef HAVE_INOTIFY
-  wd: i32; /* inotify watch descriptor */
-// #endif
-};
+
+
 
 /* packet-dump flags */
-pub const DUMP_QUERY: u32 = 0;x0001
-pub const DUMP_REPLY: u32 = 0;x0002
-pub const DUMP_UP_QUERY: u32 = 0;x0004
-pub const DUMP_UP_REPLY: u32 = 0;x0008
-pub const DUMP_SEC_QUERY: u32 = 0;x0010
-pub const DUMP_SEC_REPLY: u32 = 0;x0020
-pub const DUMP_BOGUS: u32 = 0;x0040
-pub const DUMP_SEC_BOGUS: u32 = 0;x0080
-pub const DUMP_DHCP: u32 = 0;x1000
-pub const DUMP_DHCPV6: u32 = 0;x2000
-pub const DUMP_RA: u32 = 0;x4000
-pub const DUMP_TFTP: u32 = 0;x8000
+pub const DUMP_QUERY: u32 = 0x0001;
+pub const DUMP_REPLY: u32 = 0x0002;
+pub const DUMP_UP_QUERY: u32 = 0x0004;
+pub const DUMP_UP_REPLY: u32 = 0x0008;
+pub const DUMP_SEC_QUERY: u32 = 0x0010;
+pub const DUMP_SEC_REPLY: u32 = 0x0020;
+pub const DUMP_BOGUS: u32 = 0x0040;
+pub const DUMP_SEC_BOGUS: u32 = 0x0080;
+pub const DUMP_DHCP: u32 = 0x1000;
+pub const DUMP_DHCPV6: u32 = 0x2000;
+pub const DUMP_RA: u32 = 0x4000;
+pub const DUMP_TFTP: u32 = 0x8000;
 
 /* DNSSEC status values. */
-pub const STAT_SECURE: u32 = 0;x10000
-pub const STAT_INSECURE: u32 = 0;x20000
-pub const STAT_BOGUS: u32 = 0;x30000
-pub const STAT_NEED_DS: u32 = 0;x40000
-pub const STAT_NEED_KEY: u32 = 0;x50000
-pub const STAT_TRUNCATED: u32 = 0;x60000
-pub const STAT_SECURE_WILDCARD: u32 = 0;x70000
-pub const STAT_OK: u32 = 0;x80000
-pub const STAT_ABANDONED: u32 = 0;x90000
+pub const STAT_SECURE: u32 = 0x10000;
+pub const STAT_INSECURE: u32 = 0x20000;
+pub const STAT_BOGUS: u32 = 0x30000;
+pub const STAT_NEED_DS: u32 = 0x40000;
+pub const STAT_NEED_KEY: u32 = 0x50000;
+pub const STAT_TRUNCATED: u32 = 0x60000;
+pub const STAT_SECURE_WILDCARD: u32 = 0x70000;
+pub const STAT_OK: u32 = 0x80000;
+pub const STAT_ABANDONED: u32 = 0x90000;
 
-pub const DNSSEC_FAIL_NYV: u32 = 0;x0001 /* key not yet valid */
-pub const DNSSEC_FAIL_EXP: u32 = 0;x0002 /* key expired */
-pub const DNSSEC_FAIL_INDET: u32 = 0;x0004 /* indetermined */
-pub const DNSSEC_FAIL_NOKEYSUP: u32 = 0;x0008 /* no supported key algo. */
-pub const DNSSEC_FAIL_NOSIG: u32 = 0;x0010 /* No RRsigs */
-pub const DNSSEC_FAIL_NOZONE: u32 = 0;x0020 /* No Zone bit set */
-pub const DNSSEC_FAIL_NONSEC: u32 = 0;x0040 /* No NSEC */
-pub const DNSSEC_FAIL_NODSSUP: u32 = 0;x0080 /* no supported DS algo. */
-pub const DNSSEC_FAIL_NOKEY: u32 = 0;x0100 /* no DNSKEY */
+pub const DNSSEC_FAIL_NYV: u32 = 0x0001; /* key not yet valid */
+pub const DNSSEC_FAIL_EXP: u32 = 0x0002; /* key expired */
+pub const DNSSEC_FAIL_INDET: u32 = 0x0004; /* indetermined */
+pub const DNSSEC_FAIL_NOKEYSUP: u32 = 0x0008; /* no supported key algo. */
+pub const DNSSEC_FAIL_NOSIG: u32 = 0x0010; /* No RRsigs */
+pub const DNSSEC_FAIL_NOZONE: u32 = 0x0020; /* No Zone bit set */
+pub const DNSSEC_FAIL_NONSEC: u32 = 0x0040; /* No NSEC */
+pub const DNSSEC_FAIL_NODSSUP: u32 = 0x0080; /* no supported DS algo. */
+pub const DNSSEC_FAIL_NOKEY: u32 = 0x0100; /* no DNSKEY */
 
 #define STAT_ISEQUAL(a, b)  (((a) & 0xffff0000) == (b))
 
@@ -576,13 +512,13 @@ struct frec {
 };
 
 /* flags in top of length field for DHCP-option tables */
-pub const OT_ADDR_LIST: u32 = 0;x8000
-pub const OT_RFC1035_NAME: u32 = 0;x4000
-pub const OT_INTERNAL: u32 = 0;x2000
-pub const OT_NAME: u32 = 0;x1000
-pub const OT_CSTRING: u32 = 0;x0800
-pub const OT_DEC: u32 = 0;x0400
-pub const OT_TIME: u32 = 0;x0200
+pub const OT_ADDR_LIST: u32 = 0x8000;
+pub const OT_RFC1035_NAME: u32 = 0x4000;
+pub const OT_INTERNAL: u32 = 0x2000;
+pub const OT_NAME: u32 = 0x1000;
+pub const OT_CSTRING: u32 = 0x0800;
+pub const OT_DEC: u32 = 0x0400;
+pub const OT_TIME: u32 = 0x0200;
 
 /* actions in the daemon->helper RPC */
 pub const ACTION_DEL: u32 = 1;

@@ -86,5 +86,16 @@ mod rand_fd_list;
 mod server;
 mod serv_addr4;
 mod serv_addr6;
+mod serv_local;
+mod rebind_domain;
+mod ipsets;
+mod allow_list;
+mod irec;
+mod listener;
+mod iname;
+mod mysubnet;
+mod resolvc;
+mod hosts_file;
+mod dyndir;
 
 fn main() {}

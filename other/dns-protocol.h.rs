@@ -122,16 +122,16 @@ struct dns_header {
   u16 qdcount,ancount,nscount,arcount;
 };
 
-pub const HB3_QR: u32 = 0;x80 /* Query */
-pub const HB3_OPCODE: u32 = 0;x78
-pub const HB3_AA: u32 = 0;x04 /* Authoritative Answer */
-pub const HB3_TC: u32 = 0;x02 /* TrunCated */
-pub const HB3_RD: u32 = 0;x01 /* Recursion Desired */
+pub const HB3_QR: u32 = 0x80; /* Query */
+pub const HB3_OPCODE: u32 = 0x78;
+pub const HB3_AA: u32 = 0x04; /* Authoritative Answer */
+pub const HB3_TC: u32 = 0x02; /* TrunCated */
+pub const HB3_RD: u32 = 0x01; /* Recursion Desired */
 
-pub const HB4_RA: u32 = 0;x80 /* Recursion Available */
-pub const HB4_AD: u32 = 0;x20 /* Authenticated Data */
-pub const HB4_CD: u32 = 0;x10 /* Checking Disabled */
-pub const HB4_RCODE: u32 = 0;x0f
+pub const HB4_RA: u32 = 0x80; /* Recursion Available */
+pub const HB4_AD: u32 = 0x20; /* Authenticated Data */
+pub const HB4_CD: u32 = 0x10; /* Checking Disabled */
+pub const HB4_RCODE: u32 = 0x0;f
 
 #define OPCODE(x)          (((x).hb3 & HB3_OPCODE) >> 3)
 #define SET_OPCODE(x, code) (x).hb3 = ((x).hb3 & ~HB3_OPCODE) | code
