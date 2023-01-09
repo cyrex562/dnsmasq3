@@ -380,7 +380,7 @@ static int private_net6(struct in6_addr *a, int ban_localhost)
   /* Block IPv4-mapped IPv6 addresses in private IPv4 address space */
   if (IN6_IS_ADDR_V4MAPPED(a))
     {
-      struct in_addr v4;
+      v4: in_addr;
       v4.s_addr = ((const uint32_t *) (a))[3];
       return private_net(v4, ban_localhost);
     }
@@ -411,7 +411,7 @@ static unsigned char *do_doctor(unsigned char *p, int count, struct dns_header *
       if (qclass == C_IN && qtype == T_A)
 	{
 	  struct doctor *doctor;
-	  struct in_addr addr;
+	  addr: in_addr;
 	  
 	  if (!CHECK_LEN(header, p, qlen, INADDRSZ))
 	    return 0;
@@ -999,7 +999,7 @@ void report_addresses(struct dns_header *header, size_t len, u32 mark)
 	    }
 	  if (aqtype == T_A)
 	    {
-	      struct in_addr addr;
+	      addr: in_addr;
 	      char ip[INET_ADDRSTRLEN];
 	      if (ardlen != INADDRSZ)
 		return;
@@ -1009,7 +1009,7 @@ void report_addresses(struct dns_header *header, size_t len, u32 mark)
 	    }
 	  else if (aqtype == T_AAAA)
 	    {
-	      struct in6_addr addr;
+	      addr: in6_addr;
 	      char ip[INET6_ADDRSTRLEN];
 	      if (ardlen != IN6ADDRSZ)
 		return;
@@ -1168,7 +1168,7 @@ static int check_bad_address(struct dns_header *header, size_t qlen, struct bogu
 	{
 	  if (qtype == T_A)
 	    {
-	      struct in_addr addr;
+	      addr: in_addr;
 	      
 	      if (!CHECK_LEN(header, p, qlen, INADDRSZ))
 		return 0;
@@ -1181,7 +1181,7 @@ static int check_bad_address(struct dns_header *header, size_t qlen, struct bogu
 	    }
 	  else if (qtype == T_AAAA)
 	    {
-	      struct in6_addr addr;
+	      addr: in6_addr;
 	      
 	      if (!CHECK_LEN(header, p, qlen, IN6ADDRSZ))
 		return 0;
@@ -1615,7 +1615,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 	      if (is_arpa == F_IPV4)
 		for (intr = daemon->int_names; intr; intr = intr->next)
 		  {
-		    struct addrlist *addrlist;
+		    addrlist: *mut addrlist;
 		    
 		    for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
 		      if (!(addrlist->flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist->addr.addr4.s_addr)
@@ -1630,7 +1630,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 	      else if (is_arpa == F_IPV6)
 		for (intr = daemon->int_names; intr; intr = intr->next)
 		  {
-		    struct addrlist *addrlist;
+		    addrlist: *mut addrlist;
 		    
 		    for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
 		      if ((addrlist->flags & ADDRLIST_IPV6) && IN6_ARE_ADDR_EQUAL(&addr.addr6, &addrlist->addr.addr6))
@@ -1771,7 +1771,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 	      
 	      if (intr)
 		{
-		  struct addrlist *addrlist;
+		  addrlist: *mut addrlist;
 		  int gotit = 0, localise = 0;
 
 		  enumerate_interfaces(0);

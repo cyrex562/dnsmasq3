@@ -1,6 +1,6 @@
 mod arp;
 mod auth;
-mod blockdata;
+mod blockdata_ops;
 mod bpf;
 mod cache;
 mod config;
@@ -68,5 +68,23 @@ mod bogus_addr;
 mod doctor;
 mod mx_srv_record;
 mod naptr;
+mod txt_record;
+mod ptr_record;
+mod cname;
+mod ds_config;
+mod addrlist;
+mod auth_zone;
+mod host_record;
+mod interface_name;
+mod bigname;
+mod blockdata;
+mod crec;
+mod mysockaddr;
+mod server_fd;
+mod rand_fd;
+mod rand_fd_list;
+mod server;
+mod serv_addr4;
+mod serv_addr6;
 
 fn main() {}

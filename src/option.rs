@@ -1665,7 +1665,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	}
       else if (is_addr && !is6)	
 	{
-	  struct in_addr in;
+	  in: in_addr;
 	  unsigned char *op;
 	  char *slash;
 	  /* max length of address/subnet descriptor is five bytes,
@@ -3068,8 +3068,8 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       {
 	char *string;
 	size: i32;
-	struct in_addr addr4;
-	struct in6_addr addr6;
+	addr4: in_addr;
+	addr6: in6_addr;
  	
 	unhide_metas(arg);
 	if (!arg)
@@ -3760,7 +3760,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	    
 	    if (new->flags & CONTEXT_TEMPLATE)
 	      {
-		struct in6_addr zero;
+		zero: in6_addr;
 		memset(&zero, 0, sizeof(zero));
 		if (!is_same_net6(&zero, &new->start6, new->prefix))
 		  {
@@ -3850,7 +3850,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case 'G':  /* --dhcp-host */
       {
 	struct dhcp_config *new;
-	struct in_addr in;
+	in: in_addr;
 	
 	new = opt_malloc(sizeof(struct dhcp_config));
 	
@@ -3915,8 +3915,8 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		else if (arg[0] == '[' && arg[strlen(arg)-1] == ']')
 		  {
 		    char *pref;
-		    struct in6_addr in6;
-		    struct addrlist *new_addr;
+		    in6: in6_addr;
+		    new_addr: *mut addrlist;
 		    
 		    arg[strlen(arg)-1] = 0;
 		    arg++;
@@ -4192,7 +4192,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	else 
 	  {
 	    char *dhcp_file, *dhcp_sname = NULL, *tftp_sname = NULL;
-	    struct in_addr dhcp_next_server;
+	    dhcp_next_server: in_addr;
 	    struct dhcp_boot *new;
 	    comma = split(arg);
 	    dhcp_file = opt_string_alloc(arg);

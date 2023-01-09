@@ -232,7 +232,7 @@ static int match_domain(struct in_addr addr, struct cond_domain *c)
 {
   if (c->interface)
     {
-      struct addrlist *al;
+      al: *mut addrlist;
       for (al = c->al; al; al = al->next)
 	if (!(al->flags & ADDRLIST_IPV6) &&
 	    is_same_net_prefix(addr, al->addr.addr4, al->prefixlen))
@@ -271,7 +271,7 @@ static int match_domain6(struct in6_addr *addr, struct cond_domain *c)
   /* subnet from interface address. */
   if (c->interface)
     {
-      struct addrlist *al;
+      al: *mut addrlist;
       for (al = c->al; al; al = al->next)
 	if (al->flags & ADDRLIST_IPV6 &&
 	    is_same_net6(addr, &al->addr.addr6, al->prefixlen))

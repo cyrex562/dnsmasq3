@@ -278,7 +278,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
     {
       struct dhcp_context *context_tmp, *context_new = NULL;
       struct shared_network *share = NULL;
-      struct in_addr addr;
+      addr: in_addr;
       int force = 0, via_relay = 0;
       
       if (subnet_addr.s_addr)
@@ -1802,7 +1802,7 @@ static struct in_addr option_addr(unsigned char *opt)
 {
    /* this worries about unaligned data in the option. */
   /* struct in_addr is network byte order */
-  struct in_addr ret;
+  ret: in_addr;
 
   memcpy(&ret, option_ptr(opt, 0), INADDRSZ);
 
@@ -2219,7 +2219,7 @@ pub const NUM_OPTS: u32 = 4;
   struct pxe_service *service;
   static struct dhcp_opt *o, *ret;
   int i, j = NUM_OPTS - 1;
-  struct in_addr boot_server;
+  boot_server: in_addr;
   
   /* We pass back references to these, hence they are declared static */
   static unsigned char discovery_control;

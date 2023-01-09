@@ -241,7 +241,7 @@ static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t 
 	  int o = new_opt6(opt6_type(opt));
 	  if (opt6_type(opt) == OPTION6_RELAY_MSG)
 	    {
-	      struct in6_addr align;
+	      align: in6_addr;
 	      /* the packet data is unaligned, copy to aligned storage */
 	      memcpy(&align, inbuff + 2, IN6ADDRSZ); 
 	      state->link_address = &align;
@@ -839,7 +839,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 	      
 	    for (; ia_option; ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
 	      {
-		struct in6_addr req_addr;
+		req_addr: in6_addr;
 		struct dhcp_context *dynamic, *c;
 		unsigned lease_time: i32;
 		int config_ok = 0;
@@ -944,7 +944,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 	    for (; ia_option; ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
 	      {
 		struct dhcp_lease *lease = NULL;
-		struct in6_addr req_addr;
+		req_addr: in6_addr;
 		unsigned int preferred_time =  opt6_uint(ia_option, 16, 4);
 		unsigned int valid_time =  opt6_uint(ia_option, 20, 4);
 		char *message = NULL;
@@ -1070,7 +1070,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 		 ia_option;
 		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24))
 	      {
-		struct in6_addr req_addr;
+		req_addr: in6_addr;
 
 		/* alignment */
 		memcpy(&req_addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
@@ -1145,7 +1145,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24)) 
 	      {
 		struct dhcp_lease *lease;
-		struct in6_addr addr;
+		addr: in6_addr;
 
 		/* align */
 		memcpy(&addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
@@ -1210,8 +1210,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 		 ia_option = opt6_find(opt6_next(ia_option, ia_end), ia_end, OPTION6_IAADDR, 24)) 
 	      {
 		struct dhcp_lease *lease;
-		struct in6_addr addr;
-		struct addrlist *addr_list;
+		addr: in6_addr;
+		addr_list: *mut addrlist;
 		
 		/* align */
 		memcpy(&addr, opt6_ptr(ia_option, 0), IN6ADDRSZ);
@@ -1719,8 +1719,8 @@ static int check_address(struct state *state, struct in6_addr *addr)
 static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr)
 {
   prefix: i32;
-  struct in6_addr wild_addr;
-  struct addrlist *addr_list;
+  wild_addr: in6_addr;
+  addr_list: *mut addrlist;
   
   if (!config || !(config->flags & CONFIG_ADDR6))
     return NULL;
@@ -1748,7 +1748,7 @@ static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_c
 static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now)
 {
   u64 addrpart, i, addresses;
-  struct addrlist *addr_list;
+  addr_list: *mut addrlist;
   
   if (!config || !(config->flags & CONFIG_ADDR6))
     return 0;
@@ -1996,7 +1996,7 @@ static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_op
 	}
       else if (type == OPTION6_IAADDR)
 	{
-	  struct in6_addr addr;
+	  addr: in6_addr;
 
 	  /* align */
 	  memcpy(&addr, opt6_ptr(opt, 0), IN6ADDRSZ);
@@ -2132,7 +2132,7 @@ int relay_upstream6(int iface_index, ssize_t sz,
   unsigned char *inbuff = daemon->dhcp_packet.iov_base;
   int msg_type = *inbuff;
   int hopcount, o;
-  struct in6_addr multicast;
+  multicast: in6_addr;
   unsigned int maclen, mactype;
   unsigned char mac[DHCP_CHADDR_MAX];
   struct dhcp_relay *relay;
@@ -2227,7 +2227,7 @@ int relay_upstream6(int iface_index, ssize_t sz,
 int relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface)
 {
   struct dhcp_relay *relay;
-  struct in6_addr link;
+  link: in6_addr;
   unsigned char *inbuff = daemon->dhcp_packet.iov_base;
   
   /* must have at least msg_type+hopcount+link_address+peer_address+minimal size option

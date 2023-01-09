@@ -1442,7 +1442,7 @@ void cache_reload(void)
 struct in_addr a_record_from_hosts(char *name, time_t now)
 {
   struct crec *crecp = NULL;
-  struct in_addr ret;
+  ret: in_addr;
   
   /* If no DNS service, cache not initialised. */
   if (daemon->port != 0)

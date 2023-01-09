@@ -320,7 +320,7 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
 // #ifdef HAVE_DHCP6
   if (context->flags & CONTEXT_V6)
     {
-       struct addrlist *addr_list;
+       addr_list: *mut addrlist;
 
        if (config->flags & CONFIG_ADDR6)
 	 for (; context; context = context->current)
@@ -1026,7 +1026,7 @@ void log_relay(int family, struct dhcp_relay *relay)
     sprintf(daemon->namebuff + strlen(daemon->namebuff), "#%u", relay->port);
 
 // #ifdef HAVE_DHCP6
-  struct in6_addr multicast;
+  multicast: in6_addr;
 
   inet_pton(AF_INET6, ALL_SERVERS, &multicast);
 

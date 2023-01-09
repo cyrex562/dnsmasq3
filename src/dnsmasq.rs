@@ -1977,7 +1977,7 @@ static void check_dns_listeners(time_t now)
 	      unsigned char *buff;
 	      struct server *s; 
 	      flags: i32;
-	      struct in_addr netmask;
+	      netmask: in_addr;
 	      auth_dns: i32;
 	   
 	      if (iface)

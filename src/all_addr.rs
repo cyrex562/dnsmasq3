@@ -84,9 +84,9 @@ pub struct LogStruct {
 
 #[derive(Debug, Clone)]
 pub union all_addr {
-    // struct in_addr addr4;
+    // addr4: in_addr;
     pub addr4: in_addr,
-    // struct in6_addr addr6;
+    // addr6: in6_addr;
     pub addr6: in6_addr,
     pub cname: Cname,
     pub key: KeyStruct,

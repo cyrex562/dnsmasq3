@@ -177,7 +177,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 	  if (flag == F_IPV4)
 	    for (intr = daemon.int_names; intr; intr = intr.next)
 	      {
-		struct addrlist *addrlist;
+		addrlist: *mut addrlist;
 		
 		for (addrlist = intr.addr; addrlist; addrlist = addrlist.next)
 		  if (!(addrlist.flags & ADDRLIST_IPV6) && addr.addr4.s_addr == addrlist.addr.addr4.s_addr)
@@ -192,7 +192,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 	  else if (flag == F_IPV6)
 	    for (intr = daemon->int_names; intr; intr = intr->next)
 	      {
-		struct addrlist *addrlist;
+		addrlist: *mut addrlist;
 		
 		for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
 		  if ((addrlist->flags & ADDRLIST_IPV6) && IN6_ARE_ADDR_EQUAL(&addr.addr6, &addrlist->addr.addr6))
@@ -394,7 +394,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
        for (intr = daemon->int_names; intr; intr = intr->next)
 	 if ((rc = hostname_issubdomain(name, intr->name)))
 	   {
-	     struct addrlist *addrlist;
+	     addrlist: *mut addrlist;
 	     
 	     nxdomain = 0;
 	     
@@ -752,7 +752,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 	  for (intr = daemon->int_names; intr; intr = intr->next)
 	    if (in_zone(zone, intr->name, &cut))
 	      {
-		struct addrlist *addrlist;
+		addrlist: *mut addrlist;
 		
 		if (cut)
 		  *cut = 0;

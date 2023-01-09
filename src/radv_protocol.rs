@@ -37,13 +37,13 @@ struct neigh_packet {
   u8 type, code;
   u16 checksum;
   u16 reserved;
-  struct in6_addr target;
+  target: in6_addr;
 };
 
 struct prefix_opt {
   u8 type, len, prefix_len, flags;
   u32 valid_lifetime, preferred_lifetime, reserved;
-  struct in6_addr prefix;
+  prefix: in6_addr;
 };
 
 pub const ICMP6_OPT_SOURCE_MAC: u32 = 1;

@@ -499,7 +499,7 @@ int is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask)
 
 int is_same_net_prefix(struct in_addr a, struct in_addr b, int prefix)
 {
-  struct in_addr mask;
+  mask: in_addr;
 
   mask.s_addr = htonl(~((1 << (32 - prefix)) - 1));
 

@@ -64,7 +64,7 @@ struct script_data
 // #ifdef HAVE_TFTP
   off_t file_len;
 // #endif
-  struct in6_addr addr6;
+  addr6: in6_addr;
 // #ifdef HAVE_DHCP6
   vendorclass_count: i32;
   unsigned iaid: i32;

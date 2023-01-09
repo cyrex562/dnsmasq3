@@ -1546,7 +1546,7 @@ void receive_query(struct listener *listen, time_t now)
   /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
   if (option_bool(OPT_LOCAL_SERVICE))
     {
-      struct addrlist *addr;
+      addr: *mut addrlist;
 
       if (family == AF_INET6) 
 	{
@@ -1557,7 +1557,7 @@ void receive_query(struct listener *listen, time_t now)
 	}
       else
 	{
-	  struct in_addr netmask;
+	  netmask: in_addr;
 	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
 	    {
 	      netmask.s_addr = htonl(~(in_addr_t)0 << (32 - addr->prefixlen));
@@ -2091,7 +2091,7 @@ unsigned char *tcp_request(int confd, time_t now,
   struct dns_header *header = (struct dns_header *)payload;
   u16 *length = (u16 *)packet;
   struct server *serv;
-  struct in_addr dst_addr_4;
+  dst_addr_4: in_addr;
   union mysockaddr peer_addr;
   socklen_t peer_len = sizeof(union mysockaddr);
   int query_count = 0;
@@ -2123,7 +2123,7 @@ unsigned char *tcp_request(int confd, time_t now,
   /* We can be configured to only accept queries from at-most-one-hop-away addresses. */
   if (option_bool(OPT_LOCAL_SERVICE))
     {
-      struct addrlist *addr;
+      addr: *mut addrlist;
 
       if (peer_addr.sa.sa_family == AF_INET6) 
 	{
@@ -2134,7 +2134,7 @@ unsigned char *tcp_request(int confd, time_t now,
 	}
       else
 	{
-	  struct in_addr netmask;
+	  netmask: in_addr;
 	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
 	    {
 	      netmask.s_addr = htonl(~(in_addr_t)0 << (32 - addr->prefixlen));

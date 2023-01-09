@@ -132,7 +132,7 @@ void dhcp_packet(time_t now, int pxe_fd)
   ssz: usize;
   int iface_index = 0, unicast_dest = 0, is_inform = 0, loopback = 0;
   rcvd_iface_index: i32;
-  struct in_addr iface_addr;
+  iface_addr: in_addr;
   struct iface_param parm;
   time_t recvtime = now;
 // #ifdef HAVE_LINUX_NETWORK
@@ -866,7 +866,7 @@ void dhcp_read_ethers(void)
   unsigned flags: i32;
   char *buff = daemon->namebuff;
   char *ip, *cp;
-  struct in_addr addr;
+  addr: in_addr;
   unsigned char hwaddr[ETHER_ADDR_LEN];
   struct dhcp_config **up, *tmp;
   struct dhcp_config *config;

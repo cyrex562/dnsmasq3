@@ -91,8 +91,8 @@ void dhcp6_packet(time_t now)
   struct ifreq ifr;
   struct iname *tmp;
   unsigned short port;
-  struct in6_addr dst_addr;
-  struct in6_addr all_servers;
+  dst_addr: in6_addr;
+  all_servers: in6_addr;
   
   memset(&dst_addr, 0, sizeof(dst_addr));
 
@@ -421,7 +421,7 @@ struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct 
   for (config = configs; config; config = config->next)
     if (config->flags & CONFIG_ADDR6)
       {
-	struct addrlist *addr_list;
+	addr_list: *mut addrlist;
 	
 	for (addr_list = config->addr6; addr_list; addr_list = addr_list->next)
 	  if ((!net || is_same_net6(&addr_list->addr.addr6, net, prefix) || ((addr_list->flags & ADDRLIST_WILDCARD) && prefix == 64)) &&

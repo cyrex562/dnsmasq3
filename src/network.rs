@@ -223,7 +223,7 @@ int label_exception(int index, int family, union all_addr *addr)
 }
 
 struct iface_param {
-  struct addrlist *spare;
+  spare: *mut addrlist;
   fd: i32;
 };
 
@@ -261,7 +261,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
   /* maintain a list of all addresses on all interfaces for --local-service option */
   if (option_bool(OPT_LOCAL_SERVICE))
     {
-      struct addrlist *al;
+      al: *mut addrlist;
 
       if (param->spare)
 	{
@@ -293,7 +293,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
   if (addr->sa.sa_family != AF_INET6 || !IN6_IS_ADDR_LINKLOCAL(&addr->in6.sin6_addr))
     {
       struct interface_name *int_name;
-      struct addrlist *al;
+      al: *mut addrlist;
 // #ifdef HAVE_AUTH
       struct auth_zone *zone;
       struct auth_name_list *name;
@@ -350,7 +350,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
       for (int_name = daemon->int_names; int_name; int_name = int_name->next)
 	if (strncmp(label, int_name->intr, IF_NAMESIZE) == 0)
 	  {
-	    struct addrlist *lp;
+	    lp: *mut addrlist;
 
 	    al = NULL;
 	    
@@ -459,7 +459,7 @@ static int iface_allowed(struct iface_param *param, int if_index, char *label,
   for (cond = daemon->cond_domain; cond; cond = cond->next)
     if (cond->interface && strncmp(label, cond->interface, IF_NAMESIZE) == 0)
       {
-	struct addrlist *al;
+	al: *mut addrlist;
 
 	if (param->spare)
 	  {
@@ -594,7 +594,7 @@ static int iface_allowed_v6(struct in6_addr *local, int prefix,
 			    int preferred, int valid, void *vparam)
 {
   union mysockaddr addr;
-  struct in_addr netmask; /* dummy */
+  netmask: in_addr; /* dummy */
   netmask.s_addr = 0;
 
   (void)scope; /* warning */

@@ -8,3 +8,4 @@ target/*
 *.ipch
 target/.rustc_info.json
 target/rls/.rustc_info.json
+cargo.toml

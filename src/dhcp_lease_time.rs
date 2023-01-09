@@ -110,7 +110,7 @@ static unsigned int option_uint(unsigned char *opt, int size)
 
 int main(int argc, char **argv)
 { 
-  struct in_addr lease;
+  lease: in_addr;
   struct dhcp_packet packet;
   unsigned char *p = packet.options;
   struct sockaddr_in dest;
