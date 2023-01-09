@@ -16,21 +16,10 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 
 // #include <netinet/icmp6.h>
 
-struct iface_param {
-  struct dhcp_context *current;
-  struct in6_addr fallback, ll_addr, ula_addr;
-  int ind, addr_match;
-};
-
-
-static int complete_context6(struct in6_addr *local,  int prefix,
-			     int scope, int if_index, int flags, 
-			     unsigned int preferred, unsigned int valid, void *vparam);
-static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, void *parm); 
 
 void dhcp6_init(void)
 {
@@ -38,13 +27,13 @@ void dhcp6_init(void)
   struct sockaddr_in6 saddr;
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
   int class = IPTOS_CLASS_CS6;
-#endif
+// #endif
   int oneopt = 1;
 
   if ((fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1 ||
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
       setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &class, sizeof(class)) == -1 ||
-#endif
+// #endif
       setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &oneopt, sizeof(oneopt)) == -1 ||
       !fix_fd(fd) ||
       !set_ipv6pktinfo(fd))
@@ -59,11 +48,11 @@ void dhcp6_init(void)
     {
       int rc = 0;
 
-#ifdef SO_REUSEPORT
+// #ifdef SO_REUSEPORT
       if ((rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &oneopt, sizeof(oneopt))) == -1 &&
 	  errno == ENOPROTOOPT)
 	rc = 0;
-#endif
+// #endif
       
       if (rc != -1)
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt));
@@ -73,9 +62,9 @@ void dhcp6_init(void)
     }
   
   memset(&saddr, 0, sizeof(saddr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
   saddr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+// #endif
   saddr.sin6_family = AF_INET6;
   saddr.sin6_addr = in6addr_any;
   saddr.sin6_port = htons(DHCPV6_SERVER_PORT);
@@ -98,7 +87,7 @@ void dhcp6_packet(time_t now)
     char control6[CMSG_SPACE(sizeof(struct in6_pktinfo))];
   } control_u;
   struct sockaddr_in6 from;
-  ssize_t sz; 
+  ssz: usize;
   struct ifreq ifr;
   struct iname *tmp;
   unsigned short port;
@@ -118,10 +107,10 @@ void dhcp6_packet(time_t now)
   if ((sz = recv_dhcp_packet(daemon.dhcp6fd, &msg)) == -1)
     return;
   
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
   dump_packet_udp(DUMP_DHCPV6, (void *)daemon.dhcp_packet.iov_base, sz,
 		  (union mysockaddr *)&from, NULL, daemon.dhcp6fd);
-#endif
+// #endif
   
   for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
     if (cmptr.cmsg_level == IPPROTO_IPV6 && cmptr.cmsg_type == daemon.v6pktinfo)
@@ -141,10 +130,10 @@ void dhcp6_packet(time_t now)
 
   if (relay_reply6(&from, sz, ifr.ifr_name))
     {
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
       dump_packet_udp(DUMP_DHCPV6, (void *)daemon.outpacket.iov_base, save_counter(-1), NULL,
 		      (union mysockaddr *)&from, daemon.dhcp6fd);
-#endif
+// #endif
       
       while (retry_send(sendto(daemon.dhcp6fd, daemon.outpacket.iov_base,
 			       save_counter(-1), 0, (struct sockaddr *)&from, 
@@ -253,10 +242,10 @@ void dhcp6_packet(time_t now)
 	{
 	  from.sin6_port = htons(port);
 	  
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
 	  dump_packet_udp(DUMP_DHCPV6, (void *)daemon->outpacket.iov_base, save_counter(-1),
 			  NULL, (union mysockaddr *)&from, daemon->dhcp6fd);
-#endif 
+// #endif
 	  
 	  while (retry_send(sendto(daemon->dhcp6fd, daemon->outpacket.iov_base,
 				   save_counter(-1), 0, (struct sockaddr *)&from, sizeof(from))));
@@ -287,9 +276,9 @@ void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsi
   neigh.checksum = 0;
    
   memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
   addr.in6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+// #endif
   addr.in6.sin6_family = AF_INET6;
   addr.in6.sin6_port = htons(IPPROTO_ICMPV6);
   addr.in6.sin6_addr = *client;
@@ -587,11 +576,11 @@ void make_duid(time_t now)
       time_t newnow = 0;
       
       /* If we have no persistent lease database, or a non-stable RTC, use DUID_LL (newnow == 0) */
-#ifndef HAVE_BROKEN_RTC
+// #endif HAVE_BROKEN_RTC
       /* rebase epoch to 1/1/2000 */
       if (!option_bool(OPT_LEASE_RO) || daemon->lease_change_command)
 	newnow = now - 946684800;
-#endif      
+// #endif
       
       iface_enumerate(AF_LOCAL, &newnow, make_duid1);
       
@@ -832,4 +821,4 @@ void dhcp_construct_contexts(time_t now)
     }
 }
 
-#endif /* HAVE_DHCP6 */
+// #endif /* HAVE_DHCP6 */

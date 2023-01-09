@@ -16,14 +16,14 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 
 #define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
 #define option_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2u+(unsigned int)(i)]))
 
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
 static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
-#endif
+// #endif
 
 static int sanitise(unsigned char *opt, char *buf);
 static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback);
@@ -98,11 +98,11 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
   int vendor_class_len = 0, emac_len = 0;
   struct dhcp_netid known_id, iface_id, cpewan_id;
   struct dhcp_opt *o;
-  unsigned char pxe_uuid[17];
+  unsigned pxe_uuid: [u8;17]
   unsigned char *oui = NULL, *serial = NULL;
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
   unsigned char *class = NULL;
-#endif
+// #endif
 
   subnet_addr.s_addr = override.s_addr = 0;
 
@@ -166,9 +166,9 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  unsigned char *y = option_ptr(opt, offset + elen + 5);
 		  oui = option_find1(x, y, 1, 1);
 		  serial = option_find1(x, y, 2, 1);
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
 		  class = option_find1(x, y, 3, 1);		  
-#endif
+// #endif
 		  /* If TR069-id is present set the tag "cpewan-id" to facilitate echoing 
 		     the gateway id back. Note that the device class is optional */
 		  if (oui && serial)
@@ -328,10 +328,10 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	      if (via_relay)
 		for (share = daemon->shared_networks; share; share = share->next)
 		  {
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 		    if (share->shared_addr.s_addr == 0)
 		      continue;
-#endif
+// #endif
 		    if (share->if_index != 0 ||
 			share->match_addr.s_addr != mess->giaddr.s_addr)
 		      continue;
@@ -874,7 +874,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	  struct pxe_service *service;
 	  int type = option_uint(opt, 0, 2);
 	  int layer = option_uint(opt, 2, 2);
-	  unsigned char save71[4];
+	  unsigned save71: [u8;4]
 	  struct dhcp_opt opt71;
 
 	  if (ignore)
@@ -1393,7 +1393,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 	      /* pick up INIT-REBOOT events. */
 	      lease->flags |= LEASE_CHANGED;
 
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
 	      if (daemon->lease_change_command)
 		{
 		  struct dhcp_netid *n;
@@ -1464,7 +1464,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		      lease_add_extradata(lease, ucp, len, -1);
 		    }
 		}
-#endif
+// #endif
 	    }
 	  
 	  if (!hostname_auth && (client_hostname = host_from_dns(mess->yiaddr)))
@@ -1627,7 +1627,7 @@ unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr,
 	  *len_out = clid_len - 1 ;
 	  return clid + 1;
 	}
-#endif
+// #endif
       
       *len_out = clid_len;
       return clid;
@@ -1686,7 +1686,7 @@ static int sanitise(unsigned char *opt, char *buf)
   return 1;
 }
 
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
 static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
 {
   if (!opt)
@@ -1694,7 +1694,7 @@ static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
   else
     lease_add_extradata(lease, option_ptr(opt, 0), option_len(opt), 0); 
 }
-#endif
+// #endif
 
 static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
 		       int mac_len, char *interface, char *string, char *err, u32 xid)
@@ -1728,12 +1728,12 @@ static void log_packet(char *type, void *addr, unsigned char *ext_mac,
 	      string ? string : "",
 	      err ? err : "");
   
-#ifdef HAVE_UBUS
+// #ifdef HAVE_UBUS
   if (!strcmp(type, "DHCPACK"))
     ubus_event_bcast("dhcp.ack", daemon->namebuff, addr ? daemon->addrbuff : NULL, string, interface);
   else if (!strcmp(type, "DHCPRELEASE"))
     ubus_event_bcast("dhcp.release", daemon->namebuff, addr ? daemon->addrbuff : NULL, string, interface);
-#endif
+// #endif
 }
 
 static void log_options(unsigned char *start, u32 xid)
@@ -1847,7 +1847,7 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
 {
   unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
   unsigned char *overload;
-  size_t ret;
+  ret: usize;
   
   /* move agent_id back down to the end of the packet */
   if (agent_id)
@@ -2812,4 +2812,4 @@ static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid)
     }
 }
 
-#endif /* HAVE_DHCP */
+// #endif /* HAVE_DHCP */

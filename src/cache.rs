@@ -17,9 +17,9 @@
 // #include "dnsmasq.h"
 
 static struct crec *cache_head = NULL, *cache_tail = NULL, **hash_table = NULL;
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 static struct crec *dhcp_spare = NULL;
-#endif
+// #endif
 static struct crec *new_chain = NULL;
 static insert_error: i32;
 static union bigname *big_free = NULL;
@@ -260,12 +260,12 @@ static void cache_blockdata_free(struct crec *crecp)
     {
       if (crecp->flags & F_SRV)
 	blockdata_free(crecp->addr.srv.target);
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
       else if (crecp->flags & F_DNSKEY)
 	blockdata_free(crecp->addr.key.keydata);
       else if (crecp->flags & F_DS)
 	blockdata_free(crecp->addr.ds.keydata);
-#endif
+// #endif
     }
 }
 
@@ -474,7 +474,7 @@ static struct crec *cache_scan_free(char *name, union all_addr *addr, unsigned s
 		  continue;
 		}
 	      
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	      /* Deletion has to be class-sensitive for DS and DNSKEY */
 	      if ((flags & crecp->flags & (F_DNSKEY | F_DS)) && crecp->uid == class)
 		{
@@ -485,7 +485,7 @@ static struct crec *cache_scan_free(char *name, union all_addr *addr, unsigned s
 		  cache_free(crecp);
 		  continue;
 		}
-#endif
+// #endif
 	    }
 
 	  if (is_expired(now, crecp) || is_outdated_cname_pointer(crecp))
@@ -562,7 +562,7 @@ void cache_start_insert(void)
 struct crec *cache_insert(char *name, union all_addr *addr, unsigned short class,
 			  time_t now,  unsigned long ttl, unsigned int flags)
 {
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
   if (flags & (F_DNSKEY | F_DS)) 
     {
       /* The DNSSEC validation process works by getting needed records into the
@@ -576,7 +576,7 @@ struct crec *cache_insert(char *name, union all_addr *addr, unsigned short class
 	ttl = DNSSEC_MIN_TTL;
     }
   else
-#endif
+// #endif
     {
       if (daemon->max_cache_ttl != 0 && daemon->max_cache_ttl < ttl)
 	ttl = daemon->max_cache_ttl;
@@ -725,10 +725,10 @@ static struct crec *really_insert(char *name, union all_addr *addr, unsigned sho
   else
     *cache_get_name(new) = 0;
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
   if (flags & (F_DS | F_DNSKEY))
     new->uid = class;
-#endif
+// #endif
 
   if (addr)
     new->addr = *addr;	
@@ -765,9 +765,9 @@ void cache_end_insert(void)
 	      char *name = cache_get_name(new_chain);
 	      ssize_t m = strlen(name);
 	      unsigned int flags = new_chain->flags;
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	      u16 class = new_chain->uid;
-#endif
+// #endif
 	      
 	      read_write(daemon->pipe_to_parent, (unsigned char *)&m, sizeof(m), 0);
 	      read_write(daemon->pipe_to_parent, (unsigned char *)name, m, 0);
@@ -782,7 +782,7 @@ void cache_end_insert(void)
 		  if (!(flags & F_NEG))
 		    blockdata_write(new_chain->addr.srv.target, new_chain->addr.srv.targetlen, daemon->pipe_to_parent);
 		}
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	      if (flags & F_DNSKEY)
 		{
 		  read_write(daemon->pipe_to_parent, (unsigned char *)&class, sizeof(class), 0);
@@ -795,7 +795,7 @@ void cache_end_insert(void)
 		  if (!(flags & F_NEG))
 		    blockdata_write(new_chain->addr.ds.keydata, new_chain->addr.ds.keylen, daemon->pipe_to_parent);
 		}
-#endif
+// #endif
 	    }
 	}
       
@@ -816,7 +816,7 @@ void cache_end_insert(void)
 /* A marshalled cache entry arrives on fd, read, unmarshall and insert into cache of master process. */
 int cache_recv_insert(time_t now, int fd)
 {
-  ssize_t m;
+  sm: usize;
   union all_addr addr;
   unsigned long ttl;
   time_t ttd;
@@ -856,7 +856,7 @@ int cache_recv_insert(time_t now, int fd)
 	  if ((flags & F_SRV) && !(flags & F_NEG) && !(addr.srv.target = blockdata_read(fd, addr.srv.targetlen)))
 	    return 0;
 	
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	   if (flags & F_DNSKEY)
 	     {
 	       if (!read_write(fd, (unsigned char *)&class, sizeof(class), 1) ||
@@ -869,7 +869,7 @@ int cache_recv_insert(time_t now, int fd)
 		    (!(flags & F_NEG) && !(addr.key.keydata = blockdata_read(fd, addr.key.keylen))))
 		  return 0;
 	     }
-#endif
+// #endif
 	       
 	  crecp = really_insert(daemon->namebuff, &addr, class, now, ttl, flags);
 	}
@@ -1289,9 +1289,9 @@ void cache_reload(void)
   struct interface_name *intr;
   struct ptr_record *ptr;
   struct naptr *naptr;
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
   struct ds_config *ds;
-#endif
+// #endif
 
   daemon->metrics[METRIC_DNS_CACHE_INSERTED] = 0;
   daemon->metrics[METRIC_DNS_CACHE_LIVE_FREED] = 0;
@@ -1336,7 +1336,7 @@ void cache_reload(void)
 	make_non_terminals(cache);
       }
   
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
   for (ds = daemon->ds; ds; ds = ds->next)
     if ((cache = whine_malloc(SIZEOF_POINTER_CREC)) &&
 	(cache->addr.ds.keydata = blockdata_alloc(ds->digest, ds->digestlen)))
@@ -1352,7 +1352,7 @@ void cache_reload(void)
 	cache_hash(cache);
 	make_non_terminals(cache);
       }
-#endif
+// #endif
   
   /* borrow the packet buffer for a temporary by-address hash */
   memset(daemon->packet, 0, daemon->packet_buff_sz);
@@ -1432,13 +1432,13 @@ void cache_reload(void)
       make_non_terminals(&lrec);
     }
   
-#ifdef HAVE_INOTIFY
+// #ifdef HAVE_INOTIFY
   set_dynamic_inotify(AH_HOSTS, total_size, (struct crec **)daemon->packet, revhashsz);
-#endif
+// #endif
   
 } 
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 struct in_addr a_record_from_hosts(char *name, time_t now)
 {
   struct crec *crecp = NULL;
@@ -1557,7 +1557,7 @@ void cache_add_dhcp_entry(char *host_name, int prot,
       make_non_terminals(crec);
     }
 }
-#endif
+// #endif
 
 /* Called when we put a local or DHCP name into the cache.
    Creates empty cache entries for subnames (ie,
@@ -1569,10 +1569,10 @@ static void make_non_terminals(struct crec *source)
   char *name = cache_get_name(source);
   struct crec *crecp, *tmp, **up;
   int type = F_HOSTS | F_CONFIG;
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
   if (source->flags & F_DHCP)
     type = F_DHCP;
-#endif
+// #endif
   
   /* First delete any empty entries for our new real name. Note that
      we only delete empty entries deriving from DHCP for a new DHCP-derived
@@ -1590,14 +1590,14 @@ static void make_non_terminals(struct crec *source)
 	  hostname_isequal(name, cache_get_name(crecp)))
 	{
 	  *up = crecp->hash_next;
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 	  if (type & F_DHCP)
 	    {
 	      crecp->next = dhcp_spare;
 	      dhcp_spare = crecp;
 	    }
 	  else
-#endif
+// #endif
 	    free(crecp);
 	  break;
 	}
@@ -1631,14 +1631,14 @@ static void make_non_terminals(struct crec *source)
 	  continue;
 	}
       
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
       if ((source->flags & F_DHCP) && dhcp_spare)
 	{
 	  crecp = dhcp_spare;
 	  dhcp_spare = dhcp_spare->next;
 	}
       else
-#endif
+// #endif
 	crecp = whine_malloc(SIZEOF_POINTER_CREC);
 
       if (crecp)
@@ -1653,7 +1653,7 @@ static void make_non_terminals(struct crec *source)
     }
 }
 
-#ifndef NO_ID
+// #endif NO_ID
 int cache_make_stat(struct txt_record *t)
 { 
   static char *buff = NULL;
@@ -1689,11 +1689,11 @@ int cache_make_stat(struct txt_record *t)
       sprintf(buff+1, "%u", daemon->metrics[METRIC_DNS_LOCAL_ANSWERED]);
       break;
 
-#ifdef HAVE_AUTH
+// #ifdef HAVE_AUTH
     case TXT_STAT_AUTH:
       sprintf(buff+1, "%u", daemon->metrics[METRIC_DNS_AUTH_ANSWERED]);
       break;
-#endif
+// #endif
 
     case TXT_STAT_SERVERS:
       /* sum counts from different records for same server */
@@ -1745,7 +1745,7 @@ int cache_make_stat(struct txt_record *t)
   *buff = len;
   return 1;
 }
-#endif
+// #endif
 
 /* There can be names in the cache containing control chars, don't 
    mess up logging or open security holes. */
@@ -1772,9 +1772,9 @@ void dump_cache(time_t now)
 	    daemon->metrics[METRIC_DNS_QUERIES_FORWARDED], daemon->metrics[METRIC_DNS_LOCAL_ANSWERED]);
   if (daemon->cache_max_expiry != 0)
     my_syslog(LOG_INFO, _("queries answered from stale cache %u"), daemon->metrics[METRIC_DNS_STALE_ANSWERED]);
-#ifdef HAVE_AUTH
+// #ifdef HAVE_AUTH
   my_syslog(LOG_INFO, _("queries for authoritative zones %u"), daemon->metrics[METRIC_DNS_AUTH_ANSWERED]);
-#endif
+// #endif
 
   blockdata_report();
 
@@ -1834,7 +1834,7 @@ void dump_cache(time_t now)
 		blockdata_retrieve(cache->addr.srv.target, targetlen, a + len);
 		a[len + targetlen] = 0;		
 	      }
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	    else if (cache->flags & F_DS)
 	      {
 		if (!(cache->flags & F_NEG))
@@ -1844,7 +1844,7 @@ void dump_cache(time_t now)
 	    else if (cache->flags & F_DNSKEY)
 	      sprintf(a, "%5u %3u %3u", cache->addr.key.keytag,
 		      cache->addr.key.algo, cache->addr.key.flags);
-#endif
+// #endif
 	    else if (!(cache->flags & F_NEG) || !(cache->flags & F_FORWARD))
 	      { 
 		a = daemon->addrbuff;
@@ -1862,12 +1862,12 @@ void dump_cache(time_t now)
 	      t = "C";
 	    else if (cache->flags & F_SRV)
 	      t = "V";
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	    else if (cache->flags & F_DS)
 	      t = "S";
 	    else if (cache->flags & F_DNSKEY)
 	      t = "K";
-#endif
+// #endif
 	    else /* non-terminal */
 	      t = "!";
 
@@ -1881,11 +1881,11 @@ void dump_cache(time_t now)
 			 cache->flags & F_HOSTS ? "H" : " ",
 			 cache->flags & F_CONFIG ? "C" : " ",
 			 cache->flags & F_DNSSECOK ? "V" : " ");
-#ifdef HAVE_BROKEN_RTC
+// #ifdef HAVE_BROKEN_RTC
 	    p += sprintf(p, "%-24lu", cache->flags & F_IMMORTAL ? 0: (unsigned long)(cache->ttd - now));
 #else
 	    p += sprintf(p, "%-24.24s", cache->flags & F_IMMORTAL ? "" : ctime(&(cache->ttd)));
-#endif
+// #endif
 	    if(cache->flags & (F_HOSTS | F_CONFIG) && cache->uid > 0)
 		p += sprintf(p, " %s", record_source(cache->uid));
 
@@ -1897,9 +1897,9 @@ void dump_cache(time_t now)
 char *record_source(unsigned int index)
 {
   struct hostsfile *ah;
-#ifdef HAVE_INOTIFY
+// #ifdef HAVE_INOTIFY
   struct dyndir *dd;
-#endif
+// #endif
   
   if (index == SRC_CONFIG)
     return "config";
@@ -1910,13 +1910,13 @@ char *record_source(unsigned int index)
     if (ah->index == index)
       return ah->fname;
 
-#ifdef HAVE_INOTIFY
+// #ifdef HAVE_INOTIFY
   /* Dynamic directories contain multiple files */
   for (dd = daemon->dynamic_dirs; dd; dd = dd->next)
     for (ah = dd->files; ah; ah = ah->next)
       if (ah->index == index)
 	return ah->fname;
-#endif
+// #endif
 
   return "<unknown>";
 }
@@ -2014,7 +2014,7 @@ void log_query(unsigned int flags, char *name, union all_addr *addr, char *arg, 
   char *source, *dest = arg;
   char *verb = "is";
   char *extra = "";
-  char portstring[7]; /* space for #<portnum> */
+  portstring: [u8;7] /* space for #<portnum> */
   
   if (!option_bool(OPT_LOG))
     return;
@@ -2023,10 +2023,10 @@ void log_query(unsigned int flags, char *name, union all_addr *addr, char *arg, 
   if (!(flags & (F_SERVER | F_IPSET)) && type > 0)
     arg = querystr(arg, type);
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
   if ((flags & F_DNSSECOK) && option_bool(OPT_EXTRALOG))
     extra = " (DNSSEC signed)";
-#endif
+// #endif
 
   name = sanitise(name);
 

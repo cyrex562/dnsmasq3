@@ -62,7 +62,7 @@ static struct blockdata *blockdata_alloc_real(int fd, char *data, size_t len)
 {
   struct blockdata *block, *ret = NULL;
   struct blockdata **prev = &ret;
-  size_t blen;
+  blen: usize;
 
   while (len > 0)
     {
@@ -128,7 +128,7 @@ void blockdata_free(struct blockdata *blocks)
 /* if data == NULL, return pointer to static block of sufficient size */
 void *blockdata_retrieve(struct blockdata *block, size_t len, void *data)
 {
-  size_t blen;
+  blen: usize;
   struct  blockdata *b;
   void *new, *d;
   

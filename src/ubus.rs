@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_UBUS
+// #ifdef HAVE_UBUS
 
 // #include <libubus.h>
 
@@ -27,7 +27,7 @@ static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj
 			       struct ubus_request_data *req, const char *method,
 			       struct blob_attr *msg);
 
-#ifdef HAVE_CONNTRACK
+// #ifdef HAVE_CONNTRACK
 enum {
   SET_CONNMARK_ALLOWLIST_MARK,
   SET_CONNMARK_ALLOWLIST_MASK,
@@ -50,15 +50,15 @@ static const struct blobmsg_policy set_connmark_allowlist_policy[] = {
 static int ubus_handle_set_connmark_allowlist(struct ubus_context *ctx, struct ubus_object *obj,
 					      struct ubus_request_data *req, const char *method,
 					      struct blob_attr *msg);
-#endif
+// #endif
 
 static void ubus_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj);
 
 static const struct ubus_method ubus_object_methods[] = {
   UBUS_METHOD_NOARG("metrics", ubus_handle_metrics),
-#ifdef HAVE_CONNTRACK
+// #ifdef HAVE_CONNTRACK
   UBUS_METHOD("set_connmark_allowlist", ubus_handle_set_connmark_allowlist, set_connmark_allowlist_policy),
-#endif
+// #endif
 };
 
 static struct ubus_object_type ubus_object_type =
@@ -200,7 +200,7 @@ static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj
   return UBUS_STATUS_OK;
 }
 
-#ifdef HAVE_CONNTRACK
+// #ifdef HAVE_CONNTRACK
 static int ubus_handle_set_connmark_allowlist(struct ubus_context *ctx, struct ubus_object *obj,
 					      struct ubus_request_data *req, const char *method,
 					      struct blob_attr *msg)
@@ -314,7 +314,7 @@ fail:
     }
   return UBUS_STATUS_UNKNOWN_ERROR;
 }
-#endif
+// #endif
 
 #undef CHECK
 
@@ -348,7 +348,7 @@ void ubus_event_bcast(const char *type, const char *mac, const char *ip, const c
   CHECK(ubus_notify(ubus, &ubus_object, type, b.head, -1));
 }
 
-#ifdef HAVE_CONNTRACK
+// #ifdef HAVE_CONNTRACK
 void ubus_event_bcast_connmark_allowlist_refused(u32 mark, const char *name)
 {
   struct ubus_context *ubus = (struct ubus_context *)daemon.ubus;
@@ -379,8 +379,8 @@ void ubus_event_bcast_connmark_allowlist_resolved(u32 mark, const char *name, co
   /* Set timeout to allow UBus subscriber to configure firewall rules before returning. */
   CHECK(ubus_notify(ubus, &ubus_object, "connmark-allowlist.resolved", b.head, /* timeout: */ 1000));
 }
-#endif
+// #endif
 
 #undef CHECK
 
-#endif /* HAVE_UBUS */
+// #endif /* HAVE_UBUS */

@@ -41,17 +41,17 @@ pub const IPSET_CMD_DEL: u32 = 10;
 pub const IPSET_MAXNAMELEN: u32 = 32;
 pub const IPSET_PROTOCOL: u32 = 6;
 
-#ifndef NFNETLINK_V0
+// #endif NFNETLINK_V0
 pub const NFNETLINK_V0: u32 = 0;
-#endif
+// #endif
 
-#ifndef NLA_F_NESTED
+// #endif NLA_F_NESTED
 #define NLA_F_NESTED		(1 << 15)
-#endif
+// #endif
 
-#ifndef NLA_F_NET_BYTEORDER
+// #endif NLA_F_NET_BYTEORDER
 #define NLA_F_NET_BYTEORDER	(1 << 14)
-#endif
+// #endif
 
 struct my_nlattr {
         __u16           nla_len;
@@ -156,14 +156,14 @@ static int old_add_to_ipset(const char *setname, const union all_addr *ipaddr, i
     unsigned version;
     union {
       char name[IPSET_MAXNAMELEN];
-      uint16_t index;
+      index: u16;
     } set;
     char typename[IPSET_MAXNAMELEN];
   } req_adt_get;
   struct ip_set_req_adt {
     unsigned op;
-    uint16_t index;
-    uint32_t ip;
+    index: u16;
+    ip: u32;
   } req_adt;
   
   if (strlen(setname) >= sizeof(req_adt_get.set.name)) 
@@ -213,4 +213,4 @@ int add_to_ipset(const char *setname, const union all_addr *ipaddr, int flags, i
   return ret;
 }
 
-#endif
+// #endif

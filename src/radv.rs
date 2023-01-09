@@ -22,7 +22,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 
 // #include <netinet/icmp6.h>
 
@@ -74,7 +74,7 @@ void ra_init(time_t now)
   fd: i32;
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
   int class = IPTOS_CLASS_CS6;
-#endif
+// #endif
   int val = 255; /* radvd uses this value */
   socklen_t len = sizeof(int);
   struct dhcp_context *context;
@@ -101,7 +101,7 @@ void ra_init(time_t now)
       getsockopt(fd, IPPROTO_IPV6, IPV6_UNICAST_HOPS, &hop_limit, &len) ||
 #if defined(IPV6_TCLASS) && defined(IPTOS_CLASS_CS6)
       setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &class, sizeof(class)) == -1 ||
-#endif
+// #endif
       !fix_fd(fd) ||
       !set_ipv6pktinfo(fd) ||
       setsockopt(fd, IPPROTO_IPV6, IPV6_UNICAST_HOPS, &val, sizeof(val)) ||
@@ -141,7 +141,7 @@ void ra_start_unsolicited(time_t now, struct dhcp_context *context)
 void icmp6_packet(time_t now)
 {
   char interface[IF_NAMESIZE+1];
-  ssize_t sz; 
+  ssz: usize;
   int if_index = 0;
   struct cmsghdr *cmptr;
   struct msghdr msg;
@@ -198,13 +198,13 @@ void icmp6_packet(time_t now)
     {
       char *mac = "";
       struct dhcp_bridge *bridge, *alias;
-      ssize_t rem;
+      srem: usize;
       unsigned char *p;
       opt_sz: i32;
       
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
       dump_packet_icmp(DUMP_RA, (void *)packet, sz, (union mysockaddr *)&from, NULL);
-#endif           
+// #endif
       
       /* look for link-layer address option for logging */
       for (rem = sz - 8, p = &packet[8]; rem >= 2; rem -= opt_sz, p += opt_sz)
@@ -264,9 +264,9 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   struct ra_interface *ra_param = find_iface_param(iface_name);
   int done_dns = 0, old_prefix = 0, mtu = 0;
   unsigned min_pref_time: i32;
-#ifdef HAVE_LINUX_NETWORK
+// #ifdef HAVE_LINUX_NETWORK
   FILE *f;
-#endif
+// #endif
   
   parm.ind = iface;
   parm.managed = 0;
@@ -425,7 +425,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
   /* an MTU of -1 prevents the option from being sent. */
   if (ra_param)
     mtu = ra_param->mtu;
-#ifdef HAVE_LINUX_NETWORK
+// #ifdef HAVE_LINUX_NETWORK
   /* Note that IPv6 MTU is not necessarily the same as the IPv4 MTU
      available from SIOCGIFMTU */
   if (mtu == 0)
@@ -439,7 +439,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
           fclose(f);
         }
     }
-#endif
+// #endif
   if (mtu > 0)
     {
       put_opt6_char(ICMP6_OPT_MTU);
@@ -541,9 +541,9 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
 			
   /* decide where we're sending */
   memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
   addr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+// #endif
   addr.sin6_family = AF_INET6;
   addr.sin6_port = htons(IPPROTO_ICMPV6);
   if (dest)
@@ -559,7 +559,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
       setsockopt(daemon->icmp6fd, IPPROTO_IPV6, IPV6_MULTICAST_IF, &send_iface, sizeof(send_iface));
     }
   
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
   {
     struct sockaddr_in6 src;
     src.sin6_family = AF_INET6;
@@ -567,7 +567,7 @@ static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_ad
     
     dump_packet_icmp(DUMP_RA, (void *)daemon->outpacket.iov_base, save_counter(-1), (union mysockaddr *)&src, (union mysockaddr *)&addr);
   }
-#endif
+// #endif
 
   while (retry_send(sendto(daemon->icmp6fd, daemon->outpacket.iov_base, 
 			   save_counter(-1), 0, (struct sockaddr *)&addr, 
@@ -1033,4 +1033,4 @@ static unsigned int calc_prio(struct ra_interface *ra)
   return 0;
 }
 
-#endif
+// #endif

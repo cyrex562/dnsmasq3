@@ -1,0 +1,11 @@
+pub const DHCP_CHADDR_MAX: usize = 16;
+pub const BOOTREQUEST: u32 = 1;
+pub const DHCP_COOKIE: u32 = 0x63825363;
+pub const OPTION_PAD: u32 = 0;
+pub const OPTION_LEASE_TIME: u32 = 51;
+pub const OPTION_OVERLOAD: u32 = 52;
+pub const OPTION_MESSAGE_TYPE: u32 = 53;
+pub const OPTION_REQUESTED_OPTIONS: u32 = 55;
+pub const OPTION_END: u32 = 255;
+pub const DHCPINFORM: u32 = 8;
+pub const DHCP_SERVER_PORT: u32 = 67;

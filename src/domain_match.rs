@@ -29,9 +29,9 @@ void build_server_array(void)
   int count = 0;
   
   for (serv = daemon.servers; serv; serv = serv.next)
-#ifdef HAVE_LOOP
+// #ifdef HAVE_LOOP
     if (!(serv.flags & SERV_LOOP))
-#endif
+// #endif
       {
 	count++;
 	if (serv.flags & SERV_WILDCARD)
@@ -66,9 +66,9 @@ void build_server_array(void)
   count = 0;
   
   for (serv = daemon.servers; serv; serv = serv.next)
-#ifdef HAVE_LOOP
+// #ifdef HAVE_LOOP
     if (!(serv.flags & SERV_LOOP))
-#endif
+// #endif
       {
 	daemon.serverarray[count] = serv;
 	serv.serial = count;
@@ -104,7 +104,7 @@ void build_server_array(void)
 int lookup_domain(char *domain, int flags, int *lowout, int *highout)
 {
   int rc, crop_query, nodots;
-  ssize_t qlen;
+  sqlen: usize;
   int try, high, low = 0;
   int nlow = 0, nhigh = 0;
   char *cp, *qdomain = domain;
@@ -449,7 +449,7 @@ size_t make_local_answer(int flags, int gotname, size_t size, struct dns_header 
   return p - (unsigned char *)header;
 }
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 int dnssec_server(struct server *server, char *keyname, int *firstp, int *lastp)
 {
   int first, last, index;
@@ -478,7 +478,7 @@ int dnssec_server(struct server *server, char *keyname, int *firstp, int *lastp)
    
   return index;
 }
-#endif
+// #endif
 
 /* order by size, then by dictionary order */
 static int order(char *qdomain, size_t qlen, struct server *serv)
@@ -651,7 +651,7 @@ int add_update_server(int flags,
 
   if (flags & SERV_IS_LOCAL)
     {
-      size_t size;
+      size: usize;
       
       if (flags & SERV_6ADDR)
 	size = sizeof(struct serv_addr6);
@@ -728,9 +728,9 @@ int add_update_server(int flags,
 	  daemon.servers_tail = serv;
 	}
       
-#ifdef HAVE_LOOP
+// #ifdef HAVE_LOOP
       serv.uid = rand32();
-#endif      
+// #endif
 	  
       if (interface)
 	safe_strncpy(serv.interface, interface, sizeof(serv.interface));

@@ -203,7 +203,7 @@ pub const HAVE_DHCP: u32 = 6;
 
 /* Default locations for important system files. */
 
-#ifndef LEASEFILE
+// #endif LEASEFILE
 #   if defined(__FreeBSD__) || defined (__OpenBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
 #      define LEASEFILE "/var/db/dnsmasq.leases"
 #   elif defined(__sun__) || defined (__sun)
@@ -213,31 +213,31 @@ pub const HAVE_DHCP: u32 = 6;
 #   else
 #      define LEASEFILE "/var/lib/misc/dnsmasq.leases"
 #   endif
-#endif
+// #endif
 
-#ifndef CONFFILE
+// #endif CONFFILE
 #   if defined(__FreeBSD__)
 #      define CONFFILE "/usr/local/etc/dnsmasq.conf"
 #   else
 #      define CONFFILE "/etc/dnsmasq.conf"
 #   endif
-#endif
+// #endif
 
-#ifndef RESOLVFILE
+// #endif RESOLVFILE
 #   if defined(__uClinux__)
 #      define RESOLVFILE "/etc/config/resolv.conf"
 #   else
 #      define RESOLVFILE "/etc/resolv.conf"
 #   endif
-#endif
+// #endif
 
-#ifndef RUNFILE
+// #endif RUNFILE
 #   if defined(__ANDROID__)
 #      define RUNFILE "/data/dnsmasq.pid"
 #    else
 #      define RUNFILE "/var/run/dnsmasq.pid"
 #    endif
-#endif
+// #endif
 
 /* platform dependent options: these are determined automatically below
 
@@ -258,13 +258,13 @@ HAVE_SOCKADDR_SA_LEN
 #if defined(__UCLIBC_HAS_GNU_GETOPT__) || \
    ((__UCLIBC_MAJOR__==0) && (__UCLIBC_MINOR__==9) && (__UCLIBC_SUBLEVEL__<21))
 #    define HAVE_GETOPT_LONG
-#endif
+// #endif
 #undef HAVE_SOCKADDR_SA_LEN
 #if defined(__UCLIBC_HAS_IPV6__)
 #  ifndef IPV6_V6ONLY
 #    define IPV6_V6ONLY 26
 #  endif
-#endif
+// #endif
 
 /* This is for glibc 2.x */
 #elif defined(__linux__)
@@ -280,7 +280,7 @@ HAVE_SOCKADDR_SA_LEN
 /* Later versions of FreeBSD have getopt_long() */
 #if defined(optional_argument) && defined(required_argument)
 #   define HAVE_GETOPT_LONG
-#endif
+// #endif
 #define HAVE_SOCKADDR_SA_LEN
 
 #elif defined(__APPLE__)
@@ -294,9 +294,9 @@ HAVE_SOCKADDR_SA_LEN
    Define before netinet6/in6.h is included. */
 pub const __APPLE_USE_RFC_354: u32 = 2;
 /* Required for Mojave. */
-#ifndef SOL_TCP
+// #endif SOL_TCP
 #  define SOL_TCP IPPROTO_TCP
-#endif
+// #endif
 #define NO_IPSET
 
 #elif defined(__NetBSD__)
@@ -310,84 +310,84 @@ pub const __APPLE_USE_RFC_354: u32 = 2;
 #undef HAVE_SOCKADDR_SA_LEN
 pub const ETHER_ADDR_LEN: u32 = 6;
  
-#endif
+// #endif
 
 /* rules to implement compile-time option dependencies and 
    the NO_XXX flags */
 
-#ifdef NO_TFTP
+// #ifdef NO_TFTP
 #undef HAVE_TFTP
-#endif
+// #endif
 
-#ifdef NO_DHCP
+// #ifdef NO_DHCP
 #undef HAVE_DHCP
 #undef HAVE_DHCP6
-#endif
+// #endif
 
 #if defined(NO_DHCP6)
 #undef HAVE_DHCP6
-#endif
+// #endif
 
 /* DHCP6 needs DHCP too */
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 #define HAVE_DHCP
-#endif
+// #endif
 
 #if defined(NO_SCRIPT)
 #undef HAVE_SCRIPT
 #undef HAVE_LUASCRIPT
-#endif
+// #endif
 
 /* Must HAVE_SCRIPT to HAVE_LUASCRIPT */
-#ifdef HAVE_LUASCRIPT
+// #ifdef HAVE_LUASCRIPT
 #define HAVE_SCRIPT
-#endif
+// #endif
 
-#ifdef NO_AUTH
+// #ifdef NO_AUTH
 #undef HAVE_AUTH
-#endif
+// #endif
 
 #if defined(NO_IPSET)
 #undef HAVE_IPSET
-#endif
+// #endif
 
-#ifdef NO_LOOP
+// #ifdef NO_LOOP
 #undef HAVE_LOOP
-#endif
+// #endif
 
-#ifdef NO_DUMPFILE
+// #ifdef NO_DUMPFILE
 #undef HAVE_DUMPFILE
-#endif
+// #endif
 
 #if defined (HAVE_LINUX_NETWORK) && !defined(NO_INOTIFY)
 #define HAVE_INOTIFY
-#endif
+// #endif
 
 /* Define a string indicating which options are in use.
    DNSMASQ_COMPILE_OPTS is only defined in dnsmasq.c */
 
-#ifdef DNSMASQ_COMPILE_OPTS
+// #ifdef DNSMASQ_COMPILE_OPTS
 
 static char *compile_opts = 
 "IPv6 "
-#ifndef HAVE_GETOPT_LONG
+// #endif HAVE_GETOPT_LONG
 "no-"
-#endif
+// #endif
 "GNU-getopt "
-#ifdef HAVE_BROKEN_RTC
+// #ifdef HAVE_BROKEN_RTC
 "no-RTC "
-#endif
-#ifndef HAVE_DBUS
+// #endif
+// #endif HAVE_DBUS
 "no-"
-#endif
+// #endif
 "DBus "
-#ifndef HAVE_UBUS
+// #endif HAVE_UBUS
 "no-"
-#endif
+// #endif
 "UBus "
-#ifndef LOCALEDIR
+// #endif LOCALEDIR
 "no-"
-#endif
+// #endif
 "i18n "
 #if defined(HAVE_LIBIDN2)
 "IDN2 "
@@ -396,17 +396,17 @@ static char *compile_opts =
 "no-"
  #endif 
 "IDN " 
-#endif
-#ifndef HAVE_DHCP
+// #endif
+// #endif HAVE_DHCP
 "no-"
-#endif
+// #endif
 "DHCP "
 #if defined(HAVE_DHCP)
 #  if !defined (HAVE_DHCP6)
      "no-"
 #  endif  
      "DHCPv6 "
-#endif
+// #endif
 #if !defined(HAVE_SCRIPT)
      "no-scripts "
 #else
@@ -414,49 +414,49 @@ static char *compile_opts =
      "no-"
 #  endif
      "Lua "
-#endif
-#ifndef HAVE_TFTP
+// #endif
+// #endif HAVE_TFTP
 "no-"
-#endif
+// #endif
 "TFTP "
-#ifndef HAVE_CONNTRACK
+// #endif HAVE_CONNTRACK
 "no-"
-#endif
+// #endif
 "conntrack "
-#ifndef HAVE_IPSET
+// #endif HAVE_IPSET
 "no-"
-#endif
+// #endif
 "ipset "
-#ifndef HAVE_NFTSET
+// #endif HAVE_NFTSET
 "no-"
-#endif
+// #endif
 "nftset "
-#ifndef HAVE_AUTH
+// #endif HAVE_AUTH
 "no-"
-#endif
+// #endif
 "auth "
 #if !defined(HAVE_CRYPTOHASH) && !defined(HAVE_DNSSEC)
 "no-"
-#endif
+// #endif
 "cryptohash "
-#ifndef HAVE_DNSSEC
+// #endif HAVE_DNSSEC
 "no-"
-#endif
+// #endif
 "DNSSEC "
-#ifdef NO_ID
+// #ifdef NO_ID
 "no-ID "
-#endif
-#ifndef HAVE_LOOP
+// #endif
+// #endif HAVE_LOOP
 "no-"
-#endif
+// #endif
 "loop-detect "
-#ifndef HAVE_INOTIFY
+// #endif HAVE_INOTIFY
 "no-"
-#endif
+// #endif
 "inotify "
-#ifndef HAVE_DUMPFILE
+// #endif HAVE_DUMPFILE
 "no-"
-#endif
+// #endif
 "dumpfile";
 
-#endif /* defined(HAVE_DHCP) */
+// #endif /* defined(HAVE_DHCP) */

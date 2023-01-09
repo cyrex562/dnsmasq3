@@ -24,7 +24,7 @@ static jmp_buf mem_jmp;
 static int one_file(char *file, int hard_opt);
 
 /* Solaris headers don't have facility names. */
-#ifdef HAVE_SOLARIS_NETWORK
+// #ifdef HAVE_SOLARIS_NETWORK
 static const struct {
   char *c_name;
   unsigned c_val: i32;
@@ -50,16 +50,16 @@ static const struct {
   { "local7", LOG_LOCAL7 },
   { NULL, 0 }
 };
-#endif
+// #endif
 
-#ifndef HAVE_GETOPT_LONG
+// #endif HAVE_GETOPT_LONG
 struct myoption {
   const char *name;
   has_arg: i32;
   int *flag;
   val: i32;
 };
-#endif
+// #endif
 
 #define OPTSTRING "951yZDNLERKzowefnbvhdkqr:m:p:c:l:s:i:t:u:g:a:x:S:C:A:T:H:Q:I:B:F:G:O:M:X:V:U:j:P:J:W:Y:2:4:6:7:8:0:3:"
 
@@ -186,11 +186,11 @@ pub const LOPT_FAST_RETRY: u32 = 376;
 pub const LOPT_STALE_CACHE: u32 = 377;
 pub const LOPT_NORR: u32 = 378;
 
-#ifdef HAVE_GETOPT_LONG
+// #ifdef HAVE_GETOPT_LONG
 static const struct option opts[] =  
 #else
 static const struct myoption opts[] = 
-#endif
+// #endif
   { 
     { "version", 0, 0, 'v' },
     { "no-hosts", 0, 0, 'h' },
@@ -635,7 +635,7 @@ static void *opt_malloc(size_t size)
 static char *opt_string_alloc(const char *cp)
 {
   char *ret = NULL;
-  size_t len;
+  len: usize;
   
   if (cp && (len = strlen(cp)) != 0)
     {
@@ -748,7 +748,7 @@ static int atoi_check16(char *a, int *res)
   return 1;
 }
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 static int atoi_check8(char *a, int *res)
 {
   if (!(atoi_check(a, res)) ||
@@ -758,9 +758,9 @@ static int atoi_check8(char *a, int *res)
 
   return 1;
 }
-#endif
+// #endif
 
-#ifndef NO_ID
+// #endif NO_ID
 static void add_txt(char *name, char *txt, int stat)
 {
   struct txt_record *r = opt_malloc(sizeof(struct txt_record));
@@ -780,11 +780,11 @@ static void add_txt(char *name, char *txt, int stat)
   daemon->txt = r;
   r->class = C_CHAOS;
 }
-#endif
+// #endif
 
 static void do_usage(void)
 {
-  char buff[100];
+  buff: [u8;100]
   int i, j;
 
   struct {
@@ -800,9 +800,9 @@ static void do_usage(void)
   };
 
   printf(_("Usage: dnsmasq [options]\n\n"));
-#ifndef HAVE_GETOPT_LONG
+// #endif HAVE_GETOPT_LONG
   printf(_("Use short options only on the command line.\n"));
-#endif
+// #endif
   printf(_("Valid options are:\n"));
   
   for (i = 0; usage[i].opt != 0; i++)
@@ -897,7 +897,7 @@ char *parse_server(char *arg, struct server_details *sdetails)
 	sdetails->source = sdetails->interface_opt;
 #else
 	return _("interface binding not supported");
-#endif
+// #endif
       }
   }
 
@@ -924,7 +924,7 @@ char *parse_server(char *arg, struct server_details *sdetails)
          the node name given in node is converted to IDN format if necessary.
          The source encoding is that of the current locale. */
       hints.ai_flags |= AI_IDN;
-#endif
+// #endif
       /* The value AF_UNSPEC indicates that getaddrinfo() should return socket
          addresses for any address family (either IPv4 or IPv6, for example)
          that can be used with node <arg> and service "domain". */
@@ -968,9 +968,9 @@ char *parse_server_addr(struct server_details *sdetails)
     {
       sdetails->addr->in.sin_port = htons(sdetails->serv_port);
       sdetails->addr->sa.sa_family = sdetails->source_addr->sa.sa_family = AF_INET;
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
       sdetails->source_addr->in.sin_len = sdetails->addr->in.sin_len = sizeof(struct sockaddr_in);
-#endif
+// #endif
       sdetails->source_addr->in.sin_addr.s_addr = INADDR_ANY;
       sdetails->source_addr->in.sin_port = htons(daemon->query_port);
       
@@ -1000,7 +1000,7 @@ char *parse_server_addr(struct server_details *sdetails)
 		  safe_strncpy(sdetails->interface, sdetails->source, IF_NAMESIZE);
 #else
 		  return _("interface binding not supported");
-#endif
+// #endif
 		}
 	    }
 	}
@@ -1017,9 +1017,9 @@ char *parse_server_addr(struct server_details *sdetails)
       sdetails->source_addr->in6.sin6_scope_id = 0;
       sdetails->addr->sa.sa_family = sdetails->source_addr->sa.sa_family = AF_INET6;
       sdetails->addr->in6.sin6_flowinfo = sdetails->source_addr->in6.sin6_flowinfo = 0;
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
       sdetails->addr->in6.sin6_len = sdetails->source_addr->in6.sin6_len = sizeof(sdetails->addr->in6);
-#endif
+// #endif
       if (sdetails->source)
 	{
 	  if (sdetails->flags)
@@ -1046,7 +1046,7 @@ char *parse_server_addr(struct server_details *sdetails)
 		  safe_strncpy(sdetails->interface, sdetails->source, IF_NAMESIZE);
 #else
 		  return _("interface binding not supported");
-#endif
+// #endif
 		}
 	    }
 	}
@@ -1096,7 +1096,7 @@ static char *domain_rev4(int from_file, char *server, struct in_addr *addr4, int
   char *string;
   msize: i32;
   u16 flags = 0;
-  char domain[29]; /* strlen("xxx.yyy.zzz.ttt.in-addr.arpa")+1 */
+  domain: [u8;29] /* strlen("xxx.yyy.zzz.ttt.in-addr.arpa")+1 */
   union mysockaddr serv_addr, source_addr;
   char interface[IF_NAMESIZE+1];
   int count = 1, rem, addrbytes, addrbits;
@@ -1179,7 +1179,7 @@ static char *domain_rev6(int from_file, char *server, struct in6_addr *addr6, in
   char *string;
   msize: i32;
   u16 flags = 0;
-  char domain[73]; /* strlen("32*<n.>ip6.arpa")+1 */
+  domain: [u8;73] /* strlen("32*<n.>ip6.arpa")+1 */
   union mysockaddr serv_addr, source_addr;
   char interface[IF_NAMESIZE+1];
   int count = 1, rem, addrbytes, addrbits;
@@ -1258,7 +1258,7 @@ static char *domain_rev6(int from_file, char *server, struct in6_addr *addr6, in
   return NULL;
 }
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 
 static int is_tag_prefix(char *arg)
 {
@@ -1348,7 +1348,7 @@ static void dhcp_config_free(struct dhcp_config *config)
       if (config->flags & CONFIG_NAME)
 	free(config->hostname);
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
       if (config->flags & CONFIG_ADDR6)
 	{
 	  struct addrlist *addr, *tmp;
@@ -1359,7 +1359,7 @@ static void dhcp_config_free(struct dhcp_config *config)
 	      free(addr);
 	    }
 	}
-#endif
+// #endif
 
       free(config);
     }
@@ -1371,9 +1371,9 @@ static void dhcp_context_free(struct dhcp_context *ctx)
     {
       dhcp_netid_free(ctx->filter);
       free(ctx->netid.net);
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
       free(ctx->template_interface);
-#endif
+// #endif
       free(ctx);
     }
 }
@@ -1432,7 +1432,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	    }
 	  break;
 	}
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
       else if (strstr(arg, "option6:") == arg)
 	{
 	  for (cp = arg+8; *cp; cp++)
@@ -1458,7 +1458,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	  is6 = 1;
 	  break;
 	}
-#endif
+// #endif
       else if (strstr(arg, "vendor:") == arg)
 	{
 	  new->u.vendor_class = (unsigned char *)opt_string_alloc(arg+7);
@@ -1493,7 +1493,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
       arg = comma; 
     }
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
   if (is6)
     {
       if (new->flags & (DHOPT_VENDOR | DHOPT_ENCAPSULATE))
@@ -1504,7 +1504,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	opt_len = lookup_dhcp_len(AF_INET6, new->opt);
     }
   else
-#endif
+// #endif
     if (opt_len == 0 &&
 	!(new->flags & (DHOPT_VENDOR | DHOPT_ENCAPSULATE | DHOPT_RFC3925)))
       opt_len = lookup_dhcp_len(AF_INET, new->opt);
@@ -1577,11 +1577,11 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
       if (!found_colon)
 	is_addr6 = 0;
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
       /* NTP server option takes hex, addresses or FQDN */
       if (is6 && new->opt == OPTION6_NTP_SERVER && !is_hex)
 	opt_len |= is_addr6 ? OT_ADDR_LIST : OT_RFC1035_NAME;
-#endif
+// #endif
      
       /* We know that some options take addresses */
       if (opt_len & OT_ADDR_LIST)
@@ -1810,7 +1810,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	      new->len = (int) len + header_size;
 	      new->val = m;
 	    }
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	  else if (comma && (opt_len & OT_CSTRING))
 	    {
 	      /* length fields are two bytes so need 16 bits for each string */
@@ -1882,7 +1882,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	      new->val = p;
 	      new->len = len;
 	    }
-#endif
+// #endif
 	  else
 	    {
 	      new->len = strlen(comma);
@@ -1934,7 +1934,7 @@ on_error:
   return 0;
 }
 
-#endif
+// #endif
 
 void set_option_bool(unsigned int opt)
 {
@@ -2215,7 +2215,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	daemon->log_file = opt_string_alloc(arg);
       else
 	{	  
-#ifdef __ANDROID__
+// #ifdef __ANDROID__
 	  ret_err(_("setting log facility is not possible under Android"));
 #else
 	  for (i = 0; facilitynames[i].c_name; i++)
@@ -2226,7 +2226,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	    daemon->log_fac = facilitynames[i].c_val;
 	  else
 	    ret_err(_("bad log facility"));
-#endif
+// #endif
 	}
       break;
 
@@ -2312,7 +2312,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       daemon->dump_mask = strtol(arg, NULL, 0);
       break;
       
-#ifdef HAVE_DHCP      
+// #ifdef HAVE_DHCP
     case 'l':  /* --dhcp-leasefile */
       daemon->lease_file = opt_string_alloc(arg);
       break;
@@ -2333,7 +2333,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
         daemon->lease_change_command = opt_string_alloc(arg);
 #  endif
       break;
-#endif /* HAVE_DHCP */
+// #endif /* HAVE_DHCP */
 
     case LOPT_DHCP_HOST:     /* --dhcp-hostsfile */
     case LOPT_DHCP_OPTS:     /* --dhcp-optsfile */
@@ -2741,7 +2741,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	    {
 	      char *p;
 	      u8 *u = daemon->umbrella_device;
-	      char word[3];
+	      word: [u8;3]
 	      
 	      arg += 9;
 	      if (strlen(arg) != 16)
@@ -2800,11 +2800,11 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       daemon->group_set = 1;
       break;
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
     case LOPT_SCRIPTUSR: /* --scriptuser */
       daemon->scriptuser = opt_string_alloc(arg);
       break;
-#endif
+// #endif
       
     case 'i':  /* --interface */
       do {
@@ -2908,9 +2908,9 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	  {
 	    new->addr.sa.sa_family = AF_INET;
 	    new->addr.in.sin_port = 0;
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
 	    new->addr.in.sin_len = sizeof(new->addr.in);
-#endif
+// #endif
 	  }
 	else if (arg && inet_pton(AF_INET6, arg, &new->addr.in6.sin6_addr) > 0)
 	  {
@@ -2918,9 +2918,9 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	    new->addr.in6.sin6_flowinfo = 0;
 	    new->addr.in6.sin6_scope_id = 0;
 	    new->addr.in6.sin6_port = 0;
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
 	    new->addr.in6.sin6_len = sizeof(new->addr.in6);
-#endif
+// #endif
 	  }
 	else
 	  ret_err_free(gen_err, new);
@@ -3104,20 +3104,20 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 
     case LOPT_IPSET: /* --ipset */
     case LOPT_NFTSET: /* --nftset */
-#ifndef HAVE_IPSET
+// #endif HAVE_IPSET
       if (option == LOPT_IPSET)
         {
           ret_err(_("recompile with HAVE_IPSET defined to enable ipset directives"));
           break;
         }
-#endif
-#ifndef HAVE_NFTSET
+// #endif
+// #endif HAVE_NFTSET
       if (option == LOPT_NFTSET)
         {
           ret_err(_("recompile with HAVE_NFTSET defined to enable nftset directives"));
           break;
         }
-#endif
+// #endif
 
       {
 	 struct ipsets ipsets_head;
@@ -3188,7 +3188,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       }
       
     case LOPT_CMARK_ALST_EN: /* --connmark-allowlist-enable */
-#ifndef HAVE_CONNTRACK
+// #endif HAVE_CONNTRACK
       ret_err(_("recompile with HAVE_CONNTRACK defined to enable connmark-allowlist directives"));
       break;
 #else
@@ -3203,10 +3203,10 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	daemon->allowlist_mask = mask;
 	break;
       }
-#endif
+// #endif
       
     case LOPT_CMARK_ALST: /* --connmark-allowlist */
-#ifndef HAVE_CONNTRACK
+// #endif HAVE_CONNTRACK
 	ret_err(_("recompile with HAVE_CONNTRACK defined to enable connmark-allowlist directives"));
 	break;
 #else
@@ -3314,7 +3314,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	  }
 	ret_err(gen_err);
       }
-#endif
+// #endif
       
     case 'c':  /* --cache-size */
       {
@@ -3457,14 +3457,14 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	}
       break;
             
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
     case 'X': /* --dhcp-lease-max */
       if (!atoi_check(arg, &daemon->dhcp_max))
 	ret_err(gen_err);
       break;
-#endif
+// #endif
       
-#ifdef HAVE_TFTP
+// #ifdef HAVE_TFTP
     case LOPT_TFTP_MAX:  /*  --tftp-max */
       if (!atoi_check(arg, &daemon->tftp_max))
 	ret_err(gen_err);
@@ -3512,7 +3512,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
       else
         ret_err(gen_err);
       break;
-#endif
+// #endif
 	      
     case LOPT_BRIDGE:   /* --bridge-interface */
       {
@@ -3549,14 +3549,14 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	break;
       }
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
     case LOPT_SHARED_NET: /* --shared-network */
       {
 	struct shared_network *new = opt_malloc(sizeof(struct shared_network));
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	new->shared_addr.s_addr = 0;
-#endif
+// #endif
 	new->if_index = 0;
 	
 	if (!(comma = split(arg)))
@@ -3572,14 +3572,14 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		!(new->if_index = if_nametoindex(arg)))
 	      goto snerr;
 	  }
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	else if (inet_pton(AF_INET6, comma, &new->shared_addr6))
 	  {
 	    if (!inet_pton(AF_INET6, arg, &new->match_addr6) &&
 		!(new->if_index = if_nametoindex(arg)))
 	      goto snerr;
 	  }
-#endif
+// #endif
 	else
 	  goto snerr;
 
@@ -3684,7 +3684,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		  }
 	      }
 	  }
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	else if (inet_pton(AF_INET6, a[0], &new->start6))
 	  {
 	    const char *err = NULL;
@@ -3776,7 +3776,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		new->end6 = tmp;
 	      }
 	  }
-#endif
+// #endif
 	else
 	  {
 	    dhcp_context_free(new);
@@ -3860,9 +3860,9 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	new->netid = NULL;
 	new->filter = NULL;
 	new->clid = NULL;
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	new->addr6 = NULL;
-#endif
+// #endif
 
 	while (arg)
 	  {
@@ -3911,7 +3911,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		else if (strstr(arg, "tag:") == arg)
 		  new->filter = dhcp_netid_create(arg+4, new->filter);
 		  
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 		else if (arg[0] == '[' && arg[strlen(arg)-1] == ']')
 		  {
 		    char *pref;
@@ -3959,7 +3959,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		    
 		    new->flags |= CONFIG_ADDR6;
 		  }
-#endif
+// #endif
 		else
 		  {
 		    struct hwaddr_config *newhw = opt_malloc(sizeof(struct hwaddr_config));
@@ -4098,7 +4098,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 
 	while (arg)
 	  {
-	    size_t len;
+	    len: usize;
 
 	    comma = split(arg);
 	    len = strlen(arg);
@@ -4158,7 +4158,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
     case LOPT_NAME_MATCH: /* --dhcp-name-match */
       {
 	struct dhcp_match_name *new;
-	ssize_t len;
+	slen: usize;
 	
 	if (!(comma = split(arg)) || (len = strlen(comma)) == 0)
 	  ret_err(gen_err);
@@ -4595,7 +4595,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		new->next = daemon->relay4;
 		daemon->relay4 = new;
 	      }
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	    else if (inet_pton(AF_INET6, arg, &new->local))
 	      {
 		char *hash = split_chr(two, '#');
@@ -4616,7 +4616,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		new->next = daemon->relay6;
 		daemon->relay6 = new;
 	      }
-#endif
+// #endif
 
 	    new->interface = opt_string_alloc(three);
 	  }
@@ -4630,9 +4630,9 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	break;
       }
 
-#endif
+// #endif
       
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
     case LOPT_RA_PARAM: /* --ra-param */
       if ((comma = split(arg)))
 	{
@@ -4686,7 +4686,7 @@ err:
 	  memcpy(daemon->duid_config, comma, daemon->duid_config_len);
 	}
       break;
-#endif
+// #endif
 
     case 'V':  /* --alias */
       {
@@ -4975,7 +4975,7 @@ err:
       {
 	struct txt_record *new;
 	unsigned char *p, *cnt;
-	size_t len;
+	len: usize;
 
 	comma = split(arg);
 		
@@ -5169,7 +5169,7 @@ err:
 	break;
       }
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
     case LOPT_DNSSEC_STAMP: /* --dnssec-timestamp */
       daemon->timestamp_file = opt_string_alloc(arg); 
       break;
@@ -5240,7 +5240,7 @@ err:
 	
 	break;
       }
-#endif
+// #endif
 		
     default:
       ret_err(_("unsupported option (check that dnsmasq was compiled with DHCP/TFTP/DNSSEC/DBus support)"));
@@ -5260,7 +5260,7 @@ static void read_file(char *file, FILE *f, int hard_opt, int from_script)
       int white, i;
       volatile option: i32;
       char *errmess, *p, *arg, *start;
-      size_t len;
+      len: usize;
 
       option = (hard_opt == LOPT_REV_SERV) ? 0 : hard_opt;
 
@@ -5404,7 +5404,7 @@ int option_read_dynfile(char *file, int flags)
   
   return 0;
 }
-#endif
+// #endif
 
 static int one_file(char *file, int hard_opt)
 {
@@ -5642,7 +5642,7 @@ void read_servers_file(void)
 }
  
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 static void clear_dynamic_conf(void)
 {
   struct dhcp_config *configs, *cp, **up;
@@ -5718,7 +5718,7 @@ void reread_dhcp(void)
   set_dynamic_inotify(AH_DHCP_HST | AH_DHCP_OPT, 0, NULL, 0);
 #  endif
 }
-#endif
+// #endif
 
 void read_opts(int argc, char **argv, char *compile_opts)
 {
@@ -5757,7 +5757,7 @@ void read_opts(int argc, char **argv, char *compile_opts)
   daemon->randport_limit = 1;
   daemon->host_index = SRC_AH;
   
-#ifndef NO_ID
+// #endif NO_ID
   add_txt("version.bind", "dnsmasq-" VERSION, 0 );
   add_txt("authors.bind", "Simon Kelley", 0);
   add_txt("copyright.bind", COPYRIGHT, 0);
@@ -5766,22 +5766,22 @@ void read_opts(int argc, char **argv, char *compile_opts)
   add_txt("evictions.bind", NULL, TXT_STAT_EVICTIONS);
   add_txt("misses.bind", NULL, TXT_STAT_MISSES);
   add_txt("hits.bind", NULL, TXT_STAT_HITS);
-#ifdef HAVE_AUTH
+// #ifdef HAVE_AUTH
   add_txt("auth.bind", NULL, TXT_STAT_AUTH);
-#endif
+// #endif
   add_txt("servers.bind", NULL, TXT_STAT_SERVERS);
-#endif
+// #endif
   
   /* See comment above make_servers(). Optimises server-read code. */
   mark_servers(0);
   
   while (1) 
     {
-#ifdef HAVE_GETOPT_LONG
+// #ifdef HAVE_GETOPT_LONG
       option = getopt_long(argc, argv, OPTSTRING, opts, NULL);
 #else
       option = getopt(argc, argv, OPTSTRING);
-#endif
+// #endif
       
       if (option == -1)
 	{
@@ -5815,15 +5815,15 @@ void read_opts(int argc, char **argv, char *compile_opts)
 	testmode = 1;
       else if (option == 'w')
 	{
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 	  if (argc == 3 && strcmp(argv[2], "dhcp") == 0)
 	    display_opts();
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	  else if (argc == 3 && strcmp(argv[2], "dhcp6") == 0)
 	    display_opts6();
-#endif
+// #endif
 	  else
-#endif
+// #endif
 	    do_usage();
 
 	  exit(0);
@@ -5850,11 +5850,11 @@ void read_opts(int argc, char **argv, char *compile_opts)
 	}
       else
 	{
-#ifdef HAVE_GETOPT_LONG
+// #ifdef HAVE_GETOPT_LONG
 	  if (!one_opt(option, arg, daemon->namebuff, _("try --help"), 1, 0))
 #else 
 	    if (!one_opt(option, arg, daemon->namebuff, _("try -w"), 1, 0)) 
-#endif  
+// #endif
 	    die(_("bad command line options: %s"), daemon->namebuff, EC_BADCONF);
 	}
     }

@@ -113,34 +113,12 @@ const short DHCP6_SERVER_PORT = 547;
 
 const char*  DHCP6_MULTICAST_ADDRESS = "ff02::1:2";
 
-struct dhcp6_option {
-  uint16_t type;
-  uint16_t len;
-  char  value[1024];
-};
-
-struct dhcp6_iaaddr_option {
-  uint16_t type;
-  uint16_t len;
-  struct in6_addr ip;
-  uint32_t preferred_lifetime;
-  uint32_t valid_lifetime;
-};
-
-struct dhcp6_iana_option {
-  uint16_t type;
-  uint16_t len;
-  uint32_t iaid;
-  uint32_t t1;
-  uint32_t t2;
-  char options[1024];
-};
 
 
-struct dhcp6_packet {
-  size_t len;
-  char buf[2048];  
-};
+
+
+
+
 
 size_t pack_duid(const char* str, char* dst)
 {
@@ -236,7 +214,7 @@ struct dhcp6_packet create_release_packet(const char* iaid, const char* ip, cons
 uint16_t parse_iana_suboption(char* buf, size_t len)
 {
   size_t current_pos = 0;
-  char option_value[1024];
+  option_value: [u8;1024]
   while (current_pos < len)
     {
       uint16_t option_type, option_len;
@@ -247,7 +225,7 @@ uint16_t parse_iana_suboption(char* buf, size_t len)
       current_pos += 2 * sizeof(uint16_t);
       if (option_type == STATUS_CODE)
 	{
-	  uint16_t status;
+	  status: u16;
 	  memcpy(&status, buf + current_pos, sizeof(uint16_t));
 	  status = ntohs(status);
 	  if (status != SUCCESS)
@@ -274,7 +252,7 @@ int16_t parse_packet(char* buf, size_t len)
   if (type != REPLY )
     return NOT_REPLY_CODE;
   
-  char option_value[1024];
+  option_value: [u8;1024]
   while (current_pos < len)
     {
       uint16_t option_type, option_len;
@@ -285,7 +263,7 @@ int16_t parse_packet(char* buf, size_t len)
       current_pos += 2 * sizeof(uint16_t);
       if (option_type == STATUS_CODE)
 	{
-	  uint16_t status;
+	  status: u16;
 	  memcpy(&status, buf + current_pos, sizeof(uint16_t));
 	  status = ntohs(status);
 	  if (status != SUCCESS)
@@ -327,7 +305,7 @@ static void fail_fatal(const char *errstr, int exitcode)
 int send_release_packet(const char* iface, struct dhcp6_packet* packet)
 {
   struct sockaddr_in6 server_addr, client_addr;
-  char response[1400];
+  response: [u8;1400]
   int sock = socket(PF_INET6, SOCK_DGRAM, 0);
   int i = 0;
   if (sock < 0)
@@ -495,7 +473,7 @@ int main(int argc, char *  const argv[])
 
     if (dry_run)
       {
-        uint16_t i;
+        i: u16;
 
         for(i=0; i<packet.len; i++)
 	  printf("%hhx", packet.buf[i]);

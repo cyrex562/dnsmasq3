@@ -19,17 +19,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d3463acf-f1a2-4164-ab5c-254f20d18ee5" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/app_context.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/arp_record.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/dhcp6_protocol.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/dhcp_protocol.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/all_addr.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/bogus_addr.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp6_iaaddr_option.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp6_iana_option.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp6_option.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp6_packet.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_constants.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_packet.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/doctor.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/event_desc.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/iface_param.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/match_param.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/mx_srv_record.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/udp_hdr.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/watch.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CHANGELOG" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dnsmasq.conf.example" beforeDir="false" afterPath="$PROJECT_DIR$/dnsmasq.conf.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/other/dns-protocol.h.rs" beforeDir="false" afterPath="$PROJECT_DIR$/other/dns-protocol.h.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/other/dnslist.pl" beforeDir="false" afterPath="$PROJECT_DIR$/other/dnslist.pl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/other/dnsmasq-2.68-try-all-ns" beforeDir="false" afterPath="$PROJECT_DIR$/other/dnsmasq-2.68-try-all-ns" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/other/dynamic-dnsmasq.pl" beforeDir="false" afterPath="$PROJECT_DIR$/other/dynamic-dnsmasq.pl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/arp.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/arp.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/auth.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/blockdata.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/blockdata.rs" afterDir="false" />
@@ -39,46 +44,38 @@
       <change beforePath="$PROJECT_DIR$/src/conntrack.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/conntrack.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/crypto.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/crypto.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dbus.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dbus.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dhcp-common.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_common.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dhcp-protocol.rs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dhcp.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dhcp6-protocol.rs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dhcp6.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp6.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dhcp_common.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_common.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dhcp_lease_time.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_lease_time.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dhcp_protocol.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_protocol.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dhcp_release.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_release.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dhcp_release6.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_release6.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dnsmasq.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnsmasq.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dnsmasq_h.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnsmasq_h.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dnsmasq_loop.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnsmasq_loop.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dnssec.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnssec.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain-match.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain_match.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/domain.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain_match.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain_match.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dump.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dump.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/edns0.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/edns0.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/forward.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/forward.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hash-questions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/hash_questions.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hash_questions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/hash_questions.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/helper.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/helper.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/inotify.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/inotify.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ip6addr.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ip6addr.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ipset.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ipset.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/lease.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lease.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/log.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/log.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/loop.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnsmasq_loop.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/metrics.h.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/metrics_h.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/metrics.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/metrics.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/netlink.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/netlink.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/network.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/network.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nftset.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nftset.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/option.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/option.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/outpacket.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/outpacket.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pattern.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/pattern.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/poll.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/poll.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/radv-protocol.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/radv_protocol.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/radv.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/radv.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rfc1035.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rfc1035.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rfc2131.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rfc2131.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rfc3315.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rfc3315.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rrfilter.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rrfilter.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/slaac.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/slaac.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/tables.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/tables.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/tftp.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/tftp.rs" afterDir="false" />
@@ -120,22 +117,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "last_opened_file_path": "/home/cyrex/Projects/dnsmasq3/other",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/cyrex/Projects/dnsmasq3/other&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/other" />
@@ -189,6 +186,7 @@
       <workItem from="1623088422784" duration="705000" />
       <workItem from="1623091094938" duration="1245000" />
       <workItem from="1672713674092" duration="1000" />
+      <workItem from="1673263986112" duration="4575000" />
     </task>
     <servers />
   </component>

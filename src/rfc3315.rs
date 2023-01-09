@@ -17,7 +17,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 
 struct state {
   unsigned char *clid;
@@ -1853,9 +1853,9 @@ static void calculate_times(struct dhcp_context *context, unsigned int *min_time
 static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now)
 {
   struct dhcp_lease *lease = lease6_find_by_addr(addr, 128, 0);
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
   struct dhcp_netid *tagif = run_tag_if(state->tags);
-#endif
+// #endif
 
   (void)context;
 
@@ -1876,7 +1876,7 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  lease_set_hostname(lease, state->hostname, state->hostname_auth, addr_domain, state->domain);
 	}
       
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
       if (daemon->lease_change_command)
 	{
 	  void *opt;
@@ -1960,7 +1960,7 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 		lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
 	    }
 	}
-#endif	
+// #endif
       
     }
 }
@@ -2202,9 +2202,9 @@ int relay_upstream6(int iface_index, ssize_t sz,
 	      }
 	  }
 	
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
 	dump_packet_udp(DUMP_DHCPV6, (void *)daemon->outpacket.iov_base, save_counter(-1), NULL, &to, daemon->dhcp6fd);
-#endif
+// #endif
 
 	while (retry_send(sendto(daemon->dhcp6fd, (void *)daemon->outpacket.iov_base, save_counter(-1),
 				 0, (struct sockaddr *)&to, sa_len(&to))));
@@ -2265,7 +2265,7 @@ int relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface)
 
 	    peer->sin6_port = ntohs(DHCPV6_CLIENT_PORT);
 	    
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
 	    if (daemon->lease_change_command && encap_type == DHCP6REPLY)
 	      {
 		/* decapsulate relayed message */
@@ -2298,7 +2298,7 @@ int relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface)
 			  }
 		    }
 	      }
-#endif		
+// #endif
 	    return 1;
 	  }
       
@@ -2307,7 +2307,7 @@ int relay_reply6(struct sockaddr_in6 *peer, ssize_t sz, char *arrival_interface)
   return 0;
 }
 
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
 int do_snoop_script_run(void)
 {
   struct dhcp_relay *relay;
@@ -2326,6 +2326,6 @@ int do_snoop_script_run(void)
   
   return 0;
 }
-#endif
+// #endif
 
-#endif
+// #endif

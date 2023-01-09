@@ -281,4 +281,4 @@ static void sha256_final(SHA256_CTX *ctx, BYTE hash[])
     }
 }
 
-#endif
+// #endif

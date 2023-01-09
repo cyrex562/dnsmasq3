@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_TFTP
+// #ifdef HAVE_TFTP
 
 static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len);
 static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix, char *client);
@@ -43,7 +43,7 @@ pub const ERR_TID: u32 = 5;
 
 void tftp_request(struct listener *listen, time_t now)
 {
-  ssize_t len;
+  slen: usize;
   char *packet = daemon.packet;
   char *filename, *mode, *p, *end, *opt;
   union mysockaddr addr, peer;
@@ -56,7 +56,7 @@ void tftp_request(struct listener *listen, time_t now)
   int port = daemon.start_tftp_port; /* may be zero to use ephemeral port */
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
   int mtuflag = IP_PMTUDISC_DONT;
-#endif
+// #endif
   char namebuff[IF_NAMESIZE];
   char *name = NULL;
   char *prefix = daemon.tftp_prefix;
@@ -76,7 +76,7 @@ void tftp_request(struct listener *listen, time_t now)
 #elif defined(IP_RECVDSTADDR) && defined(IP_RECVIF)
     char control[CMSG_SPACE(sizeof(struct in_addr)) +
 		 CMSG_SPACE(sizeof(struct sockaddr_dl))];
-#endif
+// #endif
   } control_u; 
 
   msg.msg_controllen = sizeof(control_u);
@@ -96,9 +96,9 @@ void tftp_request(struct listener *listen, time_t now)
   if ((len = recvmsg(listen.tftpfd, &msg, 0)) < 2)
     return;
 
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
   dump_packet_udp(DUMP_TFTP, (void *)packet, len, (union mysockaddr *)&peer, NULL, listen.tftpfd);
-#endif
+// #endif
   
   /* Can always get recvd interface for IPv6 */
   if (!check_dest)
@@ -175,7 +175,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      if_index = p.s->sdl_index;
 	  }
 	  
-#endif
+// #endif
 
       if (family == AF_INET6)
         {
@@ -225,12 +225,12 @@ void tftp_request(struct listener *listen, time_t now)
 		return;
 	    }
 	  
-#ifdef HAVE_DHCP      
+// #ifdef HAVE_DHCP
 	  /* allowed interfaces are the same as for DHCP */
 	  for (tmp = daemon->dhcp_except; tmp; tmp = tmp->next)
 	    if (tmp->name && wildcard_match(tmp->name, name))
 	      return;
-#endif
+// #endif
 	}
 
       safe_strncpy(ifr.ifr_name, name, IF_NAMESIZE);
@@ -290,18 +290,18 @@ void tftp_request(struct listener *listen, time_t now)
   if (family == AF_INET)
     {
       addr.in.sin_port = htons(port);
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
       addr.in.sin_len = sizeof(addr.in);
-#endif
+// #endif
     }
   else
     {
       addr.in6.sin6_port = htons(port);
       addr.in6.sin6_flowinfo = 0;
       addr.in6.sin6_scope_id = 0;
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
       addr.in6.sin6_len = sizeof(addr.in6);
-#endif
+// #endif
     }
 
   /* May reuse struct transfer from abandoned transfer in single port mode. */
@@ -336,7 +336,7 @@ void tftp_request(struct listener *listen, time_t now)
       if (bind(transfer->sockfd, &addr.sa, sa_len(&addr)) == -1 ||
 #if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
 	  setsockopt(transfer->sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &mtuflag, sizeof(mtuflag)) == -1 ||
-#endif
+// #endif
 	  !fix_fd(transfer->sockfd))
 	{
 	  if (errno == EADDRINUSE && daemon->start_tftp_port != 0)
@@ -434,7 +434,7 @@ void tftp_request(struct listener *listen, time_t now)
 	      unsigned char *macaddr = NULL;
 	      unsigned char macbuf[DHCP_CHADDR_MAX];
 	      
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 	      if (daemon->dhcp && peer.sa.sa_family == AF_INET)
 	        {
 		  /* Check if the client IP is in our lease database */
@@ -442,7 +442,7 @@ void tftp_request(struct listener *listen, time_t now)
 		  if (lease && lease->hwaddr_type == ARPHRD_ETHER && lease->hwaddr_len == ETHER_ADDR_LEN)
 		    macaddr = lease->hwaddr;
 		}
-#endif
+// #endif
 	      
 	      /* If no luck, try to find in ARP table. This only works if client is in same (V)LAN */
 	      if (!macaddr && find_mac(&peer, macbuf, 1, now) > 0)
@@ -487,9 +487,9 @@ void tftp_request(struct listener *listen, time_t now)
 
   send_from(transfer->sockfd, !option_bool(OPT_SINGLE_PORT), packet, len, &peer, &addra, if_index);
 
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
   dump_packet_udp(DUMP_TFTP, (void *)packet, len, NULL, (union mysockaddr *)&peer, transfer->sockfd);
-#endif
+// #endif
   
   if (is_err)
     free_transfer(transfer);
@@ -593,7 +593,7 @@ void check_tftp_listeners(time_t now)
 	{
 	  union mysockaddr peer;
 	  socklen_t addr_len = sizeof(union mysockaddr);
-	  ssize_t len;
+	  slen: usize;
 	  
 	  /* we overwrote the buffer... */
 	  daemon->srv_save = NULL;
@@ -609,9 +609,9 @@ void check_tftp_listeners(time_t now)
 		  len = tftp_err(ERR_TID, daemon->packet, _("ignoring packet from %s (TID mismatch)"), daemon->addrbuff, NULL);
 		  while(retry_send(sendto(transfer->sockfd, daemon->packet, len, 0, &peer.sa, sa_len(&peer))));
 
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
 		  dump_packet_udp(DUMP_TFTP, (void *)daemon->packet, len, NULL, (union mysockaddr *)&peer, transfer->sockfd);
-#endif
+// #endif
 		}
 	    }
 	}
@@ -623,7 +623,7 @@ void check_tftp_listeners(time_t now)
       if (difftime(now, transfer->timeout) >= 0.0)
 	{
 	  int endcon = 0;
-	  ssize_t len;
+	  slen: usize;
 
 	  /* timeout, retransmit */
 	  transfer->timeout += 1 + (1<<(transfer->backoff/2));
@@ -649,9 +649,9 @@ void check_tftp_listeners(time_t now)
 	    {
 	      send_from(transfer->sockfd, !option_bool(OPT_SINGLE_PORT), daemon->packet, len,
 			&transfer->peer, &transfer->source, transfer->if_index);
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
 	      dump_packet_udp(DUMP_TFTP, (void *)daemon->packet, len, NULL, (union mysockaddr *)&transfer->peer, transfer->sockfd);
-#endif
+// #endif
 	    }
 	  
 	  if (endcon || len == 0)
@@ -737,7 +737,7 @@ static void free_transfer(struct tftp_transfer *transfer)
 static char *next(char **p, char *end)
 {
   char *ret = *p;
-  size_t len;
+  len: usize;
 
   if (*(end-1) != 0 || 
       *p == end ||
@@ -847,7 +847,7 @@ static ssize_t get_block(char *packet, struct tftp_transfer *transfer)
       /* Map '\n' to CR-LF in netascii mode */
       if (transfer->netascii)
 	{
-	  size_t i;
+	  i: usize;
 	  newcarrylf: i32;
 
 	  for (i = 0, newcarrylf = 0; i < size; i++)
@@ -882,13 +882,13 @@ int do_tftp_script_run(void)
   if ((transfer = daemon->tftp_done_trans))
     {
       daemon->tftp_done_trans = transfer->next;
-#ifdef HAVE_SCRIPT
+// #ifdef HAVE_SCRIPT
       queue_tftp(transfer->file->size, transfer->file->filename, &transfer->peer);
-#endif
+// #endif
       free_transfer(transfer);
       return 1;
     }
 
   return 0;
 }
-#endif
+// #endif

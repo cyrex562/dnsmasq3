@@ -91,12 +91,3 @@ pub const DHCPINFORM: u32 = 8;
 pub const BRDBAND_FORUM_IANA: u32 = 3561; /* Broadband forum IANA enterprise */
 
 pub const DHCP_CHADDR_MAX: u32 = 16;
-
-struct dhcp_packet {
-  u8 op, htype, hlen, hops;
-  u32 xid;
-  u16 secs, flags;
-  struct in_addr ciaddr, yiaddr, siaddr, giaddr;
-  u8 chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
-  u8 options[312];
-};

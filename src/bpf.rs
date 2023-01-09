@@ -16,41 +16,43 @@
 
 // #include "dnsmasq.h"
 
-#if defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
+// #if defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK)
 // #include <ifaddrs.h>
 
 // #include <sys/param.h>
-#if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
+// #if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
 // #include <sys/sysctl.h>
-#endif
+// #endif
 // #include <net/if.h>
 // #include <net/route.h>
 // #include <net/if_dl.h>
 // #include <netinet/if_ether.h>
-#if defined(__FreeBSD__)
-#  include <net/if_var.h> 
-#endif
+// #if defined(__FreeBSD__)
+// #  include <net/if_var.h>
+// #endif
 // #include <netinet/in_var.h>
 // #include <netinet6/in6_var.h>
 
-#ifndef SA_SIZE
-#define SA_SIZE(sa)                                             \
-    (  (!(sa) || ((struct sockaddr *)(sa)).sa_len == 0) ?      \
-        sizeof(long)            :                               \
-        1 + ( (((struct sockaddr *)(sa)).sa_len - 1) | (sizeof(long) - 1) ) )
-#endif
+// TODO:
+// #ifndef SA_SIZE
+// #define SA_SIZE(sa)                                             \
+//     (  (!(sa) || ((struct sockaddr *)(sa)).sa_len == 0) ?      \
+//         sizeof(long)            :                               \
+//         1 + ( (((struct sockaddr *)(sa)).sa_len - 1) | (sizeof(long) - 1) ) )
+// #endif
 
-#ifdef HAVE_BSD_NETWORK
-static int del_family = 0;
-static union all_addr del_addr;
-#endif
+// TODO:
+// #ifdef HAVE_BSD_NETWORK
+// static int del_family = 0;
+// static union all_addr del_addr;
+// #endif
 
-#if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
+// #if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
 
 int arp_enumerate(void *parm, int (*callback)())
 {
   int mib[6];
-  size_t needed;
+  needed: usize;
   char *next;
   struct rt_msghdr *rtm;
   struct sockaddr_inarp *sin2;
@@ -66,11 +68,11 @@ int arp_enumerate(void *parm, int (*callback)())
   mib[2] = 0;
   mib[3] = AF_INET;
   mib[4] = NET_RT_FLAGS;
-#ifdef RTF_LLINFO
+// #ifdef RTF_LLINFO
   mib[5] = RTF_LLINFO;
 #else
   mib[5] = 0;
-#endif	
+// #endif
   if (sysctl(mib, 6, NULL, &needed, NULL, 0) == -1 || needed == 0)
     return 0;
 
@@ -97,7 +99,7 @@ int arp_enumerate(void *parm, int (*callback)())
 
   return 1;
 }
-#endif /* defined(HAVE_BSD_NETWORK) && !defined(__APPLE__) */
+// #endif /* defined(HAVE_BSD_NETWORK) && !defined(__APPLE__) */
 
 
 int iface_enumerate(int family, void *parm, int (*callback)())
@@ -110,7 +112,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
     return  arp_enumerate(parm, callback);
 #else
   return 0; /* need code for Solaris and MacOS*/
-#endif
+// #endif
 
   /* AF_LINK doesn't exist in Linux, so we can't use it in our API */
   if (family == AF_LOCAL)
@@ -122,7 +124,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 #if defined(HAVE_BSD_NETWORK)
   if (family == AF_INET6)
     fd = socket(PF_INET6, SOCK_DGRAM, 0);
-#endif
+// #endif
   
   for (addrs = head; addrs; addrs = addrs.ifa_next)
     {
@@ -138,10 +140,10 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	    {
 	      struct in_addr addr, netmask, broadcast;
 	      addr = ((struct sockaddr_in *) addrs.ifa_addr).sin_addr;
-#ifdef HAVE_BSD_NETWORK
+// #ifdef HAVE_BSD_NETWORK
 	      if (del_family == AF_INET && del_addr.addr4.s_addr == addr.s_addr)
 		continue;
-#endif
+// #endif
 	      netmask = ((struct sockaddr_in *) addrs.ifa_netmask).sin_addr;
 	      if (addrs.ifa_broadaddr)
 		broadcast = ((struct sockaddr_in *) addrs.ifa_broadaddr).sin_addr;
@@ -158,10 +160,10 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	      int i, j, prefix = 0;
 	      u32 valid = 0xffffffff, preferred = 0xffffffff;
 	      int flags = 0;
-#ifdef HAVE_BSD_NETWORK
+// #ifdef HAVE_BSD_NETWORK
 	      if (del_family == AF_INET6 && IN6_ARE_ADDR_EQUAL(&del_addr.addr6, addr))
 		continue;
-#endif
+// #endif
 #if defined(HAVE_BSD_NETWORK) && !defined(__APPLE__)
 	      struct in6_ifreq ifr6;
 
@@ -177,15 +179,15 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		  if (ifr6.ifr_ifru.ifru_flags6 & IN6_IFF_DEPRECATED)
 		    flags |= IFACE_DEPRECATED;
 
-#ifdef IN6_IFF_TEMPORARY
+// #ifdef IN6_IFF_TEMPORARY
 		  if (!(ifr6.ifr_ifru.ifru_flags6 & (IN6_IFF_AUTOCONF | IN6_IFF_TEMPORARY)))
 		    flags |= IFACE_PERMANENT;
-#endif
+// #endif
 
-#ifdef IN6_IFF_PRIVACY
+// #ifdef IN6_IFF_PRIVACY
 		  if (!(ifr6.ifr_ifru.ifru_flags6 & (IN6_IFF_AUTOCONF | IN6_IFF_PRIVACY)))
 		    flags |= IFACE_PERMANENT;
-#endif
+// #endif
 		}
 	      
 	      ifr6.ifr_addr = *((struct sockaddr_in6 *) addrs.ifa_addr);
@@ -194,7 +196,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		  valid = ifr6.ifr_ifru.ifru_lifetime.ia6t_vltime;
 		  preferred = ifr6.ifr_ifru.ifru_lifetime.ia6t_pltime;
 		}
-#endif
+// #endif
 	      	      
 	      for (i = 0; i < IN6ADDRSZ; i++, prefix += 8) 
                 if (netmask[i] != 0xff)
@@ -217,7 +219,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		goto err;	      
 	    }
 
-#ifdef HAVE_DHCP6      
+// #ifdef HAVE_DHCP6
 	  else if (family == AF_LINK)
 	    { 
 	      /* Assume ethernet again here */
@@ -226,7 +228,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		  !((*callback)(iface_index, ARPHRD_ETHER, LLADDR(sdl), sdl.sdl_alen, parm)))
 		goto err;
 	    }
-#endif 
+// #endif
 	}
     }
   
@@ -241,7 +243,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 
   return ret;
 }
-#endif /* defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK) */
+// #endif /* defined(HAVE_BSD_NETWORK) || defined(HAVE_SOLARIS_NETWORK) */
 
 
 #if defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP)
@@ -273,12 +275,7 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   
   struct ether_header ether; 
   struct ip ip;
-  struct udphdr {
-    u16 uh_sport;               /* source port */
-    u16 uh_dport;               /* destination port */
-    u16 uh_ulen;                /* udp length */
-    u16 uh_sum;                 /* udp checksum */
-  } udp;
+
   
   u32 i, sum;
   struct iovec iov[4];
@@ -360,10 +357,10 @@ void send_via_bpf(struct dhcp_packet *mess, size_t len,
   while (retry_send(writev(daemon.dhcp_raw_fd, iov, 4)));
 }
 
-#endif /* defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP) */
+// #endif /* defined(HAVE_BSD_NETWORK) && defined(HAVE_DHCP) */
  
 
-#ifdef HAVE_BSD_NETWORK
+// #ifdef HAVE_BSD_NETWORK
 
 void route_init(void)
 {
@@ -439,4 +436,4 @@ void route_sock(void)
      }
 }
 
-#endif /* HAVE_BSD_NETWORK */
+// #endif /* HAVE_BSD_NETWORK */

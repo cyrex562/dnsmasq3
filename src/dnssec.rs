@@ -17,7 +17,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 
 #define SERIAL_UNDEF  -100
 pub const SERIAL_EQ: u32 = 0;
@@ -226,7 +226,7 @@ static int is_check_date(unsigned long curtime)
 */
 struct rdata_state {
   u16 *desc;
-  size_t c;
+  c: usize;
   unsigned char *end, *ip, *op;
   char *buff;
 };
@@ -2157,7 +2157,7 @@ size_t dnssec_generate_query(struct dns_header *header, unsigned char *end, char
 			     int type, int edns_pktsz)
 {
   unsigned char *p;
-  size_t ret;
+  ret: usize;
 
   header->qdcount = htons(1);
   header->ancount = htons(0);
@@ -2214,4 +2214,4 @@ int errflags_to_ede(int status)
   else
     return EDE_UNSET;
 }
-#endif /* HAVE_DNSSEC */
+// #endif /* HAVE_DNSSEC */

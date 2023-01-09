@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_AUTH
+// #ifdef HAVE_AUTH
 
 static struct addrlist *find_addrlist(struct addrlist *list, int flag, union all_addr *addr_u)
 {
@@ -897,4 +897,4 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
   return ansp - (unsigned char *)header;
 }
   
-#endif  
+// #endif

@@ -39,35 +39,11 @@
 // #include <linux/rtnetlink.h>
 // #include <errno.h>
 
-pub const DHCP_CHADDR_MAX: u32 = 16;
-pub const BOOTREQUEST: u32 = 1;
-pub const DHCP_COOKIE: u32 = 0;x63825363
-pub const OPTION_PAD: u32 = 0;
-pub const OPTION_LEASE_TIME: u32 = 51;
-pub const OPTION_OVERLOAD: u32 = 52;
-pub const OPTION_MESSAGE_TYPE: u32 = 53;
-pub const OPTION_REQUESTED_OPTIONS: u32 = 55;
-pub const OPTION_END: u32 = 255;
-pub const DHCPINFORM: u32 = 8;
-pub const DHCP_SERVER_PORT: u32 = 67;
-
-#define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
-#define option_ptr(opt) ((void *)&(((unsigned char *)(opt))[2]))
+// #define option_len(opt) ((int)(((unsigned char *)(opt))[1]))
+// #define option_ptr(opt) ((void *)&(((unsigned char *)(opt))[2]))
 
 
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned u32: i32;
 
-struct dhcp_packet {
-  u8 op, htype, hlen, hops;
-  u32 xid;
-  u16 secs, flags;
-  struct in_addr ciaddr, yiaddr, siaddr, giaddr;
-  u8 chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
-  u32 cookie;
-  unsigned char options[308];
-};
 
 static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize)
 {
@@ -139,7 +115,7 @@ int main(int argc, char **argv)
   unsigned char *p = packet.options;
   struct sockaddr_in dest;
   int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  ssize_t rc;
+  src: usize;
   
   if (argc < 2)
     { 

@@ -20,19 +20,19 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_BROKEN_RTC
+// #ifdef HAVE_BROKEN_RTC
 // #include <sys/times.h>
-#endif
+// #endif
 
 #if defined(HAVE_LIBIDN2)
 // #include <idn2.h>
 #elif defined(HAVE_IDN)
 // #include <idna.h>
-#endif
+// #endif
 
-#ifdef HAVE_LINUX_NETWORK
+// #ifdef HAVE_LINUX_NETWORK
 // #include <sys/utsname.h>
-#endif
+// #endif
 
 /* SURF random number generator */
 
@@ -150,7 +150,7 @@ static int check_name(char *in)
         return 0;
 #else
         idn_encode = 1;
-#endif
+// #endif
       else if (c != ' ')
         {
           nowhite = 1;
@@ -159,14 +159,14 @@ static int check_name(char *in)
             hasuscore = 1;
 #else
           (void)hasuscore;
-#endif
+// #endif
 
 #if defined(HAVE_IDN) || defined(HAVE_LIBIDN2)
           if (c >= 'A' && c <= 'Z')
             hasucase = 1;
 #else
           (void)hasucase;
-#endif
+// #endif
         }
     }
 
@@ -179,7 +179,7 @@ static int check_name(char *in)
   idn_encode = idn_encode || (hasucase && !hasuscore);
 #else
   idn_encode = idn_encode || hasucase;
-#endif
+// #endif
 
   return (idn_encode) ? 2 : 1;
 }
@@ -254,7 +254,7 @@ char *canonicalise(char *in, int *nomem)
     }
 #else
   (void)rc;
-#endif
+// #endif
   
   if ((ret = whine_malloc(strlen(in)+1)))
     strcpy(ret, in);
@@ -280,11 +280,11 @@ unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
           if (limit && p + 1 > (unsigned char*)limit)
             return NULL;
 
-#ifdef HAVE_DNSSEC
+// #ifdef HAVE_DNSSEC
 	  if (option_bool(OPT_DNSSEC_VALID) && *sval == NAME_ESCAPE)
 	    *p++ = (*(++sval))-1;
 	  else
-#endif		
+// #endif
 	    *p++ = *sval;
 	}
       
@@ -379,14 +379,14 @@ int sockaddr_isnull(const union mysockaddr *s)
 
 int sa_len(union mysockaddr *addr)
 {
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
   return addr.sa.sa_len;
 #else
   if (addr.sa.sa_family == AF_INET6)
     return sizeof(addr.in6);
   else
     return sizeof(addr.in);
-#endif
+// #endif
 }
 
 /* don't use strcasecmp and friends here - they may be messed up by LOCALE */
@@ -458,7 +458,7 @@ int hostname_issubdomain(char *a, char *b)
   
 time_t dnsmasq_time(void)
 {
-#ifdef HAVE_BROKEN_RTC
+// #ifdef HAVE_BROKEN_RTC
   struct timespec ts;
 
   if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0)
@@ -467,7 +467,7 @@ time_t dnsmasq_time(void)
   return ts.tv_sec;
 #else
   return time(NULL);
-#endif
+// #endif
 }
 
 u32 dnsmasq_milliseconds(void)
@@ -784,7 +784,7 @@ void close_fds(long max_fd, int spare1, int spare2, int spare3)
   /* On Linux, use the /proc/ filesystem to find which files
      are actually open, rather than iterate over the whole space,
      for efficiency reasons. If this fails we drop back to the dumb code. */
-#ifdef HAVE_LINUX_NETWORK 
+// #ifdef HAVE_LINUX_NETWORK
   DIR *d;
   
   if ((d = opendir("/proc/self/fd")))
@@ -810,7 +810,7 @@ void close_fds(long max_fd, int spare1, int spare2, int spare3)
       closedir(d);
       return;
   }
-#endif
+// #endif
 
   /* fallback, dumb code. */
   for (max_fd--; max_fd >= 0; max_fd--)
@@ -856,7 +856,7 @@ int wildcard_matchn(const char* wildcard, const char* match, int num)
   return (!num) || (*wildcard == *match);
 }
 
-#ifdef HAVE_LINUX_NETWORK
+// #ifdef HAVE_LINUX_NETWORK
 int kernel_version(void)
 {
   struct utsname utsname;
@@ -873,4 +873,4 @@ int kernel_version(void)
   split = strtok(NULL, ".");
   return version * 256 + (split ? atoi(split) : 0);
 }
-#endif
+// #endif

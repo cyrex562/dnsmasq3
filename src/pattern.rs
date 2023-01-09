@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_CONNTRACK
+// #ifdef HAVE_CONNTRACK
 
 #define LOG(...) \
   do { \
@@ -383,4 +383,4 @@ int is_dns_name_matching_pattern(const char *name, const char *pattern)
   return !*n && !*p;
 }
 
-#endif
+// #endif

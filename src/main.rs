@@ -52,5 +52,21 @@ mod ubus;
 mod util;
 mod arp_record;
 mod app_context;
+mod dhcp_constants;
+mod dhcp_packet;
+mod udp_hdr;
+mod watch;
+mod iface_param;
+mod match_param;
+mod dhcp6_option;
+mod dhcp6_iaaddr_option;
+mod dhcp6_iana_option;
+mod dhcp6_packet;
+mod event_desc;
+mod all_addr;
+mod bogus_addr;
+mod doctor;
+mod mx_srv_record;
+mod naptr;
 
 fn main() {}

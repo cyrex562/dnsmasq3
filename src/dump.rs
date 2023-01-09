@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DUMPFILE
+// #ifdef HAVE_DUMPFILE
 
 // #include <netinet/icmp6.h>
 
@@ -136,7 +136,7 @@ static void do_dump_packet(int mask, void *packet, size_t len,
   struct timeval time;
   u32 i, sum;
   void *iphdr;
-  size_t ipsz;
+  ipsz: usize;
   rc: i32;
      
   /* if port != -1 it carries a port number 
@@ -292,4 +292,4 @@ static void do_dump_packet(int mask, void *packet, size_t len,
 
 }
 
-#endif
+// #endif

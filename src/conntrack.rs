@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_CONNTRACK
+// #ifdef HAVE_CONNTRACK
 
 // #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
@@ -82,4 +82,4 @@ static int callback(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, vo
   return NFCT_CB_CONTINUE;
 }
 
-#endif /* HAVE_CONNTRACK */
+// #endif /* HAVE_CONNTRACK */

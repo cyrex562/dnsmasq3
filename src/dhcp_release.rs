@@ -63,15 +63,7 @@ typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned u32: i32;
 
-struct dhcp_packet {
-  u8 op, htype, hlen, hops;
-  u32 xid;
-  u16 secs, flags;
-  struct in_addr ciaddr, yiaddr, siaddr, giaddr;
-  u8 chaddr[DHCP_CHADDR_MAX], sname[64], file[128];
-  u32 cookie;
-  unsigned char options[308];
-};
+
 
 static struct iovec iov;
 
@@ -103,7 +95,7 @@ static int expand_buf(struct iovec *iov, size_t size)
 static ssize_t netlink_recv(int fd)
 {
   struct msghdr msg;
-  ssize_t rc;
+  src: usize;
 
   msg.msg_control = NULL;
   msg.msg_controllen = 0;
@@ -182,7 +174,7 @@ static struct in_addr find_interface(struct in_addr client, int fd, unsigned int
 {
   struct sockaddr_nl addr;
   struct nlmsghdr *h;
-  ssize_t len;
+  slen: usize;
  
   struct {
     struct nlmsghdr nlh;

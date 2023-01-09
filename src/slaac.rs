@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 
 // #include <netinet/icmp6.h>
 
@@ -56,14 +56,14 @@ void slaac_add_addrs(struct dhcp_lease *lease, time_t now, int force)
 	else if (lease.hwaddr_len == 8 &&
 		 lease.hwaddr_type == ARPHRD_EUI64)
 	  memcpy(&addr.s6_addr[8], lease.hwaddr, 8);
-#endif
+// #endif
 #if defined(ARPHRD_IEEE1394) && defined(ARPHRD_EUI64)
 	else if (lease.clid_len == 9 &&
 		 lease.clid[0] ==  ARPHRD_EUI64 &&
 		 lease.hwaddr_type == ARPHRD_IEEE1394)
 	  /* firewire has EUI-64 identifier as clid */
 	  memcpy(&addr.s6_addr[8], &lease.clid[1], 8);
-#endif
+// #endif
 	else
 	  continue;
 	
@@ -157,9 +157,9 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 	    ping.sequence_no = slaac.backoff;
 	    
 	    memset(&addr, 0, sizeof(addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
 	    addr.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+// #endif
 	    addr.sin6_family = AF_INET6;
 	    addr.sin6_port = htons(IPPROTO_ICMPV6);
 	    addr.sin6_addr = slaac.addr;
@@ -210,4 +210,4 @@ void slaac_ping_reply(struct in6_addr *sender, unsigned char *packet, char *inte
   lease_update_dns(gotone);
 }
 	
-#endif
+// #endif

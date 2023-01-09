@@ -16,32 +16,32 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_LINUX_NETWORK
+// #ifdef HAVE_LINUX_NETWORK
 
 // #include <linux/types.h>
 // #include <linux/netlink.h>
 // #include <linux/rtnetlink.h>
 
 /* Blergh. Radv does this, so that's our excuse. */
-#ifndef SOL_NETLINK
+// #endif SOL_NETLINK
 pub const SOL_NETLINK: u32 = 270;
-#endif
+// #endif
 
-#ifndef NETLINK_NO_ENOBUFS
+// #endif NETLINK_NO_ENOBUFS
 pub const NETLINK_NO_ENOBUFS: u32 = 5;
-#endif
+// #endif
 
 /* linux 2.6.19 buggers up the headers, patch it up here. */ 
-#ifndef IFA_RTA
+// #endif IFA_RTA
 #  define IFA_RTA(r)  \
        ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
 
 #  include <linux/if_addr.h>
-#endif
+// #endif
 
-#ifndef NDA_RTA
+// #endif NDA_RTA
 #  define NDA_RTA(r) ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ndmsg)))) 
-#endif
+// #endif
 
 /* Used to request refresh of addresses or routes just once,
  * when multiple changes might be announced. */
@@ -99,7 +99,7 @@ static ssize_t netlink_recv(int flags)
 {
   struct msghdr msg;
   struct sockaddr_nl nladdr;
-  ssize_t rc;
+  src: usize;
 
   while (1)
     {
@@ -155,7 +155,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 {
   struct sockaddr_nl addr;
   struct nlmsghdr *h;
-  ssize_t len;
+  slen: usize;
   static unsigned int seq = 0;
   int callback_ok = 1;
   unsigned state = 0;
@@ -321,7 +321,7 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 	      if (!((*callback)(neigh->ndm_family, inaddr, mac, maclen, parm)))
 		callback_ok = 0;
 	  }
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
 	else if (h->nlmsg_type == RTM_NEWLINK && family == AF_LOCAL)
 	  {
 	    struct ifinfomsg *link =  NLMSG_DATA(h);
@@ -345,13 +345,13 @@ int iface_enumerate(int family, void *parm, int (*callback)())
 		!((*callback)((int)link->ifi_index, (unsigned int)link->ifi_type, mac, maclen, parm)))
 	      callback_ok = 0;
 	  }
-#endif
+// #endif
     }
 }
 
 static void nl_multicast_state(unsigned state)
 {
-  ssize_t len;
+  slen: usize;
   struct nlmsghdr *h;
 
   do {
@@ -404,4 +404,4 @@ static unsigned nl_async(struct nlmsghdr *h, unsigned state)
     }
   return state;
 }
-#endif /* HAVE_LINUX_NETWORK */
+// #endif /* HAVE_LINUX_NETWORK */

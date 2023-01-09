@@ -15,7 +15,7 @@
 */
 
 // #include "dnsmasq.h"
-#ifdef HAVE_INOTIFY
+// #ifdef HAVE_INOTIFY
 
 // #include <sys/inotify.h>
 // #include <sys/param.h> /* For MAXSYMLINKS */
@@ -234,10 +234,10 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 		 {
 		   if (dd->flags & AH_HOSTS)
 		     total_size = read_hostsfile(path, ah->index, total_size, rhash, revhashsz);
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 		   else if (dd->flags & (AH_DHCP_HST | AH_DHCP_OPT))
 		     option_read_dynfile(path, dd->flags);
-#endif		   
+// #endif
 		 }
 	     }
 	 }
@@ -265,7 +265,7 @@ int inotify_check(time_t now)
       
       for (p = inotify_buffer; rc - (p - inotify_buffer) >= (int)sizeof(struct inotify_event); p += sizeof(struct inotify_event) + in->len) 
 	{
-	  size_t namelen;
+	  namelen: usize;
 
 	  in = (struct inotify_event*)p;
 	  
@@ -311,7 +311,7 @@ int inotify_check(time_t now)
 			    /* (Re-)load hostsfile only if this event isn't triggered by deletion */
 			    if (!(in->mask & IN_DELETE))
 			      read_hostsfile(path, ah->index, 0, NULL, 0);
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 			    if (daemon->dhcp || daemon->doing_dhcp6) 
 			      {
 				/* Propagate the consequences of loading a new dhcp-host */
@@ -320,10 +320,10 @@ int inotify_check(time_t now)
 				lease_update_file(now); 
 				lease_update_dns(1);
 			      }
-#endif
+// #endif
 			  }
 		      }
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 		    else if (dd->flags & AH_DHCP_HST)
 		      {
 			if (option_read_dynfile(path, AH_DHCP_HST))
@@ -337,7 +337,7 @@ int inotify_check(time_t now)
 		      }
 		    else if (dd->flags & AH_DHCP_OPT)
 		      option_read_dynfile(path, AH_DHCP_OPT);
-#endif
+// #endif
 		    
 		    if (!ah)
 		      free(path);
@@ -348,4 +348,4 @@ int inotify_check(time_t now)
   return hit;
 }
 
-#endif  /* INOTIFY */
+// #endif  /* INOTIFY */

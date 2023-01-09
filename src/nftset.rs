@@ -42,7 +42,7 @@ int add_to_nftset(const char *setname, const union all_addr *ipaddr, int flags, 
 {
   const char *cmd = remove ? cmd_del : cmd_add;
   int ret, af = (flags & F_IPV4) ? AF_INET : AF_INET6;
-  size_t new_sz;
+  new_sz: usize;
   char *new, *err, *nl;
   static char *cmd_buf = NULL;
   static size_t cmd_buf_sz = 0;
@@ -91,4 +91,4 @@ int add_to_nftset(const char *setname, const union all_addr *ipaddr, int flags, 
   return ret;
 }
 
-#endif
+// #endif

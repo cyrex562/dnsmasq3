@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#ifdef HAVE_DBUS
+// #ifdef HAVE_DBUS
 
 // #include <dbus/dbus.h>
 
@@ -35,11 +35,11 @@ const char* introspection_xml_template =
 "    <method name=\"GetVersion\">\n"
 "      <arg name=\"version\" direction=\"out\" type=\"s\"/>\n"
 "    </method>\n"
-#ifdef HAVE_LOOP
+// #ifdef HAVE_LOOP
 "    <method name=\"GetLoopServers\">\n"
 "      <arg name=\"server\" direction=\"out\" type=\"as\"/>\n"
 "    </method>\n"
-#endif
+// #endif
 "    <method name=\"SetServers\">\n"
 "      <arg name=\"servers\" direction=\"in\" type=\"av\"/>\n"
 "    </method>\n"
@@ -73,7 +73,7 @@ const char* introspection_xml_template =
 "      <arg name=\"hwaddr\" type=\"s\"/>\n"
 "      <arg name=\"hostname\" type=\"s\"/>\n"
 "    </signal>\n"
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 "    <method name=\"AddDhcpLease\">\n"
 "       <arg name=\"ipaddr\" type=\"s\"/>\n"
 "       <arg name=\"hwaddr\" type=\"s\"/>\n"
@@ -87,7 +87,7 @@ const char* introspection_xml_template =
 "       <arg name=\"ipaddr\" type=\"s\"/>\n"
 "       <arg name=\"success\" type=\"b\" direction=\"out\"/>\n"
 "    </method>\n"
-#endif
+// #endif
 "    <method name=\"GetMetrics\">\n"
 "      <arg name=\"metrics\" direction=\"out\" type=\"a{su}\"/>\n"
 "    </method>\n"
@@ -101,10 +101,7 @@ const char* introspection_xml_template =
 
 static char *introspection_xml = NULL;
 
-struct watch {
-  DBusWatch *watch;      
-  struct watch *next;
-};
+
 
 
 static dbus_bool_t add_watch(DBusWatch *watch, void *data)
@@ -170,9 +167,9 @@ static DBusMessage* dbus_read_servers(DBusMessage *message)
 	  dbus_message_iter_get_basic(&iter, &a);
 	  dbus_message_iter_next (&iter);
 	  
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
 	  source_addr.in.sin_len = addr.in.sin_len = sizeof(struct sockaddr_in);
-#endif
+// #endif
 	  addr.in.sin_addr.s_addr = ntohl(a);
 	  source_addr.in.sin_family = addr.in.sin_family = AF_INET;
 	  addr.in.sin_port = htons(NAMESERVER_PORT);
@@ -200,9 +197,9 @@ static DBusMessage* dbus_read_servers(DBusMessage *message)
 	  if (i == sizeof(struct in6_addr))
 	    {
 	      memcpy(&addr.in6.sin6_addr, p, sizeof(struct in6_addr));
-#ifdef HAVE_SOCKADDR_SA_LEN
+// #ifdef HAVE_SOCKADDR_SA_LEN
               source_addr.in6.sin6_len = addr.in6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+// #endif
               source_addr.in6.sin6_family = addr.in6.sin6_family = AF_INET6;
               addr.in6.sin6_port = htons(NAMESERVER_PORT);
               source_addr.in6.sin6_flowinfo = addr.in6.sin6_flowinfo = 0;
@@ -237,7 +234,7 @@ static DBusMessage* dbus_read_servers(DBusMessage *message)
   return NULL;
 }
 
-#ifdef HAVE_LOOP
+// #ifdef HAVE_LOOP
 static DBusMessage *dbus_reply_server_loop(DBusMessage *message)
 {
   DBusMessageIter args, args_iter;
@@ -258,7 +255,7 @@ static DBusMessage *dbus_reply_server_loop(DBusMessage *message)
 
   return reply;
 }
-#endif
+// #endif
 
 static DBusMessage* dbus_read_servers_ex(DBusMessage *message, int strings)
 {
@@ -500,7 +497,7 @@ static DBusMessage *dbus_set_bool(DBusMessage *message, int flag, char *name)
   return NULL;
 }
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 static DBusMessage *dbus_add_lease(DBusMessage* message)
 {
   struct dhcp_lease *lease;
@@ -588,7 +585,7 @@ static DBusMessage *dbus_add_lease(DBusMessage* message)
       if (!(lease = lease_find_by_addr(addr.addr4)))
     	lease = lease4_allocate(addr.addr4);
     }
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
   else if (inet_pton(AF_INET6, ipaddr, &addr.addr6))
     {
       if (!(lease = lease6_find_by_addr(&addr.addr6, 128, 0)))
@@ -596,7 +593,7 @@ static DBusMessage *dbus_add_lease(DBusMessage* message)
 				is_temporary ? LEASE_TA : LEASE_NA);
       lease_set_iaid(lease, ia_id);
     }
-#endif
+// #endif
   else
     return dbus_message_new_error_printf(message, DBUS_ERROR_INVALID_ARGS,
 					 "Invalid IP address '%s'", ipaddr);
@@ -643,10 +640,10 @@ static DBusMessage *dbus_del_lease(DBusMessage* message)
 
   if (inet_pton(AF_INET, ipaddr, &addr.addr4))
     lease = lease_find_by_addr(addr.addr4);
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
   else if (inet_pton(AF_INET6, ipaddr, &addr.addr6))
     lease = lease6_find_by_addr(&addr.addr6, 128, 0);
-#endif
+// #endif
   else
     return dbus_message_new_error_printf(message, DBUS_ERROR_INVALID_ARGS,
 					 "Invalid IP address '%s'", ipaddr);
@@ -667,7 +664,7 @@ static DBusMessage *dbus_del_lease(DBusMessage* message)
     
   return reply;
 }
-#endif
+// #endif
 
 static DBusMessage *dbus_get_metrics(DBusMessage* message)
 {
@@ -792,12 +789,12 @@ DBusHandlerResult message_handler(DBusConnection *connection,
       
       dbus_message_append_args(reply, DBUS_TYPE_STRING, &v, DBUS_TYPE_INVALID);
     }
-#ifdef HAVE_LOOP
+// #ifdef HAVE_LOOP
   else if (strcmp(method, "GetLoopServers") == 0)
     {
       reply = dbus_reply_server_loop(message);
     }
-#endif
+// #endif
   else if (strcmp(method, "SetServers") == 0)
     {
       reply = dbus_read_servers(message);
@@ -825,7 +822,7 @@ DBusHandlerResult message_handler(DBusConnection *connection,
     {
       reply = dbus_set_bool(message, OPT_BOGUSPRIV, "bogus-priv");
     }
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
   else if (strcmp(method, "AddDhcpLease") == 0)
     {
       reply = dbus_add_lease(message);
@@ -834,7 +831,7 @@ DBusHandlerResult message_handler(DBusConnection *connection,
     {
       reply = dbus_del_lease(message);
     }
-#endif
+// #endif
   else if (strcmp(method, "GetMetrics") == 0)
     {
       reply = dbus_get_metrics(message);
@@ -970,7 +967,7 @@ void check_dbus_listeners()
     }
 }
 
-#ifdef HAVE_DHCP
+// #ifdef HAVE_DHCP
 void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
 {
   DBusConnection *connection = (DBusConnection *)daemon->dbus;
@@ -986,14 +983,14 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
   if (!hostname)
     hostname = "";
   
-#ifdef HAVE_DHCP6
+// #ifdef HAVE_DHCP6
    if (lease->flags & (LEASE_TA | LEASE_NA))
      {
        print_mac(mac, lease->clid, lease->clid_len);
        inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
      }
    else
-#endif
+// #endif
      {
        p = extended_hwaddr(lease->hwaddr_type, lease->hwaddr_len,
 			   lease->hwaddr, lease->clid_len, lease->clid, &i);
@@ -1022,6 +1019,6 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
   
   dbus_message_unref(message);
 }
-#endif
+// #endif
 
-#endif
+// #endif
