@@ -1,5 +1,7 @@
+use std::os::unix::raw::pid_t;
 use libc::{c_char, iovec, nfds_t, pollfd, time_t};
 use crate::arp_record::arp_record;
+use crate::daemon::daemon;
 
 #[derive(Default, Debug,Clone)]
 pub struct AppContext {
@@ -17,7 +19,9 @@ pub struct AppContext {
     pub nfds: nfds_t,
     pub arrsize: nfds_t,
     pub hop_limit: i32,
-    
+    pub daemon: daemon,
+    pub pid: pid_t,
+    pub pipewrite: i32,
 }
 
 impl AppContext {
