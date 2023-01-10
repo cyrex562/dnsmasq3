@@ -35,12 +35,12 @@ int indextoname(int fd, int index, char *name)
 }
 
 
-#elif defined(HAVE_SOLARIS_NETWORK)
+// #elif defined(HAVE_SOLARIS_NETWORK)
 
 // #include <zone.h>
 // #include <alloca.h>
 // #endif LIFC_UNDER_IPMP
-#  define LIFC_UNDER_IPMP 0
+// #  define LIFC_UNDER_IPMP 0
 // #endif
 
 int indextoname(int fd, int index, char *name)

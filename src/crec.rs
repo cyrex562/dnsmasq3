@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use libc::{c_char, time_t};
 use crate::all_addr::all_addr;
 use crate::bigname::bigname;
@@ -14,6 +15,35 @@ pub union NameUnion {
     pub namep: *mut c_char,
 }
 
+impl Default for NameUnion {
+    fn default() -> Self {
+        Self {
+            sname: [0; SMALLDNAME as usize]
+        }
+    }
+}
+
+impl Debug for NameUnion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.bname.is_null() == false {
+            write!(f, "{:?}", self.bname)
+        } else if self.namep.is_null() == false {
+            write!(f, "{:?}", self.namep)
+        } else {
+            write!(f, "{:?}", self.sname)
+        }
+    }
+}
+
+impl Clone for NameUnion {
+    fn clone(&self) -> Self {
+        Self {
+            sname: self.sname.clone()
+        }
+    }
+}
+
+
 #[derive(Default, Debug, Clone)]
 pub struct crec {
     // struct crec *next, *prev, *hash_next;
@@ -28,6 +58,7 @@ pub struct crec {
     pub flags: u32,
     pub name: NameUnion,
 }
+
 
 // #define SIZEOF_BARE_CREC (sizeof(struct crec) - SMALLDNAME)
 // #define SIZEOF_POINTER_CREC (sizeof(struct crec) + sizeof(char *) - SMALLDNAME)

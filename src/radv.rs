@@ -26,47 +26,30 @@
 
 // #include <netinet/icmp6.h>
 
-struct ra_param {
-  time_t now;
-  int ind, managed, other, first, adv_router;
-  char *if_name;
-  struct dhcp_netid *tags;
-  struct in6_addr link_local, link_global, ula;
-  unsigned int glob_pref_time, link_pref_time, ula_pref_time, adv_interval, prio;
-  struct dhcp_context *found_context;
-};
 
-struct search_param {
-  time_t now; iface: i32;
-  char name[IF_NAMESIZE+1];
-};
 
-struct alias_param {
-  iface: i32;
-  struct dhcp_bridge *bridge;
-  num_alias_ifs: i32;
-  max_alias_ifs: i32;
-  int *alias_ifs;
-};
 
-static void send_ra(time_t now, int iface, char *iface_name, struct in6_addr *dest);
-static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_addr *dest,
-                    int send_iface);
-static int send_ra_to_aliases(int index, unsigned int type, char *mac, size_t maclen, void *parm);
-static int add_prefixes(struct in6_addr *local,  int prefix,
-			int scope, int if_index, int flags, 
-			unsigned int preferred, unsigned int valid, void *vparam);
-static int iface_search(struct in6_addr *local,  int prefix,
-			int scope, int if_index, int flags, 
-			int prefered, int valid, void *vparam);
-static int add_lla(int index, unsigned int type, char *mac, size_t maclen, void *parm);
-static void new_timeout(struct dhcp_context *context, char *iface_name, time_t now);
-static unsigned int calc_lifetime(struct ra_interface *ra);
-static unsigned int calc_interval(struct ra_interface *ra);
-static unsigned int calc_prio(struct ra_interface *ra);
-static struct ra_interface *find_iface_param(char *iface);
 
-static hop_limit: i32;
+
+
+// static void send_ra(time_t now, int iface, char *iface_name, struct in6_addr *dest);
+// static void send_ra_alias(time_t now, int iface, char *iface_name, struct in6_addr *dest,
+//                     int send_iface);
+// static int send_ra_to_aliases(int index, unsigned int type, char *mac, size_t maclen, void *parm);
+// static int add_prefixes(struct in6_addr *local,  int prefix,
+// 			int scope, int if_index, int flags, 
+// 			unsigned int preferred, unsigned int valid, void *vparam);
+// static int iface_search(struct in6_addr *local,  int prefix,
+// 			int scope, int if_index, int flags, 
+// 			int prefered, int valid, void *vparam);
+// static int add_lla(int index, unsigned int type, char *mac, size_t maclen, void *parm);
+// static void new_timeout(struct dhcp_context *context, char *iface_name, time_t now);
+// static unsigned int calc_lifetime(struct ra_interface *ra);
+// static unsigned int calc_interval(struct ra_interface *ra);
+// static unsigned int calc_prio(struct ra_interface *ra);
+// static struct ra_interface *find_iface_param(char *iface);
+
+// static hop_limit: i32;
 
 void ra_init(time_t now)
 {

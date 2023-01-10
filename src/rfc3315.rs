@@ -19,45 +19,33 @@
 
 // #ifdef HAVE_DHCP6
 
-struct state {
-  unsigned char *clid;
-  int clid_len, ia_type, interface, hostname_auth, lease_allocate;
-  char *client_hostname, *hostname, *domain, *send_domain;
-  struct dhcp_context *context;
-  struct in6_addr *link_address, *fallback, *ll_addr, *ula_addr;
-  unsigned int xid, fqdn_flags, iaid;
-  char *iface_name;
-  void *packet_options, *end;
-  struct dhcp_netid *tags, *context_tags;
-  unsigned char mac[DHCP_CHADDR_MAX];
-  unsigned int mac_len, mac_type;
-};
 
-static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t sz, 
-			     struct in6_addr *client_addr, int is_unicast, time_t now);
-static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbuff, size_t sz, int is_unicast, time_t now);
-static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_opts);
-static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string);
-static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, char *string);
-static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize);
-static void *opt6_next(void *opts, void *end);
-static unsigned int opt6_uint(unsigned char *opt, int offset, int size);
-static void get_context_tag(struct state *state, struct dhcp_context *context);
-static int check_ia(struct state *state, void *opt, void **endp, void **ia_option);
-static int build_ia(struct state *state, int *t1cntr);
-static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz);
-static void mark_context_used(struct state *state, struct in6_addr *addr);
-static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr);
-static int check_address(struct state *state, struct in6_addr *addr);
-static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now);
-static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr);
-static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
-			unsigned int *min_time, struct in6_addr *addr, time_t now);
-static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now);
-static int add_local_addrs(struct dhcp_context *context);
-static struct dhcp_netid *add_options(struct state *state, int do_refresh);
-static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
-			    unsigned int *preferred_timep, unsigned int lease_time);
+
+// static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t sz, 
+// 			     struct in6_addr *client_addr, int is_unicast, time_t now);
+// static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbuff, size_t sz, int is_unicast, time_t now);
+// static void log6_opts(int nest, unsigned int xid, void *start_opts, void *end_opts);
+// static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string);
+// static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, char *string);
+// static void *opt6_find (void *opts, void *end, unsigned int search, unsigned int minsize);
+// static void *opt6_next(void *opts, void *end);
+// static unsigned int opt6_uint(unsigned char *opt, int offset, int size);
+// static void get_context_tag(struct state *state, struct dhcp_context *context);
+// static int check_ia(struct state *state, void *opt, void **endp, void **ia_option);
+// static int build_ia(struct state *state, int *t1cntr);
+// static void end_ia(int t1cntr, unsigned int min_time, int do_fuzz);
+// static void mark_context_used(struct state *state, struct in6_addr *addr);
+// static void mark_config_used(struct dhcp_context *context, struct in6_addr *addr);
+// static int check_address(struct state *state, struct in6_addr *addr);
+// static int config_valid(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr, struct state *state, time_t now);
+// static struct addrlist *config_implies(struct dhcp_config *config, struct dhcp_context *context, struct in6_addr *addr);
+// static void add_address(struct state *state, struct dhcp_context *context, unsigned int lease_time, void *ia_option, 
+// 			unsigned int *min_time, struct in6_addr *addr, time_t now);
+// static void update_leases(struct state *state, struct dhcp_context *context, struct in6_addr *addr, unsigned int lease_time, time_t now);
+// static int add_local_addrs(struct dhcp_context *context);
+// static struct dhcp_netid *add_options(struct state *state, int do_refresh);
+// static void calculate_times(struct dhcp_context *context, unsigned int *min_time, unsigned int *valid_timep, 
+// 			    unsigned int *preferred_timep, unsigned int lease_time);
 
 pub const opt: u32 = 6;_len(opt) ((int)(opt6_uint(opt, -2, 2)))
 pub const opt: u32 = 6;_type(opt) (opt6_uint(opt, -4, 2))

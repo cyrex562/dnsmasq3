@@ -19,7 +19,7 @@
  
 // #ifdef HAVE_DHCP6
 
-static outpacket_counter: usize;
+
 
 void end_opt6(int container)
 {

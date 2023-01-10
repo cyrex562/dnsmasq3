@@ -39,8 +39,8 @@
     event is OR of POLLIN, POLLOUT, POLLERR, etc
 */
 
-static struct pollfd *pollfds = NULL;
-static nfds_t nfds, arrsize = 0;
+// static struct pollfd *pollfds = NULL;
+// static nfds_t nfds, arrsize = 0;
 
 /* Binary search. Returns either the pollfd with fd, or
    if the fd doesn't match, or return equals nfds, the entry

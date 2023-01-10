@@ -15,13 +15,13 @@
 */
 
 /* define this to get facilitynames */
-#define SYSLOG_NAMES
+// #define SYSLOG_NAMES
 // #include "dnsmasq.h"
 // #include <setjmp.h>
 
-static volatile int mem_recover = 0;
-static jmp_buf mem_jmp;
-static int one_file(char *file, int hard_opt);
+// static volatile int mem_recover = 0;
+// static jmp_buf mem_jmp;
+// static int one_file(char *file, int hard_opt);
 
 /* Solaris headers don't have facility names. */
 // #ifdef HAVE_SOLARIS_NETWORK
@@ -61,7 +61,7 @@ struct myoption {
 };
 // #endif
 
-#define OPTSTRING "951yZDNLERKzowefnbvhdkqr:m:p:c:l:s:i:t:u:g:a:x:S:C:A:T:H:Q:I:B:F:G:O:M:X:V:U:j:P:J:W:Y:2:4:6:7:8:0:3:"
+pub const OPTSTRING: String = String::from("951yZDNLERKzowefnbvhdkqr:m:p:c:l:s:i:t:u:g:a:x:S:C:A:T:H:Q:I:B:F:G:O:M:X:V:U:j:P:J:W:Y:2:4:6:7:8:0:3:");
 
 /* options which don't have a one-char version */
 pub const LOPT_RELOAD: u32 = 256;

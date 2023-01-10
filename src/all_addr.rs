@@ -4,24 +4,20 @@
    sizeof(struct in6_addr) - 16 bytes.
 */
 
-use libc::c_char;
+use std::fmt::{Debug, Formatter};
+use std::ptr::{null, null_mut};
+use libc::{c_char, in6_addr, in_addr};
+use crate::blockdata::blockdata;
+use crate::cname_struct::Cname;
+use crate::util::{in6addr_to_string, inaddr_to_string};
 
-#[derive(Debug, Clone)]
-pub union TargetUnion {
-    //     //     union {
-    //     //       struct crec *cache;
-    //     //       char *name;
-    //     //     } target;
-    pub cache: *mut crec,
-    pub name: *mut c_char,
-}
 
 // struct {
 //     struct blockdata *keydata;
 //     unsigned short keylen, flags, keytag;
 //     unsigned char algo;
 //   } key;
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct KeyStruct {
     pub keydata: *mut blockdata,
     pub keylen: u16,
@@ -30,15 +26,16 @@ pub struct KeyStruct {
     pub algo: u8,
 }
 
-#[derive(Default, Debug, Clone)]
-pub struct Cname {
-    // struct {
-    //     unsigned uid: i32;
-    //     is_name_ptr: i32;  /* disciminates target union */
-    //   } cname;
-    pub target: TargetUnion,
-    pub uid: i32,
-    pub is_name_ptr: i32,
+impl Default for KeyStruct {
+    fn default() -> Self {
+        Self {
+            keydata: null_mut(),
+            keylen: 0,
+            flags: 0,
+            keytag: 0,
+            algo: 0
+        }
+    }
 }
 
 // struct {
@@ -47,7 +44,7 @@ pub struct Cname {
 //     unsigned char algo;
 //     unsigned char digest;
 //   } ds;
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct DsStruct {
     pub keydata: *mut blockdata,
     pub keylen: u16,
@@ -56,17 +53,41 @@ pub struct DsStruct {
     pub digest: u8,
 }
 
+impl Default for DsStruct {
+    fn default() -> Self {
+        Self {
+            keydata: null_mut(),
+            keylen: 0,
+            keytag: 0,
+            algo: 0,
+            digest: 0
+        }
+    }
+}
+
 //  struct {
 //     struct blockdata *target;
 //     unsigned short targetlen, srvport, priority, weight;
 //   } srv;
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct SrvStruct {
     pub target: *mut blockdata,
     pub targetlent: u16,
     pub srvport: u16,
     pub priority: u16,
     pub weight: u16,
+}
+
+impl Default for SrvStruct {
+    fn default() -> Self {
+        Self {
+            target: null_mut(),
+            targetlent: 0,
+            srvport: 0,
+            priority: 0,
+            weight: 0
+        }
+    }
 }
 
 //  struct {
@@ -82,15 +103,34 @@ pub struct LogStruct {
     pub ede: i32,
 }
 
-#[derive(Debug, Clone)]
 pub union all_addr {
-    // addr4: in_addr;
     pub addr4: in_addr,
-    // addr6: in6_addr;
     pub addr6: in6_addr,
     pub cname: Cname,
     pub key: KeyStruct,
     pub ds: DsStruct,
     pub srv: SrvStruct,
     pub log: LogStruct,
+}
+
+impl Default for all_addr {
+    fn default() -> Self {
+        Self {
+            addr6: in6_addr { s6_addr: [0;16] }
+        }
+    }
+}
+
+impl Debug for all_addr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{addr4: {}, addr6: {}, cname: {:?}, key: {:?}, ds: {:?}, srv: {:?}, log: {:?}}}", inaddr_to_string(&self.addr4), in6addr_to_string(&self.addr6), &self.cname, &self.key, &self.ds, &self.srv, &self.log)
+    }
+}
+
+impl Clone for all_addr {
+    fn clone(&self) -> Self {
+        Self {
+            addr6: self.addr6.clone()
+        }
+    }
 }

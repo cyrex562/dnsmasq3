@@ -14,37 +14,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define ALL_NODES                 "FF02::1"
-#define ALL_ROUTERS               "FF02::2"
+pub const ALL_NODES: String = String::from("FF02::1");
+pub const ALL_ROUTERS: String = String::from("FF02::2");
 
-struct ping_packet {
-  u8 type, code;
-  u16 checksum;
-  u16 identifier;
-  u16 sequence_no;
-};
-
-struct ra_packet {
-  u8 type, code;
-  u16 checksum;
-  u8 hop_limit, flags;
-  u16 lifetime;
-  u32 reachable_time;
-  u32 retrans_time;
-};
-
-struct neigh_packet {
-  u8 type, code;
-  u16 checksum;
-  u16 reserved;
-  target: in6_addr;
-};
-
-struct prefix_opt {
-  u8 type, len, prefix_len, flags;
-  u32 valid_lifetime, preferred_lifetime, reserved;
-  prefix: in6_addr;
-};
 
 pub const ICMP6_OPT_SOURCE_MAC: u32 = 1;
 pub const ICMP6_OPT_PREFIX: u32 = 3;

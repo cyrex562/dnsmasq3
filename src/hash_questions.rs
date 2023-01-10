@@ -28,11 +28,15 @@
 
 // #include "dnsmasq.h"
 
-#if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
+// #if defined(HAVE_DNSSEC) || defined(HAVE_CRYPTOHASH)
 
-static const struct nettle_hash *hash;
-static void *ctx;
-static unsigned char *digest;
+use std::os::raw::c_void;
+
+pub struct HashContext {
+    hash: *mut nettle_hash,
+    ctx: *mut c_void,
+    digest: *mut u8,
+}
 
 void hash_questions_init(void)
 {

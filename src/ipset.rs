@@ -16,7 +16,7 @@
 
 // #include "dnsmasq.h"
 
-#if defined(HAVE_IPSET) && defined(HAVE_LINUX_NETWORK)
+// #if defined(HAVE_IPSET) && defined(HAVE_LINUX_NETWORK)
 
 // #include <string.h>
 // #include <errno.h>
@@ -53,16 +53,16 @@ pub const NFNETLINK_V0: u32 = 0;
 #define NLA_F_NET_BYTEORDER	(1 << 14)
 // #endif
 
-struct my_nlattr {
-        __u16           nla_len;
-        __u16           nla_type;
-};
+// struct my_nlattr {
+//         __u16           nla_len;
+//         __u16           nla_type;
+// };
 
-struct my_nfgenmsg {
-        __u8  nfgen_family;             /* AF_xxx */
-        __u8  version;          /* nfnetlink version */
-        __be16    res_id;               /* resource id */
-};
+// struct my_nfgenmsg {
+//         __u8  nfgen_family;             /* AF_xxx */
+//         __u8  version;          /* nfnetlink version */
+//         __be16    res_id;               /* resource id */
+// };
 
 
 /* data structure size in here is fixed */

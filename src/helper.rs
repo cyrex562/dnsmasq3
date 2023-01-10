@@ -30,48 +30,25 @@
    main process.
 */
 
-static void my_setenv(const char *name, const char *value, int *error);
-static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  char *env, int *err);
+// static void my_setenv(const char *name, const char *value, int *error);
+// static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  char *env, int *err);
 
 // #ifdef HAVE_LUASCRIPT
-#define LUA_COMPAT_ALL
+// #define LUA_COMPAT_ALL
 // #include <lua.h>
 // #include <lualib.h>
 // #include <lauxlib.h>
 
 // #endif lua_open
-#define lua_open()     luaL_newstate()
+// #define lua_open()     luaL_newstate()
 // #endif
 
-lua_State *lua;
+// lua_State *lua;
 
-static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end, char *field);
+// static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end, char *field);
 // #endif
 
 
-struct script_data
-{
-  flags: i32;
-  int action, hwaddr_len, hwaddr_type;
-  int clid_len, hostname_len, ed_len;
-  struct in_addr addr, giaddr;
-  unsigned remaining_time: i32;
-// #ifdef HAVE_BROKEN_RTC
-  unsigned length: i32;
-#else
-  time_t expires;
-// #endif
-// #ifdef HAVE_TFTP
-  off_t file_len;
-// #endif
-  addr6: in6_addr;
-// #ifdef HAVE_DHCP6
-  vendorclass_count: i32;
-  unsigned iaid: i32;
-// #endif
-  unsigned char hwaddr[DHCP_CHADDR_MAX];
-  char interface[IF_NAMESIZE];
-};
 
 static struct script_data *buf = NULL;
 static size_t bytes_in_buf = 0, buf_size = 0;

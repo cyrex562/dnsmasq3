@@ -20,27 +20,12 @@
 
 // #include <netinet/icmp6.h>
 
-static u32 packet_count;
-static void do_dump_packet(int mask, void *packet, size_t len,
-			   union mysockaddr *src, union mysockaddr *dst, int port, int proto);
+// static u32 packet_count;
+// static void do_dump_packet(int mask, void *packet, size_t len,
+// 			   union mysockaddr *src, union mysockaddr *dst, int port, int proto);
 
-/* https://wiki.wireshark.org/Development/LibpcapFileFormat */
-struct pcap_hdr_s {
-        u32 magic_number;   /* magic number */
-        u16 version_major;  /* major version number */
-        u16 version_minor;  /* minor version number */
-        u32 thiszone;       /* GMT to local correction */
-        u32 sigfigs;        /* accuracy of timestamps */
-        u32 snaplen;        /* max length of captured packets, in octets */
-        u32 network;        /* data link type */
-};
 
-struct pcaprec_hdr_s {
-        u32 ts_sec;         /* timestamp seconds */
-        u32 ts_usec;        /* timestamp microseconds */
-        u32 incl_len;       /* number of octets of packet saved in file */
-        u32 orig_len;       /* actual length of packet */
-};
+
 
 
 void dump_init(void)

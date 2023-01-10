@@ -19,24 +19,94 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d3463acf-f1a2-4164-ab5c-254f20d18ee5" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/allow_list.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/dyndir.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/hosts_file.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/iname.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ipsets.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/irec.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/listener.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/mysubnet.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rebind_domain.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/resolvc.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/serv_local.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/addr_list.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/alias_param.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/cname_struct.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/cond_domain.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/daemon.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/delay_config.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_boot.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_bridge.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_config.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_context.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_lease.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_mac.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_match_name.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_netid.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_netid_list.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_opt.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_pxe_vendor.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_relay.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dhcp_vendor.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dns_header.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/dns_protocol.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/frec.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/hwaddr_config.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/my_nfgenmsg.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/my_nlattr.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/neigh_packet.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/pcap_hdr_s.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/pcap_rec_hdr_s.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ping_packet.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ping_result.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/prefix_opt.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/pxe_service.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ra_interface.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ra_packet.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ra_param.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/script_data.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/search_param.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/server_details.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/shared_network.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/state.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/subnet_opt.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/surf_rand.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/tag_if.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/target_union.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/tftp_file.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/tftp_prefix.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/tftp_transfer.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/other/dns-protocol.h.rs" beforeDir="false" afterPath="$PROJECT_DIR$/other/dns-protocol.h.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dhcp_protocol.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_protocol.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dhcp_release.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp_release.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dnsmasq_h.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnsmasq_h.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/all_addr.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/all_addr.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app_context.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_context.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/blockdata.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/blockdata.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/crec.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/crec.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dhcp6_protocol.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dhcp6_protocol.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dnsmasq_h.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnsmasq_defines.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dnssec.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dnssec.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doctor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/doctor.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/domain_match.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/domain_match.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ds_config.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ds_config.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dump.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dump.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dyndir.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dyndir.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/edns0.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/edns0.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/forward.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/forward.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hash_questions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/hash_questions.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/helper.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/helper.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/host_record.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/host_record.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hosts_file.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/hosts_file.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/iface_param.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/iface_param.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/iname.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/iname.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/inotify.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/inotify.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/interface_name.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/interface_name.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ipset.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ipset.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mysockaddr.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/mysockaddr.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/naptr.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/naptr.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/netlink.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/netlink.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/network.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/network.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nftset.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nftset.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/option.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/option.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/outpacket.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/outpacket.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/poll.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/poll.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ptr_record.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ptr_record.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/radv.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/radv.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/radv_protocol.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/radv_protocol.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rfc2131.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rfc2131.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rfc3315.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rfc3315.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/util.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/util.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,6 +124,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MacroExpansionManager">
@@ -87,6 +162,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "settings.editor.selected.configurable": "preferences.rainbow.brackets",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -120,6 +196,8 @@
     </configuration>
   </component>
   <component name="RustProjectSettings">
+    <option name="externalLinter" value="Clippy" />
+    <option name="runExternalLinterOnTheFly" value="true" />
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
     <option name="version" value="2" />
   </component>

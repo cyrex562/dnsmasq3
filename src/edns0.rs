@@ -323,11 +323,7 @@ static size_t add_mac(struct dns_header *header, size_t plen, unsigned char *lim
   return plen; 
 }
 
-struct subnet_opt {
-  u16 family;
-  u8 source_netmask, scope_netmask; 
-  u8 addr[IN6ADDRSZ];
-};
+
 
 static void *get_addrp(union mysockaddr *addr, const short family) 
 {

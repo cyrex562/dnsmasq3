@@ -22,51 +22,51 @@
 #define option_ptr(opt, i) ((void *)&(((unsigned char *)(opt))[2u+(unsigned int)(i)]))
 
 // #ifdef HAVE_SCRIPT
-static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
+// static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt);
 // #endif
 
-static int sanitise(unsigned char *opt, char *buf);
-static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback);
-static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt);
-static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val);
-static void option_put_string(struct dhcp_packet *mess, unsigned char *end, 
-			      int opt, const char *string, int null_term);
-static struct in_addr option_addr(unsigned char *opt);
-static unsigned int option_uint(unsigned char *opt, int offset, int size);
-static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
-		       int mac_len, char *interface, char *string, char *err, u32 xid);
-static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize);
-static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize);
-static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end);
-static void clear_packet(struct dhcp_packet *mess, unsigned char *end);
-static int in_list(unsigned char *list, int opt);
-static void do_options(struct dhcp_context *context,
-		       struct dhcp_packet *mess,
-		       unsigned char *end,
-		       unsigned char *req_options,
-		       char *hostname, 
-		       char *domain,
-		       struct dhcp_netid *netid,
-		       struct in_addr subnet_addr, 
-		       unsigned char fqdn_flags,
-		       int null_term, int pxe_arch,
-		       unsigned char *uuid,
-		       int vendor_class_len,
-		       time_t now,
-		       unsigned int lease_time,
-		       unsigned short fuzz,
-		       const char *pxevendor);
-
-
-static void match_vendor_opts(unsigned char *opt, struct dhcp_opt *dopt); 
-static int do_encap_opts(struct dhcp_opt *opt, int encap, int flag, struct dhcp_packet *mess, unsigned char *end, int null_term);
-static void pxe_misc(struct dhcp_packet *mess, unsigned char *end, unsigned char *uuid, const char *pxevendor);
-static int prune_vendor_opts(struct dhcp_netid *netid);
-static struct dhcp_opt *pxe_opts(int pxe_arch, struct dhcp_netid *netid, struct in_addr local, time_t now);
-struct dhcp_boot *find_boot(struct dhcp_netid *netid);
-static int pxe_uefi_workaround(int pxe_arch, struct dhcp_netid *netid, struct dhcp_packet *mess, struct in_addr local, time_t now, int pxe);
-static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid);
-static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_vendor);
+// static int sanitise(unsigned char *opt, char *buf);
+// static struct in_addr server_id(struct dhcp_context *context, struct in_addr override, struct in_addr fallback);
+// static unsigned int calc_time(struct dhcp_context *context, struct dhcp_config *config, unsigned char *opt);
+// static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val);
+// static void option_put_string(struct dhcp_packet *mess, unsigned char *end, 
+// 			      int opt, const char *string, int null_term);
+// static struct in_addr option_addr(unsigned char *opt);
+// static unsigned int option_uint(unsigned char *opt, int offset, int size);
+// static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
+// 		       int mac_len, char *interface, char *string, char *err, u32 xid);
+// static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize);
+// static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize);
+// static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end);
+// static void clear_packet(struct dhcp_packet *mess, unsigned char *end);
+// static int in_list(unsigned char *list, int opt);
+// static void do_options(struct dhcp_context *context,
+// 		       struct dhcp_packet *mess,
+// 		       unsigned char *end,
+// 		       unsigned char *req_options,
+// 		       char *hostname, 
+// 		       char *domain,
+// 		       struct dhcp_netid *netid,
+// 		       struct in_addr subnet_addr, 
+// 		       unsigned char fqdn_flags,
+// 		       int null_term, int pxe_arch,
+// 		       unsigned char *uuid,
+// 		       int vendor_class_len,
+// 		       time_t now,
+// 		       unsigned int lease_time,
+// 		       unsigned short fuzz,
+// 		       const char *pxevendor);
+// 
+// 
+// static void match_vendor_opts(unsigned char *opt, struct dhcp_opt *dopt); 
+// static int do_encap_opts(struct dhcp_opt *opt, int encap, int flag, struct dhcp_packet *mess, unsigned char *end, int null_term);
+// static void pxe_misc(struct dhcp_packet *mess, unsigned char *end, unsigned char *uuid, const char *pxevendor);
+// static int prune_vendor_opts(struct dhcp_netid *netid);
+// static struct dhcp_opt *pxe_opts(int pxe_arch, struct dhcp_netid *netid, struct in_addr local, time_t now);
+// struct dhcp_boot *find_boot(struct dhcp_netid *netid);
+// static int pxe_uefi_workaround(int pxe_arch, struct dhcp_netid *netid, struct dhcp_packet *mess, struct in_addr local, time_t now, int pxe);
+// static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid);
+// static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_vendor);
 
 size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
 		  size_t sz, time_t now, int unicast_dest, int loopback,

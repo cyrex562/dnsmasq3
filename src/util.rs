@@ -24,9 +24,9 @@
 // #include <sys/times.h>
 // #endif
 
-#if defined(HAVE_LIBIDN2)
+// #if defined(HAVE_LIBIDN2)
 // #include <idn2.h>
-#elif defined(HAVE_IDN)
+// #elif defined(HAVE_IDN)
 // #include <idna.h>
 // #endif
 
@@ -36,83 +36,43 @@
 
 /* SURF random number generator */
 
-static u32 seed[32];
-static u32 in[12];
-static u32 out[8];
-static int outleft = 0;
+use libc::{c_char, in_addr, in6_addr, sockaddr, sockaddr_in, sockaddr_in6, open, O_RDONLY, close};
+use crate::config::RANDFILE;
 
-void rand_init()
-{
-  int fd = open(RANDFILE, O_RDONLY);
-  
-  if (fd == -1 ||
-      !read_write(fd, (unsigned char *)&seed, sizeof(seed), 1) ||
-      !read_write(fd, (unsigned char *)&in, sizeof(in), 1))
-    die(_("failed to seed the random number generator: %s"), NULL, EC_MISC);
-  
-  close(fd);
+pub fn hex_string_from_byte_slice(a_slice: &[u8]) -> String {
+    let mut out = String::from("");
+    for x in a_slice {
+        out += &format!("{:02x}", x);
+    }
+    out
 }
 
-#define ROTATE(x,b) (((x) << (b)) | ((x) >> (32 - (b))))
-#define MUSH(i,b) x = t[i] += (((x ^ seed[i]) + sum) ^ ROTATE(x,b));
-
-static void surf(void)
-{
-  u32 t[12]; u32 x; u32 sum = 0;
-  r: i32; i: i32; loop: i32;
-
-  for (i = 0;i < 12;++i) t[i] = in[i] ^ seed[12 + i];
-  for (i = 0;i < 8;++i) out[i] = seed[24 + i];
-  x = t[11];
-  for (loop = 0;loop < 2;++loop) {
-    for (r = 0;r < 16;++r) {
-      sum += 0x9e3779b9;
-      MUSH(0,5) MUSH(1,7) MUSH(2,9) MUSH(3,13)
-      MUSH(4,5) MUSH(5,7) MUSH(6,9) MUSH(7,13)
-      MUSH(8,5) MUSH(9,7) MUSH(10,9) MUSH(11,13)
+pub fn hex_string_from_c_char_slice(a_slice: &[c_char]) -> String {
+    let mut out = String::from("");
+    for x in a_slice {
+        out += &format!("{:02x}", x);
     }
-    for (i = 0;i < 8;++i) out[i] ^= t[i + 4];
-  }
+    out
 }
 
-unsigned short rand16(void)
-{
-  if (!outleft) 
-    {
-      if (!++in[0]) if (!++in[1]) if (!++in[2]) ++in[3];
-      surf();
-      outleft = 8;
-    }
-  
-  return (unsigned short) out[--outleft];
+pub fn inaddr_to_string(x: &in_addr) ->String {
+    format!("{{s_addr: {:04x}}}", x.s_addr)
 }
 
-u32 rand32(void)
-{
- if (!outleft) 
-    {
-      if (!++in[0]) if (!++in[1]) if (!++in[2]) ++in[3];
-      surf();
-      outleft = 8;
-    }
-  
-  return out[--outleft]; 
+pub fn sockaddr_to_string(x: &sockaddr) -> String {
+    format!("{{sa_family: {}, sa_data: {}}}", x.sa_family, hex_string_from_c_char_slice(&x.sa_data))
 }
 
-u64 rand64(void)
-{
-  static int outleft = 0;
+pub fn sockaddrin_to_string(x: &sockaddr_in) -> String {
+    format!("{{sin_family: {}, sin_port: {}, sin_addr: {}, sin_zero: {}}}", x.sin_family, x.sin_port, in_addr_to_string(&x.sin_addr), hex_string_from_byte_slice(&x.sin_zero))
+}
 
-  if (outleft < 2)
-    {
-      if (!++in[0]) if (!++in[1]) if (!++in[2]) ++in[3];
-      surf();
-      outleft = 8;
-    }
-  
-  outleft -= 2;
+pub fn in6addr_to_string(x: &in6_addr) -> String {
+    format!("{{s6_addr: {}}}", hex_string_from_byte_slice(&x.s6_addr))
+}
 
-  return (u64)out[outleft+1] + (((u64)out[outleft]) << 32);
+pub fn sockaddrin6_to_string(x: &sockaddr_in6) -> String {
+    format!("{{sin6_family: {}, sin6_port: {}, sin6_flowinfo: {}, sin6_addr: {}, sin6_scope_id: {}}}", x.sin6_family, x.sin6_port, x.sin6_flowinfo, in6addr_to_string(&x.sin6_addr), x.sin6_scope_id)
 }
 
 /* returns 1 if name is OK and ascii printable

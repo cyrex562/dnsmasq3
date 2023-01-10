@@ -17,14 +17,14 @@
 
 // #include "dnsmasq.h"
 
-#if defined (HAVE_NFTSET) && defined (HAVE_LINUX_NETWORK)
+// #if defined (HAVE_NFTSET) && defined (HAVE_LINUX_NETWORK)
 
 // #include <nftables/libnftables.h>
 
 // #include <string.h>
 // #include <arpa/inet.h>
 
-static struct nft_ctx *ctx = NULL;
+// static struct nft_ctx *ctx = NULL;
 static const char *cmd_add = "add element %s { %s }";
 static const char *cmd_del = "delete element %s { %s }";
 

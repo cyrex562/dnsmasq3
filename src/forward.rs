@@ -16,18 +16,18 @@
 
 // #include "dnsmasq.h"
 
-static struct frec *get_new_frec(time_t now, struct server *serv, int force);
-static struct frec *lookup_frec(unsigned short id, int fd, void *hash, int *firstp, int *lastp);
-static struct frec *lookup_frec_by_query(void *hash, unsigned int flags, unsigned int flagmask);
-// #ifdef HAVE_DNSSEC
-static struct frec *lookup_frec_dnssec(char *target, int class, int flags, struct dns_header *header);
-// #endif
-
-static unsigned short get_id(void);
-static void free_frec(struct frec *f);
-static void query_full(time_t now, char *domain);
-
-static void return_reply(time_t now, struct frec *forward, struct dns_header *header, ssize_t n, int status);
+// static struct frec *get_new_frec(time_t now, struct server *serv, int force);
+// static struct frec *lookup_frec(unsigned short id, int fd, void *hash, int *firstp, int *lastp);
+// static struct frec *lookup_frec_by_query(void *hash, unsigned int flags, unsigned int flagmask);
+// // #ifdef HAVE_DNSSEC
+// static struct frec *lookup_frec_dnssec(char *target, int class, int flags, struct dns_header *header);
+// // #endif
+//
+// static unsigned short get_id(void);
+// static void free_frec(struct frec *f);
+// static void query_full(time_t now, char *domain);
+//
+// static void return_reply(time_t now, struct frec *forward, struct dns_header *header, ssize_t n, int status);
 
 /* Send a UDP packet with its source address set as "source" 
    unless nowild is true, when we just send it with the kernel default */

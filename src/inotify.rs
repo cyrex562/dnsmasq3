@@ -33,8 +33,8 @@
    files don't. 
 */
 
-static char *inotify_buffer;
-#define INOTIFY_SZ (sizeof(struct inotify_event) + NAME_MAX + 1)
+// static char *inotify_buffer;
+// #define INOTIFY_SZ (sizeof(struct inotify_event) + NAME_MAX + 1)
 
 /* If path is a symbolic link, return the path it
    points to, made absolute if relative.

@@ -1,7 +1,8 @@
+use std::ptr::null_mut;
 use libc::c_char;
 use crate::hosts_file::hostsfile;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct dyndir {
     // struct dyndir *next;
     // struct hostsfile *files;
@@ -13,4 +14,15 @@ pub struct dyndir {
     pub wd: i32,
     /* inotify watch descriptor */
 // #endif
+}
+
+impl Default for dyndir {
+    fn default() -> Self {
+        Self {
+            files: null_mut(),
+            flags: 0,
+            dname: null_mut(),
+            wd: 0,
+        }
+    }
 }

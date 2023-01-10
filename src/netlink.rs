@@ -48,14 +48,14 @@ pub const NETLINK_NO_ENOBUFS: u32 = 5;
 enum async_states {
   STATE_NEWADDR = (1 << 0),
   STATE_NEWROUTE = (1 << 1),
-};
+}
 
 
 static struct iovec iov;
 static u32 netlink_pid;
 
-static unsigned nl_async(struct nlmsghdr *h, unsigned state);
-static void nl_multicast_state(unsigned state);
+// static unsigned nl_async(struct nlmsghdr *h, unsigned state);
+// static void nl_multicast_state(unsigned state);
 
 char *netlink_init(void)
 {

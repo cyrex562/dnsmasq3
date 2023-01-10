@@ -17,8 +17,8 @@
 pub const DHCPV6_SERVER_PORT: u32 = 547;
 pub const DHCPV6_CLIENT_PORT: u32 = 546;
 
-#define ALL_SERVERS                  "FF05::1:3"
-#define ALL_RELAY_AGENTS_AND_SERVERS "FF02::1:2"
+pub const ALL_SERVERS: String = String::from("FF05::1:3");
+pub const ALL_RELAY_AGENTS_AND_SERVERS: String = String::from("FF02::1:2");
 
 pub const DHCP6SOLICIT: u32 = 1;
 pub const DHCP6ADVERTISE: u32 = 2;

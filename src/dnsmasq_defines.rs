@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// #define COPYRIGHT "Copyright (c) 2000-2022 Simon Kelley"
+// pub const COPYRIGHT: String = String::from("Copyright (c) 2000-2022 Simon Kelley");
 
 /* We do defines that influence behavior of stdio.h, so complain
    if included too early. */
@@ -170,7 +170,6 @@ pub const LINUX_CAPABILITY_VERSION_3: u32 = 0x20080522;
 
 // TODO:
 // #define ADDRSTRLEN INET6_ADDRSTRLEN
-
 
 
 pub const EVENT_RELOAD: u32 = 1;
@@ -365,8 +364,6 @@ pub const SRC_HOSTS: u32 = 2;
 pub const SRC_AH: u32 = 3;
 
 
-
-
 /* bits in flag param to IPv6 callbacks from iface_enumerate() */
 pub const IFACE_TENTATIVE: u32 = 1;
 pub const IFACE_DEPRECATED: u32 = 2;
@@ -393,32 +390,7 @@ pub const SERV_DO_DNSSEC: u32 = 16384;  /* Validate DNSSEC when using this serve
 pub const SERV_GOT_TCP: u32 = 32768;  /* Got some data from the TCP connection */
 
 
-
-
-
-
-
-
-
-
 /* First four fields must match struct server in next three definitions.. */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* adn-hosts parms from command-line (also dhcp-hostsfile and dhcp-optsfile and dhcp-hostsdir*/
@@ -428,8 +400,6 @@ pub const AH_WD_DONE: u32 = 4;
 pub const AH_HOSTS: u32 = 8;
 pub const AH_DHCP_HST: u32 = 16;
 pub const AH_DHCP_OPT: u32 = 32;
-
-
 
 
 /* packet-dump flags */
@@ -467,7 +437,10 @@ pub const DNSSEC_FAIL_NONSEC: u32 = 0x0040; /* No NSEC */
 pub const DNSSEC_FAIL_NODSSUP: u32 = 0x0080; /* no supported DS algo. */
 pub const DNSSEC_FAIL_NOKEY: u32 = 0x0100; /* no DNSKEY */
 
-#define STAT_ISEQUAL(a, b)  (((a) & 0xffff0000) == (b))
+// #define STAT_ISEQUAL(a, b)  (((a) & 0xffff0000) == (b))
+pub fn STAT_ISEQUAL(a: u32, b: u32) -> bool {
+    (a & 0xffff0000) == b
+}
 
 pub const FREC_NOREBIND: u32 = 1;
 pub const FREC_CHECKING_DISABLED: u32 = 2;
@@ -483,33 +456,6 @@ pub const FREC_HAS_PHEADER: u32 = 1024;
 
 pub const HASH_SIZE: u32 = 32; /* SHA-256 digest size */
 
-struct frec {
-  struct frec_src {
-    union mysockaddr source;
-    union all_addr dest;
-    unsigned int iface, log_id;
-    fd: i32;
-    unsigned short orig_id;
-    struct frec_src *next;
-  } frec_src;
-  struct server *sentto; /* NULL means free */
-  struct randfd_list *rfds;
-  unsigned short new_id;
-  int forwardall, flags;
-  time_t time;
-  u32 forward_timestamp;
-  forward_delay: i32;
-  unsigned char *hash[HASH_SIZE];
-  struct blockdata *stash; /* Saved reply, whilst we validate */
-  stash_len: usize;
-// #ifdef HAVE_DNSSEC
-  int class, work_counter;
-  struct frec *dependent; /* Query awaiting internally-generated DNSKEY or DS query */
-  struct frec *next_dependent; /* list of above. */
-  struct frec *blocking_query; /* Query which is blocking us. */
-// #endif
-  struct frec *next;
-};
 
 /* flags in top of length field for DHCP-option tables */
 pub const OT_ADDR_LIST: u32 = 0x8000;
@@ -540,86 +486,6 @@ pub const LEASE_TA: u32 = 64;  /* IPv6 temporary lease */
 pub const LEASE_HAVE_HWADDR: u32 = 128;  /* Have set hwaddress */
 pub const LEASE_EXP_CHANGED: u32 = 256;  /* Lease expiry time changed */
 
-struct dhcp_lease {
-  clid_len: i32;          /* length of client identifier */
-  unsigned char *clid;   /* clientid */
-  char *hostname, *fqdn; /* name from client-hostname option or config */
-  char *old_hostname;    /* hostname before it moved to another lease */
-  flags: i32;
-  time_t expires;        /* lease expiry */
-// #ifdef HAVE_BROKEN_RTC
-  unsigned length: i32;
-// #endif
-  int hwaddr_len, hwaddr_type;
-  unsigned char hwaddr[DHCP_CHADDR_MAX]; 
-  struct in_addr addr, override, giaddr;
-  unsigned char *extradata;
-  unsigned int extradata_len, extradata_size;
-  last_interface: i32;
-  new_interface: i32;     /* save possible originated interface */
-  new_prefixlen: i32;     /* and its prefix length */
-// #ifdef HAVE_DHCP6
-  addr6: in6_addr;
-  unsigned iaid: i32;
-  struct slaac_address {
-    addr: in6_addr;
-    time_t ping_time;
-    backoff: i32; /* zero -> confirmed */
-    struct slaac_address *next;
-  } *slaac_address;
-  vendorclass_count: i32;
-// #endif
-  struct dhcp_lease *next;
-};
-
-struct dhcp_netid {
-  char *net;
-  struct dhcp_netid *next;
-};
-
-struct dhcp_netid_list {
-  struct dhcp_netid *list;
-  struct dhcp_netid_list *next;
-};
-
-struct tag_if {
-  struct dhcp_netid_list *set;
-  struct dhcp_netid *tag;
-  struct tag_if *next;
-};
-
-struct delay_config {
-  delay: i32;
-  struct dhcp_netid *netid;
-  struct delay_config *next;
-};
-
-struct hwaddr_config {
-  int hwaddr_len, hwaddr_type;
-  unsigned char hwaddr[DHCP_CHADDR_MAX];
-  unsigned wildcard_mask: i32;
-  struct hwaddr_config *next;
-};
-
-struct dhcp_config {
-  unsigned flags: i32;
-  clid_len: i32;          /* length of client identifier */
-  unsigned char *clid;   /* clientid */
-  char *hostname, *domain;
-  struct dhcp_netid_list *netid;
-  struct dhcp_netid *filter;
-// #ifdef HAVE_DHCP6
-  addr6: *mut addrlist;
-// #endif
-  addr: in_addr;
-  time_t decline_time;
-  unsigned lease_time: i32;
-  struct hwaddr_config *hwaddr;
-  struct dhcp_config *next;
-};
-
-#define have_config(config, mask) ((config) && ((config).flags & (mask)))
-
 pub const CONFIG_DISABLE: u32 = 1;
 pub const CONFIG_CLID: u32 = 2;
 pub const CONFIG_TIME: u32 = 8;
@@ -633,17 +499,6 @@ pub const CONFIG_BANK: u32 = 2048;    /* from dhcp hosts file */
 pub const CONFIG_ADDR6: u32 = 4096;
 pub const CONFIG_ADDR6_HOSTS: u32 = 16384;    /* address added by from /etc/hosts */
 
-struct dhcp_opt {
-  int opt, len, flags;
-  union {
-    encap: i32;
-    unsigned wildcard_mask: i32;
-    unsigned char *vendor_class;
-  } u;
-  unsigned char *val;
-  struct dhcp_netid *netid;
-  struct dhcp_opt *next;
-};
 
 pub const DHOPT_ADDR: u32 = 1;
 pub const DHOPT_STRING: u32 = 2;
@@ -661,29 +516,8 @@ pub const DHOPT_TAGOK: u32 = 4096;
 pub const DHOPT_ADDR6: u32 = 8192;
 pub const DHOPT_VENDOR_PXE: u32 = 16384;
 
-struct dhcp_boot {
-  char *file, *sname, *tftp_sname;
-  next_server: in_addr;
-  struct dhcp_netid *netid;
-  struct dhcp_boot *next;
-};
 
-struct dhcp_match_name {
-  char *name;
-  wildcard: i32;
-  struct dhcp_netid *netid;
-  struct dhcp_match_name *next;
-};
-
-struct pxe_service {
-  unsigned short CSA, type; 
-  char *menu, *basename, *sname;
-  server: in_addr;
-  struct dhcp_netid *netid;
-  struct pxe_service *next;
-};
-
-#define DHCP_PXE_DEF_VENDOR      "PXEClient"
+pub const DHCP_PXE_DEF_VENDOR: String = String::from("PXEClient");
 
 pub const MATCH_VENDOR: u32 = 1;
 pub const MATCH_USER: u32 = 2;
@@ -691,346 +525,28 @@ pub const MATCH_CIRCUIT: u32 = 3;
 pub const MATCH_REMOTE: u32 = 4;
 pub const MATCH_SUBSCRIBER: u32 = 5;
 
-/* vendorclass, userclass, remote-id or circuit-id */
-struct dhcp_vendor {
-  int len, match_type;
-  unsigned enterprise: i32;
-  char *data;
-  struct dhcp_netid netid;
-  struct dhcp_vendor *next;
-};
 
-struct dhcp_pxe_vendor {
-  char *data;
-  struct dhcp_pxe_vendor *next;
-};
+pub const CONTEXT_STATIC: u32 = 1 << 0;
+pub const CONTEXT_NETMASK: u32 = 1 << 1;
+pub const CONTEXT_BRDCAST: u32 = 1 << 2;
+pub const CONTEXT_PROXY: u32 = 1 << 3;
+pub const CONTEXT_RA_ROUTER: u32 = 1 << 4;
+pub const CONTEXT_RA_DONE: u32 = 1 << 5;
+pub const CONTEXT_RA_NAME: u32 = 1 << 6;
+pub const CONTEXT_RA_STATELESS: u32 = 1 << 7;
+pub const CONTEXT_DHCP: u32 = 1 << 8;
+pub const CONTEXT_DEPRECATE: u32 = 1 << 9;
+pub const CONTEXT_TEMPLATE: u32 = 1 << 10;    /* create contexts using addresses */
+pub const CONTEXT_CONSTRUCTED: u32 = 1 << 11;
+pub const CONTEXT_GC: u32 = 1 << 12;
+pub const CONTEXT_RA: u32 = 1 << 13;
+pub const CONTEXT_CONF_USED: u32 = 1 << 14;
+pub const CONTEXT_USED: u32 = 1 << 15;
+pub const CONTEXT_OLD: u32 = 1 << 16;
+pub const CONTEXT_V6: u32 = 1 << 17;
+pub const CONTEXT_RA_OFF_LINK: u32 = 1 << 18;
+pub const CONTEXT_SETLEASE: u32 = 1 << 19;
 
-struct dhcp_mac {
-  unsigned mask: i32;
-  int hwaddr_len, hwaddr_type;
-  unsigned char hwaddr[DHCP_CHADDR_MAX];
-  struct dhcp_netid netid;
-  struct dhcp_mac *next;
-};
-
-struct dhcp_bridge {
-  char iface[IF_NAMESIZE];
-  struct dhcp_bridge *alias, *next;
-};
-
-struct cond_domain {
-  char *domain, *prefix; /* prefix is text-prefix on domain name */
-  char *interface;       /* These two set when domain comes from interface. */
-  al: *mut addrlist;
-  struct in_addr start, end;
-  struct in6_addr start6, end6;
-  int is6, indexed, prefixlen;
-  struct cond_domain *next;
-}; 
-
-struct ra_interface {
-  char *name;
-  char *mtu_name;
-  int interval, lifetime, prio, mtu;
-  struct ra_interface *next;
-};
-
-struct dhcp_context {
-  unsigned int lease_time, addr_epoch;
-  struct in_addr netmask, broadcast;
-  struct in_addr local, router;
-  struct in_addr start, end; /* range of available addresses */
-// #ifdef HAVE_DHCP6
-  struct in6_addr start6, end6; /* range of available addresses */
-  local6: in6_addr;
-  int prefix, if_index;
-  unsigned int valid, preferred, saved_valid;
-  time_t ra_time, ra_short_period_start, address_lost_time;
-  char *template_interface;
-// #endif
-  flags: i32;
-  struct dhcp_netid netid, *filter;
-  struct dhcp_context *next, *current;
-};
-
-struct shared_network {
-  if_index: i32;
-  struct in_addr match_addr, shared_addr;
-// #ifdef HAVE_DHCP6
-  /* shared_addr == 0 for IP6 entries. */
-  struct in6_addr match_addr6, shared_addr6;
-// #endif
-  struct shared_network *next;
-};
-
-#define CONTEXT_STATIC         (1u<<0)
-#define CONTEXT_NETMASK        (1u<<1)
-#define CONTEXT_BRDCAST        (1u<<2)
-#define CONTEXT_PROXY          (1u<<3)
-#define CONTEXT_RA_ROUTER      (1u<<4)
-#define CONTEXT_RA_DONE        (1u<<5)
-#define CONTEXT_RA_NAME        (1u<<6)
-#define CONTEXT_RA_STATELESS   (1u<<7)
-#define CONTEXT_DHCP           (1u<<8)
-#define CONTEXT_DEPRECATE      (1u<<9)
-#define CONTEXT_TEMPLATE       (1u<<10)    /* create contexts using addresses */
-#define CONTEXT_CONSTRUCTED    (1u<<11)
-#define CONTEXT_GC             (1u<<12)
-#define CONTEXT_RA             (1u<<13)
-#define CONTEXT_CONF_USED      (1u<<14)
-#define CONTEXT_USED           (1u<<15)
-#define CONTEXT_OLD            (1u<<16)
-pub const CONTEXT_V: u32 = 6;             (1u<<17)
-#define CONTEXT_RA_OFF_LINK    (1u<<18)
-#define CONTEXT_SETLEASE       (1u<<19)
-
-struct ping_result {
-  addr: in_addr;
-  time_t time;
-  unsigned hash: i32;
-  struct ping_result *next;
-};
-
-struct tftp_file {
-  int refcount, fd;
-  off_t size;
-  dev_t dev;
-  ino_t inode;
-  char filename[];
-};
-
-struct tftp_transfer {
-  sockfd: i32;
-  time_t timeout;
-  backoff: i32;
-  unsigned int block, blocksize, expansion;
-  off_t offset;
-  union mysockaddr peer;
-  union all_addr source;
-  if_index: i32;
-  char opt_blocksize, opt_transize, netascii, carrylf;
-  struct tftp_file *file;
-  struct tftp_transfer *next;
-};
-
-struct addr_list {
-  addr: in_addr;
-  struct addr_list *next;
-};
-
-struct tftp_prefix {
-  char *interface;
-  char *prefix;
-  missing: i32;
-  struct tftp_prefix *next;
-};
-
-struct dhcp_relay {
-  union all_addr local, server;
-  char *interface; /* Allowable interface for replies from server, and dest for IPv6 multicast */
-  iface_index: i32; /* working - interface in which requests arrived, for return */
-  port: i32;        /* Port of relay we forward to. */
-// #ifdef HAVE_SCRIPT
-  struct snoop_record {
-    struct in6_addr client, prefix;
-    prefix_len: i32;
-    struct snoop_record *next;
-  } *snoop_records;
-// #endif
-  struct dhcp_relay *next;
-};
-
-extern struct daemon {
-  /* datastuctures representing the command-line and 
-     config file arguments. All set (including defaults)
-     in option.c */
-
-  unsigned int options[OPTION_SIZE];
-  struct resolvc default_resolv, *resolv_files;
-  time_t last_resolv;
-  char *servers_file;
-  struct mx_srv_record *mxnames;
-  struct naptr *naptr;
-  struct txt_record *txt, *rr;
-  struct ptr_record *ptr;
-  struct host_record *host_records, *host_records_tail;
-  struct cname *cnames;
-  struct auth_zone *auth_zones;
-  struct interface_name *int_names;
-  char *mxtarget;
-  struct mysubnet *add_subnet4;
-  struct mysubnet *add_subnet6;
-  char *lease_file;
-  char *username, *groupname, *scriptuser;
-  char *luascript;
-  char *authserver, *hostmaster;
-  struct iname *authinterface;
-  struct name_list *secondary_forward_server;
-  int group_set, osport;
-  char *domain_suffix;
-  struct cond_domain *cond_domain, *synth_domains;
-  char *runfile; 
-  char *lease_change_command;
-  struct iname *if_names, *if_addrs, *if_except, *dhcp_except, *auth_peers, *tftp_interfaces;
-  struct bogus_addr *bogus_addr, *ignore_addr;
-  struct server *servers, *servers_tail, *local_domains, **serverarray;
-  struct rebind_domain *no_rebind;
-  server_has_wildcard: i32;
-  int serverarraysz, serverarrayhwm;
-  struct ipsets *ipsets, *nftsets;
-  u32 allowlist_mask;
-  struct allowlist *allowlists;
-  log_fac: i32; /* log facility */
-  char *log_file; /* optional log file */
-  max_logs: i32;  /* queue limit */
-  randport_limit: i32; /* Maximum number of source ports for query. */
-  int cachesize, ftabsize;
-  int port, query_port, min_port, max_port;
-  unsigned long local_ttl, neg_ttl, max_ttl, min_cache_ttl, max_cache_ttl, auth_ttl, dhcp_ttl, use_dhcp_ttl;
-  char *dns_client_id;
-  u32 umbrella_org;
-  u32 umbrella_asset;
-  u8 umbrella_device[8];
-  host_index: i32;
-  struct hostsfile *addn_hosts;
-  struct dhcp_context *dhcp, *dhcp6;
-  struct ra_interface *ra_interfaces;
-  struct dhcp_config *dhcp_conf;
-  struct dhcp_opt *dhcp_opts, *dhcp_match, *dhcp_opts6, *dhcp_match6;
-  struct dhcp_match_name *dhcp_name_match;
-  struct dhcp_pxe_vendor *dhcp_pxe_vendors;
-  struct dhcp_vendor *dhcp_vendors;
-  struct dhcp_mac *dhcp_macs;
-  struct dhcp_boot *boot_config;
-  struct pxe_service *pxe_services;
-  struct tag_if *tag_if; 
-  struct addr_list *override_relays;
-  struct dhcp_relay *relay4, *relay6;
-  struct delay_config *delay_conf;
-  override: i32;
-  enable_pxe: i32;
-  int doing_ra, doing_dhcp6;
-  struct dhcp_netid_list *dhcp_ignore, *dhcp_ignore_names, *dhcp_gen_names; 
-  struct dhcp_netid_list *force_broadcast, *bootp_dynamic;
-  struct hostsfile *dhcp_hosts_file, *dhcp_opts_file;
-  struct dyndir *dynamic_dirs;
-  int dhcp_max, tftp_max, tftp_mtu;
-  int dhcp_server_port, dhcp_client_port;
-  int start_tftp_port, end_tftp_port; 
-  unsigned min_leasetime: i32;
-  struct doctor *doctors;
-  unsigned short edns_pktsz;
-  char *tftp_prefix; 
-  struct tftp_prefix *if_prefix; /* per-interface TFTP prefixes */
-  unsigned int duid_enterprise, duid_config_len;
-  unsigned char *duid_config;
-  char *dbus_name;
-  char *ubus_name;
-  char *dump_file;
-  dump_mask: i32;
-  unsigned long soa_sn, soa_refresh, soa_retry, soa_expiry;
-  u32 metrics[__METRIC_MAX];
-  int fast_retry_time, fast_retry_timeout;
-  cache_max_expiry: i32;
-// #ifdef HAVE_DNSSEC
-  struct ds_config *ds;
-  char *timestamp_file;
-// #endif
-
-  /* globally used stuff for DNS */
-  char *packet; /* packet buffer */
-  packet_buff_sz: i32; /* size of above */
-  char *namebuff; /* MAXDNAME size buffer */
-#if (defined(HAVE_CONNTRACK) && defined(HAVE_UBUS)) || defined(HAVE_DNSSEC)
-  /* CONNTRACK UBUS code uses this buffer, as well as DNSSEC code. */
-  char *workspacename;
-// #endif
-// #ifdef HAVE_DNSSEC
-  char *keyname; /* MAXDNAME size buffer */
-  unsigned long *rr_status; /* ceiling in TTL from DNSSEC or zero for insecure */
-  rr_status_sz: i32;
-  dnssec_no_time_check: i32;
-  back_to_the_future: i32;
-// #endif
-  struct frec *frec_list;
-  struct frec_src *free_frec_src;
-  frec_src_count: i32;
-  struct serverfd *sfds;
-  struct irec *interfaces;
-  struct listener *listeners;
-  struct server *srv_save; /* Used for resend on DoD */
-  packet_len: usize;       /*      "        "        */
-  int    fd_save;          /*      "        "        */
-  pid_t tcp_pids[MAX_PROCS];
-  int tcp_pipes[MAX_PROCS];
-  pipe_to_parent: i32;
-  numrrand: i32;
-  struct randfd *randomsocks;
-  struct randfd_list *rfl_spare, *rfl_poll;
-  v6pktinfo: i32;
-  interface_addrs: *mut addrlist; /* list of all addresses/prefix lengths associated with all local interfaces */
-  int log_id, log_display_id; /* ids of transactions for logging */
-  union mysockaddr *log_source_addr;
-
-  /* DHCP state */
-  int dhcpfd, helperfd, pxefd; 
-// #ifdef HAVE_INOTIFY
-  inotifyfd: i32;
-// #endif
-#if defined(HAVE_LINUX_NETWORK)
-  int netlinkfd, kernel_version;
-#elif defined(HAVE_BSD_NETWORK)
-  int dhcp_raw_fd, dhcp_icmp_fd, routefd;
-// #endif
-  struct iovec dhcp_packet;
-  char *dhcp_buff, *dhcp_buff2, *dhcp_buff3;
-  struct ping_result *ping_results;
-  FILE *lease_stream;
-  struct dhcp_bridge *bridges;
-  struct shared_network *shared_networks;
-// #ifdef HAVE_DHCP6
-  duid_len: i32;
-  unsigned char *duid;
-  struct iovec outpacket;
-  int dhcp6fd, icmp6fd;
-#  ifdef HAVE_SCRIPT
-  struct snoop_record *free_snoops;
-#  endif
-// #endif
-  
-  /* DBus stuff */
-  /* void * here to avoid depending on dbus headers outside dbus.c */
-  void *dbus;
-// #ifdef HAVE_DBUS
-  struct watch *watches;
-// #endif
-
-  /* UBus stuff */
-// #ifdef HAVE_UBUS
-  /* void * here to avoid depending on ubus headers outside ubus.c */
-  void *ubus;
-// #endif
-
-  /* TFTP stuff */
-  struct tftp_transfer *tftp_trans, *tftp_done_trans;
-
-  /* utility string buffer, hold max sized IP address as string */
-  char *addrbuff;
-  char *addrbuff2; /* only allocated when OPT_EXTRALOG */
-
-// #ifdef HAVE_DUMPFILE
-  /* file for packet dumps. */
-  dumpfd: i32;
-// #endif
-} *daemon;
-
-struct server_details {
-  union mysockaddr *addr, *source_addr;
-  struct addrinfo *hostinfo, *orig_hostinfo;
-  char *interface, *source, *scope_id, *interface_opt;
-  int serv_port, source_port, addr_type, scope_index, valid;
-  u16 *flags;
-};
 
 pub const RRFILTER_EDNS0: u32 = 0;
 pub const RRFILTER_DNSSEC: u32 = 1;

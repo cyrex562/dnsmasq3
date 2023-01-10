@@ -16,12 +16,10 @@
 
 // #include "dnsmasq.h"
 
-static int order(char *qdomain, size_t qlen, struct server *serv);
-static int order_qsort(const void *a, const void *b);
-static int order_servers(struct server *s, struct server *s2);
+
 
 /* If the server is USE_RESOLV or LITERAL_ADDRES, it lives on the local_domains chain. */
-#define SERV_IS_LOCAL (SERV_USE_RESOLV | SERV_LITERAL_ADDRESS)
+// #define SERV_IS_LOCAL (SERV_USE_RESOLV | SERV_LITERAL_ADDRESS)
 
 void build_server_array(void)
 {

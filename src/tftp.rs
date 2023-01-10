@@ -18,14 +18,14 @@
 
 // #ifdef HAVE_TFTP
 
-static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len);
-static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix, char *client);
-static void free_transfer(struct tftp_transfer *transfer);
-static ssize_t tftp_err(int err, char *packet, char *message, char *file, char *arg2);
-static ssize_t tftp_err_oops(char *packet, const char *file);
-static ssize_t get_block(char *packet, struct tftp_transfer *transfer);
-static char *next(char **p, char *end);
-static void sanitise(char *buf);
+// static void handle_tftp(time_t now, struct tftp_transfer *transfer, ssize_t len);
+// static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix, char *client);
+// static void free_transfer(struct tftp_transfer *transfer);
+// static ssize_t tftp_err(int err, char *packet, char *message, char *file, char *arg2);
+// static ssize_t tftp_err_oops(char *packet, const char *file);
+// static ssize_t get_block(char *packet, struct tftp_transfer *transfer);
+// static char *next(char **p, char *end);
+// static void sanitise(char *buf);
 
 pub const OP_RRQ: u32 = 1;
 pub const OP_WRQ: u32 = 2;

@@ -17,10 +17,7 @@
 // #include "dnsmasq.h"
 
 
-static struct cond_domain *search_domain(struct in_addr addr, struct cond_domain *c);
-static int match_domain(struct in_addr addr, struct cond_domain *c);
-static struct cond_domain *search_domain6(struct in6_addr *addr, struct cond_domain *c);
-static int match_domain6(struct in6_addr *addr, struct cond_domain *c);
+
 
 int is_name_synthetic(int flags, char *name, union all_addr *addr)
 {
