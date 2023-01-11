@@ -1,16 +1,17 @@
-use crate::irec::irec;
-use crate::mysockaddr::mysockaddr;
+use std::net::IpAddr;
+use crate::irec::Irec;
+use crate::mysockaddr::MySockAddr;
 
 #[derive(Default, Debug, Clone)]
-pub struct listener {
+pub struct Listener {
     // int fd, tcpfd, tftpfd, used;
     pub fd: i32,
     pub tcpfd: i32,
     pub tftpfd: i32,
     pub used: i32,
     // union mysockaddr addr;
-    pub addr: mysockaddr,
+    pub addr: IpAddr,
     // struct irec *iface; /* only sometimes valid for non-wildcard */
-    pub iface: *mut irec,
+    pub iface: Vec<Irec>,
     // struct listener *next;
 }

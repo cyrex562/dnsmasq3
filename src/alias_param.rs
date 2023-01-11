@@ -1,10 +1,10 @@
 use std::ptr::{null, null_mut};
-use crate::dhcp_bridge::dhcp_bridge;
+use crate::dhcp_bridge::DhcpBridge;
 
 #[derive(Debug, Clone)]
 pub struct alias_param {
     pub iface: i32,
-    pub bridge: *mut dhcp_bridge,
+    pub bridge: *mut DhcpBridge,
     pub num_alias_ifs: i32,
     pub max_alias_ifs: i32,
     pub alias_ifs: *mut i32,

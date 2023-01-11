@@ -1,26 +1,27 @@
+use std::net::IpAddr;
 use libc::{c_char, time_t};
-use crate::mysockaddr::mysockaddr;
-use crate::server_fd::serverfd;
+use crate::mysockaddr::MySockAddr;
+use crate::server_fd::ServerFd;
 
 #[derive(Default, Debug, Clone)]
-pub struct server {
+pub struct Server {
     // u16 flags, domain_len;
     pub flags: u16,
     pub domain_len: u16,
     // char *domain;
-    pub domain: *mut c_char,
+    pub domain: String,
     // struct server *next;
     // int serial, arrayposn;
     pub serial: i32,
     pub last_server: i32,
     // union mysockaddr addr, source_addr;
-    pub addr: mysockaddr,
-    pub source_addr: mysockaddr,
-    pub interface: [c_char; IF_NAMESIZE + 1],
+    pub addr: IpAddr,
+    pub source_addr: IpAddr,
+    pub interface: String,
     pub ifindex: u32,
     /* corresponding to interface, above */
     // struct serverfd *sfd;
-    pub sfd: *mut serverfd,
+    pub sfd: Vec<ServerFd>,
     // int tcpfd, edns_pktsz;
     pub tcpfd: i32,
     pub edns_pktsz: i32,

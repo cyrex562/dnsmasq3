@@ -1,12 +1,12 @@
 use libc::c_char;
 
-#[derive(Default,Debug,Clone)]
-pub struct cname {
-  // int ttl, flag;
-  pub ttl: i32,
-  pub flag: i32,
-  // char *alias, *target;
-  pub alias: *mut c_char,
-  pub target: *mut c_char,
-  // struct cname *next, *targetp;
+#[derive(Default, Debug, Clone)]
+pub struct Cname {
+    // int ttl, flag;
+    pub ttl: i32,
+    pub flag: i32,
+    // char *alias, *target;
+    pub alias: String,
+    pub target: String,
+    // struct cname *next, *targetp;
 }

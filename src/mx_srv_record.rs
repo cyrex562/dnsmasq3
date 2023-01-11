@@ -1,16 +1,14 @@
 use libc::c_char;
 
 #[derive(Default, Debug, Clone)]
-pub struct mx_srv_record {
+pub struct MxSrvRecord {
     // char *name, *target;
-    pub name: *mut c_char,
-    pub target: *mut c_char,
-    // int issrv, srvport, priority, weight;
+    pub name: String,
+    pub target: String,
     pub issrv: i32,
-    pub srvport: i32,
+    pub srvport: u16,
     pub priority: i32,
     pub weight: i32,
-    // unsigned offset: i32;
-    pub offset: i32,
+    pub offset: usize,
     // struct mx_srv_record *next;
 }

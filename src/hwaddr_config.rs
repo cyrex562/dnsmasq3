@@ -1,7 +1,7 @@
 use crate::dhcp_constants::DHCP_CHADDR_MAX;
 
 #[derive(Debug, Clone)]
-pub struct hwaddr_config {
+pub struct HwAddrConfig {
     pub hwaddr_len: i32,
     pub hwaddr_type: i32,
     pub hwaddr: [u8; DHCP_CHADDR_MAX],
@@ -9,7 +9,7 @@ pub struct hwaddr_config {
     // next
 }
 
-impl Default for hwaddr_config {
+impl Default for HwAddrConfig {
     fn default() -> Self {
         Self {
             hwaddr_len: 0,

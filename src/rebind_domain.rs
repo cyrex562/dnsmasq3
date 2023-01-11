@@ -1,8 +1,8 @@
 use libc::c_char;
 
 #[derive(Debug, Clone, Default)]
-pub struct rebind_domain {
+pub struct RebindDomain {
     // char *domain;
-    pub domain: *mut c_char,
+    pub domain: String,
     // struct rebind_domain *next;
 }

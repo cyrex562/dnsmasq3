@@ -1,5 +1,5 @@
 #[derive(Default,Debug,Clone)]
-pub struct arp_record {
+pub struct ArpRecord {
   // unsigned short hwlen, status;
   hwlen: u16,
   status: u16,

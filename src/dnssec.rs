@@ -177,12 +177,12 @@ else return ! daemon -> dnssec_no_time_check;
 }
 
 /* Return bytes of canonicalised rrdata one by one.
-   Init state->ip with the RR, and state->end with the end of same.
-   Init state->op to NULL.
-   Init state->desc to RR descriptor.
-   Init state->buff with a MAXDNAME * 2 buffer.
+   Init state.ip with the RR, and state.end with the end of same.
+   Init state.op to NULL.
+   Init state.desc to RR descriptor.
+   Init state.buff with a MAXDNAME * 2 buffer.
    
-   After each call which returns 1, state->op points to the next byte of data.
+   After each call which returns 1, state.op points to the next byte of data.
    On returning 0, the end has been reached.
 */
 struct rdata_state {
@@ -431,7 +431,7 @@ if (wildcard_out) * wildcard_out = NULL;
 name_labels = count_labels(name); /* For 4035 5.3.2 check */
 
 /* Sort RRset records into canonical order.
-   Note that at this point keyname and daemon->workspacename buffs are
+   Note that at this point keyname and daemon.workspacename buffs are
    unused, and used as workspace by the sort. */
 rrsetidx = sort_rrset(header, plen, rr_desc, rrsetidx, rrset, daemon -> workspacename, keyname);
 
@@ -1419,7 +1419,7 @@ return STAT_SECURE;
    STAT_NEED_KEY need DNSKEY to complete validation (name is returned in keyname, class in *class)
    STAT_NEED_DS  need DS to complete validation (name is returned in keyname)
 
-   daemon->rr_status points to a char array which corressponds to the RRs in the 
+   daemon.rr_status points to a char array which corressponds to the RRs in the
    answer and auth sections. This is set to >1 for each RR which is validated, and 0 for any which aren't.
 
    When validating replies to DS records, we're only interested in the NSEC{3} RRs in the auth section.

@@ -22,17 +22,17 @@ void dhcp_common_init(void)
 {
   /* These each hold a DHCP option max size 255
      and get a terminating zero added */
-  daemon.dhcp_buff = safe_malloc(DHCP_BUFF_SZ);
-  daemon->dhcp_buff2 = safe_malloc(DHCP_BUFF_SZ); 
-  daemon->dhcp_buff3 = safe_malloc(DHCP_BUFF_SZ);
+  daemon.dhcp_buff = malloc(DHCP_BUFF_SZ);
+  daemon.dhcp_buff2 = malloc(DHCP_BUFF_SZ);
+  daemon.dhcp_buff3 = malloc(DHCP_BUFF_SZ);
   
   /* dhcp_packet is used by v4 and v6, outpacket only by v6 
      sizeof(struct dhcp_packet) is as good an initial size as any,
      even for v6 */
-  expand_buf(&daemon->dhcp_packet, sizeof(struct dhcp_packet));
+  expand_buf(&daemon.dhcp_packet, sizeof(struct dhcp_packet));
 // #ifdef HAVE_DHCP6
-  if (daemon->dhcp6)
-    expand_buf(&daemon->outpacket, sizeof(struct dhcp_packet));
+  if (daemon.dhcp6)
+    expand_buf(&daemon.outpacket, sizeof(struct dhcp_packet));
 // #endif
 }
 
@@ -42,25 +42,25 @@ ssize_t recv_dhcp_packet(int fd, struct msghdr *msg)
  
   while (1)
     {
-      msg->msg_flags = 0;
+      msg.msg_flags = 0;
       while ((sz = recvmsg(fd, msg, MSG_PEEK | MSG_TRUNC)) == -1 && errno == EINTR);
       
       if (sz == -1)
 	return -1;
       
-      if (!(msg->msg_flags & MSG_TRUNC))
+      if (!(msg.msg_flags & MSG_TRUNC))
 	break;
 
       /* Very new Linux kernels return the actual size needed, 
 	 older ones always return truncated size */
-      if ((size_t)sz == msg->msg_iov->iov_len)
+      if ((size_t)sz == msg.msg_iov.iov_len)
 	{
-	  if (!expand_buf(msg->msg_iov, sz + 100))
+	  if (!expand_buf(msg.msg_iov, sz + 100))
 	    return -1;
 	}
       else
 	{
-	  expand_buf(msg->msg_iov, sz);
+	  expand_buf(msg.msg_iov, sz);
 	  break;
 	}
     }
@@ -76,7 +76,7 @@ ssize_t recv_dhcp_packet(int fd, struct msghdr *msg)
   if (new_sz == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
     new_sz = sz;
   
-  return (msg->msg_flags & MSG_TRUNC) ? -1 : new_sz;
+  return (msg.msg_flags & MSG_TRUNC) ? -1 : new_sz;
 }
 
 /* like match_netid() except that the check can have a trailing * for wildcard */
@@ -85,25 +85,25 @@ int match_netid_wild(struct dhcp_netid *check, struct dhcp_netid *pool)
 {
   struct dhcp_netid *tmp1;
   
-  for (; check; check = check->next)
+  for (; check; check = check.next)
     {
-      const int check_len = strlen(check->net);
-      const int is_wc = (check_len > 0 && check->net[check_len - 1] == '*');
+      const int check_len = strlen(check.net);
+      const int is_wc = (check_len > 0 && check.net[check_len - 1] == '*');
       
       /* '#' for not is for backwards compat. */
-      if (check->net[0] != '!' && check->net[0] != '#')
+      if (check.net[0] != '!' && check.net[0] != '#')
 	{
-	  for (tmp1 = pool; tmp1; tmp1 = tmp1->next)
-	    if (is_wc ? (strncmp(check->net, tmp1->net, check_len-1) == 0) :
-		(strcmp(check->net, tmp1->net) == 0))
+	  for (tmp1 = pool; tmp1; tmp1 = tmp1.next)
+	    if (is_wc ? (strncmp(check.net, tmp1.net, check_len-1) == 0) :
+		(strcmp(check.net, tmp1.net) == 0))
 	      break;
 	  if (!tmp1)
 	    return 0;
 	}
       else
-	for (tmp1 = pool; tmp1; tmp1 = tmp1->next)
-	  if (is_wc ? (strncmp((check->net)+1, tmp1->net, check_len-2) == 0) :
-	      (strcmp((check->net)+1, tmp1->net) == 0))
+	for (tmp1 = pool; tmp1; tmp1 = tmp1.next)
+	  if (is_wc ? (strncmp((check.net)+1, tmp1.net, check_len-2) == 0) :
+	      (strcmp((check.net)+1, tmp1.net) == 0))
 	    return 0;
     }
   return 1;
@@ -117,12 +117,12 @@ struct dhcp_netid *run_tag_if(struct dhcp_netid *tags)
   /* this now uses match_netid_wild() above so that tag_if can
    * be used to set a 'group of interfaces' tag.
    */
-  for (exprs = daemon->tag_if; exprs; exprs = exprs->next)
-    if (match_netid_wild(exprs->tag, tags))
-      for (list = exprs->set; list; list = list->next)
+  for (exprs = daemon.tag_if; exprs; exprs = exprs.next)
+    if (match_netid_wild(exprs.tag, tags))
+      for (list = exprs.set; list; list = list.next)
 	{
-	  list->list->next = tags;
-	  tags = list->list;
+	  list.list.next = tags;
+	  tags = list.list;
 	}
 
   return tags;
@@ -136,12 +136,12 @@ struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *con
   struct dhcp_opt *tmp;  
 
   /* flag options which are valid with the current tag set (sans context tags) */
-  for (opt = opts; opt; opt = opt->next)
+  for (opt = opts; opt; opt = opt.next)
     {
-      opt->flags &= ~DHOPT_TAGOK;
-      if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
-	  match_netid(opt->netid, tagif, 0))
-	opt->flags |= DHOPT_TAGOK;
+      opt.flags &= ~DHOPT_TAGOK;
+      if (!(opt.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
+	  match_netid(opt.netid, tagif, 0))
+	opt.flags |= DHOPT_TAGOK;
     }
 
   /* now flag options which are valid, including the context tags,
@@ -150,49 +150,49 @@ struct dhcp_netid *option_filter(struct dhcp_netid *tags, struct dhcp_netid *con
     {
       struct dhcp_netid *last_tag;
 
-      for (last_tag = context_tags; last_tag->next; last_tag = last_tag->next);
-      last_tag->next = tags;
+      for (last_tag = context_tags; last_tag.next; last_tag = last_tag.next);
+      last_tag.next = tags;
       tagif = run_tag_if(context_tags);
       
       /* reset stuff with tag:!<tag> which now matches. */
-      for (opt = opts; opt; opt = opt->next)
-	if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
-	    (opt->flags & DHOPT_TAGOK) &&
-	    !match_netid(opt->netid, tagif, 0))
-	  opt->flags &= ~DHOPT_TAGOK;
+      for (opt = opts; opt; opt = opt.next)
+	if (!(opt.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)) &&
+	    (opt.flags & DHOPT_TAGOK) &&
+	    !match_netid(opt.netid, tagif, 0))
+	  opt.flags &= ~DHOPT_TAGOK;
 
-      for (opt = opts; opt; opt = opt->next)
-	if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) &&
-	    match_netid(opt->netid, tagif, 0))
+      for (opt = opts; opt; opt = opt.next)
+	if (!(opt.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) &&
+	    match_netid(opt.netid, tagif, 0))
 	  {
 	    struct dhcp_opt *tmp;  
-	    for (tmp = opts; tmp; tmp = tmp->next) 
-	      if (tmp->opt == opt->opt && opt->netid && (tmp->flags & DHOPT_TAGOK))
+	    for (tmp = opts; tmp; tmp = tmp.next)
+	      if (tmp.opt == opt.opt && opt.netid && (tmp.flags & DHOPT_TAGOK))
 		break;
 	    if (!tmp)
-	      opt->flags |= DHOPT_TAGOK;
+	      opt.flags |= DHOPT_TAGOK;
 	  }      
     }
   
   /* now flag untagged options which are not overridden by tagged ones */
-  for (opt = opts; opt; opt = opt->next)
-    if (!(opt->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) && !opt->netid)
+  for (opt = opts; opt; opt = opt.next)
+    if (!(opt.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925 | DHOPT_TAGOK)) && !opt.netid)
       {
-	for (tmp = opts; tmp; tmp = tmp->next) 
-	  if (tmp->opt == opt->opt && (tmp->flags & DHOPT_TAGOK))
+	for (tmp = opts; tmp; tmp = tmp.next)
+	  if (tmp.opt == opt.opt && (tmp.flags & DHOPT_TAGOK))
 	    break;
 	if (!tmp)
-	  opt->flags |= DHOPT_TAGOK;
-	else if (!tmp->netid)
-	  my_syslog(MS_DHCP | LOG_WARNING, _("Ignoring duplicate dhcp-option %d"), tmp->opt); 
+	  opt.flags |= DHOPT_TAGOK;
+	else if (!tmp.netid)
+	  my_syslog(MS_DHCP | LOG_WARNING, _("Ignoring duplicate dhcp-option %d"), tmp.opt);
       }
 
   /* Finally, eliminate duplicate options later in the chain, and therefore earlier in the config file. */
-  for (opt = opts; opt; opt = opt->next)
-    if (opt->flags & DHOPT_TAGOK)
-      for (tmp = opt->next; tmp; tmp = tmp->next) 
-	if (tmp->opt == opt->opt)
-	  tmp->flags &= ~DHOPT_TAGOK;
+  for (opt = opts; opt; opt = opt.next)
+    if (opt.flags & DHOPT_TAGOK)
+      for (tmp = opt.next; tmp; tmp = tmp.next)
+	if (tmp.opt == opt.opt)
+	  tmp.flags &= ~DHOPT_TAGOK;
   
   return tagif;
 }
@@ -206,20 +206,20 @@ int match_netid(struct dhcp_netid *check, struct dhcp_netid *pool, int tagnotnee
   if (!check && !tagnotneeded)
     return 0;
 
-  for (; check; check = check->next)
+  for (; check; check = check.next)
     {
       /* '#' for not is for backwards compat. */
-      if (check->net[0] != '!' && check->net[0] != '#')
+      if (check.net[0] != '!' && check.net[0] != '#')
 	{
-	  for (tmp1 = pool; tmp1; tmp1 = tmp1->next)
-	    if (strcmp(check->net, tmp1->net) == 0)
+	  for (tmp1 = pool; tmp1; tmp1 = tmp1.next)
+	    if (strcmp(check.net, tmp1.net) == 0)
 	      break;
 	  if (!tmp1)
 	    return 0;
 	}
       else
-	for (tmp1 = pool; tmp1; tmp1 = tmp1->next)
-	  if (strcmp((check->net)+1, tmp1->net) == 0)
+	for (tmp1 = pool; tmp1; tmp1 = tmp1.next)
+	  if (strcmp((check.net)+1, tmp1.net) == 0)
 	    return 0;
     }
   return 1;
@@ -244,20 +244,20 @@ void log_tags(struct dhcp_netid *netid, u32 xid)
 {
   if (netid && option_bool(OPT_LOG_OPTS))
     {
-      char *s = daemon->namebuff;
-      for (*s = 0; netid; netid = netid->next)
+      char *s = daemon.namebuff;
+      for (*s = 0; netid; netid = netid.next)
 	{
 	  /* kill dupes. */
 	  struct dhcp_netid *n;
 	  
-	  for (n = netid->next; n; n = n->next)
-	    if (strcmp(netid->net, n->net) == 0)
+	  for (n = netid.next; n; n = n.next)
+	    if (strcmp(netid.net, n.net) == 0)
 	      break;
 	  
 	  if (!n)
 	    {
-	      strncat (s, netid->net, (MAXDNAME-1) - strlen(s));
-	      if (netid->next)
+	      strncat (s, netid.net, (MAXDNAME-1) - strlen(s));
+	      if (netid.next)
 		strncat (s, ", ", (MAXDNAME-1) - strlen(s));
 	    }
 	}
@@ -269,27 +269,27 @@ int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
 {
   i: i32;
   
-  if (o->len > len)
+  if (o.len > len)
     return 0;
   
-  if (o->len == 0)
+  if (o.len == 0)
     return 1;
      
-  if (o->flags & DHOPT_HEX)
+  if (o.flags & DHOPT_HEX)
     { 
-      if (memcmp_masked(o->val, p, o->len, o->u.wildcard_mask))
+      if (memcmp_masked(o.val, p, o.len, o.u.wildcard_mask))
 	return 1;
     }
   else 
-    for (i = 0; i <= (len - o->len); ) 
+    for (i = 0; i <= (len - o.len); )
       {
-	if (memcmp(o->val, p + i, o->len) == 0)
+	if (memcmp(o.val, p + i, o.len) == 0)
 	  return 1;
 	    
-	if (o->flags & DHOPT_STRING)
+	if (o.flags & DHOPT_STRING)
 	  i++;
 	else
-	  i += o->len;
+	  i += o.len;
       }
   
   return 0;
@@ -299,11 +299,11 @@ int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, i
 {
   struct hwaddr_config *conf_addr;
   
-  for (conf_addr = config->hwaddr; conf_addr; conf_addr = conf_addr->next)
-    if (conf_addr->wildcard_mask == 0 &&
-	conf_addr->hwaddr_len == len &&
-	(conf_addr->hwaddr_type == type || conf_addr->hwaddr_type == 0) &&
-	memcmp(conf_addr->hwaddr, hwaddr, len) == 0)
+  for (conf_addr = config.hwaddr; conf_addr; conf_addr = conf_addr.next)
+    if (conf_addr.wildcard_mask == 0 &&
+	conf_addr.hwaddr_len == len &&
+	(conf_addr.hwaddr_type == type || conf_addr.hwaddr_type == 0) &&
+	memcmp(conf_addr.hwaddr, hwaddr, len) == 0)
       return 1;
   
   return 0;
@@ -314,30 +314,30 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
   if (!context) /* called via find_config() from lease_update_from_configs() */
     return 1; 
 
-  if (!(config->flags & (CONFIG_ADDR | CONFIG_ADDR6)))
+  if (!(config.flags & (CONFIG_ADDR | CONFIG_ADDR6)))
     return 1;
   
 // #ifdef HAVE_DHCP6
-  if (context->flags & CONTEXT_V6)
+  if (context.flags & CONTEXT_V6)
     {
        addr_list: *mut addrlist;
 
-       if (config->flags & CONFIG_ADDR6)
-	 for (; context; context = context->current)
-	   for (addr_list = config->addr6; addr_list; addr_list = addr_list->next)
+       if (config.flags & CONFIG_ADDR6)
+	 for (; context; context = context.current)
+	   for (addr_list = config.addr6; addr_list; addr_list = addr_list.next)
 	     {
-	       if ((addr_list->flags & ADDRLIST_WILDCARD) && context->prefix == 64)
+	       if ((addr_list.flags & ADDRLIST_WILDCARD) && context.prefix == 64)
 		 return 1;
 	       
-	       if (is_same_net6(&addr_list->addr.addr6, &context->start6, context->prefix))
+	       if (is_same_net6(&addr_list.addr.addr6, &context.start6, context.prefix))
 		 return 1;
 	     }
     }
   else
 // #endif
     {
-      for (; context; context = context->current)
-	if ((config->flags & CONFIG_ADDR) && is_same_net(config->addr, context->start, context->netmask))
+      for (; context; context = context.current)
+	if ((config.flags & CONFIG_ADDR) && is_same_net(config.addr, context.start, context.netmask))
 	  return 1;
     }
 
@@ -356,40 +356,40 @@ static struct dhcp_config *find_config_match(struct dhcp_config *configs,
   struct hwaddr_config *conf_addr;
 
   if (clid)
-    for (config = configs; config; config = config->next)
-      if (config->flags & CONFIG_CLID)
+    for (config = configs; config; config = config.next)
+      if (config.flags & CONFIG_CLID)
 	{
-	  if (config->clid_len == clid_len && 
-	      memcmp(config->clid, clid, clid_len) == 0 &&
+	  if (config.clid_len == clid_len &&
+	      memcmp(config.clid, clid, clid_len) == 0 &&
 	      is_config_in_context(context, config) &&
-	      match_netid(config->filter, tags, tag_not_needed))
+	      match_netid(config.filter, tags, tag_not_needed))
 	    
 	    return config;
 	  
 	  /* dhcpcd prefixes ASCII client IDs by zero which is wrong, but we try and
 	     cope with that here. This is IPv4 only. context==NULL implies IPv4, 
 	     see lease_update_from_configs() */
-	  if ((!context || !(context->flags & CONTEXT_V6)) && *clid == 0 && config->clid_len == clid_len-1  &&
-	      memcmp(config->clid, clid+1, clid_len-1) == 0 &&
+	  if ((!context || !(context.flags & CONTEXT_V6)) && *clid == 0 && config.clid_len == clid_len-1  &&
+	      memcmp(config.clid, clid+1, clid_len-1) == 0 &&
 	      is_config_in_context(context, config) &&
-	      match_netid(config->filter, tags, tag_not_needed))
+	      match_netid(config.filter, tags, tag_not_needed))
 	    return config;
 	}
   
 
   if (hwaddr)
-    for (config = configs; config; config = config->next)
+    for (config = configs; config; config = config.next)
       if (config_has_mac(config, hwaddr, hw_len, hw_type) &&
 	  is_config_in_context(context, config) &&
-	  match_netid(config->filter, tags, tag_not_needed))
+	  match_netid(config.filter, tags, tag_not_needed))
 	return config;
   
   if (hostname && context)
-    for (config = configs; config; config = config->next)
-      if ((config->flags & CONFIG_NAME) && 
-	  hostname_isequal(config->hostname, hostname) &&
+    for (config = configs; config; config = config.next)
+      if ((config.flags & CONFIG_NAME) &&
+	  hostname_isequal(config.hostname, hostname) &&
 	  is_config_in_context(context, config) &&
-	  match_netid(config->filter, tags, tag_not_needed))
+	  match_netid(config.filter, tags, tag_not_needed))
 	return config;
 
   
@@ -397,14 +397,14 @@ static struct dhcp_config *find_config_match(struct dhcp_config *configs,
     return NULL;
 
   /* use match with fewest wildcard octets */
-  for (candidate = NULL, count = 0, config = configs; config; config = config->next)
+  for (candidate = NULL, count = 0, config = configs; config; config = config.next)
     if (is_config_in_context(context, config) &&
-	match_netid(config->filter, tags, tag_not_needed))
-      for (conf_addr = config->hwaddr; conf_addr; conf_addr = conf_addr->next)
-	if (conf_addr->wildcard_mask != 0 &&
-	    conf_addr->hwaddr_len == hw_len &&	
-	    (conf_addr->hwaddr_type == hw_type || conf_addr->hwaddr_type == 0) &&
-	    (new = memcmp_masked(conf_addr->hwaddr, hwaddr, hw_len, conf_addr->wildcard_mask)) > count)
+	match_netid(config.filter, tags, tag_not_needed))
+      for (conf_addr = config.hwaddr; conf_addr; conf_addr = conf_addr.next)
+	if (conf_addr.wildcard_mask != 0 &&
+	    conf_addr.hwaddr_len == hw_len &&
+	    (conf_addr.hwaddr_type == hw_type || conf_addr.hwaddr_type == 0) &&
+	    (new = memcmp_masked(conf_addr.hwaddr, hwaddr, hw_len, conf_addr.wildcard_mask)) > count)
 	  {
 	      count = new;
 	      candidate = config;
@@ -441,13 +441,13 @@ void dhcp_update_configs(struct dhcp_config *configs)
   struct crec *crec;
   int prot = AF_INET;
 
-  for (config = configs; config; config = config->next)
+  for (config = configs; config; config = config.next)
   {
-    if (config->flags & CONFIG_ADDR_HOSTS)
-      config->flags &= ~(CONFIG_ADDR | CONFIG_ADDR_HOSTS);
+    if (config.flags & CONFIG_ADDR_HOSTS)
+      config.flags &= ~(CONFIG_ADDR | CONFIG_ADDR_HOSTS);
 // #ifdef HAVE_DHCP6
-    if (config->flags & CONFIG_ADDR6_HOSTS)
-      config->flags &= ~(CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS);
+    if (config.flags & CONFIG_ADDR6_HOSTS)
+      config.flags &= ~(CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS);
 // #endif
   }
 
@@ -455,8 +455,8 @@ void dhcp_update_configs(struct dhcp_config *configs)
  again:  
 // #endif
 
-  if (daemon->port != 0)
-    for (config = configs; config; config = config->next)
+  if (daemon.port != 0)
+    for (config = configs; config; config = config.next)
       {
 	int conflags = CONFIG_ADDR;
 	int cacheflags = F_IPV4;
@@ -468,55 +468,55 @@ void dhcp_update_configs(struct dhcp_config *configs)
 	    cacheflags = F_IPV6;
 	  }
 // #endif
-	if (!(config->flags & conflags) &&
-	    (config->flags & CONFIG_NAME) && 
-	    (crec = cache_find_by_name(NULL, config->hostname, 0, cacheflags)) &&
-	    (crec->flags & F_HOSTS))
+	if (!(config.flags & conflags) &&
+	    (config.flags & CONFIG_NAME) &&
+	    (crec = cache_find_by_name(NULL, config.hostname, 0, cacheflags)) &&
+	    (crec.flags & F_HOSTS))
 	  {
-	    if (cache_find_by_name(crec, config->hostname, 0, cacheflags))
+	    if (cache_find_by_name(crec, config.hostname, 0, cacheflags))
 	      {
 		/* use primary (first) address */
-		while (crec && !(crec->flags & F_REVERSE))
-		  crec = cache_find_by_name(crec, config->hostname, 0, cacheflags);
+		while (crec && !(crec.flags & F_REVERSE))
+		  crec = cache_find_by_name(crec, config.hostname, 0, cacheflags);
 		if (!crec)
 		  continue; /* should be never */
-		inet_ntop(prot, &crec->addr, daemon->addrbuff, ADDRSTRLEN);
+		inet_ntop(prot, &crec.addr, daemon.addrbuff, ADDRSTRLEN);
 		my_syslog(MS_DHCP | LOG_WARNING, _("%s has more than one address in hostsfile, using %s for DHCP"), 
-			  config->hostname, daemon->addrbuff);
+			  config.hostname, daemon.addrbuff);
 	      }
 	    
 	    if (prot == AF_INET && 
-		(!(conf_tmp = config_find_by_address(configs, crec->addr.addr4)) || conf_tmp == config))
+		(!(conf_tmp = config_find_by_address(configs, crec.addr.addr4)) || conf_tmp == config))
 	      {
-		config->addr = crec->addr.addr4;
-		config->flags |= CONFIG_ADDR | CONFIG_ADDR_HOSTS;
+		config.addr = crec.addr.addr4;
+		config.flags |= CONFIG_ADDR | CONFIG_ADDR_HOSTS;
 		continue;
 	      }
 
 // #ifdef HAVE_DHCP6
 	    if (prot == AF_INET6 && 
-		(!(conf_tmp = config_find_by_address6(configs, NULL, 0, &crec->addr.addr6)) || conf_tmp == config))
+		(!(conf_tmp = config_find_by_address6(configs, NULL, 0, &crec.addr.addr6)) || conf_tmp == config))
 	      {
 		/* host must have exactly one address if comming from /etc/hosts. */
-		if (!config->addr6 && (config->addr6 = whine_malloc(sizeof(struct addrlist))))
+		if (!config.addr6 && (config.addr6 = whine_malloc(sizeof(struct addrlist))))
 		  {
-		    config->addr6->next = NULL;
-		    config->addr6->flags = 0;
+		    config.addr6.next = NULL;
+		    config.addr6.flags = 0;
 		  }
 
-		if (config->addr6 && !config->addr6->next && !(config->addr6->flags & (ADDRLIST_WILDCARD|ADDRLIST_PREFIX)))
+		if (config.addr6 && !config.addr6.next && !(config.addr6.flags & (ADDRLIST_WILDCARD|ADDRLIST_PREFIX)))
 		  {
-		    memcpy(&config->addr6->addr.addr6, &crec->addr.addr6, IN6ADDRSZ);
-		    config->flags |= CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS;
+		    memcpy(&config.addr6.addr.addr6, &crec.addr.addr6, IN6ADDRSZ);
+		    config.flags |= CONFIG_ADDR6 | CONFIG_ADDR6_HOSTS;
 		  }
 	    
 		continue;
 	      }
 // #endif
 
-	    inet_ntop(prot, &crec->addr, daemon->addrbuff, ADDRSTRLEN);
+	    inet_ntop(prot, &crec.addr, daemon.addrbuff, ADDRSTRLEN);
 	    my_syslog(MS_DHCP | LOG_WARNING, _("duplicate IP address %s (%s) in dhcp-config directive"), 
-		      daemon->addrbuff, config->hostname);
+		      daemon.addrbuff, config.hostname);
 	    
 	    
 	  }
@@ -549,26 +549,26 @@ char *whichdevice(void)
   struct irec *iface, *found;
   struct iname *if_tmp;
   
-  if (!daemon->if_names)
+  if (!daemon.if_names)
     return NULL;
   
-  for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
-    if (if_tmp->name && (!if_tmp->used || strchr(if_tmp->name, '*')))
+  for (if_tmp = daemon.if_names; if_tmp; if_tmp = if_tmp.next)
+    if (if_tmp.name && (!if_tmp.used || strchr(if_tmp.name, '*')))
       return NULL;
 
-  for (found = NULL, iface = daemon->interfaces; iface; iface = iface->next)
-    if (iface->dhcp_ok)
+  for (found = NULL, iface = daemon.interfaces; iface; iface = iface.next)
+    if (iface.dhcp_ok)
       {
 	if (!found)
 	  found = iface;
-	else if (strcmp(found->name, iface->name) != 0) 
+	else if (strcmp(found.name, iface.name) != 0)
 	  return NULL; /* more than one. */
       }
 
   if (found)
     {
-      char *ret = safe_malloc(strlen(found->name)+1);
-      strcpy(ret, found->name);
+      char *ret = malloc(strlen(found.name)+1);
+      strcpy(ret, found.name);
       return ret;
     }
   
@@ -594,18 +594,18 @@ int bind_dhcp_devices(char *bound_device)
 
   if (bound_device)
     {
-      if (daemon->dhcp)
+      if (daemon.dhcp)
 	{
-	  if (!daemon->relay4)
-	    ret |= bindtodevice(bound_device, daemon->dhcpfd);
+	  if (!daemon.relay4)
+	    ret |= bindtodevice(bound_device, daemon.dhcpfd);
 	  
-	  if (daemon->enable_pxe && daemon->pxefd != -1)
-	    ret |= bindtodevice(bound_device, daemon->pxefd);
+	  if (daemon.enable_pxe && daemon.pxefd != -1)
+	    ret |= bindtodevice(bound_device, daemon.pxefd);
 	}
       
 #if defined(HAVE_DHCP6)
-      if (daemon->doing_dhcp6 && !daemon->relay6)
-	ret |= bindtodevice(bound_device, daemon->dhcp6fd);
+      if (daemon.doing_dhcp6 && !daemon.relay6)
+	ret |= bindtodevice(bound_device, daemon.dhcp6fd);
 // #endif
     }
   
@@ -830,8 +830,8 @@ char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len,
 		      strncat(buf, ", ", buf_len - strlen(buf));
 		    /* align */
 		    memcpy(&addr, &val[i], addr_len); 
-		    inet_ntop(prot, &val[i], daemon->addrbuff, ADDRSTRLEN);
-		    strncat(buf, daemon->addrbuff, buf_len - strlen(buf));
+		    inet_ntop(prot, &val[i], daemon.addrbuff, ADDRSTRLEN);
+		    strncat(buf, daemon.addrbuff, buf_len - strlen(buf));
 		  }
 	      }
 	    else if (ot[o].size & OT_NAME)
@@ -926,104 +926,104 @@ void log_context(int family, struct dhcp_context *context)
 {
   /* Cannot use dhcp_buff* for RA contexts */
 
-  void *start = &context->start;
-  void *end = &context->end;
-  char *template = "", *p = daemon->namebuff;
+  void *start = &context.start;
+  void *end = &context.end;
+  char *template = "", *p = daemon.namebuff;
   
   *p = 0;
     
 // #ifdef HAVE_DHCP6
   if (family == AF_INET6)
     {
-      struct in6_addr subnet = context->start6;
-      if (!(context->flags & CONTEXT_TEMPLATE))
+      struct in6_addr subnet = context.start6;
+      if (!(context.flags & CONTEXT_TEMPLATE))
 	setaddr6part(&subnet, 0);
-      inet_ntop(AF_INET6, &subnet, daemon->addrbuff, ADDRSTRLEN); 
-      start = &context->start6;
-      end = &context->end6;
+      inet_ntop(AF_INET6, &subnet, daemon.addrbuff, ADDRSTRLEN);
+      start = &context.start6;
+      end = &context.end6;
     }
 // #endif
 
-  if (family != AF_INET && (context->flags & CONTEXT_DEPRECATE))
-    strcpy(daemon->namebuff, _(", prefix deprecated"));
+  if (family != AF_INET && (context.flags & CONTEXT_DEPRECATE))
+    strcpy(daemon.namebuff, _(", prefix deprecated"));
   else
     {
       p += sprintf(p, _(", lease time "));
-      prettyprint_time(p, context->lease_time);
+      prettyprint_time(p, context.lease_time);
       p += strlen(p);
     }	
 
 // #ifdef HAVE_DHCP6
-  if (context->flags & CONTEXT_CONSTRUCTED)
+  if (context.flags & CONTEXT_CONSTRUCTED)
     {
       char ifrn_name[IFNAMSIZ];
       
       template = p;
       p += sprintf(p, ", ");
       
-      if (indextoname(daemon->icmp6fd, context->if_index, ifrn_name))
-	sprintf(p, "%s for %s", (context->flags & CONTEXT_OLD) ? "old prefix" : "constructed", ifrn_name);
+      if (indextoname(daemon.icmp6fd, context.if_index, ifrn_name))
+	sprintf(p, "%s for %s", (context.flags & CONTEXT_OLD) ? "old prefix" : "constructed", ifrn_name);
     }
-  else if (context->flags & CONTEXT_TEMPLATE && !(context->flags & CONTEXT_RA_STATELESS))
+  else if (context.flags & CONTEXT_TEMPLATE && !(context.flags & CONTEXT_RA_STATELESS))
     {
       template = p;
       p += sprintf(p, ", ");
       
-      sprintf(p, "template for %s", context->template_interface);  
+      sprintf(p, "template for %s", context.template_interface);
     }
 // #endif
      
-  if (!(context->flags & CONTEXT_OLD) &&
-      ((context->flags & CONTEXT_DHCP) || family == AF_INET)) 
+  if (!(context.flags & CONTEXT_OLD) &&
+      ((context.flags & CONTEXT_DHCP) || family == AF_INET))
     {
 // #ifdef HAVE_DHCP6
-      if (context->flags & CONTEXT_RA_STATELESS)
+      if (context.flags & CONTEXT_RA_STATELESS)
 	{
-	  if (context->flags & CONTEXT_TEMPLATE)
-	    strncpy(daemon->dhcp_buff, context->template_interface, DHCP_BUFF_SZ);
+	  if (context.flags & CONTEXT_TEMPLATE)
+	    strncpy(daemon.dhcp_buff, context.template_interface, DHCP_BUFF_SZ);
 	  else
-	    strcpy(daemon->dhcp_buff, daemon->addrbuff);
+	    strcpy(daemon.dhcp_buff, daemon.addrbuff);
 	}
       else 
 // #endif
-	inet_ntop(family, start, daemon->dhcp_buff, DHCP_BUFF_SZ);
-      inet_ntop(family, end, daemon->dhcp_buff3, DHCP_BUFF_SZ);
+	inet_ntop(family, start, daemon.dhcp_buff, DHCP_BUFF_SZ);
+      inet_ntop(family, end, daemon.dhcp_buff3, DHCP_BUFF_SZ);
       my_syslog(MS_DHCP | LOG_INFO, 
-		(context->flags & CONTEXT_RA_STATELESS) ? 
+		(context.flags & CONTEXT_RA_STATELESS) ?
 		_("%s stateless on %s%.0s%.0s%s") :
-		(context->flags & CONTEXT_STATIC) ? 
+		(context.flags & CONTEXT_STATIC) ?
 		_("%s, static leases only on %.0s%s%s%.0s") :
-		(context->flags & CONTEXT_PROXY) ?
+		(context.flags & CONTEXT_PROXY) ?
 		_("%s, proxy on subnet %.0s%s%.0s%.0s") :
 		_("%s, IP range %s -- %s%s%.0s"),
 		(family != AF_INET) ? "DHCPv6" : "DHCP",
-		daemon->dhcp_buff, daemon->dhcp_buff3, daemon->namebuff, template);
+		daemon.dhcp_buff, daemon.dhcp_buff3, daemon.namebuff, template);
     }
   
 // #ifdef HAVE_DHCP6
-  if (context->flags & CONTEXT_TEMPLATE)
+  if (context.flags & CONTEXT_TEMPLATE)
     {
-      strcpy(daemon->addrbuff, context->template_interface);
+      strcpy(daemon.addrbuff, context.template_interface);
       template = "";
     }
 
-  if ((context->flags & CONTEXT_RA_NAME) && !(context->flags & CONTEXT_OLD))
-    my_syslog(MS_DHCP | LOG_INFO, _("DHCPv4-derived IPv6 names on %s%s"), daemon->addrbuff, template);
+  if ((context.flags & CONTEXT_RA_NAME) && !(context.flags & CONTEXT_OLD))
+    my_syslog(MS_DHCP | LOG_INFO, _("DHCPv4-derived IPv6 names on %s%s"), daemon.addrbuff, template);
   
-  if ((context->flags & CONTEXT_RA) || (option_bool(OPT_RA) && (context->flags & CONTEXT_DHCP) && family == AF_INET6)) 
-    my_syslog(MS_DHCP | LOG_INFO, _("router advertisement on %s%s"), daemon->addrbuff, template);
+  if ((context.flags & CONTEXT_RA) || (option_bool(OPT_RA) && (context.flags & CONTEXT_DHCP) && family == AF_INET6))
+    my_syslog(MS_DHCP | LOG_INFO, _("router advertisement on %s%s"), daemon.addrbuff, template);
 // #endif
 
 }
 
 void log_relay(int family, struct dhcp_relay *relay)
 {
-  int broadcast = relay->server.addr4.s_addr == 0;
-  inet_ntop(family, &relay->local, daemon->addrbuff, ADDRSTRLEN);
-  inet_ntop(family, &relay->server, daemon->namebuff, ADDRSTRLEN);
+  int broadcast = relay.server.addr4.s_addr == 0;
+  inet_ntop(family, &relay.local, daemon.addrbuff, ADDRSTRLEN);
+  inet_ntop(family, &relay.server, daemon.namebuff, ADDRSTRLEN);
 
-  if (family == AF_INET && relay->port != DHCP_SERVER_PORT)
-    sprintf(daemon->namebuff + strlen(daemon->namebuff), "#%u", relay->port);
+  if (family == AF_INET && relay.port != DHCP_SERVER_PORT)
+    sprintf(daemon.namebuff + strlen(daemon.namebuff), "#%u", relay.port);
 
 // #ifdef HAVE_DHCP6
   multicast: in6_addr;
@@ -1032,22 +1032,22 @@ void log_relay(int family, struct dhcp_relay *relay)
 
   if (family == AF_INET6)
     {
-      broadcast = IN6_ARE_ADDR_EQUAL(&relay->server.addr6, &multicast);
-      if (relay->port != DHCPV6_SERVER_PORT)
-	sprintf(daemon->namebuff + strlen(daemon->namebuff), "#%u", relay->port);
+      broadcast = IN6_ARE_ADDR_EQUAL(&relay.server.addr6, &multicast);
+      if (relay.port != DHCPV6_SERVER_PORT)
+	sprintf(daemon.namebuff + strlen(daemon.namebuff), "#%u", relay.port);
     }
 // #endif
   
   
-  if (relay->interface)
+  if (relay.interface)
     {
       if (broadcast)
-	my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s via %s"), daemon->addrbuff, relay->interface);
+	my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s via %s"), daemon.addrbuff, relay.interface);
       else
-	my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s to %s via %s"), daemon->addrbuff, daemon->namebuff, relay->interface);
+	my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s to %s via %s"), daemon.addrbuff, daemon.namebuff, relay.interface);
     }
   else
-    my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s to %s"), daemon->addrbuff, daemon->namebuff);
+    my_syslog(MS_DHCP | LOG_INFO, _("DHCP relay from %s to %s"), daemon.addrbuff, daemon.namebuff);
 }
    
 // #endif

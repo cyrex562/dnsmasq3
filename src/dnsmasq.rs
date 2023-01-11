@@ -135,11 +135,11 @@ static int read_event(int fd, struct event_desc *evp, char **msg)
   
   *msg = NULL;
   
-  if (evp->msg_sz != 0 && 
-      (buf = malloc(evp->msg_sz + 1)) &&
-      read_write(fd, (unsigned char *)buf, evp->msg_sz, 1))
+  if (evp.msg_sz != 0 &&
+      (buf = malloc(evp.msg_sz + 1)) &&
+      read_write(fd, (unsigned char *)buf, evp.msg_sz, 1))
     {
-      buf[evp->msg_sz] = 0;
+      buf[evp.msg_sz] = 0;
       *msg = buf;
     }
 
@@ -148,9 +148,9 @@ static int read_event(int fd, struct event_desc *evp, char **msg)
     
 static void fatal_event(struct event_desc *ev, char *msg)
 {
-  errno = ev->data;
+  errno = ev.data;
   
-  switch (ev->event)
+  switch (ev.event)
     {
     case EVENT_DIE:
       exit(0);
@@ -210,22 +210,22 @@ static void async_event(int pipe, time_t now)
     switch (ev.event)
       {
       case EVENT_RELOAD:
-	daemon->soa_sn++; /* Bump zone serial, as it may have changed. */
+	daemon.soa_sn++; /* Bump zone serial, as it may have changed. */
 	
 	/* fall through */
 	
       case EVENT_INIT:
 	clear_cache_and_reload(now);
 	
-	if (daemon->port != 0)
+	if (daemon.port != 0)
 	  {
-	    if (daemon->resolv_files && option_bool(OPT_NO_POLL))
+	    if (daemon.resolv_files && option_bool(OPT_NO_POLL))
 	      {
-		reload_servers(daemon->resolv_files->name);
+		reload_servers(daemon.resolv_files.name);
 		check = 1;
 	      }
 
-	    if (daemon->servers_file)
+	    if (daemon.servers_file)
 	      {
 		read_servers_file();
 		check = 1;
@@ -241,19 +241,19 @@ static void async_event(int pipe, time_t now)
 	break;
 	
       case EVENT_DUMP:
-	if (daemon->port != 0)
+	if (daemon.port != 0)
 	  dump_cache(now);
 	break;
 	
       case EVENT_ALARM:
 // #ifdef HAVE_DHCP
-	if (daemon->dhcp || daemon->doing_dhcp6)
+	if (daemon.dhcp || daemon.doing_dhcp6)
 	  {
 	    lease_prune(NULL, now);
 	    lease_update_file(now);
 	  }
 // #ifdef HAVE_DHCP6
-	else if (daemon->doing_ra)
+	else if (daemon.doing_ra)
 	  /* Not doing DHCP, so no lease system, manage alarms for ra only */
 	    send_alarm(periodic_ra(now), now);
 // #endif
@@ -270,8 +270,8 @@ static void async_event(int pipe, time_t now)
 	    }      
 	  else 
 	    for (i = 0 ; i < MAX_PROCS; i++)
-	      if (daemon->tcp_pids[i] == p)
-		daemon->tcp_pids[i] = 0;
+	      if (daemon.tcp_pids[i] == p)
+		daemon.tcp_pids[i] = 0;
 	break;
 	
 #if defined(HAVE_SCRIPT)	
@@ -285,7 +285,7 @@ static void async_event(int pipe, time_t now)
 
       case EVENT_EXEC_ERR:
 	my_syslog(LOG_ERR, _("failed to execute %s: %s"), 
-		  daemon->lease_change_command, strerror(ev.data));
+		  daemon.lease_change_command, strerror(ev.data));
 	break;
 
       case EVENT_SCRIPT_LOG:
@@ -306,8 +306,8 @@ static void async_event(int pipe, time_t now)
 	/* Note: this may leave TCP-handling processes with the old file still open.
 	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
 	   we leave them logging to the old file. */
-	if (daemon->log_file != NULL)
-	  log_reopen(daemon->log_file);
+	if (daemon.log_file != NULL)
+	  log_reopen(daemon.log_file);
 	break;
 
       case EVENT_NEWADDR:
@@ -322,10 +322,10 @@ static void async_event(int pipe, time_t now)
 
       case EVENT_TIME:
 // #ifdef HAVE_DNSSEC
-	if (daemon->dnssec_no_time_check && option_bool(OPT_DNSSEC_VALID) && option_bool(OPT_DNSSEC_TIME))
+	if (daemon.dnssec_no_time_check && option_bool(OPT_DNSSEC_VALID) && option_bool(OPT_DNSSEC_TIME))
 	  {
 	    my_syslog(LOG_INFO, _("now checking DNSSEC signature timestamps"));
-	    daemon->dnssec_no_time_check = 0;
+	    daemon.dnssec_no_time_check = 0;
 	    clear_cache_and_reload(now);
 	  }
 // #endif
@@ -334,41 +334,41 @@ static void async_event(int pipe, time_t now)
       case EVENT_TERM:
 	/* Knock all our children on the head. */
 	for (i = 0; i < MAX_PROCS; i++)
-	  if (daemon->tcp_pids[i] != 0)
-	    kill(daemon->tcp_pids[i], SIGALRM);
+	  if (daemon.tcp_pids[i] != 0)
+	    kill(daemon.tcp_pids[i], SIGALRM);
 	
 #if defined(HAVE_SCRIPT) && defined(HAVE_DHCP)
 	/* handle pending lease transitions */
-	if (daemon->helperfd != -1)
+	if (daemon.helperfd != -1)
 	  {
 	    /* block in writes until all done */
-	    if ((i = fcntl(daemon->helperfd, F_GETFL)) != -1)
-	      while(retry_send(fcntl(daemon->helperfd, F_SETFL, i & ~O_NONBLOCK)));
+	    if ((i = fcntl(daemon.helperfd, F_GETFL)) != -1)
+	      while(retry_send(fcntl(daemon.helperfd, F_SETFL, i & ~O_NONBLOCK)));
 	    do {
 	      helper_write();
 	    } while (!helper_buf_empty() || do_script_run(now));
-	    close(daemon->helperfd);
+	    close(daemon.helperfd);
 	  }
 // #endif
 	
-	if (daemon->lease_stream)
-	  fclose(daemon->lease_stream);
+	if (daemon.lease_stream)
+	  fclose(daemon.lease_stream);
 
 // #ifdef HAVE_DNSSEC
 	/* update timestamp file on TERM if time is considered valid */
-	if (daemon->back_to_the_future)
+	if (daemon.back_to_the_future)
 	  {
-	     if (utimes(daemon->timestamp_file, NULL) == -1)
-		my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon->timestamp_file, strerror(errno));
+	     if (utimes(daemon.timestamp_file, NULL) == -1)
+		my_syslog(LOG_ERR, _("failed to update mtime on %s: %s"), daemon.timestamp_file, strerror(errno));
 	  }
 // #endif
 
-	if (daemon->runfile)
-	  unlink(daemon->runfile);
+	if (daemon.runfile)
+	  unlink(daemon.runfile);
 
 // #ifdef HAVE_DUMPFILE
-	if (daemon->dumpfd != -1)
-	  close(daemon->dumpfd);
+	if (daemon.dumpfd != -1)
+	  close(daemon.dumpfd);
 // #endif
 	
 	my_syslog(LOG_INFO, _("exiting on receipt of SIGTERM"));
@@ -386,23 +386,23 @@ static void poll_resolv(int force, int do_reload, time_t now)
      Go through and find the one which changed _last_.
      Warn of any which can't be read. */
 
-  if (daemon->port == 0 || option_bool(OPT_NO_POLL))
+  if (daemon.port == 0 || option_bool(OPT_NO_POLL))
     return;
   
-  for (latest = NULL, res = daemon->resolv_files; res; res = res->next)
-    if (stat(res->name, &statbuf) == -1)
+  for (latest = NULL, res = daemon.resolv_files; res; res = res.next)
+    if (stat(res.name, &statbuf) == -1)
       {
 	if (force)
 	  {
-	    res->mtime = 0; 
+	    res.mtime = 0;
 	    continue;
 	  }
 
-	if (!res->logged)
-	  my_syslog(LOG_WARNING, _("failed to access %s: %s"), res->name, strerror(errno));
-	res->logged = 1;
+	if (!res.logged)
+	  my_syslog(LOG_WARNING, _("failed to access %s: %s"), res.name, strerror(errno));
+	res.logged = 1;
 	
-	if (res->mtime != 0)
+	if (res.mtime != 0)
 	  { 
 	    /* existing file evaporated, force selection of the latest
 	       file even if its mtime hasn't changed since we last looked */
@@ -412,11 +412,11 @@ static void poll_resolv(int force, int do_reload, time_t now)
       }
     else
       {
-	res->logged = 0;
-	if (force || (statbuf.st_mtime != res->mtime || statbuf.st_ino != res->ino))
+	res.logged = 0;
+	if (force || (statbuf.st_mtime != res.mtime || statbuf.st_ino != res.ino))
           {
-            res->mtime = statbuf.st_mtime;
-	    res->ino = statbuf.st_ino;
+            res.mtime = statbuf.st_mtime;
+	    res.ino = statbuf.st_ino;
 	    if (difftime(statbuf.st_mtime, last_change) > 0.0)
 	      {
 		last_change = statbuf.st_mtime;
@@ -428,9 +428,9 @@ static void poll_resolv(int force, int do_reload, time_t now)
   if (latest)
     {
       static int warned = 0;
-      if (reload_servers(latest->name))
+      if (reload_servers(latest.name))
 	{
-	  my_syslog(LOG_INFO, _("reading %s"), latest->name);
+	  my_syslog(LOG_INFO, _("reading %s"), latest.name);
 	  warned = 0;
 	  check_servers(0);
 	  if (option_bool(OPT_RELOAD) && do_reload)
@@ -443,10 +443,10 @@ static void poll_resolv(int force, int do_reload, time_t now)
 	     invalid, so just rebuild that here. Once reload_servers() succeeds,
 	     we call check_servers() above, which calls build_server_array itself. */
 	  build_server_array();
-	  latest->mtime = 0;
+	  latest.mtime = 0;
 	  if (!warned)
 	    {
-	      my_syslog(LOG_WARNING, _("no servers found in %s, will retry"), latest->name);
+	      my_syslog(LOG_WARNING, _("no servers found in %s, will retry"), latest.name);
 	      warned = 1;
 	    }
 	}
@@ -457,22 +457,22 @@ void clear_cache_and_reload(time_t now)
 {
   (void)now;
 
-  if (daemon->port != 0)
+  if (daemon.port != 0)
     cache_reload();
   
 // #ifdef HAVE_DHCP
-  if (daemon->dhcp || daemon->doing_dhcp6)
+  if (daemon.dhcp || daemon.doing_dhcp6)
     {
       if (option_bool(OPT_ETHERS))
 	dhcp_read_ethers();
       reread_dhcp();
-      dhcp_update_configs(daemon->dhcp_conf);
+      dhcp_update_configs(daemon.dhcp_conf);
       lease_update_from_configs(); 
       lease_update_file(now); 
       lease_update_dns(1);
     }
 // #ifdef HAVE_DHCP6
-  else if (daemon->doing_ra)
+  else if (daemon.doing_ra)
     /* Not doing DHCP, so no lease system, manage 
        alarms for ra only */
     send_alarm(periodic_ra(now), now);
@@ -491,52 +491,52 @@ static void set_dns_listeners(void)
   int  tftp = 0;
   struct tftp_transfer *transfer;
   if (!option_bool(OPT_SINGLE_PORT))
-    for (transfer = daemon->tftp_trans; transfer; transfer = transfer->next)
+    for (transfer = daemon.tftp_trans; transfer; transfer = transfer.next)
       {
 	tftp++;
-	poll_listen(transfer->sockfd, POLLIN);
+	poll_listen(transfer.sockfd, POLLIN);
       }
 // #endif
   
-  for (serverfdp = daemon->sfds; serverfdp; serverfdp = serverfdp->next)
-    poll_listen(serverfdp->fd, POLLIN);
+  for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    poll_listen(serverfdp.fd, POLLIN);
     
-  for (i = 0; i < daemon->numrrand; i++)
-    if (daemon->randomsocks[i].refcount != 0)
-      poll_listen(daemon->randomsocks[i].fd, POLLIN);
+  for (i = 0; i < daemon.numrrand; i++)
+    if (daemon.randomsocks[i].refcount != 0)
+      poll_listen(daemon.randomsocks[i].fd, POLLIN);
 
   /* Check overflow random sockets too. */
-  for (rfl = daemon->rfl_poll; rfl; rfl = rfl->next)
-    poll_listen(rfl->rfd->fd, POLLIN);
+  for (rfl = daemon.rfl_poll; rfl; rfl = rfl.next)
+    poll_listen(rfl.rfd.fd, POLLIN);
   
   /* check to see if we have free tcp process slots. */
   for (i = MAX_PROCS - 1; i >= 0; i--)
-    if (daemon->tcp_pids[i] == 0 && daemon->tcp_pipes[i] == -1)
+    if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
       break;
 
-  for (listener = daemon->listeners; listener; listener = listener->next)
+  for (listener = daemon.listeners; listener; listener = listener.next)
     {
-      if (listener->fd != -1)
-	poll_listen(listener->fd, POLLIN);
+      if (listener.fd != -1)
+	poll_listen(listener.fd, POLLIN);
       
       /* Only listen for TCP connections when a process slot
 	 is available. Death of a child goes through the select loop, so
 	 we don't need to explicitly arrange to wake up here,
 	 we'll be called again when a slot becomes available. */
-      if  (listener->tcpfd != -1 && i >= 0)
-	poll_listen(listener->tcpfd, POLLIN);
+      if  (listener.tcpfd != -1 && i >= 0)
+	poll_listen(listener.tcpfd, POLLIN);
       
 // #ifdef HAVE_TFTP
       /* tftp == 0 in single-port mode. */
-      if (tftp <= daemon->tftp_max && listener->tftpfd != -1)
-	poll_listen(listener->tftpfd, POLLIN);
+      if (tftp <= daemon.tftp_max && listener.tftpfd != -1)
+	poll_listen(listener.tftpfd, POLLIN);
 // #endif
     }
   
   if (!option_bool(OPT_DEBUG))
     for (i = 0; i < MAX_PROCS; i++)
-      if (daemon->tcp_pipes[i] != -1)
-	poll_listen(daemon->tcp_pipes[i], POLLIN);
+      if (daemon.tcp_pipes[i] != -1)
+	poll_listen(daemon.tcp_pipes[i], POLLIN);
 }
 
 static void check_dns_listeners(time_t now)
@@ -547,19 +547,19 @@ static void check_dns_listeners(time_t now)
   i: i32;
   int pipefd[2];
   
-  for (serverfdp = daemon->sfds; serverfdp; serverfdp = serverfdp->next)
-    if (poll_check(serverfdp->fd, POLLIN))
-      reply_query(serverfdp->fd, now);
+  for (serverfdp = daemon.sfds; serverfdp; serverfdp = serverfdp.next)
+    if (poll_check(serverfdp.fd, POLLIN))
+      reply_query(serverfdp.fd, now);
   
-  for (i = 0; i < daemon->numrrand; i++)
-    if (daemon->randomsocks[i].refcount != 0 && 
-	poll_check(daemon->randomsocks[i].fd, POLLIN))
-      reply_query(daemon->randomsocks[i].fd, now);
+  for (i = 0; i < daemon.numrrand; i++)
+    if (daemon.randomsocks[i].refcount != 0 &&
+	poll_check(daemon.randomsocks[i].fd, POLLIN))
+      reply_query(daemon.randomsocks[i].fd, now);
 
   /* Check overflow random sockets too. */
-  for (rfl = daemon->rfl_poll; rfl; rfl = rfl->next)
-    if (poll_check(rfl->rfd->fd, POLLIN))
-      reply_query(rfl->rfd->fd, now);
+  for (rfl = daemon.rfl_poll; rfl; rfl = rfl.next)
+    if (poll_check(rfl.rfd.fd, POLLIN))
+      reply_query(rfl.rfd.fd, now);
 
   /* Races. The child process can die before we read all of the data from the
      pipe, or vice versa. Therefore send tcp_pids to zero when we wait() the 
@@ -570,21 +570,21 @@ static void check_dns_listeners(time_t now)
      returns POLLHUP, not POLLIN, so have to check for both here. */
   if (!option_bool(OPT_DEBUG))
     for (i = 0; i < MAX_PROCS; i++)
-      if (daemon->tcp_pipes[i] != -1 &&
-	  poll_check(daemon->tcp_pipes[i], POLLIN | POLLHUP) &&
-	  !cache_recv_insert(now, daemon->tcp_pipes[i]))
+      if (daemon.tcp_pipes[i] != -1 &&
+	  poll_check(daemon.tcp_pipes[i], POLLIN | POLLHUP) &&
+	  !cache_recv_insert(now, daemon.tcp_pipes[i]))
 	{
-	  close(daemon->tcp_pipes[i]);
-	  daemon->tcp_pipes[i] = -1;	
+	  close(daemon.tcp_pipes[i]);
+	  daemon.tcp_pipes[i] = -1;
 	}
 	
-  for (listener = daemon->listeners; listener; listener = listener->next)
+  for (listener = daemon.listeners; listener; listener = listener.next)
     {
-      if (listener->fd != -1 && poll_check(listener->fd, POLLIN))
+      if (listener.fd != -1 && poll_check(listener.fd, POLLIN))
 	receive_query(listener, now); 
       
 // #ifdef HAVE_TFTP
-      if (listener->tftpfd != -1 && poll_check(listener->tftpfd, POLLIN))
+      if (listener.tftpfd != -1 && poll_check(listener.tftpfd, POLLIN))
 	tftp_request(listener, now);
 // #endif
 
@@ -594,10 +594,10 @@ static void check_dns_listeners(time_t now)
 	 There may be more waiting connections after
 	 poll() returns then free process slots. */
       for (i = MAX_PROCS - 1; i >= 0; i--)
-	if (daemon->tcp_pids[i] == 0 && daemon->tcp_pipes[i] == -1)
+	if (daemon.tcp_pids[i] == 0 && daemon.tcp_pipes[i] == -1)
 	  break;
 
-      if (listener->tcpfd != -1 && i >= 0 && poll_check(listener->tcpfd, POLLIN))
+      if (listener.tcpfd != -1 && i >= 0 && poll_check(listener.tcpfd, POLLIN))
 	{
 	  int confd, client_ok = 1;
 	  struct irec *iface = NULL;
@@ -605,7 +605,7 @@ static void check_dns_listeners(time_t now)
 	  union mysockaddr tcp_addr;
 	  socklen_t tcp_len = sizeof(union mysockaddr);
 
-	  while ((confd = accept(listener->tcpfd, NULL, NULL)) == -1 && errno == EINTR);
+	  while ((confd = accept(listener.tcpfd, NULL, NULL)) == -1 && errno == EINTR);
 	  
 	  if (confd == -1)
 	    continue;
@@ -630,7 +630,7 @@ static void check_dns_listeners(time_t now)
 	  enumerate_interfaces(0);
 	  
 	  if (option_bool(OPT_NOWILD))
-	    iface = listener->iface; /* May be NULL */
+	    iface = listener.iface; /* May be NULL */
 	  else 
 	    {
 	      if_index: i32;
@@ -638,7 +638,7 @@ static void check_dns_listeners(time_t now)
 	      
 	      /* if we can find the arrival interface, check it's one that's allowed */
 	      if ((if_index = tcp_interface(confd, tcp_addr.sa.sa_family)) != 0 &&
-		  indextoname(listener->tcpfd, if_index, intr_name))
+		  indextoname(listener.tcpfd, if_index, intr_name))
 		{
 		  union all_addr addr;
 		  
@@ -647,17 +647,17 @@ static void check_dns_listeners(time_t now)
 		  else
 		    addr.addr4 = tcp_addr.in.sin_addr;
 		  
-		  for (iface = daemon->interfaces; iface; iface = iface->next)
-		    if (iface->index == if_index &&
-		        iface->addr.sa.sa_family == tcp_addr.sa.sa_family)
+		  for (iface = daemon.interfaces; iface; iface = iface.next)
+		    if (iface.index == if_index &&
+		        iface.addr.sa.sa_family == tcp_addr.sa.sa_family)
 		      break;
 		  
-		  if (!iface && !loopback_exception(listener->tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
+		  if (!iface && !loopback_exception(listener.tcpfd, tcp_addr.sa.sa_family, &addr, intr_name))
 		    client_ok = 0;
 		}
 	      
 	      if (option_bool(OPT_CLEVERBIND))
-		iface = listener->iface; /* May be NULL */
+		iface = listener.iface; /* May be NULL */
 	      else
 		{
 		  /* Check for allowed interfaces when binding the wildcard address:
@@ -666,8 +666,8 @@ static void check_dns_listeners(time_t now)
 		     an allowed interface. As a side effect, we get the netmask of the
 		     interface too, for localisation. */
 		  
-		  for (iface = daemon->interfaces; iface; iface = iface->next)
-		    if (sockaddr_isequal(&iface->addr, &tcp_addr))
+		  for (iface = daemon.interfaces; iface; iface = iface.next)
+		    if (sockaddr_isequal(&iface.addr, &tcp_addr))
 		      break;
 		  
 		  if (!iface)
@@ -707,13 +707,13 @@ static void check_dns_listeners(time_t now)
 // #endif
 
 		  /* i holds index of free slot */
-		  daemon->tcp_pids[i] = p;
-		  daemon->tcp_pipes[i] = pipefd[0];
+		  daemon.tcp_pids[i] = p;
+		  daemon.tcp_pipes[i] = pipefd[0];
 		}
 	      close(confd);
 
 	      /* The child can use up to TCP_MAX_QUERIES ids, so skip that many. */
-	      daemon->log_id += TCP_MAX_QUERIES;
+	      daemon.log_id += TCP_MAX_QUERIES;
 	    }
 	  else
 	    {
@@ -725,8 +725,8 @@ static void check_dns_listeners(time_t now)
 	   
 	      if (iface)
 		{
-		  netmask = iface->netmask;
-		  auth_dns = iface->dns_auth;
+		  netmask = iface.netmask;
+		  auth_dns = iface.dns_auth;
 		}
 	      else
 		{
@@ -742,17 +742,17 @@ static void check_dns_listeners(time_t now)
 		  /* See comment above re: netlink socket. */
 		  unsigned char a = 0;
 
-		  close(daemon->netlinkfd);
+		  close(daemon.netlinkfd);
 		  read_write(pipefd[1], &a, 1, 0);
 // #endif
 		  alarm(CHILD_LIFETIME);
 		  close(pipefd[0]); /* close read end in child. */
-		  daemon->pipe_to_parent = pipefd[1];
+		  daemon.pipe_to_parent = pipefd[1];
 		}
 
 	      /* start with no upstream connections. */
-	      for (s = daemon->servers; s; s = s->next)
-		 s->tcpfd = -1; 
+	      for (s = daemon.servers; s; s = s.next)
+		 s.tcpfd = -1;
 	      
 	      /* The connected socket inherits non-blocking
 		 attribute from the listening socket. 
@@ -765,16 +765,16 @@ static void check_dns_listeners(time_t now)
 	      if (buff)
 		free(buff);
 	      
-	      for (s = daemon->servers; s; s = s->next)
-		if (s->tcpfd != -1)
+	      for (s = daemon.servers; s; s = s.next)
+		if (s.tcpfd != -1)
 		  {
-		    shutdown(s->tcpfd, SHUT_RDWR);
-		    close(s->tcpfd);
+		    shutdown(s.tcpfd, SHUT_RDWR);
+		    close(s.tcpfd);
 		  }
 	      
 	      if (!option_bool(OPT_DEBUG))
 		{
-		  close(daemon->pipe_to_parent);
+		  close(daemon.pipe_to_parent);
 		  flush_log();
 		  _exit(0);
 		}
@@ -821,7 +821,7 @@ int icmp_ping(struct in_addr addr)
     return 0;
 #else
   int opt = 2000;
-  fd = daemon->dhcp_icmp_fd;
+  fd = daemon.dhcp_icmp_fd;
   setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt));
 // #endif
 
@@ -888,8 +888,8 @@ int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id)
       set_log_writer();
       
 // #ifdef HAVE_DHCP6
-      if (daemon->doing_ra)
-	poll_listen(daemon->icmp6fd, POLLIN); 
+      if (daemon.doing_ra)
+	poll_listen(daemon.icmp6fd, POLLIN);
 // #endif
       
       rc = do_poll(250);
@@ -905,7 +905,7 @@ int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id)
       check_dns_listeners(now);
       
 // #ifdef HAVE_DHCP6
-      if (daemon->doing_ra && poll_check(daemon->icmp6fd, POLLIN))
+      if (daemon.doing_ra && poll_check(daemon.icmp6fd, POLLIN))
 	icmp6_packet(now);
 // #endif
       

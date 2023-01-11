@@ -1,23 +1,18 @@
 use libc::c_char;
-use crate::addrlist::addrlist;
+use crate::addrlist::AddrList;
 
 #[derive(Default, Debug, Clone)]
-pub struct auth_name_list {
-    // char *name;
-    pub name: *mut c_char,
-    // flags: i32;
+pub struct AuthNameList {
+    pub name: String,
     pub flags: i32,
     // struct auth_name_list *next;
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct auth_zone {
-    // char *domain;
-    pub domain: *mut c_char,
-    pub interface_names: *mut auth_name_list,
-    // struct addrlist *subnet;
-    pub subnet: *mut addrlist,
-    // struct addrlist *exclude;
-    pub exclude: *mut addrlist,
+pub struct AuthZone {
+    pub domain: String,
+    pub interface_names: Vec<AuthNameList>,
+    pub subnet: Vec<AddrList>,
+    pub exclude: Vec<AddrList>,
     // struct auth_zone *next;
 }

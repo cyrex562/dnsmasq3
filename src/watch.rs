@@ -1,6 +1,7 @@
 #[derive(Default, Debug, Clone)]
-pub struct watch {
+pub struct Watch {
     // DBusWatch *watch;
-    pub watch: *mut DBusWatch,
+    #[cfg(target_os = "linux")]
+    pub watch: Vec<DBusWatch>,
     // struct watch *next;
 }

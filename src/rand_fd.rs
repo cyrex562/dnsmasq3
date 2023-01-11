@@ -1,9 +1,9 @@
-use crate::server::server;
+use crate::server::Server;
 
 #[derive(Default, Debug, Clone)]
-pub struct randfd {
+pub struct RandFd {
     // struct server *serv;
-    pub serv: server,
+    pub serv: Server,
     // fd: i32;
     pub fd: i32,
     // unsigned short refcount; /* refcount == 0xffff means overflow record. */

@@ -156,56 +156,56 @@ int is_rev_synth(int flag, union all_addr *addr, char *name)
 {
    struct cond_domain *c;
 
-   if (flag & F_IPV4 && (c = search_domain(addr.addr4, daemon->synth_domains)))
+   if (flag & F_IPV4 && (c = search_domain(addr.addr4, daemon.synth_domains)))
      {
        char *p;
        
        *name = 0;
-       if (c->indexed)
+       if (c.indexed)
 	 {
-	   unsigned int index = ntohl(addr->addr4.s_addr) - ntohl(c->start.s_addr);
-	   snprintf(name, MAXDNAME, "%s%u", c->prefix ? c->prefix : "", index);
+	   unsigned int index = ntohl(addr.addr4.s_addr) - ntohl(c.start.s_addr);
+	   snprintf(name, MAXDNAME, "%s%u", c.prefix ? c.prefix : "", index);
 	 }
        else
 	 {
-	   if (c->prefix)
-	     strncpy(name, c->prefix, MAXDNAME - ADDRSTRLEN);
+	   if (c.prefix)
+	     strncpy(name, c.prefix, MAXDNAME - ADDRSTRLEN);
        
-       	   inet_ntop(AF_INET, &addr->addr4, name + strlen(name), ADDRSTRLEN);
+       	   inet_ntop(AF_INET, &addr.addr4, name + strlen(name), ADDRSTRLEN);
 	   for (p = name; *p; p++)
 	     if (*p == '.')
 	       *p = '-';
 	 }
        
        strncat(name, ".", MAXDNAME);
-       strncat(name, c->domain, MAXDNAME);
+       strncat(name, c.domain, MAXDNAME);
 
        return 1;
      }
 
-   if ((flag & F_IPV6) && (c = search_domain6(&addr->addr6, daemon->synth_domains))) 
+   if ((flag & F_IPV6) && (c = search_domain6(&addr.addr6, daemon.synth_domains)))
      {
        char *p;
        
        *name = 0;
-       if (c->indexed)
+       if (c.indexed)
 	 {
-	   u64 index = addr6part(&addr->addr6) - addr6part(&c->start6);
-	   snprintf(name, MAXDNAME, "%s%llu", c->prefix ? c->prefix : "", index);
+	   u64 index = addr6part(&addr.addr6) - addr6part(&c.start6);
+	   snprintf(name, MAXDNAME, "%s%llu", c.prefix ? c.prefix : "", index);
 	 }
        else
 	 {
-	   if (c->prefix)
-	     strncpy(name, c->prefix, MAXDNAME - ADDRSTRLEN);
+	   if (c.prefix)
+	     strncpy(name, c.prefix, MAXDNAME - ADDRSTRLEN);
        
-	   inet_ntop(AF_INET6, &addr->addr6, name + strlen(name), ADDRSTRLEN);
+	   inet_ntop(AF_INET6, &addr.addr6, name + strlen(name), ADDRSTRLEN);
 
 	   /* IPv6 presentation address can start with ":", but valid domain names
 	      cannot start with "-" so prepend a zero in that case. */
-	   if (!c->prefix && *name == ':')
+	   if (!c.prefix && *name == ':')
 	     {
 	       *name = '0';
-	       inet_ntop(AF_INET6, &addr->addr6, name+1, ADDRSTRLEN);
+	       inet_ntop(AF_INET6, &addr.addr6, name+1, ADDRSTRLEN);
 	     }
 	   
 	   /* V4-mapped have periods.... */
@@ -216,7 +216,7 @@ int is_rev_synth(int flag, union all_addr *addr, char *name)
 	 }
 
        strncat(name, ".", MAXDNAME);
-       strncat(name, c->domain, MAXDNAME);
+       strncat(name, c.domain, MAXDNAME);
        
        return 1;
      }
@@ -227,17 +227,17 @@ int is_rev_synth(int flag, union all_addr *addr, char *name)
 
 static int match_domain(struct in_addr addr, struct cond_domain *c)
 {
-  if (c->interface)
+  if (c.interface)
     {
       al: *mut addrlist;
-      for (al = c->al; al; al = al->next)
-	if (!(al->flags & ADDRLIST_IPV6) &&
-	    is_same_net_prefix(addr, al->addr.addr4, al->prefixlen))
+      for (al = c.al; al; al = al.next)
+	if (!(al.flags & ADDRLIST_IPV6) &&
+	    is_same_net_prefix(addr, al.addr.addr4, al.prefixlen))
 	  return 1;
     }
-  else if (!c->is6 &&
-	   ntohl(addr.s_addr) >= ntohl(c->start.s_addr) &&
-	   ntohl(addr.s_addr) <= ntohl(c->end.s_addr))
+  else if (!c.is6 &&
+	   ntohl(addr.s_addr) >= ntohl(c.start.s_addr) &&
+	   ntohl(addr.s_addr) <= ntohl(c.end.s_addr))
     return 1;
 
   return 0;
@@ -245,7 +245,7 @@ static int match_domain(struct in_addr addr, struct cond_domain *c)
 
 static struct cond_domain *search_domain(struct in_addr addr, struct cond_domain *c)
 {
-  for (; c; c = c->next)
+  for (; c; c = c.next)
     if (match_domain(addr, c))
       return c;
   
@@ -256,35 +256,35 @@ char *get_domain(struct in_addr addr)
 {
   struct cond_domain *c;
 
-  if ((c = search_domain(addr, daemon->cond_domain)))
-    return c->domain;
+  if ((c = search_domain(addr, daemon.cond_domain)))
+    return c.domain;
 
-  return daemon->domain_suffix;
+  return daemon.domain_suffix;
 } 
 
 static int match_domain6(struct in6_addr *addr, struct cond_domain *c)
 {
     
   /* subnet from interface address. */
-  if (c->interface)
+  if (c.interface)
     {
       al: *mut addrlist;
-      for (al = c->al; al; al = al->next)
-	if (al->flags & ADDRLIST_IPV6 &&
-	    is_same_net6(addr, &al->addr.addr6, al->prefixlen))
+      for (al = c.al; al; al = al.next)
+	if (al.flags & ADDRLIST_IPV6 &&
+	    is_same_net6(addr, &al.addr.addr6, al.prefixlen))
 	  return 1;
     }
-  else if (c->is6)
+  else if (c.is6)
     {
-      if (c->prefixlen >= 64)
+      if (c.prefixlen >= 64)
 	{
 	  u64 addrpart = addr6part(addr);
-	  if (is_same_net6(addr, &c->start6, 64) &&
-	      addrpart >= addr6part(&c->start6) &&
-	      addrpart <= addr6part(&c->end6))
+	  if (is_same_net6(addr, &c.start6, 64) &&
+	      addrpart >= addr6part(&c.start6) &&
+	      addrpart <= addr6part(&c.end6))
 	    return 1;
 	}
-      else if (is_same_net6(addr, &c->start6, c->prefixlen))
+      else if (is_same_net6(addr, &c.start6, c.prefixlen))
 	return 1;
     }
     
@@ -293,7 +293,7 @@ static int match_domain6(struct in6_addr *addr, struct cond_domain *c)
 
 static struct cond_domain *search_domain6(struct in6_addr *addr, struct cond_domain *c)
 {
-  for (; c; c = c->next)
+  for (; c; c = c.next)
     if (match_domain6(addr, c))
       return c;
   
@@ -304,8 +304,8 @@ char *get_domain6(struct in6_addr *addr)
 {
   struct cond_domain *c;
 
-  if (addr && (c = search_domain6(addr, daemon->cond_domain)))
-    return c->domain;
+  if (addr && (c = search_domain6(addr, daemon.cond_domain)))
+    return c.domain;
 
-  return daemon->domain_suffix;
+  return daemon.domain_suffix;
 } 

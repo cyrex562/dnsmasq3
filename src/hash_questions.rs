@@ -43,8 +43,8 @@ void hash_questions_init(void)
   if (!(hash = hash_find("sha256")))
     die(_("Failed to create SHA-256 hash object"), NULL, EC_MISC);
 
-  ctx = safe_malloc(hash.context_size);
-  digest = safe_malloc(hash.digest_size);
+  ctx = malloc(hash.context_size);
+  digest = malloc(hash.digest_size);
 }
 
 unsigned char *hash_questions(struct dns_header *header, size_t plen, char *name)

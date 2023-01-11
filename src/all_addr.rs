@@ -5,9 +5,10 @@
 */
 
 use std::fmt::{Debug, Formatter};
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::ptr::{null, null_mut};
 use libc::{c_char, in6_addr, in_addr};
-use crate::blockdata::blockdata;
+use crate::blockdata::BlockData;
 use crate::cname_struct::Cname;
 use crate::util::{in6addr_to_string, inaddr_to_string};
 
@@ -19,7 +20,7 @@ use crate::util::{in6addr_to_string, inaddr_to_string};
 //   } key;
 #[derive(Debug, Clone)]
 pub struct KeyStruct {
-    pub keydata: *mut blockdata,
+    pub keydata: *mut BlockData,
     pub keylen: u16,
     pub flags: u16,
     pub keytag: u16,
@@ -46,7 +47,7 @@ impl Default for KeyStruct {
 //   } ds;
 #[derive(Debug, Clone)]
 pub struct DsStruct {
-    pub keydata: *mut blockdata,
+    pub keydata: *mut BlockData,
     pub keylen: u16,
     pub keytag: u16,
     pub algo: u8,
@@ -71,7 +72,7 @@ impl Default for DsStruct {
 //   } srv;
 #[derive(Debug, Clone)]
 pub struct SrvStruct {
-    pub target: *mut blockdata,
+    pub target: *mut BlockData,
     pub targetlent: u16,
     pub srvport: u16,
     pub priority: u16,
@@ -103,9 +104,9 @@ pub struct LogStruct {
     pub ede: i32,
 }
 
-pub union all_addr {
-    pub addr4: in_addr,
-    pub addr6: in6_addr,
+pub union AllAddr {
+    pub addr4: Ipv4Addr,
+    pub addr6: Ipv6Addr,
     pub cname: Cname,
     pub key: KeyStruct,
     pub ds: DsStruct,
@@ -113,7 +114,7 @@ pub union all_addr {
     pub log: LogStruct,
 }
 
-impl Default for all_addr {
+impl Default for AllAddr {
     fn default() -> Self {
         Self {
             addr6: in6_addr { s6_addr: [0;16] }
@@ -121,13 +122,13 @@ impl Default for all_addr {
     }
 }
 
-impl Debug for all_addr {
+impl Debug for AllAddr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{addr4: {}, addr6: {}, cname: {:?}, key: {:?}, ds: {:?}, srv: {:?}, log: {:?}}}", inaddr_to_string(&self.addr4), in6addr_to_string(&self.addr6), &self.cname, &self.key, &self.ds, &self.srv, &self.log)
     }
 }
 
-impl Clone for all_addr {
+impl Clone for AllAddr {
     fn clone(&self) -> Self {
         Self {
             addr6: self.addr6.clone()

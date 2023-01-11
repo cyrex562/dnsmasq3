@@ -29,20 +29,20 @@ void loop_send_probes()
 
    /* Loop through all upstream servers not for particular domains, and send a query to that server which is
       identifiable, via the uid. If we see that query back again, then the server is looping, and we should not use it. */
-   for (serv = daemon->servers; serv; serv = serv->next)
-     if (strlen(serv->domain) == 0 &&
-	 !(serv->flags & (SERV_FOR_NODOTS)))
+   for (serv = daemon.servers; serv; serv = serv.next)
+     if (strlen(serv.domain) == 0 &&
+	 !(serv.flags & (SERV_FOR_NODOTS)))
        {
-	 ssize_t len = loop_make_probe(serv->uid);
+	 ssize_t len = loop_make_probe(serv.uid);
 	 fd: i32;
 	 
-	 serv->flags &= ~SERV_LOOP;
+	 serv.flags &= ~SERV_LOOP;
 
 	 if ((fd = allocate_rfd(&rfds, serv)) == -1)
 	   continue;
 	 
-	 while (retry_send(sendto(fd, daemon->packet, len, 0, 
-				  &serv->addr.sa, sa_len(&serv->addr))));
+	 while (retry_send(sendto(fd, daemon.packet, len, 0,
+				  &serv.addr.sa, sa_len(&serv.addr))));
        }
 
    free_rfds(&rfds);
@@ -50,17 +50,17 @@ void loop_send_probes()
   
 static ssize_t loop_make_probe(u32 uid)
 {
-  struct dns_header *header = (struct dns_header *)daemon->packet;
+  struct dns_header *header = (struct dns_header *)daemon.packet;
   unsigned char *p = (unsigned char *)(header+1);
   
   /* packet buffer overwritten */
-  daemon->srv_save = NULL;
+  daemon.srv_save = NULL;
   
-  header->id = rand16();
-  header->ancount = header->nscount = header->arcount = htons(0);
-  header->qdcount = htons(1);
-  header->hb3 = HB3_RD;
-  header->hb4 = 0;
+  header.id = rand16();
+  header.ancount = header.nscount = header.arcount = htons(0);
+  header.qdcount = htons(1);
+  header.hb3 = HB3_RD;
+  header.hb4 = 0;
   SET_OPCODE(header, QUERY);
 
   *p++ = 8;
@@ -97,12 +97,12 @@ int detect_loop(char *query, int type)
 
   uid = strtol(query, NULL, 16);
 
-  for (serv = daemon->servers; serv; serv = serv->next)
-    if (strlen(serv->domain) == 0 &&
-	!(serv->flags & SERV_LOOP) &&
-	uid == serv->uid)
+  for (serv = daemon.servers; serv; serv = serv.next)
+    if (strlen(serv.domain) == 0 &&
+	!(serv.flags & SERV_LOOP) &&
+	uid == serv.uid)
       {
-	serv->flags |= SERV_LOOP;
+	serv.flags |= SERV_LOOP;
 	check_servers(1); /* log new state - don't send more probes. */
 	return 1;
       }

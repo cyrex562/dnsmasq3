@@ -1,10 +1,10 @@
 use libc::c_char;
 
 #[derive(Default, Debug, Clone)]
-pub struct ipsets {
+pub struct IpSets {
     // char **sets;
-    pub sets: *mut *mut c_char,
+    pub sets: Vec<String>,
     // char *domain;
-    pub domain: *mut c_char,
+    pub domain: String,
     // struct ipsets *next;
 }

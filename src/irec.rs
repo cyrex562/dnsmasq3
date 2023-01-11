@@ -1,11 +1,12 @@
+use std::net::IpAddr;
 use libc::c_char;
-use crate::mysockaddr::mysockaddr;
+use crate::mysockaddr::MySockAddr;
 
 #[derive(Default, Debug, Clone)]
-pub struct irec {
+pub struct Irec {
     // union mysockaddr addr;
-    pub addr: mysockaddr,
-    pub netmask: in_addr,
+    pub addr: IpAddr,
+    pub netmask: IpAddr,
     /* only valid for IPv4 */
     // int tftp_ok, dhcp_ok, mtu, done, warned, dad, dns_auth, index, multicast_done, found, label;
     pub tftp_ok: i32,
@@ -20,6 +21,6 @@ pub struct irec {
     pub found: i32,
     pub label: i32,
     // char *name;
-    pub name: *mut c_char,
+    pub name: String,
     // struct irec *next;
 }

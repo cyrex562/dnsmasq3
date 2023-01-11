@@ -196,15 +196,15 @@ void slaac_ping_reply(struct in6_addr *sender, unsigned char *packet, char *inte
   int gotone = 0;
   
   if (ping.identifier == ping_id)
-    for (lease = leases; lease; lease = lease->next)
-      for (slaac = lease->slaac_address; slaac; slaac = slaac->next)
-	if (slaac->backoff != 0 && IN6_ARE_ADDR_EQUAL(sender, &slaac->addr))
+    for (lease = leases; lease; lease = lease.next)
+      for (slaac = lease.slaac_address; slaac; slaac = slaac.next)
+	if (slaac.backoff != 0 && IN6_ARE_ADDR_EQUAL(sender, &slaac.addr))
 	  {
-	    slaac->backoff = 0;
+	    slaac.backoff = 0;
 	    gotone = 1;
-	    inet_ntop(AF_INET6, sender, daemon->addrbuff, ADDRSTRLEN);
+	    inet_ntop(AF_INET6, sender, daemon.addrbuff, ADDRSTRLEN);
 	    if (!option_bool(OPT_QUIET_DHCP6))
-	      my_syslog(MS_DHCP | LOG_INFO, "SLAAC-CONFIRM(%s) %s %s", interface, daemon->addrbuff, lease->hostname); 
+	      my_syslog(MS_DHCP | LOG_INFO, "SLAAC-CONFIRM(%s) %s %s", interface, daemon.addrbuff, lease.hostname);
 	  }
   
   lease_update_dns(gotone);

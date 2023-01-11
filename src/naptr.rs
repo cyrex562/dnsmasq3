@@ -1,28 +1,14 @@
 use std::ptr::null_mut;
 use libc::c_char;
 
-#[derive(Debug, Clone)]
-pub struct naptr {
-    pub name: *mut c_char,
-    pub replace: *mut c_char,
-    pub regexp: *mut c_char,
-    pub services: *mut c_char,
-    pub flags: *mut c_char,
+#[derive(Default, Debug, Clone)]
+pub struct NaPtr {
+    pub name: String,
+    pub replace: String,
+    pub regexp: String,
+    pub services: String,
+    pub flags: String,
     pub order: u32,
     pub pref: u32,
     // next
-}
-
-impl Default for naptr {
-    fn default() -> Self {
-        Self {
-            name: null_mut(),
-            replace: null_mut(),
-            regexp: null_mut(),
-            services: null_mut(),
-            flags: null_mut(),
-            order: 0,
-            pref: 0,
-        }
-    }
 }

@@ -554,7 +554,7 @@ static int order_qsort(const void *a, const void *b)
 
 static int maybe_free_servers = 0;
 
-/* Must be called before  add_update_server() to set daemon->servers_tail */
+/* Must be called before  add_update_server() to set daemon.servers_tail */
 void mark_servers(int flag)
 {
   struct server *serv, *next, **up;

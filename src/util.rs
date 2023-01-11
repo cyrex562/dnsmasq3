@@ -257,7 +257,7 @@ unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
 }
 
 /* for use during startup */
-void *safe_malloc(size_t size)
+void *malloc(size_t size)
 {
   void *ret = calloc(1, size);
   
@@ -521,13 +521,13 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
       char name[IF_NAMESIZE];
       inet_ntop(AF_INET6, &addr.in6.sin6_addr, buf, ADDRSTRLEN);
       if (addr.in6.sin6_scope_id != 0 &&
-	  if_indextoname(addr->in6.sin6_scope_id, name) &&
+	  if_indextoname(addr.in6.sin6_scope_id, name) &&
 	  strlen(buf) + strlen(name) + 2 <= ADDRSTRLEN)
 	{
 	  strcat(buf, "%");
 	  strcat(buf, name);
 	}
-      port = ntohs(addr->in6.sin6_port);
+      port = ntohs(addr.in6.sin6_port);
     }
   
   return port;
@@ -642,7 +642,7 @@ int expand_buf(struct iovec *iov, size_t size)
 {
   void *new;
 
-  if (size <= (size_t)iov->iov_len)
+  if (size <= (size_t)iov.iov_len)
     return 1;
 
   if (!(new = whine_malloc(size)))
@@ -651,14 +651,14 @@ int expand_buf(struct iovec *iov, size_t size)
       return 0;
     }
 
-  if (iov->iov_base)
+  if (iov.iov_base)
     {
-      memcpy(new, iov->iov_base, iov->iov_len);
-      free(iov->iov_base);
+      memcpy(new, iov.iov_base, iov.iov_len);
+      free(iov.iov_base);
     }
 
-  iov->iov_base = new;
-  iov->iov_len = size;
+  iov.iov_base = new;
+  iov.iov_len = size;
 
   return 1;
 }
@@ -757,7 +757,7 @@ void close_fds(long max_fd, int spare1, int spare2, int spare3)
 	  char *e = NULL;
 	  
 	  errno = 0;
-	  fd = strtol(de->d_name, &e, 10);
+	  fd = strtol(de.d_name, &e, 10);
 	  	  
       	  if (errno != 0 || !e || *e || fd == dirfd(d) ||
 	      fd == STDOUT_FILENO || fd == STDERR_FILENO || fd == STDIN_FILENO ||

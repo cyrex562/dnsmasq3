@@ -1,13 +1,13 @@
 use std::fmt::{Debug, Formatter};
 use std::ptr::null_mut;
 use libc::in6_addr;
-use crate::dhcp_context::dhcp_context;
+use crate::dhcp_context::DhcpContext;
 use crate::util::in6addr_to_string;
 
 #[derive(Clone)]
 pub struct iface_param {
     // struct dhcp_context *current;
-    pub current: *mut dhcp_context,
+    pub current: *mut DhcpContext,
     pub ind: i32,
     pub fallback: in6_addr,
     pub ll_addr: in6_addr,

@@ -1,10 +1,10 @@
 use libc::time_t;
-use crate::all_addr::all_addr;
+use crate::all_addr::AllAddr;
 
 #[derive(Default,Debug,Clone)]
-pub struct addrlist {
+pub struct AddrList {
   // union all_addr addr;
-  addr: all_addr,
+  addr: AllAddr,
   // int flags, prefixlen;
   flags: i32,
   prefixlen: i32,

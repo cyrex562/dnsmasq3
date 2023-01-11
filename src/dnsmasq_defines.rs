@@ -466,7 +466,7 @@ pub const OT_CSTRING: u32 = 0x0800;
 pub const OT_DEC: u32 = 0x0400;
 pub const OT_TIME: u32 = 0x0200;
 
-/* actions in the daemon->helper RPC */
+/* actions in the daemon.helper RPC */
 pub const ACTION_DEL: u32 = 1;
 pub const ACTION_OLD_HOSTNAME: u32 = 2;
 pub const ACTION_OLD: u32 = 3;

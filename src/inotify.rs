@@ -47,7 +47,7 @@ static char *my_readlink(char *path)
 
   while (1)
     {
-      buf = safe_malloc(size);
+      buf = malloc(size);
       rc = readlink(path, buf, (size_t)size);
       
       if (rc == -1)
@@ -69,7 +69,7 @@ static char *my_readlink(char *path)
 	  if (buf[0] != '/' && ((d = strrchr(path, '/'))))
 	    {
 	      /* Add path to relative link */
-	      char *new_buf = safe_malloc((d - path) + strlen(buf) + 2);
+	      char *new_buf = malloc((d - path) + strlen(buf) + 2);
 	      *(d+1) = 0;
 	      strcpy(new_buf, path);
 	      strcat(new_buf, buf);
@@ -88,7 +88,7 @@ static char *my_readlink(char *path)
 void inotify_dnsmasq_init()
 {
   struct resolvc *res;
-  inotify_buffer = safe_malloc(INOTIFY_SZ);
+  inotify_buffer = malloc(INOTIFY_SZ);
   daemon.inotifyfd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   
   if (daemon.inotifyfd == -1)
@@ -99,7 +99,7 @@ void inotify_dnsmasq_init()
   
   for (res = daemon.resolv_files; res; res = res.next)
     {
-      char *d, *new_path, *path = safe_malloc(strlen(res.name) + 1);
+      char *d, *new_path, *path = malloc(strlen(res.name) + 1);
       int links = MAXSYMLINKS;
 
       strcpy(path, res.name);
@@ -113,32 +113,32 @@ void inotify_dnsmasq_init()
 	  path = new_path;
 	}
 
-      res->wd = -1;
+      res.wd = -1;
 
       if ((d = strrchr(path, '/')))
 	{
 	  *d = 0; /* make path just directory */
-	  res->wd = inotify_add_watch(daemon->inotifyfd, path, IN_CLOSE_WRITE | IN_MOVED_TO);
+	  res.wd = inotify_add_watch(daemon.inotifyfd, path, IN_CLOSE_WRITE | IN_MOVED_TO);
 
-	  res->file = d+1; /* pointer to filename */
+	  res.file = d+1; /* pointer to filename */
 	  *d = '/';
 	  
-	  if (res->wd == -1 && errno == ENOENT)
-	    die(_("directory %s for resolv-file is missing, cannot poll"), res->name, EC_MISC);
+	  if (res.wd == -1 && errno == ENOENT)
+	    die(_("directory %s for resolv-file is missing, cannot poll"), res.name, EC_MISC);
 	}	  
 	 
-      if (res->wd == -1)
-	die(_("failed to create inotify for %s: %s"), res->name, EC_MISC);
+      if (res.wd == -1)
+	die(_("failed to create inotify for %s: %s"), res.name, EC_MISC);
 	
     }
 }
 
 static struct hostsfile *dyndir_addhosts(struct dyndir *dd, char *path)
 {
-  /* Check if this file is already known in dd->files */
+  /* Check if this file is already known in dd.files */
   struct hostsfile *ah = NULL;
-  for(ah = dd->files; ah; ah = ah->next)
-    if(ah && ah->fname && strcmp(path, ah->fname) == 0)
+  for(ah = dd.files; ah; ah = ah.next)
+    if(ah && ah.fname && strcmp(path, ah.fname) == 0)
       return ah;
 
   /* Not known, create new hostsfile record for this dyndir */
@@ -147,13 +147,13 @@ static struct hostsfile *dyndir_addhosts(struct dyndir *dd, char *path)
     return NULL;
 
   /* Add this file to the tip of the linked list */
-  newah->next = dd->files;
-  dd->files = newah;
+  newah.next = dd.files;
+  dd.files = newah;
 
   /* Copy flags, set index and the full file path */
-  newah->flags = dd->flags;
-  newah->index = daemon->host_index++;
-  newah->fname = path;
+  newah.flags = dd.flags;
+  newah.index = daemon.host_index++;
+  newah.fname = path;
 
   return newah;
 }
@@ -164,64 +164,64 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 {
   struct dyndir *dd;
 
-  for (dd = daemon->dynamic_dirs; dd; dd = dd->next)
+  for (dd = daemon.dynamic_dirs; dd; dd = dd.next)
     {
       DIR *dir_stream = NULL;
       struct dirent *ent;
       struct stat buf;
 
-      if (!(dd->flags & flag))
+      if (!(dd.flags & flag))
 	continue;
 
-      if (stat(dd->dname, &buf) == -1)
+      if (stat(dd.dname, &buf) == -1)
 	{
 	  my_syslog(LOG_ERR, _("bad dynamic directory %s: %s"), 
-		    dd->dname, strerror(errno));
+		    dd.dname, strerror(errno));
 	  continue;
 	}
 
       if (!(S_ISDIR(buf.st_mode)))
 	{
 	  my_syslog(LOG_ERR, _("bad dynamic directory %s: %s"), 
-		    dd->dname, _("not a directory"));
+		    dd.dname, _("not a directory"));
 	  continue;
 	}
 
-       if (!(dd->flags & AH_WD_DONE))
+       if (!(dd.flags & AH_WD_DONE))
 	 {
-	   dd->wd = inotify_add_watch(daemon->inotifyfd, dd->dname, IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE);
-	   dd->flags |= AH_WD_DONE;
+	   dd.wd = inotify_add_watch(daemon.inotifyfd, dd.dname, IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE);
+	   dd.flags |= AH_WD_DONE;
 	 }
 
        /* Read contents of dir _after_ calling add_watch, in the hope of avoiding
 	  a race which misses files being added as we start */
-       if (dd->wd == -1 || !(dir_stream = opendir(dd->dname)))
+       if (dd.wd == -1 || !(dir_stream = opendir(dd.dname)))
 	 {
 	   my_syslog(LOG_ERR, _("failed to create inotify for %s: %s"),
-		     dd->dname, strerror(errno));
+		     dd.dname, strerror(errno));
 	   continue;
 	 }
 
        while ((ent = readdir(dir_stream)))
 	 {
-	   size_t lendir = strlen(dd->dname);
-	   size_t lenfile = strlen(ent->d_name);
+	   size_t lendir = strlen(dd.dname);
+	   size_t lenfile = strlen(ent.d_name);
 	   char *path;
 
 	   /* ignore emacs backups and dotfiles */
 	   if (lenfile == 0 || 
-	       ent->d_name[lenfile - 1] == '~' ||
-	       (ent->d_name[0] == '#' && ent->d_name[lenfile - 1] == '#') ||
-	       ent->d_name[0] == '.')
+	       ent.d_name[lenfile - 1] == '~' ||
+	       (ent.d_name[0] == '#' && ent.d_name[lenfile - 1] == '#') ||
+	       ent.d_name[0] == '.')
 	     continue;
 
 	   if ((path = whine_malloc(lendir + lenfile + 2)))
 	     {
 	       struct hostsfile *ah;
 
-	       strcpy(path, dd->dname);
+	       strcpy(path, dd.dname);
 	       strcat(path, "/");
-	       strcat(path, ent->d_name);
+	       strcat(path, ent.d_name);
 
 	       if (!(ah = dyndir_addhosts(dd, path)))
 		 {
@@ -232,11 +232,11 @@ void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revh
 	       /* ignore non-regular files */
 	       if (stat(path, &buf) != -1 && S_ISREG(buf.st_mode))
 		 {
-		   if (dd->flags & AH_HOSTS)
-		     total_size = read_hostsfile(path, ah->index, total_size, rhash, revhashsz);
+		   if (dd.flags & AH_HOSTS)
+		     total_size = read_hostsfile(path, ah.index, total_size, rhash, revhashsz);
 // #ifdef HAVE_DHCP
-		   else if (dd->flags & (AH_DHCP_HST | AH_DHCP_OPT))
-		     option_read_dynfile(path, dd->flags);
+		   else if (dd.flags & (AH_DHCP_HST | AH_DHCP_OPT))
+		     option_read_dynfile(path, dd.flags);
 // #endif
 		 }
 	     }
@@ -258,64 +258,64 @@ int inotify_check(time_t now)
       struct resolvc *res;
       struct inotify_event *in;
 
-      while ((rc = read(daemon->inotifyfd, inotify_buffer, INOTIFY_SZ)) == -1 && errno == EINTR);
+      while ((rc = read(daemon.inotifyfd, inotify_buffer, INOTIFY_SZ)) == -1 && errno == EINTR);
       
       if (rc <= 0)
 	break;
       
-      for (p = inotify_buffer; rc - (p - inotify_buffer) >= (int)sizeof(struct inotify_event); p += sizeof(struct inotify_event) + in->len) 
+      for (p = inotify_buffer; rc - (p - inotify_buffer) >= (int)sizeof(struct inotify_event); p += sizeof(struct inotify_event) + in.len)
 	{
 	  namelen: usize;
 
 	  in = (struct inotify_event*)p;
 	  
 	  /* ignore emacs backups and dotfiles */
-	  if (in->len == 0 || (namelen = strlen(in->name)) == 0 ||
-	      in->name[namelen - 1] == '~' ||
-	      (in->name[0] == '#' && in->name[namelen - 1] == '#') ||
-	      in->name[0] == '.')
+	  if (in.len == 0 || (namelen = strlen(in.name)) == 0 ||
+	      in.name[namelen - 1] == '~' ||
+	      (in.name[0] == '#' && in.name[namelen - 1] == '#') ||
+	      in.name[0] == '.')
 	    continue;
 
-	  for (res = daemon->resolv_files; res; res = res->next)
-	    if (res->wd == in->wd && strcmp(res->file, in->name) == 0)
+	  for (res = daemon.resolv_files; res; res = res.next)
+	    if (res.wd == in.wd && strcmp(res.file, in.name) == 0)
 	      hit = 1;
 
-	  for (dd = daemon->dynamic_dirs; dd; dd = dd->next)
-	    if (dd->wd == in->wd)
+	  for (dd = daemon.dynamic_dirs; dd; dd = dd.next)
+	    if (dd.wd == in.wd)
 	      {
-		size_t lendir = strlen(dd->dname);
+		size_t lendir = strlen(dd.dname);
 		char *path;
 				
-		if ((path = whine_malloc(lendir + in->len + 2)))
+		if ((path = whine_malloc(lendir + in.len + 2)))
 		  {
 		    struct hostsfile *ah = NULL;
 
-		    strcpy(path, dd->dname);
+		    strcpy(path, dd.dname);
 		    strcat(path, "/");
-		    strcat(path, in->name);
+		    strcat(path, in.name);
 
 		    /* Is this is a deletion event? */
-		    if (in->mask & IN_DELETE)
+		    if (in.mask & IN_DELETE)
 		      my_syslog(LOG_INFO, _("inotify: %s removed"), path);
 		    else 
 		      my_syslog(LOG_INFO, _("inotify: %s new or modified"), path);
 
-		    if (dd->flags & AH_HOSTS)
+		    if (dd.flags & AH_HOSTS)
 		      {
 			if ((ah = dyndir_addhosts(dd, path)))
 			  {
-			    const unsigned int removed = cache_remove_uid(ah->index);
+			    const unsigned int removed = cache_remove_uid(ah.index);
 			    if (removed > 0)
 			      my_syslog(LOG_INFO, _("inotify: flushed %u names read from %s"), removed, path);
 
 			    /* (Re-)load hostsfile only if this event isn't triggered by deletion */
-			    if (!(in->mask & IN_DELETE))
-			      read_hostsfile(path, ah->index, 0, NULL, 0);
+			    if (!(in.mask & IN_DELETE))
+			      read_hostsfile(path, ah.index, 0, NULL, 0);
 // #ifdef HAVE_DHCP
-			    if (daemon->dhcp || daemon->doing_dhcp6) 
+			    if (daemon.dhcp || daemon.doing_dhcp6)
 			      {
 				/* Propagate the consequences of loading a new dhcp-host */
-				dhcp_update_configs(daemon->dhcp_conf);
+				dhcp_update_configs(daemon.dhcp_conf);
 				lease_update_from_configs(); 
 				lease_update_file(now); 
 				lease_update_dns(1);
@@ -324,18 +324,18 @@ int inotify_check(time_t now)
 			  }
 		      }
 // #ifdef HAVE_DHCP
-		    else if (dd->flags & AH_DHCP_HST)
+		    else if (dd.flags & AH_DHCP_HST)
 		      {
 			if (option_read_dynfile(path, AH_DHCP_HST))
 			  {
 			    /* Propagate the consequences of loading a new dhcp-host */
-			    dhcp_update_configs(daemon->dhcp_conf);
+			    dhcp_update_configs(daemon.dhcp_conf);
 			    lease_update_from_configs(); 
 			    lease_update_file(now); 
 			    lease_update_dns(1);
 			  }
 		      }
-		    else if (dd->flags & AH_DHCP_OPT)
+		    else if (dd.flags & AH_DHCP_OPT)
 		      option_read_dynfile(path, AH_DHCP_OPT);
 // #endif
 		    

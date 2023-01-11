@@ -23,7 +23,7 @@ pub const IN6ADDRSZ: u32 = 16;
 pub const INADDRSZ: u32 = 4;
 
 pub const PACKETSZ: u32 = 512;		/* maximum packet size */
-pub const MAXDNAME: u32 = 1025;		/* maximum presentation domain name */
+pub const MAXDNAME: usize = 1025;		/* maximum presentation domain name */
 pub const RRFIXEDSZ: u32 = 10;		/* #/bytes of fixed data in r record */
 pub const MAXLABEL: u32 = 63;              /* maximum length of domain label */
 

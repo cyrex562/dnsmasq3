@@ -720,8 +720,8 @@ static DBusMessage *dbus_get_server_metrics(DBusMessage* message)
   for (serv = daemon.servers; serv; serv = serv.next)
     serv.flags &= ~SERV_MARK;
   
-  for (serv = daemon.servers; serv; serv = serv->next)
-    if (!(serv->flags & SERV_MARK))
+  for (serv = daemon.servers; serv; serv = serv.next)
+    if (!(serv.flags & SERV_MARK))
       {
 	unsigned port: i32;
 	unsigned int queries = 0, failed_queries = 0, nxdomain_replies = 0, retrys = 0;
@@ -729,28 +729,28 @@ static DBusMessage *dbus_get_server_metrics(DBusMessage* message)
 	
 	struct server *serv1;
 
-	for (serv1 = serv; serv1; serv1 = serv1->next)
-	  if (!(serv1->flags & SERV_MARK) && sockaddr_isequal(&serv->addr, &serv1->addr))
+	for (serv1 = serv; serv1; serv1 = serv1.next)
+	  if (!(serv1.flags & SERV_MARK) && sockaddr_isequal(&serv.addr, &serv1.addr))
 	    {
-	      serv1->flags |= SERV_MARK;
-	      queries += serv1->queries;
-	      failed_queries += serv1->failed_queries;
-	      nxdomain_replies += serv1->nxdomain_replies;
-	      retrys += serv1->retrys;
-	      sigma_latency += serv1->query_latency;
+	      serv1.flags |= SERV_MARK;
+	      queries += serv1.queries;
+	      failed_queries += serv1.failed_queries;
+	      nxdomain_replies += serv1.nxdomain_replies;
+	      retrys += serv1.retrys;
+	      sigma_latency += serv1.query_latency;
 	      count_latency++;
 	    }
 	
 	dbus_message_iter_open_container(&server_array, DBUS_TYPE_ARRAY, "{ss}", &dict_array);
 	
-	port = prettyprint_addr(&serv->addr, daemon->namebuff);
-	add_dict_entry(&dict_array, "address", daemon->namebuff);
+	port = prettyprint_addr(&serv.addr, daemon.namebuff);
+	add_dict_entry(&dict_array, "address", daemon.namebuff);
 	
 	add_dict_int(&dict_array, "port", port);
-	add_dict_int(&dict_array, "queries", serv->queries);
-	add_dict_int(&dict_array, "failed_queries", serv->failed_queries);
-	add_dict_int(&dict_array, "nxdomain", serv->nxdomain_replies);
-	add_dict_int(&dict_array, "retries", serv->retrys);
+	add_dict_int(&dict_array, "queries", serv.queries);
+	add_dict_int(&dict_array, "failed_queries", serv.failed_queries);
+	add_dict_int(&dict_array, "nxdomain", serv.nxdomain_replies);
+	add_dict_int(&dict_array, "retries", serv.retrys);
 	add_dict_int(&dict_array, "latency", sigma_latency/count_latency);
 	
 	dbus_message_iter_close_container(&server_array, &dict_array);
@@ -773,8 +773,8 @@ DBusHandlerResult message_handler(DBusConnection *connection,
     {
       /* string length: "%s" provides space for termination zero */
       if (!introspection_xml && 
-	  (introspection_xml = whine_malloc(strlen(introspection_xml_template) + strlen(daemon->dbus_name))))
-	sprintf(introspection_xml, introspection_xml_template, daemon->dbus_name);
+	  (introspection_xml = whine_malloc(strlen(introspection_xml_template) + strlen(daemon.dbus_name))))
+	sprintf(introspection_xml, introspection_xml_template, daemon.dbus_name);
     
       if (introspection_xml)
 	{
@@ -895,7 +895,7 @@ char *dbus_init(void)
   dbus_connection_set_watch_functions(connection, add_watch, remove_watch, 
 				      NULL, NULL, NULL);
   dbus_error_init (&dbus_error);
-  dbus_bus_request_name (connection, daemon->dbus_name, 0, &dbus_error);
+  dbus_bus_request_name (connection, daemon.dbus_name, 0, &dbus_error);
   if (dbus_error_is_set (&dbus_error))
     return (char *)dbus_error.message;
   
@@ -903,9 +903,9 @@ char *dbus_init(void)
 					    &dnsmasq_vtable, NULL))
     return _("could not register a DBus message handler");
   
-  daemon->dbus = connection; 
+  daemon.dbus = connection;
   
-  if ((message = dbus_message_new_signal(DNSMASQ_PATH, daemon->dbus_name, "Up")))
+  if ((message = dbus_message_new_signal(DNSMASQ_PATH, daemon.dbus_name, "Up")))
     {
       dbus_connection_send(connection, message, NULL);
       dbus_message_unref(message);
@@ -919,11 +919,11 @@ void set_dbus_listeners(void)
 {
   struct watch *w;
   
-  for (w = daemon->watches; w; w = w->next)
-    if (dbus_watch_get_enabled(w->watch))
+  for (w = daemon.watches; w; w = w.next)
+    if (dbus_watch_get_enabled(w.watch))
       {
-	unsigned int flags = dbus_watch_get_flags(w->watch);
-	int fd = dbus_watch_get_unix_fd(w->watch);
+	unsigned int flags = dbus_watch_get_flags(w.watch);
+	int fd = dbus_watch_get_unix_fd(w.watch);
 	
 	if (flags & DBUS_WATCH_READABLE)
 	  poll_listen(fd, POLLIN);
@@ -937,14 +937,14 @@ void set_dbus_listeners(void)
 
 void check_dbus_listeners()
 {
-  DBusConnection *connection = (DBusConnection *)daemon->dbus;
+  DBusConnection *connection = (DBusConnection *)daemon.dbus;
   struct watch *w;
 
-  for (w = daemon->watches; w; w = w->next)
-    if (dbus_watch_get_enabled(w->watch))
+  for (w = daemon.watches; w; w = w.next)
+    if (dbus_watch_get_enabled(w.watch))
       {
 	unsigned int flags = 0;
-	int fd = dbus_watch_get_unix_fd(w->watch);
+	int fd = dbus_watch_get_unix_fd(w.watch);
 	
 	if (poll_check(fd, POLLIN))
 	  flags |= DBUS_WATCH_READABLE;
@@ -956,7 +956,7 @@ void check_dbus_listeners()
 	  flags |= DBUS_WATCH_ERROR;
 
 	if (flags != 0)
-	  dbus_watch_handle(w->watch, flags);
+	  dbus_watch_handle(w.watch, flags);
       }
 
   if (connection)
@@ -970,10 +970,10 @@ void check_dbus_listeners()
 // #ifdef HAVE_DHCP
 void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
 {
-  DBusConnection *connection = (DBusConnection *)daemon->dbus;
+  DBusConnection *connection = (DBusConnection *)daemon.dbus;
   DBusMessage* message = NULL;
   DBusMessageIter args;
-  char *action_str, *mac = daemon->namebuff;
+  char *action_str, *mac = daemon.namebuff;
   unsigned char *p;
   i: i32;
 
@@ -984,18 +984,18 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
     hostname = "";
   
 // #ifdef HAVE_DHCP6
-   if (lease->flags & (LEASE_TA | LEASE_NA))
+   if (lease.flags & (LEASE_TA | LEASE_NA))
      {
-       print_mac(mac, lease->clid, lease->clid_len);
-       inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
+       print_mac(mac, lease.clid, lease.clid_len);
+       inet_ntop(AF_INET6, &lease.addr6, daemon.addrbuff, ADDRSTRLEN);
      }
    else
 // #endif
      {
-       p = extended_hwaddr(lease->hwaddr_type, lease->hwaddr_len,
-			   lease->hwaddr, lease->clid_len, lease->clid, &i);
+       p = extended_hwaddr(lease.hwaddr_type, lease.hwaddr_len,
+			   lease.hwaddr, lease.clid_len, lease.clid, &i);
        print_mac(mac, p, i);
-       inet_ntop(AF_INET, &lease->addr, daemon->addrbuff, ADDRSTRLEN);
+       inet_ntop(AF_INET, &lease.addr, daemon.addrbuff, ADDRSTRLEN);
      }
 
   if (action == ACTION_DEL)
@@ -1007,12 +1007,12 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
   else
     return;
 
-  if (!(message = dbus_message_new_signal(DNSMASQ_PATH, daemon->dbus_name, action_str)))
+  if (!(message = dbus_message_new_signal(DNSMASQ_PATH, daemon.dbus_name, action_str)))
     return;
   
   dbus_message_iter_init_append(message, &args);
   
-  if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &daemon->addrbuff) &&
+  if (dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &daemon.addrbuff) &&
       dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &mac) &&
       dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &hostname))
     dbus_connection_send(connection, message, NULL);

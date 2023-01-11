@@ -82,12 +82,12 @@ static int expand_buf(struct iovec *iov, size_t size)
 
   if (iov.iov_base)
     {
-      memcpy(new, iov.iov_base, iov->iov_len);
-      free(iov->iov_base);
+      memcpy(new, iov.iov_base, iov.iov_len);
+      free(iov.iov_base);
     }
 
-  iov->iov_base = new;
-  iov->iov_len = size;
+  iov.iov_base = new;
+  iov.iov_len = size;
 
   return 1;
 }
@@ -209,33 +209,33 @@ static struct in_addr find_interface(struct in_addr client, int fd, unsigned int
 	}
 
       for (h = (struct nlmsghdr *)iov.iov_base; NLMSG_OK(h, (size_t)len); h = NLMSG_NEXT(h, len))
-	if (h->nlmsg_type == NLMSG_DONE)
+	if (h.nlmsg_type == NLMSG_DONE)
           {
 	    /* No match found, return first address as src/dhcp.c code does */
-	    ifr->ifr_addr.sa_family = AF_INET;
+	    ifr.ifr_addr.sa_family = AF_INET;
 	    if (ioctl(ifrfd, SIOCGIFADDR, ifr) != -1)
-	      return ((struct sockaddr_in *)&ifr->ifr_addr).sin_addr;
+	      return ((struct sockaddr_in *)&ifr.ifr_addr).sin_addr;
 	    else
 	      {
 		fprintf(stderr, "error: local IPv4 address not found\n");
 		exit(1);
 	      }
           }
-	else if (h->nlmsg_type == RTM_NEWADDR)
+	else if (h.nlmsg_type == RTM_NEWADDR)
           {
             struct ifaddrmsg *ifa = NLMSG_DATA(h);  
             struct rtattr *rta;
-            unsigned int len1 = h->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
+            unsigned int len1 = h.nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
             
-            if (ifa->ifa_index == index && ifa->ifa_family == AF_INET)
+            if (ifa.ifa_index == index && ifa.ifa_family == AF_INET)
               {
                 struct in_addr netmask, addr;
                 
-                netmask.s_addr = htonl(0xffffffff << (32 - ifa->ifa_prefixlen));
+                netmask.s_addr = htonl(0xffffffff << (32 - ifa.ifa_prefixlen));
                 addr.s_addr = 0;
                 
                 for (rta = IFA_RTA(ifa); RTA_OK(rta, len1); rta = RTA_NEXT(rta, len1))
-		  if (rta->rta_type == IFA_LOCAL)
+		  if (rta.rta_type == IFA_LOCAL)
 		    addr = *((rta+1));
 		
                 if (addr.s_addr && is_same_net(addr, client, netmask))

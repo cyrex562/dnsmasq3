@@ -91,7 +91,7 @@ void ipset_init(void)
     return;
   
   if (!old_kernel && 
-      (buffer = safe_malloc(BUFF_SZ)) &&
+      (buffer = malloc(BUFF_SZ)) &&
       (ipset_sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_NETFILTER)) != -1 &&
       (bind(ipset_sock, (struct sockaddr *)&snl, sizeof(snl)) != -1))
     return;

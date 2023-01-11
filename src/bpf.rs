@@ -374,17 +374,17 @@ void route_init(void)
 void route_sock(void)
 {
   struct if_msghdr *msg;
-  int rc = recv(daemon.routefd, daemon.packet, daemon->packet_buff_sz, 0);
+  int rc = recv(daemon.routefd, daemon.packet, daemon.packet_buff_sz, 0);
 
   if (rc < 4)
     return;
 
-  msg = (struct if_msghdr *)daemon->packet;
+  msg = (struct if_msghdr *)daemon.packet;
   
-  if (rc < msg->ifm_msglen)
+  if (rc < msg.ifm_msglen)
     return;
 
-   if (msg->ifm_version != RTM_VERSION)
+   if (msg.ifm_version != RTM_VERSION)
      {
        static int warned = 0;
        if (!warned)
@@ -393,12 +393,12 @@ void route_sock(void)
 	   warned = 1;
 	 }
      }
-   else if (msg->ifm_type == RTM_NEWADDR)
+   else if (msg.ifm_type == RTM_NEWADDR)
      {
        del_family = 0;
        queue_event(EVENT_NEWADDR);
      }
-   else if (msg->ifm_type == RTM_DELADDR)
+   else if (msg.ifm_type == RTM_DELADDR)
      {
        /* There's a race in the kernel, such that if we run iface_enumerate() immediately
 	  we get a DELADDR event, the deleted address still appears. Here we store the deleted address
@@ -413,11 +413,11 @@ void route_sock(void)
 	 if (mask & maskvec[i]) 
 	   {
 	     struct sockaddr *sa = (struct sockaddr *)((char *)msg + of);
-	     size_t diff = (sa->sa_len != 0) ? sa->sa_len : sizeof(long);
+	     size_t diff = (sa.sa_len != 0) ? sa.sa_len : sizeof(long);
 	     
 	     if (maskvec[i] == RTA_IFA)
 	       {
-		 del_family = sa->sa_family;
+		 del_family = sa.sa_family;
 		 if (del_family == AF_INET)
 		   del_addr.addr4 = ((struct sockaddr_in *)sa).sin_addr;
 		 else if (del_family == AF_INET6)

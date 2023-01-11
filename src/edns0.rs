@@ -373,12 +373,12 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, 
   
   opt.family = htons(sa_family == AF_INET6 ? 2 : 1);
   
-  if (addrp && opt->source_netmask != 0)
+  if (addrp && opt.source_netmask != 0)
     {
-      len = ((opt->source_netmask - 1) >> 3) + 1;
-      memcpy(opt->addr, addrp, len);
-      if (opt->source_netmask & 7)
-	opt->addr[len-1] &= 0xff << (8 - (opt->source_netmask & 7));
+      len = ((opt.source_netmask - 1) >> 3) + 1;
+      memcpy(opt.addr, addrp, len);
+      if (opt.source_netmask & 7)
+	opt.addr[len-1] &= 0xff << (8 - (opt.source_netmask & 7));
     }
   else
     {
@@ -462,13 +462,13 @@ pub const UMBRELLA_VERSION: u32 = 1;
 pub const UMBRELLA_TYPESZ: u32 = 2;
 
 pub const UMBRELLA_ASSET: u32 = 0x0004;
-#define UMBRELLA_ASSETSZ    sizeof(daemon->umbrella_asset)
+#define UMBRELLA_ASSETSZ    sizeof(daemon.umbrella_asset)
 pub const UMBRELLA_ORG: u32 = 0x0008;
-#define UMBRELLA_ORGSZ      sizeof(daemon->umbrella_org)
+#define UMBRELLA_ORGSZ      sizeof(daemon.umbrella_org)
 pub const UMBRELLA_IPV4: u32 = 0x0010;
 pub const UMBRELLA_IPV6: u32 = 0x0020;
 pub const UMBRELLA_DEVICE: u32 = 0x0040;
-#define UMBRELLA_DEVICESZ   sizeof(daemon->umbrella_device)
+#define UMBRELLA_DEVICESZ   sizeof(daemon.umbrella_device)
 
 struct umbrella_opt {
   u8 magic[4];
@@ -488,13 +488,13 @@ static size_t add_umbrella_opt(struct dns_header *header, size_t plen, unsigned 
 
   struct umbrella_opt opt = {{"ODNS"}, UMBRELLA_VERSION, 0, {}};
   u8 *u = &opt.fields[0];
-  int family = source->sa.sa_family;
+  int family = source.sa.sa_family;
   int size = family == AF_INET ? INADDRSZ : IN6ADDRSZ;
 
-  if (daemon->umbrella_org)
+  if (daemon.umbrella_org)
     {
       PUTSHORT(UMBRELLA_ORG, u);
-      PUTLONG(daemon->umbrella_org, u);
+      PUTLONG(daemon.umbrella_org, u);
     }
   
   PUTSHORT(family == AF_INET ? UMBRELLA_IPV4 : UMBRELLA_IPV6, u);
@@ -504,14 +504,14 @@ static size_t add_umbrella_opt(struct dns_header *header, size_t plen, unsigned 
   if (option_bool(OPT_UMBRELLA_DEVID))
     {
       PUTSHORT(UMBRELLA_DEVICE, u);
-      memcpy(u, (char *)&daemon->umbrella_device, UMBRELLA_DEVICESZ);
+      memcpy(u, (char *)&daemon.umbrella_device, UMBRELLA_DEVICESZ);
       u += UMBRELLA_DEVICESZ;
     }
 
-  if (daemon->umbrella_asset)
+  if (daemon.umbrella_asset)
     {
       PUTSHORT(UMBRELLA_ASSET, u);
-      PUTLONG(daemon->umbrella_asset, u);
+      PUTLONG(daemon.umbrella_asset, u);
     }
   
   return add_pseudoheader(header, plen, (unsigned char *)limit, PACKETSZ, EDNS0_OPTION_UMBRELLA, (unsigned char *)&opt, u - (u8 *)&opt, 0, 1);
@@ -528,9 +528,9 @@ size_t add_edns0_config(struct dns_header *header, size_t plen, unsigned char *l
   plen  = add_mac(header, plen, limit, source, now, cacheable);
   plen = add_dns_client(header, plen, limit, source, now, cacheable);
   
-  if (daemon->dns_client_id)
+  if (daemon.dns_client_id)
     plen = add_pseudoheader(header, plen, limit, PACKETSZ, EDNS0_OPTION_NOMCPEID, 
-			    (unsigned char *)daemon->dns_client_id, strlen(daemon->dns_client_id), 0, 1);
+			    (unsigned char *)daemon.dns_client_id, strlen(daemon.dns_client_id), 0, 1);
 
   if (option_bool(OPT_UMBRELLA))
     plen = add_umbrella_opt(header, plen, limit, source, cacheable);

@@ -1,26 +1,16 @@
 /* interface and address parms from command line. */
+use std::net::IpAddr;
 use std::ptr::null_mut;
 use libc::c_char;
-use crate::mysockaddr::mysockaddr;
+use crate::mysockaddr::MySockAddr;
 
-#[derive(Debug, Clone)]
-pub struct iname {
+#[derive(Default, Debug, Clone)]
+pub struct Iname {
     // char *name;
-    pub name: *mut c_char,
+    pub name: String,
     // union mysockaddr addr;
-    pub addr: mysockaddr,
+    pub addr: IpAddr,
     // used: i32;
     pub used: i32,
     // struct iname *next;
-}
-
-
-impl Default for iname {
-    fn default() -> Self {
-        Self {
-            name: null_mut(),
-            addr: Default::default(),
-            used: 0,
-        }
-    }
 }

@@ -92,7 +92,7 @@ int log_start(struct passwd *ent_pw, int errfd)
      the one required buffer now. */
   if (max_logs == 0)
     {  
-      free_entries = safe_malloc(sizeof(struct log_entry));
+      free_entries = malloc(sizeof(struct log_entry));
       free_entries.next = NULL;
       entries_alloced = 1;
     }

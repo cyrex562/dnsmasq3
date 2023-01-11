@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 use libc::{c_char, time_t};
-use crate::all_addr::all_addr;
+use crate::all_addr::AllAddr;
 use crate::bigname::bigname;
 use crate::config::SMALLDNAME;
 
@@ -12,7 +12,7 @@ use crate::config::SMALLDNAME;
 pub union NameUnion {
     pub sname: [c_char; SMALLDNAME as usize],
     pub bname: *mut bigname,
-    pub namep: *mut c_char,
+    pub namep: String,
 }
 
 impl Default for NameUnion {
@@ -48,7 +48,7 @@ impl Clone for NameUnion {
 pub struct crec {
     // struct crec *next, *prev, *hash_next;
     // union all_addr addr;
-    pub addr: all_addr,
+    pub addr: AllAddr,
     // time_t ttd; /* time to die */
     pub ttd: time_t,
     /* used as class if DNSKEY/DS, index to source for F_HOSTS */

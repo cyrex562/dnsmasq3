@@ -6,7 +6,7 @@ use libc::{in6_addr, sockaddr, sockaddr_in, sockaddr_in6};
 use crate::util::{hex_string_from_byte_slice, hex_string_from_c_char_slice, sockaddr_to_string, sockaddrin6_to_string, sockaddrin_to_string};
 
 #[derive()]
-pub union mysockaddr {
+pub union MySockAddr {
     // struct sockaddr sa;
     pub sa: sockaddr,
     // struct sockaddr_in in;
@@ -16,7 +16,7 @@ pub union mysockaddr {
 }
 
 
-impl Default for mysockaddr {
+impl Default for MySockAddr {
     fn default() -> Self {
         Self {
             sa_in6: sockaddr_in6 {
@@ -31,13 +31,13 @@ impl Default for mysockaddr {
 }
 
 
-impl Debug for mysockaddr {
+impl Debug for MySockAddr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{sa: {}, sa_in: {}, sa_in6: {}}}", sockaddr_to_string(&self.sa), sockaddrin_to_string(&self.sa_in), sockaddrin6_to_string(&self.sa_in6))
     }
 }
 
-impl Clone for mysockaddr {
+impl Clone for MySockAddr {
     fn clone(&self) -> Self {
         Self {
             sa_in6: self.sa_in6.clone()

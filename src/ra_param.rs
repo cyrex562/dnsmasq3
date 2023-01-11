@@ -1,8 +1,8 @@
 use std::fmt::{Debug, Formatter};
 use std::ptr::null_mut;
 use libc::{c_char, in6_addr, time_t};
-use crate::dhcp_context::dhcp_context;
-use crate::dhcp_netid::dhcp_netid;
+use crate::dhcp_context::DhcpContext;
+use crate::dhcp_netid::DhcpNetid;
 use crate::util::in6addr_to_string;
 
 #[derive(Clone)]
@@ -13,8 +13,8 @@ pub struct ra_param {
     pub other: i32,
     pub first: i32,
     pub adv_router: i32,
-    pub if_name: *mut c_char,
-    pub tags: *mut dhcp_netid,
+    pub if_name: String,
+    pub tags: *mut DhcpNetid,
     pub link_local: in6_addr,
     pub link_global: in6_addr,
     pub ula: in6_addr,
@@ -23,7 +23,7 @@ pub struct ra_param {
     pub ula_pref_time: u32,
     pub adv_interval: u32,
     pub prio: u32,
-    pub found_context: *mut dhcp_context,
+    pub found_context: *mut DhcpContext,
 }
 
 impl Default for ra_param {

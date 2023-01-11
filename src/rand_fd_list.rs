@@ -1,8 +1,8 @@
-use crate::rand_fd::randfd;
+use crate::rand_fd::RandFd;
 
 #[derive(Default,Debug,Clone)]
-pub struct randfd_list {
+pub struct RandFdList {
   // struct randfd *rfd;
-  rfd: *mut randfd,
+  rfd: Vec<RandFd>,
     // struct randfd_list *next;
 }

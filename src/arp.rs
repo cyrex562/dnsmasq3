@@ -35,8 +35,8 @@ pub const ARP_EMPTY: u32 = 3;  /* No MAC addr */
 
 pub fn filter_mac(
     ctx: &mut AppContext, family: i32,
-    addrp: *mut c_char,
-    mac: *mut c_char,
+    addrp: String,
+    mac: String,
     maclen: usize,
     parmv: *mut c_void) -> i32
 {
@@ -49,8 +49,8 @@ pub fn filter_mac(
   }
 
   /* Look for existing entry */
-  // for (arp = arps; arp; arp = arp->next)
-  for arp in ctx.arps.iter_mut()
+  // for (arp = arps; arp; arp = arp.next)
+  for arp in ctx.arp_records.iter_mut()
     {
       if family != arp.family || arp.status == ARP_NEW {
           continue;
@@ -98,7 +98,7 @@ pub fn filter_mac(
 	  arp = freelist;
 	  freelist = freelist.next;
 	}
-      else if (!(arp = whine_malloc(sizeof(struct arp_record)))){
+      else if (!(arp = whine_malloc(sizeof(struct ArpRecord)))){
     return 1;}
       
       arp.next = arps;
@@ -119,7 +119,7 @@ pub fn filter_mac(
 /* If in lazy mode, we cache absence of ARP entries. */
 int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
 {
-  struct arp_record *arp, *tmp, **up;
+  struct ArpRecord *arp, *tmp, **up;
   int updated = 0;
 
  again:
@@ -193,7 +193,7 @@ int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
       freelist = freelist.next;
     }
   else
-    arp = whine_malloc(sizeof(struct arp_record));
+    arp = whine_malloc(sizeof(struct ArpRecord));
   
   if (arp)
     {      
@@ -214,7 +214,7 @@ int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
 
 int do_arp_script_run(void)
 {
-  struct arp_record *arp;
+  struct ArpRecord *arp;
   
   /* Notify any which went, then move to free list */
   if (old)

@@ -32,9 +32,9 @@ pub struct dhcp_lease {
     pub clid_len: i32,
     /* length of client identifier */
     pub clid: *mut u8,
-    pub hostname: *mut c_char,
-    pub fqdn: *mut c_char,
-    pub old_hostname: *mut c_char,
+    pub hostname: String,
+    pub fqdn: String,
+    pub old_hostname: String,
     pub flags: i32,
     pub expires: time_t,
     pub length: i32,

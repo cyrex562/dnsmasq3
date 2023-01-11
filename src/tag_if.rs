@@ -1,19 +1,10 @@
 use std::ptr::null_mut;
-use crate::dhcp_netid::dhcp_netid;
-use crate::dhcp_netid_list::dhcp_netid_list;
+use crate::dhcp_netid::DhcpNetid;
+use crate::dhcp_netid_list::DhcpNetidList;
 
-#[derive(Debug, Clone)]
-pub struct tag_if {
-    pub list_set: *mut dhcp_netid_list,
-    pub tag: *mut dhcp_netid,
+#[derive(Default, Debug, Clone)]
+pub struct TagIf {
+    pub list_set: Vec<DhcpNetidList>,
+    pub tag: Vec<DhcpNetid>,
     // next
-}
-
-impl Default for tag_if {
-    fn default() -> Self {
-        Self {
-            list_set: null_mut(),
-            tag: null_mut(),
-        }
-    }
 }

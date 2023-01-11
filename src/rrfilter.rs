@@ -195,7 +195,7 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
       if (mode == RRFILTER_EDNS0) /* EDNS */
 	{
 	  /* EDNS mode, remove T_OPT from additional section only */
-	  if (i < (ntohs(header->nscount) + ntohs(header->ancount)) || type != T_OPT)
+	  if (i < (ntohs(header.nscount) + ntohs(header.ancount)) || type != T_OPT)
 	    continue;
 	}
       else if (mode == RRFILTER_DNSSEC)
@@ -205,13 +205,13 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
 	    continue;
 
 	  /* Don't remove the answer. */
-	  if (i < ntohs(header->ancount) && type == qtype && class == qclass)
+	  if (i < ntohs(header.ancount) && type == qtype && class == qclass)
 	    continue;
 	}
       else
 	{
 	  /* Only looking at answer section now. */
-	  if (i >= ntohs(header->ancount))
+	  if (i >= ntohs(header.ancount))
 	    break;
 
 	  if (class != C_IN)
@@ -230,9 +230,9 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
       rrs[rr_found++] = pstart;
       rrs[rr_found++] = p;
       
-      if (i < ntohs(header->ancount))
+      if (i < ntohs(header.ancount))
 	chop_an++;
-      else if (i < (ntohs(header->nscount) + ntohs(header->ancount)))
+      else if (i < (ntohs(header.nscount) + ntohs(header.ancount)))
 	chop_ns++;
       else
 	chop_ar++;
@@ -275,9 +275,9 @@ size_t rrfilter(struct dns_header *header, size_t plen, int mode)
     }
      
   plen = p - (unsigned char *)header;
-  header->ancount = htons(ntohs(header->ancount) - chop_an);
-  header->nscount = htons(ntohs(header->nscount) - chop_ns);
-  header->arcount = htons(ntohs(header->arcount) - chop_ar);
+  header.ancount = htons(ntohs(header.ancount) - chop_an);
+  header.nscount = htons(ntohs(header.nscount) - chop_ns);
+  header.arcount = htons(ntohs(header.arcount) - chop_ar);
 
   return plen;
 }

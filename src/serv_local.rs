@@ -6,6 +6,6 @@ pub struct serv_local {
     pub flags: u16,
     pub domain_len: u16,
     // char *domain;
-    domain: *mut c_char,
+    domain: String,
     // struct server *next;
 }

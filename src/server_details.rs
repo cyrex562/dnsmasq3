@@ -1,18 +1,18 @@
 use std::ptr::null_mut;
 use libc::{addrinfo, c_char};
-use crate::mysockaddr::mysockaddr;
-use crate::server::server;
+use crate::mysockaddr::MySockAddr;
+use crate::server::Server;
 
 #[derive(Debug, Clone)]
 pub struct server_details {
-    pub addr: *mut mysockaddr,
-    pub source_addr: *mut mysockaddr,
+    pub addr: *mut MySockAddr,
+    pub source_addr: *mut MySockAddr,
     pub hostinfo: *mut addrinfo,
     pub orig_hostinfo: *mut addrinfo,
-    pub interface: *mut c_char,
-    pub source: *mut c_char,
-    pub scope_id: *mut c_char,
-    pub interface_opt: *mut c_char,
+    pub interface: String,
+    pub source: String,
+    pub scope_id: String,
+    pub interface_opt: String,
     pub serv_port: i32,
     pub source_port: i32,
     pub addr_type: i32,

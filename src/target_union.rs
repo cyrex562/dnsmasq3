@@ -9,7 +9,7 @@ pub union TargetUnion {
     //     //       char *name;
     //     //     } target;
     pub cache: *mut crec,
-    pub name: *mut c_char,
+    pub name: String,
 }
 
 impl Default for TargetUnion {

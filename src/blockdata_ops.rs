@@ -45,7 +45,7 @@ void blockdata_init(void)
   blockdata_count = 0;
   blockdata_hwm = 0;
 
-  /* Note that daemon->cachesize is enforced to have non-zero size if OPT_DNSSEC_VALID is set */  
+  /* Note that daemon.cachesize is enforced to have non-zero size if OPT_DNSSEC_VALID is set */
   if (option_bool(OPT_DNSSEC_VALID))
     blockdata_expand(daemon.cachesize);
 }
