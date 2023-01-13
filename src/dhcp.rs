@@ -480,7 +480,7 @@ void dhcp_packet(time_t now, int pxe_fd)
 }
 
 /* check against secondary interface addresses */
-static int check_listen_addrs(struct in_addr local, int if_index, char *label,
+static int check_listen_addrs(struct in_addr local, int if_index, label: &mut String
 			      struct in_addr netmask, struct in_addr broadcast, void *vparam)
 {
   struct match_param *param = vparam;
@@ -538,7 +538,7 @@ static void guess_range_netmask(struct in_addr addr, struct in_addr netmask)
       }
 }
 
-static int complete_context(struct in_addr local, int if_index, char *label,
+static int complete_context(struct in_addr local, int if_index, label: &mut String
 			    struct in_addr netmask, struct in_addr broadcast, void *vparam)
 {
   struct dhcp_context *context;
@@ -762,7 +762,7 @@ struct ping_result *do_icmp_ping(time_t now, struct in_addr addr, unsigned int h
 }
 
 int address_allocate(struct dhcp_context *context,
-		     struct in_addr *addrp, unsigned char *hwaddr, int hw_len, 
+		     struct in_addr *addrp, hwaddr: *mut u8 int hw_len,
 		     struct dhcp_netid *netids, time_t now, int loopback)   
 {
   /* Find a free address: exclude anything in use and anything allocated to
@@ -865,7 +865,7 @@ void dhcp_read_ethers(void)
   FILE *f = fopen(ETHERSFILE, "r");
   unsigned flags: i32;
   char *buff = daemon.namebuff;
-  char *ip, *cp;
+  ip: &mut String *cp;
   addr: in_addr;
   unsigned char hwaddr[ETHER_ADDR_LEN];
   struct dhcp_config **up, *tmp;
@@ -1038,7 +1038,7 @@ char *host_from_dns(struct in_addr addr)
 
   if (lookup && (lookup.flags & F_HOSTS))
     {
-      char *dot, *hostname = cache_get_name(lookup);
+      dot: &mut String *hostname = cache_get_name(lookup);
       dot = strchr(hostname, '.');
       
       if (dot && strlen(dot+1) != 0)

@@ -106,7 +106,7 @@ static int check_name(unsigned char **namep, struct dns_header *header, size_t p
 }
 
 /* Go through RRs and check or fixup the domain names contained within */
-static int check_rrs(unsigned char *p, struct dns_header *header, size_t plen, int fixup, unsigned char **rrs, int rr_count)
+static int check_rrs(p: *mut u8 struct dns_header *header, size_t plen, int fixup, unsigned char **rrs, int rr_count)
 {
   int i, j, type, class, rdlen;
   unsigned char *pp;

@@ -177,7 +177,7 @@ int legal_hostname(char *name)
   return 1;
 }
   
-char *canonicalise(char *in, int *nomem)
+char *canonicalise(in: &mut String int *nomem)
 {
   char *ret = NULL;
   rc: i32;
@@ -224,7 +224,7 @@ char *canonicalise(char *in, int *nomem)
   return ret;
 }
 
-unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit)
+unsigned char *do_rfc1035_name(unsigned p: &mut String sval: &mut String char *limit)
 {
   j: i32;
   
@@ -269,7 +269,7 @@ void *malloc(size_t size)
 
 /* Ensure limited size string is always terminated.
  * Can be replaced by (void)strlcpy() on some platforms */
-void safe_strncpy(char *dest, const char *src, size_t size)
+void safe_strncpy(dest: &mut String const char *src, size_t size)
 {
   if (size != 0)
     {
@@ -379,9 +379,9 @@ int hostname_isequal(const char *a, const char *b)
 }
 
 /* is b equal to or a subdomain of a return 2 for equal, 1 for subdomain */
-int hostname_issubdomain(char *a, char *b)
+int hostname_issubdomain(a: &mut String char *b)
 {
-  char *ap, *bp;
+  ap: &mut String *bp;
   unsigned int c1, c2;
   
   /* move to the end */
@@ -533,7 +533,7 @@ int prettyprint_addr(union mysockaddr *addr, char *buf)
   return port;
 }
 
-void prettyprint_time(char *buf, unsigned int t)
+void prettyprint_time(buf: &mut String unsigned int t)
 {
   if (t == 0xffffffff)
     sprintf(buf, _("infinite"));
@@ -554,7 +554,7 @@ void prettyprint_time(char *buf, unsigned int t)
 
 /* in may equal out, when maxlen may be -1 (No max len). 
    Return -1 for extraneous no-hex chars found. */
-int parse_hex(char *in, unsigned char *out, int maxlen, 
+int parse_hex(in: &mut String unsigned out: &mut String int maxlen,
 	      unsigned int *wildcard_mask, int *mac_type)
 {
   int done = 0, mask = 0, i = 0;
@@ -623,7 +623,7 @@ int parse_hex(char *in, unsigned char *out, int maxlen,
 }
 
 /* return 0 for no match, or (no matched octets) + 1 */
-int memcmp_masked(unsigned char *a, unsigned char *b, int len, unsigned int mask)
+int memcmp_masked(unsigned a: &mut String unsigned b: &mut String int len, unsigned int mask)
 {
   int i, count;
   for (count = 1, i = len - 1; i >= 0; i--, mask = mask >> 1)
@@ -663,7 +663,7 @@ int expand_buf(struct iovec *iov, size_t size)
   return 1;
 }
 
-char *print_mac(char *buff, unsigned char *mac, int len)
+char *print_mac(buff: &mut String unsigned mac: &mut String int len)
 {
   char *p = buff;
   i: i32;
@@ -714,7 +714,7 @@ int retry_send(ssize_t rc)
   return 0;
 }
 
-int read_write(int fd, unsigned char *packet, int size, int rw)
+int read_write(int fd, unsigned packet: &mut String int size, int rw)
 {
   ssize_t n, done;
   

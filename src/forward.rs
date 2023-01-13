@@ -683,9 +683,9 @@ static struct ipsets *domain_find_sets(struct ipsets *setlist, const char *domai
 
 static size_t process_reply(struct dns_header *header, time_t now, struct server *server, size_t n, int check_rebind, 
 			    int no_cache, int cache_secure, int bogusanswer, int ad_reqd, int do_bit, int added_pheader, 
-			    union mysockaddr *query_source, unsigned char *limit, int ede)
+			    union mysockaddr *query_source, limit: *mut u8 int ede)
 {
-  unsigned char *pheader, *sizep;
+  pheader: *mut u8 *sizep;
   struct ipsets *ipsets = NULL, *nftsets = NULL;
   int munged = 0, is_sign;
   unsigned int rcode = RCODE(header);
@@ -1157,7 +1157,7 @@ void reply_query(int fd, time_t now)
       !(forward.flags & FREC_HAS_EXTRADATA))
     /* for broken servers, attempt to send to another one. */
     {
-      unsigned char *pheader, *udpsz;
+      pheader: *mut u8 *udpsz;
       unsigned short udp_size =  PACKETSZ; /* default if no EDNS0 */
       plen: usize;
       is_sign: i32;
@@ -1877,7 +1877,7 @@ void receive_query(struct listener *listen, time_t now)
 
 /* Send query in packet, qsize to a server determined by first,last,start and
    get the reply. return reply size. */
-static ssize_t tcp_talk(int first, int last, int start, unsigned char *packet,  size_t qsize,
+static ssize_t tcp_talk(int first, int last, int start, packet: *mut u8  size_t qsize,
 			int have_mark, unsigned int mark, struct server **servp)
 {
   int firstsendto = -1;

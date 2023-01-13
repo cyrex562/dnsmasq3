@@ -45,7 +45,7 @@ void tftp_request(struct listener *listen, time_t now)
 {
   slen: usize;
   char *packet = daemon.packet;
-  char *filename, *mode, *p, *end, *opt;
+  filename: &mut String *mode, *p, *end, *opt;
   union mysockaddr addr, peer;
   struct msghdr msg;
   struct iovec iov;
@@ -500,7 +500,7 @@ void tftp_request(struct listener *listen, time_t now)
     }
 }
  
-static struct tftp_file *check_tftp_fileperm(ssize_t *len, char *prefix, char *client)
+static struct tftp_file *check_tftp_fileperm(ssize_t *len, prefix: &mut String char *client)
 {
   char *packet = daemon.packet, *namebuff = daemon.namebuff;
   struct tftp_file *file;
@@ -750,7 +750,7 @@ static char *next(char **p, char *end)
 
 static void sanitise(char *buf)
 {
-  unsigned char *q, *r;
+  unsigned q: &mut String *r;
   for (q = r = (unsigned char *)buf; *r; r++)
     if (isprint((int)*r))
       *(q++) = *r;
@@ -759,7 +759,7 @@ static void sanitise(char *buf)
 }
 
 pub const MAXMESSAGE: u32 = 500; /* limit to make packet < 512 bytes and definitely smaller than buffer */
-static ssize_t tftp_err(int err, char *packet, char *message, char *file, char *arg2)
+static ssize_t tftp_err(int err, packet: &mut String char *message, char *file, char *arg2)
 {
   struct errmess {
     unsigned short op, err;

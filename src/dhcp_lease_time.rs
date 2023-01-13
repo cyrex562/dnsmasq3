@@ -45,7 +45,7 @@
 
 
 
-static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize)
+static unsigned char *option_find1(p: *mut u8 end: *mut u8 int opt, int minsize)
 {
   while (*p != OPTION_END) 
     {
@@ -72,7 +72,7 @@ static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt
  
 static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize)
 {
-  unsigned char *ret, *overload;
+  ret: *mut u8 *overload;
   
   /* skip over DHCP cookie; */
   if ((ret = option_find1(&mess.options[0], ((unsigned char *)mess) + size, opt_type, minsize)))
@@ -95,7 +95,7 @@ static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt
   return NULL;
 }
 
-static unsigned int option_uint(unsigned char *opt, int size)
+static unsigned int option_uint(opt: *mut u8 int size)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;

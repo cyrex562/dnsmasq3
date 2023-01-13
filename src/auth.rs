@@ -100,7 +100,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
 		   int local_query, int do_bit, int have_pseudoheader) 
 {
   char *name = daemon.namebuff;
-  unsigned char *p, *ansp;
+  p: *mut u8 *ansp;
   int qtype, qclass, rc;
   int nameoffset, axfroffset = 0;
   int q, anscount = 0, authcount = 0;

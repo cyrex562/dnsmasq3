@@ -68,11 +68,11 @@
 // static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid);
 // static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_vendor);
 
-size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
+size_t dhcp_reply(struct dhcp_context *context, iface_name: &mut String int int_index,
 		  size_t sz, time_t now, int unicast_dest, int loopback,
 		  int *is_inform, int pxe, struct in_addr fallback, time_t recvtime)
 {
-  unsigned char *opt, *clid = NULL;
+  opt: *mut u8 *clid = NULL;
   struct dhcp_lease *ltmp, *lease = NULL;
   struct dhcp_vendor *vendor;
   struct dhcp_mac *mac;
@@ -684,7 +684,7 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
       /* http://tools.ietf.org/wg/dhc/draft-ietf-dhc-fqdn-option/draft-ietf-dhc-fqdn-option-10.txt */
       int len = option_len(opt);
       char *pq = daemon.dhcp_buff;
-      unsigned char *pp, *op = option_ptr(opt, 0);
+      pp: *mut u8 *op = option_ptr(opt, 0);
       
       fqdn_flags = *op;
       len -= 3;
@@ -1610,8 +1610,8 @@ size_t dhcp_reply(struct dhcp_context *context, char *iface_name, int int_index,
    then the client-id is using the usual encoding and use the rest of the 
    client-id: if not we can use the whole client-id. This should give
    sane MAC address logs. */
-unsigned char *extended_hwaddr(int hwtype, int hwlen, unsigned char *hwaddr, 
-				      int clid_len, unsigned char *clid, int *len_out)
+unsigned char *extended_hwaddr(int hwtype, int hwlen, hwaddr: *mut u8
+				      int clid_len, clid: *mut u8 int *len_out)
 {
   if (hwlen == 0 && clid && clid_len > 3)
     {
@@ -1663,7 +1663,7 @@ static struct in_addr server_id(struct dhcp_context *context, struct in_addr ove
     return fallback;
 }
 
-static int sanitise(unsigned char *opt, char *buf)
+static int sanitise(opt: *mut u8 char *buf)
 {
   char *p;
   i: i32;
@@ -1696,7 +1696,7 @@ static void add_extradata_opt(struct dhcp_lease *lease, unsigned char *opt)
 }
 // #endif
 
-static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
+static void log_packet(char *type, void *addr, ext_mac: *mut u8
 		       int mac_len, char *interface, char *string, char *err, u32 xid)
 {
   if (!err && !option_bool(OPT_LOG_OPTS) && option_bool(OPT_QUIET_DHCP))
@@ -1736,7 +1736,7 @@ static void log_packet(char *type, void *addr, unsigned char *ext_mac,
 // #endif
 }
 
-static void log_options(unsigned char *start, u32 xid)
+static void log_options(start: *mut u8 u32 xid)
 {
   while (*start != OPTION_END)
     {
@@ -1748,7 +1748,7 @@ static void log_options(unsigned char *start, u32 xid)
     }
 }
 
-static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize)
+static unsigned char *option_find1(p: *mut u8 end: *mut u8 int opt, int minsize)
 {
   while (1) 
     {
@@ -1775,7 +1775,7 @@ static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt
  
 static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize)
 {
-  unsigned char *ret, *overload;
+  ret: *mut u8 *overload;
   
   /* skip over DHCP cookie; */
   if ((ret = option_find1(&mess.options[0] + sizeof(u32), ((unsigned char *)mess) + size, opt_type, minsize)))
@@ -1809,7 +1809,7 @@ static struct in_addr option_addr(unsigned char *opt)
   return ret;
 }
 
-static unsigned int option_uint(unsigned char *opt, int offset, int size)
+static unsigned int option_uint(opt: *mut u8 int offset, int size)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;
@@ -1843,7 +1843,7 @@ static unsigned char *find_overload(struct dhcp_packet *mess)
   return NULL;
 }
 
-static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end)
+static size_t dhcp_packet_size(struct dhcp_packet *mess, agent_id: *mut u8 unsigned char *real_end)
 {
   unsigned char *p = dhcp_skip_opts(&mess.options[0] + sizeof(u32));
   unsigned char *overload;
@@ -1903,7 +1903,7 @@ static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id
   return ret;
 }
 
-static unsigned char *free_space(struct dhcp_packet *mess, unsigned char *end, int opt, int len)
+static unsigned char *free_space(struct dhcp_packet *mess, end: *mut u8 int opt, int len)
 {
   unsigned char *p = dhcp_skip_opts(&mess.options[0] + sizeof(u32));
   
@@ -1965,7 +1965,7 @@ static unsigned char *free_space(struct dhcp_packet *mess, unsigned char *end, i
   return p;
 }
 	      
-static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, int len, unsigned int val)
+static void option_put(struct dhcp_packet *mess, end: *mut u8 int opt, int len, unsigned int val)
 {
   i: i32;
   unsigned char *p = free_space(mess, end, opt, len);
@@ -1975,7 +1975,7 @@ static void option_put(struct dhcp_packet *mess, unsigned char *end, int opt, in
       *(p++) = val >> (8 * (len - (i + 1)));
 }
 
-static void option_put_string(struct dhcp_packet *mess, unsigned char *end, int opt, 
+static void option_put_string(struct dhcp_packet *mess, end: *mut u8 int opt,
 			      const char *string, int null_term)
 {
   unsigned char *p;
@@ -1989,7 +1989,7 @@ static void option_put_string(struct dhcp_packet *mess, unsigned char *end, int 
 }
 
 /* return length, note this only does the data part */
-static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *context, int null_term)
+static int do_opt(struct dhcp_opt *opt, p: *mut u8 struct dhcp_context *context, int null_term)
 {
   int len = opt.len;
   
@@ -2019,7 +2019,7 @@ static int do_opt(struct dhcp_opt *opt, unsigned char *p, struct dhcp_context *c
   return len;
 }
 
-static int in_list(unsigned char *list, int opt)
+static int in_list(list: *mut u8 int opt)
 {
   i: i32;
 
@@ -2047,7 +2047,7 @@ static struct dhcp_opt *option_find2(int opt)
 
 /* mark vendor-encapsulated options which match the client-supplied  or
    config-supplied vendor class */
-static void match_vendor_opts(unsigned char *opt, struct dhcp_opt *dopt)
+static void match_vendor_opts(opt: *mut u8 struct dhcp_opt *dopt)
 {
   for (; dopt; dopt = dopt.next)
     {
@@ -2085,7 +2085,7 @@ static void match_vendor_opts(unsigned char *opt, struct dhcp_opt *dopt)
 }
 
 static int do_encap_opts(struct dhcp_opt *opt, int encap, int flag,  
-			 struct dhcp_packet *mess, unsigned char *end, int null_term)
+			 struct dhcp_packet *mess, end: *mut u8 int null_term)
 {
   int len, enc_len, ret = 0;
   struct dhcp_opt *start;
@@ -2132,7 +2132,7 @@ static int do_encap_opts(struct dhcp_opt *opt, int encap, int flag,
   return ret;
 }
 
-static void pxe_misc(struct dhcp_packet *mess, unsigned char *end, unsigned char *uuid, const char *pxevendor)
+static void pxe_misc(struct dhcp_packet *mess, end: *mut u8 uuid: *mut u8 const char *pxevendor)
 {
   unsigned char *p;
 
@@ -2381,15 +2381,15 @@ static int is_pxe_client(struct dhcp_packet *mess, size_t sz, const char **pxe_v
 
 static void do_options(struct dhcp_context *context,
 		       struct dhcp_packet *mess,
-		       unsigned char *end, 
-		       unsigned char *req_options,
+		       end: *mut u8
+		       req_options: *mut u8
 		       char *hostname, 
 		       char *domain,
 		       struct dhcp_netid *netid,
 		       struct in_addr subnet_addr,
 		       unsigned char fqdn_flags,
 		       int null_term, int pxe_arch,
-		       unsigned char *uuid,
+		       uuid: *mut u8
 		       int vendor_class_len,
 		       time_t now,
 		       unsigned int lease_time,

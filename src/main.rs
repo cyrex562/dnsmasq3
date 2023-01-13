@@ -159,6 +159,7 @@ mod state;
 mod name_list;
 mod frec_src;
 mod snoop_record;
+mod cli_opts;
 
 fn main() {
 

@@ -1,1403 +1,26 @@
-/* dnsmasq is Copyright (c) 2000-2022 Simon Kelley
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 dated June, 1991, or
-   (at your option) version 3 dated 29 June, 2007.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-     
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/* define this to get facilitynames */
-// #define SYSLOG_NAMES
-// #include "dnsmasq.h"
-// #include <setjmp.h>
-
-// static volatile int mem_recover = 0;
-// static jmp_buf mem_jmp;
-// static int one_file(char *file, int hard_opt);
-
-/* Solaris headers don't have facility names. */
-// #ifdef HAVE_SOLARIS_NETWORK
-static const struct {
-  char *c_name;
-  unsigned c_val: i32;
-}  facilitynames[] = {
-  { "kern",   LOG_KERN },
-  { "user",   LOG_USER },
-  { "mail",   LOG_MAIL },
-  { "daemon", LOG_DAEMON },
-  { "auth",   LOG_AUTH },
-  { "syslog", LOG_SYSLOG },
-  { "lpr",    LOG_LPR },
-  { "news",   LOG_NEWS },
-  { "uucp",   LOG_UUCP },
-  { "audit",  LOG_AUDIT },
-  { "cron",   LOG_CRON },
-  { "local0", LOG_LOCAL0 },
-  { "local1", LOG_LOCAL1 },
-  { "local2", LOG_LOCAL2 },
-  { "local3", LOG_LOCAL3 },
-  { "local4", LOG_LOCAL4 },
-  { "local5", LOG_LOCAL5 },
-  { "local6", LOG_LOCAL6 },
-  { "local7", LOG_LOCAL7 },
-  { NULL, 0 }
-};
-// #endif
-
-// #endif HAVE_GETOPT_LONG
-struct myoption {
-  const char *name;
-  has_arg: i32;
-  int *flag;
-  val: i32;
-};
-// #endif
-
-pub const OPTSTRING: String = String::from("951yZDNLERKzowefnbvhdkqr:m:p:c:l:s:i:t:u:g:a:x:S:C:A:T:H:Q:I:B:F:G:O:M:X:V:U:j:P:J:W:Y:2:4:6:7:8:0:3:");
-
-/* options which don't have a one-char version */
-pub const LOPT_RELOAD: u32 = 256;
-pub const LOPT_NO_NAMES: u32 = 257;
-pub const LOPT_TFTP: u32 = 258;
-pub const LOPT_SECURE: u32 = 259;
-pub const LOPT_PREFIX: u32 = 260;
-pub const LOPT_PTR: u32 = 261;
-pub const LOPT_BRIDGE: u32 = 262;
-pub const LOPT_TFTP_MAX: u32 = 263;
-pub const LOPT_FORCE: u32 = 264;
-pub const LOPT_NOBLOCK: u32 = 265;
-pub const LOPT_LOG_OPTS: u32 = 266;
-pub const LOPT_MAX_LOGS: u32 = 267;
-pub const LOPT_CIRCUIT: u32 = 268;
-pub const LOPT_REMOTE: u32 = 269;
-pub const LOPT_SUBSCR: u32 = 270;
-pub const LOPT_INTNAME: u32 = 271;
-pub const LOPT_BANK: u32 = 272;
-pub const LOPT_DHCP_HOST: u32 = 273;
-pub const LOPT_APREF: u32 = 274;
-pub const LOPT_OVERRIDE: u32 = 275;
-pub const LOPT_TFTPPORTS: u32 = 276;
-pub const LOPT_REBIND: u32 = 277;
-pub const LOPT_NOLAST: u32 = 278;
-pub const LOPT_OPTS: u32 = 279;
-pub const LOPT_DHCP_OPTS: u32 = 280;
-pub const LOPT_MATCH: u32 = 281;
-pub const LOPT_BROADCAST: u32 = 282;
-pub const LOPT_NEGTTL: u32 = 283;
-pub const LOPT_ALTPORT: u32 = 284;
-pub const LOPT_SCRIPTUSR: u32 = 285;
-pub const LOPT_LOCAL: u32 = 286;
-pub const LOPT_NAPTR: u32 = 287;
-pub const LOPT_MINPORT: u32 = 288;
-pub const LOPT_DHCP_FQDN: u32 = 289;
-pub const LOPT_CNAME: u32 = 290;
-pub const LOPT_PXE_PROMT: u32 = 291;
-pub const LOPT_PXE_SERV: u32 = 292;
-pub const LOPT_TEST: u32 = 293;
-pub const LOPT_TAG_IF: u32 = 294;
-pub const LOPT_PROXY: u32 = 295;
-pub const LOPT_GEN_NAMES: u32 = 296;
-pub const LOPT_MAXTTL: u32 = 297;
-pub const LOPT_NO_REBIND: u32 = 298;
-pub const LOPT_LOC_REBND: u32 = 299;
-pub const LOPT_ADD_MAC: u32 = 300;
-pub const LOPT_DNSSEC: u32 = 301;
-pub const LOPT_INCR_ADDR: u32 = 302;
-pub const LOPT_CONNTRACK: u32 = 303;
-pub const LOPT_FQDN: u32 = 304;
-pub const LOPT_LUASCRIPT: u32 = 305;
-pub const LOPT_RA: u32 = 306;
-pub const LOPT_DUID: u32 = 307;
-pub const LOPT_HOST_REC: u32 = 308;
-pub const LOPT_TFTP_LC: u32 = 309;
-pub const LOPT_RR: u32 = 310;
-pub const LOPT_CLVERBIND: u32 = 311;
-pub const LOPT_MAXCTTL: u32 = 312;
-pub const LOPT_AUTHZONE: u32 = 313;
-pub const LOPT_AUTHSERV: u32 = 314;
-pub const LOPT_AUTHTTL: u32 = 315;
-pub const LOPT_AUTHSOA: u32 = 316;
-pub const LOPT_AUTHSFS: u32 = 317;
-pub const LOPT_AUTHPEER: u32 = 318;
-pub const LOPT_IPSET: u32 = 319;
-pub const LOPT_SYNTH: u32 = 320;
-pub const LOPT_RELAY: u32 = 323;
-pub const LOPT_RA_PARAM: u32 = 324;
-pub const LOPT_ADD_SBNET: u32 = 325;
-pub const LOPT_QUIET_DHCP: u32 = 326;
-pub const LOPT_QUIET_DHCP6: u32 = 327;
-pub const LOPT_QUIET_RA: u32 = 328;
-pub const LOPT_SEC_VALID: u32 = 329;
-pub const LOPT_TRUST_ANCHOR: u32 = 330;
-pub const LOPT_DNSSEC_DEBUG: u32 = 331;
-pub const LOPT_REV_SERV: u32 = 332;
-pub const LOPT_SERVERS_FILE: u32 = 333;
-pub const LOPT_DNSSEC_CHECK: u32 = 334;
-pub const LOPT_LOCAL_SERVICE: u32 = 335;
-pub const LOPT_DNSSEC_TIME: u32 = 336;
-pub const LOPT_LOOP_DETECT: u32 = 337;
-pub const LOPT_IGNORE_ADDR: u32 = 338;
-pub const LOPT_MINCTTL: u32 = 339;
-pub const LOPT_DHCP_INOTIFY: u32 = 340;
-pub const LOPT_DHOPT_INOTIFY: u32 = 341;
-pub const LOPT_HOST_INOTIFY: u32 = 342;
-pub const LOPT_DNSSEC_STAMP: u32 = 343;
-pub const LOPT_TFTP_NO_FAIL: u32 = 344;
-pub const LOPT_MAXPORT: u32 = 345;
-pub const LOPT_CPE_ID: u32 = 346;
-pub const LOPT_SCRIPT_ARP: u32 = 347;
-pub const LOPT_DHCPTTL: u32 = 348;
-pub const LOPT_TFTP_MTU: u32 = 349;
-pub const LOPT_REPLY_DELAY: u32 = 350;
-pub const LOPT_RAPID_COMMIT: u32 = 351;
-pub const LOPT_DUMPFILE: u32 = 352;
-pub const LOPT_DUMPMASK: u32 = 353;
-pub const LOPT_UBUS: u32 = 354;
-pub const LOPT_NAME_MATCH: u32 = 355;
-pub const LOPT_CAA: u32 = 356;
-pub const LOPT_SHARED_NET: u32 = 357;
-pub const LOPT_IGNORE_CLID: u32 = 358;
-pub const LOPT_SINGLE_PORT: u32 = 359;
-pub const LOPT_SCRIPT_TIME: u32 = 360;
-pub const LOPT_PXE_VENDOR: u32 = 361;
-pub const LOPT_DYNHOST: u32 = 362;
-pub const LOPT_LOG_DEBUG: u32 = 363;
-pub const LOPT_UMBRELLA: u32 = 364;
-pub const LOPT_CMARK_ALST_EN: u32 = 365;
-pub const LOPT_CMARK_ALST: u32 = 366;
-pub const LOPT_QUIET_TFTP: u32 = 367;
-pub const LOPT_NFTSET: u32 = 368;
-pub const LOPT_FILTER_A: u32 = 369;
-pub const LOPT_FILTER_AAAA: u32 = 370;
-pub const LOPT_STRIP_SBNET: u32 = 371;
-pub const LOPT_STRIP_MAC: u32 = 372;
-pub const LOPT_CONF_OPT: u32 = 373;
-pub const LOPT_CONF_SCRIPT: u32 = 374;
-pub const LOPT_RANDPORT_LIM: u32 = 375;
-pub const LOPT_FAST_RETRY: u32 = 376;
-pub const LOPT_STALE_CACHE: u32 = 377;
-pub const LOPT_NORR: u32 = 378;
-
-// #ifdef HAVE_GETOPT_LONG
-static const struct option opts[] =  
-#else
-static const struct myoption opts[] = 
-// #endif
-  { 
-    { "version", 0, 0, 'v' },
-    { "no-hosts", 0, 0, 'h' },
-    { "no-poll", 0, 0, 'n' },
-    { "help", 0, 0, 'w' },
-    { "no-daemon", 0, 0, 'd' },
-    { "log-queries", 2, 0, 'q' },
-    { "user", 2, 0, 'u' },
-    { "group", 2, 0, 'g' },
-    { "resolv-file", 2, 0, 'r' },
-    { "servers-file", 1, 0, LOPT_SERVERS_FILE },
-    { "mx-host", 1, 0, 'm' },
-    { "mx-target", 1, 0, 't' },
-    { "cache-size", 2, 0, 'c' },
-    { "port", 1, 0, 'p' },
-    { "dhcp-leasefile", 2, 0, 'l' },
-    { "dhcp-lease", 1, 0, 'l' },
-    { "dhcp-host", 1, 0, 'G' },
-    { "dhcp-range", 1, 0, 'F' },
-    { "dhcp-option", 1, 0, 'O' },
-    { "dhcp-boot", 1, 0, 'M' },
-    { "domain", 1, 0, 's' },
-    { "domain-suffix", 1, 0, 's' },
-    { "interface", 1, 0, 'i' },
-    { "listen-address", 1, 0, 'a' },
-    { "local-service", 0, 0, LOPT_LOCAL_SERVICE },
-    { "bogus-priv", 0, 0, 'b' },
-    { "bogus-nxdomain", 1, 0, 'B' },
-    { "ignore-address", 1, 0, LOPT_IGNORE_ADDR },
-    { "selfmx", 0, 0, 'e' },
-    { "filterwin2k", 0, 0, 'f' },
-    { "filter-A", 0, 0, LOPT_FILTER_A },
-    { "filter-AAAA", 0, 0, LOPT_FILTER_AAAA },
-    { "pid-file", 2, 0, 'x' },
-    { "strict-order", 0, 0, 'o' },
-    { "server", 1, 0, 'S' },
-    { "rev-server", 1, 0, LOPT_REV_SERV },
-    { "local", 1, 0, LOPT_LOCAL },
-    { "address", 1, 0, 'A' },
-    { "conf-file", 2, 0, 'C' },
-    { "conf-script", 1, 0, LOPT_CONF_SCRIPT },
-    { "no-resolv", 0, 0, 'R' },
-    { "expand-hosts", 0, 0, 'E' },
-    { "localmx", 0, 0, 'L' },
-    { "local-ttl", 1, 0, 'T' },
-    { "no-negcache", 0, 0, 'N' },
-    { "no-round-robin", 0, 0, LOPT_NORR },
-    { "addn-hosts", 1, 0, 'H' },
-    { "hostsdir", 1, 0, LOPT_HOST_INOTIFY },
-    { "query-port", 1, 0, 'Q' },
-    { "except-interface", 1, 0, 'I' },
-    { "no-dhcp-interface", 1, 0, '2' },
-    { "domain-needed", 0, 0, 'D' },
-    { "dhcp-lease-max", 1, 0, 'X' },
-    { "bind-interfaces", 0, 0, 'z' },
-    { "read-ethers", 0, 0, 'Z' },
-    { "alias", 1, 0, 'V' },
-    { "dhcp-vendorclass", 1, 0, 'U' },
-    { "dhcp-userclass", 1, 0, 'j' },
-    { "dhcp-ignore", 1, 0, 'J' },
-    { "edns-packet-max", 1, 0, 'P' },
-    { "keep-in-foreground", 0, 0, 'k' },
-    { "dhcp-authoritative", 0, 0, 'K' },
-    { "srv-host", 1, 0, 'W' },
-    { "localise-queries", 0, 0, 'y' },
-    { "txt-record", 1, 0, 'Y' },
-    { "caa-record", 1, 0 , LOPT_CAA },
-    { "dns-rr", 1, 0, LOPT_RR },
-    { "enable-dbus", 2, 0, '1' },
-    { "enable-ubus", 2, 0, LOPT_UBUS },
-    { "bootp-dynamic", 2, 0, '3' },
-    { "dhcp-mac", 1, 0, '4' },
-    { "no-ping", 0, 0, '5' },
-    { "dhcp-script", 1, 0, '6' },
-    { "conf-dir", 1, 0, '7' },
-    { "log-facility", 1, 0 ,'8' },
-    { "leasefile-ro", 0, 0, '9' },
-    { "script-on-renewal", 0, 0, LOPT_SCRIPT_TIME},
-    { "dns-forward-max", 1, 0, '0' },
-    { "clear-on-reload", 0, 0, LOPT_RELOAD },
-    { "dhcp-ignore-names", 2, 0, LOPT_NO_NAMES },
-    { "enable-tftp", 2, 0, LOPT_TFTP },
-    { "tftp-secure", 0, 0, LOPT_SECURE },
-    { "tftp-no-fail", 0, 0, LOPT_TFTP_NO_FAIL },
-    { "tftp-unique-root", 2, 0, LOPT_APREF },
-    { "tftp-root", 1, 0, LOPT_PREFIX },
-    { "tftp-max", 1, 0, LOPT_TFTP_MAX },
-    { "tftp-mtu", 1, 0, LOPT_TFTP_MTU },
-    { "tftp-lowercase", 0, 0, LOPT_TFTP_LC },
-    { "tftp-single-port", 0, 0, LOPT_SINGLE_PORT },
-    { "ptr-record", 1, 0, LOPT_PTR },
-    { "naptr-record", 1, 0, LOPT_NAPTR },
-    { "bridge-interface", 1, 0 , LOPT_BRIDGE },
-    { "shared-network", 1, 0, LOPT_SHARED_NET },
-    { "dhcp-option-force", 1, 0, LOPT_FORCE },
-    { "tftp-no-blocksize", 0, 0, LOPT_NOBLOCK },
-    { "log-dhcp", 0, 0, LOPT_LOG_OPTS },
-    { "log-async", 2, 0, LOPT_MAX_LOGS },
-    { "dhcp-circuitid", 1, 0, LOPT_CIRCUIT },
-    { "dhcp-remoteid", 1, 0, LOPT_REMOTE },
-    { "dhcp-subscrid", 1, 0, LOPT_SUBSCR },
-    { "dhcp-pxe-vendor", 1, 0, LOPT_PXE_VENDOR },
-    { "interface-name", 1, 0, LOPT_INTNAME },
-    { "dhcp-hostsfile", 1, 0, LOPT_DHCP_HOST },
-    { "dhcp-optsfile", 1, 0, LOPT_DHCP_OPTS },
-    { "dhcp-hostsdir", 1, 0, LOPT_DHCP_INOTIFY },
-    { "dhcp-optsdir", 1, 0, LOPT_DHOPT_INOTIFY },
-    { "dhcp-no-override", 0, 0, LOPT_OVERRIDE },
-    { "tftp-port-range", 1, 0, LOPT_TFTPPORTS },
-    { "stop-dns-rebind", 0, 0, LOPT_REBIND },
-    { "rebind-domain-ok", 1, 0, LOPT_NO_REBIND },
-    { "all-servers", 0, 0, LOPT_NOLAST }, 
-    { "dhcp-match", 1, 0, LOPT_MATCH },
-    { "dhcp-name-match", 1, 0, LOPT_NAME_MATCH },
-    { "dhcp-broadcast", 2, 0, LOPT_BROADCAST },
-    { "neg-ttl", 1, 0, LOPT_NEGTTL },
-    { "max-ttl", 1, 0, LOPT_MAXTTL },
-    { "min-cache-ttl", 1, 0, LOPT_MINCTTL },
-    { "max-cache-ttl", 1, 0, LOPT_MAXCTTL },
-    { "dhcp-alternate-port", 2, 0, LOPT_ALTPORT },
-    { "dhcp-scriptuser", 1, 0, LOPT_SCRIPTUSR },
-    { "min-port", 1, 0, LOPT_MINPORT },
-    { "max-port", 1, 0, LOPT_MAXPORT },
-    { "dhcp-fqdn", 0, 0, LOPT_DHCP_FQDN },
-    { "cname", 1, 0, LOPT_CNAME },
-    { "pxe-prompt", 1, 0, LOPT_PXE_PROMT },
-    { "pxe-service", 1, 0, LOPT_PXE_SERV },
-    { "test", 0, 0, LOPT_TEST },
-    { "tag-if", 1, 0, LOPT_TAG_IF },
-    { "dhcp-proxy", 2, 0, LOPT_PROXY },
-    { "dhcp-generate-names", 2, 0, LOPT_GEN_NAMES },
-    { "rebind-localhost-ok", 0, 0,  LOPT_LOC_REBND },
-    { "add-mac", 2, 0, LOPT_ADD_MAC },
-    { "strip-mac", 0, 0, LOPT_STRIP_MAC },
-    { "add-subnet", 2, 0, LOPT_ADD_SBNET },
-    { "strip-subnet", 0, 0, LOPT_STRIP_SBNET },
-    { "add-cpe-id", 1, 0 , LOPT_CPE_ID },
-    { "proxy-dnssec", 0, 0, LOPT_DNSSEC },
-    { "dhcp-sequential-ip", 0, 0,  LOPT_INCR_ADDR },
-    { "conntrack", 0, 0, LOPT_CONNTRACK },
-    { "dhcp-client-update", 0, 0, LOPT_FQDN },
-    { "dhcp-luascript", 1, 0, LOPT_LUASCRIPT },
-    { "enable-ra", 0, 0, LOPT_RA },
-    { "dhcp-duid", 1, 0, LOPT_DUID },
-    { "host-record", 1, 0, LOPT_HOST_REC },
-    { "bind-dynamic", 0, 0, LOPT_CLVERBIND },
-    { "auth-zone", 1, 0, LOPT_AUTHZONE },
-    { "auth-server", 1, 0, LOPT_AUTHSERV },
-    { "auth-ttl", 1, 0, LOPT_AUTHTTL },
-    { "auth-soa", 1, 0, LOPT_AUTHSOA },
-    { "auth-sec-servers", 1, 0, LOPT_AUTHSFS },
-    { "auth-peer", 1, 0, LOPT_AUTHPEER }, 
-    { "ipset", 1, 0, LOPT_IPSET },
-    { "nftset", 1, 0, LOPT_NFTSET },
-    { "connmark-allowlist-enable", 2, 0, LOPT_CMARK_ALST_EN },
-    { "connmark-allowlist", 1, 0, LOPT_CMARK_ALST },
-    { "synth-domain", 1, 0, LOPT_SYNTH },
-    { "dnssec", 0, 0, LOPT_SEC_VALID },
-    { "trust-anchor", 1, 0, LOPT_TRUST_ANCHOR },
-    { "dnssec-debug", 0, 0, LOPT_DNSSEC_DEBUG },
-    { "dnssec-check-unsigned", 2, 0, LOPT_DNSSEC_CHECK },
-    { "dnssec-no-timecheck", 0, 0, LOPT_DNSSEC_TIME },
-    { "dnssec-timestamp", 1, 0, LOPT_DNSSEC_STAMP },
-    { "dhcp-relay", 1, 0, LOPT_RELAY },
-    { "ra-param", 1, 0, LOPT_RA_PARAM },
-    { "quiet-dhcp", 0, 0, LOPT_QUIET_DHCP },
-    { "quiet-dhcp6", 0, 0, LOPT_QUIET_DHCP6 },
-    { "quiet-ra", 0, 0, LOPT_QUIET_RA },
-    { "dns-loop-detect", 0, 0, LOPT_LOOP_DETECT },
-    { "script-arp", 0, 0, LOPT_SCRIPT_ARP },
-    { "dhcp-ttl", 1, 0 , LOPT_DHCPTTL },
-    { "dhcp-reply-delay", 1, 0, LOPT_REPLY_DELAY },
-    { "dhcp-rapid-commit", 0, 0, LOPT_RAPID_COMMIT },
-    { "dumpfile", 1, 0, LOPT_DUMPFILE },
-    { "dumpmask", 1, 0, LOPT_DUMPMASK },
-    { "dhcp-ignore-clid", 0, 0,  LOPT_IGNORE_CLID },
-    { "dynamic-host", 1, 0, LOPT_DYNHOST },
-    { "log-debug", 0, 0, LOPT_LOG_DEBUG },
-    { "umbrella", 2, 0, LOPT_UMBRELLA },
-    { "quiet-tftp", 0, 0, LOPT_QUIET_TFTP },
-    { "port-limit", 1, 0, LOPT_RANDPORT_LIM },
-    { "fast-dns-retry", 2, 0, LOPT_FAST_RETRY },
-    { "use-stale-cache", 2, 0 , LOPT_STALE_CACHE },
-    { NULL, 0, 0, 0 }
-  };
-
-
-#define ARG_DUP       OPT_LAST
-#define ARG_ONE       OPT_LAST + 1
-#define ARG_USED_CL   OPT_LAST + 2
-#define ARG_USED_FILE OPT_LAST + 3
-
-static struct {
-  opt: i32;
-  unsigned rept: i32;
-  char * const flagdesc;
-  char * const desc;
-  char * const arg;
-} usage[] = {
-  { 'a', ARG_DUP, "<ipaddr>",  gettext_noop("Specify local address(es) to listen on."), NULL },
-  { 'A', ARG_DUP, "/<domain>/<ipaddr>", gettext_noop("Return ipaddr for all hosts in specified domains."), NULL },
-  { 'b', OPT_BOGUSPRIV, NULL, gettext_noop("Fake reverse lookups for RFC1918 private address ranges."), NULL },
-  { 'B', ARG_DUP, "<ipaddr>", gettext_noop("Treat ipaddr as NXDOMAIN (defeats Verisign wildcard)."), NULL }, 
-  { 'c', ARG_ONE, "<integer>", gettext_noop("Specify the size of the cache in entries (defaults to %s)."), "$" },
-  { 'C', ARG_DUP, "<path>", gettext_noop("Specify configuration file (defaults to %s)."), CONFFILE },
-  { 'd', OPT_DEBUG, NULL, gettext_noop("Do NOT fork into the background: run in debug mode."), NULL },
-  { 'D', OPT_NODOTS_LOCAL, NULL, gettext_noop("Do NOT forward queries with no domain part."), NULL }, 
-  { 'e', OPT_SELFMX, NULL, gettext_noop("Return self-pointing MX records for local hosts."), NULL },
-  { 'E', OPT_EXPAND, NULL, gettext_noop("Expand simple names in /etc/hosts with domain-suffix."), NULL },
-  { 'f', OPT_FILTER, NULL, gettext_noop("Don't forward spurious DNS requests from Windows hosts."), NULL },
-  { LOPT_FILTER_A, OPT_FILTER_A, NULL, gettext_noop("Don't include IPv4 addresses in DNS answers."), NULL },
-  { LOPT_FILTER_AAAA, OPT_FILTER_AAAA, NULL, gettext_noop("Don't include IPv6 addresses in DNS answers."), NULL },
-  { 'F', ARG_DUP, "<ipaddr>,...", gettext_noop("Enable DHCP in the range given with lease duration."), NULL },
-  { 'g', ARG_ONE, "<groupname>", gettext_noop("Change to this group after startup (defaults to %s)."), CHGRP },
-  { 'G', ARG_DUP, "<hostspec>", gettext_noop("Set address or hostname for a specified machine."), NULL },
-  { LOPT_DHCP_HOST, ARG_DUP, "<path>", gettext_noop("Read DHCP host specs from file."), NULL },
-  { LOPT_DHCP_OPTS, ARG_DUP, "<path>", gettext_noop("Read DHCP option specs from file."), NULL },
-  { LOPT_DHCP_INOTIFY, ARG_DUP, "<path>", gettext_noop("Read DHCP host specs from a directory."), NULL }, 
-  { LOPT_DHOPT_INOTIFY, ARG_DUP, "<path>", gettext_noop("Read DHCP options from a directory."), NULL }, 
-  { LOPT_TAG_IF, ARG_DUP, "tag-expression", gettext_noop("Evaluate conditional tag expression."), NULL },
-  { 'h', OPT_NO_HOSTS, NULL, gettext_noop("Do NOT load %s file."), HOSTSFILE },
-  { 'H', ARG_DUP, "<path>", gettext_noop("Specify a hosts file to be read in addition to %s."), HOSTSFILE },
-  { LOPT_HOST_INOTIFY, ARG_DUP, "<path>", gettext_noop("Read hosts files from a directory."), NULL },
-  { 'i', ARG_DUP, "<interface>", gettext_noop("Specify interface(s) to listen on."), NULL },
-  { 'I', ARG_DUP, "<interface>", gettext_noop("Specify interface(s) NOT to listen on.") , NULL },
-  { 'j', ARG_DUP, "set:<tag>,<class>", gettext_noop("Map DHCP user class to tag."), NULL },
-  { LOPT_CIRCUIT, ARG_DUP, "set:<tag>,<circuit>", gettext_noop("Map RFC3046 circuit-id to tag."), NULL },
-  { LOPT_REMOTE, ARG_DUP, "set:<tag>,<remote>", gettext_noop("Map RFC3046 remote-id to tag."), NULL },
-  { LOPT_SUBSCR, ARG_DUP, "set:<tag>,<remote>", gettext_noop("Map RFC3993 subscriber-id to tag."), NULL },
-  { LOPT_PXE_VENDOR, ARG_DUP, "<vendor>[,...]", gettext_noop("Specify vendor class to match for PXE requests."), NULL },
-  { 'J', ARG_DUP, "tag:<tag>...", gettext_noop("Don't do DHCP for hosts with tag set."), NULL },
-  { LOPT_BROADCAST, ARG_DUP, "[=tag:<tag>...]", gettext_noop("Force broadcast replies for hosts with tag set."), NULL }, 
-  { 'k', OPT_NO_FORK, NULL, gettext_noop("Do NOT fork into the background, do NOT run in debug mode."), NULL },
-  { 'K', OPT_AUTHORITATIVE, NULL, gettext_noop("Assume we are the only DHCP server on the local network."), NULL },
-  { 'l', ARG_ONE, "<path>", gettext_noop("Specify where to store DHCP leases (defaults to %s)."), LEASEFILE },
-  { 'L', OPT_LOCALMX, NULL, gettext_noop("Return MX records for local hosts."), NULL },
-  { 'm', ARG_DUP, "<host_name>,<target>,<pref>", gettext_noop("Specify an MX record."), NULL },
-  { 'M', ARG_DUP, "<bootp opts>", gettext_noop("Specify BOOTP options to DHCP server."), NULL },
-  { 'n', OPT_NO_POLL, NULL, gettext_noop("Do NOT poll %s file, reload only on SIGHUP."), RESOLVFILE }, 
-  { 'N', OPT_NO_NEG, NULL, gettext_noop("Do NOT cache failed search results."), NULL },
-  { LOPT_STALE_CACHE, ARG_ONE, "[=<max_expired>]", gettext_noop("Use expired cache data for faster reply."), NULL },
-  { 'o', OPT_ORDER, NULL, gettext_noop("Use nameservers strictly in the order given in %s."), RESOLVFILE },
-  { 'O', ARG_DUP, "<optspec>", gettext_noop("Specify options to be sent to DHCP clients."), NULL },
-  { LOPT_FORCE, ARG_DUP, "<optspec>", gettext_noop("DHCP option sent even if the client does not request it."), NULL},
-  { 'p', ARG_ONE, "<integer>", gettext_noop("Specify port to listen for DNS requests on (defaults to 53)."), NULL },
-  { 'P', ARG_ONE, "<integer>", gettext_noop("Maximum supported UDP packet size for EDNS.0 (defaults to %s)."), "*" },
-  { 'q', ARG_DUP, NULL, gettext_noop("Log DNS queries."), NULL },
-  { 'Q', ARG_ONE, "<integer>", gettext_noop("Force the originating port for upstream DNS queries."), NULL },
-  { LOPT_RANDPORT_LIM, ARG_ONE, "#ports", gettext_noop("Set maximum number of random originating ports for a query."), NULL },
-  { 'R', OPT_NO_RESOLV, NULL, gettext_noop("Do NOT read resolv.conf."), NULL },
-  { 'r', ARG_DUP, "<path>", gettext_noop("Specify path to resolv.conf (defaults to %s)."), RESOLVFILE }, 
-  { LOPT_SERVERS_FILE, ARG_ONE, "<path>", gettext_noop("Specify path to file with server= options"), NULL },
-  { 'S', ARG_DUP, "/<domain>/<ipaddr>", gettext_noop("Specify address(es) of upstream servers with optional domains."), NULL },
-  { LOPT_REV_SERV, ARG_DUP, "<addr>/<prefix>,<ipaddr>", gettext_noop("Specify address of upstream servers for reverse address queries"), NULL },
-  { LOPT_LOCAL, ARG_DUP, "/<domain>/", gettext_noop("Never forward queries to specified domains."), NULL },
-  { 's', ARG_DUP, "<domain>[,<range>]", gettext_noop("Specify the domain to be assigned in DHCP leases."), NULL },
-  { 't', ARG_ONE, "<host_name>", gettext_noop("Specify default target in an MX record."), NULL },
-  { 'T', ARG_ONE, "<integer>", gettext_noop("Specify time-to-live in seconds for replies from /etc/hosts."), NULL },
-  { LOPT_NEGTTL, ARG_ONE, "<integer>", gettext_noop("Specify time-to-live in seconds for negative caching."), NULL },
-  { LOPT_MAXTTL, ARG_ONE, "<integer>", gettext_noop("Specify time-to-live in seconds for maximum TTL to send to clients."), NULL },
-  { LOPT_MAXCTTL, ARG_ONE, "<integer>", gettext_noop("Specify time-to-live ceiling for cache."), NULL },
-  { LOPT_MINCTTL, ARG_ONE, "<integer>", gettext_noop("Specify time-to-live floor for cache."), NULL },
-  { LOPT_FAST_RETRY, ARG_ONE, "<milliseconds>", gettext_noop("Retry DNS queries after this many milliseconds."), NULL},
-  { 'u', ARG_ONE, "<username>", gettext_noop("Change to this user after startup. (defaults to %s)."), CHUSER }, 
-  { 'U', ARG_DUP, "set:<tag>,<class>", gettext_noop("Map DHCP vendor class to tag."), NULL },
-  { 'v', 0, NULL, gettext_noop("Display dnsmasq version and copyright information."), NULL },
-  { 'V', ARG_DUP, "<ipaddr>,<ipaddr>,<netmask>", gettext_noop("Translate IPv4 addresses from upstream servers."), NULL },
-  { 'W', ARG_DUP, "<name>,<target>,...", gettext_noop("Specify a SRV record."), NULL },
-  { 'w', 0, NULL, gettext_noop("Display this message. Use --help dhcp or --help dhcp6 for known DHCP options."), NULL },
-  { 'x', ARG_ONE, "<path>", gettext_noop("Specify path of PID file (defaults to %s)."), RUNFILE },
-  { 'X', ARG_ONE, "<integer>", gettext_noop("Specify maximum number of DHCP leases (defaults to %s)."), "&" },
-  { 'y', OPT_LOCALISE, NULL, gettext_noop("Answer DNS queries based on the interface a query was sent to."), NULL },
-  { 'Y', ARG_DUP, "<name>,<txt>[,<txt]", gettext_noop("Specify TXT DNS record."), NULL },
-  { LOPT_PTR, ARG_DUP, "<name>,<target>", gettext_noop("Specify PTR DNS record."), NULL },
-  { LOPT_INTNAME, ARG_DUP, "<name>,<interface>", gettext_noop("Give DNS name to IPv4 address of interface."), NULL },
-  { 'z', OPT_NOWILD, NULL, gettext_noop("Bind only to interfaces in use."), NULL },
-  { 'Z', OPT_ETHERS, NULL, gettext_noop("Read DHCP static host information from %s."), ETHERSFILE },
-  { '1', ARG_ONE, "[=<busname>]", gettext_noop("Enable the DBus interface for setting upstream servers, etc."), NULL },
-  { LOPT_UBUS, ARG_ONE, "[=<busname>]", gettext_noop("Enable the UBus interface."), NULL },
-  { '2', ARG_DUP, "<interface>", gettext_noop("Do not provide DHCP on this interface, only provide DNS."), NULL },
-  { '3', ARG_DUP, "[=tag:<tag>]...", gettext_noop("Enable dynamic address allocation for bootp."), NULL },
-  { '4', ARG_DUP, "set:<tag>,<mac address>", gettext_noop("Map MAC address (with wildcards) to option set."), NULL },
-  { LOPT_BRIDGE, ARG_DUP, "<iface>,<alias>..", gettext_noop("Treat DHCP requests on aliases as arriving from interface."), NULL },
-  { LOPT_SHARED_NET, ARG_DUP, "<iface>|<addr>,<addr>", gettext_noop("Specify extra networks sharing a broadcast domain for DHCP"), NULL},
-  { '5', OPT_NO_PING, NULL, gettext_noop("Disable ICMP echo address checking in the DHCP server."), NULL },
-  { '6', ARG_ONE, "<path>", gettext_noop("Shell script to run on DHCP lease creation and destruction."), NULL },
-  { LOPT_LUASCRIPT, ARG_DUP, "path", gettext_noop("Lua script to run on DHCP lease creation and destruction."), NULL },
-  { LOPT_SCRIPTUSR, ARG_ONE, "<username>", gettext_noop("Run lease-change scripts as this user."), NULL },
-  { LOPT_SCRIPT_ARP, OPT_SCRIPT_ARP, NULL, gettext_noop("Call dhcp-script with changes to local ARP table."), NULL },
-  { '7', ARG_DUP, "<path>", gettext_noop("Read configuration from all the files in this directory."), NULL },
-  { LOPT_CONF_SCRIPT, ARG_DUP, "<path>", gettext_noop("Execute file and read configuration from stdin."), NULL },
-  { '8', ARG_ONE, "<facility>|<file>", gettext_noop("Log to this syslog facility or file. (defaults to DAEMON)"), NULL },
-  { '9', OPT_LEASE_RO, NULL, gettext_noop("Do not use leasefile."), NULL },
-  { '0', ARG_ONE, "<integer>", gettext_noop("Maximum number of concurrent DNS queries. (defaults to %s)"), "!" }, 
-  { LOPT_RELOAD, OPT_RELOAD, NULL, gettext_noop("Clear DNS cache when reloading %s."), RESOLVFILE },
-  { LOPT_NO_NAMES, ARG_DUP, "[=tag:<tag>]...", gettext_noop("Ignore hostnames provided by DHCP clients."), NULL },
-  { LOPT_OVERRIDE, OPT_NO_OVERRIDE, NULL, gettext_noop("Do NOT reuse filename and server fields for extra DHCP options."), NULL },
-  { LOPT_TFTP, ARG_DUP, "[=<intr>[,<intr>]]", gettext_noop("Enable integrated read-only TFTP server."), NULL },
-  { LOPT_PREFIX, ARG_DUP, "<dir>[,<iface>]", gettext_noop("Export files by TFTP only from the specified subtree."), NULL },
-  { LOPT_APREF, ARG_DUP, "[=ip|mac]", gettext_noop("Add client IP or hardware address to tftp-root."), NULL },
-  { LOPT_SECURE, OPT_TFTP_SECURE, NULL, gettext_noop("Allow access only to files owned by the user running dnsmasq."), NULL },
-  { LOPT_TFTP_NO_FAIL, OPT_TFTP_NO_FAIL, NULL, gettext_noop("Do not terminate the service if TFTP directories are inaccessible."), NULL },
-  { LOPT_TFTP_MAX, ARG_ONE, "<integer>", gettext_noop("Maximum number of concurrent TFTP transfers (defaults to %s)."), "#" },
-  { LOPT_TFTP_MTU, ARG_ONE, "<integer>", gettext_noop("Maximum MTU to use for TFTP transfers."), NULL },
-  { LOPT_NOBLOCK, OPT_TFTP_NOBLOCK, NULL, gettext_noop("Disable the TFTP blocksize extension."), NULL },
-  { LOPT_TFTP_LC, OPT_TFTP_LC, NULL, gettext_noop("Convert TFTP filenames to lowercase"), NULL },
-  { LOPT_TFTPPORTS, ARG_ONE, "<start>,<end>", gettext_noop("Ephemeral port range for use by TFTP transfers."), NULL },
-  { LOPT_SINGLE_PORT, OPT_SINGLE_PORT, NULL, gettext_noop("Use only one port for TFTP server."), NULL },
-  { LOPT_LOG_OPTS, OPT_LOG_OPTS, NULL, gettext_noop("Extra logging for DHCP."), NULL },
-  { LOPT_MAX_LOGS, ARG_ONE, "[=<integer>]", gettext_noop("Enable async. logging; optionally set queue length."), NULL },
-  { LOPT_REBIND, OPT_NO_REBIND, NULL, gettext_noop("Stop DNS rebinding. Filter private IP ranges when resolving."), NULL },
-  { LOPT_LOC_REBND, OPT_LOCAL_REBIND, NULL, gettext_noop("Allow rebinding of 127.0.0.0/8, for RBL servers."), NULL },
-  { LOPT_NO_REBIND, ARG_DUP, "/<domain>/", gettext_noop("Inhibit DNS-rebind protection on this domain."), NULL },
-  { LOPT_NOLAST, OPT_ALL_SERVERS, NULL, gettext_noop("Always perform DNS queries to all servers."), NULL },
-  { LOPT_MATCH, ARG_DUP, "set:<tag>,<optspec>", gettext_noop("Set tag if client includes matching option in request."), NULL },
-  { LOPT_NAME_MATCH, ARG_DUP, "set:<tag>,<string>[*]", gettext_noop("Set tag if client provides given name."), NULL },
-  { LOPT_ALTPORT, ARG_ONE, "[=<ports>]", gettext_noop("Use alternative ports for DHCP."), NULL },
-  { LOPT_NAPTR, ARG_DUP, "<name>,<naptr>", gettext_noop("Specify NAPTR DNS record."), NULL },
-  { LOPT_MINPORT, ARG_ONE, "<port>", gettext_noop("Specify lowest port available for DNS query transmission."), NULL },
-  { LOPT_MAXPORT, ARG_ONE, "<port>", gettext_noop("Specify highest port available for DNS query transmission."), NULL },
-  { LOPT_DHCP_FQDN, OPT_DHCP_FQDN, NULL, gettext_noop("Use only fully qualified domain names for DHCP clients."), NULL },
-  { LOPT_GEN_NAMES, ARG_DUP, "[=tag:<tag>]", gettext_noop("Generate hostnames based on MAC address for nameless clients."), NULL},
-  { LOPT_PROXY, ARG_DUP, "[=<ipaddr>]...", gettext_noop("Use these DHCP relays as full proxies."), NULL },
-  { LOPT_RELAY, ARG_DUP, "<local-addr>,<server>[,<iface>]", gettext_noop("Relay DHCP requests to a remote server"), NULL},
-  { LOPT_CNAME, ARG_DUP, "<alias>,<target>[,<ttl>]", gettext_noop("Specify alias name for LOCAL DNS name."), NULL },
-  { LOPT_PXE_PROMT, ARG_DUP, "<prompt>,[<timeout>]", gettext_noop("Prompt to send to PXE clients."), NULL },
-  { LOPT_PXE_SERV, ARG_DUP, "<service>", gettext_noop("Boot service for PXE menu."), NULL },
-  { LOPT_TEST, 0, NULL, gettext_noop("Check configuration syntax."), NULL },
-  { LOPT_ADD_MAC, ARG_DUP, "[=base64|text]", gettext_noop("Add requestor's MAC address to forwarded DNS queries."), NULL },
-  { LOPT_STRIP_MAC, OPT_STRIP_MAC, NULL, gettext_noop("Strip MAC information from queries."), NULL },
-  { LOPT_ADD_SBNET, ARG_ONE, "<v4 pref>[,<v6 pref>]", gettext_noop("Add specified IP subnet to forwarded DNS queries."), NULL },
-  { LOPT_STRIP_SBNET, OPT_STRIP_ECS, NULL, gettext_noop("Strip ECS information from queries."), NULL },
-  { LOPT_CPE_ID, ARG_ONE, "<text>", gettext_noop("Add client identification to forwarded DNS queries."), NULL },
-  { LOPT_DNSSEC, OPT_DNSSEC_PROXY, NULL, gettext_noop("Proxy DNSSEC validation results from upstream nameservers."), NULL },
-  { LOPT_INCR_ADDR, OPT_CONSEC_ADDR, NULL, gettext_noop("Attempt to allocate sequential IP addresses to DHCP clients."), NULL },
-  { LOPT_IGNORE_CLID, OPT_IGNORE_CLID, NULL, gettext_noop("Ignore client identifier option sent by DHCP clients."), NULL },
-  { LOPT_CONNTRACK, OPT_CONNTRACK, NULL, gettext_noop("Copy connection-track mark from queries to upstream connections."), NULL },
-  { LOPT_FQDN, OPT_FQDN_UPDATE, NULL, gettext_noop("Allow DHCP clients to do their own DDNS updates."), NULL },
-  { LOPT_RA, OPT_RA, NULL, gettext_noop("Send router-advertisements for interfaces doing DHCPv6"), NULL },
-  { LOPT_DUID, ARG_ONE, "<enterprise>,<duid>", gettext_noop("Specify DUID_EN-type DHCPv6 server DUID"), NULL },
-  { LOPT_HOST_REC, ARG_DUP, "<name>,<address>[,<ttl>]", gettext_noop("Specify host (A/AAAA and PTR) records"), NULL },
-  { LOPT_DYNHOST, ARG_DUP, "<name>,[<IPv4>][,<IPv6>],<interface-name>", gettext_noop("Specify host record in interface subnet"), NULL },
-  { LOPT_CAA, ARG_DUP, "<name>,<flags>,<tag>,<value>", gettext_noop("Specify certification authority authorization record"), NULL },  
-  { LOPT_RR, ARG_DUP, "<name>,<RR-number>,[<data>]", gettext_noop("Specify arbitrary DNS resource record"), NULL },
-  { LOPT_CLVERBIND, OPT_CLEVERBIND, NULL, gettext_noop("Bind to interfaces in use - check for new interfaces"), NULL },
-  { LOPT_AUTHSERV, ARG_ONE, "<NS>,<interface>", gettext_noop("Export local names to global DNS"), NULL },
-  { LOPT_AUTHZONE, ARG_DUP, "<domain>,[<subnet>...]", gettext_noop("Domain to export to global DNS"), NULL },
-  { LOPT_AUTHTTL, ARG_ONE, "<integer>", gettext_noop("Set TTL for authoritative replies"), NULL },
-  { LOPT_AUTHSOA, ARG_ONE, "<serial>[,...]", gettext_noop("Set authoritative zone information"), NULL },
-  { LOPT_AUTHSFS, ARG_DUP, "<NS>[,<NS>...]", gettext_noop("Secondary authoritative nameservers for forward domains"), NULL },
-  { LOPT_AUTHPEER, ARG_DUP, "<ipaddr>[,<ipaddr>...]", gettext_noop("Peers which are allowed to do zone transfer"), NULL },
-  { LOPT_IPSET, ARG_DUP, "/<domain>[/<domain>...]/<ipset>...", gettext_noop("Specify ipsets to which matching domains should be added"), NULL },
-  { LOPT_NFTSET, ARG_DUP, "/<domain>[/<domain>...]/<nftset>...", gettext_noop("Specify nftables sets to which matching domains should be added"), NULL },
-  { LOPT_CMARK_ALST_EN, ARG_ONE, "[=<mask>]", gettext_noop("Enable filtering of DNS queries with connection-track marks."), NULL },
-  { LOPT_CMARK_ALST, ARG_DUP, "<connmark>[/<mask>][,<pattern>[/<pattern>...]]", gettext_noop("Set allowed DNS patterns for a connection-track mark."), NULL },
-  { LOPT_SYNTH, ARG_DUP, "<domain>,<range>,[<prefix>]", gettext_noop("Specify a domain and address range for synthesised names"), NULL },
-  { LOPT_SEC_VALID, OPT_DNSSEC_VALID, NULL, gettext_noop("Activate DNSSEC validation"), NULL },
-  { LOPT_TRUST_ANCHOR, ARG_DUP, "<domain>,[<class>],...", gettext_noop("Specify trust anchor key digest."), NULL },
-  { LOPT_DNSSEC_DEBUG, OPT_DNSSEC_DEBUG, NULL, gettext_noop("Disable upstream checking for DNSSEC debugging."), NULL },
-  { LOPT_DNSSEC_CHECK, ARG_DUP, NULL, gettext_noop("Ensure answers without DNSSEC are in unsigned zones."), NULL },
-  { LOPT_DNSSEC_TIME, OPT_DNSSEC_TIME, NULL, gettext_noop("Don't check DNSSEC signature timestamps until first cache-reload"), NULL },
-  { LOPT_DNSSEC_STAMP, ARG_ONE, "<path>", gettext_noop("Timestamp file to verify system clock for DNSSEC"), NULL },
-  { LOPT_RA_PARAM, ARG_DUP, "<iface>,[mtu:<value>|<interface>|off,][<prio>,]<intval>[,<lifetime>]", gettext_noop("Set MTU, priority, resend-interval and router-lifetime"), NULL },
-  { LOPT_QUIET_DHCP, OPT_QUIET_DHCP, NULL, gettext_noop("Do not log routine DHCP."), NULL },
-  { LOPT_QUIET_DHCP6, OPT_QUIET_DHCP6, NULL, gettext_noop("Do not log routine DHCPv6."), NULL },
-  { LOPT_QUIET_RA, OPT_QUIET_RA, NULL, gettext_noop("Do not log RA."), NULL },
-  { LOPT_LOG_DEBUG, OPT_LOG_DEBUG, NULL, gettext_noop("Log debugging information."), NULL }, 
-  { LOPT_LOCAL_SERVICE, OPT_LOCAL_SERVICE, NULL, gettext_noop("Accept queries only from directly-connected networks."), NULL },
-  { LOPT_LOOP_DETECT, OPT_LOOP_DETECT, NULL, gettext_noop("Detect and remove DNS forwarding loops."), NULL },
-  { LOPT_IGNORE_ADDR, ARG_DUP, "<ipaddr>", gettext_noop("Ignore DNS responses containing ipaddr."), NULL }, 
-  { LOPT_DHCPTTL, ARG_ONE, "<ttl>", gettext_noop("Set TTL in DNS responses with DHCP-derived addresses."), NULL }, 
-  { LOPT_REPLY_DELAY, ARG_ONE, "<integer>", gettext_noop("Delay DHCP replies for at least number of seconds."), NULL },
-  { LOPT_RAPID_COMMIT, OPT_RAPID_COMMIT, NULL, gettext_noop("Enables DHCPv4 Rapid Commit option."), NULL },
-  { LOPT_DUMPFILE, ARG_ONE, "<path>", gettext_noop("Path to debug packet dump file"), NULL },
-  { LOPT_DUMPMASK, ARG_ONE, "<hex>", gettext_noop("Mask which packets to dump"), NULL },
-  { LOPT_SCRIPT_TIME, OPT_LEASE_RENEW, NULL, gettext_noop("Call dhcp-script when lease expiry changes."), NULL },
-  { LOPT_UMBRELLA, ARG_ONE, "[=<optspec>]", gettext_noop("Send Cisco Umbrella identifiers including remote IP."), NULL },
-  { LOPT_QUIET_TFTP, OPT_QUIET_TFTP, NULL, gettext_noop("Do not log routine TFTP."), NULL },
-  { LOPT_NORR, OPT_NORR, NULL, gettext_noop("Suppress round-robin ordering of DNS records."), NULL },
-  { 0, 0, NULL, NULL, NULL }
-}; 
-
-/* We hide metacharacters in quoted strings by mapping them into the ASCII control
-   character space. Note that the \0, \t \b \r \033 and \n characters are carefully placed in the
-   following sequence so that they map to themselves: it is therefore possible to call
-   unhide_metas repeatedly on string without breaking things.
-   The transformation gets undone by opt_canonicalise, atoi_check and opt_string_alloc, and a 
-   couple of other places. 
-   Note that space is included here so that
-   --dhcp-option=3, string
-   has five characters, whilst
-   --dhcp-option=3," string"
-   has six.
-*/
-
-static const char meta[] = "\000123456 \b\t\n78\r90abcdefABCDE\033F:,.";
-
-static char hide_meta(char c)
-{
-  unsigned i: i32;
-
-  for (i = 0; i < (sizeof(meta) - 1); i++)
-    if (c == meta[i])
-      return (char)i;
-  
-  return c;
-}
-
-static char unhide_meta(char cr)
-{ 
-  unsigned int c = cr;
-  
-  if (c < (sizeof(meta) - 1))
-    cr = meta[c];
-  
-  return cr;
-}
-
-static void unhide_metas(char *cp)
-{
-  if (cp)
-    for(; *cp; cp++)
-      *cp = unhide_meta(*cp);
-}
-
-static void *opt_malloc(size_t size)
-{
-  void *ret;
-
-  if (mem_recover)
-    {
-      ret = whine_malloc(size);
-      if (!ret)
-	longjmp(mem_jmp, 1);
-    }
-  else
-    ret = malloc(size);
-  
-  return ret;
-}
-
-static char *opt_string_alloc(const char *cp)
-{
-  char *ret = NULL;
-  len: usize;
-  
-  if (cp && (len = strlen(cp)) != 0)
-    {
-      ret = opt_malloc(len+1);
-      memcpy(ret, cp, len+1); 
-      
-      /* restore hidden metachars */
-      unhide_metas(ret);
-    }
-    
-  return ret;
-}
-
-
-/* find next comma, split string with zero and eliminate spaces.
-   return start of string following comma */
-
-static char *split_chr(char *s, char c)
-{
-  char *comma, *p;
-
-  if (!s || !(comma = strchr(s, c)))
-    return NULL;
-  
-  p = comma;
-  *comma = ' ';
-  
-  for (; *comma == ' '; comma++);
- 
-  for (; (p >= s) && *p == ' '; p--)
-    *p = 0;
-    
-  return comma;
-}
-
-static char *split(char *s)
-{
-  return split_chr(s, ',');
-}
-
-static char *canonicalise_opt(char *s)
-{
-  char *ret;
-  nomem: i32;
-
-  if (!s)
-    return 0;
-
-  if (strlen(s) == 0)
-    return opt_malloc(1); /* Heap-allocated empty string */
-
-  unhide_metas(s);
-  if (!(ret = canonicalise(s, &nomem)) && nomem)
-    {
-      if (mem_recover)
-	longjmp(mem_jmp, 1);
-      else
-	die(_("could not get memory"), NULL, EC_NOMEM);
-    }
-
-  return ret;
-}
-
-static int numeric_check(char *a)
-{
-  char *p;
-
-  if (!a)
-    return 0;
-
-  unhide_metas(a);
-  
-  for (p = a; *p; p++)
-     if (*p < '0' || *p > '9')
-       return 0;
-
-  return 1;
-}
-
-static int atoi_check(char *a, int *res)
-{
-  if (!numeric_check(a))
-    return 0;
-  *res = atoi(a);
-  return 1;
-}
-
-static int strtoul_check(char *a, u32 *res)
-{
-  unsigned long x;
-  
-  if (!numeric_check(a))
-    return 0;
-  x = strtoul(a, NULL, 10);
-  if (errno || x > UINT32_MAX) {
-    errno = 0;
-    return 0;
-  }
-  *res = (u32)x;
-  return 1;
-}
-
-static int atoi_check16(char *a, int *res)
-{
-  if (!(atoi_check(a, res)) ||
-      *res < 0 ||
-      *res > 0xffff)
-    return 0;
-
-  return 1;
-}
-
-// #ifdef HAVE_DNSSEC
-static int atoi_check8(char *a, int *res)
-{
-  if (!(atoi_check(a, res)) ||
-      *res < 0 ||
-      *res > 0xff)
-    return 0;
-
-  return 1;
-}
-// #endif
-
-// #endif NO_ID
-static void add_txt(char *name, char *txt, int stat)
-{
-  struct txt_record *r = opt_malloc(sizeof(struct txt_record));
-
-  if (txt)
-    {
-      size_t len = strlen(txt);
-      r.txt = opt_malloc(len+1);
-      r.len = len+1;
-      *(r.txt) = len;
-      memcpy((r.txt)+1, txt, len);
-    }
-
-  r.stat = stat;
-  r.name = opt_string_alloc(name);
-  r.next = daemon.txt;
-  daemon.txt = r;
-  r.class = C_CHAOS;
-}
-// #endif
-
-static void do_usage(void)
-{
-  buff: [u8;100]
-  int i, j;
-
-  struct {
-    char handle;
-    val: i32;
-  } tab[] = {
-    { '$', CACHESIZ },
-    { '*', EDNS_PKTSZ },
-    { '&', MAXLEASES },
-    { '!', FTABSIZ },
-    { '#', TFTP_MAX_CONNECTIONS },
-    { '\0', 0 }
-  };
-
-  printf(_("Usage: dnsmasq [options]\n\n"));
-// #endif HAVE_GETOPT_LONG
-  printf(_("Use short options only on the command line.\n"));
-// #endif
-  printf(_("Valid options are:\n"));
-  
-  for (i = 0; usage[i].opt != 0; i++)
-    {
-      char *desc = usage[i].flagdesc; 
-      char *eq = "=";
-      
-      if (!desc || *desc == '[')
-	eq = "";
-      
-      if (!desc)
-	desc = "";
-
-      for ( j = 0; opts[j].name; j++)
-	if (opts[j].val == usage[i].opt)
-	  break;
-      if (usage[i].opt < 256)
-	sprintf(buff, "-%c, ", usage[i].opt);
-      else
-	sprintf(buff, "    ");
-      
-      sprintf(buff+4, "--%s%s%s", opts[j].name, eq, desc);
-      printf("%-55.55s", buff);
-	     
-      if (usage[i].arg)
-	{
-	  safe_strncpy(buff, usage[i].arg, sizeof(buff));
-	  for (j = 0; tab[j].handle; j++)
-	    if (tab[j].handle == *(usage[i].arg))
-	      sprintf(buff, "%d", tab[j].val);
-	}
-      printf(_(usage[i].desc), buff);
-      printf("\n");
-    }
-}
-
-#define ret_err(x) do { strcpy(errstr, (x)); return 0; } while (0)
-#define ret_err_free(x,m) do { strcpy(errstr, (x)); free((m)); return 0; } while (0)
-#define goto_err(x) do { strcpy(errstr, (x)); goto on_error; } while (0)
-
-static char *parse_mysockaddr(char *arg, union mysockaddr *addr) 
-{
-  if (inet_pton(AF_INET, arg, &addr.in.sin_addr) > 0)
-    addr.sa.sa_family = AF_INET;
-  else if (inet_pton(AF_INET6, arg, &addr.in6.sin6_addr) > 0)
-    addr.sa.sa_family = AF_INET6;
-  else
-    return _("bad address");
-   
-  return NULL;
-}
-
-char *parse_server(char *arg, struct server_details *sdetails)
-{
-  sdetails.serv_port = NAMESERVER_PORT;
-  char *portno;
-  int ecode = 0;
-  struct addrinfo hints;
-
-  memset(&hints, 0, sizeof(struct addrinfo));
-  
-  *sdetails.interface = 0;
-  sdetails.addr_type = AF_UNSPEC;
-     
-  if (strcmp(arg, "#") == 0)
-    {
-      if (sdetails.flags)
-	*sdetails.flags |= SERV_USE_RESOLV;
-      sdetails.addr_type = AF_LOCAL;
-      sdetails.valid = 1;
-      return NULL;
-    }
-  
-  if ((sdetails.source = split_chr(arg, '@')) && /* is there a source. */
-      (portno = split_chr(sdetails.source, '#')) &&
-      !atoi_check16(portno, &sdetails.source_port))
-    return _("bad port");
-  
-  if ((portno = split_chr(arg, '#')) && /* is there a port no. */
-      !atoi_check16(portno, &sdetails.serv_port))
-    return _("bad port");
-  
-  sdetails.scope_id = split_chr(arg, '%');
-  
-  if (sdetails.source) {
-    sdetails.interface_opt = split_chr(sdetails.source, '@');
-
-    if (sdetails.interface_opt)
-      {
-#if defined(SO_BINDTODEVICE)
-	safe_strncpy(sdetails.interface, sdetails.source, IF_NAMESIZE);
-	sdetails.source = sdetails.interface_opt;
-#else
-	return _("interface binding not supported");
-// #endif
-      }
-  }
-
-  if (inet_pton(AF_INET, arg, &sdetails.addr.in.sin_addr) > 0)
-      sdetails.addr_type = AF_INET;
-  else if (inet_pton(AF_INET6, arg, &sdetails.addr.in6.sin6_addr) > 0)
-      sdetails.addr_type = AF_INET6;
-  else 
-    {
-      /* if the argument is neither an IPv4 not an IPv6 address, it might be a
-	 hostname and we should try to resolve it to a suitable address. */
-      memset(&hints, 0, sizeof(hints));
-      /* The AI_ADDRCONFIG flag ensures that then IPv4 addresses are returned in
-         the result only if the local system has at least one IPv4 address
-         configured, and IPv6 addresses are returned only if the local system
-         has at least one IPv6 address configured. The loopback address is not
-         considered for this case as valid as a configured address. This flag is
-         useful on, for example, IPv4-only systems, to ensure that getaddrinfo()
-         does not return IPv6 socket addresses that would always fail in
-         subsequent connect() or bind() attempts. */
-      hints.ai_flags = AI_ADDRCONFIG;
-#if defined(HAVE_IDN) && defined(AI_IDN)
-      /* If the AI_IDN flag is specified and we have glibc 2.3.4 or newer, then
-         the node name given in node is converted to IDN format if necessary.
-         The source encoding is that of the current locale. */
-      hints.ai_flags |= AI_IDN;
-// #endif
-      /* The value AF_UNSPEC indicates that getaddrinfo() should return socket
-         addresses for any address family (either IPv4 or IPv6, for example)
-         that can be used with node <arg> and service "domain". */
-      hints.ai_family = AF_UNSPEC;
-
-      /* Get addresses suitable for sending datagrams. We assume that we can use the
-	 same addresses for TCP connections. Settting this to zero gets each address
-	 threes times, for SOCK_STREAM, SOCK_RAW and SOCK_DGRAM, which is not useful. */
-      hints.ai_socktype = SOCK_DGRAM;
-
-      /* Get address associated with this hostname */
-      ecode = getaddrinfo(arg, NULL, &hints, &sdetails.hostinfo);
-      if (ecode == 0)
-	{
-	  /* The getaddrinfo() function allocated and initialized a linked list of
-	     addrinfo structures, one for each network address that matches node
-	     and service, subject to the restrictions imposed by our <hints>
-	     above, and returns a pointer to the start of the list in <hostinfo>.
-	     The items in the linked list are linked by the <ai_next> field. */
-	  sdetails.valid = 1;
-	  sdetails.orig_hostinfo = sdetails.hostinfo;
-	  return NULL;
-	}
-      else
-	{
-	  /* Lookup failed, return human readable error string */
-	  if (ecode == EAI_AGAIN)
-	    return _("Cannot resolve server name");
-	  else
-	    return _((char*)gai_strerror(ecode));
-	}
-    }
-  
-  sdetails.valid = 1;
-  return NULL;
-}
-
-char *parse_server_addr(struct server_details *sdetails)
-{
-  if (sdetails.addr_type == AF_INET)
-    {
-      sdetails.addr.in.sin_port = htons(sdetails.serv_port);
-      sdetails.addr.sa.sa_family = sdetails.source_addr.sa.sa_family = AF_INET;
-// #ifdef HAVE_SOCKADDR_SA_LEN
-      sdetails.source_addr.in.sin_len = sdetails.addr.in.sin_len = sizeof(struct sockaddr_in);
-// #endif
-      sdetails.source_addr.in.sin_addr.s_addr = INADDR_ANY;
-      sdetails.source_addr.in.sin_port = htons(daemon.query_port);
-      
-      if (sdetails.source)
-	{
-	  if (sdetails.flags)
-	    *sdetails.flags |= SERV_HAS_SOURCE;
-	  sdetails.source_addr.in.sin_port = htons(sdetails.source_port);
-	  if (inet_pton(AF_INET, sdetails.source, &sdetails.source_addr.in.sin_addr) == 0)
-	    {
-	      if (inet_pton(AF_INET6, sdetails.source, &sdetails.source_addr.in6.sin6_addr) == 1)
-		{
-		  sdetails.source_addr.sa.sa_family = AF_INET6;
-		  /* When resolving a server IP by hostname, we can simply skip mismatching
-		     server / source IP pairs. Otherwise, when an IP address is given directly,
-		     this is a fatal error. */
-		  if (!sdetails.orig_hostinfo)
-		    return _("cannot use IPv4 server address with IPv6 source address");
-		}
-	      else
-		{
-#if defined(SO_BINDTODEVICE)
-		  if (sdetails.interface_opt)
-		    return _("interface can only be specified once");
-
-		  sdetails.source_addr.in.sin_addr.s_addr = INADDR_ANY;
-		  safe_strncpy(sdetails.interface, sdetails.source, IF_NAMESIZE);
-#else
-		  return _("interface binding not supported");
-// #endif
-		}
-	    }
-	}
-    }
-  else if (sdetails.addr_type == AF_INET6)
-    {
-      if (sdetails.scope_id && (sdetails.scope_index = if_nametoindex(sdetails.scope_id)) == 0)
-	return _("bad interface name");
-
-      sdetails.addr.in6.sin6_port = htons(sdetails.serv_port);
-      sdetails.addr.in6.sin6_scope_id = sdetails.scope_index;
-      sdetails.source_addr.in6.sin6_addr = in6addr_any;
-      sdetails.source_addr.in6.sin6_port = htons(daemon.query_port);
-      sdetails.source_addr.in6.sin6_scope_id = 0;
-      sdetails.addr.sa.sa_family = sdetails.source_addr.sa.sa_family = AF_INET6;
-      sdetails.addr.in6.sin6_flowinfo = sdetails.source_addr.in6.sin6_flowinfo = 0;
-// #ifdef HAVE_SOCKADDR_SA_LEN
-      sdetails.addr.in6.sin6_len = sdetails.source_addr.in6.sin6_len = sizeof(sdetails.addr.in6);
-// #endif
-      if (sdetails.source)
-	{
-	  if (sdetails.flags)
-	    *sdetails.flags |= SERV_HAS_SOURCE;
-	  sdetails.source_addr.in6.sin6_port = htons(sdetails.source_port);
-	  if (inet_pton(AF_INET6, sdetails.source, &sdetails.source_addr.in6.sin6_addr) == 0)
-	    {
-	      if (inet_pton(AF_INET, sdetails.source, &sdetails.source_addr.in.sin_addr) == 1)
-		{
-		  sdetails.source_addr.sa.sa_family = AF_INET;
-		  /* When resolving a server IP by hostname, we can simply skip mismatching
-		     server / source IP pairs. Otherwise, when an IP address is given directly,
-		     this is a fatal error. */
-		  if(!sdetails.orig_hostinfo)
-		    return _("cannot use IPv6 server address with IPv4 source address");
-		}
-	      else
-		{
-#if defined(SO_BINDTODEVICE)
-		  if (sdetails.interface_opt)
-		  return _("interface can only be specified once");
-
-		  sdetails.source_addr.in6.sin6_addr = in6addr_any;
-		  safe_strncpy(sdetails.interface, sdetails.source, IF_NAMESIZE);
-#else
-		  return _("interface binding not supported");
-// #endif
-		}
-	    }
-	}
-    }
-  else if (sdetails.addr_type != AF_LOCAL)
-    return _("bad address");
-  
-  return NULL;
-}
-
-int parse_server_next(struct server_details *sdetails)
-{
-  /* Looping over resolved addresses? */
-  if (sdetails.hostinfo)
-    {
-      /* Get address type */
-      sdetails.addr_type = sdetails.hostinfo.ai_family;
-
-      /* Get address */
-      if (sdetails.addr_type == AF_INET)
-	memcpy(&sdetails.addr.in.sin_addr,
-		&((struct sockaddr_in *) sdetails.hostinfo.ai_addr).sin_addr,
-		sizeof(sdetails.addr.in.sin_addr));
-      else if (sdetails.addr_type == AF_INET6)
-	memcpy(&sdetails.addr.in6.sin6_addr,
-		&((struct sockaddr_in6 *) sdetails.hostinfo.ai_addr).sin6_addr,
-		sizeof(sdetails.addr.in6.sin6_addr));
-
-      /* Iterate to the next available address */
-      sdetails.valid = sdetails.hostinfo.ai_next != NULL;
-      sdetails.hostinfo = sdetails.hostinfo.ai_next;
-      return 1;
-    }
-  else if (sdetails.valid)
-    {
-      /* When using an IP address, we return the address only once */
-      sdetails.valid = 0;
-      return 1;
-    }
-  /* Stop iterating here, we used all available addresses */
-  return 0;
-}
-
-static char *domain_rev4(int from_file, char *server, struct in_addr *addr4, int size)
-{
-  int i, j;
-  char *string;
-  msize: i32;
-  u16 flags = 0;
-  domain: [u8;29] /* strlen("xxx.yyy.zzz.ttt.in-addr.arpa")+1 */
-  union mysockaddr serv_addr, source_addr;
-  char interface[IF_NAMESIZE+1];
-  int count = 1, rem, addrbytes, addrbits;
-  struct server_details sdetails;
-
-  memset(&sdetails, 0, sizeof(struct server_details));
-  sdetails.addr = &serv_addr;
-  sdetails.source_addr = &source_addr;
-  sdetails.interface = interface;
-  sdetails.flags = &flags;
-    
-  if (!server)
-    flags = SERV_LITERAL_ADDRESS;
-  else if ((string = parse_server(server, &sdetails)))
-    return string;
-  
-  if (from_file)
-    flags |= SERV_FROM_FILE;
- 
-  rem = size & 0x7;
-  addrbytes = (32 - size) >> 3;
-  addrbits = (32 - size) & 7;
-  
-  if (size > 32 || size < 1)
-    return _("bad IPv4 prefix length");
-  
-  /* Zero out last address bits according to CIDR mask */
-  ((u8 *)addr4)[3-addrbytes] &= ~((1 << addrbits)-1);
-  
-  size = size & ~0x7;
-  
-  if (rem != 0)
-    count = 1 << (8 - rem);
-  
-  for (i = 0; i < count; i++)
-    {
-      *domain = 0;
-      string = domain;
-      msize = size/8;
-      
-      for (j = (rem == 0) ? msize-1 : msize; j >= 0; j--)
-	{ 
-	  int dig = ((unsigned char *)addr4)[j];
-	  
-	  if (j == msize)
-	    dig += i;
-	  
-	  string += sprintf(string, "%d.", dig);
-	}
-      
-      sprintf(string, "in-addr.arpa");
-
-      if (flags & SERV_LITERAL_ADDRESS)
-	{
-	  if (!add_update_server(flags, &serv_addr, &source_addr, interface, domain, NULL))
-	    return  _("error");
-	}
-      else
-	{
-	  while (parse_server_next(&sdetails))
-	    {
-	      if ((string = parse_server_addr(&sdetails)))
-		return string;
-	      
-	      if (!add_update_server(flags, &serv_addr, &source_addr, interface, domain, NULL))
-		return  _("error");
-	    }
-
-	  if (sdetails.orig_hostinfo)
-	    freeaddrinfo(sdetails.orig_hostinfo);
-	}
-    }
-  
-  return NULL;
-}
-
-static char *domain_rev6(int from_file, char *server, struct in6_addr *addr6, int size)
-{
-  int i, j;
-  char *string;
-  msize: i32;
-  u16 flags = 0;
-  domain: [u8;73] /* strlen("32*<n.>ip6.arpa")+1 */
-  union mysockaddr serv_addr, source_addr;
-  char interface[IF_NAMESIZE+1];
-  int count = 1, rem, addrbytes, addrbits;
-  struct server_details sdetails;
-  
-  memset(&sdetails, 0, sizeof(struct server_details));
-  sdetails.addr = &serv_addr;
-  sdetails.source_addr = &source_addr;
-  sdetails.interface = interface;
-  sdetails.flags = &flags;
-   
-  if (!server)
-    flags = SERV_LITERAL_ADDRESS;
-  else if ((string = parse_server(server, &sdetails)))
-    return string;
-
-  if (from_file)
-    flags |= SERV_FROM_FILE;
-  
-  rem = size & 0x3;
-  addrbytes = (128 - size) >> 3;
-  addrbits = (128 - size) & 7;
-  
-  if (size > 128 || size < 1)
-    return _("bad IPv6 prefix length");
-  
-  /* Zero out last address bits according to CIDR mask */
-  addr6.s6_addr[15-addrbytes] &= ~((1 << addrbits) - 1);
-  
-  size = size & ~0x3;
-  
-  if (rem != 0)
-    count = 1 << (4 - rem);
-      
-  for (i = 0; i < count; i++)
-    {
-      *domain = 0;
-      string = domain;
-      msize = size/4;
-  
-      for (j = (rem == 0) ? msize-1 : msize; j >= 0; j--)
-	{ 
-	  int dig = ((unsigned char *)addr6)[j>>1];
-	  
-	  dig = j & 1 ? dig & 15 : dig >> 4;
-	  
-	  if (j == msize)
-	    dig += i;
-	  
-	  string += sprintf(string, "%.1x.", dig);
-	}
-      
-      sprintf(string, "ip6.arpa");
-
-      if (flags & SERV_LITERAL_ADDRESS)
-	{
-	  if (!add_update_server(flags, &serv_addr, &source_addr, interface, domain, NULL))
-	    return  _("error");
-	}
-      else
-	{
-	  while (parse_server_next(&sdetails))
-	    {
-	      if ((string = parse_server_addr(&sdetails)))
-		return string;
-	      
-	      if (!add_update_server(flags, &serv_addr, &source_addr, interface, domain, NULL))
-		return  _("error");
-	    }
-
-	  if (sdetails.orig_hostinfo)
-	    freeaddrinfo(sdetails.orig_hostinfo);
-	}
-    }
-  
-  return NULL;
-}
-
-// #ifdef HAVE_DHCP
-
-static int is_tag_prefix(char *arg)
-{
-  if (arg && (strstr(arg, "net:") == arg || strstr(arg, "tag:") == arg))
-    return 1;
-  
-  return 0;
-}
-
-static char *set_prefix(char *arg)
-{
-   if (strstr(arg, "set:") == arg)
-     return arg+4;
-   
-   return arg;
-}
-
-static struct dhcp_netid *dhcp_netid_create(const char *net, struct dhcp_netid *next)
-{
-  struct dhcp_netid *tt;
-  tt = opt_malloc(sizeof (struct dhcp_netid));
-  tt.net = opt_string_alloc(net);
-  tt.next = next;
-  return tt;
-}
-
-static void dhcp_netid_free(struct dhcp_netid *nid)
-{
-  while (nid)
-    {
-      struct dhcp_netid *tmp = nid;
-      nid = nid.next;
-      free(tmp.net);
-      free(tmp);
-    }
-}
-
-/* Parse one or more tag:s before parameters.
- * Moves arg to the end of tags. */
-static struct dhcp_netid * dhcp_tags(char **arg)
-{
-  struct dhcp_netid *id = NULL;
-
-  while (is_tag_prefix(*arg))
-    {
-      char *comma = split(*arg);
-      id = dhcp_netid_create((*arg)+4, id);
-      *arg = comma;
-    };
-  if (!*arg)
-    {
-      dhcp_netid_free(id);
-      id = NULL;
-    }
-  return id;
-}
-
-static void dhcp_netid_list_free(struct dhcp_netid_list *netid)
-{
-  while (netid)
-    {
-      struct dhcp_netid_list *tmplist = netid;
-      netid = netid.next;
-      dhcp_netid_free(tmplist.list);
-      free(tmplist);
-    }
-}
-
-static void dhcp_config_free(struct dhcp_config *config)
-{
-  if (config)
-    {
-      struct hwaddr_config *hwaddr = config.hwaddr;
-      
-      while (hwaddr)
-        {
-	  struct hwaddr_config *tmp = hwaddr;
-          hwaddr = hwaddr.next;
-	  free(tmp);
-        }
-      
-      dhcp_netid_list_free(config.netid);
-      dhcp_netid_free(config.filter);
-      
-      if (config.flags & CONFIG_CLID)
-        free(config.clid);
-      if (config.flags & CONFIG_NAME)
-	free(config.hostname);
-
-// #ifdef HAVE_DHCP6
-      if (config.flags & CONFIG_ADDR6)
-	{
-	  struct addrlist *addr, *tmp;
-	  
-	  for (addr = config.addr6; addr; addr = tmp)
-	    {
-	      tmp = addr.next;
-	      free(addr);
-	    }
-	}
-// #endif
-
-      free(config);
-    }
-}
-
-static void dhcp_context_free(struct dhcp_context *ctx)
-{
-  if (ctx)
-    {
-      dhcp_netid_free(ctx.filter);
-      free(ctx.netid.net);
-// #ifdef HAVE_DHCP6
-      free(ctx.template_interface);
-// #endif
-      free(ctx);
-    }
-}
-
-static void dhcp_opt_free(struct dhcp_opt *opt)
-{
-  if (opt.flags & DHOPT_VENDOR)
-    free(opt.u.vendor_class);
-  dhcp_netid_free(opt.netid);
-  free(opt.val);
-  free(opt);
-}
 
 
 /* This is too insanely large to keep in-line in the switch */
-static int parse_dhcp_opt(char *errstr, char *arg, int flags)
+use crate::dhcp_opt::DhcpOpt;
+use crate::dnsmasq_defines::{DHOPT_ENCAPSULATE, DHOPT_MATCH, DHOPT_RFC3925, DHOPT_VENDOR, OT_INTERNAL};
+
+pub fn parse_dhcp_opt(errstr: &mut String, arg: &mut String, flags: i32) -> i32
 {
-  struct dhcp_opt *new = opt_malloc(sizeof(struct dhcp_opt));
-  char lenchar = 0, *cp;
-  int addrs, digs, is_addr, is_addr6, is_hex, is_dec, is_string, dots;
-  char *comma = NULL;
-  u16 opt_len = 0;
-  int is6 = 0;
-  int option_ok = 0;
+  let mut new = DhcpOpt::default();
+  let mut len= 0u8;
+    let mut cp = String::new();
+    let mut addrs = 0i32;
+    let mut digs = 0i32;
+    let mut is_addr = 0i32;
+    let mut is_addr6 = 0i32;
+    let mut is_hex = 0i32;
+    let mut is_dec = 0i32;
+    let mut is_string = 0i32;
+    let mut dots = 0i32;
+    let mut comma = String::new();
+    let mut opt_len = 0u16;
+    let mut is6 = 0i32;
+    let mut option_ok = 0i32;
 
   new.len = 0;
   new.flags = flags;
@@ -1405,15 +28,15 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
   new.val = NULL;
   new.opt = 0;
   
-  while (arg)
+  while arg
     {
       comma = split(arg);      
 
       for (cp = arg; *cp; cp++)
-	if (*cp < '0' || *cp > '9')
+	if *cp < '0' || *cp > '9'
 	  break;
       
-      if (!*cp)
+      if !*cp
 	{
 	  new.opt = atoi(arg);
 	  opt_len = 0;
@@ -1421,25 +44,25 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	  break;
 	}
       
-      if (strstr(arg, "option:") == arg)
+      if strstr(arg, "option:") == arg
 	{
-	  if ((new.opt = lookup_dhcp_opt(AF_INET, arg+7)) != -1)
+	  if (new.opt = lookup_dhcp_opt(AF_INET, arg+7)) != -1
 	    {
 	      opt_len = lookup_dhcp_len(AF_INET, new.opt);
 	      /* option:<optname> must follow tag and vendor string. */
-	      if (!(opt_len & OT_INTERNAL) || flags == DHOPT_MATCH)
+	      if !(opt_len & OT_INTERNAL) || flags == DHOPT_MATCH
 		option_ok = 1;
 	    }
 	  break;
 	}
 // #ifdef HAVE_DHCP6
-      else if (strstr(arg, "option6:") == arg)
+      else if strstr(arg, "option6:") == arg
 	{
 	  for (cp = arg+8; *cp; cp++)
-	    if (*cp < '0' || *cp > '9')
+	    if *cp < '0' || *cp > '9'
 	      break;
 	 
-	  if (!*cp)
+	  if !*cp
 	    {
 	      new.opt = atoi(arg+8);
 	      opt_len = 0;
@@ -1447,10 +70,10 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	    }
 	  else
 	    {
-	      if ((new.opt = lookup_dhcp_opt(AF_INET6, arg+8)) != -1)
+	      if (new.opt = lookup_dhcp_opt(AF_INET6, arg+8)) != -1
 		{
 		  opt_len = lookup_dhcp_len(AF_INET6, new.opt);
-		  if (!(opt_len & OT_INTERNAL) || flags == DHOPT_MATCH)
+		  if !(opt_len & OT_INTERNAL) || flags == DHOPT_MATCH
 		    option_ok = 1;
 		}
 	    }
@@ -1459,25 +82,25 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	  break;
 	}
 // #endif
-      else if (strstr(arg, "vendor:") == arg)
+      else if strstr(arg, "vendor:") == arg
 	{
 	  new.u.vendor_class = (unsigned char *)opt_string_alloc(arg+7);
 	  new.flags |= DHOPT_VENDOR;
-	  if ((new.flags & DHOPT_ENCAPSULATE) || flags == DHOPT_MATCH)
+	  // if ((new.flags & DHOPT_ENCAPSULATE) || flags == DHOPT_MATCH)
 	    goto_err(_("inappropriate vendor:"));
 	}
-      else if (strstr(arg, "encap:") == arg)
+      else if strstr(arg, "encap:") == arg
 	{
 	  new.u.encap = atoi(arg+6);
 	  new.flags |= DHOPT_ENCAPSULATE;
-	  if ((new.flags & DHOPT_VENDOR) || flags == DHOPT_MATCH)
+	  if (new.flags & DHOPT_VENDOR) || flags == DHOPT_MATCH
 	    goto_err(_("inappropriate encap:"));
 	}
-      else if (strstr(arg, "vi-encap:") == arg)
+      else if strstr(arg, "vi-encap:") == arg
 	{
 	  new.u.encap = atoi(arg+9);
 	  new.flags |= DHOPT_RFC3925;
-	  if (flags == DHOPT_MATCH)
+	  if flags == DHOPT_MATCH
 	    {
 	      option_ok = 1;
 	      break;
@@ -1494,26 +117,30 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
     }
 
 // #ifdef HAVE_DHCP6
-  if (is6)
+  if is6
     {
-      if (new.flags & (DHOPT_VENDOR | DHOPT_ENCAPSULATE))
-	goto_err(_("unsupported encapsulation for IPv6 option"));
+      if new.flags & (DHOPT_VENDOR | DHOPT_ENCAPSULATE) {
+          goto_err(_("unsupported encapsulation for IPv6 option"));
+      }
       
-      if (opt_len == 0 &&
-	  !(new.flags & DHOPT_RFC3925))
-	opt_len = lookup_dhcp_len(AF_INET6, new.opt);
+      if opt_len == 0 &&
+	  !(new.flags & DHOPT_RFC3925) {
+          opt_len = lookup_dhcp_len(AF_INET6, new.opt);
+      }
     }
-  else
+  else {
 // #endif
-    if (opt_len == 0 &&
-	!(new.flags & (DHOPT_VENDOR | DHOPT_ENCAPSULATE | DHOPT_RFC3925)))
-      opt_len = lookup_dhcp_len(AF_INET, new.opt);
+      if opt_len == 0 && !(new.flags & (DHOPT_VENDOR | DHOPT_ENCAPSULATE | DHOPT_RFC3925)) {
+          opt_len = lookup_dhcp_len(AF_INET, new.opt);
+      }
+  }
   
   /* option may be missing with rfc3925 match */
-  if (!option_ok)
-    goto_err(_("bad dhcp-option"));
+  if (!option_ok) {
+      goto_err(_("bad dhcp-option"));
+  }
   
-  if (comma)
+  if comma
     {
       /* characterise the value */
       char c;
@@ -1522,7 +149,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
       addrs = digs = 1;
       dots = 0;
       for (cp = comma; (c = *cp); cp++)
-	if (c == ',')
+	if c == ','
 	  {
 	    addrs++;
 	    is_dec = is_hex = 0;
@@ -1742,8 +369,8 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	      !is6 && !(new.flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR | DHOPT_RFC3925)))
 	    {
 	      /* dns search, RFC 3397, or SIP, RFC 3361 */
-	      unsigned char *q, *r, *tail;
-	      unsigned char *p, *m = NULL, *newp;
+	      q: *mut u8 *r, *tail;
+	      p: *mut u8 *m = NULL, *newp;
 	      size_t newlen, len = 0;
 	      int header_size = (new.opt == OPTION_DOMAIN_SEARCH) ? 0 : 1;
 	      
@@ -1815,7 +442,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	    {
 	      /* length fields are two bytes so need 16 bits for each string */
 	      int i, commas = 1;
-	      unsigned char *p, *newp;
+	      p: *mut u8 *newp;
 
 	      for (i = 0; comma[i]; i++)
 		if (comma[i] == ',')
@@ -4974,7 +3601,7 @@ err:
     case 'Y':  /* --txt-record */
       {
 	struct txt_record *new;
-	unsigned char *p, *cnt;
+	p: *mut u8 *cnt;
 	len: usize;
 
 	comma = split(arg);

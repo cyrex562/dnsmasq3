@@ -131,7 +131,7 @@ static ssize_t netlink_recv(int fd)
   return rc;
 }
 
-static int parse_hex(char *in, unsigned char *out, int maxlen, int *mac_type)
+static int parse_hex(in: &mut String out: *mut u8 int maxlen, int *mac_type)
 {
   int i = 0;
   char *r;

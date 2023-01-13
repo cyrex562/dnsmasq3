@@ -17,7 +17,7 @@
 // #include "dnsmasq.h"
 
 int extract_name(struct dns_header *header, size_t plen, unsigned char **pp, 
-		 char *name, int isExtract, int extrabytes)
+		 name: &mut String int isExtract, int extrabytes)
 {
   unsigned char *cp = (unsigned char *)name, *p = *pp, *p1 = NULL;
   unsigned int j, l, namelen = 0, hops = 0;
@@ -143,7 +143,7 @@ int extract_name(struct dns_header *header, size_t plen, unsigned char **pp,
  
 /* Max size of input string (for IPv6) is 75 chars.) */
 pub const MAXARPANAME: u32 = 75;
-int in_arpa_name_2_addr(char *namein, union all_addr *addrp)
+int in_arpa_name_2_addr(namein: &mut String union all_addr *addrp)
 {
   j: i32;
   char name[MAXARPANAME+1], *cp1;
@@ -246,7 +246,7 @@ int in_arpa_name_2_addr(char *namein, union all_addr *addrp)
   return 0;
 }
 
-unsigned char *skip_name(unsigned char *ansp, struct dns_header *header, size_t plen, int extrabytes)
+unsigned char *skip_name(ansp: *mut u8 struct dns_header *header, size_t plen, int extrabytes)
 {
   while(1)
     {
@@ -316,7 +316,7 @@ unsigned char *skip_questions(struct dns_header *header, size_t plen)
   return ansp;
 }
 
-unsigned char *skip_section(unsigned char *ansp, int count, struct dns_header *header, size_t plen)
+unsigned char *skip_section(ansp: *mut u8 int count, struct dns_header *header, size_t plen)
 {
   int i, rdlen;
   
@@ -333,7 +333,7 @@ unsigned char *skip_section(unsigned char *ansp, int count, struct dns_header *h
   return ansp;
 }
 
-size_t resize_packet(struct dns_header *header, size_t plen, unsigned char *pheader, size_t hlen)
+size_t resize_packet(struct dns_header *header, size_t plen, pheader: *mut u8 size_t hlen)
 {
   unsigned char *ansp = skip_questions(header, plen);
     
@@ -394,7 +394,7 @@ static int private_net6(struct in6_addr *a, int ban_localhost)
     ((u32 *)a)[0] == htonl(0x20010db8); /* RFC 6303 4.6 */
 }
 
-static unsigned char *do_doctor(unsigned char *p, int count, struct dns_header *header, size_t qlen, int *doctored)
+static unsigned char *do_doctor(p: *mut u8 int count, struct dns_header *header, size_t qlen, int *doctored)
 {
   int i, qtype, qclass, rdlen;
 
@@ -502,8 +502,8 @@ static int find_soa(struct dns_header *header, size_t qlen, int *doctored)
 }
 
 /* Print TXT reply to log */
-static int print_txt(struct dns_header *header, const size_t qlen, char *name,
-		     unsigned char *p, const int ardlen, int secflag)
+static int print_txt(struct dns_header *header, const size_t qlen, name: &mut String
+		     p: *mut u8 const int ardlen, int secflag)
 {
   unsigned char *p1 = p;
   if (!CHECK_LEN(header, p1, qlen, ardlen))
@@ -541,11 +541,11 @@ static int print_txt(struct dns_header *header, const size_t qlen, char *name,
    Return 1 if we reject an address because it look like part of dns-rebinding attack. 
    Return 2 if the packet is malformed.
 */
-int extract_addresses(struct dns_header *header, size_t qlen, char *name, time_t now, 
+int extract_addresses(struct dns_header *header, size_t qlen, name: &mut String time_t now,
 		      struct ipsets *ipsets, struct ipsets *nftsets, int is_sign, int check_rebind,
 		      int no_cache_dnssec, int secure, int *doctored)
 {
-  unsigned char *p, *p1, *endrr, *namep;
+  p: *mut u8 *p1, *endrr, *namep;
   int j, qtype, qclass, aqtype, aqclass, ardlen, res, searched_soa = 0;
   unsigned long ttl = 0;
   union all_addr addr;
@@ -953,7 +953,7 @@ static int safe_name(char *name)
 
 void report_addresses(struct dns_header *header, size_t len, u32 mark)
 {
-  unsigned char *p, *endrr;
+  p: *mut u8 *endrr;
   i: i32;
   unsigned long attl;
   struct allowlist *allowlists;
@@ -1026,7 +1026,7 @@ void report_addresses(struct dns_header *header, size_t len, u32 mark)
 
 /* If the packet holds exactly one query
    return F_IPV4 or F_IPV6  and leave the name from the query in name */
-unsigned int extract_request(struct dns_header *header, size_t qlen, char *name, unsigned short *typep)
+unsigned int extract_request(struct dns_header *header, size_t qlen, name: &mut String unsigned short *typep)
 {
   unsigned char *p = (unsigned char *)(header+1);
   int qtype, qclass;
@@ -1103,7 +1103,7 @@ void setup_reply(struct dns_header *header, unsigned int flags, int ede)
 }
 
 /* check if name matches local names ie from /etc/hosts or DHCP or local mx names. */
-int check_for_local_domain(char *name, time_t now)
+int check_for_local_domain(name: &mut String time_t now)
 {
   struct mx_srv_record *mx;
   struct txt_record *txt;
@@ -1137,7 +1137,7 @@ int check_for_local_domain(char *name, time_t now)
   return 0;
 }
 
-static int check_bad_address(struct dns_header *header, size_t qlen, struct bogus_addr *baddr, char *name, unsigned long *ttlp)
+static int check_bad_address(struct dns_header *header, size_t qlen, struct bogus_addr *baddr, name: &mut String unsigned long *ttlp)
 {
   unsigned char *p;
   int i, qtype, qclass, rdlen;
@@ -1204,7 +1204,7 @@ static int check_bad_address(struct dns_header *header, size_t qlen, struct bogu
 /* Is the packet a reply with the answer address equal to addr?
    If so mung is into an NXDOMAIN reply and also put that information
    in the cache. */
-int check_for_bogus_wildcard(struct dns_header *header, size_t qlen, char *name, time_t now)
+int check_for_bogus_wildcard(struct dns_header *header, size_t qlen, name: &mut String time_t now)
 {
   unsigned long ttl;
 
@@ -1231,7 +1231,7 @@ int add_resource_record(struct dns_header *header, char *limit, int *truncp, int
 			unsigned long ttl, int *offset, unsigned short type, unsigned short class, char *format, ...)
 {
   va_list ap;
-  unsigned char *sav, *p = *pp;
+  sav: *mut u8 *p = *pp;
   j: i32;
   unsigned short usval;
   long lval;
@@ -1412,7 +1412,7 @@ size_t answer_request(struct dns_header *header, char *limit, size_t qlen,
 		      int *stale) 
 {
   char *name = daemon.namebuff;
-  unsigned char *p, *ansp;
+  p: *mut u8 *ansp;
   unsigned int qtype, qclass;
   union all_addr addr;
   nameoffset: i32;

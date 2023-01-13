@@ -188,7 +188,7 @@ time_t periodic_slaac(time_t now, struct dhcp_lease *leases)
 }
 
 
-void slaac_ping_reply(struct in6_addr *sender, unsigned char *packet, char *interface, struct dhcp_lease *leases)
+void slaac_ping_reply(struct in6_addr *sender, packet: *mut u8 char *interface, struct dhcp_lease *leases)
 {
   struct dhcp_lease *lease;
   struct slaac_address *slaac;

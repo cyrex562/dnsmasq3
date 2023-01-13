@@ -435,7 +435,7 @@ static int find_interface_v6(struct in6_addr *local,  int prefix,
   return 1;
 }
 
-void lease_ping_reply(struct in6_addr *sender, unsigned char *packet, char *interface)
+void lease_ping_reply(struct in6_addr *sender, packet: *mut u8 char *interface)
 {
   /* We may be doing RA but not DHCPv4, in which case the lease
      database may not exist and we have nothing to do anyway */
@@ -581,8 +581,8 @@ void lease_prune(struct dhcp_lease *target, time_t now)
 } 
 	
   
-struct dhcp_lease *lease_find_by_client(unsigned char *hwaddr, int hw_len, int hw_type,
-					unsigned char *clid, int clid_len)
+struct dhcp_lease *lease_find_by_client(hwaddr: *mut u8 int hw_len, int hw_type,
+					clid: *mut u8 int clid_len)
 {
   struct dhcp_lease *lease;
 
@@ -634,7 +634,7 @@ struct dhcp_lease *lease_find_by_addr(struct in_addr addr)
 
 // #ifdef HAVE_DHCP6
 /* find address for {CLID, IAID, address} */
-struct dhcp_lease *lease6_find(unsigned char *clid, int clid_len, 
+struct dhcp_lease *lease6_find(clid: *mut u8 int clid_len,
 			       int lease_type, unsigned int iaid,
 			       struct in6_addr *addr)
 {
@@ -669,7 +669,7 @@ void lease6_reset(void)
 
 /* enumerate all leases belonging to {CLID, IAID} */
 struct dhcp_lease *lease6_find_by_client(struct dhcp_lease *first, int lease_type,
-					 unsigned char *clid, int clid_len,
+					 clid: *mut u8 int clid_len,
 					 unsigned int iaid)
 {
   struct dhcp_lease *lease;
@@ -862,8 +862,8 @@ void lease_set_iaid(struct dhcp_lease *lease, unsigned int iaid)
 }
 // #endif
 
-void lease_set_hwaddr(struct dhcp_lease *lease, const unsigned char *hwaddr,
-		      const unsigned char *clid, int hw_len, int hw_type,
+void lease_set_hwaddr(struct dhcp_lease *lease, const hwaddr: *mut u8
+		      const clid: *mut u8 int hw_len, int hw_type,
 		      int clid_len, time_t now, int force)
 {
 // #ifdef HAVE_DHCP6
@@ -1162,7 +1162,7 @@ int do_script_run(time_t now)
 
 // #ifdef HAVE_SCRIPT
 /* delim == -1 -> delim = 0, but embedded 0s, creating extra records, are OK. */
-void lease_add_extradata(struct dhcp_lease *lease, unsigned char *data, unsigned int len, int delim)
+void lease_add_extradata(struct dhcp_lease *lease, data: *mut u8 unsigned int len, int delim)
 {
   unsigned i: i32;
   

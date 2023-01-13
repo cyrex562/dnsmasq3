@@ -258,7 +258,7 @@ void dhcp6_packet(time_t now)
     }
 }
 
-void get_client_mac(struct in6_addr *client, int iface, unsigned char *mac, unsigned int *maclenp, unsigned int *mactypep, time_t now)
+void get_client_mac(struct in6_addr *client, int iface, mac: *mut u8 unsigned int *maclenp, unsigned int *mactypep, time_t now)
 {
   /* Receiving a packet from a host does not populate the neighbour
      cache, so we send a neighbour discovery request if we can't 
@@ -432,7 +432,7 @@ struct dhcp_config *config_find_by_address6(struct dhcp_config *configs, struct 
   return NULL;
 }
 
-struct dhcp_context *address6_allocate(struct dhcp_context *context,  unsigned char *clid, int clid_len, int temp_addr,
+struct dhcp_context *address6_allocate(struct dhcp_context *context,  clid: *mut u8 int clid_len, int temp_addr,
 				       unsigned int iaid, int serial, struct dhcp_netid *netids, int plain_range, struct in6_addr *ans)
 {
   /* Find a free address: exclude anything in use and anything allocated to
@@ -589,7 +589,7 @@ void make_duid(time_t now)
     }
 }
 
-static int make_duid1(int index, unsigned int type, char *mac, size_t maclen, void *parm)
+static int make_duid1(int index, unsigned int type, mac: &mut String size_t maclen, void *parm)
 {
   /* create DUID as specified in RFC3315. We use the MAC of the
      first interface we find that isn't loopback or P-to-P and

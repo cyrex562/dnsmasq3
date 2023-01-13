@@ -914,7 +914,7 @@ ea = - - sa; eb = - - sb;
 static int prove_non_existence_nsec(struct dns_header * header, size_t plen, unsigned char * * nsecs, unsigned char * * labels, int nsec_count,
 char *workspace1_in, char *workspace2, char *name, int type , int *nons)
 {
-int i, rc, rdlen; unsigned char *p, * psave; int offset = ( type & 0xff) > > 3; int mask = 0x80 > > ( type & 0x07);
+int i, rc, rdlen; p: *mut u8 * psave; int offset = ( type & 0xff) > > 3; int mask = 0x80 > > ( type & 0x07);
 
 if (nons) * nons = 1;
 
@@ -997,7 +997,7 @@ return 0;
 
 /* return digest length, or zero on error */
 static int hash_name(char * in, unsigned char * * out, struct nettle_hash const *hash,
-unsigned char *salt, int salt_len, int iterations)
+salt: *mut u8 int salt_len, int iterations)
 {
 void * ctx; unsigned char * digest; i: i32;
 
@@ -1043,7 +1043,7 @@ return 0;
 return p - out;
 }
 
-static int check_nsec3_coverage(struct dns_header * header, size_t plen, int digest_len, unsigned char *digest, int type ,
+static int check_nsec3_coverage(struct dns_header * header, size_t plen, int digest_len, digest: *mut u8 int type ,
 char *workspace1, char *workspace2, unsigned char * * nsecs, int nsec_count, int *nons, int name_labels)
 {
 int i, hash_len, salt_len, base32_len, rdlen, flags; unsigned char * p, * psave;
@@ -1617,7 +1617,7 @@ return secure;
 
 
 /* Compute keytag (checksum to quickly index a key). See RFC4034 */
-int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen)
+int dnskey_keytag(int alg, int flags, key: *mut u8 int keylen)
 {
 if (alg == 1)
 {
@@ -1637,7 +1637,7 @@ return ac & 0xffff;
 }
 }
 
-size_t dnssec_generate_query(struct dns_header * header, unsigned char *end, char *name, int class,
+size_t dnssec_generate_query(struct dns_header * header, end: *mut u8 char *name, int class,
 int type , int edns_pktsz)
 {
 unsigned char * p; ret: usize;

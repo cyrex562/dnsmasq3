@@ -117,7 +117,7 @@ pub fn filter_mac(
 }
 
 /* If in lazy mode, we cache absence of ARP entries. */
-int find_mac(union mysockaddr *addr, unsigned char *mac, int lazy, time_t now)
+int find_mac(union mysockaddr *addr, unsigned mac: &mut String int lazy, time_t now)
 {
   struct ArpRecord *arp, *tmp, **up;
   int updated = 0;

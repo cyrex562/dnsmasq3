@@ -265,7 +265,7 @@ void log_tags(struct dhcp_netid *netid, u32 xid)
     } 
 }   
   
-int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
+int match_bytes(struct dhcp_opt *o, p: *mut u8 int len)
 {
   i: i32;
   
@@ -295,7 +295,7 @@ int match_bytes(struct dhcp_opt *o, unsigned char *p, int len)
   return 0;
 }
 
-int config_has_mac(struct dhcp_config *config, unsigned char *hwaddr, int len, int type)
+int config_has_mac(struct dhcp_config *config, hwaddr: *mut u8 int len, int type)
 {
   struct hwaddr_config *conf_addr;
   
@@ -346,9 +346,9 @@ static int is_config_in_context(struct dhcp_context *context, struct dhcp_config
 
 static struct dhcp_config *find_config_match(struct dhcp_config *configs,
 					     struct dhcp_context *context,
-					     unsigned char *clid, int clid_len,
-					     unsigned char *hwaddr, int hw_len, 
-					     int hw_type, char *hostname,
+					     clid: *mut u8 int clid_len,
+					     hwaddr: *mut u8 int hw_len,
+					     int hw_type, hostname: &mut String
 					     struct dhcp_netid *tags, int tag_not_needed)
 {
   int count, new;
@@ -416,8 +416,8 @@ static struct dhcp_config *find_config_match(struct dhcp_config *configs,
 /* Find tagged configs first. */
 struct dhcp_config *find_config(struct dhcp_config *configs,
 				struct dhcp_context *context,
-				unsigned char *clid, int clid_len,
-				unsigned char *hwaddr, int hw_len, 
+				clid: *mut u8 int clid_len,
+				hwaddr: *mut u8 int hw_len,
 				int hw_type, char *hostname, struct dhcp_netid *tags)
 {
   struct dhcp_config *ret = find_config_match(configs, context, clid, clid_len, hwaddr, hw_len, hw_type, hostname, tags, 0);
@@ -798,7 +798,7 @@ int lookup_dhcp_len(int prot, int val)
    return 0;
 }
 
-char *option_string(int prot, unsigned int opt, unsigned char *val, int opt_len, char *buf, int buf_len)
+char *option_string(int prot, unsigned int opt, val: *mut u8 int opt_len, char *buf, int buf_len)
 {
   int o, i, j, nodecode = 0;
   const struct opttab_t *ot = opttab;

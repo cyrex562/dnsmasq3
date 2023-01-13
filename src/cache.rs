@@ -26,7 +26,7 @@ static union bigname *big_free = NULL;
 static int bignames_left, hash_size;
 
 static void make_non_terminals(struct crec *source);
-static struct crec *really_insert(char *name, union all_addr *addr, unsigned short class,
+static struct crec *really_insert(name: &mut String union all_addr *addr, unsigned short class,
 				  time_t now,  unsigned long ttl, unsigned int flags);
 
 /* type.string mapping: this is also used by the name-hash function as a mixing table. */
@@ -423,7 +423,7 @@ unsigned int cache_remove_uid(const unsigned int uid)
   return removed;
 }
 
-static struct crec *cache_scan_free(char *name, union all_addr *addr, unsigned short class, time_t now,
+static struct crec *cache_scan_free(name: &mut String union all_addr *addr, unsigned short class, time_t now,
 				    unsigned int flags, struct crec **target_crec, unsigned int *target_uid)
 {
   /* Scan and remove old entries.
@@ -559,7 +559,7 @@ void cache_start_insert(void)
   insert_error = 0;
 }
 
-struct crec *cache_insert(char *name, union all_addr *addr, unsigned short class,
+struct crec *cache_insert(name: &mut String union all_addr *addr, unsigned short class,
 			  time_t now,  unsigned long ttl, unsigned int flags)
 {
 // #ifdef HAVE_DNSSEC
@@ -588,7 +588,7 @@ struct crec *cache_insert(char *name, union all_addr *addr, unsigned short class
 }
 
 
-static struct crec *really_insert(char *name, union all_addr *addr, unsigned short class,
+static struct crec *really_insert(name: &mut String union all_addr *addr, unsigned short class,
 				  time_t now,  unsigned long ttl, unsigned int flags)
 {
   struct crec *new, *target_crec = NULL;
@@ -896,7 +896,7 @@ int cache_recv_insert(time_t now, int fd)
     }
 }
 	
-int cache_find_non_terminal(char *name, time_t now)
+int cache_find_non_terminal(name: &mut String time_t now)
 {
   struct crec *crecp;
 
@@ -911,7 +911,7 @@ int cache_find_non_terminal(char *name, time_t now)
   return 0;
 }
 
-struct crec *cache_find_by_name(struct crec *crecp, char *name, time_t now, unsigned int prot)
+struct crec *cache_find_by_name(struct crec *crecp, name: &mut String time_t now, unsigned int prot)
 {
   struct crec *ans;
   int no_rr = (prot & F_NO_RR) || option_bool(OPT_NORR);
@@ -1173,7 +1173,7 @@ static int gettok(FILE *f, char *token)
     }
 }
 
-int read_hostsfile(char *filename, unsigned int index, int cache_size, struct crec **rhash, int hashsz)
+int read_hostsfile(filename: &mut String unsigned int index, int cache_size, struct crec **rhash, int hashsz)
 {  
   FILE *f = fopen(filename, "r");
   char *token = daemon.namebuff, *domain_suffix = NULL;
@@ -1439,7 +1439,7 @@ void cache_reload(void)
 } 
 
 // #ifdef HAVE_DHCP
-struct in_addr a_record_from_hosts(char *name, time_t now)
+struct in_addr a_record_from_hosts(name: &mut String time_t now)
 {
   struct crec *crecp = NULL;
   ret: in_addr;
@@ -1473,7 +1473,7 @@ void cache_unhash_dhcp(void)
 	up = &cache.hash_next;
 }
 
-void cache_add_dhcp_entry(char *host_name, int prot,
+void cache_add_dhcp_entry(host_name: &mut String int prot,
 			  union all_addr *host_address, time_t ttd) 
 {
   struct crec *crec = NULL, *fail_crec = NULL;
@@ -1703,7 +1703,7 @@ int cache_make_stat(struct txt_record *t)
       for (serv = daemon.servers; serv; serv = serv.next)
 	if (!(serv.flags & SERV_MARK))
 	  {
-	    char *new, *lenp;
+	    new: &mut String *lenp;
 	    int port, newlen, bytes_avail, bytes_needed;
 	    unsigned int queries = 0, failed_queries = 0;
 	    for (serv1 = serv; serv1; serv1 = serv1.next)
@@ -1921,7 +1921,7 @@ char *record_source(unsigned int index)
   return "<unknown>";
 }
 
-static char *querystr(char *desc, unsigned short type)
+static char *querystr(desc: &mut String unsigned short type)
 {
   unsigned i: i32;
   int len = 10; /* strlen("type=xxxxx") */
@@ -2009,9 +2009,9 @@ static char *edestr(int ede)
     }
 }
 
-void log_query(unsigned int flags, char *name, union all_addr *addr, char *arg, unsigned short type)
+void log_query(unsigned int flags, name: &mut String union all_addr *addr, arg: &mut String unsigned short type)
 {
-  char *source, *dest = arg;
+  source: &mut String *dest = arg;
   char *verb = "is";
   char *extra = "";
   portstring: [u8;7] /* space for #<portnum> */

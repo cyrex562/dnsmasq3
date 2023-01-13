@@ -61,7 +61,7 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
   
   for (i = 0; i < arcount; i++)
     {
-      unsigned char *save, *start = ansp;
+      save: *mut u8 *start = ansp;
       if (!(ansp = skip_name(ansp, header, plen, 10)))
 	return NULL; 
 
@@ -97,10 +97,10 @@ unsigned char *find_pseudoheader(struct dns_header *header, size_t plen, size_t 
  
 
 /* replace == 2 ->delete existing option only. */
-size_t add_pseudoheader(struct dns_header *header, size_t plen, unsigned char *limit, 
-			unsigned short udp_sz, int optno, unsigned char *opt, size_t optlen, int set_do, int replace)
+size_t add_pseudoheader(struct dns_header *header, size_t plen, limit: *mut u8
+			unsigned short udp_sz, int optno, opt: *mut u8 size_t optlen, int set_do, int replace)
 { 
-  unsigned char *lenp, *datap, *p, *udp_len, *buff = NULL;
+  lenp: *mut u8 *datap, *p, *udp_len, *buff = NULL;
   int rdlen = 0, is_sign, is_last;
   unsigned short flags = set_do ? 0x8000 : 0, rcode = 0;
 
@@ -256,7 +256,7 @@ static unsigned char char64(unsigned char c)
   return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[c & 0x3f];
 }
 
-static void encoder(unsigned char *in, char *out)
+static void encoder(in: *mut u8 char *out)
 {
   out[0] = char64(in[0]>>2);
   out[1] = char64((in[0]<<4) | (in[1]>>4));
@@ -267,7 +267,7 @@ static void encoder(unsigned char *in, char *out)
 /* OPT_ADD_MAC = MAC is added (if available)
    OPT_ADD_MAC + OPT_STRIP_MAC = MAC is replaced, if not available, it is only removed
    OPT_STRIP_MAC = MAC is removed */
-static size_t add_dns_client(struct dns_header *header, size_t plen, unsigned char *limit,
+static size_t add_dns_client(struct dns_header *header, size_t plen, limit: *mut u8
 			     union mysockaddr *l3, time_t now, int *cacheablep)
 {
   int replace = 0, maclen = 0;
@@ -302,7 +302,7 @@ static size_t add_dns_client(struct dns_header *header, size_t plen, unsigned ch
 /* OPT_ADD_MAC = MAC is added (if available)
    OPT_ADD_MAC + OPT_STRIP_MAC = MAC is replaced, if not available, it is only removed
    OPT_STRIP_MAC = MAC is removed */
-static size_t add_mac(struct dns_header *header, size_t plen, unsigned char *limit,
+static size_t add_mac(struct dns_header *header, size_t plen, limit: *mut u8
 		      union mysockaddr *l3, time_t now, int *cacheablep)
 {
   int maclen = 0, replace = 0;
@@ -395,7 +395,7 @@ static size_t calc_subnet_opt(struct subnet_opt *opt, union mysockaddr *source, 
 /* OPT_CLIENT_SUBNET = client subnet is added
    OPT_CLIENT_SUBNET + OPT_STRIP_ECS = client subnet is replaced
    OPT_STRIP_ECS = client subnet is removed */
-static size_t add_source_addr(struct dns_header *header, size_t plen, unsigned char *limit,
+static size_t add_source_addr(struct dns_header *header, size_t plen, limit: *mut u8
 			      union mysockaddr *source, int *cacheable)
 {
   /* http://tools.ietf.org/html/draft-vandergaast-edns-client-subnet-02 */
@@ -417,7 +417,7 @@ static size_t add_source_addr(struct dns_header *header, size_t plen, unsigned c
   return add_pseudoheader(header, plen, (unsigned char *)limit, PACKETSZ, EDNS0_OPTION_CLIENT_SUBNET, (unsigned char *)&opt, len, 0, replace);
 }
 
-int check_source(struct dns_header *header, size_t plen, unsigned char *pseudoheader, union mysockaddr *peer)
+int check_source(struct dns_header *header, size_t plen, pseudoheader: *mut u8 union mysockaddr *peer)
 {
   /* Section 9.2, Check that subnet option in reply matches. */
   
@@ -482,7 +482,7 @@ struct umbrella_opt {
   u8 fields[4 * UMBRELLA_TYPESZ + UMBRELLA_ORGSZ + IN6ADDRSZ + UMBRELLA_DEVICESZ + UMBRELLA_ASSETSZ];
 };
 
-static size_t add_umbrella_opt(struct dns_header *header, size_t plen, unsigned char *limit, union mysockaddr *source, int *cacheable)
+static size_t add_umbrella_opt(struct dns_header *header, size_t plen, limit: *mut u8 union mysockaddr *source, int *cacheable)
 {
   *cacheable = 0;
 
@@ -520,7 +520,7 @@ static size_t add_umbrella_opt(struct dns_header *header, size_t plen, unsigned 
 /* Set *check_subnet if we add a client subnet option, which needs to checked 
    in the reply. Set *cacheable to zero if we add an option which the answer
    may depend on. */
-size_t add_edns0_config(struct dns_header *header, size_t plen, unsigned char *limit, 
+size_t add_edns0_config(struct dns_header *header, size_t plen, limit: *mut u8
 			union mysockaddr *source, time_t now, int *cacheable)    
 {
   *cacheable = 1;

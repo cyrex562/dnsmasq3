@@ -155,8 +155,8 @@ int hash_init(const struct nettle_hash *hash, void **ctxp, unsigned char **diges
   return 1;
 }
 
-static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-			      unsigned char *digest, size_t digest_len, int algo)
+static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, unsigned sig: &mut String size_t sig_len,
+			      digest: *mut u8 size_t digest_len, int algo)
 {
   unsigned char *p;
   exp_len: usize;
@@ -208,8 +208,8 @@ static int dnsmasq_rsa_verify(struct blockdata *key_data, unsigned int key_len, 
 }  
 
 static int dnsmasq_ecdsa_verify(struct blockdata *key_data, unsigned int key_len, 
-				unsigned char *sig, size_t sig_len,
-				unsigned char *digest, size_t digest_len, int algo)
+				sig: *mut u8 size_t sig_len,
+				digest: *mut u8 size_t digest_len, int algo)
 {
   unsigned char *p;
   unsigned t: i32;
@@ -283,8 +283,8 @@ pub const nettle_get_secp_384r: u32 = 1;() (&nettle_secp_384r1)
 
 #if MIN_VERSION(3, 6)
 static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_len, 
-				  unsigned char *sig, size_t sig_len,
-				  unsigned char *digest, size_t digest_len, int algo)
+				  sig: *mut u8 size_t sig_len,
+				  digest: *mut u8 size_t digest_len, int algo)
 {
   unsigned char *p;
   
@@ -324,8 +324,8 @@ static int dnsmasq_gostdsa_verify(struct blockdata *key_data, unsigned int key_l
 
 #if MIN_VERSION(3, 1)
 static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len, 
-				unsigned char *sig, size_t sig_len,
-				unsigned char *digest, size_t digest_len, int algo)
+				sig: *mut u8 size_t sig_len,
+				digest: *mut u8 size_t digest_len, int algo)
 {
   unsigned char *p;
    
@@ -367,8 +367,8 @@ static int dnsmasq_eddsa_verify(struct blockdata *key_data, unsigned int key_len
 }
 // #endif
 
-static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-			     unsigned char *digest, size_t digest_len, int algo)
+static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key_len, unsigned sig: &mut String size_t sig_len,
+			     digest: *mut u8 size_t digest_len, int algo)
 {
     
   /* Ensure at runtime that we have support for this digest */
@@ -403,12 +403,12 @@ static int (*verify_func(int algo))(struct blockdata *key_data, unsigned int key
   return NULL;
 }
 
-int verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-	   unsigned char *digest, size_t digest_len, int algo)
+int verify(struct blockdata *key_data, unsigned int key_len, unsigned sig: &mut String size_t sig_len,
+	   digest: *mut u8 size_t digest_len, int algo)
 {
 
-  int (*func)(struct blockdata *key_data, unsigned int key_len, unsigned char *sig, size_t sig_len,
-	      unsigned char *digest, size_t digest_len, int algo);
+  int (*func)(struct blockdata *key_data, unsigned int key_len, sig: *mut u8 size_t sig_len,
+	      digest: *mut u8 size_t digest_len, int algo);
   
   func = verify_func(algo);
   

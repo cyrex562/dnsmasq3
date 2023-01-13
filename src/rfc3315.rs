@@ -92,7 +92,7 @@ unsigned short dhcp6_reply(struct dhcp_context *context, int interface, char *if
 }
 
 /* This cost me blood to write, it will probably cost you blood to understand - srk. */
-static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t sz, 
+static int dhcp6_maybe_relay(struct state *state, inbuff: *mut u8 size_t sz,
 			     struct in6_addr *client_addr, int is_unicast, time_t now)
 {
   void *end = inbuff + sz;
@@ -247,7 +247,7 @@ static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t 
   return 1;
 }
 
-static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbuff, size_t sz, int is_unicast, time_t now)
+static int dhcp6_no_relay(struct state *state, int msg_type, inbuff: *mut u8 size_t sz, int is_unicast, time_t now)
 {
   void *opt;
   int i, o, o1, start_opts, start_msg;
@@ -461,7 +461,7 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
 
        if (len != 0 && len < 255)
 	 {
-	   unsigned char *pp, *op = opt6_ptr(opt, 1);
+	   pp: *mut u8 *op = opt6_ptr(opt, 1);
 	   char *pq = daemon.dhcp_buff;
 	   
 	   pp = op;
@@ -2100,7 +2100,7 @@ static void *opt6_next(void *opts, void *end)
   return opts + opt_len;
 }
 
-static unsigned int opt6_uint(unsigned char *opt, int offset, int size)
+static unsigned int opt6_uint(opt: *mut u8 int offset, int size)
 {
   /* this worries about unaligned data and byte order */
   unsigned int ret = 0;

@@ -2,12 +2,13 @@
 name = "dnsmasq_rs"
 version = "0.1.0"
 authors = ["Josh M. <cyrex562@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 libc = "0.2"
-log = "*"
-fern = "*"
-chrono = "*"
+log = "0.4"
+fern = "0.6"
+chrono = "0.4"
+clap = {version="0.11", features=["derive"]}

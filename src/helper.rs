@@ -161,7 +161,7 @@ int create_helper(int event_fd, int err_fd, uid_t uid, gid_t gid, long max_fd)
       struct script_data data;
       char *p, *action_str, *hostname = NULL, *domain = NULL;
       unsigned char *buf = (unsigned char *)daemon.namebuff;
-      unsigned char *end, *extradata;
+      end: *mut u8 *extradata;
       int is6, err = 0;
       int pipeout[2];
 
@@ -678,7 +678,7 @@ static void my_setenv(const char *name, const char *value, int *error)
     }
 }
  
-static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  char *env, int *err)
+static unsigned char *grab_extradata(buf: *mut u8 end: *mut u8  char *env, int *err)
 {
   unsigned char *next = NULL;
   char *val = NULL;
@@ -710,7 +710,7 @@ static unsigned char *grab_extradata(unsigned char *buf, unsigned char *end,  ch
 }
 
 // #ifdef HAVE_LUASCRIPT
-static unsigned char *grab_extradata_lua(unsigned char *buf, unsigned char *end, char *field)
+static unsigned char *grab_extradata_lua(buf: *mut u8 end: *mut u8 char *field)
 {
   unsigned char *next;
 
@@ -874,7 +874,7 @@ void queue_tftp(off_t file_len, char *filename, union mysockaddr *peer)
 }
 // #endif
 
-void queue_arp(int action, unsigned char *mac, int maclen, int family, union all_addr *addr)
+void queue_arp(int action, mac: *mut u8 int maclen, int family, union all_addr *addr)
 {
   /* no script */
   if (daemon.helperfd == -1)

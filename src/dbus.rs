@@ -288,7 +288,7 @@ static DBusMessage* dbus_read_servers_ex(DBusMessage *message, int strings)
       union  mysockaddr addr, source_addr;
       u16 flags = 0;
       char interface[IF_NAMESIZE];
-      char *str_addr, *str_domain = NULL;
+      str_addr: &mut String *str_domain = NULL;
       struct server_details sdetails = { 0 };
       sdetails.addr = &addr;
       sdetails.source_addr = &source_addr;
@@ -501,7 +501,7 @@ static DBusMessage *dbus_set_bool(DBusMessage *message, int flag, char *name)
 static DBusMessage *dbus_add_lease(DBusMessage* message)
 {
   struct dhcp_lease *lease;
-  const char *ipaddr, *hwaddr, *hostname, *tmp;
+  const ipaddr: &mut String *hwaddr, *hostname, *tmp;
   const unsigned char* clid;
   int clid_len, hostname_len, hw_len, hw_type;
   dbus_uint32_t expires, ia_id;
@@ -690,7 +690,7 @@ static DBusMessage *dbus_get_metrics(DBusMessage* message)
   return reply;
 }
 
-static void add_dict_entry(DBusMessageIter *container, const char *key, const char *val)
+static void add_dict_entry(DBusMessageIter *container, const key: &mut String const char *val)
 {
   DBusMessageIter dict;
 
@@ -700,7 +700,7 @@ static void add_dict_entry(DBusMessageIter *container, const char *key, const ch
   dbus_message_iter_close_container(container, &dict);
 }
 
-static void add_dict_int(DBusMessageIter *container, const char *key, const unsigned int val)
+static void add_dict_int(DBusMessageIter *container, const key: &mut String const unsigned int val)
 {
   snprintf(daemon.namebuff, MAXDNAME, "%u", val);
   
@@ -973,7 +973,7 @@ void emit_dbus_signal(int action, struct dhcp_lease *lease, char *hostname)
   DBusConnection *connection = (DBusConnection *)daemon.dbus;
   DBusMessage* message = NULL;
   DBusMessageIter args;
-  char *action_str, *mac = daemon.namebuff;
+  action_str: &mut String *mac = daemon.namebuff;
   unsigned char *p;
   i: i32;
 
